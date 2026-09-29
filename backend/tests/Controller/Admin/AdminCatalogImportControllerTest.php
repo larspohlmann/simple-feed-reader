@@ -23,12 +23,12 @@ final class AdminCatalogImportControllerTest extends WebTestCase
      */
     private function authHeader(string $email, array $roles): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        $user = (new UserFactory($em, $hasher))->create($email, roles: $roles);
+        $user = (new UserFactory($entityManager, $hasher))->create($email, roles: $roles);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -124,9 +124,9 @@ final class AdminCatalogImportControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertCount(0, $em->getRepository(CatalogFeed::class)->findAll());
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        self::assertCount(0, $entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 
     public function testAnUnknownModeIsRejected(): void
@@ -159,9 +159,13 @@ final class AdminCatalogImportControllerTest extends WebTestCase
         self::assertSame(\count($document->categories), $body['categories']);
         self::assertSame($document->feedCount(), $body['feeds']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertCount(0, $em->getRepository(CatalogFeed::class)->findAll(), 'describing must not import');
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        self::assertCount(
+            0,
+            $entityManager->getRepository(CatalogFeed::class)->findAll(),
+            'describing must not import',
+        );
     }
 
     public function testTheBundledDocumentCanBeImportedWithoutUploadingAFile(): void

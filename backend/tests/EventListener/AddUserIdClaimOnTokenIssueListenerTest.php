@@ -14,10 +14,10 @@ final class AddUserIdClaimOnTokenIssueListenerTest extends DbTestCase
 {
     public function testAnIssuedTokenCarriesTheAccountIdAsAClaim(): void
     {
-        $this->em->persist(new User('first@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new User('first@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $second = new User('second@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($second);
-        $this->em->flush();
+        $this->entityManager->persist($second);
+        $this->entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);

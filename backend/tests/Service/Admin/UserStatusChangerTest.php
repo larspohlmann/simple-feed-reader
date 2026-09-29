@@ -29,7 +29,7 @@ final class UserStatusChangerTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     /** @return MockObject&AccountMailerInterface */
@@ -47,7 +47,7 @@ final class UserStatusChangerTest extends DbTestCase
     private function service(AccountMailerInterface $mailer): UserStatusChanger
     {
         return new UserStatusChanger(
-            $this->em,
+            $this->entityManager,
             new MockClock('2026-07-15T00:00:00Z'),
             $mailer,
             new SelfActionGuard(),

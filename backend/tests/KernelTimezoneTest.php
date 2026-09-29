@@ -45,8 +45,8 @@ final class KernelTimezoneTest extends KernelTestCase
     public function testAStoredDatetimeHydratesAndSerializesAsUtc(): void
     {
         self::bootKernel();
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         $feed = new Feed('https://example.com/feed');
         $entry = new Entry(
@@ -57,12 +57,12 @@ final class KernelTimezoneTest extends KernelTestCase
             new \DateTimeImmutable('2026-07-27 23:23:05', new \DateTimeZone('UTC')),
             new \DateTimeImmutable('2026-07-27 23:23:05', new \DateTimeZone('UTC')),
         );
-        $em->persist($feed);
-        $em->persist($entry);
-        $em->flush();
-        $em->clear();
+        $entityManager->persist($feed);
+        $entityManager->persist($entry);
+        $entityManager->flush();
+        $entityManager->clear();
 
-        $hydrated = $em->find(Entry::class, $entry->getId());
+        $hydrated = $entityManager->find(Entry::class, $entry->getId());
         self::assertNotNull($hydrated);
 
         self::assertSame(

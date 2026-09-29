@@ -59,11 +59,11 @@ final class AiConfigurationEditorTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $user = (new UserFactory($this->em, $hasher))->create($email);
+        $user = (new UserFactory($this->entityManager, $hasher))->create($email);
 
         $settings = AiProviderSettingsFactory::build($user, $name);
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
 
         return $settings;
     }

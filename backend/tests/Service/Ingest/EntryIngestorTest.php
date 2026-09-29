@@ -36,7 +36,7 @@ final class EntryIngestorTest extends DbTestCase
 
     private function ingestorWith(PlatformEntryRules $rules): EntryIngestor
     {
-        return EntryIngestors::withPlatformRules($this->em, new MockClock('2026-09-21 12:00:00'), $rules);
+        return EntryIngestors::withPlatformRules($this->entityManager, new MockClock('2026-09-21 12:00:00'), $rules);
     }
 
     private function parsedEntryAt(string $guid, string $url): ParsedEntryModel
@@ -73,10 +73,10 @@ final class EntryIngestorTest extends DbTestCase
         );
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [$parsed]), self::context());
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
         $media = $entry->getMedia();
         self::assertCount(2, $media);
@@ -105,10 +105,10 @@ final class EntryIngestorTest extends DbTestCase
         );
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [$parsed]), self::context());
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
         $media = $entry->getMedia();
         self::assertCount(1, $media);
@@ -134,10 +134,10 @@ final class EntryIngestorTest extends DbTestCase
         );
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [$parsed]), self::context());
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
         $media = $entry->getMedia();
         self::assertCount(1, $media);
@@ -157,15 +157,15 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#0', $url),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $created = $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntryAt('https://www.bbc.com/news/articles/ckg4424zd7go#1', $url),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(0, $created);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testTrackingParametersThatVaryPerFetchDoNotDefeatDedup(): void
@@ -175,15 +175,15 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntryAt('guid-a', 'https://www.bbc.com/news/x?at_medium=RSS&at_campaign=rss'),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $created = $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntryAt('guid-b', 'https://www.bbc.com/news/x?at_medium=email'),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(0, $created);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     /**
@@ -202,16 +202,16 @@ final class EntryIngestorTest extends DbTestCase
             $this->parsedEntryAt('aaa#0', $first),
             $this->parsedEntryAt('bbb#0', $second),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $created = $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntryAt('aaa#1', $first),
             $this->parsedEntryAt('bbb#1', $second),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(0, $created);
-        self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(2, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testTwoItemsWithTheSameUrlInOneBatchCreateOnlyOneRow(): void
@@ -223,10 +223,10 @@ final class EntryIngestorTest extends DbTestCase
             $this->parsedEntryAt('abc#0', $url),
             $this->parsedEntryAt('abc#1', $url),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(1, $created);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testDifferentUrlsWithDifferentGuidsRemainSeparate(): void
@@ -237,10 +237,10 @@ final class EntryIngestorTest extends DbTestCase
             $this->parsedEntryAt('g1', 'https://example.com/story?id=42'),
             $this->parsedEntryAt('g2', 'https://example.com/story?id=43'),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(2, $created);
-        self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(2, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testUrlLessEntriesStillDedupeByGuid(): void
@@ -249,14 +249,14 @@ final class EntryIngestorTest extends DbTestCase
         $item = new ParsedEntryModel('only-guid', null, 'Title', null, null, '<p>body</p>', null);
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [$item]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $created = $this->ingestor
             ->ingest($feed, new ParsedFeedModel(null, null, null, null, [$item]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(0, $created);
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testStoresTheParsedDiscussion(): void
@@ -300,10 +300,10 @@ final class EntryIngestorTest extends DbTestCase
         $feed = $this->feed();
 
         $ingestor->ingest($feed, new ParsedFeedModel('Feed', null, null, null, [$parsed]), self::context());
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
         self::assertSame('https://example.com/a', $entry->getUrl());
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
@@ -337,19 +337,19 @@ final class EntryIngestorTest extends DbTestCase
         $feed = $this->feed();
 
         $ingestor->ingest($feed, new ParsedFeedModel('Feed', null, null, null, [$first, $second]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     private function ingestOne(ParsedEntryModel $parsedEntry): Entry
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeedModel('Feed', null, null, null, [$parsedEntry]), self::context());
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
 
         return $entry;
@@ -358,8 +358,8 @@ final class EntryIngestorTest extends DbTestCase
     private function feed(): Feed
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -381,7 +381,7 @@ final class EntryIngestorTest extends DbTestCase
 
     private function effectiveDateOf(Feed $feed, string $guid): string
     {
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
         self::assertNotNull($entry);
 
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
@@ -417,8 +417,8 @@ final class EntryIngestorTest extends DbTestCase
     public function testAllEntriesInOneIngestCallShareTheFetchedAtTimestamp(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $fetchedAt = new \DateTimeImmutable('2026-07-21T12:00:00Z');
         $parsed = new ParsedFeedModel(null, null, null, null, [
@@ -428,9 +428,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, new FeedIngestContext($fetchedAt, null));
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entries = $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
         self::assertCount(3, $entries);
         foreach ($entries as $entry) {
             self::assertSame($fetchedAt->getTimestamp(), $entry->getCreatedAt()->getTimestamp());
@@ -440,8 +440,8 @@ final class EntryIngestorTest extends DbTestCase
     public function testIngestsNewEntriesSanitizedAndDeduped(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $parsed = new ParsedFeedModel('Feed Title', 'https://example.com/', 'Desc', null, [
             $this->parsedEntry('g1', 'One'),
@@ -450,10 +450,10 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $created = $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(2, $created);
-        $entries = $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
         self::assertCount(2, $entries);
 
         $first = $entries[0];
@@ -467,46 +467,46 @@ final class EntryIngestorTest extends DbTestCase
     public function testSecondIngestOnlyAddsUnseenGuids(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntry('g1', 'One'),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $created = $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [
             $this->parsedEntry('g1', 'One again'),
             $this->parsedEntry('g3', 'Three'),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(1, $created);
-        self::assertCount(2, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+        self::assertCount(2, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     public function testSameGuidInDifferentFeedsAreSeparateEntries(): void
     {
         $feedA = new Feed('https://a.example.com/feed');
         $feedB = new Feed('https://b.example.com/feed');
-        $this->em->persist($feedA);
-        $this->em->persist($feedB);
-        $this->em->flush();
+        $this->entityManager->persist($feedA);
+        $this->entityManager->persist($feedB);
+        $this->entityManager->flush();
 
         $parsed = new ParsedFeedModel(null, null, null, null, [$this->parsedEntry('shared-guid', 'Shared')]);
         self::assertCount(1, $this->ingestor->ingest($feedA, $parsed, self::context()));
         self::assertCount(1, $this->ingestor->ingest($feedB, $parsed, self::context()));
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feedA]));
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feedB]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feedA]));
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feedB]));
     }
 
     public function testOverlongFieldsAreTruncatedToColumnLimits(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $parsed = new ParsedFeedModel(str_repeat('T', 900), null, null, null, [
             new ParsedEntryModel(
@@ -521,9 +521,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertNotNull($entry);
         self::assertSame(1024, mb_strlen($entry->getTitle()));
         self::assertSame(255, mb_strlen((string) $entry->getAuthor()));
@@ -586,9 +586,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g1']);
         self::assertNotNull($entry);
         self::assertSame('https://i/1.jpg', $entry->getImageUrl());
         self::assertSame(948, $entry->getImageWidth());
@@ -603,9 +603,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'no-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'no-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
         self::assertNull($entry->getImageWidth());
@@ -630,9 +630,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'overlong-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'overlong-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
         self::assertNull($entry->getImageWidth());
@@ -648,9 +648,9 @@ final class EntryIngestorTest extends DbTestCase
                 new DeclaredImageModel('//i.example.com/img.jpg', 400, 300),
             ),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative']);
         self::assertNotNull($entry);
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
@@ -661,9 +661,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('http-image', new DeclaredImageModel('http://i.example.com/img.jpg', 400, 300)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
         self::assertNotNull($entry);
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
@@ -674,9 +674,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('http-pending', new DeclaredImageModel('http://i/x.jpg', 400, 300)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'http-pending']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'http-pending']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -687,9 +687,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('protocol-relative-pending', new DeclaredImageModel('//i/x.jpg', 800, 450)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative-pending']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative-pending']);
         self::assertNotNull($entry);
         self::assertSame('https://i/x.jpg', $entry->getImageUrl());
         self::assertNull($entry->getImage()->getCheckedAt());
@@ -701,9 +701,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('https-trusted', new DeclaredImageModel('https://i/x.jpg', 400, 300)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-trusted']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-trusted']);
         self::assertNotNull($entry);
         self::assertNotNull($entry->getImage()->getCheckedAt());
     }
@@ -714,9 +714,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('https-beacon', new DeclaredImageModel('https://i/pixel.gif', 1, 1)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-beacon']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-beacon']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -727,9 +727,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('https-halfdims', new DeclaredImageModel('https://i/x.jpg', 400, null)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-halfdims']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-halfdims']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -740,9 +740,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('https-nodims', new DeclaredImageModel('https://i/x.jpg', null, null)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'https-nodims']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-nodims']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -756,9 +756,9 @@ final class EntryIngestorTest extends DbTestCase
                 new DeclaredImageModel('data:image/png;base64,AAAA', null, null),
             ),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'data-uri-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'data-uri-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -769,9 +769,9 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
             $this->parsedEntryWithImage('site-relative-image', new DeclaredImageModel('/img/x.jpg', 400, 300)),
         ]), self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'site-relative-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'site-relative-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -792,9 +792,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'fallback-summary']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'fallback-summary']);
         self::assertNotNull($entry);
         self::assertSame('Body text here.', $entry->getSummary());
     }
@@ -817,9 +817,9 @@ final class EntryIngestorTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'junk-summary']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'junk-summary']);
         self::assertNotNull($entry);
         self::assertNull($entry->getSummary());
     }
@@ -827,8 +827,8 @@ final class EntryIngestorTest extends DbTestCase
     public function testEmptyParsedFeedStillUpdatesMetadata(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $created = $this->ingestor
             ->ingest($feed, new ParsedFeedModel('New Title', null, null, null, []), self::context());
@@ -842,8 +842,8 @@ final class EntryIngestorTest extends DbTestCase
         $feed = new Feed('https://example.com/feed');
         $feed->setTitle('Existing Title');
         $feed->setSiteUrl('https://existing.example.com/');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, []), self::context());
 
@@ -900,7 +900,7 @@ final class EntryIngestorTest extends DbTestCase
             new \DateTimeImmutable('2026-08-14 12:00:00'),
             new \DateTimeImmutable('2026-08-14 06:00:00'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'old'));
         self::assertSame('2026-08-14 12:00:00', $this->effectiveDateOf($feed, 'new'));

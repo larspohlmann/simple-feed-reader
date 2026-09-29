@@ -43,20 +43,20 @@ final class EntrySearchWithFallbackTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setTitle('Example');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         // A subscription so IndexedEntrySearch does not short-circuit before
         // ever asking the reader — see IndexedEntrySearchTest's own "no
         // subscriptions" case for that other behaviour.
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function fallback(

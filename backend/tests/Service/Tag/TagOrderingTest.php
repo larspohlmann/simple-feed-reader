@@ -31,7 +31,7 @@ final class TagOrderingTest extends DbTestCase
         );
 
         self::assertSame([$third, $first, $second], $ordered);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(['C', 'A', 'B'], $this->tagNamesInOrder($user));
     }
 
@@ -58,7 +58,7 @@ final class TagOrderingTest extends DbTestCase
             [$second->requireId(), $first->requireId()],
         );
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(1, $this->joinPosition($first->requireId(), $tag->requireId()));
         self::assertSame(0, $this->joinPosition($second->requireId(), $tag->requireId()));
     }
@@ -86,8 +86,8 @@ final class TagOrderingTest extends DbTestCase
     {
         $tag = new Tag($user, $name);
         $tag->setPosition($position);
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }
@@ -95,11 +95,11 @@ final class TagOrderingTest extends DbTestCase
     private function taggedSubscription(User $user, string $url, Tag $tag, int $position): Subscription
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $subscription->addTag($tag, $position);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $subscription;
     }
@@ -115,7 +115,7 @@ final class TagOrderingTest extends DbTestCase
 
     private function joinPosition(int $subscriptionId, int $tagId): int
     {
-        $subscription = $this->em->find(Subscription::class, $subscriptionId);
+        $subscription = $this->entityManager->find(Subscription::class, $subscriptionId);
         self::assertInstanceOf(Subscription::class, $subscription);
         foreach ($subscription->getSubscriptionTags() as $join) {
             if ($join->getTag()->requireId() === $tagId) {

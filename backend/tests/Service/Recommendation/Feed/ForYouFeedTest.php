@@ -36,25 +36,27 @@ final class ForYouFeedTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
 
         $this->user = new User('for-you-responder@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $this->em->persist($run);
+        $this->entityManager->persist($run);
 
         $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'g1', null, 'Title g1', $createdAt, $createdAt);
-        $this->em->persist($entry);
-        $this->em->persist(new RecommendationItem($run, $entry, 1, 'reason g1', 88));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new RecommendationItem($run, $entry, 1, 'reason g1', 88));
+        $this->entityManager->flush();
     }
 
     public function testOmitsBothAnnotationsWhenShowReasonsIsOff(): void
@@ -101,12 +103,12 @@ final class ForYouFeedTest extends DbTestCase
 
     public function testEntryCategoriesAreEnrichedOnTheForYouFeed(): void
     {
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $category = new Category('world', '');
-        $this->em->persist($category);
-        $this->em->persist(new EntryCategory($entry, $category, 0, 'World'));
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist(new EntryCategory($entry, $category, 0, 'World'));
+        $this->entityManager->flush();
 
         $first = $this->firstEntry();
 
@@ -115,14 +117,16 @@ final class ForYouFeedTest extends DbTestCase
 
     public function testEntrySavedSearchesAreEnrichedOnTheForYouFeed(): void
     {
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $search = new SavedSearch($this->user, 'title', false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
         $search->setSlug($search->requireId() . '-title');
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-08-07T09:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-08-07T09:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         $first = $this->firstEntry();
 
@@ -142,7 +146,7 @@ final class ForYouFeedTest extends DbTestCase
 
     private function forYouFeed(): ForYouFeed
     {
-        $repository = $this->em->getRepository(RecommendationItem::class);
+        $repository = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $repository);
 
         $settings = self::getContainer()->get(RecommendationSettingsResolver::class);

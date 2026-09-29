@@ -32,8 +32,8 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $admin = new User(self::ADMIN_EMAIL, new \DateTimeImmutable('-1 day'));
         $admin->setRoles(['ROLE_ADMIN']);
         $admin->approve(new \DateTimeImmutable('-1 day'));
-        $this->em->persist($admin);
-        $this->em->flush();
+        $this->entityManager->persist($admin);
+        $this->entityManager->flush();
 
         return $admin;
     }
@@ -47,7 +47,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 
     private function countRows(string $table): int
     {
-        $count = $this->em->getConnection()->executeQuery('SELECT COUNT(*) FROM ' . $table)->fetchOne();
+        $count = $this->entityManager->getConnection()->executeQuery('SELECT COUNT(*) FROM ' . $table)->fetchOne();
 
         return is_numeric($count) ? (int) $count : 0;
     }
@@ -175,9 +175,9 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $admin = $this->seedAdmin();
 
         $realFeed = new Feed('https://news.example.org/feed.xml');
-        $this->em->persist($realFeed);
-        $this->em->persist(new Subscription($admin, $realFeed, new \DateTimeImmutable('-1 hour')));
-        $this->em->flush();
+        $this->entityManager->persist($realFeed);
+        $this->entityManager->persist(new Subscription($admin, $realFeed, new \DateTimeImmutable('-1 hour')));
+        $this->entityManager->flush();
 
         $tester = $this->tester();
         self::assertSame(Command::SUCCESS, $tester->execute([]));
@@ -200,8 +200,8 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $this->tester()->execute([]);
 
         $feed = $this->fixtureFeed();
-        $this->em->remove($this->fixtureEntry($feed));
-        $this->em->flush();
+        $this->entityManager->remove($this->fixtureEntry($feed));
+        $this->entityManager->flush();
         self::assertSame(0, $this->countRows('entry'));
 
         $this->tester()->execute([]);
@@ -226,11 +226,11 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $subscription = $subscriptions->findOneBy(['user' => $admin, 'feed' => $feed]);
         self::assertInstanceOf(Subscription::class, $subscription);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('+1 hour'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->tester()->execute([]);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         /** @var SubscriptionRepository $subscriptions */
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         $reloaded = $subscriptions->findOneBy(['user' => $admin, 'feed' => $this->fixtureFeed()]);
@@ -251,12 +251,12 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $entry = $this->fixtureEntry($this->fixtureFeed());
         $state = new EntryState($admin, $entry);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $this->tester()->execute([]);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         /** @var EntryStateRepository $entryStates */
         $entryStates = self::getContainer()->get(EntryStateRepository::class);
         $reloaded = $entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
@@ -297,7 +297,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
             $feeds,
             $entries,
             $entryStates,
-            $this->em,
+            $this->entityManager,
             $clock,
             'prod',
         );

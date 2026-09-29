@@ -28,16 +28,16 @@ final class RecommendationFeedTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
         $this->sub = new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->sub);
+        $this->entityManager->persist($this->sub);
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid): Entry
@@ -51,8 +51,8 @@ final class RecommendationFeedTest extends DbTestCase
             $createdAt,
             $createdAt,
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -69,8 +69,8 @@ final class RecommendationFeedTest extends DbTestCase
             $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }
@@ -78,15 +78,15 @@ final class RecommendationFeedTest extends DbTestCase
     private function item(RecommendationRun $run, Entry $entry, int $position, string $reason): RecommendationItem
     {
         $item = new RecommendationItem($run, $entry, $position, $reason);
-        $this->em->persist($item);
-        $this->em->flush();
+        $this->entityManager->persist($item);
+        $this->entityManager->flush();
 
         return $item;
     }
 
     private function repo(): RecommendationItemRepository
     {
-        $repo = $this->em->getRepository(RecommendationItem::class);
+        $repo = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $repo);
 
         return $repo;
@@ -111,11 +111,13 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($runningRun, $entryD, 1, 'running reason d');
 
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($stranger);
+        $this->entityManager->persist($stranger);
         $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
-        $this->em->persist($strangerFeed);
-        $this->em->persist(new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($strangerFeed);
+        $this->entityManager->persist(
+            new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
         $strangerCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $strangerEntry = new Entry(
             $strangerFeed,
@@ -125,8 +127,8 @@ final class RecommendationFeedTest extends DbTestCase
             $strangerCreatedAt,
             $strangerCreatedAt,
         );
-        $this->em->persist($strangerEntry);
-        $this->em->flush();
+        $this->entityManager->persist($strangerEntry);
+        $this->entityManager->flush();
         $strangerRun = $this->seedRun($stranger, RunStatus::Completed);
         $this->item($strangerRun, $strangerEntry, 1, 'stranger reason');
 
@@ -170,7 +172,7 @@ final class RecommendationFeedTest extends DbTestCase
         $entryViewed = $this->entry('viewed');
         $watermark = new \DateTimeImmutable('2026-08-07T00:00:00Z');
         $this->sub->setMarkedReadUntil($watermark);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $favState = new EntryState($this->user, $entryFav);
         $favState->markFavorite();
@@ -178,10 +180,10 @@ final class RecommendationFeedTest extends DbTestCase
         $keptState->markKept();
         $viewedState = new EntryState($this->user, $entryViewed);
         $viewedState->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($favState);
-        $this->em->persist($keptState);
-        $this->em->persist($viewedState);
-        $this->em->flush();
+        $this->entityManager->persist($favState);
+        $this->entityManager->persist($keptState);
+        $this->entityManager->persist($viewedState);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryOld, 1, 'reason old');
@@ -228,14 +230,14 @@ final class RecommendationFeedTest extends DbTestCase
 
         $hiddenState = new EntryState($this->user, $hidden);
         $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($hiddenState);
+        $this->entityManager->persist($hiddenState);
         // An explicit unread row beats the watermark below, exactly as it does
         // in the main list — that is what UnreadDql's first clause is for.
         $unreadState = new EntryState($this->user, $unreadAgain);
         $unreadState->markUnread();
-        $this->em->persist($unreadState);
+        $this->entityManager->persist($unreadState);
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
@@ -261,8 +263,8 @@ final class RecommendationFeedTest extends DbTestCase
         $hidden = $this->entry('hidden');
         $hiddenState = new EntryState($this->user, $hidden);
         $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($hiddenState);
-        $this->em->flush();
+        $this->entityManager->persist($hiddenState);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
@@ -281,8 +283,8 @@ final class RecommendationFeedTest extends DbTestCase
 
         $readState = new EntryState($this->user, $read);
         $readState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($readState);
-        $this->em->flush();
+        $this->entityManager->persist($readState);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
@@ -306,8 +308,8 @@ final class RecommendationFeedTest extends DbTestCase
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable($completedAt));
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }
@@ -316,10 +318,10 @@ final class RecommendationFeedTest extends DbTestCase
     {
         $customFeed = new Feed('https://custom.example.com/feed.xml');
         $customFeed->setTitle('Underlying Feed Title');
-        $this->em->persist($customFeed);
+        $this->entityManager->persist($customFeed);
         $customSub = new Subscription($this->user, $customFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $customSub->setCustomTitle('My Custom Title');
-        $this->em->persist($customSub);
+        $this->entityManager->persist($customSub);
         $customCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $customEntry = new Entry(
             $customFeed,
@@ -329,8 +331,8 @@ final class RecommendationFeedTest extends DbTestCase
             $customCreatedAt,
             $customCreatedAt,
         );
-        $this->em->persist($customEntry);
-        $this->em->flush();
+        $this->entityManager->persist($customEntry);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $customEntry, 1, 'reason custom');
@@ -343,9 +345,9 @@ final class RecommendationFeedTest extends DbTestCase
     public function testSubscriptionTitleFallsBackToFeedUrlWhenNothingElseIsSet(): void
     {
         $untitledFeed = new Feed('https://untitled.example.com/feed.xml');
-        $this->em->persist($untitledFeed);
+        $this->entityManager->persist($untitledFeed);
         $untitledSub = new Subscription($this->user, $untitledFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($untitledSub);
+        $this->entityManager->persist($untitledSub);
         $untitledCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $untitledEntry = new Entry(
             $untitledFeed,
@@ -355,8 +357,8 @@ final class RecommendationFeedTest extends DbTestCase
             $untitledCreatedAt,
             $untitledCreatedAt,
         );
-        $this->em->persist($untitledEntry);
-        $this->em->flush();
+        $this->entityManager->persist($untitledEntry);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $untitledEntry, 1, 'reason untitled');
@@ -409,8 +411,8 @@ final class RecommendationFeedTest extends DbTestCase
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entry, 1, 'reason gone');
 
-        $this->em->remove($this->sub);
-        $this->em->flush();
+        $this->entityManager->remove($this->sub);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
         self::assertCount(0, $rows);
@@ -421,14 +423,14 @@ final class RecommendationFeedTest extends DbTestCase
         $entryA = $this->entry('a');
 
         $excludedFeed = new Feed('https://excluded.example.com/feed.xml');
-        $this->em->persist($excludedFeed);
+        $this->entityManager->persist($excludedFeed);
         $excludedSub = new Subscription(
             $this->user,
             $excludedFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $excludedSub->setIncludeInForYou(false);
-        $this->em->persist($excludedSub);
+        $this->entityManager->persist($excludedSub);
         $excludedCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entryB = new Entry(
             $excludedFeed,
@@ -438,8 +440,8 @@ final class RecommendationFeedTest extends DbTestCase
             $excludedCreatedAt,
             $excludedCreatedAt,
         );
-        $this->em->persist($entryB);
-        $this->em->flush();
+        $this->entityManager->persist($entryB);
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryA, 1, 'reason a');
@@ -461,8 +463,8 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run, $read, 2, 'reason read');
         $readState = new EntryState($this->user, $read);
         $readState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($readState);
-        $this->em->flush();
+        $this->entityManager->persist($readState);
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->repo()->countForYou($this->user->requireId()));
         self::assertSame(2, $this->repo()->countForYouIncludingRead($this->user->requireId()));
@@ -478,14 +480,14 @@ final class RecommendationFeedTest extends DbTestCase
         // one pick the count must keep.
         $unreadState = new EntryState($this->user, $unread);
         $unreadState->markUnread();
-        $this->em->persist($unreadState);
+        $this->entityManager->persist($unreadState);
         $hiddenState = new EntryState($this->user, $hidden);
         $hiddenState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($hiddenState);
+        $this->entityManager->persist($hiddenState);
         // 'under-watermark' keeps its 2026-07-01 effectiveDate and gets no state
         // row, so only the subscription watermark can read it as read.
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');

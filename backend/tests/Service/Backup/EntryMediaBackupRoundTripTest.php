@@ -24,7 +24,7 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
     {
         $user = $this->makeUser('media-backup@example.com');
         $feed = new Feed('https://media.example/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $entry = new Entry(
             $feed,
             'guid-media',
@@ -38,9 +38,9 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
             [new EntryMedium('https://i/lead.jpg', 'image', 800, 600)],
             [new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
         );
-        $this->em->persist($entry);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
 
         $entryLine = $this->exportedEntryLine($user);
         self::assertSame(
@@ -56,17 +56,19 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         );
 
         $target = new Feed('https://restore.example/feed.xml');
-        $this->em->persist($target);
-        $this->em->flush();
+        $this->entityManager->persist($target);
+        $this->entityManager->flush();
         $targetId = $target->getId();
         self::assertNotNull($targetId);
 
-        (new EntryBatchInserter($this->em->getConnection(), new UrlNormalizer()))
+        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
             ->insert($targetId, [EntryLine::fromLine($entryLine)]);
 
-        $this->em->clear();
-        $restoredFeed = $this->em->getRepository(Feed::class)->findOneBy(['url' => 'https://restore.example/feed.xml']);
-        $restored = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $restoredFeed]);
+        $this->entityManager->clear();
+        $restoredFeed = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://restore.example/feed.xml']);
+        $restored = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $restoredFeed]);
         self::assertInstanceOf(Entry::class, $restored);
 
         $media = $restored->getMedia();
@@ -111,6 +113,6 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return (new UserFactory($this->em, $hasher))->create($email, locale: 'de');
+        return (new UserFactory($this->entityManager, $hasher))->create($email, locale: 'de');
     }
 }

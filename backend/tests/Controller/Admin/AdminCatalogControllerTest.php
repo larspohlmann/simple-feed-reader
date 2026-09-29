@@ -60,11 +60,11 @@ final class AdminCatalogControllerTest extends WebTestCase
 
     private function reloadedCategory(int $id): ?CatalogCategory
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->clear();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->clear();
 
-        return $em->find(CatalogCategory::class, $id);
+        return $entityManager->find(CatalogCategory::class, $id);
     }
 
     /**
@@ -74,12 +74,12 @@ final class AdminCatalogControllerTest extends WebTestCase
      */
     private function authHeader(string $email, array $roles): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        $user = (new UserFactory($em, $hasher))->create($email, roles: $roles);
+        $user = (new UserFactory($entityManager, $hasher))->create($email, roles: $roles);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -153,11 +153,11 @@ final class AdminCatalogControllerTest extends WebTestCase
         $client->disableReboot();
         $headers = $this->authHeader('admin2@example.com', ['ROLE_ADMIN']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $category = new CatalogCategory('science', 'Science', 'science', '#14b8a6');
-        $em->persist($category);
-        $em->flush();
+        $entityManager->persist($category);
+        $entityManager->flush();
 
         // Stub BEFORE the first admin request: AdminCatalogController eagerly builds
         // CatalogFaviconWarmer, which eagerly builds the fetcher — once a request has
@@ -179,7 +179,7 @@ final class AdminCatalogControllerTest extends WebTestCase
         );
         self::assertResponseStatusCodeSame(201);
 
-        $feed = $em->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Quanta Magazine']);
+        $feed = $entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Quanta Magazine']);
         self::assertNotNull($feed);
 
         // The refresh action must answer even when the download fails — a dead
@@ -194,13 +194,13 @@ final class AdminCatalogControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('warm@example.com', ['ROLE_ADMIN']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $feed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
-        $em->persist($category);
-        $em->persist($feed);
-        $em->flush();
+        $entityManager->persist($category);
+        $entityManager->persist($feed);
+        $entityManager->flush();
 
         // The favicon services are stubbed: this asserts the endpoint's contract,
         // not that the internet is reachable from CI.
@@ -221,16 +221,16 @@ final class AdminCatalogControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('admin3@example.com', ['ROLE_ADMIN']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $first = new CatalogCategory('a', 'A', 'memory', '#111111');
         $first->setPosition(0);
         $second = new CatalogCategory('b', 'B', 'memory', '#222222');
         $second->setPosition(1);
-        $em->persist($first);
-        $em->persist($second);
-        $em->flush();
+        $entityManager->persist($first);
+        $entityManager->persist($second);
+        $entityManager->flush();
 
         $client->request(
             'PATCH',
@@ -240,8 +240,8 @@ final class AdminCatalogControllerTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        $em->clear();
-        $reloaded = $em->getRepository(CatalogCategory::class)->findOneBy(['key' => 'b']);
+        $entityManager->clear();
+        $reloaded = $entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'b']);
         self::assertNotNull($reloaded);
         self::assertSame(0, $reloaded->getPosition());
     }

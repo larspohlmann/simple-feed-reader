@@ -45,7 +45,7 @@ final class ForYouSweepTest extends DbTestCase
         parent::setUp();
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     private function sweep(): ForYouSweep
@@ -59,7 +59,7 @@ final class ForYouSweepTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }
@@ -88,9 +88,9 @@ final class ForYouSweepTest extends DbTestCase
 
         $feed = new Feed('https://example.com/' . $email . '/feed.xml');
         $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
 
         for ($i = 0; $i < 5; $i++) {
             $this->fixtures->entry($feed, $email . '-entry-' . $i, 60 - $i);
@@ -109,7 +109,7 @@ final class ForYouSweepTest extends DbTestCase
         $this->setCadence($second, 1);
 
         $started = $this->sweep()->startDueRuns();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertGreaterThanOrEqual(2, $started);
         self::assertNotNull($this->runs()->findActiveForUser($first));
@@ -121,7 +121,7 @@ final class ForYouSweepTest extends DbTestCase
         $user = $this->seedDueUserWithCandidates('sweep-once@example.test');
 
         $report = $this->sweep()->sweepOnce();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertGreaterThanOrEqual(1, $report->startedRuns);
         self::assertGreaterThanOrEqual(1, $report->advancedRuns);
@@ -150,7 +150,7 @@ final class ForYouSweepTest extends DbTestCase
     {
         $this->seedDueUserWithCandidates('sweep-presence@example.test');
         $this->sweep()->sweepOnce(); // starts the run and snapshots it; no provider call yet
-        $this->em->clear();
+        $this->entityManager->clear();
 
         // Well-formed and empty: this test is about who is driving, not about
         // what the model ranks.
@@ -183,7 +183,7 @@ final class ForYouSweepTest extends DbTestCase
     {
         $this->seedDueUserWithCandidates('sweep-mid-call-beat@example.test');
         $this->sweep()->sweepOnce();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $this->chatClient()->queueContent('{"recommendations":[]}');
         $livenessAfterTheBeat = null;
@@ -209,7 +209,7 @@ final class ForYouSweepTest extends DbTestCase
     {
         $this->seedDueUserWithCandidates('sweep-heartbeat-disarm@example.test');
         $this->sweep()->sweepOnce();
-        $this->em->clear();
+        $this->entityManager->clear();
         $this->chatClient()->queueContent('{"recommendations":[]}');
 
         $this->sweep()->sweepOnce();
@@ -295,7 +295,7 @@ final class ForYouSweepTest extends DbTestCase
             $this->runs(),
             $presence,
             new SweepStreamHeartbeat($presence, $clock),
-            $this->em,
+            $this->entityManager,
             new NullLogger(),
         );
     }

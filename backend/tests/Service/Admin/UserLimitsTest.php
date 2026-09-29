@@ -18,12 +18,12 @@ final class UserLimitsTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     private function service(): UserLimits
     {
-        return new UserLimits($this->em, new MockClock('2026-07-15T00:00:00Z'));
+        return new UserLimits($this->entityManager, new MockClock('2026-07-15T00:00:00Z'));
     }
 
     public function testStartTrialSetsEndDateFromToday(): void

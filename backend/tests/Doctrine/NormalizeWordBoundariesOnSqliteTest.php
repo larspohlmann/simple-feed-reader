@@ -18,7 +18,7 @@ final class NormalizeWordBoundariesOnSqliteTest extends DbTestCase
     {
         parent::setUp();
 
-        if (!$this->em->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
             self::markTestSkipped('The native function is SQLite-only; this leg runs on another platform.');
         }
     }
@@ -29,12 +29,12 @@ final class NormalizeWordBoundariesOnSqliteTest extends DbTestCase
 
         self::assertSame(
             WordBoundaries::normalize($text),
-            $this->em->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(?)', [$text]),
+            $this->entityManager->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(?)', [$text]),
         );
     }
 
     public function testANullHaystackStaysNull(): void
     {
-        self::assertNull($this->em->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(NULL)'));
+        self::assertNull($this->entityManager->getConnection()->fetchOne('SELECT NORMALIZE_WORD_BOUNDARIES(NULL)'));
     }
 }

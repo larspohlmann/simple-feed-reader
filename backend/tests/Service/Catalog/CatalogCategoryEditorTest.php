@@ -72,8 +72,8 @@ final class CatalogCategoryEditorTest extends DbTestCase
 
         $this->editor()->delete($category);
 
-        $this->em->clear();
-        self::assertNull($this->em->find(CatalogCategory::class, $id));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(CatalogCategory::class, $id));
     }
 
     public function testReorderGivesEachCategoryItsIndex(): void

@@ -109,7 +109,7 @@ final class EntryPlanHintWalkerTest extends DbTestCase
 
     public function testTheUrlHashIndexNameMatchesEntrysOrmMetadata(): void
     {
-        $indexes = $this->em->getClassMetadata(Entry::class)->table['indexes'] ?? [];
+        $indexes = $this->entityManager->getClassMetadata(Entry::class)->table['indexes'] ?? [];
 
         self::assertArrayHasKey(EntryPlanHint::URL_HASH_INDEX_NAME, $indexes);
     }
@@ -129,6 +129,6 @@ final class EntryPlanHintWalkerTest extends DbTestCase
      */
     private function collapseQuery(): Query
     {
-        return $this->em->createQuery(\sprintf(self::COLLAPSE_DQL, Entry::class, Entry::class));
+        return $this->entityManager->createQuery(\sprintf(self::COLLAPSE_DQL, Entry::class, Entry::class));
     }
 }

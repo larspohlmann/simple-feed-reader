@@ -14,11 +14,11 @@ final class GrafanaSettingsRepositoryTest extends KernelTestCase
 {
     public function testTheSingletonIsTheOldestRowWhenMoreThanOneExists(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist($this->rowFor('https://first.example'));
-        $em->flush();
-        $em->persist($this->rowFor('https://second.example'));
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($this->rowFor('https://first.example'));
+        $entityManager->flush();
+        $entityManager->persist($this->rowFor('https://second.example'));
+        $entityManager->flush();
 
         $singleton = self::getContainer()->get(GrafanaSettingsRepository::class)->findSingleton();
 

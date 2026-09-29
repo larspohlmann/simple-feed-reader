@@ -27,7 +27,7 @@ final class MailSendFailureRepositoryTest extends DbTestCase
 
         self::assertSame(0, $this->failures->countAll());
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->failures->countAll());
     }
@@ -36,7 +36,7 @@ final class MailSendFailureRepositoryTest extends DbTestCase
     {
         $this->failures->add($this->failure('a@example.test', '2026-09-06T10:00:00Z'));
         $this->failures->add($this->failure('b@example.test', '2026-09-06T11:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $recent = $this->failures->recent(10);
 
@@ -49,7 +49,7 @@ final class MailSendFailureRepositoryTest extends DbTestCase
     public function testDeleteAllClearsTheTable(): void
     {
         $this->failures->add($this->failure('a@example.test', '2026-09-06T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->failures->deleteAll();
 
@@ -85,7 +85,7 @@ final class MailSendFailureRepositoryTest extends DbTestCase
             $stamp = sprintf('2026-09-06T10:%02d:00Z', $minute);
             $this->failures->add($this->failure("user{$minute}@example.test", $stamp));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function failure(string $recipient, string $createdAt): MailSendFailure

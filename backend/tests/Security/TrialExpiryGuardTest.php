@@ -24,35 +24,35 @@ final class TrialExpiryGuardTest extends TestCase
         return $user;
     }
 
-    private function guard(EntityManagerInterface $em): TrialExpiryGuard
+    private function guard(EntityManagerInterface $entityManager): TrialExpiryGuard
     {
-        return new TrialExpiryGuard($em, new MockClock('2026-07-15T00:00:00Z'));
+        return new TrialExpiryGuard($entityManager, new MockClock('2026-07-15T00:00:00Z'));
     }
 
     public function testNoTrialIsANoOp(): void
     {
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('flush');
 
-        $this->guard($em)->enforce($this->user(null));
+        $this->guard($entityManager)->enforce($this->user(null));
     }
 
     public function testActiveTrialInTheFutureIsANoOp(): void
     {
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('flush');
 
-        $this->guard($em)->enforce($this->user(new \DateTimeImmutable('2026-07-20T00:00:00Z')));
+        $this->guard($entityManager)->enforce($this->user(new \DateTimeImmutable('2026-07-20T00:00:00Z')));
     }
 
     public function testExpiredTrialFlipsActiveUserToSuspendedThenThrows(): void
     {
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
         $user = $this->user(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
 
         try {
-            $this->guard($em)->enforce($user);
+            $this->guard($entityManager)->enforce($user);
             self::fail('Expected AccountStatusException');
         } catch (AccountStatusException $exception) {
             self::assertSame('suspended', $exception->accountStatus);
@@ -63,11 +63,11 @@ final class TrialExpiryGuardTest extends TestCase
 
     public function testExpiredTrialOnAlreadySuspendedUserThrowsWithoutFlushing(): void
     {
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('flush');
         $user = $this->user(new \DateTimeImmutable('2026-07-10T00:00:00Z'), UserStatus::Suspended);
 
         $this->expectException(AccountStatusException::class);
-        $this->guard($em)->enforce($user);
+        $this->guard($entityManager)->enforce($user);
     }
 }

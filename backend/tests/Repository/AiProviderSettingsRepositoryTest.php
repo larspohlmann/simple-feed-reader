@@ -25,14 +25,14 @@ final class AiProviderSettingsRepositoryTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $this->first = $factory->create('ai-repo-first@example.test');
         $this->second = $factory->create('ai-repo-second@example.test');
 
         $this->firstConfiguration = $this->persistConfiguration($this->first, 'Work OpenAI');
         $this->secondConfiguration = $this->persistConfiguration($this->first, 'Personal OpenRouter');
         $this->persistConfiguration($this->second, 'Someone else\'s key');
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testFindAllForUserReturnsOnlyThatUsersRowsOrderedById(): void
@@ -74,7 +74,7 @@ final class AiProviderSettingsRepositoryTest extends DbTestCase
     private function persistConfiguration(User $user, string $name): AiProviderSettings
     {
         $configuration = AiProviderSettingsFactory::build($user, $name);
-        $this->em->persist($configuration);
+        $this->entityManager->persist($configuration);
 
         return $configuration;
     }

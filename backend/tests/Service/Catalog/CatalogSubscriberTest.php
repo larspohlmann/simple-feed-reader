@@ -13,19 +13,10 @@ use App\Repository\FeedRepository;
 use App\Service\Catalog\CatalogSubscriber;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class CatalogSubscriberTest extends DbTestCase
 {
     use SeedsUsers;
-
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
 
     /** @return array{0: CatalogFeed, 1: CatalogFeed, 2: CatalogFeed} */
     private function catalog(): array
@@ -40,9 +31,9 @@ final class CatalogSubscriberTest extends DbTestCase
         $quanta = new CatalogFeed($science, 'Quanta Magazine', 'https://api.quantamagazine.org/feed/');
 
         foreach ([$technology, $science, $verge, $ars, $quanta] as $row) {
-            $this->em()->persist($row);
+            $this->entityManager->persist($row);
         }
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         return [$verge, $ars, $quanta];
     }
@@ -91,8 +82,8 @@ final class CatalogSubscriberTest extends DbTestCase
         [$verge, , ] = $this->catalog();
         $disabled = new CatalogFeed($verge->getCategory(), 'Retired', 'https://retired.example.com/rss.xml');
         $disabled->setEnabled(false);
-        $this->em()->persist($disabled);
-        $this->em()->flush();
+        $this->entityManager->persist($disabled);
+        $this->entityManager->flush();
 
         $user = $this->user('stale@example.com');
 
@@ -125,9 +116,9 @@ final class CatalogSubscriberTest extends DbTestCase
         $scraped->setSourceFormat(SourceFormat::SCRAPED);
 
         foreach ([$technology, $scraped] as $row) {
-            $this->em()->persist($row);
+            $this->entityManager->persist($row);
         }
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $user = $this->user('format@example.com');
 

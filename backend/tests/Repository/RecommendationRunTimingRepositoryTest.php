@@ -31,7 +31,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('timing-owner@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('timing-owner@example.test');
 
         /** @var RecommendationRunTimingRepository $timings */
         $timings = self::getContainer()->get(RecommendationRunTimingRepository::class);
@@ -39,7 +39,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testReturnsEachPhaseWallSpanWithBatchCount(): void
@@ -53,7 +53,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $this->finishedLog($run, CallPhase::Batch, 2, '10:00:12', '10:00:30');
         // Consolidate 30s.
         $this->finishedLog($run, CallPhase::Consolidate, null, '10:00:40', '10:01:10');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $spans = array_map(
             static fn (array $span): array => [...$span, 'phase' => $span['phase']->value],
@@ -78,7 +78,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         // Another user's completed run.
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $stranger = (new UserFactory($this->em, $hasher))->create('timing-stranger@example.test');
+        $stranger = (new UserFactory($this->entityManager, $hasher))->create('timing-stranger@example.test');
         $strangerRun = $this->completedRun($stranger);
         $this->finishedLog($strangerRun, CallPhase::Distill, null, '10:00:00', '10:00:05');
 
@@ -87,7 +87,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $this->finishedLog($older, CallPhase::Distill, null, '10:00:00', '10:00:05');
         $newer = $this->completedRun();
         $this->finishedLog($newer, CallPhase::Distill, null, '10:00:00', '10:00:09');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $spans = $this->timings->completedRunPhaseSpans($this->user, 1);
 
@@ -99,9 +99,9 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     {
         $run = $this->completedRun();
         $this->finishedLog($run, CallPhase::Distill, null, '10:00:00', '10:00:10');
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $connection = $this->em->getConnection();
+        $connection = $this->entityManager->getConnection();
         $connection->insert('recommendation_run_log', [
             'run_id' => $run->requireId(),
             'phase' => 'dedup',
@@ -112,7 +112,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
             'created_at' => '2026-08-08 10:00:20',
             'finished_at' => '2026-08-08 10:00:25',
         ]);
-        $this->em->clear();
+        $this->entityManager->clear();
 
         try {
             $this->timings->completedRunPhaseSpans($this->user, 10);
@@ -130,7 +130,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         foreach ($migration->getSql() as $query) {
             $connection->executeStatement($query->getStatement());
         }
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $spans = array_map(
             static fn (array $span): array => [...$span, 'phase' => $span['phase']->value],

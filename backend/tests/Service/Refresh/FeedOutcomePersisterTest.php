@@ -47,7 +47,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
 
-        $result = $this->persister($this->em)->persist(
+        $result = $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(
                 FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), '"e1"', null),
@@ -65,7 +65,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
 
-        $result = $this->persister($this->em)->persist(
+        $result = $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::failed(new FeedThrottledException('HTTP 429', 90)),
             $this->clock->now(),
@@ -81,7 +81,11 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $feed = $this->feed('https://one.example.com/feed');
         $gone = new FeedGoneException('HTTP 410 Gone');
 
-        $result = $this->persister($this->em)->persist($feed, FetchOutcomeModel::failed($gone), $this->clock->now());
+        $result = $this->persister($this->entityManager)->persist(
+            $feed,
+            FetchOutcomeModel::failed($gone),
+            $this->clock->now(),
+        );
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->assertLoggedOnce('warning', 'Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
@@ -93,7 +97,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $feed = $this->feed('https://one.example.com/feed');
         $unreachable = new FeedUnreachableException('connection refused');
 
-        $result = $this->persister($this->em)
+        $result = $this->persister($this->entityManager)
             ->persist($feed, FetchOutcomeModel::failed($unreachable), $this->clock->now());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
@@ -109,7 +113,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
 
-        $result = $this->persister($this->em)->persist(
+        $result = $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
@@ -125,9 +129,9 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
         $duplicate = DuplicateKeyViolation::exception();
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: $duplicate);
+        $failingEntityManager = new FlushFailingEntityManager($this->entityManager, thrown: $duplicate);
 
-        $result = $this->persister($failingEm)->persist(
+        $result = $this->persister($failingEntityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
@@ -145,9 +149,9 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
         $staleLock = OptimisticLockException::lockFailed(Feed::class);
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: $staleLock);
+        $failingEntityManager = new FlushFailingEntityManager($this->entityManager, thrown: $staleLock);
 
-        $result = $this->persister($failingEm)->persist(
+        $result = $this->persister($failingEntityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
@@ -165,7 +169,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://old.example.com/feed');
 
-        $this->persister($this->em)->persist(
+        $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(
                 FetchResponseModel::notModified('https://new.example.com/feed', false, null, null),
@@ -182,7 +186,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $target = 'https://new.example.com/' . str_repeat('p', 726);
         self::assertSame(750, mb_strlen($target));
 
-        $this->persister($this->em)->persist(
+        $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(FetchResponseModel::notModified($target, true, null, null)),
             $this->clock->now(),
@@ -197,7 +201,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $target = 'https://new.example.com/' . str_repeat('ü', 726);
         self::assertSame(750, mb_strlen($target));
 
-        $this->persister($this->em)->persist(
+        $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(FetchResponseModel::notModified($target, true, null, null)),
             $this->clock->now(),
@@ -206,18 +210,18 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame($target, $feed->getUrl());
     }
 
-    private function persister(EntityManagerInterface $em): FeedOutcomePersister
+    private function persister(EntityManagerInterface $entityManager): FeedOutcomePersister
     {
         /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->em->getRepository(Feed::class);
+        $feedRepository = $this->entityManager->getRepository(Feed::class);
         $bodyParser = self::getContainer()->get(FeedBodyParser::class);
         self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
 
         return new FeedOutcomePersister(
-            $em,
+            $entityManager,
             $feedRepository,
             $bodyParser,
-            EntryIngestors::build($this->em, $this->clock),
+            EntryIngestors::build($this->entityManager, $this->clock),
             FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             $this->logger,
@@ -227,8 +231,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }

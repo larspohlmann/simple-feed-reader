@@ -176,7 +176,7 @@ final class OAuthFlowTest extends WebTestCase
 
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getPasswordHash());
-        self::assertCount(1, $this->em()->getRepository(UserIdentity::class)->findAll());
+        self::assertCount(1, $this->entityManager()->getRepository(UserIdentity::class)->findAll());
     }
 
     /**
@@ -198,7 +198,7 @@ final class OAuthFlowTest extends WebTestCase
     {
         $this->completeCallback(new OAuthIdentityModel('apple', 'sub-addressless', null, false));
 
-        $identities = $this->em()->getRepository(UserIdentity::class)->findAll();
+        $identities = $this->entityManager()->getRepository(UserIdentity::class)->findAll();
         self::assertCount(1, $identities);
 
         $user = $identities[0]->getUser();
@@ -318,9 +318,9 @@ final class OAuthFlowTest extends WebTestCase
 
         // user_identity's FK carries ON DELETE CASCADE, so removing the user
         // takes the identity row with it, exactly as an account purge would.
-        $em = $this->em();
-        $em->remove($this->userByEmail('bob@example.com'));
-        $em->flush();
+        $entityManager = $this->entityManager();
+        $entityManager->remove($this->userByEmail('bob@example.com'));
+        $entityManager->flush();
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
 
@@ -1056,7 +1056,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     private function userByEmail(string $email): User
     {
-        $this->em()->clear();
+        $this->entityManager()->clear();
 
         /** @var UserRepository $users */
         $users = self::getContainer()->get(UserRepository::class);
@@ -1071,15 +1071,15 @@ final class OAuthFlowTest extends WebTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($this->em(), $hasher);
+        return new UserFactory($this->entityManager(), $hasher);
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
-        return $em;
+        return $entityManager;
     }
 
     private function rateLimiterCache(): CacheItemPoolInterface

@@ -30,7 +30,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->taggedSubscription($user, 'https://b.example.com/rss', [[$news, 1]]);
 
         $this->sync()->sync($feed, [$news->requireId(), $tech->requireId()], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, TagJoins::positionOf($feed, $news));
         self::assertSame(0, TagJoins::positionOf($feed, $tech));
@@ -44,7 +44,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0], [$tech, 0]]);
 
         $this->sync()->sync($feed, [$news->requireId()], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $tagNames = array_map(static fn (Tag $t): string => $t->getName(), $feed->getTags()->toArray());
         self::assertSame(['News'], $tagNames);
@@ -59,11 +59,11 @@ final class SubscriptionTagSyncTest extends DbTestCase
         // An untagged sibling at 3 makes the user's next feeds-list slot 4.
         $sibling = new Subscription($user, $this->feed('https://sibling.example.com/rss'), $this->now());
         $sibling->setPosition(3);
-        $this->em->persist($sibling);
-        $this->em->flush();
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
 
         $this->sync()->sync($feed, [], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());
         self::assertSame(4, $feed->getPosition());
@@ -74,15 +74,15 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $user = $this->user('stayput@example.com');
         $feed = new Subscription($user, $this->feed('https://a.example.com/rss'), $this->now());
         $feed->setPosition(0);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         // A sibling at 7 would push a wrongful append to 8.
         $sibling = new Subscription($user, $this->feed('https://sibling.example.com/rss'), $this->now());
         $sibling->setPosition(7);
-        $this->em->persist($sibling);
-        $this->em->flush();
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
 
         $this->sync()->sync($feed, [], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $feed->getPosition());
     }
@@ -99,14 +99,14 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $alreadyTagged = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
 
         $this->sync()->sync($alreadyTagged, [$news->requireId()], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $freshlyTagged = new Subscription($user, $this->feed('https://b.example.com/rss'), $this->now());
-        $this->em->persist($freshlyTagged);
-        $this->em->flush();
+        $this->entityManager->persist($freshlyTagged);
+        $this->entityManager->flush();
 
         $this->sync()->sync($freshlyTagged, [$news->requireId()], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(
             1,
@@ -121,11 +121,11 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $stranger = $this->user('stranger@example.com');
         $strangerTag = $this->tag($stranger, 'Theirs');
         $feed = new Subscription($user, $this->feed('https://a.example.com/rss'), $this->now());
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $this->sync()->sync($feed, [$strangerTag->requireId()], $user->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());
     }
@@ -141,8 +141,8 @@ final class SubscriptionTagSyncTest extends DbTestCase
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }
@@ -150,7 +150,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -161,11 +161,11 @@ final class SubscriptionTagSyncTest extends DbTestCase
     private function taggedSubscription(User $user, string $url, array $tagPositions): Subscription
     {
         $subscription = new Subscription($user, $this->feed($url), $this->now());
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         foreach ($tagPositions as [$tag, $position]) {
             $subscription->addTag($tag, $position);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $subscription;
     }

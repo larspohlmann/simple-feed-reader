@@ -38,11 +38,11 @@ final class EntryReaderControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -52,13 +52,13 @@ final class EntryReaderControllerTest extends WebTestCase
 
     private function seedEntry(User $user, ?string $url): Entry
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -70,8 +70,8 @@ final class EntryReaderControllerTest extends WebTestCase
         );
         $entry->setContentHtml('<p>The feed body.</p>');
         $entry->getImage()->storePending('https://example.com/feed.jpg', 800, 450);
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
 
         return $entry;
     }
@@ -314,17 +314,17 @@ final class EntryReaderControllerTest extends WebTestCase
 
     private function setFeedBody(Entry $entry, string $html): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry->setContentHtml($html);
-        $em->flush();
+        $entityManager->flush();
     }
 
     private function flush(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->flush();
     }
 
     /** A distinct-worded feed body past the gate's substantial-feed bar. */

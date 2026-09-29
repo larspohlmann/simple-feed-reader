@@ -40,13 +40,13 @@ final class RestoreLoadPassTest extends TestCase
     public function testTheFeedLookupRunsOnceForTheWholeFileAndCreatesWhatItMisses(): void
     {
         $user = new User('one-lookup@example.com', new \DateTimeImmutable('2026-08-01'));
-        $em = $this->createStub(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $feeds = $this->createMock(RestoreFeedsInterface::class);
         $feeds->expects($this->once())
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://known.example/feed.xml', 'https://new.example/feed.xml'])
             ->willReturn(['https://known.example/feed.xml' => new Feed('https://known.example/feed.xml')]);
-        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug(), self::rows());
+        $pass = new RestoreLoadPass($entityManager, $feeds, $this->savedSearchSlug(), self::rows());
 
         $result = $pass->run($user, (function () {
             yield $this->feedLine('https://known.example/feed.xml');
@@ -62,13 +62,13 @@ final class RestoreLoadPassTest extends TestCase
     public function testFeedsWithNoSubscriptionAreStillResolvedAtTheFinalFlush(): void
     {
         $user = new User('feeds-only@example.com', new \DateTimeImmutable('2026-08-01'));
-        $em = $this->createStub(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $feeds = $this->createMock(RestoreFeedsInterface::class);
         $feeds->expects($this->once())
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://orphan-one.example/feed.xml', 'https://orphan-two.example/feed.xml'])
             ->willReturn([]);
-        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug(), self::rows());
+        $pass = new RestoreLoadPass($entityManager, $feeds, $this->savedSearchSlug(), self::rows());
 
         // No subscription line ever runs, so loadSubscription() never gets a
         // chance to call resolveHeldFeeds() itself — only the final flush can
@@ -111,10 +111,10 @@ final class RestoreLoadPassTest extends TestCase
 
     public function testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError(): void
     {
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('flush')->willThrowException($this->dbalException());
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('flush')->willThrowException($this->dbalException());
         $pass = new RestoreLoadPass(
-            $em,
+            $entityManager,
             $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),

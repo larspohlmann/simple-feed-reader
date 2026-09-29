@@ -29,14 +29,14 @@ final class EntryReadMarkerTest extends DbTestCase
 
         $this->reader = $this->user('marker@example.com');
         $this->feed = new Feed('https://example.com/marker.xml');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
         $this->subscription = new Subscription(
             $this->reader,
             $this->feed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($this->subscription);
-        $this->em->flush();
+        $this->entityManager->persist($this->subscription);
+        $this->entityManager->flush();
     }
 
     public function testMarkingEntriesCreatesAHiddenRowWhereNoneExists(): void
@@ -97,7 +97,7 @@ final class EntryReadMarkerTest extends DbTestCase
     public function testMarkingSubscriptionsMovesAnEarlierWatermarkForward(): void
     {
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-05T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->marker()->markSubscriptionsReadUntil(
             $this->reader->requireId(),
@@ -111,7 +111,7 @@ final class EntryReadMarkerTest extends DbTestCase
     public function testMarkingSubscriptionsNeverMovesAWatermarkBack(): void
     {
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->marker()->markSubscriptionsReadUntil(
             $this->reader->requireId(),
@@ -140,8 +140,8 @@ final class EntryReadMarkerTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -150,16 +150,16 @@ final class EntryReadMarkerTest extends DbTestCase
     {
         $state = new EntryState($this->reader, $entry);
         $state->markUnread();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
     }
 
     /** Clears first: the marks are bulk DQL, which the identity map never sees. */
     private function stateOf(Entry $entry): ?EntryState
     {
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        return $this->em->getRepository(EntryState::class)
+        return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($this->reader->requireId(), $entry->requireId());
     }
 

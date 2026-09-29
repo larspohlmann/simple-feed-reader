@@ -18,27 +18,27 @@ final class IdentityTokenTest extends DbTestCase
         $now = new \DateTimeImmutable();
         $userA = new User('a@example.com', $now);
         $userB = new User('b@example.com', $now);
-        $this->em->persist($userA);
-        $this->em->persist($userB);
+        $this->entityManager->persist($userA);
+        $this->entityManager->persist($userB);
 
-        $this->em->persist(new UserIdentity($userA, 'google', 'google-uid-1', $now));
-        $this->em->flush();
+        $this->entityManager->persist(new UserIdentity($userA, 'google', 'google-uid-1', $now));
+        $this->entityManager->flush();
 
-        $this->em->persist(new UserIdentity($userB, 'google', 'google-uid-1', $now));
+        $this->entityManager->persist(new UserIdentity($userB, 'google', 'google-uid-1', $now));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testSameProviderIdOnDifferentProvidersIsAllowed(): void
     {
         $now = new \DateTimeImmutable();
         $user = new User('c@example.com', $now);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
-        $this->em->persist(new UserIdentity($user, 'google', 'uid-x', $now));
-        $this->em->persist(new UserIdentity($user, 'apple', 'uid-x', $now));
-        $this->em->flush();
+        $this->entityManager->persist(new UserIdentity($user, 'google', 'uid-x', $now));
+        $this->entityManager->persist(new UserIdentity($user, 'apple', 'uid-x', $now));
+        $this->entityManager->flush();
 
         $this->addToAssertionCount(1);
     }
@@ -57,7 +57,7 @@ final class IdentityTokenTest extends DbTestCase
     public function testIdentityEmailIsNormalisedButProviderIdIsNot(): void
     {
         $user = new User('owner@example.com', new \DateTimeImmutable('2026-07-21 10:00:00'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $identity = new UserIdentity($user, 'google', 'AbC123XyZ', new \DateTimeImmutable('2026-07-21 10:00:00'));
         $identity->setEmail('  Bob.Smith@Example.COM ');
@@ -80,7 +80,7 @@ final class IdentityTokenTest extends DbTestCase
     {
         $now = new \DateTimeImmutable('2026-07-21 12:00:00');
         $user = new User('d@example.com', $now);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $token = new ActionToken(
             user: $user,
@@ -89,11 +89,11 @@ final class IdentityTokenTest extends DbTestCase
             expiresAt: $now->modify('+24 hours'),
             createdAt: $now,
         );
-        $this->em->persist($token);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($token);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(ActionToken::class)
+        $reloaded = $this->entityManager->getRepository(ActionToken::class)
             ->findOneBy(['tokenHash' => hash('sha256', 'raw-token-value')]);
 
         self::assertNotNull($reloaded);
@@ -107,7 +107,7 @@ final class IdentityTokenTest extends DbTestCase
     {
         $now = new \DateTimeImmutable('2026-07-21 12:00:00');
         $user = new User('e@example.com', $now);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $token = new ActionToken(
             user: $user,
@@ -116,16 +116,16 @@ final class IdentityTokenTest extends DbTestCase
             expiresAt: $now->modify('+24 hours'),
             createdAt: $now,
         );
-        $this->em->persist($token);
-        $this->em->flush();
+        $this->entityManager->persist($token);
+        $this->entityManager->flush();
 
         self::assertFalse($token->isExpiredAt($now->modify('+24 hours')));
 
         $token->setConsumedAt($now->modify('+1 hour'));
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(ActionToken::class)
+        $reloaded = $this->entityManager->getRepository(ActionToken::class)
             ->findOneBy(['tokenHash' => hash('sha256', 'another-token')]);
 
         self::assertNotNull($reloaded);

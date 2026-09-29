@@ -699,11 +699,11 @@ final class PasskeyRegistrationTest extends ApiTestCase
      */
     private function givenAPasskeyFor(User $user, string $credentialId, string $userHandle = 'aGFuZGxl'): void
     {
-        $this->em()->persist(new UserPasskey(
+        $this->entityManager()->persist(new UserPasskey(
             $user,
             PasskeyRegistrations::any(credentialId: $credentialId, userHandle: $userHandle, label: 'Test key'),
         ));
-        $this->em()->flush();
+        $this->entityManager()->flush();
     }
 
     private function buildFixture(string $relyingPartyId, string $origin): PasskeyAttestationFixture

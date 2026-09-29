@@ -98,7 +98,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         self::assertTrue($availability->isAvailable());
 
         $owner = $this->factory()->create('passkey-owner@example.test');
-        $this->em()->persist(new UserPasskey(
+        $this->entityManager()->persist(new UserPasskey(
             $owner,
             registration: PasskeyRegistrations::any(
                 credentialId: bin2hex(random_bytes(16)),
@@ -107,7 +107,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
                 registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
             ),
         ));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->factory()->create('another-user@example.test');
 
         self::assertTrue($this->availabilityFor('example.test')->isAvailable());

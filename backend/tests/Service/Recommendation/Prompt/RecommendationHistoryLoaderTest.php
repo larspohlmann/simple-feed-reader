@@ -29,20 +29,20 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('history@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
         $this->subscription = new Subscription(
             $this->user,
             $this->feed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($this->subscription);
+        $this->entityManager->persist($this->subscription);
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testEachEntryAppearsOnlyInItsHighestSection(): void
@@ -57,22 +57,22 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $stateA->markFavorite();
         $stateA->markKept();
         $stateA->markViewed(new \DateTimeImmutable('2026-07-10T09:00:00Z'));
-        $this->em->persist($stateA);
+        $this->entityManager->persist($stateA);
 
         $stateB = new EntryState($this->user, $entryB);
         $stateB->markKept();
         $stateB->markViewed(new \DateTimeImmutable('2026-07-11T09:00:00Z'));
-        $this->em->persist($stateB);
+        $this->entityManager->persist($stateB);
 
         $stateC = new EntryState($this->user, $entryC);
         $stateC->markViewed(new \DateTimeImmutable('2026-07-12T09:00:00Z'));
-        $this->em->persist($stateC);
+        $this->entityManager->persist($stateC);
 
         $stateE = new EntryState($this->user, $entryE);
         $stateE->markFavorite();
-        $this->em->persist($stateE);
+        $this->entityManager->persist($stateE);
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -90,18 +90,18 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
         $stateC = new EntryState($this->user, $entryC);
         $stateC->markViewed(new \DateTimeImmutable('2026-07-15T10:00:00Z'));
-        $this->em->persist($stateC);
+        $this->entityManager->persist($stateC);
 
         $stateB = new EntryState($this->user, $entryB);
         $stateB->markKept();
         $stateB->markViewed(new \DateTimeImmutable('2026-07-15T11:00:00Z'));
-        $this->em->persist($stateB);
+        $this->entityManager->persist($stateB);
 
         $stateF = new EntryState($this->user, $entryF);
         $stateF->markViewed(new \DateTimeImmutable('2026-07-15T12:00:00Z'));
-        $this->em->persist($stateF);
+        $this->entityManager->persist($stateF);
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings(viewedCap: 1));
 
@@ -117,11 +117,11 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             $kept->markKept();
             $viewed = new EntryState($this->user, $this->entry('V' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
             $viewed->markViewed(new \DateTimeImmutable('2026-07-15T1' . $index . ':00:00Z'));
-            $this->em->persist($favorite);
-            $this->em->persist($kept);
-            $this->em->persist($viewed);
+            $this->entityManager->persist($favorite);
+            $this->entityManager->persist($kept);
+            $this->entityManager->persist($viewed);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings(favoritesCap: 1, keptCap: 2, viewedCap: 3));
 
@@ -138,13 +138,13 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
         $stateF = new EntryState($this->user, $entryF);
         $stateF->markViewed(new \DateTimeImmutable('2026-07-25T09:00:00Z'));
-        $this->em->persist($stateF);
+        $this->entityManager->persist($stateF);
 
         $stateC = new EntryState($this->user, $entryC);
         $stateC->markViewed(new \DateTimeImmutable('2026-07-25T08:00:00Z'));
-        $this->em->persist($stateC);
+        $this->entityManager->persist($stateC);
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -157,8 +157,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -172,8 +172,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry->setContentHtml('<p>Content text</p>');
         $state = new EntryState($this->user, $entry);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -185,8 +185,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -199,8 +199,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
@@ -219,8 +219,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             $publishedAt,
         );
         $entry->setPublishedAt($publishedAt);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }

@@ -27,12 +27,12 @@ final class EntrySearchMarkReadTest extends ApiTestCase
 
     private function seedSubscribedMatchingEntry(User $user): void
     {
-        $em = $this->em();
+        $entityManager = $this->entityManager();
 
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setTitle('Example');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -42,8 +42,8 @@ final class EntrySearchMarkReadTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
     }
 
     public function testAnonymousIsRejected(): void

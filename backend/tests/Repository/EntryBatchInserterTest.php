@@ -23,8 +23,8 @@ final class EntryBatchInserterTest extends DbTestCase
     private function createFeed(string $url): int
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed->requireId();
     }
@@ -79,8 +79,8 @@ final class EntryBatchInserterTest extends DbTestCase
 
         $this->inserter()->insert($feedId, $lines);
 
-        $this->em->clear();
-        $rows = $this->em->getRepository(Entry::class)->findBy(['feed' => $feedId]);
+        $this->entityManager->clear();
+        $rows = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feedId]);
         self::assertCount(501, $rows);
     }
 
@@ -90,8 +90,10 @@ final class EntryBatchInserterTest extends DbTestCase
 
         $this->inserter()->insert($feedId, [$this->entryLine('one-guid', 'One')]);
 
-        $this->em->clear();
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guidHash' => hash('sha256', 'one-guid')]);
+        $this->entityManager->clear();
+        $entry = $this->entityManager
+            ->getRepository(Entry::class)
+            ->findOneBy(['guidHash' => hash('sha256', 'one-guid')]);
         self::assertInstanceOf(Entry::class, $entry);
         self::assertSame('one-guid', $entry->getGuid());
         self::assertSame('https://batch.example/one-guid', $entry->getUrl());
@@ -114,7 +116,7 @@ final class EntryBatchInserterTest extends DbTestCase
 
         $this->inserter()->insert($feedId, [$this->entryLine('zero-guid')]);
 
-        $stored = $this->em->getConnection()->fetchOne(
+        $stored = $this->entityManager->getConnection()->fetchOne(
             'SELECT body_is_opening_post FROM entry WHERE guid_hash = ?',
             [hash('sha256', 'zero-guid')],
         );
@@ -147,7 +149,7 @@ final class EntryBatchInserterTest extends DbTestCase
             $this->entryLine(guid: 'b', url: null),
         ]);
 
-        $rows = $this->em->getConnection()->fetchAllAssociative(
+        $rows = $this->entityManager->getConnection()->fetchAllAssociative(
             'SELECT guid, url_hash FROM entry WHERE feed_id = ? ORDER BY guid',
             [$feedId],
         );

@@ -24,7 +24,7 @@ final class PendingImageVerificationTest extends DbTestCase
             new \DateTimeImmutable('2026-09-21 10:00:00'),
         );
         $this->entry($feed, 'no-image');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $found = $this->repository()->findPendingImageVerification(50);
 
@@ -40,7 +40,7 @@ final class PendingImageVerificationTest extends DbTestCase
         foreach (['a', 'b', 'c'] as $guid) {
             $this->entry($feed, $guid)->getImage()->storePending('https://i/' . $guid . '.jpg', null, null);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(2, $this->repository()->findPendingImageVerification(2));
     }
@@ -51,12 +51,12 @@ final class PendingImageVerificationTest extends DbTestCase
         $this->entry($feed, 'restored');
         $pending = $this->entry($feed, 'pending-sibling');
         $pending->getImage()->storePending('https://i/pending-sibling.jpg', null, null);
-        $this->em->flush();
-        $this->em->getConnection()->executeStatement(
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
             'UPDATE entry SET image_url = ? WHERE guid = ?',
             ['https://i/restored.jpg', 'restored'],
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $found = $this->repository()->findPendingImageVerification(50);
 
@@ -73,7 +73,7 @@ final class PendingImageVerificationTest extends DbTestCase
         $retried->getImage()->recordFailedProbe();
         $fresh = $this->entry($feed, 'fresh');
         $fresh->getImage()->storePending('https://i/fresh.jpg', null, null);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $found = $this->repository()->findPendingImageVerification(50);
 
@@ -84,7 +84,7 @@ final class PendingImageVerificationTest extends DbTestCase
     private function feed(): Feed
     {
         $feed = new Feed('https://example.test/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -99,7 +99,7 @@ final class PendingImageVerificationTest extends DbTestCase
             new \DateTimeImmutable('2026-09-21 06:00:00'),
             new \DateTimeImmutable('2026-09-21 05:00:00'),
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

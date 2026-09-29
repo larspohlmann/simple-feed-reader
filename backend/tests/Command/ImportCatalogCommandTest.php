@@ -27,14 +27,14 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         self::assertSame(0, $tester->getStatusCode());
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $catalog = self::getContainer()->get(BundledCatalog::class);
         self::assertInstanceOf(BundledCatalog::class, $catalog);
 
         $shippedFeedCount = $catalog->document()->feedCount();
         self::assertGreaterThan(0, $shippedFeedCount);
-        self::assertCount($shippedFeedCount, $em->getRepository(CatalogFeed::class)->findAll());
+        self::assertCount($shippedFeedCount, $entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 
     /**
@@ -48,9 +48,9 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         self::assertSame(0, $tester->getStatusCode());
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertNotEmpty($em->getRepository(CatalogFeed::class)->findAll());
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        self::assertNotEmpty($entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 
     /**
@@ -61,14 +61,14 @@ final class ImportCatalogCommandTest extends DbTestCase
     {
         $this->tester()->execute([]);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feeds = $em->getRepository(CatalogFeed::class);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $feeds = $entityManager->getRepository(CatalogFeed::class);
         $deleted = $feeds->findAll()[0];
         $deletedUrl = $deleted->getUrl();
-        $em->remove($deleted);
-        $em->flush();
-        $em->clear();
+        $entityManager->remove($deleted);
+        $entityManager->flush();
+        $entityManager->clear();
 
         $tester = $this->tester();
         $tester->execute(['--if-empty' => true]);
@@ -93,12 +93,15 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         self::assertSame(0, $tester->getStatusCode());
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $catalog = self::getContainer()->get(BundledCatalog::class);
         self::assertInstanceOf(BundledCatalog::class, $catalog);
 
-        self::assertCount($catalog->document()->feedCount(), $em->getRepository(CatalogFeed::class)->findAll());
+        self::assertCount(
+            $catalog->document()->feedCount(),
+            $entityManager->getRepository(CatalogFeed::class)->findAll(),
+        );
     }
 
     public function testAnUnknownModeIsAnErrorAndImportsNothing(): void
@@ -108,8 +111,8 @@ final class ImportCatalogCommandTest extends DbTestCase
 
         self::assertSame(1, $tester->getStatusCode());
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertCount(0, $em->getRepository(CatalogFeed::class)->findAll());
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        self::assertCount(0, $entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 }

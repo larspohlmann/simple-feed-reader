@@ -43,10 +43,10 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('consolidation-resolver@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('consolidation-resolver@example.test');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->fixtures->seedReadyAiSettings($this->user);
     }
 
@@ -218,7 +218,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $run = $this->runWithWinners([['id' => $this->idOf($entry), 'score' => 500, 'reason' => '']]);
         $this->stubChatClient()->duringNextCall(function () use ($run): void {
             $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
-            $this->em->flush();
+            $this->entityManager->flush();
         });
         $this->stubChatClient()->queueContent('not json');
 
@@ -275,7 +275,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         $this->resolveConsolidation($run);
 
-        $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
+        $log = $this->entityManager->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
         self::assertNotNull($log);
         $decoded = json_decode($log->getRequestBody(), true, 512, \JSON_THROW_ON_ERROR);
         self::assertIsArray($decoded);
@@ -320,10 +320,10 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             ['id' => $thirdId, 'score' => 300, 'reason' => ''],
         ]);
 
-        $middle = $this->em->getRepository(Entry::class)->find($secondId);
+        $middle = $this->entityManager->getRepository(Entry::class)->find($secondId);
         self::assertNotNull($middle);
-        $this->em->remove($middle);
-        $this->em->flush();
+        $this->entityManager->remove($middle);
+        $this->entityManager->flush();
 
         $this->stubChatClient()->queueContent('not json');
 
@@ -346,10 +346,10 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         $run = $this->runWithWinners([['id' => $id, 'score' => 500, 'reason' => '']]);
 
-        $entry = $this->em->getRepository(Entry::class)->find($id);
+        $entry = $this->entityManager->getRepository(Entry::class)->find($id);
         self::assertNotNull($entry);
-        $this->em->remove($entry);
-        $this->em->flush();
+        $this->entityManager->remove($entry);
+        $this->entityManager->flush();
 
         $outcome = $this->resolveConsolidation($run);
 
@@ -366,7 +366,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $run = $this->fixtures->createRun($this->user);
         $run->snapshot([array_column($winners, 'id')]);
         $run->recordBatchWinners($winners);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $run;
     }

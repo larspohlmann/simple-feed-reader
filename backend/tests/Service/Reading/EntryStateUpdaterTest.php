@@ -20,15 +20,15 @@ final class EntryStateUpdaterTest extends DbTestCase
     private function seedGroup(): array
     {
         $user = new User('mirror@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $feedA = new Feed('https://example.com/mirror-a.xml');
-        $this->em->persist($feedA);
-        $this->em->persist(new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feedA);
+        $this->entityManager->persist(new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $feedB = new Feed('https://example.com/mirror-b.xml');
-        $this->em->persist($feedB);
-        $this->em->persist(new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feedB);
+        $this->entityManager->persist(new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $effectiveDate = new \DateTimeImmutable('2026-07-05T00:00:00Z');
         $target = new Entry(
@@ -40,7 +40,7 @@ final class EntryStateUpdaterTest extends DbTestCase
             $effectiveDate,
             'shared-url-hash',
         );
-        $this->em->persist($target);
+        $this->entityManager->persist($target);
         $sibling = new Entry(
             $feedB,
             'mirror-sibling',
@@ -50,8 +50,8 @@ final class EntryStateUpdaterTest extends DbTestCase
             $effectiveDate,
             'shared-url-hash',
         );
-        $this->em->persist($sibling);
-        $this->em->flush();
+        $this->entityManager->persist($sibling);
+        $this->entityManager->flush();
 
         return [$user, $target, $sibling];
     }
@@ -72,7 +72,7 @@ final class EntryStateUpdaterTest extends DbTestCase
      */
     private function stateOf(User $user, Entry $entry): EntryState
     {
-        return $this->em->getRepository(EntryState::class)
+        return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId())
             ?? new EntryState($user, $entry);
     }
@@ -83,7 +83,7 @@ final class EntryStateUpdaterTest extends DbTestCase
      */
     private function persistedStateOf(User $user, Entry $entry): ?EntryState
     {
-        return $this->em->getRepository(EntryState::class)
+        return $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $entry->requireId());
     }
 

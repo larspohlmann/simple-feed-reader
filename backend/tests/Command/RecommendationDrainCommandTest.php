@@ -60,7 +60,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     /**
@@ -89,7 +89,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $exitCode = $this->execute($this->command());
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Completed, $persisted->getStatus());
@@ -120,7 +120,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         }
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        $this->em->clear();
+        $this->entityManager->clear();
         $run = $this->runs()->findActiveForUser($user);
         self::assertNotNull($run);
         self::assertSame(RunStatus::Pending, $run->getStatus());
@@ -145,7 +145,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $exitCode = $this->execute($this->command($hourPerReading));
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertNotNull($this->runs()->findActiveForUser($user));
     }
 
@@ -165,13 +165,13 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $this->queueDistillReply();
 
         $command = $this->commandWithLockStore(
-            new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
+            new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->entityManager->getConnection())),
         );
 
         $exitCode = $this->execute($command);
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertNotNull($this->runs()->findActiveForUser($user));
     }
 
@@ -196,13 +196,13 @@ final class RecommendationDrainCommandTest extends DbTestCase
         ));
 
         $command = $this->commandWithLockStore(
-            new LockKeyExpiringBeforeEveryRefreshStore(new DoctrineDbalStore($this->em->getConnection())),
+            new LockKeyExpiringBeforeEveryRefreshStore(new DoctrineDbalStore($this->entityManager->getConnection())),
         );
 
         $exitCode = $this->execute($command);
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Completed, $persisted->getStatus());
@@ -229,7 +229,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         );
         $this->execute($this->command($hourPerReading));
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertNotNull($this->runs()->findActiveForUser($user));
         self::assertFalse($this->presence()->isAnybodyDrivingRecommendationRuns());
     }
@@ -338,7 +338,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
             $this->advancer(),
             $this->presence(),
             $this->streamHeartbeat($this->presence()),
-            $this->em,
+            $this->entityManager,
             new NullLogger(),
         );
     }
@@ -436,14 +436,14 @@ final class RecommendationDrainCommandTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
     }
 
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }

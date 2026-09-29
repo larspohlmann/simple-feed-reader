@@ -33,7 +33,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('recommendation-settings@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('recommendation-settings@example.test');
     }
 
     public function testAllDefaultsWhenNoRowAndNoProviderWindow(): void
@@ -74,8 +74,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
-        $this->em->persist($row);
-        $this->em->flush();
+        $this->entityManager->persist($row);
+        $this->entityManager->flush();
 
         $effective = $this->resolver()->forUser($this->user);
 
@@ -143,7 +143,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $provider = $this->user->getActiveAiProviderSettings();
         self::assertNotNull($provider);
         $provider->setSlowModel(true);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(
             RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
@@ -208,8 +208,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             profileText: $profileText,
             showReasons: $showReasons,
         ));
-        $this->em->persist($row);
-        $this->em->flush();
+        $this->entityManager->persist($row);
+        $this->entityManager->flush();
 
         return $row;
     }
@@ -224,11 +224,11 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $this->em->persist($settings);
+        $this->entityManager->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
         $settings->setMaxBatchSize($maxBatchSize);
         $user->setActiveAiProviderSettings($settings);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function resolver(): RecommendationSettingsResolver

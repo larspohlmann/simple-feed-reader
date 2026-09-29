@@ -30,9 +30,9 @@ final class FirstFetchRecorderTest extends DbTestCase
         $clock = new MockClock('2026-06-01T00:00:00Z');
         $this->indexWriter = new RecordingSearchIndexWriter();
         $this->recorder = new FirstFetchRecorder(
-            EntryIngestors::build($this->em, $clock),
+            EntryIngestors::build($this->entityManager, $clock),
             FeedSchedulers::build($clock),
-            $this->em,
+            $this->entityManager,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),
         );
@@ -158,8 +158,8 @@ final class FirstFetchRecorderTest extends DbTestCase
     private function feed(): Feed
     {
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -211,7 +211,7 @@ final class FirstFetchRecorderTest extends DbTestCase
     private function findByGuid(Feed $feed, string $guid): ?Entry
     {
         /** @var Entry|null $entry */
-        $entry = $this->em->getRepository(Entry::class)->findOneBy([
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy([
             'feed' => $feed,
             'guidHash' => hash('sha256', $guid),
         ]);
@@ -230,7 +230,7 @@ final class FirstFetchRecorderTest extends DbTestCase
     private function guidsByInsertionOrder(Feed $feed): array
     {
         /** @var list<Entry> $entries */
-        $entries = $this->em->createQueryBuilder()
+        $entries = $this->entityManager->createQueryBuilder()
             ->select('e')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')

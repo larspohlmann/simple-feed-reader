@@ -25,7 +25,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $user = $this->user('title-clear@example.com');
         $subscription = $this->subscription($user, 'https://clear.editor.example.com/rss');
         $subscription->setCustomTitle('Old');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->editor()->update($subscription, new SubscriptionChangeModel(''));
 
@@ -48,7 +48,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription = $this->subscription($user, 'https://flags-keep.editor.example.com/rss');
         $subscription->setIncludeInAllItems(false);
         $subscription->setIncludeInForYou(false);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->editor()->update($subscription, new SubscriptionChangeModel(null));
 
@@ -63,7 +63,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription = $this->subscription($user, 'https://flags-set.editor.example.com/rss');
         $subscription->setIncludeInAllItems(true);
         $subscription->setIncludeInForYou(true);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->editor()->update($subscription, new SubscriptionChangeModel(null, [], false, false));
 
@@ -90,7 +90,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $tech = $this->tag($user, 'Tech');
         $subscription = $this->subscription($user, 'https://move.editor.example.com/rss');
         $subscription->addTag($news);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->editor()->moveToTag($subscription, new FeedMoveModel($news->requireId(), $tech->requireId()));
 
@@ -104,7 +104,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $second = $this->subscription($user, 'https://second.editor.example.com/rss');
         $first->setPosition(5);
         $second->setPosition(7);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->editor()->reorder($user, [$second->requireId(), $first->requireId()]);
 
@@ -123,8 +123,8 @@ final class SubscriptionEditorTest extends DbTestCase
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }
@@ -132,10 +132,10 @@ final class SubscriptionEditorTest extends DbTestCase
     private function subscription(User $user, string $url): Subscription
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }

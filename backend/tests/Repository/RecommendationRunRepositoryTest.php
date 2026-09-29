@@ -120,10 +120,10 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         $run->getRunningThrottle()->reduceConcurrency(8);
         $run->getRunningCallAttempts()->recordInvalidReply('garbage');
         $run->getRunningCallAttempts()->recordTransportFailure();
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $persisted = $this->em->find(RecommendationRun::class, $run->requireId());
+        $persisted = $this->entityManager->find(RecommendationRun::class, $run->requireId());
 
         self::assertNotNull($persisted);
         self::assertSame('2026-08-07 09:05:00', $persisted->getRetryNotBefore()?->format('Y-m-d H:i:s'));
@@ -136,7 +136,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }
@@ -161,8 +161,8 @@ final class RecommendationRunRepositoryTest extends DbTestCase
             $run->cancel(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }

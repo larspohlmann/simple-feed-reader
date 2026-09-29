@@ -59,8 +59,8 @@ final class SavedSearchEditorTest extends DbTestCase
 
         $this->editor()->delete($savedSearch);
 
-        $this->em->clear();
-        self::assertNull($this->em->find(SavedSearch::class, $id));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(SavedSearch::class, $id));
     }
 
     private function editor(): SavedSearchEditor

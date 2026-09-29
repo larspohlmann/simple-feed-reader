@@ -69,11 +69,11 @@ final class RecommendationRunControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -88,12 +88,12 @@ final class RecommendationRunControllerTest extends WebTestCase
 
     private function fixtures(): RecommendationRunFixtures
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        return new RecommendationRunFixtures($em, $cipher);
+        return new RecommendationRunFixtures($entityManager, $cipher);
     }
 
     /**
@@ -102,13 +102,13 @@ final class RecommendationRunControllerTest extends WebTestCase
      */
     private function seedOneCandidateEntry(User $user): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $publishedAt = new \DateTimeImmutable('-1 hour');
         $entry = new Entry(
@@ -120,8 +120,8 @@ final class RecommendationRunControllerTest extends WebTestCase
             $publishedAt,
         );
         $entry->setPublishedAt($publishedAt);
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
     }
 
     private function stubChatClient(): StubChatClient
@@ -152,15 +152,15 @@ final class RecommendationRunControllerTest extends WebTestCase
      *  continue from at the batch that failed. */
     private function persistFailedRun(User $user): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08 09:00:00'));
         $run->snapshot([[1, 2], [3]]);
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $run->fail('provider unreachable', new \DateTimeImmutable('2026-08-08 09:05:00'));
-        $em->persist($run);
-        $em->flush();
+        $entityManager->persist($run);
+        $entityManager->flush();
     }
 
     /**
@@ -668,20 +668,20 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs', server: $headers);
         self::assertResponseIsSuccessful();
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $settings = $em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $settings = $entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
         self::assertInstanceOf(AiProviderSettings::class, $settings);
-        $em->remove($settings);
-        $em->flush();
+        $entityManager->remove($settings);
+        $entityManager->flush();
 
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame('ai_not_configured', $this->payload($client->getResponse())['type']);
 
-        $em->clear();
-        $run = $em->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
+        $entityManager->clear();
+        $run = $entityManager->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
         self::assertInstanceOf(RecommendationRun::class, $run);
         self::assertSame(RunStatus::Failed, $run->getStatus());
         self::assertSame('The AI provider is no longer configured.', $run->getError());
@@ -705,12 +705,12 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->getConnection()->executeStatement(
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->getConnection()->executeStatement(
             "UPDATE user_ai_settings SET api_key_ciphertext = 'not-a-sealed-key'",
         );
-        $em->clear();
+        $entityManager->clear();
 
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
 

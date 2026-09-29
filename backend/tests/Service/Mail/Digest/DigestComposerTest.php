@@ -43,8 +43,8 @@ final class DigestComposerTest extends DbTestCase
         $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
 
         $this->user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
-        $this->em->flush();
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
 
         $this->since = new \DateTimeImmutable('2026-08-01T00:00:00Z');
     }
@@ -86,7 +86,7 @@ final class DigestComposerTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
         $entry = $this->member($rust, 'Title', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
         $entry->setSummary('<p>' . str_repeat('word ', 60) . '</p>');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);
 
@@ -120,7 +120,7 @@ final class DigestComposerTest extends DbTestCase
         $entry->setPublishedAt(new \DateTimeImmutable('2026-08-15T09:48:00Z'));
         $entry->getImage()->storePending('https://cdn.example.com/1.jpg', 1200, 900);
         $entry->getFeed()->setFaviconUrl('https://example.com/favicon.ico');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $model = $this->composer()->compose($this->user, $this->since);
 
@@ -134,8 +134,8 @@ final class DigestComposerTest extends DbTestCase
     private function search(string $term): SavedSearch
     {
         $search = new SavedSearch($this->user, $term, false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
 
         return $search;
     }
@@ -148,8 +148,10 @@ final class DigestComposerTest extends DbTestCase
     ): Entry {
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle($feedTitle);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
 
         $entry = new Entry(
             $feed,
@@ -159,9 +161,11 @@ final class DigestComposerTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $effectiveDate,
         );
-        $this->em->persist($entry);
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         return $entry;
     }

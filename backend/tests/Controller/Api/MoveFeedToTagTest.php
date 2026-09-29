@@ -27,7 +27,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $x = $this->makeSub($user, 'https://x.example.com/rss', 0, $tech, 0);
         $y = $this->makeSub($user, 'https://y.example.com/rss', 0, $tech, 1);
         $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
             'fromTagId' => $news->getId(),
@@ -36,7 +36,7 @@ final class MoveFeedToTagTest extends WebTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $positions = $this->tagFeedPositions($client, $user, $tech->requireId());
         self::assertSame(0, $positions[$x->requireId()]);
         self::assertSame(1, $positions[$moved->requireId()]);
@@ -53,7 +53,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $news = $this->makeTag($user, 'News', 0);
         $theirs = $this->makeTag($stranger, 'Theirs', 0);
         $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
             'fromTagId' => $news->getId(),
@@ -62,7 +62,7 @@ final class MoveFeedToTagTest extends WebTestCase
         ]);
         self::assertResponseStatusCodeSame(422);
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $positions = $this->tagFeedPositions($client, $user, $news->requireId());
         self::assertArrayHasKey($moved->requireId(), $positions);
     }
@@ -72,7 +72,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('missing@example.com');
         $tech = $this->makeTag($user, 'Tech', 0);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/999999/move-to-tag', [
             'toTagId' => $tech->getId(),
@@ -81,12 +81,12 @@ final class MoveFeedToTagTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     /** @return array<string, string> */
@@ -105,7 +105,7 @@ final class MoveFeedToTagTest extends WebTestCase
     {
         $tag = new Tag($user, $name);
         $tag->setPosition($position);
-        $this->em()->persist($tag);
+        $this->entityManager()->persist($tag);
 
         return $tag;
     }
@@ -113,13 +113,13 @@ final class MoveFeedToTagTest extends WebTestCase
     private function makeSub(User $user, string $url, int $position, ?Tag $tag = null, int $tagPos = 0): Subscription
     {
         $feed = new Feed($url);
-        $this->em()->persist($feed);
+        $this->entityManager()->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $sub->setPosition($position);
         if (null !== $tag) {
             $sub->addTag($tag, $tagPos);
         }
-        $this->em()->persist($sub);
+        $this->entityManager()->persist($sub);
 
         return $sub;
     }

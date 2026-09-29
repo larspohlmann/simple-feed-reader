@@ -36,8 +36,8 @@ final class RefreshHousekeepingTest extends DbTestCase
 
         $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::allDue(30));
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(Feed::class)->find($orphanId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(Feed::class)->find($orphanId));
         self::assertCount(1, $this->logger->records);
         self::assertSame('info', $this->logger->records[0]['level']);
         self::assertSame('Reclaimed orphaned feeds', $this->logger->records[0]['message']);
@@ -50,8 +50,8 @@ final class RefreshHousekeepingTest extends DbTestCase
 
         $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::forUser(1, 30));
 
-        $this->em->clear();
-        self::assertNotNull($this->em->getRepository(Feed::class)->find($orphanId));
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($orphanId));
         self::assertSame([], $this->logger->records);
     }
 
@@ -65,9 +65,9 @@ final class RefreshHousekeepingTest extends DbTestCase
     private function housekeeping(): RefreshHousekeeping
     {
         return new RefreshHousekeeping(
-            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             new EntryPruner(
-                new RetentionRepository($this->em, new RowIds($this->em)),
+                new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
                 new MockClock('2026-07-21 12:00:00', 'UTC'),
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),
@@ -78,8 +78,8 @@ final class RefreshHousekeepingTest extends DbTestCase
     private function orphanedFeed(): int
     {
         $feed = new Feed('https://orphan.example.com/rss');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed->requireId();
     }

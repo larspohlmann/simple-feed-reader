@@ -29,14 +29,14 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     {
         parent::setUp();
         /** @var SubscriptionRepository $repository */
-        $repository = $this->em->getRepository(Subscription::class);
+        $repository = $this->entityManager->getRepository(Subscription::class);
         $this->repository = $repository;
     }
 
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -45,7 +45,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     {
         $subscription = new Subscription($user, $feed, $this->now());
         $subscription->setPosition($position);
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
 
         return $subscription;
     }
@@ -58,7 +58,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     public function testNextPositionForUserSeedsAtZeroWithNoSubscriptions(): void
     {
         $user = $this->user('next-position-empty@example.com');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->repository->nextPositionForUser($user->requireId()));
     }
@@ -67,7 +67,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     {
         $user = $this->user('next-position-seeded@example.com');
         $this->subscribe($user, $this->feed('https://a.example/feed.xml'), 4);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(5, $this->repository->nextPositionForUser($user->requireId()));
     }
@@ -81,9 +81,9 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     {
         $user = $this->user('find-with-tags-many@example.com');
         $first = $this->subscribe($user, $this->feed('https://a.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repository->findForUserWithTags($user->requireId());
 
@@ -103,12 +103,12 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
     {
         $user = $this->user('find-by-tag-many@example.com');
         $tag = new Tag($user, 'Shared');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $first = $this->subscribe($user, $this->feed('https://a.example/feed.xml'));
         $first->addTag($tag, 0);
         $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
         $second->addTag($tag, 1);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repository->findForUserByTagId($user->requireId(), $tag->requireId());
 

@@ -32,11 +32,11 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -54,12 +54,12 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         return $decoded;
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     private function fixtures(): RecommendationRunFixtures
@@ -67,7 +67,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        return new RecommendationRunFixtures($this->em(), $cipher);
+        return new RecommendationRunFixtures($this->entityManager(), $cipher);
     }
 
     public function testOverviewAnswersWithTheAccountsMonthLatestRunsAndTheAllTimeTotal(): void
@@ -81,12 +81,12 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $older->snapshot([[1]]);
         $older->recordBatchWinners([]);
         $older->complete(new \DateTimeImmutable('2026-08-16 09:00:10'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->fixtures()->priceRun($older, 1_000);
 
         // priceRun() clears the identity map, so $older and $user must be
         // re-fetched before they are used as Doctrine associations again.
-        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
 
         $newer = $this->fixtures()->createRun($user);
@@ -94,17 +94,17 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $newer->snapshot([[1]]);
         $newer->recordBatchWinners([]);
         $newer->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->fixtures()->priceRun($newer, 2_000);
 
-        $otherUser = $this->em()->getRepository(User::class)->find($otherUser->getId());
+        $otherUser = $this->entityManager()->getRepository(User::class)->find($otherUser->getId());
         self::assertInstanceOf(User::class, $otherUser);
         $theirRun = $this->fixtures()->createRun($otherUser);
         $theirRun->stampProvider('example.test', 'their-model');
         $theirRun->snapshot([[1]]);
         $theirRun->recordBatchWinners([]);
         $theirRun->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->fixtures()->priceRun($theirRun, 9_999);
 
         $client->request('GET', self::HISTORY_ROUTE, server: $headers);
@@ -194,7 +194,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $run->snapshot([[1]]);
         $run->fail('that provider did not answer', new \DateTimeImmutable('2026-08-08 10:00:47'));
         $run->resume();
-        $this->em()->flush();
+        $this->entityManager()->flush();
         // The column keeps the failed attempt's stamp; only the payload hides
         // it. Asserted here so a future "fix" in the entity is caught as the
         // behaviour change it would be.
@@ -255,7 +255,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         $this->fixtures()->priceRun($julyOne, 500);
         $this->fixtures()->priceRun($julyTwo, 700);
 
-        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
         $august = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-05 09:00:00'));
         $this->fixtures()->priceRun($august, 1_200);
@@ -317,7 +317,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-history-month-route@example.test');
 
         $july = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-12 09:00:00'));
-        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-12 09:00:00'));
 
@@ -374,10 +374,10 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-history-cursor@example.test');
 
         $oldest = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 09:00:00'));
-        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
         $middle = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-02 09:00:00'));
-        $user = $this->em()->getRepository(User::class)->find($user->getId());
+        $user = $this->entityManager()->getRepository(User::class)->find($user->getId());
         self::assertInstanceOf(User::class, $user);
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-03 09:00:00'));
 

@@ -14,7 +14,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
 {
     private function repo(): SavedSearchRepository
     {
-        $repo = $this->em->getRepository(SavedSearch::class);
+        $repo = $this->entityManager->getRepository(SavedSearch::class);
         self::assertInstanceOf(SavedSearchRepository::class, $repo);
 
         return $repo;
@@ -24,16 +24,16 @@ final class SavedSearchRepositoryTest extends DbTestCase
     {
         $owner = new User('owner@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($owner);
-        $this->em->persist($stranger);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($stranger);
 
         $first = new SavedSearch($owner, 'climate', false);
         $second = new SavedSearch($owner, 'rust lang', true);
         $strangers = new SavedSearch($stranger, 'not mine', false);
-        $this->em->persist($first);
-        $this->em->persist($second);
-        $this->em->persist($strangers);
-        $this->em->flush();
+        $this->entityManager->persist($first);
+        $this->entityManager->persist($second);
+        $this->entityManager->persist($strangers);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->findForUser($owner->requireId());
 
@@ -46,14 +46,14 @@ final class SavedSearchRepositoryTest extends DbTestCase
     {
         $owner = new User('ids-owner@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $stranger = new User('ids-stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($owner);
-        $this->em->persist($stranger);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($stranger);
         $first = new SavedSearch($owner, 'climate', false);
         $second = new SavedSearch($owner, 'rocket', false);
-        $this->em->persist($first);
-        $this->em->persist($second);
-        $this->em->persist(new SavedSearch($stranger, 'not mine', false));
-        $this->em->flush();
+        $this->entityManager->persist($first);
+        $this->entityManager->persist($second);
+        $this->entityManager->persist(new SavedSearch($stranger, 'not mine', false));
+        $this->entityManager->flush();
 
         self::assertSame(
             [$second->getId(), $first->getId()],
@@ -64,10 +64,10 @@ final class SavedSearchRepositoryTest extends DbTestCase
     public function testFindOneForUserByTermDistinguishesWholeWord(): void
     {
         $user = new User('u@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->persist(new SavedSearch($user, 'punk', false));
-        $this->em->persist(new SavedSearch($user, 'punk', true));
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist(new SavedSearch($user, 'punk', false));
+        $this->entityManager->persist(new SavedSearch($user, 'punk', true));
+        $this->entityManager->flush();
 
         $userId = $user->requireId();
         self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', false, false));
@@ -82,10 +82,10 @@ final class SavedSearchRepositoryTest extends DbTestCase
         // distinct saved searches — the mode is part of a saved search's
         // identity, so the lookup must not confuse one for the other.
         $user = new User('phrase@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->persist(new SavedSearch($user, 'climate change', false, false));
-        $this->em->persist(new SavedSearch($user, 'climate change', false, true));
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist(new SavedSearch($user, 'climate change', false, false));
+        $this->entityManager->persist(new SavedSearch($user, 'climate change', false, true));
+        $this->entityManager->flush();
 
         $userId = $user->requireId();
         $substring = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, false);
@@ -99,10 +99,10 @@ final class SavedSearchRepositoryTest extends DbTestCase
     public function testGetOneForUserReturnsTheOwnersSavedSearch(): void
     {
         $owner = new User('owner3@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($owner);
+        $this->entityManager->persist($owner);
         $saved = new SavedSearch($owner, 'mine', false);
-        $this->em->persist($saved);
-        $this->em->flush();
+        $this->entityManager->persist($saved);
+        $this->entityManager->flush();
 
         self::assertSame($saved, $this->repo()->getOneForUser($owner->requireId(), $saved->requireId()));
     }
@@ -111,11 +111,11 @@ final class SavedSearchRepositoryTest extends DbTestCase
     {
         $owner = new User('owner4@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $stranger = new User('stranger4@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($owner);
-        $this->em->persist($stranger);
+        $this->entityManager->persist($owner);
+        $this->entityManager->persist($stranger);
         $saved = new SavedSearch($owner, 'mine', false);
-        $this->em->persist($saved);
-        $this->em->flush();
+        $this->entityManager->persist($saved);
+        $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such saved search.');

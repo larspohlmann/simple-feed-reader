@@ -19,8 +19,8 @@ final class AiConfigurationForUserTest extends DbTestCase
     private function persistConfiguration(User $user): AiProviderSettings
     {
         $configuration = AiProviderSettingsFactory::build($user);
-        $this->em->persist($configuration);
-        $this->em->flush();
+        $this->entityManager->persist($configuration);
+        $this->entityManager->flush();
 
         return $configuration;
     }

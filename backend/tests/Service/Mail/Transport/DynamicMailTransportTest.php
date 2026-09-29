@@ -95,9 +95,9 @@ final class DynamicMailTransportTest extends KernelTestCase
             new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
             new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
         );
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist($row);
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($row);
+        $entityManager->flush();
 
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage(
@@ -139,9 +139,9 @@ final class DynamicMailTransportTest extends KernelTestCase
             new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
             $cipher->seal('app-pw'),
         );
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist($row);
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($row);
+        $entityManager->flush();
 
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage(
@@ -152,15 +152,15 @@ final class DynamicMailTransportTest extends KernelTestCase
 
     public function testAProxiedRowWhoseProxyPasswordIsUnreadableSurfacesAsATransportFailure(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
         $row = new MailServerSettings();
         $row->apply(
             new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
             self::getContainer()->get(MailPasswordCipher::class)->seal('app-pw'),
         );
-        $em->persist($row);
-        $em->flush();
+        $entityManager->persist($row);
+        $entityManager->flush();
 
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage(

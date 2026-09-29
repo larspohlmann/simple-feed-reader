@@ -20,7 +20,7 @@ final class FeedRepositoryTest extends DbTestCase
     {
         parent::setUp();
         /** @var FeedRepository $repository */
-        $repository = $this->em->getRepository(Feed::class);
+        $repository = $this->entityManager->getRepository(Feed::class);
         $this->repository = $repository;
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
@@ -30,7 +30,7 @@ final class FeedRepositoryTest extends DbTestCase
         if (null !== $nextFetchAt) {
             $feed->scheduleNextFetchAt($nextFetchAt);
         }
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -64,7 +64,7 @@ final class FeedRepositoryTest extends DbTestCase
         $neverFetched = $this->feed('https://b.example.com/feed', null);
         $this->feed('https://c.example.com/feed', $this->now->modify('+1 hour'));
         $this->goneFeed('https://d.example.com/feed', $this->now->modify('-1 day'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now), 10);
 
@@ -81,7 +81,7 @@ final class FeedRepositoryTest extends DbTestCase
     {
         $handled = $this->feed('https://a.example.com/feed', $this->now->modify('-2 hours'));
         $untouched = $this->feed('https://b.example.com/feed', $this->now->modify('-1 hour'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $criteria = (new DueFeedCriteria($this->now))->excluding([$handled->requireId()]);
 
@@ -123,7 +123,7 @@ final class FeedRepositoryTest extends DbTestCase
         $recent = $this->feed('https://a.example.com/feed', $this->now->modify('-10 minutes'));
         $ancient = $this->feed('https://b.example.com/feed', $this->now->modify('-5 days'));
         $middle = $this->feed('https://c.example.com/feed', $this->now->modify('-3 hours'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(
             [$ancient->getId(), $middle->getId(), $recent->getId()],
@@ -136,7 +136,7 @@ final class FeedRepositoryTest extends DbTestCase
         $this->feed('https://a.example.com/feed', $this->now->modify('-3 hours'));
         $this->feed('https://b.example.com/feed', $this->now->modify('-2 hours'));
         $this->feed('https://c.example.com/feed', $this->now->modify('-1 hour'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(2, $this->repository->findDue(new DueFeedCriteria($this->now), 2));
         self::assertSame(3, $this->repository->countDue(new DueFeedCriteria($this->now)));
@@ -148,7 +148,7 @@ final class FeedRepositoryTest extends DbTestCase
         $fresh->recordSuccessfulFetch($this->now->modify('-1 minute'), 60);
         $stale = $this->feed('https://b.example.com/feed', $this->now->modify('+1 hour'));
         $stale->recordSuccessfulFetch($this->now->modify('-10 minutes'), 60);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(
             new DueFeedCriteria($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
@@ -166,7 +166,7 @@ final class FeedRepositoryTest extends DbTestCase
         // time is impossible, so the feed is due.
         $future = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
         $future->recordSuccessfulFetch($this->now->modify('+59 minutes'), 60);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(
             new DueFeedCriteria($this->now, force: true, cooldownCutoff: $this->now->modify('-5 minutes')),
@@ -188,7 +188,7 @@ final class FeedRepositoryTest extends DbTestCase
     {
         $this->goneFeed('https://gone.example.com/feed', null);
         $active = $this->feed('https://ok.example.com/feed', null);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now, force: true), 10);
 
@@ -204,7 +204,7 @@ final class FeedRepositoryTest extends DbTestCase
     {
         $justFetched = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
         $justFetched->recordSuccessfulFetch($this->now->modify('-1 minute'), 60);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now, force: true), 10);
 
@@ -215,13 +215,13 @@ final class FeedRepositoryTest extends DbTestCase
     {
         $user = new User('reader@example.com', $this->now);
         $other = new User('other@example.com', $this->now);
-        $this->em->persist($user);
-        $this->em->persist($other);
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($other);
         $mine = $this->feed('https://mine.example.com/feed', null);
         $theirs = $this->feed('https://other.example.com/feed', null);
-        $this->em->persist(new Subscription($user, $mine, $this->now));
-        $this->em->persist(new Subscription($other, $theirs, $this->now));
-        $this->em->flush();
+        $this->entityManager->persist(new Subscription($user, $mine, $this->now));
+        $this->entityManager->persist(new Subscription($other, $theirs, $this->now));
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now, userId: $user->getId()), 10);
 
@@ -235,7 +235,7 @@ final class FeedRepositoryTest extends DbTestCase
         // A second due feed, so the assertion below fails if the id filter is
         // dropped rather than passing on a one-row fixture.
         $this->feed('https://ok.example.com/feed', null);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now, feedId: $gone->getId(), force: true), 10);
 
@@ -245,7 +245,7 @@ final class FeedRepositoryTest extends DbTestCase
     public function testNoDueFeedsReturnsEmpty(): void
     {
         $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame([], $this->repository->findDue(new DueFeedCriteria($this->now), 10));
         self::assertSame(0, $this->repository->countDue(new DueFeedCriteria($this->now)));

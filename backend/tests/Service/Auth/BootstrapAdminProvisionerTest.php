@@ -38,6 +38,6 @@ final class BootstrapAdminProvisionerTest extends DbTestCase
         $second = $this->provisioner()->provision('root@example.com', 'a-different-password-456');
 
         self::assertSame($first->getId(), $second->getId());
-        self::assertCount(1, $this->em->getRepository($first::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository($first::class)->findAll());
     }
 }

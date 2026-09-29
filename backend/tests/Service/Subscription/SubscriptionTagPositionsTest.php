@@ -27,7 +27,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -35,7 +35,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         return $tag;
     }
@@ -49,7 +49,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
     {
         $user = $this->user('tag-positions-empty@example.com');
         $tag = $this->tag($user, 'Empty');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->positions()->nextForTag($tag));
     }
@@ -67,9 +67,9 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         $user = $this->user('tag-positions-seed@example.com');
         $tag = $this->tag($user, 'News');
         $existing = new Subscription($user, $this->feed('https://a.example/feed.xml'), $this->now());
-        $this->em->persist($existing);
+        $this->entityManager->persist($existing);
         $existing->addTag($tag, 0);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $positions = $this->positions();
 
@@ -81,7 +81,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
     public function testNextUntaggedForUserSeedsAtZeroWhenTheUserHasNoSubscriptionsYet(): void
     {
         $user = $this->user('untagged-positions-empty@example.com');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->positions()->nextUntaggedForUser($user->requireId()));
     }
@@ -99,8 +99,8 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         $user = $this->user('untagged-positions-seed@example.com');
         $existing = new Subscription($user, $this->feed('https://a.example/feed.xml'), $this->now());
         $existing->setPosition(4);
-        $this->em->persist($existing);
-        $this->em->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $positions = $this->positions();
 
@@ -119,9 +119,9 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         $tag = $this->tag($user, 'Independent');
         $existing = new Subscription($user, $this->feed('https://a.example/feed.xml'), $this->now());
         $existing->setPosition(9);
-        $this->em->persist($existing);
+        $this->entityManager->persist($existing);
         $existing->addTag($tag, 2);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $positions = $this->positions();
 

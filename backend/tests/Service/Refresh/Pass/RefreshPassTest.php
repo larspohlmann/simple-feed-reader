@@ -142,10 +142,10 @@ final class RefreshPassTest extends DbTestCase
         $feeds = [];
         for ($index = 1; $index <= $count; ++$index) {
             $feed = new Feed(sprintf('https://feed%d.example.com/rss', $index));
-            $this->em->persist($feed);
+            $this->entityManager->persist($feed);
             $feeds[] = $feed;
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $feeds;
     }

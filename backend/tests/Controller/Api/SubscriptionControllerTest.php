@@ -27,12 +27,12 @@ final class SubscriptionControllerTest extends WebTestCase
 
     private function userFactory(): UserFactory
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new UserFactory($em, $hasher);
+        return new UserFactory($entityManager, $hasher);
     }
 
     /** @return array<string, string> */
@@ -69,12 +69,12 @@ final class SubscriptionControllerTest extends WebTestCase
      */
     private function enableScrapeFallback(string $email): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $user = $em->getRepository(User::class)->findOneBy(['email' => User::normalizeEmail($email)]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => User::normalizeEmail($email)]);
         self::assertInstanceOf(User::class, $user);
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $em->flush();
+        $entityManager->flush();
     }
 
     public function testAnonymousIsRejected(): void
@@ -253,15 +253,15 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testSubscribeWithTagIdsCreatesAlreadyTaggedFeed(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('withtags@example.com');
         $news = new Tag($user, 'News');
         $tech = new Tag($user, 'Tech');
-        $em->persist($news);
-        $em->persist($tech);
-        $em->flush();
+        $entityManager->persist($news);
+        $entityManager->persist($tech);
+        $entityManager->flush();
         $newsId = $news->requireId();
         $techId = $tech->requireId();
 
@@ -314,20 +314,20 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testSubscribeIgnoresTagIdsOwnedByAnotherUser(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $factory = $this->userFactory();
         $stranger = $factory->create('tagstranger@example.com');
         $strangerTag = new Tag($stranger, 'Secret');
-        $em->persist($strangerTag);
-        $em->flush();
+        $entityManager->persist($strangerTag);
+        $entityManager->flush();
         $strangerTagId = $strangerTag->requireId();
 
         $subscriber = $factory->create('tagvictim@example.com');
         $ownTag = new Tag($subscriber, 'Mine');
-        $em->persist($ownTag);
-        $em->flush();
+        $entityManager->persist($ownTag);
+        $entityManager->flush();
         $ownTagId = $ownTag->requireId();
 
         $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
@@ -539,9 +539,9 @@ final class SubscriptionControllerTest extends WebTestCase
 
         // The FORMAT must be persisted on the shared feed row — it is what the
         // refresh pipeline later dispatches on, not the response JSON.
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feed = $em->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $feed = $entityManager->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']);
         self::assertInstanceOf(Feed::class, $feed);
         self::assertSame('scraped', $feed->getSourceFormat());
     }
@@ -549,18 +549,18 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testScrapedFormatSubscribeStillEnforcesTheSubscriptionCap(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('atcap@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
             $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
-            $em->persist($feed);
-            $em->persist(new Subscription($user, $feed, $when));
+            $entityManager->persist($feed);
+            $entityManager->persist(new Subscription($user, $feed, $when));
         }
-        $em->flush();
+        $entityManager->flush();
 
         // Nothing stubbed: the scraped path never fetches, and if a regression
         // makes it fetch, the stub fails the test instead of hitting the net.
@@ -610,9 +610,9 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertSame('scraping_disabled', $body['type']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        self::assertNull($em->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        self::assertNull($entityManager->getRepository(Feed::class)->findOneBy(['url' => 'https://www.heise.de/']));
     }
 
     public function testWpJsonFormatSubscribeSeedsTheCandidateTitleWithoutFetching(): void
@@ -642,9 +642,9 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertSame('WordPress Example', $created['subscription']['title']);
         self::assertSame('wp-json', $created['subscription']['sourceFormat']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feed = $em->getRepository(Feed::class)->findOneBy(['url' => $url]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $feed = $entityManager->getRepository(Feed::class)->findOneBy(['url' => $url]);
         self::assertInstanceOf(Feed::class, $feed);
         self::assertSame('WordPress Example', $feed->getTitle());
     }
@@ -652,16 +652,16 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testCannotUpdateAnotherUsersSubscription(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $factory = $this->userFactory();
         $stranger = $factory->create('stranger@example.com');
         $feed = new Feed('https://example.com/x.xml');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($stranger, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $em->persist($sub);
-        $em->flush();
+        $entityManager->persist($sub);
+        $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -684,15 +684,15 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testPatchSetsIncludeInAllItemsFalse(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('flagsetter@example.com');
         $feed = new Feed('https://flags.example.com/rss');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $em->persist($sub);
-        $em->flush();
+        $entityManager->persist($sub);
+        $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -719,16 +719,16 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testOmittingAFlagLeavesItUnchanged(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('flagkeeper@example.com');
         $feed = new Feed('https://flagkeeper.example.com/rss');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $sub->setIncludeInForYou(false);
-        $em->persist($sub);
-        $em->flush();
+        $entityManager->persist($sub);
+        $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -759,18 +759,18 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testTagClearOnOmissionStillHolds(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('tagclearer@example.com');
         $tag = new Tag($user, 'Keepsake');
-        $em->persist($tag);
+        $entityManager->persist($tag);
         $feed = new Feed('https://tagclearer.example.com/rss');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $sub->addTag($tag);
-        $em->persist($sub);
-        $em->flush();
+        $entityManager->persist($sub);
+        $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -792,15 +792,15 @@ final class SubscriptionControllerTest extends WebTestCase
     public function testUnsubscribingAsTheOnlySubscriberDeletesTheFeed(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('solo@example.com');
         $feed = new Feed('https://solo.example.com/rss');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $em->persist($subscription);
-        $em->flush();
+        $entityManager->persist($subscription);
+        $entityManager->flush();
         $feedId = $feed->requireId();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -817,28 +817,28 @@ final class SubscriptionControllerTest extends WebTestCase
         // A single-request test never reboots the kernel (KernelBrowser only
         // reboots from the second request on), so this is still the SAME
         // EntityManager the controller used. reclaim() deletes via bulk DQL,
-        // which bypasses the unit of work, so $em's identity map still holds
+        // which bypasses the unit of work, so $entityManager's identity map still holds
         // the now-deleted Feed; find() would return it without ever touching
         // the database unless the map is cleared first.
-        $em->clear();
-        self::assertNull($em->getRepository(Feed::class)->find($feedId));
+        $entityManager->clear();
+        self::assertNull($entityManager->getRepository(Feed::class)->find($feedId));
     }
 
     public function testUnsubscribingKeepsAFeedAnotherUserStillReads(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $factory = $this->userFactory();
         $leaver = $factory->create('leaver@example.com');
         $stayer = $factory->create('stayer@example.com');
         $feed = new Feed('https://shared.example.com/rss');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $leaving = new Subscription($leaver, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $em->persist($leaving);
-        $em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
-        $em->flush();
+        $entityManager->persist($leaving);
+        $entityManager->persist(new Subscription($stayer, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $entityManager->flush();
         $feedId = $feed->requireId();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -853,12 +853,12 @@ final class SubscriptionControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(204);
         // Same identity-map trap as the sibling test above: a single-request
-        // test never reboots the kernel, so $em is still the exact instance
+        // test never reboots the kernel, so $entityManager is still the exact instance
         // the controller used. Without clearing it, find() would return the
         // pre-request Feed object straight out of the identity map and this
         // assertion would pass even if reclaim() wrongly deleted the row —
         // proving nothing about the guard this test exists to cover.
-        $em->clear();
-        self::assertNotNull($em->getRepository(Feed::class)->find($feedId));
+        $entityManager->clear();
+        self::assertNotNull($entityManager->getRepository(Feed::class)->find($feedId));
     }
 }

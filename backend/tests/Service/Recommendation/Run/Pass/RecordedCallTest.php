@@ -39,10 +39,10 @@ final class RecordedCallTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('recorded-call-owner@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('recorded-call-owner@example.test');
 
         $this->run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
-        $this->em->persist($this->run);
+        $this->entityManager->persist($this->run);
 
         $this->log = new RecommendationRunLog(
             $this->run,
@@ -52,8 +52,8 @@ final class RecordedCallTest extends DbTestCase
             'the request',
             new \DateTimeImmutable('2026-08-08T09:59:00Z'),
         );
-        $this->em->persist($this->log);
-        $this->em->flush();
+        $this->entityManager->persist($this->log);
+        $this->entityManager->flush();
 
         $this->clock = new MockClock('2026-08-08T10:00:00Z');
     }
@@ -291,7 +291,7 @@ final class RecordedCallTest extends DbTestCase
         $runId = $this->run->requireId();
         $logId = $this->log->requireId();
 
-        $calls = new RecommendationCallRepository($this->em->getConnection());
+        $calls = new RecommendationCallRepository($this->entityManager->getConnection());
 
         return new RecordedCall($calls, $this->clock, $runId, $logId);
     }
@@ -302,7 +302,7 @@ final class RecordedCallTest extends DbTestCase
         $runId = $this->run->getId();
         self::assertNotNull($runId);
 
-        $row = $this->em->getConnection()->fetchAssociative(
+        $row = $this->entityManager->getConnection()->fetchAssociative(
             'SELECT prompt_tokens, completion_tokens, reasoning_tokens, cached_tokens, cost_nano_credits'
             . ' FROM recommendation_run WHERE id = :runId',
             ['runId' => $runId],

@@ -46,7 +46,7 @@ final class WorkerRunSweepTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testSweepWithNoActiveRunsReturnsZeroAndStillReportsLiveness(): void
@@ -110,7 +110,7 @@ final class WorkerRunSweepTest extends DbTestCase
         $this->fixtures->seedSingleBatchFixture($second);
         $this->starter()->start($second);
 
-        $clearTracker = new ClearTrackingEntityManager($this->em);
+        $clearTracker = new ClearTrackingEntityManager($this->entityManager);
         $presence = new WorkerPresence($this->heartbeats(), new ThrowingClock(1));
         $sweep = new WorkerRunSweep(
             $this->runs(),
@@ -167,7 +167,7 @@ final class WorkerRunSweepTest extends DbTestCase
             $this->advancer(),
             $presence,
             $heartbeat,
-            $this->em,
+            $this->entityManager,
             new NullLogger(),
         );
         $sweep->sweep(RecommendationDriverKind::PersistentWorker);
@@ -205,7 +205,7 @@ final class WorkerRunSweepTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }
@@ -240,7 +240,7 @@ final class WorkerRunSweepTest extends DbTestCase
             $this->advancer(),
             $this->presence(),
             $this->streamHeartbeat($this->presence()),
-            $this->em,
+            $this->entityManager,
             new NullLogger(),
         );
     }

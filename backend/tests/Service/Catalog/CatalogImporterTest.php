@@ -11,18 +11,9 @@ use App\Service\Catalog\CatalogImporter;
 use App\Service\Catalog\Model\CatalogImportMode;
 use App\Service\Catalog\Model\ParsedCatalogModel;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class CatalogImporterTest extends DbTestCase
 {
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
-
     private function importer(): CatalogImporter
     {
         $importer = self::getContainer()->get(CatalogImporter::class);
@@ -99,12 +90,12 @@ final class CatalogImporterTest extends DbTestCase
         ]);
         $this->importer()->import($document, CatalogImportMode::Merge);
 
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://www.theverge.com/rss/index.xml',
         ]);
         self::assertNotNull($feed);
         $feed->storeFavicon('https://www.theverge.com/favicon.ico', 'PNGBYTES', 'image/png', new \DateTimeImmutable());
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $renamed = $this->document([
             ['title' => 'The Verge (renamed)', 'url' => 'https://www.theverge.com/rss/index.xml'],
@@ -114,8 +105,8 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->feedsCreated);
         self::assertSame(1, $result->feedsUpdated);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://www.theverge.com/rss/index.xml',
         ]);
         self::assertNotNull($reloaded);
@@ -136,7 +127,7 @@ final class CatalogImporterTest extends DbTestCase
         );
 
         self::assertSame(0, $result->feedsRemoved);
-        self::assertCount(2, $this->em()->getRepository(CatalogFeed::class)->findAll());
+        self::assertCount(2, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 
     public function testReplaceRemovesRowsTheDocumentDoesNotMention(): void
@@ -153,8 +144,8 @@ final class CatalogImporterTest extends DbTestCase
 
         self::assertSame(1, $result->feedsRemoved);
 
-        $this->em()->clear();
-        $remaining = $this->em()->getRepository(CatalogFeed::class)->findAll();
+        $this->entityManager->clear();
+        $remaining = $this->entityManager->getRepository(CatalogFeed::class)->findAll();
         self::assertCount(1, $remaining);
         self::assertSame('New', $remaining[0]->getTitle());
     }
@@ -166,8 +157,8 @@ final class CatalogImporterTest extends DbTestCase
 
         self::assertSame(1, $result->categoriesRemoved);
 
-        $this->em()->clear();
-        self::assertCount(1, $this->em()->getRepository(CatalogCategory::class)->findAll());
+        $this->entityManager->clear();
+        self::assertCount(1, $this->entityManager->getRepository(CatalogCategory::class)->findAll());
     }
 
     public function testReplaceKeepsALockedFeedTheDocumentNoLongerLists(): void
@@ -177,10 +168,10 @@ final class CatalogImporterTest extends DbTestCase
             CatalogImportMode::Merge,
         );
 
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
         self::assertNotNull($feed);
         $feed->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $result = $this->importer()->import(
             $this->document([['title' => 'New', 'url' => 'https://new.example.com/rss.xml']]),
@@ -190,8 +181,8 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->feedsRemoved);
         self::assertSame(1, $result->lockedSkipped);
 
-        $this->em()->clear();
-        self::assertCount(2, $this->em()->getRepository(CatalogFeed::class)->findAll());
+        $this->entityManager->clear();
+        self::assertCount(2, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
     }
 
     public function testALockedFeedIsNotOverwrittenByTheDocument(): void
@@ -201,10 +192,10 @@ final class CatalogImporterTest extends DbTestCase
             CatalogImportMode::Merge,
         );
 
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Original']);
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Original']);
         self::assertNotNull($feed);
         $feed->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $result = $this->importer()->import(
             $this->document([['title' => 'Renamed by the document', 'url' => 'https://locked.example.com/rss.xml']]),
@@ -214,8 +205,8 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->feedsUpdated);
         self::assertSame(1, $result->lockedSkipped);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://locked.example.com/rss.xml',
         ]);
         self::assertNotNull($reloaded);
@@ -229,10 +220,10 @@ final class CatalogImporterTest extends DbTestCase
             CatalogImportMode::Merge,
         );
 
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
         self::assertNotNull($feed);
         $feed->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         // The document drops the whole 'mine' category. Removing it would
         // cascade to the locked feed, so it has to survive.
@@ -241,19 +232,19 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->categoriesRemoved);
         self::assertSame(2, $result->lockedSkipped);
 
-        $this->em()->clear();
-        self::assertCount(1, $this->em()->getRepository(CatalogFeed::class)->findAll());
-        self::assertCount(2, $this->em()->getRepository(CatalogCategory::class)->findAll());
+        $this->entityManager->clear();
+        self::assertCount(1, $this->entityManager->getRepository(CatalogFeed::class)->findAll());
+        self::assertCount(2, $this->entityManager->getRepository(CatalogCategory::class)->findAll());
     }
 
     public function testReplaceKeepsALockedCategory(): void
     {
         $this->importer()->import($this->document([], 'mine', 'Mine'), CatalogImportMode::Merge);
 
-        $category = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'mine']);
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'mine']);
         self::assertNotNull($category);
         $category->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $result = $this->importer()->import($this->document([]), CatalogImportMode::Replace);
 
@@ -285,14 +276,14 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(1, $result->feedsUpdated);
         self::assertSame(0, $result->lockedSkipped);
 
-        $this->em()->clear();
-        $category = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        $this->entityManager->clear();
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
         self::assertNotNull($category);
         self::assertSame('Tech and Gadgets', $category->getName());
         self::assertSame('devices', $category->getIcon());
         self::assertSame('#ef4444', $category->getColor());
         self::assertSame(1, $category->getPosition());
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://moved.example.com/rss.xml',
         ]);
         self::assertNotNull($feed);
@@ -323,8 +314,8 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(1, $result->categoriesCreated);
         self::assertSame(1, $result->feedsUpdated);
 
-        $this->em()->clear();
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $this->entityManager->clear();
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://wanderer.example.com/rss.xml',
         ]);
         self::assertNotNull($feed);
@@ -334,10 +325,10 @@ final class CatalogImporterTest extends DbTestCase
     public function testALockedCategoryKeepsItsRowWhileItsFeedsAreStillImported(): void
     {
         $this->importer()->import($this->document([]), CatalogImportMode::Merge);
-        $category = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        $category = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
         self::assertNotNull($category);
         $category->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $result = $this->importer()->import(
             $this->document(
@@ -352,11 +343,11 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame(0, $result->categoriesUpdated);
         self::assertSame(1, $result->feedsCreated);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
         self::assertNotNull($reloaded);
         self::assertSame('Technology', $reloaded->getName());
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy([
             'url' => 'https://inside.example.com/rss.xml',
         ]);
         self::assertNotNull($feed);
@@ -367,10 +358,10 @@ final class CatalogImporterTest extends DbTestCase
     {
         $document = $this->document([['title' => 'Mine', 'url' => 'https://mine.example.com/rss.xml']]);
         $this->importer()->import($document, CatalogImportMode::Merge);
-        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        $feed = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
         self::assertNotNull($feed);
         $feed->setLocked(true);
-        $this->em()->flush();
+        $this->entityManager->flush();
 
         $result = $this->importer()->import($document, CatalogImportMode::Replace);
 
@@ -391,8 +382,8 @@ final class CatalogImporterTest extends DbTestCase
             CatalogImportMode::Merge,
         );
 
-        $this->em()->clear();
-        $second = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Second']);
+        $this->entityManager->clear();
+        $second = $this->entityManager->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Second']);
         self::assertNotNull($second);
         self::assertSame(1, $second->getPosition());
     }
@@ -401,8 +392,8 @@ final class CatalogImporterTest extends DbTestCase
     {
         $this->importer()->import($this->twoCategoryDocumentInReverseAlphabeticalOrder(), CatalogImportMode::Merge);
 
-        $this->em()->clear();
-        $ordered = $this->em()->getRepository(CatalogCategory::class)->findAllOrdered();
+        $this->entityManager->clear();
+        $ordered = $this->entityManager->getRepository(CatalogCategory::class)->findAllOrdered();
 
         self::assertSame(
             ['Zebra', 'Apple'],

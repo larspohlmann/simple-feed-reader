@@ -60,7 +60,7 @@ final class EmailVerifierTest extends DbTestCase
         self::assertSame([], $recording->events());
 
         // Past the identity map: the approval was flushed, not only set in memory.
-        $this->em->clear();
+        $this->entityManager->clear();
         $reloaded = $this->users()->findOneByEmail('verifier-approval-off@example.com');
         self::assertInstanceOf(User::class, $reloaded);
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
@@ -79,8 +79,8 @@ final class EmailVerifierTest extends DbTestCase
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
         self::assertSame(UserStatus::PendingVerification, $user->getStatus());
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $this->tokens()->issue($user, TokenPurpose::VerifyEmail);
     }
@@ -90,7 +90,7 @@ final class EmailVerifierTest extends DbTestCase
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
 
-        return new EmailVerifier($this->tokens(), $policy, $this->em, $events, $clock);
+        return new EmailVerifier($this->tokens(), $policy, $this->entityManager, $events, $clock);
     }
 
     private function tokens(): ActionTokenService

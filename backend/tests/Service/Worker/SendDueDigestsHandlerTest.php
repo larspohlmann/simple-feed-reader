@@ -56,7 +56,7 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     {
         $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user);
-        $search = (new SavedSearchMatchFixture($this->em))
+        $search = (new SavedSearchMatchFixture($this->entityManager))
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);

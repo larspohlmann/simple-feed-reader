@@ -21,11 +21,11 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
     public function testAnUnconfiguredEngineMeansTheDatabaseMatcherAnswers(): void
     {
         $engine = new FakeMultiSearchReader([], new SearchEngineUnavailableException('never asked'));
-        $em = $this->createStub(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
 
         $matcher = new EngineOrDatabaseSavedSearchMatcher(
             new IndexedSavedSearchMatcher($engine),
-            new DatabaseSavedSearchMatcher($em, new SearchTermsPredicateBuilder()),
+            new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder()),
             new SearchEngineCapability('', ''),
         );
 
@@ -36,11 +36,11 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
     public function testAConfiguredEngineAnswersAndItsFailurePropagatesWithoutFallback(): void
     {
         $engine = new FakeMultiSearchReader([], new SearchEngineUnavailableException('down'));
-        $em = $this->createStub(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
 
         $matcher = new EngineOrDatabaseSavedSearchMatcher(
             new IndexedSavedSearchMatcher($engine),
-            new DatabaseSavedSearchMatcher($em, new SearchTermsPredicateBuilder()),
+            new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder()),
             new SearchEngineCapability('http://meilisearch:7700', 'key'),
         );
 

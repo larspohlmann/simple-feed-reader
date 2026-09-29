@@ -25,13 +25,13 @@ final class RecommendationTickCheckpointTest extends DbTestCase
     public function testAPersistedActiveRunDoesNotStopTheTick(): void
     {
         $user = new User('checkpoint-active@example.test', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
         $run->snapshot([[1]]);
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         $this->checkpoint()->guard($run);
 
@@ -52,14 +52,14 @@ final class RecommendationTickCheckpointTest extends DbTestCase
     private function cancelledRun(): RecommendationRun
     {
         $user = new User('checkpoint-cancelled@example.test', new \DateTimeImmutable('2026-08-16T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->cancel(new \DateTimeImmutable('2026-08-16T09:05:00Z'));
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }

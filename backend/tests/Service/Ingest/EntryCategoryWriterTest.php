@@ -24,14 +24,14 @@ final class EntryCategoryWriterTest extends DbTestCase
     {
         parent::setUp();
         /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $this->em->getRepository(Category::class);
-        $this->writer = new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer());
+        $categoryRepository = $this->entityManager->getRepository(Category::class);
+        $this->writer = new EntryCategoryWriter($this->entityManager, $categoryRepository, new CategoryNormalizer());
     }
 
     private function persistFeed(): Feed
     {
         $feed = new Feed('https://feed.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -40,7 +40,7 @@ final class EntryCategoryWriterTest extends DbTestCase
     {
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $entry = new Entry($feed, $guid, 'https://x.test/' . $guid, 'T', $now, $now);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
@@ -57,10 +57,10 @@ final class EntryCategoryWriterTest extends DbTestCase
 
         $parsed = $this->parsed('a', new ParsedCategoryModel('Politics'), new ParsedCategoryModel('World'));
         $this->writer->attach([[$entry, $parsed]]);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $links = $this->em->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
+        $links = $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
         self::assertCount(2, $links);
         $labels = array_map(static fn (EntryCategory $link): string => $link->getLabel(), $links);
         self::assertSame(['Politics', 'World'], $labels);
@@ -74,12 +74,15 @@ final class EntryCategoryWriterTest extends DbTestCase
         $entryB = $this->persistEntry($feedB, 'b');
 
         $this->writer->attach([[$entryA, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->writer->attach([[$entryB, $this->parsed('b', new ParsedCategoryModel('POLITICS'))]]);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        self::assertCount(1, $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']));
+        self::assertCount(
+            1,
+            $this->entityManager->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']),
+        );
     }
 
     public function testDoesNotFlushEarlyWhenNoNewCategoryIsCreated(): void
@@ -87,7 +90,7 @@ final class EntryCategoryWriterTest extends DbTestCase
         $feed = $this->persistFeed();
         $seedEntry = $this->persistEntry($feed, 'seed');
         $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategoryModel('Politics'))]]);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $entry = $this->persistEntry($feed, 'a');
         self::assertNull($entry->getId());
@@ -101,11 +104,11 @@ final class EntryCategoryWriterTest extends DbTestCase
     {
         $feed = $this->persistFeed();
         $entry = $this->persistEntry($feed, 'a');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
 
-        $categories = $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
+        $categories = $this->entityManager->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
         self::assertCount(1, $categories);
         self::assertNotNull(
             $categories[0]->getId(),
@@ -118,16 +121,16 @@ final class EntryCategoryWriterTest extends DbTestCase
         $feed = $this->persistFeed();
         $seedEntry = $this->persistEntry($feed, 'seed');
         $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategoryModel('Politics'))]]);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $entry = $this->persistEntry($feed, 'a');
         $this->writer->attach([
             [$entry, $this->parsed('a', new ParsedCategoryModel('Politics'), new ParsedCategoryModel('World'))],
         ]);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $links = $this->em->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
+        $links = $this->entityManager->getRepository(EntryCategory::class)->findBy(['entry' => $entry->getId()]);
         self::assertCount(2, $links);
     }
 
@@ -136,7 +139,7 @@ final class EntryCategoryWriterTest extends DbTestCase
         $feed = $this->persistFeed();
         $entryA = $this->persistEntry($feed, 'a');
         $entryB = $this->persistEntry($feed, 'b');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);

@@ -36,11 +36,11 @@ final class RefreshFeedsCommandTest extends DbTestCase
     {
         $feed = new Feed($url);
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscriber = new User('cli-fixture-subscriber@example.com', new \DateTimeImmutable());
-        $this->em->persist($subscriber);
-        $this->em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
-        $this->em->flush();
+        $this->entityManager->persist($subscriber);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
+        $this->entityManager->flush();
 
         return $feed;
     }

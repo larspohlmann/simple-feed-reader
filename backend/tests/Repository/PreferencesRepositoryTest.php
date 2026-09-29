@@ -20,7 +20,7 @@ final class PreferencesRepositoryTest extends DbTestCase
 {
     private function repo(): PreferencesRepository
     {
-        $repo = $this->em->getRepository(Preferences::class);
+        $repo = $this->entityManager->getRepository(Preferences::class);
         self::assertInstanceOf(PreferencesRepository::class, $repo);
 
         return $repo;
@@ -34,9 +34,9 @@ final class PreferencesRepositoryTest extends DbTestCase
         $disabledUser = new User('digest-off@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         // digestEnabled defaults to false: left untouched on purpose.
 
-        $this->em->persist($enabledUser);
-        $this->em->persist($disabledUser);
-        $this->em->flush();
+        $this->entityManager->persist($enabledUser);
+        $this->entityManager->persist($disabledUser);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->findWithDigestEnabled();
 

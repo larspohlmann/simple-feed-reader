@@ -127,12 +127,12 @@ final class JwtAccessTest extends ApiTestCase
         // factory used belongs to a kernel that has since been rebooted, so
         // flushing the stale entity would be a silent no-op and this test would
         // pass without ever revoking anything.
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'revoked@example.com']);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'revoked@example.com']);
         self::assertInstanceOf(User::class, $user);
         $user->suspend();
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
 
@@ -159,12 +159,12 @@ final class JwtAccessTest extends ApiTestCase
         $this->factory()->create('quiet@example.com');
         $token = $this->tokenFor($client, 'quiet@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'quiet@example.com']);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'quiet@example.com']);
         self::assertInstanceOf(User::class, $user);
         $user->suspend();
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
 
@@ -270,12 +270,12 @@ final class JwtAccessTest extends ApiTestCase
         // iat > now), which would make that case pass for the wrong reason.
         $changedAt = new \DateTimeImmutable('@' . (time() - 10));
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $stored = $em->getRepository(User::class)->findOneBy(['email' => 'boundary@example.com']);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $stored = $entityManager->getRepository(User::class)->findOneBy(['email' => 'boundary@example.com']);
         self::assertInstanceOf(User::class, $stored);
         $stored->setPasswordHash($user->getPasswordHash(), $changedAt);
-        $em->flush();
+        $entityManager->flush();
 
         /** @var JWTTokenManagerInterface $manager */
         $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -302,17 +302,17 @@ final class JwtAccessTest extends ApiTestCase
         $client = self::createClient();
         $this->factory()->create('nostamp@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $stored = $em->getRepository(User::class)->findOneBy(['email' => 'nostamp@example.com']);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $stored = $entityManager->getRepository(User::class)->findOneBy(['email' => 'nostamp@example.com']);
         self::assertInstanceOf(User::class, $stored);
 
         // Simulate a pre-migration row: hash present, stamp absent.
-        $em->getConnection()->executeStatement(
+        $entityManager->getConnection()->executeStatement(
             'UPDATE app_user SET password_changed_at = NULL WHERE id = ?',
             [$stored->getId()],
         );
-        $em->clear();
+        $entityManager->clear();
 
         $token = $this->tokenFor($client, 'nostamp@example.com');
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
@@ -396,17 +396,17 @@ final class JwtAccessTest extends ApiTestCase
         );
         $token = $this->tokenFor($client, 'expired-trial@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
         self::assertInstanceOf(User::class, $user);
         $user->setTrialEndsAt(new \DateTimeImmutable('-1 day'));
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
         $this->assertUnauthorizedProblem($client);
 
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'expired-trial@example.com']);
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::Suspended, $user->getStatus());
     }

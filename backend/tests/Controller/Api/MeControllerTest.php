@@ -7,7 +7,6 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -20,14 +19,6 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 final class MeControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
-
-    private function entityManager(): EntityManagerInterface
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-
-        return $em;
-    }
 
     /** Attaches a bearer token to every subsequent request this client makes. */
     private function authenticate(KernelBrowser $client, string $email): void

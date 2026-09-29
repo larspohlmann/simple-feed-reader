@@ -29,17 +29,17 @@ final class EntryStateResolverTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('resolver@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $feed = new Feed('https://example.com/resolver.xml');
         $feed->setTitle('Resolver Feed');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         $this->subscription = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->subscription);
+        $this->entityManager->persist($this->subscription);
 
         $this->feed = $feed;
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid): Entry
@@ -52,8 +52,8 @@ final class EntryStateResolverTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -109,8 +109,8 @@ final class EntryStateResolverTest extends DbTestCase
 
         $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), null);
 
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
         self::assertNotNull($persisted);
@@ -123,8 +123,8 @@ final class EntryStateResolverTest extends DbTestCase
         $watermark = new \DateTimeImmutable('2026-07-06T11:15:00');
 
         $state = $this->resolver()->resolve($this->user, $this->listRow($entry, true, $watermark));
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         self::assertTrue($state->isHidden());
         $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
@@ -138,8 +138,8 @@ final class EntryStateResolverTest extends DbTestCase
         $entry = $this->entry('existing');
         $existing = new EntryState($this->user, $entry);
         $existing->markKept();
-        $this->em->persist($existing);
-        $this->em->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $resolved = $this->resolver()->resolve($this->user, $this->listRow($entry, false, null));
 
@@ -150,8 +150,8 @@ final class EntryStateResolverTest extends DbTestCase
     public function testResolveSkipsTheInsertWhenTheRowAlreadyExists(): void
     {
         $entry = $this->entry('already-there');
-        $this->em->persist(new EntryState($this->user, $entry));
-        $this->em->flush();
+        $this->entityManager->persist(new EntryState($this->user, $entry));
+        $this->entityManager->flush();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);

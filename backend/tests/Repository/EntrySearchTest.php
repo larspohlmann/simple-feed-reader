@@ -32,17 +32,17 @@ final class EntrySearchTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(
@@ -60,8 +60,8 @@ final class EntrySearchTest extends DbTestCase
             new \DateTimeImmutable($effectiveDate),
         );
         $entry->setSummary($summary);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -170,7 +170,7 @@ final class EntrySearchTest extends DbTestCase
     public function testSkipsEntriesInFeedsTheUserDoesNotSubscribeTo(): void
     {
         $other = new Feed('https://other.example.com/feed.xml');
-        $this->em->persist($other);
+        $this->entityManager->persist($other);
         $foreign = new Entry(
             $other,
             'foreign',
@@ -179,8 +179,8 @@ final class EntrySearchTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($foreign);
-        $this->em->flush();
+        $this->entityManager->persist($foreign);
+        $this->entityManager->flush();
 
         self::assertSame([], $this->search('angular'));
     }
@@ -237,8 +237,8 @@ final class EntrySearchTest extends DbTestCase
         $newer = $this->entry('newer', 'Angular three', null, '2026-07-12T00:00:00Z');
         $read = new EntryState($this->user, $newer);
         $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($read);
-        $this->em->flush();
+        $this->entityManager->persist($read);
+        $this->entityManager->flush();
 
         self::assertSame(['middle'], $this->unreadSearch('angular', limit: 1));
         $cursor = new EntryCursor($middle->getEffectiveDate(), $middle->requireId());

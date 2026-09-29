@@ -24,8 +24,8 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         parent::setUp();
 
         $this->feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($this->feed);
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->flush();
     }
 
     public function testAnswersEveryRequestedSearchWithItsMatchesAmongTheCandidates(): void
@@ -104,7 +104,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
 
     private function matcher(): DatabaseSavedSearchMatcher
     {
-        return new DatabaseSavedSearchMatcher($this->em, new SearchTermsPredicateBuilder());
+        return new DatabaseSavedSearchMatcher($this->entityManager, new SearchTermsPredicateBuilder());
     }
 
     private function search(int $id, string $term, SearchMode $mode = SearchMode::Substring): SavedSearchTermModel
@@ -123,8 +123,8 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
         $entry->setSummary($summary);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }

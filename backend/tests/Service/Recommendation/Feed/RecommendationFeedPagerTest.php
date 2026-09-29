@@ -24,24 +24,26 @@ final class RecommendationFeedPagerTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('pager@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $this->em->persist($run);
+        $this->entityManager->persist($run);
 
         foreach (['a', 'b'] as $position => $guid) {
             $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
             $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $createdAt, $createdAt);
-            $this->em->persist($entry);
-            $this->em->persist(new RecommendationItem($run, $entry, $position + 1, 'reason ' . $guid));
+            $this->entityManager->persist($entry);
+            $this->entityManager->persist(new RecommendationItem($run, $entry, $position + 1, 'reason ' . $guid));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testAMalformedCursorYieldsTheFirstPageInsteadOfAnError(): void
@@ -61,7 +63,7 @@ final class RecommendationFeedPagerTest extends DbTestCase
 
     private function pager(): RecommendationFeedPager
     {
-        $repository = $this->em->getRepository(RecommendationItem::class);
+        $repository = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $repository);
 
         return new RecommendationFeedPager($repository);

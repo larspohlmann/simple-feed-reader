@@ -35,31 +35,31 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final readonly class FullyPopulatedAccount
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $hasher,
     ) {
     }
 
     public function create(string $email): User
     {
-        $user = (new UserFactory($this->em, $this->hasher))->create($email, locale: 'de');
+        $user = (new UserFactory($this->entityManager, $this->hasher))->create($email, locale: 'de');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $user->getPreferences()->setMagazineStyle(MagazineStyle::Airy);
 
         $tag = $this->tagFor($user);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
-        $this->em->persist($this->savedSearchFor($user));
+        $this->entityManager->persist($this->savedSearchFor($user));
 
         $feed = $this->feedFor($email);
-        $this->em->persist($feed);
-        $this->em->persist($this->subscriptionFor($user, $feed, $tag));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($this->subscriptionFor($user, $feed, $tag));
 
         $entry = $this->entryFor($feed);
-        $this->em->persist($entry);
-        $this->em->persist($this->stateFor($user, $entry));
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist($this->stateFor($user, $entry));
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $user;
     }

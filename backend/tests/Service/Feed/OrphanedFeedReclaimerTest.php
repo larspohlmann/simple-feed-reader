@@ -25,7 +25,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     {
         parent::setUp();
 
-        $this->reclaimer = new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em));
+        $this->reclaimer = new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager));
     }
 
     public function testReclaimDeletesAFeedNobodySubscribesTo(): void
@@ -34,8 +34,8 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
 
         self::assertTrue($this->reclaimer->reclaim($feed->requireId()));
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(Feed::class)->find($feed->getId()));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(Feed::class)->find($feed->getId()));
     }
 
     public function testReclaimKeepsAFeedThatStillHasASubscriber(): void
@@ -46,14 +46,14 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
 
         self::assertFalse($this->reclaimer->reclaim($feedId));
 
-        $this->em->clear();
-        self::assertNotNull($this->em->getRepository(Feed::class)->find($feedId));
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($feedId));
     }
 
     public function testReclaimTakesTheFeedsEntriesWithIt(): void
     {
         $feed = $this->feed('https://withentries.example.com/rss');
-        $this->em->persist(new Entry(
+        $this->entityManager->persist(new Entry(
             $feed,
             'guid-1',
             'https://withentries.example.com/1',
@@ -61,12 +61,12 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
             new \DateTimeImmutable(self::NOW),
             new \DateTimeImmutable(self::NOW),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->reclaimer->reclaim($feed->requireId());
 
-        $this->em->clear();
-        self::assertSame(0, (int) $this->em->createQuery(
+        $this->entityManager->clear();
+        self::assertSame(0, (int) $this->entityManager->createQuery(
             'SELECT COUNT(e.id) FROM App\Entity\Entry e',
         )->getSingleScalarResult());
     }
@@ -80,8 +80,8 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
 
         self::assertSame(2, $this->reclaimer->reclaimAll());
 
-        $this->em->clear();
-        $feeds = $this->em->getRepository(Feed::class);
+        $this->entityManager->clear();
+        $feeds = $this->entityManager->getRepository(Feed::class);
         self::assertNull($feeds->find($orphanOne->getId()));
         self::assertNull($feeds->find($orphanTwo->getId()));
         self::assertNotNull($feeds->find($kept->getId()));
@@ -95,15 +95,15 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
 
     private function subscribe(User $user, Feed $feed): void
     {
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable(self::NOW)));
-        $this->em->flush();
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable(self::NOW)));
+        $this->entityManager->flush();
     }
 }

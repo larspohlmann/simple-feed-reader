@@ -117,8 +117,8 @@ final class AdminSettingsControllerTest extends ApiTestCase
             ),
         );
 
-        $this->em()->persist($passkey);
-        $this->em()->flush();
+        $this->entityManager()->persist($passkey);
+        $this->entityManager()->flush();
 
         return $passkey;
     }

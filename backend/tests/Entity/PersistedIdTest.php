@@ -20,13 +20,13 @@ final class PersistedIdTest extends DbTestCase
     public function testAnUninitializedReferenceAnswersWithoutLoading(): void
     {
         $id = $this->flushedUser()->requireId();
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reference = $this->em->getReference(User::class, $id);
+        $reference = $this->entityManager->getReference(User::class, $id);
         self::assertNotNull($reference);
 
         self::assertSame($id, $reference->requireId());
-        self::assertTrue($this->em->getUnitOfWork()->isUninitializedObject($reference));
+        self::assertTrue($this->entityManager->getUnitOfWork()->isUninitializedObject($reference));
     }
 
     public function testAnUnsavedEntityIsRefused(): void
@@ -40,8 +40,8 @@ final class PersistedIdTest extends DbTestCase
     private function flushedUser(): User
     {
         $user = new User('persisted@example.com', new \DateTimeImmutable('2026-09-25T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }

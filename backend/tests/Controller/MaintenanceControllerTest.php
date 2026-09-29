@@ -29,15 +29,15 @@ final class MaintenanceControllerTest extends WebTestCase
      */
     private function feedFor(KernelBrowser $client, string $url): Feed
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $feed = new Feed($url);
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $subscriber = new User('maintenance-fixture-subscriber@example.com', new \DateTimeImmutable());
-        $em->persist($subscriber);
-        $em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
-        $em->flush();
+        $entityManager->persist($subscriber);
+        $entityManager->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable()));
+        $entityManager->flush();
 
         return $feed;
     }
@@ -158,13 +158,16 @@ final class MaintenanceControllerTest extends WebTestCase
                 null,
             ),
         );
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $failingEm = new FlushFailingEntityManager($em, thrown: DuplicateKeyViolation::exception());
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $failingEntityManager = new FlushFailingEntityManager(
+            $entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
         self::getContainer()->set(
             RefreshRunner::class,
-            RefreshRunners::fromContainer(self::getContainer(), $em, new MockClock())
-                ->flushingThrough($failingEm)
+            RefreshRunners::fromContainer(self::getContainer(), $entityManager, new MockClock())
+                ->flushingThrough($failingEntityManager)
                 ->build($fetcher, $fetcher),
         );
 

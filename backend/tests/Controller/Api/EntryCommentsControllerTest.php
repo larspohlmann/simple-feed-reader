@@ -50,8 +50,8 @@ final class EntryCommentsControllerTest extends ApiTestCase
     {
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
         $feed->setTitle('Seeded');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -63,8 +63,8 @@ final class EntryCommentsControllerTest extends ApiTestCase
         );
         $entry->setAuthor('/u/Background_Lie11');
         $entry->setDiscussion($discussion);
-        $this->em()->persist($entry);
-        $this->em()->flush();
+        $this->entityManager()->persist($entry);
+        $this->entityManager()->flush();
 
         return $entry;
     }

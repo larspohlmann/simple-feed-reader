@@ -37,14 +37,14 @@ final class EntrySearchControllerTest extends ApiTestCase
      */
     private function seedSubscribedFeedWithEntries(User $user, string $titlePrefix, int $count): Subscription
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $em->persist($sub);
+        $entityManager->persist($sub);
 
         for ($i = 1; $i <= $count; $i++) {
             $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i));
@@ -57,9 +57,9 @@ final class EntrySearchControllerTest extends ApiTestCase
                 $publishedAt,
             );
             $entry->setPublishedAt($publishedAt);
-            $em->persist($entry);
+            $entityManager->persist($entry);
         }
-        $em->flush();
+        $entityManager->flush();
 
         return $sub;
     }
@@ -67,19 +67,19 @@ final class EntrySearchControllerTest extends ApiTestCase
     /** A feed the given user has NOT subscribed to, with one matching entry. */
     private function seedUnsubscribedFeedWithEntry(User $owner, string $title): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/stranger-' . uniqid('', true) . '.xml');
         $feed->setTitle('Stranger feed');
-        $em->persist($feed);
-        $em->persist(new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $publishedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'stranger-1', 'https://example.com/stranger-1', $title, $publishedAt, $publishedAt);
         $entry->setPublishedAt($publishedAt);
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
     }
 
     public function testMatchingEntryComesBackWithAnEntriesArray(): void
@@ -106,11 +106,11 @@ final class EntrySearchControllerTest extends ApiTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('s-excerpt@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
-        $em = $this->em();
-        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entityManager = $this->entityManager();
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $entry->setContentHtml('<p>Angular body text.</p>');
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
 
@@ -128,13 +128,13 @@ final class EntrySearchControllerTest extends ApiTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('s-categories@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
-        $em = $this->em();
-        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entityManager = $this->entityManager();
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $category = new Category('frontend', '');
-        $em->persist($category);
-        $em->persist(new EntryCategory($entry, $category, 0, 'Frontend'));
-        $em->flush();
+        $entityManager->persist($category);
+        $entityManager->persist(new EntryCategory($entry, $category, 0, 'Frontend'));
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
 
@@ -151,15 +151,15 @@ final class EntrySearchControllerTest extends ApiTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('s-saved-search@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
-        $em = $this->em();
-        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entityManager = $this->entityManager();
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $search = new SavedSearch($user, 'angular', false);
-        $em->persist($search);
-        $em->flush();
+        $entityManager->persist($search);
+        $entityManager->flush();
         $search->setSlug($search->getId() . '-angular');
-        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
-        $em->flush();
+        $entityManager->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries/search?q=angular', server: $headers);
 
@@ -194,11 +194,11 @@ final class EntrySearchControllerTest extends ApiTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('s-unread@example.com');
         $subscription = $this->seedSubscribedFeedWithEntries($user, 'Angular', 4);
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
 
-        $belowWatermark = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
-        $aboveWatermark = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 3']);
+        $belowWatermark = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $aboveWatermark = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 3']);
         self::assertInstanceOf(Entry::class, $belowWatermark);
         self::assertInstanceOf(Entry::class, $aboveWatermark);
 
@@ -206,9 +206,9 @@ final class EntrySearchControllerTest extends ApiTestCase
         $explicitUnread->markUnread();
         $explicitRead = new EntryState($user, $aboveWatermark);
         $explicitRead->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $em->persist($explicitUnread);
-        $em->persist($explicitRead);
-        $em->flush();
+        $entityManager->persist($explicitUnread);
+        $entityManager->persist($explicitRead);
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries/search?q=angular&unread=1', server: $headers);
 

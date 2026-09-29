@@ -28,11 +28,11 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -50,12 +50,12 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         return $decoded;
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     private function fixtures(): RecommendationRunFixtures
@@ -63,7 +63,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        return new RecommendationRunFixtures($this->em(), $cipher);
+        return new RecommendationRunFixtures($this->entityManager(), $cipher);
     }
 
     public function testListReturnsEntriesWithStreamingTextOnlyForTheOpenCall(): void
@@ -97,7 +97,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             'req b',
             new \DateTimeImmutable('2026-08-08T10:00:06Z'),
         );
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
@@ -171,7 +171,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $run->snapshot([[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('bad reply');
         $run->fail('The model did not return a usable ranking.', new \DateTimeImmutable('2026-08-08T10:05:00Z'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
@@ -205,7 +205,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
         $this->fixtures()->log($newer, CallPhase::Batch, 1, 1, 'newer request');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
 
@@ -238,7 +238,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
         $this->fixtures()->log($newer, CallPhase::Batch, 1, 1, 'newer request');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log?run=' . $older->getId(), server: $headers);
 
@@ -263,7 +263,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-run-stale@example.test');
         $run = $this->fixtures()->createRun($user);
         $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'request');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log?run=999999', server: $headers);
 
@@ -289,7 +289,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
                 'length',
             ),
         );
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $id = $log->getId();
         self::assertNotNull($id);
 
@@ -319,7 +319,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [, $otherUser] = $this->auth('debug-log-detail-theirs@example.test');
         $theirRun = $this->fixtures()->createRun($otherUser);
         $theirLog = $this->fixtures()->log($theirRun, CallPhase::Batch, 1, 1, 'req');
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $id = $theirLog->getId();
         self::assertNotNull($id);
 

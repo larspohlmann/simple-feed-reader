@@ -48,7 +48,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
             $this->userFactory()->create('all-items-other@example.com'),
             'https://example.com/foreign.xml',
         );
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(
             [$included->requireId(), $alsoIncluded->requireId()],
@@ -61,7 +61,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
 
     private function repo(): SubscriptionRepository
     {
-        $repo = $this->em->getRepository(Subscription::class);
+        $repo = $this->entityManager->getRepository(Subscription::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repo);
 
         return $repo;
@@ -72,7 +72,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     private function subscription(User $owner): Subscription
@@ -83,10 +83,10 @@ final class SubscriptionRepositoryTest extends DbTestCase
     private function subscriptionToFeed(User $owner, string $feedUrl): Subscription
     {
         $feed = new Feed($feedUrl);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }

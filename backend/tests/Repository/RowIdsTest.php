@@ -62,14 +62,14 @@ final class RowIdsTest extends DbTestCase
             $this->failures()->add($failure);
             $failures[] = $failure;
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $failures;
     }
 
     private function idsOf(string ...$recipients): QueryBuilder
     {
-        return $this->em->createQueryBuilder()
+        return $this->entityManager->createQueryBuilder()
             ->from(MailSendFailure::class, 'f')
             ->andWhere('f.recipient IN (:recipients)')
             ->setParameter('recipients', $recipients);

@@ -113,7 +113,7 @@ final class OAuthSignInTest extends DbTestCase
 
         $signIn->redeemLoginCode($code, self::BROWSER);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $reloaded = $this->findUser('bob@example.com');
         self::assertInstanceOf(User::class, $reloaded);
         self::assertNotNull($reloaded->getLastLoginAt());
@@ -167,8 +167,8 @@ final class OAuthSignInTest extends DbTestCase
         $signIn = $this->signIn();
         $code = $signIn->issueLoginCode($this->identity(), self::BROWSER);
 
-        $this->em->remove($user);
-        $this->em->flush();
+        $this->entityManager->remove($user);
+        $this->entityManager->flush();
 
         $this->expectException(InvalidTokenException::class);
         $signIn->redeemLoginCode($code, self::BROWSER);
@@ -189,15 +189,15 @@ final class OAuthSignInTest extends DbTestCase
 
     private function findUser(string $email): ?User
     {
-        return $this->em->getRepository(User::class)->findOneBy(['email' => $email]);
+        return $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
     }
 
     private function persistUser(string $email, UserStatus $status): User
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-21 12:00:00'));
         NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-21 12:00:00'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }

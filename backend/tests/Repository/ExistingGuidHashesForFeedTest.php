@@ -22,7 +22,7 @@ final class ExistingGuidHashesForFeedTest extends DbTestCase
         $this->entry($one, 'guid-a');
         $this->entry($one, 'guid-b');
         $this->entry($two, 'guid-a');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $existing = $this->repository()->existingGuidHashesForFeed(
             $one->requireId(),
@@ -40,7 +40,7 @@ final class ExistingGuidHashesForFeedTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -55,14 +55,14 @@ final class ExistingGuidHashesForFeedTest extends DbTestCase
             new \DateTimeImmutable('2026-08-02 06:00:00'),
             new \DateTimeImmutable('2026-08-02 05:00:00'),
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
 
     private function repository(): EntryRepository
     {
-        $repository = $this->em->getRepository(Entry::class);
+        $repository = $this->entityManager->getRepository(Entry::class);
         self::assertInstanceOf(EntryRepository::class, $repository);
 
         return $repository;

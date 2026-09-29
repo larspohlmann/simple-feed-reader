@@ -43,13 +43,13 @@ final class OpmlImporterTest extends DbTestCase
     /** @return list<Subscription> */
     private function subsOf(User $user): array
     {
-        return $this->em->getRepository(Subscription::class)->findBy(['user' => $user]);
+        return $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
     }
 
     /** @return list<Feed> */
     private function feedsWithUrl(string $url): array
     {
-        return $this->em->getRepository(Feed::class)->findBy(['url' => $url]);
+        return $this->entityManager->getRepository(Feed::class)->findBy(['url' => $url]);
     }
 
     public function testImportsFeedsCreatesTagsAndSchedulesFetch(): void
@@ -61,16 +61,18 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(3, $result->imported); // 2 under News + 1 root feed
         self::assertSame(0, $result->alreadySubscribed);
 
-        $subs = $this->em->getRepository(Subscription::class)->findBy(['user' => $user]);
+        $subs = $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
         self::assertCount(3, $subs);
 
         // New feeds are due now so the next refresh populates them (no inline fetch).
-        $feed = $this->em->getRepository(Feed::class)->findOneBy(['url' => 'https://blog.example.com/feed.xml']);
+        $feed = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://blog.example.com/feed.xml']);
         self::assertNotNull($feed);
         self::assertNotNull($feed->getNextFetchAt());
 
         // The "News" folder became a tag attached to its two feeds.
-        $tag = $this->em->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'News']);
+        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $user, 'name' => 'News']);
         self::assertNotNull($tag);
     }
 
@@ -78,15 +80,17 @@ final class OpmlImporterTest extends DbTestCase
     {
         $user = $this->user('dupe@example.com');
         $feed = new Feed('https://blog.example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
 
         $result = $this->importer()->import($user, $this->fixture());
 
         self::assertSame(2, $result->imported);        // the two News feeds
         self::assertSame(1, $result->alreadySubscribed); // blog.example.com
-        $rows = $this->em->getRepository(Feed::class)->findBy(['url' => 'https://blog.example.com/feed.xml']);
+        $rows = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findBy(['url' => 'https://blog.example.com/feed.xml']);
         self::assertCount(1, $rows);
     }
 
@@ -138,8 +142,8 @@ final class OpmlImporterTest extends DbTestCase
     {
         $user = $this->user('dup-existing@example.com');
         $url = 'https://exists.example.com/feed.xml';
-        $this->em->persist(new Feed($url)); // committed, user NOT subscribed
-        $this->em->flush();
+        $this->entityManager->persist(new Feed($url)); // committed, user NOT subscribed
+        $this->entityManager->flush();
 
         $opml = $this->opml(
             '<outline type="rss" text="F" xmlUrl="' . $url . '"/>'
@@ -175,8 +179,8 @@ final class OpmlImporterTest extends DbTestCase
     public function testReusesPreExistingTagCaseInsensitively(): void
     {
         $user = $this->user('tag-reuse@example.com');
-        $this->em->persist(new Tag($user, 'news')); // lowercase, pre-existing
-        $this->em->flush();
+        $this->entityManager->persist(new Tag($user, 'news')); // lowercase, pre-existing
+        $this->entityManager->flush();
 
         $opml = $this->opml(
             '<outline text="News" title="News">'
@@ -187,7 +191,7 @@ final class OpmlImporterTest extends DbTestCase
         $result = $this->importer()->import($user, $opml);
 
         self::assertSame(1, $result->imported);
-        $tags = $this->em->getRepository(Tag::class)->findBy(['user' => $user]);
+        $tags = $this->entityManager->getRepository(Tag::class)->findBy(['user' => $user]);
         self::assertCount(1, $tags); // reused, not duplicated
         self::assertSame('news', $tags[0]->getName()); // original casing preserved
 
@@ -202,12 +206,12 @@ final class OpmlImporterTest extends DbTestCase
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
             $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
-            $this->em->persist($feed);
-            $this->em->persist(new Subscription($user, $feed, $when));
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $when));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $feedsBefore = (int) $this->em->getRepository(Feed::class)
+        $feedsBefore = (int) $this->entityManager->getRepository(Feed::class)
             ->createQueryBuilder('f')->select('COUNT(f.id)')->getQuery()->getSingleScalarResult();
 
         $result = $this->importer()->import($user, $this->fixture());
@@ -215,7 +219,7 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(0, $result->imported);
         self::assertSame(3, $result->skippedOverLimit); // the 3 importable fixture feeds
 
-        $feedsAfter = (int) $this->em->getRepository(Feed::class)
+        $feedsAfter = (int) $this->entityManager->getRepository(Feed::class)
             ->createQueryBuilder('f')->select('COUNT(f.id)')->getQuery()->getSingleScalarResult();
         self::assertSame($feedsBefore, $feedsAfter); // no orphan Feed rows created
     }

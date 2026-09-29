@@ -15,7 +15,7 @@ final class UserRepositoryTest extends DbTestCase
     private function users(): UserRepository
     {
         /** @var UserRepository $repository */
-        $repository = $this->em->getRepository(User::class);
+        $repository = $this->entityManager->getRepository(User::class);
 
         return $repository;
     }
@@ -25,8 +25,8 @@ final class UserRepositoryTest extends DbTestCase
         $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
         NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-01 10:00:00'));
         $user->setRoles(array_values($roles));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }

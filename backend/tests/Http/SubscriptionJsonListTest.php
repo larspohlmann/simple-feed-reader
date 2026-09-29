@@ -16,7 +16,7 @@ final class SubscriptionJsonListTest extends DbTestCase
     public function testEachSubscriptionCarriesItsCountsAndTheSurfaceTotalsFollow(): void
     {
         $user = new User('subscription-list@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $counted = $this->subscription($user, 'https://example.com/counted.xml');
         $silent = $this->subscription($user, 'https://example.com/silent.xml');
         $tallies = new SubscriptionTalliesModel(
@@ -40,10 +40,10 @@ final class SubscriptionJsonListTest extends DbTestCase
     private function subscription(User $user, string $url): Subscription
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }

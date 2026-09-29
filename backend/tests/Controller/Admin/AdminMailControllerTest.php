@@ -177,8 +177,8 @@ final class AdminMailControllerTest extends ApiTestCase
 
     public function testTheMailTestReportsAnUnreadableProxyPasswordInsteadOfFailing(): void
     {
-        $this->em()->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
-        $this->em()->flush();
+        $this->entityManager()->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $this->entityManager()->flush();
         $admin = $this->admin();
 
         $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
@@ -325,8 +325,8 @@ final class AdminMailControllerTest extends ApiTestCase
 
     public function testAnUnreadableProxyPasswordDoesNotBreakTheMailPage(): void
     {
-        $this->em()->persist(UnreadableProxyPasswordRows::enabledWithUnreadablePassword());
-        $this->em()->flush();
+        $this->entityManager()->persist(UnreadableProxyPasswordRows::enabledWithUnreadablePassword());
+        $this->entityManager()->flush();
         $admin = $this->admin();
 
         $this->requestAs($admin, 'GET');

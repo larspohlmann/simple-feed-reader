@@ -25,9 +25,11 @@ final class UserRefreshScopeTest extends DbTestCase
 
         $this->user = $this->userFactory()->create('refresh-scope@example.com');
         $this->feed = new Feed('https://example.com/refresh-scope.xml');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
     }
 
     public function testNoTargetRefreshesEveryFeedOfTheUser(): void
@@ -53,8 +55,8 @@ final class UserRefreshScopeTest extends DbTestCase
     public function testAFeedTheUserDoesNotSubscribeToIsNotFound(): void
     {
         $other = new Feed('https://example.com/not-subscribed.xml');
-        $this->em->persist($other);
-        $this->em->flush();
+        $this->entityManager->persist($other);
+        $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such subscription.');
@@ -107,14 +109,14 @@ final class UserRefreshScopeTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     private function tag(User $owner): Tag
     {
         $tag = new Tag($owner, 'News');
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }

@@ -33,8 +33,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
     public function testAKnownIdentityResolvesToItsUser(): void
     {
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
-        $this->em->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
-        $this->em->flush();
+        $this->entityManager->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
+        $this->entityManager->flush();
 
         $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
@@ -102,7 +102,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $planted = $this->persistUser('bob@example.com', UserStatus::PendingVerification);
         $planted->setPasswordHash('an-attackers-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
@@ -146,7 +146,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // silently disable it, and must not revoke that user's live sessions.
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
         $user->setPasswordHash('a-real-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
@@ -238,13 +238,13 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
         $identity = new UserIdentity($user, 'google', 'sub-1', $this->now());
         $identity->setEmail('old@example.com');
-        $this->em->persist($identity);
-        $this->em->flush();
+        $this->entityManager->persist($identity);
+        $this->entityManager->flush();
 
         $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(UserIdentity::class)
+        $reloaded = $this->entityManager->getRepository(UserIdentity::class)
             ->findOneBy(['provider' => 'google', 'providerUserId' => 'sub-1']);
 
         self::assertNotNull($reloaded);
@@ -307,8 +307,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
     public function testAReturningIdentityAnnouncesNothing(): void
     {
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
-        $this->em->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
-        $this->em->flush();
+        $this->entityManager->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
+        $this->entityManager->flush();
         $recording = new AwaitingApprovalRecorder();
 
         $this->linker($recording->dispatcher)
@@ -344,7 +344,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $planted = $this->persistUser('bob@example.com', UserStatus::PendingVerification);
         $planted->setPasswordHash('an-attackers-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $recording = new AwaitingApprovalRecorder();
 
         $resolved = $this->linker($recording->dispatcher, $this->registrationPolicy(confirm: true, approve: false))
@@ -366,14 +366,14 @@ final class OAuthAccountLinkerTest extends DbTestCase
         ?RegistrationPolicy $policy = null,
     ): OAuthAccountLinker {
         /** @var \App\Repository\UserRepository $users */
-        $users = $this->em->getRepository(User::class);
+        $users = $this->entityManager->getRepository(User::class);
         /** @var \App\Repository\UserIdentityRepository $identities */
-        $identities = $this->em->getRepository(UserIdentity::class);
+        $identities = $this->entityManager->getRepository(UserIdentity::class);
         $policy ??= $this->registrationPolicy(confirm: true, approve: true);
         $clock = new MockClock(self::NOW);
 
         return new OAuthAccountLinker(
-            $this->em,
+            $this->entityManager,
             $users,
             $identities,
             $clock,
@@ -387,8 +387,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $user = new User($email, $this->now());
         NewUserStatus::apply($user, $status, $this->now());
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -400,12 +400,12 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
     private function countIdentities(): int
     {
-        return \count($this->em->getRepository(UserIdentity::class)->findAll());
+        return \count($this->entityManager->getRepository(UserIdentity::class)->findAll());
     }
 
     private function onlyIdentity(): UserIdentity
     {
-        $identities = $this->em->getRepository(UserIdentity::class)->findAll();
+        $identities = $this->entityManager->getRepository(UserIdentity::class)->findAll();
 
         self::assertCount(1, $identities);
 

@@ -20,12 +20,12 @@ final class SubscriptionBulkTest extends WebTestCase
 {
     use SeedsUsers;
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     /** @return array<string, string> */
@@ -44,7 +44,7 @@ final class SubscriptionBulkTest extends WebTestCase
     {
         $tag = new Tag($user, $name);
         $tag->setPosition(0);
-        $this->em()->persist($tag);
+        $this->entityManager()->persist($tag);
 
         return $tag;
     }
@@ -52,12 +52,12 @@ final class SubscriptionBulkTest extends WebTestCase
     private function makeSub(User $user, string $url, ?Tag $tag = null): Subscription
     {
         $feed = new Feed($url);
-        $this->em()->persist($feed);
+        $this->entityManager()->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         if (null !== $tag) {
             $subscription->addTag($tag, 0);
         }
-        $this->em()->persist($subscription);
+        $this->entityManager()->persist($subscription);
 
         return $subscription;
     }
@@ -97,7 +97,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $tech = $this->makeTag($user, 'Tech');
         $first = $this->makeSub($user, 'https://a.example/feed.xml');
         $second = $this->makeSub($user, 'https://b.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$first->requireId(), $second->requireId()],
@@ -122,7 +122,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $user = $this->user('bulk-endpoint-persist@example.com');
         $tech = $this->makeTag($user, 'Tech');
         $subscription = $this->makeSub($user, 'https://persist.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $subscriptionId = $subscription->requireId();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
@@ -131,8 +131,8 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(Subscription::class)->find($subscriptionId);
+        $this->entityManager()->clear();
+        $reloaded = $this->entityManager()->getRepository(Subscription::class)->find($subscriptionId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(
             1,
@@ -149,7 +149,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('bulk-endpoint-flags@example.com');
         $subscription = $this->makeSub($user, 'https://flags.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$subscription->requireId()],
@@ -172,7 +172,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $tech = $this->makeTag($mine, 'Tech');
         $ours = $this->makeSub($mine, 'https://ours.example/feed.xml');
         $foreign = $this->makeSub($theirs, 'https://foreign.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $mine, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$ours->requireId(), $foreign->requireId()],
@@ -180,8 +180,8 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(Subscription::class)->find($ours->requireId());
+        $this->entityManager()->clear();
+        $reloaded = $this->entityManager()->getRepository(Subscription::class)->find($ours->requireId());
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write nothing.');
     }
@@ -202,7 +202,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $theirs = $this->user('bulk-endpoint-tag-theirs@example.com');
         $foreignTag = $this->makeTag($theirs, 'Theirs');
         $ours = $this->makeSub($mine, 'https://ours2.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $ourId = $ours->requireId();
 
         $this->send($client, $mine, 'PATCH', '/api/subscriptions/bulk', [
@@ -212,8 +212,8 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(Subscription::class)->find($ourId);
+        $this->entityManager()->clear();
+        $reloaded = $this->entityManager()->getRepository(Subscription::class)->find($ourId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write no tag.');
         self::assertTrue($reloaded->isIncludeInAllItems(), 'A rejected bulk request must write no flag.');
@@ -223,7 +223,7 @@ final class SubscriptionBulkTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('bulk-endpoint-cap@example.com');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => range(1, SubscriptionService::MAX_BULK_REQUEST_IDS + 1),
@@ -248,7 +248,7 @@ final class SubscriptionBulkTest extends WebTestCase
         for ($i = 0; $i < $count; ++$i) {
             $subscriptions[] = $this->makeSub($user, "https://raised-cap-$i.example/feed.xml");
         }
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $ids = array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions);
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
@@ -280,7 +280,7 @@ final class SubscriptionBulkTest extends WebTestCase
         for ($i = 0; $i < 5; ++$i) {
             $subscriptions[] = $this->makeSub($user, "https://n1-{$i}.example/feed.xml", $tech);
         }
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
@@ -330,7 +330,7 @@ final class SubscriptionBulkTest extends WebTestCase
         for ($i = 0; $i < 5; ++$i) {
             $subscriptions[] = $this->makeSub($user, "https://tag-n1-{$i}.example/feed.xml");
         }
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
@@ -369,7 +369,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $first = $this->makeSub($user, 'https://pos-a.example/feed.xml');
         $second = $this->makeSub($user, 'https://pos-b.example/feed.xml');
         $third = $this->makeSub($user, 'https://pos-c.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$first->requireId(), $second->requireId(), $third->requireId()],
@@ -377,7 +377,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $this->em()->clear();
+        $this->entityManager()->clear();
         self::assertSame(
             [0, 1, 2],
             [
@@ -404,7 +404,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $first = $this->makeSub($user, 'https://untag-a.example/feed.xml', $tech);
         $second = $this->makeSub($user, 'https://untag-b.example/feed.xml', $tech);
         $third = $this->makeSub($user, 'https://untag-c.example/feed.xml', $tech);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$first->requireId(), $second->requireId(), $third->requireId()],
@@ -412,7 +412,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseIsSuccessful();
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $positions = [
             $this->subscriptionPosition($first->getId()),
             $this->subscriptionPosition($second->getId()),
@@ -427,7 +427,7 @@ final class SubscriptionBulkTest extends WebTestCase
 
     private function joinPosition(?int $subscriptionId, ?int $tagId): int
     {
-        $subscription = $this->em()->getRepository(Subscription::class)->find((int) $subscriptionId);
+        $subscription = $this->entityManager()->getRepository(Subscription::class)->find((int) $subscriptionId);
         self::assertInstanceOf(Subscription::class, $subscription);
         foreach ($subscription->getSubscriptionTags() as $join) {
             if ($join->getTag()->requireId() === (int) $tagId) {
@@ -439,7 +439,7 @@ final class SubscriptionBulkTest extends WebTestCase
 
     private function subscriptionPosition(?int $subscriptionId): int
     {
-        $subscription = $this->em()->getRepository(Subscription::class)->find((int) $subscriptionId);
+        $subscription = $this->entityManager()->getRepository(Subscription::class)->find((int) $subscriptionId);
         self::assertInstanceOf(Subscription::class, $subscription);
 
         return $subscription->getPosition();
@@ -452,7 +452,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $kept = $this->makeSub($user, 'https://kept.example/feed.xml');
         $goingOne = $this->makeSub($user, 'https://going1.example/feed.xml');
         $goingTwo = $this->makeSub($user, 'https://going2.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $keptId = $kept->requireId();
         $goingOneId = $goingOne->requireId();
         $goingTwoId = $goingTwo->requireId();
@@ -463,14 +463,14 @@ final class SubscriptionBulkTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['removed' => 2], $this->json($client));
-        $this->em()->clear();
-        self::assertNotNull($this->em()->getRepository(Subscription::class)->find($keptId));
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->getRepository(Subscription::class)->find($keptId));
         self::assertNull(
-            $this->em()->getRepository(Subscription::class)->find($goingOneId),
+            $this->entityManager()->getRepository(Subscription::class)->find($goingOneId),
             'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
         );
         self::assertNull(
-            $this->em()->getRepository(Subscription::class)->find($goingTwoId),
+            $this->entityManager()->getRepository(Subscription::class)->find($goingTwoId),
             'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
         );
     }
@@ -482,7 +482,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $theirs = $this->user('bulk-endpoint-unsub-theirs@example.com');
         $ours = $this->makeSub($mine, 'https://mine.example/feed.xml');
         $foreign = $this->makeSub($theirs, 'https://theirs.example/feed.xml');
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $ourId = $ours->requireId();
 
         $this->send($client, $mine, 'POST', '/api/subscriptions/bulk-unsubscribe', [
@@ -490,7 +490,7 @@ final class SubscriptionBulkTest extends WebTestCase
         ]);
 
         self::assertResponseStatusCodeSame(422);
-        $this->em()->clear();
-        self::assertNotNull($this->em()->getRepository(Subscription::class)->find($ourId));
+        $this->entityManager()->clear();
+        self::assertNotNull($this->entityManager()->getRepository(Subscription::class)->find($ourId));
     }
 }

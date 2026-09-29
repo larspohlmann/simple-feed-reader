@@ -19,22 +19,22 @@ final class SubscriptionTallyReaderTest extends DbTestCase
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('tallies@example.com', $when);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/tallies.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, $when);
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $read = $this->entry($feed, 'read');
         $this->entry($feed, 'unread');
         $state = new EntryState($user, $read);
         $state->hide($when);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $reader = self::getContainer()->get(SubscriptionTallyReader::class);
         self::assertInstanceOf(SubscriptionTallyReader::class, $reader);
-        $entryStates = $this->em->getRepository(EntryState::class);
+        $entryStates = $this->entityManager->getRepository(EntryState::class);
         self::assertInstanceOf(EntryStateRepository::class, $entryStates);
         $tallies = $reader->forUser($user->requireId());
 
@@ -48,7 +48,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
     {
         $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, $guid, null, $guid, $createdAt, $createdAt);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

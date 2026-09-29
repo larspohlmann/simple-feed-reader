@@ -154,7 +154,7 @@ final class PasskeyListTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('oauth-only@example.test');
         $user->setPasswordHash(null, new \DateTimeImmutable());
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $onlyPasskey = $this->givenAPasskeyFor($user, credentialId: 'b25seS1jcmVk');
         $this->authenticate($client, 'oauth-only@example.test');
 
@@ -237,8 +237,8 @@ final class PasskeyListTest extends ApiTestCase
                 registeredAt: $createdAt,
             ),
         );
-        $this->em()->persist($passkey);
-        $this->em()->flush();
+        $this->entityManager()->persist($passkey);
+        $this->entityManager()->flush();
 
         return $passkey;
     }

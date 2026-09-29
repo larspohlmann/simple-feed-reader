@@ -22,17 +22,19 @@ final class EntryListRowEnricherTest extends DbTestCase
     public function testARowGainsItsCategoriesAndItsOwnersSavedSearches(): void
     {
         $user = new User('enricher@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $entry = $this->entry();
         $politics = new Category('politics', '');
-        $this->em->persist($politics);
-        $this->em->persist(new EntryCategory($entry, $politics, 0, 'Politics'));
+        $this->entityManager->persist($politics);
+        $this->entityManager->persist(new EntryCategory($entry, $politics, 0, 'Politics'));
         $search = new SavedSearch($user, 'climate', false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
         $search->setSlug($search->requireId() . '-climate');
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager->flush();
 
         $rows = $this->enricher()->enrich([$this->row($entry)], $user->requireId());
 
@@ -56,10 +58,10 @@ final class EntryListRowEnricherTest extends DbTestCase
     private function entry(): Entry
     {
         $feed = new Feed('https://example.com/enricher-feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-07-02T00:00:00Z');
         $entry = new Entry($feed, 'enricher-guid', 'https://example.com/enricher-entry', 'Climate', $now, $now);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

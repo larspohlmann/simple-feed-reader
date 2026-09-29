@@ -14,11 +14,11 @@ final class UserTest extends DbTestCase
     public function testPersistAndReload(): void
     {
         $user = new User('lars@example.com', new \DateTimeImmutable('2026-07-21 10:00:00'));
-        $this->em->persist($user);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(User::class)->findOneBy(['email' => 'lars@example.com']);
+        $reloaded = $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'lars@example.com']);
 
         self::assertNotNull($reloaded);
         self::assertSame(UserStatus::PendingVerification, $reloaded->getStatus());
@@ -52,25 +52,25 @@ final class UserTest extends DbTestCase
     public function testCaseVariantsCollideOnTheUniqueIndex(): void
     {
         $now = new \DateTimeImmutable();
-        $this->em->persist(new User('casefold@example.com', $now));
-        $this->em->flush();
+        $this->entityManager->persist(new User('casefold@example.com', $now));
+        $this->entityManager->flush();
 
-        $this->em->persist(new User('CaseFold@Example.com', $now));
+        $this->entityManager->persist(new User('CaseFold@Example.com', $now));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testEmailIsUnique(): void
     {
         $now = new \DateTimeImmutable();
-        $this->em->persist(new User('dup@example.com', $now));
-        $this->em->flush();
+        $this->entityManager->persist(new User('dup@example.com', $now));
+        $this->entityManager->flush();
 
-        $this->em->persist(new User('dup@example.com', $now));
+        $this->entityManager->persist(new User('dup@example.com', $now));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testANewAccountHasNeverLoggedIn(): void

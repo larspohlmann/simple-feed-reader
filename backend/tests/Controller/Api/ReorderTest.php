@@ -18,12 +18,12 @@ final class ReorderTest extends WebTestCase
 {
     use SeedsUsers;
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     /** @return array<string, string> */
@@ -42,7 +42,7 @@ final class ReorderTest extends WebTestCase
     {
         $tag = new Tag($user, $name);
         $tag->setPosition($position);
-        $this->em()->persist($tag);
+        $this->entityManager()->persist($tag);
 
         return $tag;
     }
@@ -50,13 +50,13 @@ final class ReorderTest extends WebTestCase
     private function makeSub(User $user, string $url, int $position, ?Tag $tag = null, int $tagPos = 0): Subscription
     {
         $feed = new Feed($url);
-        $this->em()->persist($feed);
+        $this->entityManager()->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $sub->setPosition($position);
         if (null !== $tag) {
             $sub->addTag($tag, $tagPos);
         }
-        $this->em()->persist($sub);
+        $this->entityManager()->persist($sub);
 
         return $sub;
     }
@@ -97,7 +97,7 @@ final class ReorderTest extends WebTestCase
         $a = $this->makeTag($user, 'Alpha', 0);
         $b = $this->makeTag($user, 'Beta', 1);
         $c = $this->makeTag($user, 'Gamma', 2);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // New order: Gamma, Alpha, Beta.
         $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$c->getId(), $a->getId(), $b->getId()]]);
@@ -126,13 +126,14 @@ final class ReorderTest extends WebTestCase
         $a = $this->makeTag($user, 'Alpha', 0);
         $b = $this->makeTag($user, 'Beta', 1);
         $c = $this->makeTag($user, 'Gamma', 2);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$c->getId(), $a->getId(), $b->getId()]]);
         self::assertResponseIsSuccessful();
 
-        $this->em()->clear();
-        $reload = fn (int $id): Tag => $this->em()->getRepository(Tag::class)->find($id) ?? self::fail("tag $id gone");
+        $this->entityManager()->clear();
+        $reload = fn (int $id): Tag
+            => $this->entityManager()->getRepository(Tag::class)->find($id) ?? self::fail("tag $id gone");
         self::assertSame(0, $reload($c->requireId())->getPosition());
         self::assertSame(1, $reload($a->requireId())->getPosition());
         self::assertSame(2, $reload($b->requireId())->getPosition());
@@ -149,7 +150,7 @@ final class ReorderTest extends WebTestCase
         $user = $this->user('reorder-tags-response@example.com');
         $a = $this->makeTag($user, 'Alpha', 0);
         $b = $this->makeTag($user, 'Beta', 1);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$b->getId(), $a->getId()]]);
         self::assertResponseIsSuccessful();
@@ -172,7 +173,7 @@ final class ReorderTest extends WebTestCase
         $user = $this->user('reorder-partial@example.com');
         $a = $this->makeTag($user, 'Alpha', 0);
         $this->makeTag($user, 'Beta', 1);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // Missing Beta → ambiguous → 422.
         $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$a->getId()]]);
@@ -186,7 +187,7 @@ final class ReorderTest extends WebTestCase
         $stranger = $this->user('reorder-stranger@example.com');
         $mine = $this->makeTag($user, 'Mine', 0);
         $theirs = $this->makeTag($stranger, 'Theirs', 0);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // A foreign id is not in the owner's set → 422, no cross-tenant write.
         $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$mine->getId(), $theirs->getId()]]);
@@ -200,16 +201,16 @@ final class ReorderTest extends WebTestCase
         $s1 = $this->makeSub($user, 'https://f/1', 0);
         $s2 = $this->makeSub($user, 'https://f/2', 1);
         $s3 = $this->makeSub($user, 'https://f/3', 2);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/reorder', [
             'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
         ]);
         self::assertResponseStatusCodeSame(204);
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $reload = function (int $id): Subscription {
-            $sub = $this->em()->find(Subscription::class, $id);
+            $sub = $this->entityManager()->find(Subscription::class, $id);
             self::assertInstanceOf(Subscription::class, $sub);
 
             return $sub;
@@ -227,7 +228,7 @@ final class ReorderTest extends WebTestCase
         $s1 = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
         $s2 = $this->makeSub($user, 'https://f/2', 1, $tag, 1);
         $s3 = $this->makeSub($user, 'https://f/3', 2, $tag, 2);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // New within-tag order: s3, s1, s2.
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
@@ -269,16 +270,16 @@ final class ReorderTest extends WebTestCase
         $s1 = $this->makeSub($user, 'https://db/1', 0, $tag, 0);
         $s2 = $this->makeSub($user, 'https://db/2', 1, $tag, 1);
         $s3 = $this->makeSub($user, 'https://db/3', 2, $tag, 2);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
             'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
         ]);
         self::assertResponseStatusCodeSame(204);
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $joinPosition = function (int $subscriptionId) use ($tag): int {
-            $subscription = $this->em()->getRepository(Subscription::class)->find($subscriptionId);
+            $subscription = $this->entityManager()->getRepository(Subscription::class)->find($subscriptionId);
             self::assertInstanceOf(Subscription::class, $subscription);
             foreach ($subscription->getSubscriptionTags() as $join) {
                 if ($join->getTag()->requireId() === $tag->requireId()) {
@@ -300,7 +301,7 @@ final class ReorderTest extends WebTestCase
         $this->makeSub($user, 'https://f/1', 0); // untagged, position 0
         $this->makeSub($user, 'https://f/2', 1); // untagged, position 1
         $tagged = $this->makeSub($user, 'https://f/3', 0, $tag, 0); // tagged, position 0
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // Remove its only tag: it joins the untagged list and must append (2),
         // not keep its stale position (0) and float to the top.
@@ -310,8 +311,8 @@ final class ReorderTest extends WebTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(Subscription::class, $tagged->requireId());
+        $this->entityManager()->clear();
+        $reloaded = $this->entityManager()->find(Subscription::class, $tagged->requireId());
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertSame(2, $reloaded->getPosition());
     }
@@ -323,7 +324,7 @@ final class ReorderTest extends WebTestCase
         $tag = $this->makeTag($user, 'Tech', 0);
         $inTag = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
         $notInTag = $this->makeSub($user, 'https://f/2', 1);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         // A feed that doesn't carry the tag makes the set inexact → 422.
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [

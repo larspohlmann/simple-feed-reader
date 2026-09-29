@@ -24,15 +24,15 @@ final class UnsubscribeAllTest extends KernelTestCase
 {
     use SeedsUsers;
 
-    private EntityManagerInterface $em;
+    private EntityManagerInterface $entityManager;
     private SubscriptionService $subscriptions;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $this->em = $em;
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $this->entityManager = $entityManager;
         $service = self::getContainer()->get(SubscriptionService::class);
         self::assertInstanceOf(SubscriptionService::class, $service);
         $this->subscriptions = $service;
@@ -41,7 +41,7 @@ final class UnsubscribeAllTest extends KernelTestCase
     private function subscribe(User $user, Feed $feed): Subscription
     {
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
 
         return $subscription;
     }
@@ -49,7 +49,7 @@ final class UnsubscribeAllTest extends KernelTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -60,7 +60,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $kept = $this->subscribe($user, $this->feed('https://kept.example/feed.xml'));
         $goingOne = $this->subscribe($user, $this->feed('https://one.example/feed.xml'));
         $goingTwo = $this->subscribe($user, $this->feed('https://two.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $keptId = $kept->requireId();
 
@@ -78,7 +78,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $user = $this->user('unsub-orphan@example.com');
         $orphaned = $this->feed('https://orphan.example/feed.xml');
         $subscription = $this->subscribe($user, $orphaned);
-        $this->em->flush();
+        $this->entityManager->flush();
         $orphanedId = $orphaned->requireId();
 
         $this->subscriptions->unsubscribeAll([$subscription]);
@@ -87,7 +87,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         // Feed entity persisted above is still cached as managed. Without
         // clear(), find() would serve that stale copy instead of asking the
         // database (see OrphanedFeedReclaimerTest for the same pattern).
-        $this->em->clear();
+        $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
         self::assertNull($feeds->find($orphanedId), 'A feed with no subscriber left must be reclaimed.');
@@ -100,7 +100,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $shared = $this->feed('https://shared.example/feed.xml');
         $ours = $this->subscribe($mine, $shared);
         $this->subscribe($theirs, $shared);
-        $this->em->flush();
+        $this->entityManager->flush();
         $sharedId = $shared->requireId();
 
         $this->subscriptions->unsubscribeAll([$ours]);
@@ -109,7 +109,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         // reclaim() deletes via bulk DQL, which bypasses the unit of work, so
         // find() would serve the Feed entity persisted above instead of asking
         // the database.
-        $this->em->clear();
+        $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
         self::assertNotNull($feeds->find($sharedId));
@@ -133,7 +133,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $shared = $this->feed('https://both.example/feed.xml');
         $ours = $this->subscribe($mine, $shared);
         $alsoOurs = $this->subscribe($theirs, $shared);
-        $this->em->flush();
+        $this->entityManager->flush();
         $sharedId = $shared->requireId();
 
         /** @var QueryRecorder $recorder */
@@ -149,7 +149,7 @@ final class UnsubscribeAllTest extends KernelTestCase
             'unsubscribeAll() must reclaim a feed shared by two removed subscriptions exactly once.',
         );
         // Same identity-map staleness as testReclaimsAFeedNobodySubscribesToAnyMore.
-        $this->em->clear();
+        $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
         self::assertNull($feeds->find($sharedId));
@@ -183,9 +183,9 @@ final class UnsubscribeAllTest extends KernelTestCase
         $orphanedFeeds = $container->get(OrphanedFeedReclaimer::class);
         self::assertInstanceOf(OrphanedFeedReclaimer::class, $orphanedFeeds);
 
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
-        $em->expects($this->never())->method('remove');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('flush');
+        $entityManager->expects($this->never())->method('remove');
 
         $service = new SubscriptionService(
             $discovery,
@@ -193,7 +193,7 @@ final class UnsubscribeAllTest extends KernelTestCase
             $scrapeFallbackPolicy,
             $firstFetch,
             $orphanedFeeds,
-            $em,
+            $entityManager,
         );
 
         self::assertSame(0, $service->unsubscribeAll([]));

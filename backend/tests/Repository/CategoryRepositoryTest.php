@@ -18,7 +18,7 @@ final class CategoryRepositoryTest extends DbTestCase
     {
         parent::setUp();
         /** @var CategoryRepository $repository */
-        $repository = $this->em->getRepository(Category::class);
+        $repository = $this->entityManager->getRepository(Category::class);
         $this->repository = $repository;
     }
 
@@ -42,9 +42,9 @@ final class CategoryRepositoryTest extends DbTestCase
     {
         $politics = new Category('politics', 'https://a.test');
         $world = new Category('world', 'https://b.test');
-        $this->em->persist($politics);
-        $this->em->persist($world);
-        $this->em->flush();
+        $this->entityManager->persist($politics);
+        $this->entityManager->persist($world);
+        $this->entityManager->flush();
 
         $normalizedPolitics = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
         $normalizedWorld = new NormalizedCategoryModel('world', 'World', 'https://b.test');
@@ -59,8 +59,8 @@ final class CategoryRepositoryTest extends DbTestCase
     public function testUnknownIdentityIsAbsentFromTheResult(): void
     {
         $existing = new Category('politics', '');
-        $this->em->persist($existing);
-        $this->em->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $unknown = new NormalizedCategoryModel('unknown', 'Unknown', '');
         $resolved = $this->repository->findExistingByIdentities([
@@ -76,9 +76,9 @@ final class CategoryRepositoryTest extends DbTestCase
     {
         $schemeA = new Category('politics', 'https://a.test');
         $schemeB = new Category('politics', 'https://b.test');
-        $this->em->persist($schemeA);
-        $this->em->persist($schemeB);
-        $this->em->flush();
+        $this->entityManager->persist($schemeA);
+        $this->entityManager->persist($schemeB);
+        $this->entityManager->flush();
 
         $normalizedA = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
         $normalizedB = new NormalizedCategoryModel('politics', 'Politics', 'https://b.test');

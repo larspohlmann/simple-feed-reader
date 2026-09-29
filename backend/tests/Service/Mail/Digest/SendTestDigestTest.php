@@ -66,8 +66,8 @@ final class SendTestDigestTest extends DbTestCase
         $this->mailer = $this->createStub(DigestMailerInterface::class);
 
         $this->user = new User('digest-test@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
-        $this->em->flush();
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
     }
 
     private function sendTestDigest(MockClock $clock, ?DigestMailerInterface $mailer = null): SendTestDigest
@@ -120,7 +120,7 @@ final class SendTestDigestTest extends DbTestCase
      */
     public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNowAndIsExclusive(): void
     {
-        $fixture = new SavedSearchMatchFixture($this->em);
+        $fixture = new SavedSearchMatchFixture($this->entityManager);
         // now(2026-08-28T12:00:00Z) - 3 days = 2026-08-25T12:00:00Z, exclusive.
         $justInside = $fixture->oneMatch($this->user, 'rust-inside', new \DateTimeImmutable('2026-08-25T12:00:01Z'));
         $justOutside = $fixture->oneMatch($this->user, 'rust-outside', new \DateTimeImmutable('2026-08-25T11:59:59Z'));
@@ -218,7 +218,7 @@ final class SendTestDigestTest extends DbTestCase
     private function givenOneMatch(\DateTimeImmutable $effectiveDate): SavedSearch
     {
         $term = 'rust-' . uniqid('', true);
-        $search = (new SavedSearchMatchFixture($this->em))->oneMatch($this->user, $term, $effectiveDate);
+        $search = (new SavedSearchMatchFixture($this->entityManager))->oneMatch($this->user, $term, $effectiveDate);
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
 
         return $search;

@@ -34,14 +34,16 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('for-you@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid): Entry
@@ -54,8 +56,8 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -73,8 +75,8 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
             $run->fail('boom', new \DateTimeImmutable($completedAt));
         }
 
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }
@@ -82,17 +84,17 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
     private function item(RecommendationRun $run, Entry $entry, int $position): RecommendationItem
     {
         $item = new RecommendationItem($run, $entry, $position, 'reason');
-        $this->em->persist($item);
-        $this->em->flush();
+        $this->entityManager->persist($item);
+        $this->entityManager->flush();
 
         return $item;
     }
 
     private function provider(): RecommendationForYouSummaryProvider
     {
-        $items = $this->em->getRepository(RecommendationItem::class);
+        $items = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $items);
-        $runs = $this->em->getRepository(RecommendationRun::class);
+        $runs = $this->entityManager->getRepository(RecommendationRun::class);
         self::assertInstanceOf(RecommendationRunRepository::class, $runs);
 
         return new RecommendationForYouSummaryProvider($items, $runs);

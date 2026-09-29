@@ -40,12 +40,12 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $buriedFeed->setPosition(0);
 
         foreach ([$technology, $gadgets, $archived, $engadget, $wired, $deadFeed, $mitReview, $buriedFeed] as $row) {
-            $this->em->persist($row);
+            $this->entityManager->persist($row);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
         // See CatalogCategoryRepositoryTest for why: already-managed entities are
         // returned from the identity map without being re-hydrated from the query.
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $requestedIds = array_map(
             static fn (CatalogFeed $f): int => $f->requireId(),
@@ -102,11 +102,11 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $zulu = new CatalogFeed($category, 'Zulu', 'https://example.com/zulu.xml');
         $zulu->setPosition(0);
         $zulu->setEnabled(false);
-        $this->em->persist($category);
+        $this->entityManager->persist($category);
         foreach ([$bravo, $alpha, $zulu] as $feed) {
-            $this->em->persist($feed);
+            $this->entityManager->persist($feed);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $mine = array_filter(
             $this->catalogFeeds()->findAllOrdered(),
@@ -166,11 +166,11 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $disabled = new CatalogFeed($category, 'Disabled Feed', 'https://example.com/disabled.xml');
         $disabled->setEnabled(false);
 
-        $this->em->persist($category);
+        $this->entityManager->persist($category);
         foreach ([$neverFetched, $staleIcon, $freshIcon, $recentlyFailed, $longFailed, $disabled] as $feed) {
-            $this->em->persist($feed);
+            $this->entityManager->persist($feed);
         }
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
     }
 }

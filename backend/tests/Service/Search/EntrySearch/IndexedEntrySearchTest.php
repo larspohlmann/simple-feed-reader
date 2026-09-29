@@ -37,17 +37,17 @@ final class IndexedEntrySearchTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid, string $effectiveDate = '2026-07-10T00:00:00Z'): Entry
@@ -60,8 +60,8 @@ final class IndexedEntrySearchTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -70,8 +70,8 @@ final class IndexedEntrySearchTest extends DbTestCase
     {
         $state = new EntryState($this->user, $entry);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
     }
 
     /** @return list<string> */
@@ -322,8 +322,8 @@ final class IndexedEntrySearchTest extends DbTestCase
     public function testAUserWithNoSubscriptionsReturnsEmptyWithoutAskingTheEngine(): void
     {
         $lonelyUser = new User('lonely@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($lonelyUser);
-        $this->em->flush();
+        $this->entityManager->persist($lonelyUser);
+        $this->entityManager->flush();
 
         $reader = new FakeSearchIndexReader();
 

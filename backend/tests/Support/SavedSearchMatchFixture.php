@@ -19,15 +19,15 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class SavedSearchMatchFixture
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     public function search(User $user, string $term): SavedSearch
     {
         $search = new SavedSearch($user, $term, false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
 
         return $search;
     }
@@ -35,8 +35,8 @@ final readonly class SavedSearchMatchFixture
     public function member(User $user, SavedSearch $search, \DateTimeImmutable $effectiveDate): Entry
     {
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -46,9 +46,11 @@ final readonly class SavedSearchMatchFixture
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $effectiveDate,
         );
-        $this->em->persist($entry);
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         return $entry;
     }

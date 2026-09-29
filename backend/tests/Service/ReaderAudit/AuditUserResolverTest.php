@@ -59,13 +59,13 @@ final class AuditUserResolverTest extends DbTestCase
     {
         $moment = new \DateTimeImmutable(self::MOMENT);
         $user = new User($email, $moment);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         for ($position = 0; $position < $subscriptions; ++$position) {
             $feed = new Feed(sprintf('https://feeds.example.com/%s/%d.xml', rawurlencode($email), $position));
-            $this->em->persist($feed);
-            $this->em->persist(new Subscription($user, $feed, $moment));
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($user, $feed, $moment));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $user;
     }

@@ -26,9 +26,9 @@ final class CatalogFeedFactoryTest extends DbTestCase
     public function testANewFeedTakesItsDetailsAndGoesLastInItsCategory(bool $enabled, bool $locked): void
     {
         $category = new CatalogCategory('tech', 'Tech', 'chip', '#333333');
-        $this->em->persist($category);
-        $this->em->persist(new CatalogFeed($category, 'First', 'https://first.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist(new CatalogFeed($category, 'First', 'https://first.example/feed.xml'));
+        $this->entityManager->flush();
         $next = $this->feeds()->nextPositionInCategory($category->requireId());
         self::assertGreaterThan(0, $next);
 

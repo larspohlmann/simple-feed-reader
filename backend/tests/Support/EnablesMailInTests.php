@@ -17,8 +17,8 @@ trait EnablesMailInTests
 {
     protected function seedEnabledMailInstance(): void
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         $settings = new MailServerSettings();
         $settings->applyWithoutPassword(new MailConnection(
@@ -31,7 +31,7 @@ trait EnablesMailInTests
             '',
         ));
 
-        $em->persist($settings);
-        $em->flush();
+        $entityManager->persist($settings);
+        $entityManager->flush();
     }
 }

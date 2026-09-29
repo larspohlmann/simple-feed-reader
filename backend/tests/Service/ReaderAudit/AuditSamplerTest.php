@@ -28,7 +28,7 @@ final class AuditSamplerTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('audit-sampler@example.com', new \DateTimeImmutable(self::MOMENT));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
     }
 
     public function testEverySubscribedFeedIsRepresentedEvenWhenOneOfThemPublishesTenTimesAsOften(): void
@@ -38,7 +38,7 @@ final class AuditSamplerTest extends DbTestCase
         // feed whose cleaners are already known to work.
         $this->feedWithEntries('loud', 40);
         $this->feedWithEntries('quiet', 1);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
@@ -49,7 +49,7 @@ final class AuditSamplerTest extends DbTestCase
     {
         $this->feedWithEntries('a', 5);
         $this->feedWithEntries('b', 5);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $sample = $this->drawn(limit: 2, perFeed: 5, seed: 1);
 
@@ -59,7 +59,7 @@ final class AuditSamplerTest extends DbTestCase
     public function testTheSameSeedDrawsTheSameSampleSoParallelShardsAgreeWithoutTalking(): void
     {
         $this->feedWithEntries('a', 20);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $first = $this->drawn(limit: 5, perFeed: 5, seed: 99);
         $second = $this->drawn(limit: 5, perFeed: 5, seed: 99);
@@ -71,8 +71,8 @@ final class AuditSamplerTest extends DbTestCase
     {
         $feed = $this->feedWithEntries('urlless', 0);
         $moment = new \DateTimeImmutable(self::MOMENT);
-        $this->em->persist(new Entry($feed, 'no-url', null, 'Ohne URL', $moment, $moment));
-        $this->em->flush();
+        $this->entityManager->persist(new Entry($feed, 'no-url', null, 'Ohne URL', $moment, $moment));
+        $this->entityManager->flush();
 
         self::assertSame([], $this->drawn(limit: 10, perFeed: 10, seed: 1));
     }
@@ -80,11 +80,11 @@ final class AuditSamplerTest extends DbTestCase
     public function testAFeedThePublisherNeverTitledIsNamedByItsUrlRatherThanDropped(): void
     {
         $feed = new Feed('https://untitled.example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable(self::MOMENT)));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->user, $feed, new \DateTimeImmutable(self::MOMENT)));
         $moment = new \DateTimeImmutable(self::MOMENT);
-        $this->em->persist(new Entry($feed, 'g', 'https://untitled.example.com/g', 'T', $moment, $moment));
-        $this->em->flush();
+        $this->entityManager->persist(new Entry($feed, 'g', 'https://untitled.example.com/g', 'T', $moment, $moment));
+        $this->entityManager->flush();
 
         $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
@@ -94,15 +94,17 @@ final class AuditSamplerTest extends DbTestCase
     public function testAnotherAccountsSubscriptionsAreNotAudited(): void
     {
         $stranger = new User('audit-stranger@example.com', new \DateTimeImmutable(self::MOMENT));
-        $this->em->persist($stranger);
+        $this->entityManager->persist($stranger);
         $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
         $strangerFeed->setTitle('stranger');
-        $this->em->persist($strangerFeed);
-        $this->em->persist(new Subscription($stranger, $strangerFeed, new \DateTimeImmutable(self::MOMENT)));
+        $this->entityManager->persist($strangerFeed);
+        $this->entityManager->persist(new Subscription($stranger, $strangerFeed, new \DateTimeImmutable(self::MOMENT)));
         $moment = new \DateTimeImmutable(self::MOMENT);
-        $this->em->persist(new Entry($strangerFeed, 'g', 'https://stranger.example.com/g', 'T', $moment, $moment));
+        $this->entityManager->persist(
+            new Entry($strangerFeed, 'g', 'https://stranger.example.com/g', 'T', $moment, $moment),
+        );
         $this->feedWithEntries('mine', 1);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
 
@@ -113,11 +115,11 @@ final class AuditSamplerTest extends DbTestCase
     {
         $feed = new Feed('https://' . $title . '.example.com/feed.xml');
         $feed->setTitle($title);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->user, $feed, new \DateTimeImmutable(self::MOMENT)));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->user, $feed, new \DateTimeImmutable(self::MOMENT)));
 
         for ($index = 0; $index < $entryCount; $index++) {
-            $this->em->persist(new Entry(
+            $this->entityManager->persist(new Entry(
                 $feed,
                 $title . '-' . $index,
                 'https://' . $title . '.example.com/' . $index,
@@ -168,8 +170,8 @@ final class AuditSamplerTest extends DbTestCase
         // audit different articles than its siblings.
         $feed = $this->feedWithEntries('late', 0);
         $stored = new \DateTimeImmutable('2026-07-05T00:00:00Z');
-        $this->em->persist(new Entry($feed, 'late', 'https://late.example.com/1', 'T', $stored, $stored));
-        $this->em->flush();
+        $this->entityManager->persist(new Entry($feed, 'late', 'https://late.example.com/1', 'T', $stored, $stored));
+        $this->entityManager->flush();
 
         $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1, before: '2026-07-02T00:00:00Z');
 
@@ -179,7 +181,7 @@ final class AuditSamplerTest extends DbTestCase
     public function testPickAuditsTheNamedArticlesWithoutDrawingAtAll(): void
     {
         $this->feedWithEntries('a', 3);
-        $this->em->flush();
+        $this->entityManager->flush();
         $drawn = $this->drawn(limit: 10, perFeed: 10, seed: 1);
         $wanted = $drawn[2]->entryId;
 
@@ -199,9 +201,9 @@ final class AuditSamplerTest extends DbTestCase
         $thread->setDiscussion(
             Discussion::of('https://reddit.example/t', null, CommentsLoad::Auto)->withOpeningPostBody(),
         );
-        $this->em->persist($article);
-        $this->em->persist($thread);
-        $this->em->flush();
+        $this->entityManager->persist($article);
+        $this->entityManager->persist($thread);
+        $this->entityManager->flush();
 
         $picked = $this->sampler()->pick([$article->requireId(), $thread->requireId()], $this->userId());
 

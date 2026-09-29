@@ -54,15 +54,15 @@ final class MeDigestTestControllerTest extends ApiTestCase
      */
     private function verifiedUserWithAMatchingDigestSearch(string $email): User
     {
-        $em = $this->em();
+        $entityManager = $this->entityManager();
 
         $user = $this->factory()->create($email);
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
 
         $feed = new Feed('https://example.com/' . $email . '/feed.xml');
         $feed->setTitle('Example feed');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -72,14 +72,14 @@ final class MeDigestTestControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('-1 day'),
         );
-        $em->persist($entry);
+        $entityManager->persist($entry);
 
         $search = new SavedSearch($user, 'rust', false);
         $search->setIncludeInDigest(true);
-        $em->persist($search);
-        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('-1 day')));
+        $entityManager->persist($search);
+        $entityManager->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('-1 day')));
 
-        $em->flush();
+        $entityManager->flush();
 
         return $user;
     }
@@ -124,7 +124,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $reloaded = $this->users()->find($user->getId());
         self::assertInstanceOf(User::class, $reloaded);
         self::assertEquals($before, $reloaded->getPreferences()->getDigestLastSentAt());
@@ -136,7 +136,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
         $this->seedEnabledMailInstance();
         $user = $this->factory()->create('digest-test-empty@example.test');
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->authenticate($client, $user);
 
         $client->request(

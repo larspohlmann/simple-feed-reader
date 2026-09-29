@@ -41,18 +41,20 @@ final class RecommendationRunPurgerTest extends DbTestCase
 
         $this->user = new User('purge-owner@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->otherUser = new User('purge-other@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
-        $this->em->persist($this->otherUser);
+        $this->entityManager->persist($this->user);
+        $this->entityManager->persist($this->otherUser);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     private function entry(string $guid): Entry
@@ -65,19 +67,19 @@ final class RecommendationRunPurgerTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
 
     private function purger(): RecommendationRunPurger
     {
-        $runs = $this->em->getRepository(RecommendationRun::class);
+        $runs = $this->entityManager->getRepository(RecommendationRun::class);
         self::assertInstanceOf(RecommendationRunRepository::class, $runs);
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         self::assertInstanceOf(RecommendationRunLogRepository::class, $logs);
-        $items = $this->em->getRepository(RecommendationItem::class);
+        $items = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $items);
 
         return new RecommendationRunPurger($runs, $logs, $items);
@@ -88,10 +90,10 @@ final class RecommendationRunPurgerTest extends DbTestCase
         $run = $this->fixtures->createRun($this->user);
         $run->snapshot([[1]]);
         $item = new RecommendationItem($run, $this->entry('mine'), 1, 'reason');
-        $this->em->persist($item);
+        $this->entityManager->persist($item);
         $log = $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'req');
         $run->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $runId = $run->getId();
         $itemId = $item->getId();
         $logId = $log->getId();
@@ -102,10 +104,10 @@ final class RecommendationRunPurgerTest extends DbTestCase
         $otherRun = $this->fixtures->createRun($this->otherUser);
         $otherRun->snapshot([[1]]);
         $otherItem = new RecommendationItem($otherRun, $this->entry('theirs'), 1, 'reason');
-        $this->em->persist($otherItem);
+        $this->entityManager->persist($otherItem);
         $otherLog = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'req');
         $otherRun->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $otherRunId = $otherRun->getId();
         $otherItemId = $otherItem->getId();
         $otherLogId = $otherLog->getId();
@@ -117,19 +119,19 @@ final class RecommendationRunPurgerTest extends DbTestCase
 
         // Bulk DQL bypasses the identity map: clear before asserting a row is
         // gone or still there, or find() serves the stale in-memory copy.
-        $this->em->clear();
-        self::assertNull($this->em->find(RecommendationRun::class, $runId));
-        self::assertNull($this->em->find(RecommendationItem::class, $itemId));
-        self::assertNull($this->em->find(RecommendationRunLog::class, $logId));
-        self::assertNotNull($this->em->find(RecommendationRun::class, $otherRunId));
-        self::assertNotNull($this->em->find(RecommendationItem::class, $otherItemId));
-        self::assertNotNull($this->em->find(RecommendationRunLog::class, $otherLogId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(RecommendationRun::class, $runId));
+        self::assertNull($this->entityManager->find(RecommendationItem::class, $itemId));
+        self::assertNull($this->entityManager->find(RecommendationRunLog::class, $logId));
+        self::assertNotNull($this->entityManager->find(RecommendationRun::class, $otherRunId));
+        self::assertNotNull($this->entityManager->find(RecommendationItem::class, $otherItemId));
+        self::assertNotNull($this->entityManager->find(RecommendationRunLog::class, $otherLogId));
     }
 
     public function testPurgeWithAPendingRunThrowsAndDeletesNothing(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $this->em->flush();
+        $this->entityManager->flush();
         $runId = $run->getId();
         self::assertNotNull($runId);
 
@@ -138,8 +140,8 @@ final class RecommendationRunPurgerTest extends DbTestCase
         try {
             $this->purger()->purge($this->user);
         } finally {
-            $this->em->clear();
-            self::assertNotNull($this->em->find(RecommendationRun::class, $runId));
+            $this->entityManager->clear();
+            self::assertNotNull($this->entityManager->find(RecommendationRun::class, $runId));
         }
     }
 }

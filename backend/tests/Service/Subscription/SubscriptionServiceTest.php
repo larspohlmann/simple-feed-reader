@@ -45,7 +45,7 @@ final class SubscriptionServiceTest extends DbTestCase
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     /** A FeedDiscovery test double returning a fixed result. */
@@ -89,24 +89,24 @@ final class SubscriptionServiceTest extends DbTestCase
         return new SubscriptionService(
             $discovery,
             new SubscriptionCreator(
-                $this->em->getRepository(Subscription::class),
-                $this->em->getRepository(Feed::class),
-                $this->em->getRepository(SubscriptionTag::class),
-                $this->em,
+                $this->entityManager->getRepository(Subscription::class),
+                $this->entityManager->getRepository(Feed::class),
+                $this->entityManager->getRepository(SubscriptionTag::class),
+                $this->entityManager,
                 $clock,
                 new SubscriptionLimitResolver(),
                 new FeedFactory(),
             ),
             new ScrapeFallbackPolicy(),
             new FirstFetchRecorder(
-                EntryIngestors::build($this->em, $clock),
+                EntryIngestors::build($this->entityManager, $clock),
                 FeedSchedulers::build($clock),
-                $this->em,
+                $this->entityManager,
                 $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),
-            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
-            $this->em,
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
+            $this->entityManager,
         );
     }
 
@@ -143,7 +143,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         self::assertNotNull($feed);
         self::assertSame('Discovered Feed', $feed->getTitle());
-        $entries = $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        $entries = $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
         self::assertCount(1, $entries);
         // The recorder's clock-now is the entry's createdAt (the run-start for
         // the list's run-first sort — a first-subscribe fetch is a one-feed run).
@@ -164,14 +164,14 @@ final class SubscriptionServiceTest extends DbTestCase
         $fetchedAt = new \DateTimeImmutable('2026-05-30T09:00:00Z');
         $shared = new Feed('https://example.com/feed.xml');
         $shared->recordSuccessfulFetch($fetchedAt, 60);
-        $this->em->persist($shared);
-        $this->em->flush();
+        $this->entityManager->persist($shared);
+        $this->entityManager->flush();
 
         $service = $this->service($this->discoveryReturning($this->discovered('https://example.com/feed.xml')));
         $service->subscribe($this->factory()->create('second@example.com'), 'https://example.com/feed');
 
         self::assertSame($fetchedAt->format('c'), $shared->getLastFetchedAt()?->format('c'));
-        self::assertSame([], $this->em->getRepository(Entry::class)->findBy(['feed' => $shared]));
+        self::assertSame([], $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $shared]));
     }
 
     public function testSecondSubscriptionToSameFeedIsRejected(): void
@@ -200,8 +200,8 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('healer@example.com');
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setSourceFormat('scraped');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
@@ -226,9 +226,9 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('reheal@example.com');
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setSourceFormat('scraped');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-06-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-06-01T00:00:00Z')));
+        $this->entityManager->flush();
         $feedId = $feed->requireId();
 
         $service = $this->service(
@@ -244,8 +244,8 @@ final class SubscriptionServiceTest extends DbTestCase
 
         // Re-read from the database, not the identity map: without the in-step
         // flush the heal would be discarded here and the row would read 'scraped'.
-        $this->em->clear();
-        $reloaded = $this->em->getRepository(Feed::class)->find($feedId);
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(Feed::class)->find($feedId);
         self::assertNotNull($reloaded);
         self::assertSame('xml', $reloaded->getSourceFormat());
     }
@@ -260,8 +260,8 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('downgrader@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
@@ -278,9 +278,9 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('tagger@example.com');
         $news = new Tag($user, 'News');
         $tech = new Tag($user, 'Tech');
-        $this->em->persist($news);
-        $this->em->persist($tech);
-        $this->em->flush();
+        $this->entityManager->persist($news);
+        $this->entityManager->persist($tech);
+        $this->entityManager->flush();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
@@ -306,8 +306,8 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('scrapedtagger@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $blog = new Tag($user, 'Blogs');
-        $this->em->persist($blog);
-        $this->em->flush();
+        $this->entityManager->persist($blog);
+        $this->entityManager->flush();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/unused.xml')),
@@ -367,8 +367,8 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testWpJsonSubscribeDoesNotChangeTheTitleOfAnExistingSharedFeed(): void
     {
         $shared = new Feed('https://wp.example/wp-json/wp/v2/posts');
-        $this->em->persist($shared);
-        $this->em->flush();
+        $this->entityManager->persist($shared);
+        $this->entityManager->flush();
 
         $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
         $outcome = $service->subscribe(
@@ -430,10 +430,10 @@ final class SubscriptionServiceTest extends DbTestCase
         $existingFeed = new Feed('https://existing.example.com/feed.xml');
         $existing = new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-05-01T00:00:00Z'));
         $existing->addTag($tag, 0);
-        $this->em->persist($tag);
-        $this->em->persist($existingFeed);
-        $this->em->persist($existing);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->persist($existingFeed);
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://fresh.example.com/feed.xml')),
@@ -463,7 +463,7 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertCount(1, $outcome->candidates);
 
         /** @var \App\Repository\SubscriptionRepository $repo */
-        $repo = $this->em->getRepository(Subscription::class);
+        $repo = $this->entityManager->getRepository(Subscription::class);
         self::assertSame(0, $repo->countForUser($user->requireId()));
     }
 

@@ -29,7 +29,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 1));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, TagJoins::positionOf($x, $tech));
         self::assertSame(1, TagJoins::positionOf($moved, $tech));
@@ -47,7 +47,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId()));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(2, TagJoins::positionOf($moved, $tech));
     }
@@ -62,7 +62,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0], [$tech, 2]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 0));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, TagJoins::positionOf($moved, $tech));
         self::assertSame(1, TagJoins::positionOf($x, $tech));
@@ -78,7 +78,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 0));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
@@ -92,7 +92,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), null, 1));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertTrue($moved->getTags()->isEmpty());
         self::assertSame(0, $first->getPosition());
@@ -109,7 +109,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 99));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(1, TagJoins::positionOf($moved, $tech));
     }
@@ -122,7 +122,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$tech, 1]]);
 
         $this->move($moved, new FeedMoveModel($tech->requireId(), $tech->requireId(), 0));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(1, TagJoins::positionOf($moved, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
@@ -149,8 +149,8 @@ final class FeedTagMoveTest extends DbTestCase
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }
@@ -161,11 +161,11 @@ final class FeedTagMoveTest extends DbTestCase
     private function taggedSubscription(User $user, string $url, array $tagPositions): Subscription
     {
         $subscription = new Subscription($user, $this->feed($url), $this->now());
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         foreach ($tagPositions as [$tag, $position]) {
             $subscription->addTag($tag, $position);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $subscription;
     }
@@ -174,8 +174,8 @@ final class FeedTagMoveTest extends DbTestCase
     {
         $subscription = new Subscription($user, $this->feed($url), $this->now());
         $subscription->setPosition($position);
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }
@@ -183,7 +183,7 @@ final class FeedTagMoveTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }

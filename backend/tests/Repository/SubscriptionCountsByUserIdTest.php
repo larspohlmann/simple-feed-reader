@@ -27,14 +27,14 @@ final class SubscriptionCountsByUserIdTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
 
     private function subscribe(User $user, Feed $feed): void
     {
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
     }
 
     public function testAnEmptyIdListShortCircuitsBeforeAnyQueryRuns(): void
@@ -59,7 +59,7 @@ final class SubscriptionCountsByUserIdTest extends DbTestCase
         $this->subscribe($first, $this->feed('https://a.example/feed.xml'));
         $this->subscribe($first, $this->feed('https://b.example/feed.xml'));
         $this->subscribe($second, $this->feed('https://c.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $counts = $this->counts()->forUserIds([$first->requireId(), $second->requireId()]);
 
@@ -72,7 +72,7 @@ final class SubscriptionCountsByUserIdTest extends DbTestCase
     public function testAUserWithNoSubscriptionsIsAbsentRatherThanZero(): void
     {
         $user = $this->user('subscription-counts-none@example.com');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame([], $this->counts()->forUserIds([$user->requireId()]));
     }

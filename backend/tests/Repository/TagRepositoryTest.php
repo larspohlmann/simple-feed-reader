@@ -35,7 +35,7 @@ final class TagRepositoryTest extends DbTestCase
 
     private function repo(): TagRepository
     {
-        $repo = $this->em->getRepository(Tag::class);
+        $repo = $this->entityManager->getRepository(Tag::class);
         self::assertInstanceOf(TagRepository::class, $repo);
 
         return $repo;
@@ -46,14 +46,14 @@ final class TagRepositoryTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new UserFactory($this->em, $hasher);
+        return new UserFactory($this->entityManager, $hasher);
     }
 
     private function tag(User $owner): Tag
     {
         $tag = new Tag($owner, 'News');
-        $this->em->persist($tag);
-        $this->em->flush();
+        $this->entityManager->persist($tag);
+        $this->entityManager->flush();
 
         return $tag;
     }

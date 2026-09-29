@@ -13,28 +13,19 @@ use App\Service\Image\FaviconFetcher\FaviconFetcher;
 use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Model\FetchedFaviconModel;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class WarmCatalogFaviconsCommandTest extends DbTestCase
 {
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
-
     private function persistFeed(string $title, string $url): CatalogFeed
     {
         $category = new CatalogCategory('technology' . $title, 'Technology', 'memory', '#3b82f6');
         $feed = new CatalogFeed($category, $title, $url);
         $feed->setSiteUrl('https://example.com');
-        $this->em()->persist($category);
-        $this->em()->persist($feed);
-        $this->em()->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -79,8 +70,8 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('warmed 1', $tester->getDisplay());
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(CatalogFeed::class, $feed->getId());
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
         self::assertNotNull($reloaded);
         self::assertSame('PNGBYTES', $reloaded->getFaviconBytes());
 
@@ -104,8 +95,8 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('failed 1', $tester->getDisplay());
 
-        $this->em()->clear();
-        $rows = $this->em()->getRepository(CatalogFeed::class)->findAll();
+        $this->entityManager->clear();
+        $rows = $this->entityManager->getRepository(CatalogFeed::class)->findAll();
         self::assertNotNull($rows[0]->getFaviconFailedAt());
     }
 

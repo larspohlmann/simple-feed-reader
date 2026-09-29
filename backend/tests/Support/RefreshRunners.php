@@ -39,10 +39,10 @@ use Symfony\Component\Lock\Store\InMemoryStore;
 final readonly class RefreshRunners
 {
     private function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private FeedBodyParser $bodyParser,
-        private EntityManagerInterface $flushingEm,
+        private EntityManagerInterface $flushingEntityManager,
         private LockFactory $lockFactory,
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
@@ -51,14 +51,14 @@ final readonly class RefreshRunners
 
     public static function fromContainer(
         ContainerInterface $container,
-        EntityManagerInterface $em,
+        EntityManagerInterface $entityManager,
         ClockInterface $clock,
     ): self {
         return new self(
-            $em,
+            $entityManager,
             $clock,
             self::bodyParser($container),
-            $em,
+            $entityManager,
             new LockFactory(new InMemoryStore()),
             new RecordingContentChangeMarker(),
             new RecordingSearchIndexWriter(),
@@ -66,13 +66,13 @@ final readonly class RefreshRunners
     }
 
     /** Only the outcome and favicon flushes go through this EntityManager; the repositories keep the real one. */
-    public function flushingThrough(EntityManagerInterface $flushingEm): self
+    public function flushingThrough(EntityManagerInterface $flushingEntityManager): self
     {
         return new self(
-            $this->em,
+            $this->entityManager,
             $this->clock,
             $this->bodyParser,
-            $flushingEm,
+            $flushingEntityManager,
             $this->lockFactory,
             $this->changeMarker,
             $this->indexWriter,
@@ -82,10 +82,10 @@ final readonly class RefreshRunners
     public function lockingWith(LockFactory $lockFactory): self
     {
         return new self(
-            $this->em,
+            $this->entityManager,
             $this->clock,
             $this->bodyParser,
-            $this->flushingEm,
+            $this->flushingEntityManager,
             $lockFactory,
             $this->changeMarker,
             $this->indexWriter,
@@ -95,10 +95,10 @@ final readonly class RefreshRunners
     public function markingChangesOn(ContentChangeMarkerInterface $changeMarker): self
     {
         return new self(
-            $this->em,
+            $this->entityManager,
             $this->clock,
             $this->bodyParser,
-            $this->flushingEm,
+            $this->flushingEntityManager,
             $this->lockFactory,
             $changeMarker,
             $this->indexWriter,
@@ -108,10 +108,10 @@ final readonly class RefreshRunners
     public function indexingInto(SearchIndexWriterInterface $indexWriter): self
     {
         return new self(
-            $this->em,
+            $this->entityManager,
             $this->clock,
             $this->bodyParser,
-            $this->flushingEm,
+            $this->flushingEntityManager,
             $this->lockFactory,
             $this->changeMarker,
             $indexWriter,
@@ -123,29 +123,29 @@ final readonly class RefreshRunners
         BatchFeedFetcherInterface $homepageFetcher,
     ): RefreshRunner {
         /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->em->getRepository(Feed::class);
+        $feedRepository = $this->entityManager->getRepository(Feed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
 
         return new RefreshRunner(
             $feedRepository,
             $feedFetcher,
             new FeedOutcomePersister(
-                $this->flushingEm,
+                $this->flushingEntityManager,
                 $feedRepository,
                 $this->bodyParser,
-                EntryIngestors::build($this->em, $this->clock),
+                EntryIngestors::build($this->entityManager, $this->clock),
                 FeedSchedulers::build($this->clock),
                 $indexer,
                 new NullLogger(),
             ),
             new MissingFaviconResolver(
                 new FaviconResolver($homepageFetcher, new NullLogger()),
-                $this->flushingEm,
+                $this->flushingEntityManager,
             ),
             new RefreshHousekeeping(
-                new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
+                new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
                 new EntryPruner(
-                    new RetentionRepository($this->em, new RowIds($this->em)),
+                    new RetentionRepository($this->entityManager, new RowIds($this->entityManager)),
                     $this->clock,
                     $indexer,
                 ),

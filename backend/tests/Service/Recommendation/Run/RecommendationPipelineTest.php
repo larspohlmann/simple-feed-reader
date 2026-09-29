@@ -51,10 +51,10 @@ final class RecommendationPipelineTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('pipeline@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('pipeline@example.test');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     /**
@@ -198,7 +198,7 @@ final class RecommendationPipelineTest extends DbTestCase
         foreach ($entries as $entry) {
             $entry->setSummary($summary);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // A connection ceiling of 10 caps each batch at 10 candidates, so the
         // 20-candidate pool packs into exactly two batches under a wide window
@@ -219,8 +219,8 @@ final class RecommendationPipelineTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
 
         return $entries;
     }
@@ -302,18 +302,20 @@ final class RecommendationPipelineTest extends DbTestCase
      */
     private function recommendationItems(RecommendationRun $run): array
     {
-        $this->em->clear();
+        $this->entityManager->clear();
 
         /** @var list<RecommendationItem> $items */
-        $items = $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $run], ['position' => 'ASC']);
+        $items = $this->entityManager
+            ->getRepository(RecommendationItem::class)
+            ->findBy(['run' => $run], ['position' => 'ASC']);
 
         return $items;
     }
 
     private function runProfileTextFor(RecommendationRun $run): ?string
     {
-        $this->em->clear();
-        $fresh = $this->em->getRepository(RecommendationRun::class)->find($run->getId());
+        $this->entityManager->clear();
+        $fresh = $this->entityManager->getRepository(RecommendationRun::class)->find($run->getId());
         self::assertNotNull($fresh);
 
         return $fresh->getProfileText();
@@ -321,9 +323,9 @@ final class RecommendationPipelineTest extends DbTestCase
 
     private function storedProfileText(): ?string
     {
-        $this->em->clear();
+        $this->entityManager->clear();
         /** @var RecommendationSettingsRepository $repository */
-        $repository = $this->em->getRepository(RecommendationSettings::class);
+        $repository = $this->entityManager->getRepository(RecommendationSettings::class);
         $settings = $repository->findForUser($this->user);
 
         return $settings?->values()->profileText;
@@ -332,7 +334,7 @@ final class RecommendationPipelineTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }

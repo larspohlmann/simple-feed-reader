@@ -31,7 +31,7 @@ final class ReadingActivityControllerTest extends WebTestCase
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($this->em(), $hasher))->create($email);
+        $user = (new UserFactory($this->entityManager(), $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -39,12 +39,12 @@ final class ReadingActivityControllerTest extends WebTestCase
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        return $em;
+        return $entityManager;
     }
 
     /** @return array<string, mixed> */
@@ -61,11 +61,11 @@ final class ReadingActivityControllerTest extends WebTestCase
     {
         $createdAt = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $entry = new Entry($feed, $guid, null, $guid, $createdAt, $createdAt);
-        $this->em()->persist($entry);
+        $this->entityManager()->persist($entry);
 
         $state = new EntryState($user, $entry);
         $state->markViewed($openedAt);
-        $this->em()->persist($state);
+        $this->entityManager()->persist($state);
     }
 
     public function testRefusesAnAnonymousRequest(): void
@@ -101,17 +101,17 @@ final class ReadingActivityControllerTest extends WebTestCase
 
         $busy = new Feed('https://example.com/busy.xml');
         $quiet = new Feed('https://example.com/quiet.xml');
-        $this->em()->persist($busy);
-        $this->em()->persist($quiet);
+        $this->entityManager()->persist($busy);
+        $this->entityManager()->persist($quiet);
         $subscribedAt = new \DateTimeImmutable('2026-01-01T00:00:00Z');
-        $this->em()->persist(new Subscription($user, $busy, $subscribedAt));
-        $this->em()->persist(new Subscription($user, $quiet, $subscribedAt));
+        $this->entityManager()->persist(new Subscription($user, $busy, $subscribedAt));
+        $this->entityManager()->persist(new Subscription($user, $quiet, $subscribedAt));
 
         $when = new \DateTimeImmutable('2026-06-01T09:00:00Z');
         $this->openArticle($user, $busy, 'busy-a', $when);
         $this->openArticle($user, $busy, 'busy-b', $when);
         $this->openArticle($user, $quiet, 'quiet-a', $when);
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', self::ROUTE . '?tz=UTC', server: $headers);
 
@@ -132,8 +132,8 @@ final class ReadingActivityControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reading-activity-counts@example.test');
 
         $feed = new Feed('https://example.com/f.xml');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
 
         // Midday UTC keeps every open clear of a day boundary under tz=UTC.
         $noonUtc = new \DateTimeImmutable('now', new \DateTimeZone('UTC'))->setTime(12, 0);
@@ -145,7 +145,7 @@ final class ReadingActivityControllerTest extends WebTestCase
         $this->openArticle($user, $feed, 'older', $fiveDaysAgo);
         // Well outside the thirty-day window, so it must not be counted.
         $this->openArticle($user, $feed, 'ancient', $noonUtc->modify('-40 days'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         $client->request('GET', self::ROUTE . '?tz=UTC', server: $headers);
 

@@ -19,25 +19,27 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $owner = $factory->create('owner@example.com');
 
         $tag = new Tag($owner, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         $tagged = new Feed('https://example.com/tagged.xml');
-        $this->em->persist($tagged);
+        $this->entityManager->persist($tagged);
         $taggedSub = new Subscription($owner, $tagged, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $taggedSub->addTag($tag);
-        $this->em->persist($taggedSub);
+        $this->entityManager->persist($taggedSub);
 
         $untagged = new Feed('https://example.com/untagged.xml');
-        $this->em->persist($untagged);
-        $this->em->persist(new Subscription($owner, $untagged, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $this->entityManager->persist($untagged);
+        $this->entityManager->persist(
+            new Subscription($owner, $untagged, new \DateTimeImmutable('2026-01-01T00:00:00Z')),
+        );
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $repo = $this->em->getRepository(Feed::class);
+        $repo = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repo);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
@@ -53,24 +55,24 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $owner = $factory->create('owner@example.com');
         $stranger = $factory->create('stranger@example.com');
 
         $ownerTag = new Tag($owner, 'news');
         $strangerTag = new Tag($stranger, 'news');
-        $this->em->persist($ownerTag);
-        $this->em->persist($strangerTag);
+        $this->entityManager->persist($ownerTag);
+        $this->entityManager->persist($strangerTag);
 
         $strangerFeed = new Feed('https://example.com/stranger.xml');
-        $this->em->persist($strangerFeed);
+        $this->entityManager->persist($strangerFeed);
         $strangerSub = new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $strangerSub->addTag($strangerTag);
-        $this->em->persist($strangerSub);
+        $this->entityManager->persist($strangerSub);
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $repo = $this->em->getRepository(Feed::class);
+        $repo = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repo);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');

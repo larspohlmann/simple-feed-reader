@@ -24,25 +24,25 @@ final class OpmlExporterTest extends DbTestCase
     public function testExportsTaggedAndUntaggedFeeds(): void
     {
         $user = new User('x@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $tagged = new Feed('https://news.example.com/feed.xml');
         $tagged->setTitle('News & Views');
         $tagged->setSiteUrl('https://news.example.com/');
-        $this->em->persist($tagged);
+        $this->entityManager->persist($tagged);
         $untagged = new Feed('https://blog.example.com/feed.xml');
         $untagged->setTitle('Blog');
-        $this->em->persist($untagged);
+        $this->entityManager->persist($untagged);
 
         $tag = new Tag($user, 'Daily');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         $s1 = new Subscription($user, $tagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $s1->addTag($tag);
-        $this->em->persist($s1);
+        $this->entityManager->persist($s1);
         $s2 = new Subscription($user, $untagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($s2);
-        $this->em->flush();
+        $this->entityManager->persist($s2);
+        $this->entityManager->flush();
 
         $xml = $this->exporter()->export($user);
 

@@ -444,7 +444,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $user = $this->factory()->create('suspended@example.test');
         $fixture = $this->enrol($client, 'suspended@example.test');
         $user->suspend();
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $handle = $this->issueLoginChallenge($fixture->challenge);
 
         $this->login($client, $handle, PasskeyFixtures::assertion(
@@ -715,7 +715,7 @@ final class PasskeyLoginTest extends ApiTestCase
             $ceremony,
             $optionsFactory,
             $passkeys,
-            $this->em(),
+            $this->entityManager(),
             $clock,
             new Logger('test', [$logSpy]),
             $availability,
@@ -772,7 +772,7 @@ final class PasskeyLoginTest extends ApiTestCase
      */
     private function onlyStoredPasskeyFor(User $user): UserPasskey
     {
-        $this->em()->clear();
+        $this->entityManager()->clear();
 
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);

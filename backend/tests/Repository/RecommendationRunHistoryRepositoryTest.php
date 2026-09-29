@@ -142,6 +142,6 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        return new RecommendationRunFixtures($this->em, $cipher);
+        return new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 }

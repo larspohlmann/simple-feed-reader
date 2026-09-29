@@ -20,8 +20,8 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         $ingestor = self::getContainer()->get(EntryIngestor::class);
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
         $thread = new ParsedEntryModel(
             't3_1abc',
             'https://www.reddit.com/r/PHP/comments/1abc/t/',
@@ -37,9 +37,9 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
             new ParsedFeedModel('Feed', null, null, null, [$thread]),
             new FeedIngestContext(new \DateTimeImmutable('2026-09-24T12:00:00Z'), null),
         );
-        $this->em->flush();
+        $this->entityManager->flush();
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
         self::assertNull($entry->getUrl());
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
