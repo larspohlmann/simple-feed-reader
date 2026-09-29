@@ -12,17 +12,9 @@ use App\Service\Reader\Media\Sibling\NearbyPoster;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * ZDF names each inline clip only in its player config — `"content":"<id>"`
- * beside a `"startImage"` — and plays it from `https://<host>/api/video/<id>.m3u8`,
- * which redirects to the durable stream. The schema.org VideoObject other
- * sources seed from is present only for a hero video, so a text-led article
- * ships none and its clips would reach the body as dead poster images. This
- * source seeds from the config instead, so every clip a page declares becomes a
- * player whether or not the page also carries the VideoObject (#1055).
- *
- * On a hero-video page a VideoObject names one of these streams too; the scanner
- * merges that one by URL, and SiblingMediaExtender drops the overlapping
- * re-derivations before they reach the network.
+ * ZDF names an inline clip only in its player config (`"content":"<id>"` beside a `"startImage"`), played from
+ * `https://<host>/api/video/<id>.m3u8`. Only a hero video has a VideoObject, so every clip is seeded from the config;
+ * the scanner merges the hero by URL.
  */
 #[AsTaggedItem(priority: 90)]
 final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterface

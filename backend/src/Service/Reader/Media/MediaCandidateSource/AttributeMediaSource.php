@@ -18,14 +18,8 @@ use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * Host-agnostic: a publisher's player often hides its file URL in an ad-hoc
- * attribute (Deutschlandradio's `data-audio-src`, ARD's `data-v` rendition
- * list) rather than `[src]` or JSON-LD, so every attribute of every element is
- * scanned instead of naming a host. `href` counts too, covering a file hung
- * off a plain link (NPR's "Listen" anchor) — a linked-file layer beneath this
- * one was dead (#756). A value can hold a whole JSON blob, so it is scanned
- * for URL-shaped substrings rather than trusted as one URL. The poster comes
- * from `og:image` or, failing that, the still beside the player.
+ * Scans every attribute of every element, `href` included, for URL-shaped substrings: a player often hides its file
+ * in an ad-hoc attribute or a JSON blob, not `[src]` or JSON-LD. The poster is og:image, else the still beside it.
  */
 #[AsTaggedItem(priority: 60)]
 final readonly class AttributeMediaSource implements MediaCandidateSourceInterface
@@ -47,9 +41,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     }
 
     /**
-     * Every media URL any attribute holds, with the element that holds it — the
-     * first element wins when a URL repeats, so the anchor is where the media
-     * first appears.
+     * Every media URL any attribute holds, with the first element that holds it: where the media first appears.
      *
      * @return array<value-of<MediaKind>, array<string, Element>> durable url => element
      */
@@ -120,8 +112,6 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
             return new MediaCandidateModel(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
         }
 
-        // The poster may be absent here; the scanner rescues or drops a
-        // still-poster-less video once every source has been merged (#913).
         $poster = $page->posterUrl ?? $this->playerPoster->near($origins[$best]);
 
         return new MediaCandidateModel($kind, $best, $poster, null, $precedingText);

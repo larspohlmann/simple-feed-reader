@@ -14,17 +14,9 @@ use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * A player some sites build client-side leaves no embeddable node in the
- * fetched page — only a URL in an inline script (Lion's Roar's
- * `var videoData = {"url":"https://vimeo.com/<id>/"}`). Every https URL an
- * inline script names is run through the embed allow-list; only a provider
- * match becomes a candidate, so a `player.js` asset or an analytics ping is
- * ignored. Scripts under page chrome are skipped, so a related-video widget in
- * a sidebar or footer never becomes the article's hero.
- *
- * No prose anchor: the script sits at the page's end, far from the empty mount
- * the player fills, so the candidate is top-placed as the hero rather than
- * dragged behind the last paragraph.
+ * An embed a client-side player names only in an inline script: every https URL the script holds goes through the
+ * embed allow-list, and scripts under page chrome are skipped. No prose anchor, so it is top-placed as the hero: the
+ * script sits far from the mount the player fills.
  */
 #[AsTaggedItem(priority: 50)]
 final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface

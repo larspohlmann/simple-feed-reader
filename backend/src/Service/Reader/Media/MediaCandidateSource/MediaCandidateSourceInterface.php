@@ -9,16 +9,8 @@ use App\Service\Reader\Media\Model\RawPageModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
- * One host-agnostic way to find the media a page offers. Implementations are
- * collected in AsTaggedItem priority order, highest first. The first to name a
- * URL sets that candidate; later ones fill its gaps and add the URLs it never
- * named — a declaration leads, but hides nothing a scan finds (#788).
- *
- * Reads the RAW page, not FetchedPageNormalizer's document: that pass is tuned
- * for readability scoring, removes elements, and is free to change again.
- *
- * Mirrors Service/Scraper/Layer/ScrapeLayerInterface, which solves the same
- * problem shape for feedless pages.
+ * One host-agnostic way to find a page's media, run in AsTaggedItem priority order, highest first (PageMediaScanner
+ * merges). Reads the raw page, not FetchedPageNormalizer's document, which removes elements for readability.
  */
 #[AutoconfigureTag('app.media_candidate_source')]
 interface MediaCandidateSourceInterface
