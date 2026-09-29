@@ -160,7 +160,8 @@ Non-negotiables:
 
 Enforced mechanically by `composer check` and `composer md`:
 
-- **PSR-12** (`phpcs.xml.dist`), `declare(strict_types=1)` in every file.
+- **PSR-12** (`phpcs.xml.dist`), and `declare(strict_types=1)` in every file of `src` and `tests`
+  (`Generic.PHP.RequireStrictTypes`).
 - **PHPStan level max** over `src` and `tests` — no new baselines, no
   `@phpstan-ignore` without a comment saying why.
 - **`ThinControllerRule`** (`tests/PhpStan/ThinControllerRule.php`, run by

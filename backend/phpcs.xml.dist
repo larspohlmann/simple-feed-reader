@@ -5,6 +5,7 @@
     <arg name="colors"/>
     <arg value="p"/>
     <rule ref="PSR12"/>
+    <rule ref="Generic.PHP.RequireStrictTypes"/>
     <file>src</file>
     <file>tests</file>
     <!-- PHPStan rule fixtures deliberately break PSR-12 (several classes per file,
