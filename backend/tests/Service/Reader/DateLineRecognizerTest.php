@@ -45,20 +45,69 @@ final class DateLineRecognizerTest extends TestCase
         self::assertFalse($this->recognizer->isDateLine('2026-09-01x'));
     }
 
+    public function testDateLineRejectsADateFollowedByMoreText(): void
+    {
+        self::assertFalse($this->recognizer->isDateLine('07.09.2026 Hamburg'));
+    }
+
+    public function testDateLineRejectsADateThatOnlyALenientParserWouldRollOver(): void
+    {
+        self::assertFalse($this->recognizer->isDateLine('31.02.2026'));
+        self::assertFalse($this->recognizer->isDateLine('32.09.2026'));
+    }
+
     public function testBuildsOneFormatterPerLocaleAndStyleAndReusesItOnEveryLaterCall(): void
     {
         $built = [];
-        $buildFormatter = static function (string $locale, int $style) use (&$built): \IntlDateFormatter {
-            $built[] = $locale . '|' . $style;
-
-            return new \IntlDateFormatter($locale, $style, \IntlDateFormatter::NONE, 'UTC');
-        };
-        $recognizer = new DateLineRecognizer($buildFormatter);
+        $recognizer = new DateLineRecognizer(self::recordingBuilder($built));
 
         $recognizer->isDateLine('Hamburg 1');
         $recognizer->isDateLine('Hamburg 2');
 
         self::assertCount(9, $built);
         self::assertSame($built, array_values(array_unique($built)));
+    }
+
+    public function testParsesNothingForTextWithoutADigitOrLongerThanTheCap(): void
+    {
+        $built = [];
+        $recognizer = new DateLineRecognizer(self::recordingBuilder($built));
+
+        self::assertFalse($recognizer->isDateLine('Hamburg'));
+        self::assertFalse($recognizer->isDateLine(str_repeat('a', 48) . '1'));
+
+        self::assertSame([], $built);
+    }
+
+    public function testParsesTextExactlyAtTheCap(): void
+    {
+        $built = [];
+
+        (new DateLineRecognizer(self::recordingBuilder($built)))->isDateLine(str_repeat('a', 47) . '1');
+
+        self::assertCount(9, $built);
+    }
+
+    public function testCountsTheCapInCharactersNotBytes(): void
+    {
+        $built = [];
+
+        (new DateLineRecognizer(self::recordingBuilder($built)))->isDateLine(str_repeat('ä', 40) . '1');
+
+        self::assertCount(9, $built);
+    }
+
+    /**
+     * @param list<string> $built
+     *
+     * @return \Closure(string, int): \IntlDateFormatter
+     */
+    private static function recordingBuilder(array &$built): \Closure
+    {
+        return static function (string $locale, int $style) use (&$built): \IntlDateFormatter {
+            $built[] = $locale . '|' . $style;
+
+            return new \IntlDateFormatter($locale, $style, \IntlDateFormatter::NONE, 'UTC');
+        };
     }
 }

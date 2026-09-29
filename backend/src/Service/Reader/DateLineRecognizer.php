@@ -21,7 +21,7 @@ final class DateLineRecognizer
     /** @var \Closure(string, int): \IntlDateFormatter */
     private readonly \Closure $buildFormatter;
 
-    /** @var array<string, \IntlDateFormatter> strict formatters, one per locale/style, reused across calls */
+    /** @var array<string, array<int, \IntlDateFormatter>> strict formatters by locale and style, reused across calls */
     private array $dateFormatters = [];
 
     /** @param (\Closure(string, int): \IntlDateFormatter)|null $buildFormatter */
@@ -55,7 +55,7 @@ final class DateLineRecognizer
 
     private function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
     {
-        $formatter = $this->dateFormatters[$locale . '|' . $style] ??= ($this->buildFormatter)($locale, $style);
+        $formatter = $this->dateFormatters[$locale][$style] ??= ($this->buildFormatter)($locale, $style);
 
         $position = 0;
         $timestamp = $formatter->parse($text, $position);
