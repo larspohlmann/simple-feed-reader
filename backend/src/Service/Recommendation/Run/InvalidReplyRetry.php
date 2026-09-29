@@ -21,8 +21,8 @@ final readonly class InvalidReplyRetry
         string $invalidReply,
         \Closure $onAttemptsExhausted,
     ): RecommendationRunReportModel {
-        $run->recordInvalidReply($invalidReply);
-        if ($run->progress()->attemptsExhausted) {
+        $run->getRunningCallAttempts()->recordInvalidReply($invalidReply);
+        if ($run->getProgress()->attemptsExhausted) {
             return $onAttemptsExhausted();
         }
         $this->entityManager->flush();

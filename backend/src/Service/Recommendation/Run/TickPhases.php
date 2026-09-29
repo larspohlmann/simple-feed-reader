@@ -38,7 +38,7 @@ final readonly class TickPhases
             return $this->snapshot->advance($tick);
         }
 
-        if ($run->mustWaitBeforeRetry($this->clock->now())) {
+        if ($run->isRetryDeferredAt($this->clock->now())) {
             return RecommendationRunReportModel::fromRun($run);
         }
 
@@ -47,7 +47,7 @@ final readonly class TickPhases
 
     private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface
     {
-        $progress = $run->progress();
+        $progress = $run->getProgress();
 
         return match (true) {
             $progress->distillPending => $this->distillation,

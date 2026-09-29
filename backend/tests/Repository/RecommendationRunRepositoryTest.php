@@ -113,6 +113,26 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         self::assertSame(\array_slice($ids, 0, \count($swept)), $swept);
     }
 
+    public function testWhatARunningRunRecordsThroughItsThrottleAndCallAttemptsIsPersisted(): void
+    {
+        $run = $this->persistRun($this->user('views@example.com'), RunStatus::Running);
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->getRunningThrottle()->reduceConcurrency(8);
+        $run->getRunningCallAttempts()->recordInvalidReply('garbage');
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $this->em->flush();
+        $this->em->clear();
+
+        $persisted = $this->em->find(RecommendationRun::class, $run->requireId());
+
+        self::assertNotNull($persisted);
+        self::assertSame('2026-08-07 09:05:00', $persisted->getRetryNotBefore()?->format('Y-m-d H:i:s'));
+        self::assertSame(4, $persisted->getWaveConcurrencyCap(8));
+        self::assertSame(1, $persisted->getAttempts());
+        self::assertSame('garbage', $persisted->getLastInvalidReply());
+        self::assertSame(1, $persisted->getTransportFailures());
+    }
+
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */

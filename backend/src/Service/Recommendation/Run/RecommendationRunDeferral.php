@@ -28,7 +28,8 @@ final readonly class RecommendationRunDeferral
         ProviderRateLimitedException $rateLimited,
     ): RecommendationRunReportModel {
         $this->checkpoint->guard($run);
-        $run->deferRetryUntil($this->clock->now()->add(self::waitInterval($rateLimited->waitSeconds())));
+        $retryNotBefore = $this->clock->now()->add(self::waitInterval($rateLimited->waitSeconds()));
+        $run->getRunningThrottle()->deferUntil($retryNotBefore);
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($run);

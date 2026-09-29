@@ -46,7 +46,7 @@ final readonly class WaveContextLoader
     /** @return list<WaveBatchModel> */
     private function nextBatches(TickContext $tick, int $waveSize): array
     {
-        $startIndex = $tick->run->progress()->nextBatchIndex;
+        $startIndex = $tick->run->getProgress()->nextBatchIndex;
         $candidateBatches = $tick->run->getCandidateBatches();
 
         $idsByPosition = [];

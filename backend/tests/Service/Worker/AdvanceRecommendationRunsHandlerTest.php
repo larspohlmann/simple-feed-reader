@@ -180,7 +180,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // Warm-up firing: batch 0 alone writes the prompt-cache (#495).
         $this->requeueCleanReplyFor($batches[0]);
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
-        self::assertSame(1, $this->activeRun($user)->progress()->batchesDone);
+        self::assertSame(1, $this->activeRun($user)->getProgress()->batchesDone);
 
         // One worker firing then fans out all three remaining batches at once.
         foreach ([$batches[1], $batches[2], $batches[3]] as $batch) {
@@ -190,8 +190,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun($user);
-        self::assertSame(4, $persisted->progress()->batchesDone);
-        self::assertTrue($persisted->progress()->isConsolidationPhase);
+        self::assertSame(4, $persisted->getProgress()->batchesDone);
+        self::assertTrue($persisted->getProgress()->isConsolidationPhase);
     }
 
     /**
@@ -225,7 +225,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // The healthy run's own tick was not blocked by the struggling one's
         // failure in the same firing: its distillation phase went through.
         $advancedAfterDistill = $this->activeRun($healthyUser);
-        self::assertFalse($advancedAfterDistill->progress()->distillPending);
+        self::assertFalse($advancedAfterDistill->getProgress()->distillPending);
 
         // The fairness this test is about is already proven above, in the one
         // firing both runs shared; driving the healthy run the rest of the
@@ -411,7 +411,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // firing the struggling run's pending failure landed in. Driving it
         // the rest of the way to completion goes straight through its own
         // advancer, now that the struggling run is done and gone.
-        self::assertFalse($this->activeRun($healthyUser)->progress()->distillPending);
+        self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
 
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
@@ -474,7 +474,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($struggling);
         self::assertSame(RunStatus::Failed, $struggling->getStatus());
 
-        self::assertFalse($this->activeRun($healthyUser)->progress()->distillPending);
+        self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
 
         // Driving the healthy run the rest of the way to completion goes
         // straight through its own advancer over the real, un-poisoned

@@ -43,7 +43,7 @@ final readonly class RecommendationTransportFailureRecorder
     {
         $this->checkpoint->guard($run);
 
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         if ($run->hasExhaustedTransportRetries()) {
             // The real per-call detail, not a hardcoded "could not be reached":
             // most transport failures are the provider refusing or truncating a

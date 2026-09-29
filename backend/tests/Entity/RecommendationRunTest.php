@@ -15,7 +15,7 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
 
-        $progress = $run->progress();
+        $progress = $run->getProgress();
 
         self::assertSame(0, $progress->batchesDone);
         self::assertNull($progress->batchesTotal);
@@ -32,7 +32,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
-        self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
+        self::assertSame(4, $run->getProgress()->batchesTotal); // 2 batches + distill + consolidate
     }
 
     public function testASingleBatchPlanTotalsThreeStages(): void
@@ -40,22 +40,22 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
         $run->snapshot([[1, 2, 3]]);
 
-        self::assertSame(3, $run->progress()->batchesTotal); // 1 batch + distill + consolidate
+        self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
     }
 
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1, 2], [3]]);
-        $run->recordInvalidReply('garbage');
+        $run->getRunningCallAttempts()->recordInvalidReply('garbage');
 
         $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'fresh']]);
 
-        self::assertSame(1, $run->progress()->batchesDone);
+        self::assertSame(1, $run->getProgress()->batchesDone);
         self::assertSame([[['id' => 2, 'score' => 50, 'reason' => 'fresh']]], $run->getWinners());
         self::assertNull($run->getLastInvalidReply());
-        self::assertFalse($run->progress()->attemptsExhausted);
-        self::assertSame(1, $run->progress()->nextBatchIndex);
+        self::assertFalse($run->getProgress()->attemptsExhausted);
+        self::assertSame(1, $run->getProgress()->nextBatchIndex);
     }
 
     /**
@@ -81,13 +81,13 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->recordInvalidReply('a');
-        $run->recordInvalidReply('b');
-        self::assertFalse($run->progress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('a');
+        $run->getRunningCallAttempts()->recordInvalidReply('b');
+        self::assertFalse($run->getProgress()->attemptsExhausted);
 
-        $run->recordInvalidReply('c');
+        $run->getRunningCallAttempts()->recordInvalidReply('c');
 
-        self::assertTrue($run->progress()->attemptsExhausted);
+        self::assertTrue($run->getProgress()->attemptsExhausted);
         self::assertSame('c', $run->getLastInvalidReply());
     }
 
@@ -96,50 +96,50 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
         $run->snapshot([[1], [2]]);
 
-        self::assertFalse($run->progress()->allBatchCallsDone);
+        self::assertFalse($run->getProgress()->allBatchCallsDone);
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-        self::assertFalse($run->progress()->allBatchCallsDone);
+        self::assertFalse($run->getProgress()->allBatchCallsDone);
 
         $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'r']]);
-        self::assertTrue($run->progress()->allBatchCallsDone);
+        self::assertTrue($run->getProgress()->allBatchCallsDone);
     }
 
     public function testRecordBatchWinnersResetsAttemptsToExactlyZero(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1], [2]]);
-        $run->recordInvalidReply('a');
-        $run->recordInvalidReply('b');
+        $run->getRunningCallAttempts()->recordInvalidReply('a');
+        $run->getRunningCallAttempts()->recordInvalidReply('b');
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
         // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
         // again — pins the reset at 0, not -1 or 1.
-        $run->recordInvalidReply('c');
-        $run->recordInvalidReply('d');
-        self::assertFalse($run->progress()->attemptsExhausted);
-        $run->recordInvalidReply('e');
-        self::assertTrue($run->progress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('c');
+        $run->getRunningCallAttempts()->recordInvalidReply('d');
+        self::assertFalse($run->getProgress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('e');
+        self::assertTrue($run->getProgress()->attemptsExhausted);
     }
 
     public function testResumeResetsAttemptsToExactlyZero(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->recordInvalidReply('a');
-        $run->recordInvalidReply('b');
+        $run->getRunningCallAttempts()->recordInvalidReply('a');
+        $run->getRunningCallAttempts()->recordInvalidReply('b');
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         $run->resume();
 
         // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
         // again — pins the reset at 0, not -1 or 1.
-        $run->recordInvalidReply('c');
-        $run->recordInvalidReply('d');
-        self::assertFalse($run->progress()->attemptsExhausted);
-        $run->recordInvalidReply('e');
-        self::assertTrue($run->progress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('c');
+        $run->getRunningCallAttempts()->recordInvalidReply('d');
+        self::assertFalse($run->getProgress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('e');
+        self::assertTrue($run->getProgress()->attemptsExhausted);
     }
 
     public function testAFreshRunHasNotExhaustedItsTransportRetries(): void
@@ -152,11 +152,11 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
         $run->snapshot([[1]]);
 
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertFalse($run->hasExhaustedTransportRetries());
 
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
@@ -168,11 +168,11 @@ final class RecommendationRunTest extends TestCase
         $run = $this->makeRun();
         $run->snapshot([[1]]);
 
-        $run->recordInvalidReply('garbage');
-        $run->recordInvalidReply('garbage');
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordInvalidReply('garbage');
+        $run->getRunningCallAttempts()->recordInvalidReply('garbage');
+        $run->getRunningCallAttempts()->recordTransportFailure();
 
-        self::assertFalse($run->progress()->attemptsExhausted);
+        self::assertFalse($run->getProgress()->attemptsExhausted);
         self::assertFalse($run->hasExhaustedTransportRetries());
     }
 
@@ -180,17 +180,17 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
         $run->snapshot([[1], [2]]);
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
         // Exactly MAX_TRANSPORT_FAILURES (3) fresh failures are needed to
         // exhaust again — pins the reset at 0, not -1 or 1.
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertFalse($run->hasExhaustedTransportRetries());
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
@@ -198,9 +198,9 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertTrue($run->hasExhaustedTransportRetries());
 
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
@@ -213,25 +213,17 @@ final class RecommendationRunTest extends TestCase
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         $run->resume();
 
-        $run->recordTransportFailure();
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertFalse($run->hasExhaustedTransportRetries());
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertTrue($run->hasExhaustedTransportRetries());
-    }
-
-    public function testRecordTransportFailureBeforeSnapshotThrows(): void
-    {
-        $run = $this->makeRun();
-
-        $this->expectException(\LogicException::class);
-        $run->recordTransportFailure();
     }
 
     public function testResumeIsOnlyLegalFromFailed(): void
@@ -260,7 +252,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertSame($when, $run->getCompletedAt());
-        self::assertSame(4, $run->progress()->batchesDone);
+        self::assertSame(4, $run->getProgress()->batchesDone);
     }
 
     public function testSnapshotAgainAfterAlreadyRunningThrows(): void
@@ -312,14 +304,6 @@ final class RecommendationRunTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
-    }
-
-    public function testRecordInvalidReplyBeforeSnapshotThrows(): void
-    {
-        $run = $this->makeRun();
-
-        $this->expectException(\LogicException::class);
-        $run->recordInvalidReply('garbage');
     }
 
     public function testStartsWithNoProviderAndNoSpend(): void
@@ -408,116 +392,126 @@ final class RecommendationRunTest extends TestCase
     public function testRecordProfileResetsAttemptsToExactlyZero(): void
     {
         $run = $this->runInRunningState();
-        $run->recordInvalidReply('a');
-        $run->recordInvalidReply('b');
+        $run->getRunningCallAttempts()->recordInvalidReply('a');
+        $run->getRunningCallAttempts()->recordInvalidReply('b');
 
         $run->recordProfile('Likes Rust.');
 
         // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
         // again — pins the reset at 0, not -1 or 1.
-        $run->recordInvalidReply('c');
-        $run->recordInvalidReply('d');
-        self::assertFalse($run->progress()->attemptsExhausted);
-        $run->recordInvalidReply('e');
-        self::assertTrue($run->progress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('c');
+        $run->getRunningCallAttempts()->recordInvalidReply('d');
+        self::assertFalse($run->getProgress()->attemptsExhausted);
+        $run->getRunningCallAttempts()->recordInvalidReply('e');
+        self::assertTrue($run->getProgress()->attemptsExhausted);
     }
 
     public function testAFreshRunNeitherWaitsNorReducesTheCap(): void
     {
         $run = $this->makeRun();
 
-        self::assertFalse($run->mustWaitBeforeRetry(new \DateTimeImmutable('2026-08-07T09:00:00Z')));
-        self::assertSame(8, $run->waveConcurrencyCap(8));
+        self::assertFalse($run->isRetryDeferredAt(new \DateTimeImmutable('2026-08-07T09:00:00Z')));
+        self::assertSame(8, $run->getWaveConcurrencyCap(8));
         self::assertNull($run->getRetryNotBefore());
     }
 
-    public function testDeferRetryUntilGatesTicksUntilThatTime(): void
+    public function testAPendingRunHandsOutNoThrottle(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Cannot throttle a recommendation run from status "pending".');
+
+        $this->makeRun()->getRunningThrottle();
+    }
+
+    public function testAPendingRunHandsOutNoCallAttempts(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Cannot record a call attempt on a recommendation run from status "pending".');
+
+        $this->makeRun()->getRunningCallAttempts();
+    }
+
+    public function testARunningRunRecordsAnInvalidReplyThroughItsCallAttempts(): void
+    {
+        $run = $this->runInRunningState();
+
+        $run->getRunningCallAttempts()->recordInvalidReply('garbage');
+
+        self::assertSame(1, $run->getAttempts());
+        self::assertSame('garbage', $run->getLastInvalidReply());
+    }
+
+    public function testARunningRunDefersThroughItsThrottle(): void
     {
         $run = $this->runInRunningState();
         $when = new \DateTimeImmutable('2026-08-07T09:05:00Z');
 
-        $run->deferRetryUntil($when);
+        $run->getRunningThrottle()->deferUntil($when);
 
         self::assertSame($when, $run->getRetryNotBefore());
-        self::assertTrue($run->mustWaitBeforeRetry(new \DateTimeImmutable('2026-08-07T09:04:00Z')));
-        self::assertFalse($run->mustWaitBeforeRetry($when));
+        self::assertTrue($run->isRetryDeferredAt(new \DateTimeImmutable('2026-08-07T09:04:00Z')));
+        self::assertFalse($run->isRetryDeferredAt($when));
     }
 
-    public function testDeferRetryUntilBeforeSnapshotThrows(): void
-    {
-        $run = $this->makeRun();
-
-        $this->expectException(\LogicException::class);
-        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-    }
-
-    public function testReduceWaveConcurrencyHalvesTheConfiguredCap(): void
+    public function testARunningRunNarrowsItsWaveThroughItsThrottle(): void
     {
         $run = $this->runInRunningState();
 
-        $run->reduceWaveConcurrency(8);
+        $run->getRunningThrottle()->reduceConcurrency(8);
 
-        self::assertSame(4, $run->waveConcurrencyCap(8));
-    }
-
-    public function testReduceWaveConcurrencyBeforeSnapshotThrows(): void
-    {
-        $run = $this->makeRun();
-
-        $this->expectException(\LogicException::class);
-        $run->reduceWaveConcurrency(8);
+        self::assertSame(4, $run->getWaveConcurrencyCap(8));
     }
 
     public function testRecordBatchWinnersClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1], [2]]);
-        $run->reduceWaveConcurrency(8);
-        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->getRunningThrottle()->reduceConcurrency(8);
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
         self::assertNull($run->getRetryNotBefore());
-        self::assertSame(4, $run->waveConcurrencyCap(8));
+        self::assertSame(4, $run->getWaveConcurrencyCap(8));
     }
 
     public function testRecordProfileClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->runInRunningState();
-        $run->reduceWaveConcurrency(8);
-        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->getRunningThrottle()->reduceConcurrency(8);
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
         $run->recordProfile('Likes Rust.');
 
         self::assertNull($run->getRetryNotBefore());
-        self::assertSame(4, $run->waveConcurrencyCap(8));
+        self::assertSame(4, $run->getWaveConcurrencyCap(8));
     }
 
     public function testCompleteClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->reduceWaveConcurrency(8);
-        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->getRunningThrottle()->reduceConcurrency(8);
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         self::assertNull($run->getRetryNotBefore());
-        self::assertSame(4, $run->waveConcurrencyCap(8));
+        self::assertSame(4, $run->getWaveConcurrencyCap(8));
     }
 
     public function testResumeClearsBothTheDeferralAndTheReducedCap(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
-        $run->reduceWaveConcurrency(8);
-        $run->deferRetryUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run->getRunningThrottle()->reduceConcurrency(8);
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         $run->resume();
 
         self::assertNull($run->getRetryNotBefore());
-        self::assertSame(8, $run->waveConcurrencyCap(8));
+        self::assertSame(8, $run->getWaveConcurrencyCap(8));
     }
 
     private function makeRun(): RecommendationRun
