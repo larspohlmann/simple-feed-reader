@@ -287,6 +287,12 @@ All ruled; the plan is written as ruled.
 
 - **F9: strict types everywhere (final review B, M-1; planner ruling, revised on Lars's word).** A new PR F tooling task. Symfony's own recipe files stay as shipped: the seven entry points (`public/index.php`, `bin/console` and the others from Flex recipes) get no declaration, and `bin/` and `public/` stay outside the sniff. `Generic.PHP.RequireStrictTypes` alone (not full PSR-12, which generated migrations would fail) is extended to `migrations/` (every migration already declares strict types) and to the `tests/PhpStan` fixtures unless that clashes with their deliberate PSR-12 exclusion. Control: before any edit, the sniff over the new paths prints nothing. Deletion check, FAIL quoted: drop the declaration from one migration. PR F's body says in one line that the recipe entry points are deliberately left as shipped.
 
+## Execution rulings (PR G)
+
+- **G6 dropped on Lars's objection.** `$lineClass::fromLine()` is a variable static call PhpStorm cannot find usages through; the real problem (kind strings, an `object` return, `instanceof` chains in four consumers) is #1227 (spike + refactoring, not scheduled in this series). 4689dce6 is reverted by 57ccc7ad: `BackupReader` keeps its `match` and its Infection ignore until #1227. PR G's body says "two equivalent mutants gone" (UrlResolver, the 304).
+- **G3's pin holds two included subscriptions and compares ids.** With one row an `ArrayOneItem` mutant escaped; comparing entities made a `TrueValue` mutant hang the run while PHPUnit exported the Doctrine graph.
+- **`FeedScheduler::grownInterval()` is `$minutes + intdiv($minutes + 1, 2)`.** It equals `round($minutes * 1.5)` for every non-negative int, and the floor guard absorbs the rest; `round` → `ceil` was an equivalent mutant on the `n.0`/`n.5` values.
+
 ## Global Constraints
 
 - **Paths and commands are relative to `backend/`**, except steps marked "from the repository root", `docs/…` and `CLAUDE.md`. The #1202 scripts run as `php ../docs/superpowers/plans/2026-09-28-1202-scripts/<script>.php`.
