@@ -19,18 +19,6 @@ final class LeadingEngagementRules
     private const int KICKER_MAX_WORDS = 3;
     private const int KICKER_MAX_CHARS = 30;
 
-    /** A date line is short; the locales the reader serves and the spelled-out date styles. */
-    private const int DATE_LINE_MAX_CHARS = 48;
-    private const array DATE_LINE_LOCALES = ['de', 'en_US', 'en_GB'];
-    private const array DATE_LINE_STYLES = [
-        \IntlDateFormatter::FULL,
-        \IntlDateFormatter::LONG,
-        \IntlDateFormatter::MEDIUM,
-    ];
-
-    /** @var array<string, \IntlDateFormatter> strict formatters, one per locale/style, reused across calls */
-    private static array $dateFormatters = [];
-
     /** Callers pass text already collapsed by {@see \App\Service\Text\Support\Whitespace::collapse()}. */
     public static function isProse(string $text, int $linkTextLength): bool
     {
@@ -66,55 +54,6 @@ final class LeadingEngagementRules
     public static function isReadingTime(string $text): bool
     {
         return preg_match('/^\d+\s*min(?:\.|ute[ns]?|\s+read)?$/iu', $text) === 1;
-    }
-
-    /**
-     * A stand-alone publication date. ICU supplies the German and English forms,
-     * so none is hand-listed; strict full-string parsing with a length cap and a
-     * required digit keep a bare month, a lone year or a sentence out.
-     */
-    public static function isDateLine(string $text): bool
-    {
-        if (mb_strlen($text) > self::DATE_LINE_MAX_CHARS || preg_match('/\d/', $text) !== 1) {
-            return false;
-        }
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $text) === 1) {
-            return true;
-        }
-
-        return array_any(
-            self::DATE_LINE_LOCALES,
-            static fn (string $locale): bool => array_any(
-                self::DATE_LINE_STYLES,
-                static fn (int $style): bool => self::consumesWholeStringAsDate($text, $locale, $style),
-            ),
-        );
-    }
-
-    private static function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
-    {
-        $formatter = self::$dateFormatters[$locale . '|' . $style] ??= self::strictDateFormatter($locale, $style);
-
-        $position = 0;
-        $timestamp = $formatter->parse($text, $position);
-
-        // parse() reports the stop position in code points, so compare with
-        // mb_strlen: a byte length rejects any date with a non-ASCII month (März).
-        return $timestamp !== false && $position === mb_strlen($text);
-    }
-
-    private static function strictDateFormatter(string $locale, int $style): \IntlDateFormatter
-    {
-        $formatter = new \IntlDateFormatter(
-            $locale,
-            $style,
-            \IntlDateFormatter::NONE,
-            'UTC',
-            \IntlDateFormatter::GREGORIAN,
-        );
-        $formatter->setLenient(false);
-
-        return $formatter;
     }
 
     /** A stray engagement count rendered as a bare number, e.g. "0". */
@@ -161,5 +100,9 @@ final class LeadingEngagementRules
     private static function withoutWhitespace(string $text): string
     {
         return (string) preg_replace('/\s+/u', '', $text);
+    }
+
+    private function __construct()
+    {
     }
 }

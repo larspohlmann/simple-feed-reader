@@ -25,4 +25,8 @@ final class HostKey
 
         return str_starts_with($host, 'www.') ? substr($host, 4) : $host;
     }
+
+    private function __construct()
+    {
+    }
 }

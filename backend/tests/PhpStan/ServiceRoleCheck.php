@@ -17,6 +17,7 @@ enum ServiceRoleCheck: string
     case ModelHome = 'modelHome';
     case PassHome = 'passHome';
     case SupportHome = 'supportHome';
+    case SupportShape = 'supportShape';
     case RootService = 'rootService';
     case StatefulService = 'statefulService';
     case ListenerName = 'listenerName';

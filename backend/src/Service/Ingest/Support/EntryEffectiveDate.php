@@ -41,4 +41,8 @@ final class EntryEffectiveDate
 
         return $publishedAt < $previousFetchAt ? $publishedAt : $context->fetchedAt;
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -72,4 +72,8 @@ final class FeedMediaClassifier
 
         return self::EXTENSION_KINDS[$extension] ?? FeedMediaKind::Unknown;
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -15,7 +15,6 @@ composer md          # PHPMD, codesize ruleset
 composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.json)
 composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
-composer roles       # ServiceRoleRule's full report while #1202 lands the roles one PR at a time
 php bin/phpunit      # unit/integration suite (SQLite natively)
 composer test        # phpunit with OpenTelemetry off — use this in Docker (see below)
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
@@ -73,8 +72,8 @@ Non-negotiables:
 
 - **Names reveal intent.** No abbreviations, no `$data`/`$info`/`$tmp`, no
   encodings — except the sanctioned role suffixes that always go with their
-  folder: `…Model` in `Model/`, `…Factory` in `Factory/`, `…Listener` in
-  `src/EventListener`, and a worker handler is its message's name plus
+  folder: `…Model` in `Model/`, `…Factory` in `Factory/`, `…Listener` on
+  every event listener in `src`, and a worker handler is its message's name plus
   `Handler` (#1202). An interface ends in `Interface`, with the role before it
   in a role folder (`…FactoryInterface`, `…ModelInterface`,
   `…ExceptionInterface`). If a name needs a comment to be understood, rename it.
@@ -184,10 +183,9 @@ Enforced mechanically by `composer check` and `composer md`:
   the two dependencies #1163 removed (`Reader → Search`, `Recommendation → Reader`).
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
-  `composer stan`) — reports every class in `src/Service`, `src/Http` and
-  `src/EventListener` that sits outside its role, and names its home. While #1202 lands, it enforces
-  only the checks in `phpstan.dist.neon`'s `serviceRoleChecks`; `composer
-  roles` reports all of them.
+  `composer stan`) — fails on every class in `src/Service`, `src/Http` and
+  every event listener anywhere in `src` that sits outside its role, and names
+  the folder it belongs in.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

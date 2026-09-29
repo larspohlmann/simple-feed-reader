@@ -16,6 +16,12 @@ final readonly class ServiceRoleMap
 
     private const array VALUE_CLASSES = ['DateTimeInterface', 'DateTimeZone', 'DateInterval', 'Throwable', 'DOMNode'];
 
+    /** @var array<string, list<ServiceRoleClass>> */
+    private array $classesByNamespace;
+
+    /** @var list<ServiceRoleClass> */
+    private array $applicationClasses;
+
     /**
      * @param array<string, ServiceRoleClass> $classes
      * @param array<string, true> $builtPerCall
@@ -29,6 +35,15 @@ final readonly class ServiceRoleMap
         private array $builtInConstructor,
         private array $unresolvedClasses,
     ) {
+        $byNamespace = [];
+        foreach ($classes as $class) {
+            $byNamespace[$class->namespace()][] = $class;
+        }
+        $this->classesByNamespace = $byNamespace;
+        $this->applicationClasses = array_values(array_filter(
+            $classes,
+            static fn (ServiceRoleClass $class): bool => ServiceRoleNames::isServiceOrHttp($class->name()),
+        ));
     }
 
     public static function fromCollected(ReflectionProvider $reflectionProvider, CollectedDataNode $node): self
@@ -91,18 +106,15 @@ final readonly class ServiceRoleMap
         return array_values($this->classes);
     }
 
+    /** @return list<ServiceRoleClass> the classes in App\Service and App\Http, without the listeners elsewhere */
+    public function applicationClasses(): array
+    {
+        return $this->applicationClasses;
+    }
+
     public function classFor(string $type): ?ServiceRoleClass
     {
         return $this->classes[$type] ?? null;
-    }
-
-    /** @return list<ServiceRoleClass> */
-    public function classesIn(string $namespace): array
-    {
-        return array_values(array_filter(
-            $this->classes,
-            static fn (ServiceRoleClass $class): bool => $class->namespace() === $namespace,
-        ));
     }
 
     /** @return list<ServiceRoleClass> */
@@ -110,8 +122,10 @@ final readonly class ServiceRoleMap
     {
         return array_values(array_filter(
             $this->classes,
-            static fn (ServiceRoleClass $class): bool => $class->namespace() === $namespace
-                || str_starts_with($class->namespace(), $namespace . '\\'),
+            static fn (ServiceRoleClass $class): bool => ClassNameReferences::isInAnyOf(
+                $class->namespace(),
+                [$namespace . '\\'],
+            ),
         ));
     }
 
@@ -132,16 +146,16 @@ final readonly class ServiceRoleMap
         if ($reflection->isEnum() || self::isValue($reflection)) {
             return false;
         }
-        if (!str_starts_with($type, 'App\\')) {
+        if (!ClassNameReferences::isInAnyOf($type, ['App\\'])) {
             return true;
         }
         if ($reflection->isInterface()) {
-            return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
+            return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOfClass($type);
         }
         $class = $this->classFor($type);
         $isPerCall = null === $class ? isset($this->builtPerCall[$type]) : $this->isPerCall($class);
 
-        return !$isPerCall && ServiceRoleClass::declaresPublicInstanceMethod($reflection);
+        return !$isPerCall && self::declaresPublicInstanceMethod($reflection);
     }
 
     /** @return list<string> the interfaces of its own module it implements, outside Factory/, Model/, Exception/ */
@@ -152,33 +166,29 @@ final readonly class ServiceRoleMap
             $class->interfaceNames(),
             static fn (string $interface): bool => ServiceRoleNames::moduleOf($interface) === $module
                 && ServiceRoleNames::isServiceOrHttp($interface)
-                && null === ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($interface)),
+                && null === ServiceRoleNames::roleOfClass($interface),
         );
         sort($interfaces);
 
         return $interfaces;
     }
 
-    /** The folder named after the interface; a folder that holds nothing but its family is renamed after it. */
+    /**
+     * The folder named after the interface; a folder that holds nothing but its family is renamed after it, unless it
+     * is the module root.
+     */
     public function interfaceFolder(string $interface): string
     {
         $namespace = ServiceRoleNames::namespaceOf($interface);
-        $base = ServiceRoleNames::withoutSuffix(ServiceRoleNames::shortNameOf($interface), 'Interface');
+        $base = ServiceRoleNames::interfaceBaseOf($interface);
         if (ServiceRoleNames::shortNameOf($namespace) === $base) {
             return $namespace;
         }
-        if ($this->holdsOnlyTheFamilyOf($interface)) {
+        if ($namespace !== ServiceRoleNames::moduleOf($interface) && $this->holdsOnlyTheFamilyOf($interface)) {
             return ServiceRoleNames::namespaceOf($namespace) . '\\' . $base;
         }
 
         return $namespace . '\\' . $base;
-    }
-
-    public function interfaceHome(string $interface): string
-    {
-        $base = ServiceRoleNames::withoutSuffix(ServiceRoleNames::shortNameOf($interface), 'Interface');
-
-        return $this->interfaceFolder($interface) . '\\' . $base . 'Interface';
     }
 
     public function folderInterfaceOf(string $namespace): ?string
@@ -190,8 +200,8 @@ final readonly class ServiceRoleMap
 
     private function holdsOnlyTheFamilyOf(string $interface): bool
     {
-        foreach ($this->classesIn(ServiceRoleNames::namespaceOf($interface)) as $member) {
-            if ($member->name() !== $interface && !\in_array($interface, $member->interfaceNames(), true)) {
+        foreach ($this->classesByNamespace[ServiceRoleNames::namespaceOf($interface)] ?? [] as $member) {
+            if (!$member->isOfFamily($interface)) {
                 return false;
             }
         }
@@ -199,12 +209,21 @@ final readonly class ServiceRoleMap
         return true;
     }
 
-    private static function isValue(ClassReflection $reflection): bool
+    private static function declaresPublicInstanceMethod(ClassReflection $reflection): bool
     {
-        foreach (self::VALUE_NAMESPACES as $namespace) {
-            if (str_starts_with($reflection->getName(), $namespace)) {
+        foreach ($reflection->getNativeReflection()->getMethods() as $method) {
+            if (!$method->isStatic() && !$method->isConstructor() && $method->isPublic()) {
                 return true;
             }
+        }
+
+        return false;
+    }
+
+    private static function isValue(ClassReflection $reflection): bool
+    {
+        if (ClassNameReferences::isInAnyOf($reflection->getName(), self::VALUE_NAMESPACES)) {
+            return true;
         }
         foreach (self::VALUE_CLASSES as $value) {
             if ($reflection->getName() === $value || $reflection->isSubclassOf($value)) {

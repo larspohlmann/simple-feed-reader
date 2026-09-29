@@ -49,4 +49,8 @@ final readonly class DesktopViewport
 
         return array_map(intval(...), $matches[1]);
     }
+
+    private function __construct()
+    {
+    }
 }

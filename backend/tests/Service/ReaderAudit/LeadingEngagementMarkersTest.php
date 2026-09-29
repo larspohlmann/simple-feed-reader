@@ -7,6 +7,8 @@ namespace App\Tests\Service\ReaderAudit;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\Factory\StrictDateFormatterFactory;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
@@ -103,7 +105,7 @@ final class LeadingEngagementMarkersTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        (new LeadingEngagementCleaner())->cleanIn(
+        (new LeadingEngagementCleaner(new DateLineRecognizer(new StrictDateFormatterFactory())))->cleanIn(
             new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)),
         );
 

@@ -58,4 +58,8 @@ final class ItemCategoryExtractor
 
         return new ParsedCategoryModel($label, $scheme === '' ? null : $scheme);
     }
+
+    private function __construct()
+    {
+    }
 }

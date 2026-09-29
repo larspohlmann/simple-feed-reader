@@ -14,6 +14,16 @@ final readonly class ServiceRoleClass
         'Monolog\\ResettableInterface',
     ];
 
+    private const string LISTENER_ATTRIBUTE = 'Symfony\\Component\\EventDispatcher\\Attribute\\AsEventListener';
+
+    private const array CLASS_LISTENER_ATTRIBUTES = [
+        self::LISTENER_ATTRIBUTE,
+        'Doctrine\\Bundle\\DoctrineBundle\\Attribute\\AsDoctrineListener',
+        'Doctrine\\Bundle\\DoctrineBundle\\Attribute\\AsEntityListener',
+    ];
+
+    private const string SUBSCRIBER_INTERFACE = 'Symfony\\Component\\EventDispatcher\\EventSubscriberInterface';
+
     private const string DEPENDENCY_INJECTION_ATTRIBUTES = 'Symfony\\Component\\DependencyInjection\\Attribute\\';
 
     /** @param list<string> $dtoReferences */
@@ -23,6 +33,28 @@ final readonly class ServiceRoleClass
         public int $line,
         public array $dtoReferences,
     ) {
+    }
+
+    /** In App\EventListener, or declared a Symfony or Doctrine listener by attribute, or a subscriber. */
+    public static function isEventListener(ClassReflection $reflection): bool
+    {
+        return ServiceRoleNames::isListener($reflection->getName())
+            || $reflection->implementsInterface(self::SUBSCRIBER_INTERFACE)
+            || self::declaresListenerAttribute($reflection);
+    }
+
+    private static function declaresListenerAttribute(ClassReflection $reflection): bool
+    {
+        $native = $reflection->getNativeReflection();
+        $onClass = array_any(
+            self::CLASS_LISTENER_ATTRIBUTES,
+            static fn (string $attribute): bool => [] !== $native->getAttributes($attribute),
+        );
+
+        return $onClass || array_any(
+            $native->getMethods(),
+            static fn (\ReflectionMethod $method): bool => [] !== $method->getAttributes(self::LISTENER_ATTRIBUTE),
+        );
     }
 
     public function name(): string
@@ -42,12 +74,22 @@ final readonly class ServiceRoleClass
 
     public function role(): ?string
     {
-        return ServiceRoleNames::roleOf($this->namespace());
+        return ServiceRoleNames::roleOfClass($this->name());
     }
 
     public function area(): string
     {
         return ServiceRoleNames::areaOf($this->namespace());
+    }
+
+    public function movedTo(string $namespace): string
+    {
+        return $namespace . '\\' . $this->shortName();
+    }
+
+    public function roleHome(string $role): string
+    {
+        return $this->movedTo($this->area() . '\\' . $role);
     }
 
     public function isInterface(): bool
@@ -70,9 +112,19 @@ final readonly class ServiceRoleClass
         return $this->reflection->isAbstract();
     }
 
+    public function isFinal(): bool
+    {
+        return $this->reflection->isFinalByKeyword();
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->reflection->isReadOnly();
+    }
+
     public function isFinalReadonly(): bool
     {
-        return $this->reflection->isFinalByKeyword() && $this->reflection->isReadOnly();
+        return $this->isFinal() && $this->isReadonly();
     }
 
     public function mayBeReadonly(): bool
@@ -101,15 +153,35 @@ final readonly class ServiceRoleClass
             && (null === $constructor || 0 === $constructor->getNumberOfParameters());
     }
 
-    public static function declaresPublicInstanceMethod(ClassReflection $reflection): bool
+    public function declaresStaticMethod(): bool
     {
-        foreach ($reflection->getNativeReflection()->getMethods() as $method) {
-            if (!$method->isStatic() && !$method->isConstructor() && $method->isPublic()) {
+        foreach ($this->reflection->getNativeReflection()->getMethods(\ReflectionMethod::IS_STATIC) as $method) {
+            if ($method->getDeclaringClass()->getName() === $this->name()) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    public function hasPrivateConstructor(): bool
+    {
+        $constructor = $this->reflection->getNativeReflection()->getConstructor();
+
+        return null !== $constructor && $constructor->isPrivate();
+    }
+
+    /** @return list<string> the names of the class's own static properties */
+    public function staticProperties(): array
+    {
+        $static = [];
+        foreach ($this->reflection->getNativeReflection()->getProperties(\ReflectionProperty::IS_STATIC) as $property) {
+            if ($property->getDeclaringClass()->getName() === $this->name()) {
+                $static[] = $property->getName();
+            }
+        }
+
+        return $static;
     }
 
     /** @return list<string> the names of the class's own properties that are neither static nor readonly */
@@ -159,6 +231,12 @@ final readonly class ServiceRoleClass
         return $types;
     }
 
+    /** The interface itself, or a class or interface that implements or extends it. */
+    public function isOfFamily(string $interface): bool
+    {
+        return $this->name() === $interface || $this->reflection->implementsInterface($interface);
+    }
+
     /** @return list<string> every interface the class implements, through its parents too */
     public function interfaceNames(): array
     {
@@ -195,7 +273,7 @@ final readonly class ServiceRoleClass
     private static function isConfiguredByAttribute(\ReflectionParameter $parameter): bool
     {
         foreach ($parameter->getAttributes() as $attribute) {
-            if (str_starts_with($attribute->getName(), self::DEPENDENCY_INJECTION_ATTRIBUTES)) {
+            if (ClassNameReferences::isInAnyOf($attribute->getName(), [self::DEPENDENCY_INJECTION_ATTRIBUTES])) {
                 return true;
             }
         }

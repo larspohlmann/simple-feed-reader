@@ -28,4 +28,8 @@ final readonly class SavedSearchTerms
     {
         return new SavedSearchTermModel($savedSearch->requireId(), self::of($savedSearch));
     }
+
+    private function __construct()
+    {
+    }
 }

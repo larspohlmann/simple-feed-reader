@@ -32,7 +32,7 @@ final class PasswordResetE2eTest extends E2eTestCase
         self::assertSame(200, $this->getJson('/api/me', $preResetToken)->getStatusCode());
 
         // (A) The revocation check compares whole-second `iat < passwordChangedAt`
-        // STRICTLY (see App\Security\PasswordChangeTokenInvalidator). Guarantee the
+        // STRICTLY (see App\Security\InvalidatePasswordChangeTokensListener). Guarantee the
         // reset lands in a strictly later second than the pre-reset token's iat, so
         // the 401 assertion below is deterministic rather than a sub-second race.
         sleep(1);

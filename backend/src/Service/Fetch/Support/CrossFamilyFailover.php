@@ -51,4 +51,8 @@ final class CrossFamilyFailover
             ? ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]]
             : [];
     }
+
+    private function __construct()
+    {
+    }
 }

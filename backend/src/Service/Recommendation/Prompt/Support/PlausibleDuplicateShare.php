@@ -29,4 +29,8 @@ final readonly class PlausibleDuplicateShare
     {
         return intdiv($shownCount * self::PERCENT, 100);
     }
+
+    private function __construct()
+    {
+    }
 }

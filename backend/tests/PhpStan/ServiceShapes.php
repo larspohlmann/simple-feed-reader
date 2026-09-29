@@ -44,14 +44,14 @@ final readonly class ServiceShapes implements ServiceRoleChecker
     private static function shapeViolations(ServiceRoleClass $service): array
     {
         $violations = [];
-        if (!$service->isAbstract() && !$service->reflection->isFinalByKeyword()) {
+        if (!$service->isAbstract() && !$service->isFinal()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::RootService,
                 $service,
                 'is a service, so it is final',
             );
         }
-        if (!$service->reflection->isReadOnly() && !$service->isStateful() && $service->mayBeReadonly()) {
+        if (!$service->isReadonly() && !$service->isStateful() && $service->mayBeReadonly()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::RootService,
                 $service,
@@ -59,7 +59,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
             );
         }
         foreach ($service->suppliedConstructorTypes() as $type) {
-            $role = ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
+            $role = ServiceRoleNames::roleOfClass($type);
             if (\in_array($role, self::UNSUPPLIED_ROLES, true)) {
                 $violations[] = new ServiceRoleViolation(
                     ServiceRoleCheck::RootService,

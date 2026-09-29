@@ -44,7 +44,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * the password changed, since whoever holds a dead token may be the thief.
  */
 #[AsEventListener(event: Events::JWT_AUTHENTICATED, method: 'onJwtAuthenticated')]
-final class PasswordChangeTokenInvalidator
+final class InvalidatePasswordChangeTokensListener
 {
     public function onJwtAuthenticated(JWTAuthenticatedEvent $event): void
     {

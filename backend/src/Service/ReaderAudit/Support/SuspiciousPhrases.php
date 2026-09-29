@@ -98,4 +98,8 @@ final readonly class SuspiciousPhrases
             ]),
         ];
     }
+
+    private function __construct()
+    {
+    }
 }

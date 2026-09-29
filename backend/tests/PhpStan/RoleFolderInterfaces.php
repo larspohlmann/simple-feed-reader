@@ -33,8 +33,8 @@ final readonly class RoleFolderInterfaces implements ServiceRoleChecker
     private static function rootsOf(ServiceRoleMap $map, string $role): array
     {
         $roots = [];
-        foreach ($map->classes() as $class) {
-            if ($role === $class->role() && ServiceRoleNames::isServiceOrHttp($class->name())) {
+        foreach ($map->applicationClasses() as $class) {
+            if ($role === $class->role()) {
                 $roots[ServiceRoleNames::roleRootOf($class->namespace(), $role)] = true;
             }
         }
@@ -53,7 +53,7 @@ final readonly class RoleFolderInterfaces implements ServiceRoleChecker
                     $check,
                     $member,
                     sprintf('sits in the wrong %s/ folder', $tree->role),
-                    $folders[0] . '\\' . $member->shortName(),
+                    $member->movedTo($folders[0]),
                 );
             }
         }

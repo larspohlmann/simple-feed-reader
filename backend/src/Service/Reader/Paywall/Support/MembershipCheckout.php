@@ -32,4 +32,8 @@ final readonly class MembershipCheckout
 
         return '//*[local-name()="a" and (' . implode(' or ', $endpoints) . ')]';
     }
+
+    private function __construct()
+    {
+    }
 }

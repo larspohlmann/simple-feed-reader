@@ -10,4 +10,8 @@ final class Whitespace
     {
         return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
     }
+
+    private function __construct()
+    {
+    }
 }

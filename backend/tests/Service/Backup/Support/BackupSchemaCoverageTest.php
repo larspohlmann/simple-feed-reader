@@ -299,7 +299,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'roles' => 'Privilege escalation: a hand-edited backup would grant ROLE_ADMIN.',
             'email' => 'Account identity; a restore must never move an account to another address.',
             'passwordHash' => 'Credential material.',
-            'passwordChangedAt' => 'Token revocation. PasswordChangeTokenInvalidator rejects any '
+            'passwordChangedAt' => 'Token revocation. InvalidatePasswordChangeTokensListener rejects any '
                 . 'JWT whose `iat` is older than this stamp, which is the whole mechanism by '
                 . 'which a password reset kills tokens already in an attacker\'s hands. A '
                 . 'restorable — or nullable — stamp would let the account holder roll it back '

@@ -42,4 +42,8 @@ final class LineFieldWithDefault
 
         return $default::tryFrom(LineField::string($line, $key)) ?? $default;
     }
+
+    private function __construct()
+    {
+    }
 }

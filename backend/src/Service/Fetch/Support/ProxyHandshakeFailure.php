@@ -67,4 +67,8 @@ final readonly class ProxyHandshakeFailure
     {
         return sprintf('%s (curl reported: %s)', $reason, $rawMessage);
     }
+
+    private function __construct()
+    {
+    }
 }

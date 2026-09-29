@@ -26,22 +26,23 @@ final class ServiceRoleNames
 
     public static function isServiceOrHttp(string $name): bool
     {
-        return self::isService($name) || str_starts_with($name, 'App\\Http\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\Service\\', 'App\\Http\\']);
     }
 
     public static function isService(string $name): bool
     {
-        return str_starts_with($name, 'App\\Service\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\Service\\']);
     }
 
     public static function isListener(string $name): bool
     {
-        return str_starts_with($name, 'App\\EventListener\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\EventListener\\']);
     }
 
     public static function isProductionNamespace(string $namespace): bool
     {
-        return str_starts_with($namespace . '\\', 'App\\') && !str_starts_with($namespace . '\\', 'App\\Tests\\');
+        return ClassNameReferences::isInAnyOf($namespace, ['App\\'])
+            && !ClassNameReferences::isInAnyOf($namespace, ['App\\Tests\\']);
     }
 
     public static function namespaceOf(string $name): string
@@ -67,8 +68,13 @@ final class ServiceRoleNames
         return implode('\\', \array_slice($segments, 0, $depth));
     }
 
+    public static function roleOfClass(string $name): ?string
+    {
+        return self::roleOf(self::namespaceOf($name));
+    }
+
     /** The innermost role folder a namespace sits in, or null in an area root or an interface folder. */
-    public static function roleOf(string $namespace): ?string
+    private static function roleOf(string $namespace): ?string
     {
         foreach (array_reverse(explode('\\', $namespace)) as $segment) {
             if (\in_array($segment, self::ROLES, true)) {
@@ -100,6 +106,11 @@ final class ServiceRoleNames
         $position = array_search($role, array_reverse($segments, true), true);
 
         return false === $position ? $namespace : implode('\\', \array_slice($segments, 0, $position + 1));
+    }
+
+    public static function interfaceBaseOf(string $interface): string
+    {
+        return self::withoutSuffix(self::shortNameOf($interface), 'Interface');
     }
 
     public static function withoutSuffix(string $name, string $suffix): string

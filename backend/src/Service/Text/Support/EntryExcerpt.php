@@ -35,4 +35,8 @@ final class EntryExcerpt
 
         return $lastSpace === false ? $cut : mb_substr($cut, 0, $lastSpace);
     }
+
+    private function __construct()
+    {
+    }
 }

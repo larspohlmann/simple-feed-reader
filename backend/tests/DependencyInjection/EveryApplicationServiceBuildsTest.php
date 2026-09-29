@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\DependencyInjection;
 
+use App\Service\Refresh\FeedBodyParser;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class EveryApplicationServiceBuildsTest extends KernelTestCase
 {
     private const string EXCLUDED = 'has been excluded in "config/services.yaml"';
+    private const int FEWEST_APPLICATION_SERVICES = 1000;
 
     public function testTheContainerBuildsEveryApplicationServiceItExposes(): void
     {
@@ -33,8 +35,40 @@ final class EveryApplicationServiceBuildsTest extends KernelTestCase
 
     public function testNoServiceNeedsAClassTheContainerExcludes(): void
     {
+        $services = $this->dumpedContainer()->getElementsByTagName('service');
+
+        $applicationIds = self::applicationServiceIds($services);
+        self::assertGreaterThanOrEqual(self::FEWEST_APPLICATION_SERVICES, \count($applicationIds));
+        self::assertContains(FeedBodyParser::class, $applicationIds);
+        self::assertSame([], self::excludedClassFailures($services));
+    }
+
+    /**
+     * @param \DOMNodeList<\DOMElement> $services
+     *
+     * @return list<string>
+     */
+    private static function applicationServiceIds(\DOMNodeList $services): array
+    {
+        $ids = [];
+        foreach ($services as $service) {
+            if (str_starts_with($service->getAttribute('id'), 'App\\')) {
+                $ids[] = $service->getAttribute('id');
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param \DOMNodeList<\DOMElement> $services
+     *
+     * @return array<string, string>
+     */
+    private static function excludedClassFailures(\DOMNodeList $services): array
+    {
         $failures = [];
-        foreach ($this->dumpedContainer()->getElementsByTagName('service') as $service) {
+        foreach ($services as $service) {
             foreach ($service->getElementsByTagName('tag') as $tag) {
                 $error = $tag->getAttribute('message');
                 if ('container.error' === $tag->getAttribute('name') && str_contains($error, self::EXCLUDED)) {
@@ -43,7 +77,7 @@ final class EveryApplicationServiceBuildsTest extends KernelTestCase
             }
         }
 
-        self::assertSame([], $failures);
+        return $failures;
     }
 
     private function dumpedContainer(): \DOMDocument

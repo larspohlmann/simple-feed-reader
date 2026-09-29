@@ -14,4 +14,8 @@ final class PasswordPolicy
     {
         return mb_strlen($password) >= self::MINIMUM_LENGTH;
     }
+
+    private function __construct()
+    {
+    }
 }

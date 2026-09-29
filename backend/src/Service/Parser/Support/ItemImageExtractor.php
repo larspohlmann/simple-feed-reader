@@ -194,17 +194,17 @@ final class ItemImageExtractor
     /** @param list<DeclaredImageModel> $candidates */
     private static function widest(array $candidates): ?DeclaredImageModel
     {
-        $best = null;
+        $best = $candidates[0] ?? null;
         foreach ($candidates as $candidate) {
-            if ($best === null) {
-                $best = $candidate;
-                continue;
-            }
             if (($candidate->width ?? 0) > ($best->width ?? 0)) {
                 $best = $candidate;
             }
         }
 
         return $best;
+    }
+
+    private function __construct()
+    {
     }
 }

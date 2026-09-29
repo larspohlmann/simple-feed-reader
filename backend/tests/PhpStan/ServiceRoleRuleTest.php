@@ -14,6 +14,8 @@ final class ServiceRoleRuleTest extends RuleTestCase
 {
     private const string FIXTURES = __DIR__ . '/data/service-role-fixtures.php';
     private const string SHOP = 'App\Service\Shop\\';
+    private const string TILL = 'App\Service\Till\Support\\';
+    private const string PROBE = 'App\Service\Probe\\';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
@@ -24,24 +26,17 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string WRONG_MODEL_FOLDER = 'sits in the wrong Model/ folder';
     private const string LISTENER = 'App\EventListener\Fixtures\NotifyTheShop';
 
-    /** @var list<string> */
-    private array $checks = [];
-
     protected function setUp(): void
     {
         parent::setUp();
         // ServiceRoleMap resolves collected names through ReflectionProvider::hasClass(), which only
         // recognises a fixture-only class once it is genuinely declared; analysing the file only parses it.
         require_once self::FIXTURES;
-        $this->checks = array_map(
-            static fn (ServiceRoleCheck $check): string => $check->value,
-            ServiceRoleCheck::cases(),
-        );
     }
 
     protected function getRule(): Rule
     {
-        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class), $this->checks);
+        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class));
     }
 
     protected function getCollectors(): array
@@ -300,19 +295,57 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 644,
             ],
-        ]);
-    }
-
-    public function testARunReportsOnlyTheChecksItIsGiven(): void
-    {
-        $this->checks = ['listenerName', 'rootService'];
-
-        $this->analyse([self::FIXTURES], [
-            [self::shop('rootService', 'Cashier', self::NOT_READONLY), 162],
-            [self::shop('rootService', 'Porter', self::NOT_FINAL), 170],
-            [self::shop('rootService', 'Register', self::TAKES_A_MODEL), 178],
-            [self::listenerMessage(), 493],
-            [self::takesADto(), 563],
+            [self::till('Coins', 'is a helper, so it is never instantiated; declare a private constructor'), 674],
+            [
+                self::till(
+                    'Drawer',
+                    'keeps state in static $opened; a helper holds none, so the state goes to a service',
+                ),
+                682,
+            ],
+            [self::till('Receipt', 'is a helper, so it is final'), 696],
+            [
+                self::message(
+                    'supportHome',
+                    'App\Service\Till\Pass\OpeningFloat',
+                    'is static-only',
+                    'App\Service\Till\Support\OpeningFloat',
+                ),
+                710,
+            ],
+            [
+                self::message(
+                    'supportHome',
+                    'App\Service\Till\Model\TaxRateModel',
+                    'is static-only',
+                    'App\Service\Till\Support\TaxRateModel',
+                ),
+                724,
+            ],
+            [self::securityListener('GuardTheDoor'), 741],
+            [self::securityListener('WatchTheWindow'), 749],
+            [self::securityListener('CountTheVisitors'), 757],
+            [
+                self::message(
+                    'modelShape',
+                    'App\Service\Ledger\Model\LedgerModel',
+                    'names the DTO App\Service\Ledger\Dto\EntryLine; map it to a model at the boundary',
+                ),
+                793,
+            ],
+            [self::probe('interfaceFolder', 'Sensor', self::OUTSIDE_ITS_FOLDER, 'Sensor\SensorInterface'), 803],
+            [self::probe('interfaceName', 'Sensor', self::NEEDS_SUFFIX, 'Sensor\SensorInterface'), 803],
+            [
+                self::probe(
+                    'interfaceFolder',
+                    'HeatSensor',
+                    'implements App\Service\Probe\Sensor, so it sits in that interface\'s folder',
+                    'Sensor\HeatSensor',
+                ),
+                807,
+            ],
+            [self::doctrineListener('FlushWatcher'), 820],
+            [self::doctrineListener('FeedTouch'), 828],
         ]);
     }
 
@@ -356,12 +389,37 @@ final class ServiceRoleRuleTest extends RuleTestCase
 
     private static function listenerMessage(): string
     {
+        return self::listener(self::LISTENER);
+    }
+
+    private static function securityListener(string $class): string
+    {
+        return self::listener('App\Security\Fixtures\\' . $class);
+    }
+
+    private static function doctrineListener(string $class): string
+    {
+        return self::listener('App\Doctrine\Fixtures\\' . $class);
+    }
+
+    private static function listener(string $name): string
+    {
         return self::message(
             'listenerName',
-            self::LISTENER,
+            $name,
             'is an event listener, so its name ends in Listener',
-            self::LISTENER . 'Listener',
+            $name . 'Listener',
         );
+    }
+
+    private static function till(string $class, string $problem): string
+    {
+        return self::message('supportShape', self::TILL . $class, $problem);
+    }
+
+    private static function probe(string $check, string $class, string $problem, string $home): string
+    {
+        return self::message($check, self::PROBE . $class, $problem, self::PROBE . $home);
     }
 
     private static function shop(string $check, string $class, string $problem, ?string $home = null): string

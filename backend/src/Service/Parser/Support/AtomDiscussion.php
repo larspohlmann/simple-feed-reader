@@ -43,4 +43,8 @@ final class AtomDiscussion
             }
         }
     }
+
+    private function __construct()
+    {
+    }
 }

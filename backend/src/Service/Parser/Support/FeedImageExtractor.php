@@ -54,4 +54,8 @@ final class FeedImageExtractor
     {
         return HttpsImageUrl::orNull(XmlHelper::childText($root, 'logo', $atomNamespace));
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -17,7 +17,6 @@ final readonly class ServiceRoleViolation
     ) {
     }
 
-    /** The trailing "Its home is …." is what the #1202 move scripts read; keep its wording. */
     public function toError(): IdentifierRuleError
     {
         $message = sprintf('Service role "%s": %s %s.', $this->check->value, $this->class->name(), $this->problem);

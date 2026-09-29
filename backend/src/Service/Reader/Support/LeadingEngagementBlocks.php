@@ -97,4 +97,8 @@ final class LeadingEngagementBlocks
 
         return false;
     }
+
+    private function __construct()
+    {
+    }
 }

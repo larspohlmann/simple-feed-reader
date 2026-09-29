@@ -657,3 +657,187 @@ namespace App\Service\Knot {
         }
     }
 }
+
+namespace App\Service\Till\Support {
+    final class Change
+    {
+        private function __construct()
+        {
+        }
+
+        public static function due(int $paid, int $price): int
+        {
+            return $paid - $price;
+        }
+    }
+
+    final class Coins
+    {
+        public static function count(int $cents): int
+        {
+            return intdiv($cents, 100);
+        }
+    }
+
+    final class Drawer
+    {
+        private static int $opened = 0;
+
+        private function __construct()
+        {
+        }
+
+        public static function open(): int
+        {
+            return ++self::$opened;
+        }
+    }
+
+    class Receipt
+    {
+        private function __construct()
+        {
+        }
+
+        public static function line(string $item): string
+        {
+            return $item;
+        }
+    }
+}
+
+namespace App\Service\Till\Pass {
+    final class OpeningFloat
+    {
+        private function __construct()
+        {
+        }
+
+        public static function opening(): int
+        {
+            return 100;
+        }
+    }
+}
+
+namespace App\Service\Till\Model {
+    final readonly class TaxRateModel
+    {
+        private function __construct()
+        {
+        }
+
+        public static function standard(): int
+        {
+            return 19;
+        }
+    }
+}
+
+namespace App\Security\Fixtures {
+    use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+    use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+    #[AsEventListener(event: 'kernel.request')]
+    final readonly class GuardTheDoor
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+
+    final readonly class WatchTheWindow
+    {
+        #[AsEventListener(event: 'kernel.response')]
+        public function onResponse(): void
+        {
+        }
+    }
+
+    final readonly class CountTheVisitors implements EventSubscriberInterface
+    {
+        public static function getSubscribedEvents(): array
+        {
+            return [];
+        }
+    }
+
+    #[AsEventListener(event: 'kernel.request')]
+    final readonly class LockTheDoorListener
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+
+    final readonly class OpenTheDoor
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+}
+
+namespace App\Service\Ledger\Dto {
+    final readonly class EntryLine
+    {
+        public function __construct(public int $cents)
+        {
+        }
+    }
+}
+
+namespace App\Service\Ledger\Model {
+    use App\Service\Ledger\Dto\EntryLine;
+
+    final readonly class LedgerModel
+    {
+        /** @param list<EntryLine> $lines */
+        public function __construct(public array $lines)
+        {
+        }
+    }
+}
+
+namespace App\Service\Probe {
+    interface Sensor
+    {
+    }
+
+    final readonly class HeatSensor implements Sensor
+    {
+        public function celsius(): int
+        {
+            return 21;
+        }
+    }
+}
+
+namespace App\Doctrine\Fixtures {
+    use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
+    use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
+
+    #[AsDoctrineListener(event: 'onFlush')]
+    final readonly class FlushWatcher
+    {
+        public function onFlush(): void
+        {
+        }
+    }
+
+    #[AsEntityListener(event: 'postUpdate', method: 'postUpdate', entity: 'App\Entity\Feed')]
+    final readonly class FeedTouch
+    {
+        public function postUpdate(): void
+        {
+        }
+    }
+
+    #[AsDoctrineListener(event: 'onFlush')]
+    final readonly class FlushCountListener
+    {
+        public function onFlush(): void
+        {
+        }
+    }
+}

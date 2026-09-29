@@ -12,7 +12,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Stamping passwordChangedAt evicts every JWT issued before the reset
- * ({@see PasswordChangeTokenInvalidator}), so a leaked session dies too.
+ * ({@see InvalidatePasswordChangeTokensListener}), so a leaked session dies too.
  */
 final readonly class PasswordResetter
 {

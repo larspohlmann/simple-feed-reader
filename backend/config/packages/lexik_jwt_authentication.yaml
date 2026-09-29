@@ -10,7 +10,7 @@ lexik_jwt_authentication:
     #    the reloaded status. Suspending an account kills its tokens at once.
     #
     #  * PASSWORD changes revoke immediately only because
-    #    App\Security\PasswordChangeTokenInvalidator compares the token's `iat`
+    #    App\Security\InvalidatePasswordChangeTokensListener compares the token's `iat`
     #    against User::passwordChangedAt. Nothing about a JWT is derived from
     #    the password hash, so without that listener a reset would change the
     #    password and leave every previously issued token live for the full TTL

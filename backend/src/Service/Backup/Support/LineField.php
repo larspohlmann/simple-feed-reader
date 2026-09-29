@@ -173,4 +173,8 @@ final class LineField
 
         return $object;
     }
+
+    private function __construct()
+    {
+    }
 }

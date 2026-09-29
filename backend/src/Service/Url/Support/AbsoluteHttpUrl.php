@@ -15,4 +15,8 @@ final class AbsoluteHttpUrl
     {
         return $url !== null && self::matches($url) ? $url : null;
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -28,4 +28,8 @@ final class EntryPlainText
 
         return $text;
     }
+
+    private function __construct()
+    {
+    }
 }

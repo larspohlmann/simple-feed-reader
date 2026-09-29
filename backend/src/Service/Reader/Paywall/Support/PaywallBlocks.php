@@ -34,4 +34,8 @@ final readonly class PaywallBlocks
 
         return '//*[' . implode(' or ', $fragments) . ']';
     }
+
+    private function __construct()
+    {
+    }
 }

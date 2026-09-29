@@ -56,4 +56,8 @@ final readonly class LikePattern
             $term,
         );
     }
+
+    private function __construct()
+    {
+    }
 }

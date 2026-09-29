@@ -3,28 +3,8 @@ includes:
     - vendor/phpstan/phpstan-doctrine/extension.neon
     - vendor/phpstan/phpstan-doctrine/rules.neon
 
-parametersSchema:
-    # ServiceRoleRule's enforced checks; phpstan-service-roles.neon lists every one (#1202).
-    serviceRoleChecks: listOf(string())
-
 parameters:
     level: max
-    serviceRoleChecks:
-        - interfaceName
-        - interfaceFolder
-        - factoryName
-        - factoryFolder
-        - modelName
-        - modelShape
-        - modelFolder
-        - dtoShape
-        - modelHome
-        - passHome
-        - supportHome
-        - rootService
-        - statefulService
-        - listenerName
-        - handlerName
     paths:
         - src
         - tests
@@ -107,7 +87,5 @@ services:
             - phpstan.collector
     -
         class: App\Tests\PhpStan\ServiceRoleRule
-        arguments:
-            checks: %serviceRoleChecks%
         tags:
             - phpstan.rules.rule

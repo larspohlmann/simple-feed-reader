@@ -48,4 +48,8 @@ final readonly class SchemaOrgAccess
             default => null,
         };
     }
+
+    private function __construct()
+    {
+    }
 }

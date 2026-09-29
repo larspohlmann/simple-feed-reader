@@ -18,10 +18,8 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
-        foreach ($map->classes() as $class) {
-            if (ServiceRoleNames::isServiceOrHttp($class->name())) {
-                $violations = [...$violations, ...self::violationsOf($map, $class)];
-            }
+        foreach ($map->applicationClasses() as $class) {
+            $violations = [...$violations, ...self::violationsOf($map, $class)];
         }
 
         return $violations;
@@ -44,7 +42,8 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
     /** @return list<ServiceRoleViolation> */
     private static function interfaceViolations(ServiceRoleMap $map, ServiceRoleClass $interface): array
     {
-        $home = $map->interfaceHome($interface->name());
+        $folder = $map->interfaceFolder($interface->name());
+        $home = $folder . '\\' . ServiceRoleNames::interfaceBaseOf($interface->name()) . 'Interface';
         $violations = [];
         if (!str_ends_with($interface->shortName(), 'Interface')) {
             $violations[] = new ServiceRoleViolation(
@@ -54,7 +53,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
                 $home,
             );
         }
-        if ($map->interfaceFolder($interface->name()) !== $interface->namespace()) {
+        if ($folder !== $interface->namespace()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::InterfaceFolder,
                 $interface,
@@ -73,7 +72,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
         if (str_ends_with($interface->shortName(), $suffix)) {
             return [];
         }
-        $base = ServiceRoleNames::withoutSuffix($interface->shortName(), 'Interface');
+        $base = ServiceRoleNames::interfaceBaseOf($interface->name());
 
         return [new ServiceRoleViolation(
             ServiceRoleCheck::InterfaceName,
@@ -102,7 +101,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
             ServiceRoleCheck::InterfaceFolder,
             $class,
             sprintf('implements %s, so it sits in that interface\'s folder', $interfaces[0]),
-            $folders[0] . '\\' . $class->shortName(),
+            $class->movedTo($folders[0]),
         )];
     }
 
@@ -118,7 +117,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
             ServiceRoleCheck::InterfaceFolder,
             $class,
             sprintf('sits in the folder of %s but does not implement it', $folderInterface),
-            ServiceRoleNames::namespaceOf($class->namespace()) . '\\' . $class->shortName(),
+            $class->movedTo(ServiceRoleNames::namespaceOf($class->namespace())),
         )];
     }
 }

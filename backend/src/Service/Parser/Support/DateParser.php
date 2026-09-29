@@ -31,4 +31,8 @@ final class DateParser
             return null;
         }
     }
+
+    private function __construct()
+    {
+    }
 }

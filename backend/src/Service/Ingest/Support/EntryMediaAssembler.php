@@ -103,4 +103,8 @@ final class EntryMediaAssembler
 
         return $kept;
     }
+
+    private function __construct()
+    {
+    }
 }

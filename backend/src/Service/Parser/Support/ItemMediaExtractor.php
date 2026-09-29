@@ -199,4 +199,8 @@ final class ItemMediaExtractor
             && $node->localName === $localName
             && $node->namespaceURI === self::MEDIA_NS;
     }
+
+    private function __construct()
+    {
+    }
 }

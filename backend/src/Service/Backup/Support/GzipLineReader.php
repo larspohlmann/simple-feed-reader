@@ -112,4 +112,8 @@ final readonly class GzipLineReader
             }
         }
     }
+
+    private function __construct()
+    {
+    }
 }

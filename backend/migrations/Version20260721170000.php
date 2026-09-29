@@ -17,7 +17,7 @@ use Doctrine\Migrations\AbstractMigration;
  * The per-request Doctrine reload revokes on a STATUS change, but nothing in a
  * JWT derives from the password hash, so a password reset revoked nothing — a
  * phished user's attacker kept full access for the rest of the week.
- * App\Security\PasswordChangeTokenInvalidator compares the token's `iat`
+ * App\Security\InvalidatePasswordChangeTokensListener compares the token's `iat`
  * against this column; App\Entity\User documents the rest.
  *
  * PLATFORM-AWARE DDL, for the same reason Version20260721153011 is. A
