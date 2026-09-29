@@ -51,8 +51,11 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $this->em->flush();
 
         self::assertSame(
-            [$included, $alsoIncluded],
-            $this->repo()->findIncludedInAllItemsForUser($owner->requireId()),
+            [$included->requireId(), $alsoIncluded->requireId()],
+            array_map(
+                static fn (Subscription $subscription): int => $subscription->requireId(),
+                $this->repo()->findIncludedInAllItemsForUser($owner->requireId()),
+            ),
         );
     }
 
