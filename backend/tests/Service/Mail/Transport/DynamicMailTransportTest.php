@@ -13,6 +13,7 @@ use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\DynamicMailTransport;
 use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
 use App\Tests\Support\ConfiguresAProxy;
+use App\Tests\Support\FinishesWorkerMessages;
 use App\Tests\Support\SettingsRequests;
 use App\Tests\Support\UnreadableProxyPasswordRows;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,6 +24,7 @@ use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 final class DynamicMailTransportTest extends KernelTestCase
 {
     use ConfiguresAProxy;
+    use FinishesWorkerMessages;
 
     public function testWithoutARowItBuildsFromTheFallbackDsn(): void
     {
@@ -46,6 +48,17 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
         self::assertSame($transport->activeTransport(), $transport->activeTransport());
+    }
+
+    public function testTheNextWorkerMessageRebuildsTheTransportEvenWhenTheSignatureIsUnchanged(): void
+    {
+        $transport = self::getContainer()->get(DynamicMailTransport::class);
+        $duringTheMessage = $transport->activeTransport();
+        self::assertSame($duringTheMessage, $transport->activeTransport());
+
+        $this->finishAMessage();
+
+        self::assertNotSame($duringTheMessage, $transport->activeTransport());
     }
 
     public function testASettingsChangeRebuildsTheTransport(): void

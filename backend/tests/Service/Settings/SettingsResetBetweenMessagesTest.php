@@ -8,15 +8,12 @@ use App\Entity\InstanceSettingsUpdate;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\PublicBaseUrl\ConfiguredPublicBaseUrl;
 use App\Tests\DbTestCase;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Messenger\Event\WorkerRunningEvent;
-use Symfony\Component\Messenger\EventListener\ResetServicesListener;
-use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\Messenger\Worker;
+use App\Tests\Support\FinishesWorkerMessages;
 
-/** The worker's view: an admin saves the settings in another process while the worker handles messages (D-P8). */
 final class SettingsResetBetweenMessagesTest extends DbTestCase
 {
+    use FinishesWorkerMessages;
+
     public function testTheNextMessageSeesAnApprovalSettingSavedElsewhere(): void
     {
         $settings = $this->instanceSettings();
@@ -54,23 +51,10 @@ final class SettingsResetBetweenMessagesTest extends DbTestCase
         return $settings;
     }
 
-    /** Another process's write, which the worker's clear() after each message also leaves the memo holding. */
+    /** Another process's write; the worker's clear() after each message leaves the memo holding the old row. */
     private function saveElsewhere(string $statement): void
     {
         $this->em->getConnection()->executeStatement($statement);
         $this->em->clear();
-    }
-
-    /** What messenger:consume attaches at run time and Worker::run() dispatches after each handled message. */
-    private function finishAMessage(): void
-    {
-        /** @var EventDispatcherInterface $dispatcher */
-        $dispatcher = self::getContainer()->get('event_dispatcher');
-        /** @var ResetServicesListener $listener */
-        $listener = self::getContainer()->get('messenger.listener.reset_services');
-        $dispatcher->addSubscriber($listener);
-        $worker = new Worker([], $this->createStub(MessageBusInterface::class), $dispatcher);
-
-        $dispatcher->dispatch(new WorkerRunningEvent($worker, false));
     }
 }
