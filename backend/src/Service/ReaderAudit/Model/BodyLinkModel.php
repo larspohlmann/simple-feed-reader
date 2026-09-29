@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * One anchor of the cleaned article: where it points and what it reads as.
- *
- * Not every anchor is a link out. An article's own table of contents points at
- * its sections, and those arrive with an empty or fragment-only href —
- * deutschlandfunk.de renders one on every long piece, and counting its five
- * entries as a menu reported the article itself as chrome (#744).
+ * One anchor of the cleaned article. An empty or fragment-only href points into the article itself (its table of
+ * contents), and counting those as a menu reported the article as chrome (#746).
  */
 final readonly class BodyLinkModel
 {

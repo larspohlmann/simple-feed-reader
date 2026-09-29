@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * The sweep's JSONL files read back as one collection, with the three views the
- * report is built from: the worst articles, the worst feeds, and the stages that
- * account for the most markers.
- *
- * Feeds are ranked by the share of their audited articles that carry a marker,
- * not by how many markers they produced: a feed that publishes ten times as
- * often would otherwise always top the list, and the question the report answers
- * is "which site does the reader handle badly", not "which site is large".
+ * The sweep's JSONL files read back, with the report's three views: worst articles, worst feeds, busiest stages.
+ * Feeds rank by the share of their articles flagged, not by marker count, so a prolific feed does not top the list.
  */
 final readonly class AuditFindingsModel
 {
@@ -63,10 +57,8 @@ final readonly class AuditFindingsModel
     }
 
     /**
-     * Per feed: [feedTitle, audited, flagged, share, worstScore], worst share
-     * first. Only feeds that failed at least once — a sweep covers every
-     * subscribed feed, so listing the clean ones buried nine rows worth reading
-     * under a hundred and sixty reading "0%".
+     * Per feed, worst share first, and only feeds flagged at least once: a sweep covers every subscribed feed, and the
+     * clean rows would bury the few worth reading.
      *
      * @return list<array{feed: string, audited: int, flagged: int, share: float, worst: int}>
      */

@@ -10,14 +10,8 @@ use App\Service\Text\Support\Whitespace;
 use Dom\Element;
 
 /**
- * The measurements every marker rule reads, taken once from the cleaned article
- * HTML. Parsing the body per rule would re-parse it a dozen times per article
- * and put the audit's cost in the DOM instead of in the network.
- *
- * The body is kept in document order, because the audit's sharpest question is
- * positional: what stands between the top of the reader view and the first real
- * paragraph. Everything above that paragraph is the leading region, and chrome
- * there is what the reader's user actually runs into (#744).
+ * The measurements every marker rule reads, taken once from the cleaned article HTML so no rule re-parses it.
+ * Blocks stay in document order, because the audit's sharpest question is positional (LeadingRegion).
  */
 final readonly class ExtractedBodyModel
 {
@@ -64,10 +58,8 @@ final readonly class ExtractedBodyModel
     }
 
     /**
-     * Whether the page yielded an article at all. Measured as total text, not as
-     * "is one block long enough": consent legalese is a paragraph too, so a
-     * per-block test would call a cookie wall an article and stop reporting it.
-     * A wall notice is short; an article is not.
+     * Whether the page yielded an article, by total text: a per-block test would take a cookie wall's legalese
+     * paragraph for an article.
      */
     public function hasArticleText(): bool
     {

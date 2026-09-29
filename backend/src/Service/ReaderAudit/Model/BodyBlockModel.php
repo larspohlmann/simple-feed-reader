@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit\Model;
 
-/**
- * One paragraph-level line of the cleaned article, with enough about its links
- * to say whether it is prose or chrome. Where a block sits matters more than
- * what it holds: a related-articles list under the last paragraph is furniture
- * the reader tolerates, and the same list above the first paragraph is the
- * article failing to start (#744).
- */
+/** One paragraph-level line of the cleaned article, with its links, to tell prose from chrome. */
 final readonly class BodyBlockModel
 {
     /** A block whose text is this share links is a menu entry, not a sentence. */
@@ -42,11 +36,7 @@ final readonly class BodyBlockModel
         return $this->dominatedBy(static fn (BodyLinkModel $link): bool => true);
     }
 
-    /**
-     * Mostly links that leave the page: a menu entry, a share button, a teaser
-     * row. An article's own table of contents is link-dominated but not this —
-     * its entries go nowhere but further down the same article (#744).
-     */
+    /** Mostly links that leave the page: a menu entry, a share button, a teaser row. */
     public function isChrome(): bool
     {
         return $this->dominatedBy(static fn (BodyLinkModel $link): bool => $link->leavesThePage());
@@ -67,11 +57,7 @@ final readonly class BodyBlockModel
         return $linked / $this->length() >= self::LINK_DOMINATED;
     }
 
-    /**
-     * A block that is a link back into this same page: a skip link, a table of
-     * contents entry, a back-to-top. It reads like chrome and is the page's own
-     * affordance, so no rule should score it (#744).
-     */
+    /** A link back into this page (a skip link, a table-of-contents entry, a back-to-top): no rule scores it. */
     public function isInPageAffordance(): bool
     {
         return $this->isLinkDominated() && !$this->isChrome();

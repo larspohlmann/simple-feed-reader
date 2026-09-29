@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * One family of leftover-furniture wording, with the two limits that keep it
- * from firing on prose: the block length above which a match means nothing, and
- * the region of the body it may look at.
- *
- * "Newsletter" in a 40-character line before the article starts is a signup box
- * in the reader's way; the same word in a 900-character paragraph is the article
- * talking about newsletters, and under the last paragraph it is the site's own
- * tail, which this audit tolerates (#744).
+ * One family of leftover-furniture wording, with the two limits that keep it off prose: the block length above which
+ * a match means nothing, and the region of the body it may look at.
  */
 final readonly class PhraseFamilyModel
 {
