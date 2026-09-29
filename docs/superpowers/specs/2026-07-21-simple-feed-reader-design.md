@@ -62,7 +62,8 @@ catalog).
 
 **Out:** keyboard shortcuts (only `/`, which focuses the search field), mobile
 apps (a native iOS client is kept viable, [docs/architecture.md](../../architecture.md)),
-social features.
+social features. A maintenance mode (a flag file, and a 503 page during a
+deploy) was designed but is not built.
 
 ## Architecture
 
@@ -505,87 +506,97 @@ Backend-focused pyramid, PHPUnit:
 - **Integration:** the non-trivial repository queries (due selection, unread
   counts, prune-except-kept) against a real DB. **CI runs the suite on both
   SQLite and MySQL** — the matrix is what proves portability.
-- **Functional:** `WebTestCase` with a fake `FeedFetcherInterface`. Full
+- **Functional:** `WebTestCase` with the fetchers (`BatchFeedFetcherInterface`,
+  `FeedFetcherInterface`) faked. Full
   journeys (register → verify → approve → login → subscribe → refresh → read)
   plus the authorization matrix for every endpoint (401 anonymous, 403/404
   cross-user, 403 non-admin). OAuth tested to the boundary with a mocked
   provider.
-- **Frontend:** component tests for the refresh-progress loop and the auth
-  interceptor only. No E2E in v1.
+- **Frontend:** Jest unit tests across the SPA, run by `npm run check` with
+  ESLint, Prettier and Stylelint (the CI gate).
+- **Mutation:** Infection over the backend files a pull request changes
+  (`composer infection:diff`), gated by `minMsi` in `infection.json5`.
+- **E2E:** a black-box backend suite (`backend/tests/E2e`, `composer e2e`) and
+  Playwright smokes (`frontend/e2e`, `npm run e2e`), both against the Docker
+  stack and outside the PR gate; `e2e-rot-check.yml` runs them weekly.
 
 ## CI/CD & deployment
 
-**`ci.yml`** (PRs + main): backend job — PHPCS, PHPStan max, PHPUnit on
-SQLite + MySQL; frontend job — lint, tests, production build. Branch
-protection requires green CI; README carries the badges.
+**`ci.yml`** (pull requests, and pushes to `develop` and `main`): backend job
+on SQLite + MySQL — PHPCS, PHPStan max, PHPMD, phptramp, the migration chain
+built from empty, PHPUnit; on pull requests, Infection over the changed files;
+frontend job — `npm run check` (lint, format, Stylelint, unit tests),
+production build; a shell-script job — ShellCheck and the script tests.
+Branch protection requires green CI; README carries the CI badge.
 
-**`deploy.yml`** (on tag) — rsync-over-SSH with atomic symlink switch.
-Credentials live in GitHub Secrets (`STRATO_SSH_KEY` — dedicated deploy
-keypair, `STRATO_SSH_HOST`, `STRATO_SSH_USER`, `STRATO_DEPLOY_PATH`,
-`STRATO_KNOWN_HOSTS` — pinned host key; the repo is public, so host/user/path
-never appear in the workflow file):
+**`deploy-strato.yml`** (on a `vX.Y.Z-dev.N` tag) — rsync-over-SSH with atomic
+symlink switch. It first refuses a tagged commit that is not on `develop` or
+has no green `push` CI run at that SHA. Credentials live in GitHub Secrets
+(`STRATO_SSH_KEY` — dedicated deploy keypair, `STRATO_SSH_HOST`,
+`STRATO_SSH_USER`, `STRATO_DEPLOY_PATH`, `STRATO_KNOWN_HOSTS` — pinned host
+key; the repo is public, so host/user/path never appear in the workflow file).
+The build and the activation are `deploy/strato/build-release.sh` and
+`deploy/strato/activate-release.sh`:
 
 1. Build backend: `composer install --no-dev --optimize-autoloader`; PHP
    minor version pinned in workflow **and** `composer.json` `config.platform`
-   to match Strato (8.3).
-2. Build frontend into `backend/public/app/`.
-3. Inject config from GitHub Secrets → `composer dump-env prod` →
-   `.env.local.php`. JWT keypair generated once, stored in Secrets — never
-   regenerated per deploy.
-4. **Upload release:** `rsync -az --delete` the artifact to
-   `releases/<tag>/` (`--link-dest=../current` hard-links unchanged files —
-   fast and cheap on quota). The live release is untouched.
-5. **Link shared paths** via SSH: `shared/var/log` → `releases/<tag>/var/log`.
-6. **Warm up on the server** via SSH: `php83 -q -f bin/console
-   cache:clear` + `cache:warmup` inside the new release dir (absolute
-   container paths must be baked on the server, not in CI), then
-   `doctrine:migrations:migrate --no-interaction`. Migrations are
-   additive-first, so the still-live old release keeps working on the new
-   schema. Non-zero exit fails the workflow — the live site never switched.
-7. **Atomic switch:** `ln -sfn releases/<tag> current`. No stale-container
-   race (each release has its own `var/cache`), no maintenance window in the
-   normal case.
-8. Health check: `curl /api/health`. On failure, flip the symlink back.
-9. **Prune:** keep the last 3 releases.
+   to match Strato (8.4).
+2. Build the frontend with the `/reader/` base href and copy it into the
+   release's `public/`.
+3. Config never travels with the release: `shared/.env.local` is written on
+   the server once, and the JWT keypair lives in `shared/config/jwt/`,
+   generated once — never regenerated per deploy. Activation refuses to go
+   on without them, or when `.env.local` lacks `APP_ENV=prod`, an absolute
+   `CACHE_DIRECTORY` or a real `INSTANCE_SECRET_KEY`.
+4. **Upload release:** `rsync -az` the artifact to a fresh
+   `releases/<UTC timestamp>-<tag>/`. The live release is untouched.
+5. **Link shared paths** via SSH: `.env.local`, `config/jwt` and `var/log`
+   from `shared/` into the release; `CACHE_DIRECTORY` points at
+   `shared/var/cache-pools`.
+6. **Warm up on the server** via SSH, with the host's real CLI
+   (`/opt/RZphp84/bin/php-cli`): `cache:clear`, which also warms the cache,
+   inside the new release dir (absolute container paths must be baked on the
+   server, not in CI), then `doctrine:migrations:migrate --no-interaction`.
+   Migrations are additive-first, so the still-live old release keeps working
+   on the new schema. Non-zero exit fails the workflow — the live site never
+   switched.
+7. **Atomic switch:** link `current.tmp` to the release and rename it over
+   `current` (`mv -Tf`, one `rename(2)`). No stale-container race (each
+   release has its own `var/cache`), no maintenance window in the normal case.
+   Catalog favicons are warmed after the switch; a failure there does not fail
+   the deploy.
+8. Smoke test: `curl /api/health` with retries, then a probe that the
+   `Authorization` header reaches PHP. On failure the job goes red and the
+   rollback below is done by hand.
+9. **Prune:** keep the five newest releases, and always the live one.
 
-**Maintenance mode** (for the exceptional breaking-migration deploy, flagged
-manually) is a flag file + rewrite rule in `public/.htaccess`:
-
-```apache
-RewriteCond %{DOCUMENT_ROOT}/../var/maintenance.flag -f
-RewriteCond %{REQUEST_URI} !^/maintenance/
-RewriteRule .* - [R=503,L]
-ErrorDocument 503 /maintenance.html
-```
-
-Toggled over SSH (`touch` / `rm` of the flag). Static `maintenance.html`
-ships with the artifact; API 503s are mapped by the Angular interceptor to a
-"back in a minute" banner (`Retry-After: 60`).
-
-**Rollback:** `ln -sfn releases/<previous> current` — instant, over SSH.
+**Rollback:** link `current.tmp` to `releases/<previous>` and `mv -Tf` it over
+`current` — instant, over SSH (`deploy/strato/README.md`, "Rolling back").
 Migrations are written additive-first (add column → deploy → drop old column
 next release) so the previous release always runs on the current schema.
 
-**Scheduled refresh:** a separate tiny workflow (`refresh.yml`, `schedule:`
-every 30 min) curls `POST /maintenance/refresh?token=…` (token from Secrets).
-Free, versioned with the code, no external cron service needed; cron-job.org
-remains a drop-in fallback if Actions scheduling proves too jittery.
+**Scheduled refresh:** in Docker, the `worker` container's scheduler
+(`WorkerSchedule`) refreshes due feeds every 5 minutes and runs the other
+sweeps on their own cadence (recommendation runs, digests, saved-search
+membership, the failed-message purge). An install without the worker points
+an external cron at `POST /maintenance/tick`, which runs refresh and every
+sweep in one request.
 
 ## Decisions log (short form)
 
 | Decision | Choice | Why |
 |---|---|---|
-| Hosting | Strato shared, SSH verified (git, rsync, php83 cgi-fcgi, symlinks) | Given; analyzed 2026-07-21 |
+| Hosting | Docker (the supported way) and Strato shared, SSH verified (git, rsync, php84 CLI and cgi-fcgi, symlinks) | Given; Strato analyzed 2026-07-21 and 2026-07-25 |
 | Backend shape | Pragmatic Symfony, no API Platform | Hand-written API is the showcase; no layer ceremony |
-| Frontend | Angular (+ admin as lazy module) | Batteries included; frontend is not the showcase |
+| Frontend | Angular (+ admin as lazy-loaded routes) | Batteries included; frontend is not the showcase |
 | Auth | Lexik JWT 7d in localStorage; DB user check per request = instant revocation | Symfony loads the user per request anyway |
 | Social login | Google + Apple v1, provider interface for more | Apple dev account exists |
-| Registration | CAPTCHA (ALTCHA) + double opt-in + manual approval | Bounded SSRF blast radius, verified queue |
+| Registration | CAPTCHA (ALTCHA) + double opt-in + manual approval (the last two admin toggles, on by default) | Bounded SSRF blast radius, verified queue |
 | Multi-user data | Shared feeds, per-user subscriptions/tags/state | Fetch once per feed, not per user |
 | Categories | Tags (m:n) with color + icon, not folders | One feed, multiple categories |
 | Flags | favorite (curation) + keep (retention), both prune-proof | Distinct intents |
-| Refresh | One budgeted, lock-guarded, resumable runner; 3 entry points | HTTP time limits; no daemons |
+| Refresh | One budgeted, lock-guarded, resumable runner; 4 entry points | HTTP time limits; runs without a daemon, and the Docker worker drives it where there is one |
 | DB | Doctrine, SQLite dev / MySQL prod, CI matrix proves portability | Requested abstraction, made testable |
-| Deploy | Tag → CI build → rsync over SSH to `releases/<tag>` → warmup+migrate via SSH → atomic `current` symlink flip | Zero-downtime; instant rollback; maintenance mode only for breaking migrations |
-| Scheduled refresh | GitHub Actions `schedule` → `POST /maintenance/refresh` | No crontab on server; pinger versioned with the code |
-| Framework version | Symfony 7.4 LTS (not 8.0) | 7.3 went EOL with 22 unpatched advisories across 11 packages (incl. firewall bypass CVE-2026-48489); 7.4 is maintained LTS and still needs only PHP 8.2+, so the PHP 8.3 runtime pin is unchanged. 8.0 would force PHP 8.4+ on Strato |
+| Deploy | `vX.Y.Z-dev.N` tag on `develop` → CI build → rsync over SSH to `releases/<timestamp>-<tag>` → warmup+migrate via SSH → atomic `current` symlink flip | Zero-downtime; instant rollback |
+| Scheduled refresh | Docker worker's scheduler; without it, an external cron → `POST /maintenance/tick` | No crontab on Strato; one endpoint runs refresh and every sweep |
+| Framework version | Symfony 7.4 LTS (not 8.x) | 7.3 went EOL with 22 unpatched advisories across 11 packages (incl. firewall bypass CVE-2026-48489); 7.4 is the LTS line, while an 8.x minor is supported for eight months only. The runtime is PHP 8.4 on Strato, in Docker and in CI |
