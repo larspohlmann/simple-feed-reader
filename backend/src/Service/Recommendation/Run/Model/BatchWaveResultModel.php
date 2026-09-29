@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run\Model;
 
-/**
- * A resolved batch wave: the winners in plan order, and whether any 429 was
- * observed this tick — which halves the run's wave concurrency (#947).
- */
+/** A resolved batch wave: the winners in plan order, and whether a 429 was seen, which halves the run's concurrency. */
 final readonly class BatchWaveResultModel
 {
     /**

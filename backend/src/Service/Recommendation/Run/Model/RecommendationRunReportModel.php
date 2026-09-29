@@ -7,13 +7,8 @@ namespace App\Service\Recommendation\Run\Model;
 use App\Entity\RecommendationRun;
 
 /**
- * The poll-facing view of a recommendation run: enough for a client or the
- * #311 worker to decide what to do next, without exposing the entity's
- * checkpoint internals (candidate batches, batch winners, retry state).
- *
- * `status` widens the entity's five persisted statuses with two that never
- * reach the database: `none` (no run has ever started) and `busy` (another
- * tick currently holds the per-user lock).
+ * The poll-facing view of a run, without its checkpoint internals. `status` also takes the two values below, which
+ * the database never holds.
  */
 final readonly class RecommendationRunReportModel
 {
@@ -36,12 +31,7 @@ final readonly class RecommendationRunReportModel
     ) {
     }
 
-    /**
-     * Seconds since the run started, on the caller's clock. Null before the
-     * run has a start instant (the `none`/`busy` reports). Computed here so
-     * both the status payload's `elapsedSeconds` and the ETA estimate read the
-     * one definition rather than each subtracting timestamps its own way.
-     */
+    /** Null before the run has a start (the none and busy reports); the status payload and the ETA both read this. */
     public function elapsedSecondsAt(\DateTimeImmutable $now): ?int
     {
         if (null === $this->startedAt) {
@@ -76,10 +66,7 @@ final readonly class RecommendationRunReportModel
         );
     }
 
-    /**
-     * The #311 poll driver's marker that a fresh worker heartbeat made this
-     * report a pure status read rather than a tick that just ran.
-     */
+    /** A pure status read: somebody else drives the run, so this request advanced nothing. */
     public function inBackground(): self
     {
         return new self(
@@ -96,11 +83,8 @@ final readonly class RecommendationRunReportModel
     }
 
     /**
-     * The #439 marker that the per-user lock is held with no fresh heartbeat:
-     * the poll driver sets it only on a `busy` advance() whose presence read
-     * came back "nobody driving" (a live holder's lock would have read fresh).
-     * A busy report is stamped background either way, so `inBackground()` alone
-     * cannot distinguish "a worker owns this" from "this may be stuck".
+     * The per-user lock is held while no driver heartbeat is fresh. A busy report is background either way, so only
+     * this flag tells "a worker owns this" from "this may be stuck".
      */
     public function waitingForLock(): self
     {

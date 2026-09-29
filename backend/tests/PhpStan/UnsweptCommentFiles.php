@@ -8,30 +8,6 @@ namespace App\Tests\PhpStan;
 final class UnsweptCommentFiles
 {
     public const array FILES = [
-        // T
-        'src/Entity/RecommendationRun.php',
-        'src/Entity/RecommendationRunLog.php',
-        'src/Entity/RecommendationRunProgress.php',
-        'src/Service/Recommendation/Run/DueRecommendationRunFinder.php',
-        'src/Service/Recommendation/Run/ForYouSweep.php',
-        'src/Service/Recommendation/Run/Model/PhaseDurationsModel.php',
-        'src/Service/Recommendation/Run/Model/RecommendationDriverKind.php',
-        'src/Service/Recommendation/Run/Model/RecommendationRunReportModel.php',
-        'src/Service/Recommendation/Run/RecommendationDrainSpawner.php',
-        'src/Service/Recommendation/Run/RecommendationEtaEstimator.php',
-        'src/Service/Recommendation/Run/RecommendationPollDriver.php',
-        'src/Service/Recommendation/Run/RecommendationRunCanceller.php',
-        'src/Service/Recommendation/Run/RecommendationRunFinalizer.php',
-        'src/Service/Recommendation/Run/RecommendationRunPurger.php',
-        'src/Service/Recommendation/Run/RecommendationRunStarter.php',
-        'src/Service/Recommendation/Run/RecommendationTickCheckpoint.php',
-        'src/Service/Recommendation/Run/RecommendationTransportFailureRecorder.php',
-        'src/Service/Recommendation/Run/RecommendationWinnerRanker.php',
-        'src/Service/Recommendation/Run/Support/RunLogRetention.php',
-        'src/Service/Recommendation/Run/SweepStreamHeartbeat.php',
-        'src/Service/Recommendation/Run/TickLockKeepalive.php',
-        'src/Service/Recommendation/Run/WorkerPresence.php',
-        'tests/Entity/RecommendationRunTest.php',
         // U
         'src/Controller/Api/ReadingActivityController.php',
         'src/Controller/Api/RecommendationRunHistoryController.php',

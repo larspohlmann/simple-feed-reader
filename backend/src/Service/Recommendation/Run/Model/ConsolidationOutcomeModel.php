@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Run\Model;
 
 /**
  * What a consolidation call settled to: the final list, or the unusable reply ConsolidationPhase retries and the
- * batch-score pool it degrades to (#493).
+ * batch-score pool it degrades to.
  */
 final readonly class ConsolidationOutcomeModel
 {
