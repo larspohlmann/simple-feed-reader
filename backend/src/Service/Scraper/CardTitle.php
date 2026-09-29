@@ -21,9 +21,9 @@ use Dom\Text;
  *   on heading-less cards would mash title, byline, and description together.
  * Length rules (min 5, truncate 300) are applied by the caller, CardFields.
  */
-final class CardTitle
+final readonly class CardTitle
 {
-    public static function of(Element $container, Element $anchor): ?string
+    public function of(Element $container, Element $anchor): ?string
     {
         return self::headingTitle($container)
             ?? self::classHintedTitle($container)
@@ -146,9 +146,5 @@ final class CardTitle
         }
 
         return null;
-    }
-
-    private function __construct()
-    {
     }
 }

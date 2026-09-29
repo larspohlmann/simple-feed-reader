@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Scraper\Pass\CardFields;
@@ -18,7 +19,9 @@ final class HtmlItemExtractorTest extends TestCase
 
     private function extractor(): HtmlItemExtractor
     {
-        return new HtmlItemExtractor([new JsonLdLayer(), new SemanticLayer(), new ClusterLayer()]);
+        $cardTitle = new CardTitle();
+
+        return new HtmlItemExtractor([new JsonLdLayer(), new SemanticLayer($cardTitle), new ClusterLayer($cardTitle)]);
     }
 
     public function testTagesschauFullExtraction(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\ScrapeLayer\SemanticLayer;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +18,7 @@ final class SemanticLayerTest extends TestCase
     {
         $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
 
-        return new SemanticLayer()->extract($doc, $baseUrl);
+        return new SemanticLayer(new CardTitle())->extract($doc, $baseUrl);
     }
 
     public function testExtractsRepeatedArticleElements(): void
@@ -35,6 +36,6 @@ final class SemanticLayerTest extends TestCase
             . '</body></html>',
             \LIBXML_NOERROR
         );
-        self::assertSame([], new SemanticLayer()->extract($doc, 'https://blog.test/'));
+        self::assertSame([], new SemanticLayer(new CardTitle())->extract($doc, 'https://blog.test/'));
     }
 }

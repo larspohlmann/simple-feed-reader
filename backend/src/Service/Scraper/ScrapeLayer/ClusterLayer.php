@@ -6,6 +6,7 @@ namespace App\Service\Scraper\ScrapeLayer;
 
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Scraper\Model\ScrapedItemModel;
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -26,6 +27,10 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
 {
     private const int MIN_CLUSTER_SIZE = 3;
     private const int MAX_CONTAINER_HOPS = 3;
+
+    public function __construct(private CardTitle $cardTitle)
+    {
+    }
 
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
@@ -53,7 +58,7 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
             }
         }
 
-        $cardFields = new CardFields(new PageUrls($baseUrl));
+        $cardFields = new CardFields(new PageUrls($baseUrl), $this->cardTitle);
 
         $best = [];
         foreach ($groups as $anchors) {

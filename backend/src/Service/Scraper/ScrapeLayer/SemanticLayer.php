@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Scraper\ScrapeLayer;
 
 use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -19,6 +20,10 @@ final readonly class SemanticLayer implements ScrapeLayerInterface
 {
     private const int MIN_ARTICLES = 3;
 
+    public function __construct(private CardTitle $cardTitle)
+    {
+    }
+
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
         $articles = $doc->querySelectorAll('article');
@@ -26,7 +31,7 @@ final readonly class SemanticLayer implements ScrapeLayerInterface
             return [];
         }
 
-        $cardFields = new CardFields(new PageUrls($baseUrl));
+        $cardFields = new CardFields(new PageUrls($baseUrl), $this->cardTitle);
 
         $items = [];
         foreach ($articles as $article) {
