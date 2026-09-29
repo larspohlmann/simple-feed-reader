@@ -10,11 +10,11 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final class AtomDiscussion
 {
-    public static function from(\DOMElement $entry, string $ns): Discussion
+    public static function from(\DOMElement $entry, string $atomNamespace): Discussion
     {
         $page = null;
         $commentsFeed = null;
-        foreach (self::repliesLinks($entry, $ns) as $link) {
+        foreach (self::repliesLinks($entry, $atomNamespace) as $link) {
             $href = trim($link->getAttribute('href'));
             if (!AbsoluteHttpUrl::matches($href)) {
                 continue;
@@ -35,9 +35,9 @@ final class AtomDiscussion
     }
 
     /** @return iterable<\DOMElement> */
-    private static function repliesLinks(\DOMElement $entry, string $ns): iterable
+    private static function repliesLinks(\DOMElement $entry, string $atomNamespace): iterable
     {
-        foreach (XmlHelper::childElements($entry, 'link', $ns) as $link) {
+        foreach (XmlHelper::childElements($entry, 'link', $atomNamespace) as $link) {
             if ($link->getAttribute('rel') === 'replies') {
                 yield $link;
             }

@@ -61,17 +61,16 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             throw new FeedParseException('Atom document without root element');
         }
 
-        $ns = $this->namespaceUri();
-        $title = XmlHelper::childText($root, 'title', $ns);
+        $title = XmlHelper::childText($root, 'title', $this->namespaceUri());
 
         $entries = [];
         foreach ($root->childNodes as $child) {
             if (
                 $child instanceof \DOMElement
                 && $child->localName === 'entry'
-                && $child->namespaceURI === $ns
+                && $child->namespaceURI === $this->namespaceUri()
             ) {
-                $entry = $this->parseEntry($child, $ns);
+                $entry = $this->parseEntry($child);
                 if ($entry !== null) {
                     $entries[] = $entry;
                 }
@@ -87,31 +86,31 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
         return new ParsedFeedModel(
             PlainText::from($title),
-            $this->alternateLink($root, $ns),
-            XmlHelper::childText($root, $this->descriptionElement(), $ns),
-            FeedImageExtractor::fromAtomFeed($root, $ns),
+            $this->alternateLink($root),
+            XmlHelper::childText($root, $this->descriptionElement(), $this->namespaceUri()),
+            FeedImageExtractor::fromAtomFeed($root, $this->namespaceUri()),
             $entries,
         );
     }
 
-    private function parseEntry(\DOMElement $entry, string $ns): ?ParsedEntryModel
+    private function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childText($entry, 'title', $ns);
-        $id = XmlHelper::childText($entry, 'id', $ns);
+        $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
+        $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());
         // Some WordPress-generated Atom feeds (Jacobin) omit the per-entry <link>
         // and carry the article permalink only in <id>. Fall back to it, but only
         // when it is an absolute http(s) URL: a urn:/tag: id is not fetchable and
         // must never become the article URL.
-        $link = $this->alternateLink($entry, $ns) ?? AbsoluteHttpUrl::orNull($id);
+        $link = $this->alternateLink($entry) ?? AbsoluteHttpUrl::orNull($id);
         if ($title === null && $link === null) {
             return null;
         }
 
-        $contentHtml = $this->elementMarkup($entry, $ns, 'content');
+        $contentHtml = $this->elementMarkup($entry, 'content');
         $image = $this->imageSelector->fromAtom(
             $entry,
-            $ns,
-            [$contentHtml, $this->elementMarkup($entry, $ns, 'summary')],
+            $this->namespaceUri(),
+            [$contentHtml, $this->elementMarkup($entry, 'summary')],
         );
         $mediaBundle = $this->mediaExtractor->extract($entry);
 
@@ -119,29 +118,31 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
-            author: $this->authorName($entry, $ns),
-            summary: XmlHelper::childText($entry, 'summary', $ns),
+            author: $this->authorName($entry),
+            summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
             contentHtml: $contentHtml,
-            publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
+            publishedAt: DateParser::parse($this->firstDate($entry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
-            discussion: AtomDiscussion::from($entry, $ns),
-            authorUrl: $this->authorUri($entry, $ns),
+            discussion: AtomDiscussion::from($entry, $this->namespaceUri()),
+            authorUrl: $this->authorUri($entry),
         );
     }
 
-    private function authorUri(\DOMElement $entry, string $ns): ?string
+    private function authorUri(\DOMElement $entry): ?string
     {
-        $author = XmlHelper::childElement($entry, 'author', $ns);
+        $author = XmlHelper::childElement($entry, 'author', $this->namespaceUri());
 
-        return $author === null ? null : AbsoluteHttpUrl::orNull(XmlHelper::childText($author, 'uri', $ns));
+        return $author === null
+            ? null
+            : AbsoluteHttpUrl::orNull(XmlHelper::childText($author, 'uri', $this->namespaceUri()));
     }
 
     /** The first present entry date, in this dialect's preference order. */
-    private function firstDate(\DOMElement $entry, string $ns): ?string
+    private function firstDate(\DOMElement $entry): ?string
     {
         foreach ($this->dateElements() as $element) {
-            $value = XmlHelper::childText($entry, $element, $ns);
+            $value = XmlHelper::childText($entry, $element, $this->namespaceUri());
             if ($value !== null) {
                 return $value;
             }
@@ -154,14 +155,14 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         return XmlHelper::childText($entry, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
     }
 
-    private function alternateLink(\DOMElement $parent, string $ns): ?string
+    private function alternateLink(\DOMElement $parent): ?string
     {
         $fallback = null;
         foreach ($parent->childNodes as $child) {
             if (
                 !$child instanceof \DOMElement
                 || $child->localName !== 'link'
-                || $child->namespaceURI !== $ns
+                || $child->namespaceURI !== $this->namespaceUri()
             ) {
                 continue;
             }
@@ -181,15 +182,15 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         return $fallback;
     }
 
-    private function authorName(\DOMElement $entry, string $ns): ?string
+    private function authorName(\DOMElement $entry): ?string
     {
         foreach ($entry->childNodes as $child) {
             if (
                 $child instanceof \DOMElement
                 && $child->localName === 'author'
-                && $child->namespaceURI === $ns
+                && $child->namespaceURI === $this->namespaceUri()
             ) {
-                return XmlHelper::childText($child, 'name', $ns);
+                return XmlHelper::childText($child, 'name', $this->namespaceUri());
             }
         }
 
@@ -203,13 +204,13 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
      * both forms lets an <img> be found in a summary-only entry, not just in
      * <content>.
      */
-    private function elementMarkup(\DOMElement $entry, string $ns, string $localName): ?string
+    private function elementMarkup(\DOMElement $entry, string $localName): ?string
     {
         foreach ($entry->childNodes as $child) {
             if (
                 !$child instanceof \DOMElement
                 || $child->localName !== $localName
-                || $child->namespaceURI !== $ns
+                || $child->namespaceURI !== $this->namespaceUri()
             ) {
                 continue;
             }

@@ -62,13 +62,13 @@ final readonly class ItemImageExtractor
     }
 
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public function fromAtomEnclosure(\DOMElement $entry, string $ns): ?DeclaredImageModel
+    public function fromAtomEnclosure(\DOMElement $entry, string $atomNamespace): ?DeclaredImageModel
     {
         foreach ($entry->childNodes as $child) {
             if (
                 !$child instanceof \DOMElement
                 || $child->localName !== 'link'
-                || $child->namespaceURI !== $ns
+                || $child->namespaceURI !== $atomNamespace
                 || $child->getAttribute('rel') !== 'enclosure'
             ) {
                 continue;
