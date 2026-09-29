@@ -15,16 +15,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Catalog feed CRUD, reorder, and per-feed favicon refresh. Access is enforced
- * by ROLE_ADMIN on ^/api/admin/ in the firewall, consistent with
- * AdminUserController.
- *
- * Note the `locked` default in CatalogFeedRequest: a row an admin creates BY
- * HAND is locked unless they say otherwise. They meant to add it, and a later
- * `replace` import should not quietly take it away again. Rows created by an
- * import are unlocked, because the document already owns them.
- */
 #[Route('/api/admin/catalog/feeds')]
 final readonly class AdminCatalogFeedController
 {
@@ -79,8 +69,6 @@ final readonly class AdminCatalogFeedController
     {
         $feed = $this->feeds->getById($id);
 
-        // The warmer resolves, downloads, records the outcome and flushes. A dead
-        // icon is a recorded failure, not a 500 — so refresh() never throws here.
         $this->warmer->refresh($feed);
 
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);

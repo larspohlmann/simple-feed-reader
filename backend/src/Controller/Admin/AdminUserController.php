@@ -25,10 +25,6 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/**
- * The approval queue. Access is enforced by ROLE_ADMIN on ^/api/admin/ in
- * security.yaml — the Angular route guard is UX only.
- */
 #[Route('/api/admin/users')]
 final readonly class AdminUserController
 {
@@ -76,23 +72,13 @@ final readonly class AdminUserController
         ]);
     }
 
-    /**
-     * Everything the admin detail screen shows about one account.
-     *
-     * Hand-built like list(), and for the same reason: a column added to User
-     * later must not reach an admin's browser merely because it exists. Note
-     * what is absent — the password hash and every token column.
-     */
     #[Route('/{id}', name: 'api_admin_users_detail', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function detail(int $id): JsonResponse
     {
         $user = $this->users->getById($id);
         $userId = $user->requireId();
 
-        // Loaded once and threaded through every mapper below, not re-read per
-        // section: findForUserWithTags() is this endpoint's heaviest query (the
-        // subscription x tag join) and this screen loads a whole library. See
-        // AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist.
+        // Loaded once and passed to every mapper: the subscription x tag join is this endpoint's heaviest query.
         $subscriptions = AdminUserJson::positionOrdered($this->subscriptions->findForUserWithTags($userId));
         $tags = $this->tags->findForUser($userId);
         $footprint = $this->statistics->forUser($user, $subscriptions, $tags);
@@ -107,14 +93,7 @@ final readonly class AdminUserController
         ));
     }
 
-    /**
-     * Activates an account — first-time grant, silent reinstatement, or silent
-     * no-op depending on the account's current status. The mail rule and the
-     * reasoning behind each case live on UserStatusChanger::approve(), which
-     * owns the decision.
-     *
-     * @throws TransportExceptionInterface
-     */
+    /** @throws TransportExceptionInterface */
     #[Route('/{id}/approve', name: 'api_admin_users_approve', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function approve(int $id): JsonResponse
     {
@@ -162,10 +141,6 @@ final readonly class AdminUserController
         return new JsonResponse(['password' => $this->passwordResetter->generateAndSet($user)]);
     }
 
-    /**
-     * Hard deletion. The self-delete and last-admin guards live on AccountDeleter,
-     * which owns the decision; this action only resolves the target and delegates.
-     */
     #[Route('/{id}', name: 'api_admin_users_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $admin): JsonResponse
     {

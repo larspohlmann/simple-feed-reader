@@ -13,14 +13,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * The admin's per-account limit controls: start or clear a trial, and set or
- * clear the per-user subscription cap. Split out of AdminUserController so
- * that controller's constructor does not grow past PHPStorm/PHPMD's
- * ExcessiveParameterList threshold — these three actions need only the two
- * collaborators below. Access is enforced by ROLE_ADMIN on ^/api/admin/ in
- * security.yaml, the same as every other controller under that prefix.
- */
 #[Route('/api/admin/users')]
 final readonly class AdminUserLimitsController
 {

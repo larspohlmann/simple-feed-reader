@@ -14,15 +14,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Catalog category CRUD and reorder. Access is enforced by ROLE_ADMIN on
- * ^/api/admin/ in the firewall, consistent with AdminUserController.
- *
- * Note the `locked` default in CatalogCategoryRequest: a row an admin creates
- * BY HAND is locked unless they say otherwise. They meant to add it, and a
- * later `replace` import should not quietly take it away again. Rows created by
- * an import are unlocked, because the document already owns them.
- */
 #[Route('/api/admin/catalog/categories')]
 final readonly class AdminCatalogCategoryController
 {
