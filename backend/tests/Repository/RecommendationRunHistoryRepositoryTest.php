@@ -6,8 +6,8 @@ namespace App\Tests\Repository;
 
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Feed\Model\MonthWindowModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;

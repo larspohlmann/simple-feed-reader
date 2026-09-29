@@ -6,11 +6,11 @@ namespace App\Service\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunHistoryRepository;
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
 use App\Service\Recommendation\Feed\Model\MonthWindowModel;
 use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 
 /**
  * The run history (#409): the overview card and the month pages it expands into. The limit-plus-one

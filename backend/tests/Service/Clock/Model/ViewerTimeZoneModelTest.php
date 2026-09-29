@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Feed\Model;
+namespace App\Tests\Service\Clock\Model;
 
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

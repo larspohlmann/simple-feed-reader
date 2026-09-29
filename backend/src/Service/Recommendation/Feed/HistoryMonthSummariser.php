@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Feed;
 
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 
 /**
  * Folds a repository's spend timeline into one HistoryMonthModel per calendar month, newest

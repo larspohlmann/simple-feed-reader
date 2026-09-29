@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reading\Model;
 
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Reading\Model\ReadingWindowModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 use PHPUnit\Framework\TestCase;
 
 /**

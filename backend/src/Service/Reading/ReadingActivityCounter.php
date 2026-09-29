@@ -6,10 +6,10 @@ namespace App\Service\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Reading\Model\ReadingActivityModel;
 use App\Service\Reading\Model\ReadingWindowModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 
 /**
  * How many articles the account opened on each of the last WINDOW_DAYS days, in the viewer's own timezone

@@ -206,8 +206,9 @@ cycle, so each one can be read, tested and moved without the others. Decided in 
   from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin` (now `Url\Support\UrlOrigin`).
   `FeedScheduler` and `OrphanedFeedReclaimer` left the `Service` root for `Service/Feed`. #1159 had already removed
   `Fetch ↔ Proxy` and `Grafana ↔ Profiling`.
-- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163) closed no cycle, so the cycle rule
-  would not stop them coming back; `ServiceModuleBoundaryRule` names them.
+- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163), and `Reading → Recommendation`
+  (#1169: the viewer time zone moved to `Service/Clock`), closed no cycle, so the cycle rule would not stop them
+  coming back; `ServiceModuleBoundaryRule` names them.
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
