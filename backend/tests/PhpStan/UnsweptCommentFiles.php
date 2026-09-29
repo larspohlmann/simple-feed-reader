@@ -8,27 +8,6 @@ namespace App\Tests\PhpStan;
 final class UnsweptCommentFiles
 {
     public const array FILES = [
-        // R
-        'src/Service/Backup/BackupReader.php',
-        'src/Service/Reading/Model/ReadingWindowModel.php',
-        'src/Service/Subscription/BulkSubscriptionUpdater.php',
-        'src/Service/Subscription/FeedTagMove.php',
-        'src/Service/Subscription/FirstFetchRecorder.php',
-        'src/Service/Subscription/OwnedSubscriptions.php',
-        'src/Service/Subscription/OwnedTagsCache.php',
-        'src/Service/Subscription/SubscriptionCreator.php',
-        'src/Service/Subscription/SubscriptionService.php',
-        'src/Service/Subscription/SubscriptionTagPositions.php',
-        'tests/Controller/Api/SubscriptionBulkTest.php',
-        'tests/Controller/Api/SubscriptionControllerTest.php',
-        'tests/Repository/SubscriptionPositionAndCountsTest.php',
-        'tests/Service/Auth/RegistrationServiceTest.php',
-        'tests/Service/Subscription/BulkSubscriptionUpdaterTest.php',
-        'tests/Service/Subscription/FirstFetchRecorderTest.php',
-        'tests/Service/Subscription/OwnedTagsCacheTest.php',
-        'tests/Service/Subscription/SubscriptionServiceTest.php',
-        'tests/Service/Subscription/SubscriptionTagPositionsTest.php',
-        'tests/Service/Subscription/UnsubscribeAllTest.php',
         // S
         'src/Service/Discovery/BotChallengePage.php',
         'src/Service/Discovery/Exception/ScrapingDisabledException.php',

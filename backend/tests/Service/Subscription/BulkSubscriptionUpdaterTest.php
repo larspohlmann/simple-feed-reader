@@ -175,13 +175,8 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
     }
 
     /**
-     * A symmetric fixture — both flags starting and ending at the same
-     * boolean — cannot tell applyFlags() apart from a copy-paste bug that
-     * writes one request field into the other setter: whichever setter
-     * fires, the field lands on the value both branches agree on. Sending
-     * both flags in ONE request, each flipping its OWN field to a DIFFERENT
-     * target value, means a swapped setter or a swapped source field shows up
-     * as the wrong boolean on the wrong flag.
+     * Both flags in one request, each flipped to a different value, so a swapped setter or source field shows as the
+     * wrong boolean on the wrong flag; a symmetric fixture passes either way.
      */
     public function testEachFlagIsWrittenToItsOwnField(): void
     {

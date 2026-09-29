@@ -16,27 +16,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Stores the document discovery already read as a feed's first fetch.
- *
- * Without this a new subscription is an empty shelf until some later refresh
- * fetches the very URL discovery just downloaded and parsed. That second
- * request lands seconds after the first, which is what sites rationing requests
- * answer with 429 (see FeedThrottledException).
- *
- * It records what the refresh pipeline records for a fetch that delivered:
- * the entries, the caching validators, and the schedule. Only the favicon is
- * left to the next sweep — resolving it here would mean another request to a
- * host we have just finished asking.
+ * Stores the document discovery already read as a feed's first fetch: entries, caching validators and schedule.
+ * Fetching it again seconds later is what rationing sites answer with 429 (FeedThrottledException); the favicon
+ * waits for the next sweep, so the host is not asked again at once.
  */
 final readonly class FirstFetchRecorder
 {
     /**
-     * A subscribe inserts every stored entry inside one HTTP request, and a feed
-     * that serves its whole archive (841 items for one measured in #384) makes
-     * that request crawl. This bounds the request, NOT retention: whatever is cut
-     * arrives on the next refresh, with the same effective date it would have had,
-     * because an article older than the previous fetch keeps its publication date
-     * either way.
+     * Bounds the subscribe request, not retention: a whole-archive feed (841 items in #384) would make it crawl.
+     * What is cut arrives on the next refresh with the same effective date.
      */
     private const int FIRST_FETCH_MAX_ENTRIES = 200;
 
@@ -50,14 +38,8 @@ final readonly class FirstFetchRecorder
     }
 
     /**
-     * The number of entries stored, which for a feed nobody has read yet is
-     * also its unread count — so the subscribe can report it without asking
-     * the database to count what it just wrote.
-     *
-     * Only for a feed nobody has fetched yet: a shared row somebody else
-     * already refreshed has a schedule and a history of its own, and this
-     * document — read for a different user's subscribe — is no reason to
-     * rewrite either.
+     * The number of entries stored, which is the new feed's unread count, so the subscribe need not count it. A feed
+     * somebody already fetched is left alone: its schedule and history are its own.
      *
      * @throws \DateMalformedStringException
      */
@@ -75,24 +57,15 @@ final readonly class FirstFetchRecorder
         $feed->recordCacheValidators($discovered->etag, $discovered->lastModified);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->entityManager->flush();
-        // See FeedOutcomePersister's identical ordering: an id only exists after this
-        // flush, so indexing has to happen after it, not before.
+        // Index after the flush: an entry has no id before it.
         $this->indexer->index($createdEntries);
 
         return \count($createdEntries);
     }
 
     /**
-     * The newest FIRST_FETCH_MAX_ENTRIES entries, newest publication first. A
-     * null publishedAt sorts last. PHP's usort has been stable since 8.0, so
-     * entries sharing a publication date keep the feed's own relative order
-     * without any extra bookkeeping here.
-     *
-     * Sorting runs unconditionally, even when the document is already under
-     * the cap: EntryIngestor persists in array order, and a feed's own order
-     * is not a publication-date order, so a size-based shortcut here would
-     * make "newest first" true only for the feeds large enough to need the
-     * cap at all — every subscribe deserves the same guarantee.
+     * The newest FIRST_FETCH_MAX_ENTRIES entries, newest publication first and a null date last; usort is stable, so
+     * ties keep the feed's order. Sorted even under the cap: EntryIngestor persists in array order.
      */
     private function newest(ParsedFeedModel $document): ParsedFeedModel
     {

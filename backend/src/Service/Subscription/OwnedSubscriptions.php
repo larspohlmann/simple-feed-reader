@@ -30,9 +30,7 @@ final readonly class OwnedSubscriptions
     }
 
     /**
-     * Same guarantee as resolve(), but with each subscription's feed and tags
-     * eager-loaded — for a caller that goes on to serialize the result (the
-     * bulk-update response, say) rather than only write through it.
+     * resolve() with each subscription's feed and tags eager-loaded, for a caller that serializes the result.
      *
      * @param list<int> $ids
      *

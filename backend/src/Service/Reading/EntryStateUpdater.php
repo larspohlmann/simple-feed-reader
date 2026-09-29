@@ -13,8 +13,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Mirrors isHidden/isViewed onto every other subscribed copy of the same article (#496), so a collapse-hidden
- * duplicate cannot resurface as unread; isFavorite/isKept stay per copy.
+ * Mirrors isHidden/isViewed onto every other subscribed copy of the same article, so a collapse-hidden duplicate
+ * cannot resurface as unread; isFavorite/isKept stay per copy.
  */
 final readonly class EntryStateUpdater
 {
@@ -39,8 +39,7 @@ final readonly class EntryStateUpdater
     private function applyTo(EntryState $state, EntryStateChangeModel $change): void
     {
         if ($change->isHidden !== null) {
-            // Unread also clears "opened" (EntryState::markUnread, #478), so the
-            // rule reaches every client, not just the web app.
+            // EntryState::markUnread() also clears "opened", so the rule reaches every client, not just the web app.
             $change->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
         }
         if ($change->isFavorite !== null) {
@@ -74,8 +73,7 @@ final readonly class EntryStateUpdater
 
     private function mirrorOnto(EntryState $sibling, EntryStateChangeModel $change): void
     {
-        // Same isHidden/isViewed invariants as applyTo() above (#478,
-        // ViewedImpliesHiddenListener): mirroring must not sidestep them.
+        // Same isHidden/isViewed invariants as applyTo() above: mirroring must not sidestep them.
         if ($change->isHidden !== null) {
             $change->isHidden ? $sibling->hide($this->clock->now()) : $sibling->markUnread();
         }

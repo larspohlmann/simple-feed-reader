@@ -75,11 +75,6 @@ final class OwnedTagsCacheTest extends KernelTestCase
         self::assertSame([], $resolved);
     }
 
-    /**
-     * The whole point of the cache: SubscriptionTagSync::sync() re-resolves
-     * its requested ids on every call, and a bulk write calls sync() once per
-     * subscription. Without this, a repeated id would cost one query per call.
-     */
     public function testARepeatedIdCostsOneQueryNotOnePerCall(): void
     {
         $user = $this->user('cache-repeat@example.com');
@@ -104,10 +99,6 @@ final class OwnedTagsCacheTest extends KernelTestCase
         );
     }
 
-    /**
-     * A later call naming a NEW id on top of an already-cached one must only
-     * fetch what is actually missing, not re-fetch the id it already knows.
-     */
     public function testOnlyTheMissingIdsAreFetchedOnASubsequentCall(): void
     {
         $user = $this->user('cache-partial@example.com');
@@ -136,13 +127,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         );
     }
 
-    /**
-     * The class's own comment used to justify never clearing $resolvedByUser
-     * on "one PHP process per request" — already false in this suite's own
-     * functional tests that call $client->disableReboot() (#659 review).
-     * reset() must actually empty the cache: a repeated id costs a fresh
-     * query again once reset() has run.
-     */
+    /** The functional tests reuse one container across requests, so reset() must really empty the cache. */
     public function testResetForgetsEverythingResolvedSoFar(): void
     {
         $user = $this->user('cache-reset@example.com');
@@ -169,12 +154,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     }
 
     /**
-     * findAllByIdsForUser() must return a plain list, in request order, even
-     * when a requested id in the MIDDLE of the list drops out (foreign or
-     * missing). array_filter() alone would leave a gap at that id's original
-     * key — array_values() closes it. assertSame() is key-sensitive, so a
-     * gapped result (e.g. keyed 0 => $news, 2 => $tech instead of 0, 1) fails
-     * this assertion even though both "contain the right two tags".
+     * A dropped middle id must leave no key gap; assertSame() is key-sensitive, so a missing array_values() fails it.
      */
     public function testReturnsAPlainListWhenAMiddleIdDropsOut(): void
     {
@@ -192,14 +172,8 @@ final class OwnedTagsCacheTest extends KernelTestCase
     }
 
     /**
-     * The cache's whole job is to turn a repeated id into a map lookup, not a
-     * query — but that guarantee is not only about the NUMBER of queries
-     * resolveMissing() issues. Asking for the SAME id twice in one call must
-     * still de-duplicate before it ever reaches the repository: without
-     * array_unique(), the one query resolveMissing() does run would carry the
-     * id twice in its IN (...) list. That is invisible to a query COUNT, but
-     * not to the query's own SQL text — a duplicated bound value shows up as
-     * an extra placeholder, "IN (?, ?)" instead of "IN (?)".
+     * A repeated id within one call is de-duplicated before the query: a query count cannot see that, but the SQL
+     * does ("IN (?, ?)" instead of "IN (?)").
      */
     public function testARepeatedIdWithinOneCallIsDeduplicatedBeforeQuerying(): void
     {
@@ -223,10 +197,6 @@ final class OwnedTagsCacheTest extends KernelTestCase
         );
     }
 
-    /**
-     * Two different users must never see each other's cached tags, even
-     * though both ask this one instance within the same request.
-     */
     public function testKeepsSeparateUsersApart(): void
     {
         $mine = $this->user('cache-isolate-mine@example.com');

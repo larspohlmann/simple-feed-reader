@@ -10,10 +10,7 @@ use App\Service\Discovery\Model\ScrapeFailureReason;
 
 final readonly class SubscribeOutcomeModel
 {
-    /**
-     * @param list<FeedCandidateModel> $candidates
-     * @param int                      $unreadCount the entries the subscribe stored; nobody has read a feed just added
-     */
+    /** @param list<FeedCandidateModel> $candidates */
     private function __construct(
         /** @noinspection AutowireWrongClass Built with new, never autowired */
         public ?Subscription $subscription,

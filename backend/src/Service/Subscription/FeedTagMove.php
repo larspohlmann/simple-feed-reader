@@ -14,11 +14,8 @@ use App\Repository\TagRepository;
 use App\Service\Subscription\Model\FeedMoveModel;
 
 /**
- * Moves one feed between the sidebar's lists the way a drag does: out of the
- * source tag and into the destination at the dropped position. The destination
- * is a tag's own feed list, or the untagged "Feeds" list when the feed loses
- * its last tag. Placement renumbers the destination densely so the other feeds
- * shift to make room.
+ * Moves one feed between the sidebar's lists the way a drag does: out of the source tag, into the destination tag
+ * or, once it has no tag left, the untagged "Feeds" list, at the dropped position. The destination renumbers densely.
  */
 final readonly class FeedTagMove
 {

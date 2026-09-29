@@ -36,7 +36,7 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordSuccess($feed, 3);
 
         // A source that shows life is polled at the floor at once, so the rest
-        // of a burst interleaves instead of blocking the top of All items (#643).
+        // of a burst interleaves instead of blocking the top of All items.
         self::assertSame(5, $feed->getFetchIntervalMinutes());
         self::assertSame(0, $feed->getConsecutiveFailures());
         self::assertSame(FeedStatus::Active, $feed->getStatus());
@@ -269,10 +269,7 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame('HTTP 410 Gone', $feed->getLastErrorMessage());
     }
 
-    /**
-     * #384: only a delivered fetch advances lastSuccessfulFetchAt; a failed or gone attempt
-     * still stamps lastFetchedAt, the manual-refresh cooldown, but not what the feed served.
-     */
+    /** A failed or gone attempt stamps lastFetchedAt, the manual-refresh cooldown, but not lastSuccessfulFetchAt. */
     public function testOnlyRecordSuccessAdvancesLastSuccessfulFetchAt(): void
     {
         $failed = new Feed('https://failed.example.com/feed');

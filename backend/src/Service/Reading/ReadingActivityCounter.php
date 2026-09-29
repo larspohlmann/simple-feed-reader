@@ -12,9 +12,9 @@ use App\Service\Reading\Model\ReadingActivityModel;
 use App\Service\Reading\Model\ReadingWindowModel;
 
 /**
- * How many articles the account opened on each of the last WINDOW_DAYS days, in the viewer's own timezone
- * (#896). Bucketed in PHP, not the database: `viewedAt` is naive UTC and the buckets are cut in the viewer's
- * zone, which no portable DQL expression can shift before grouping.
+ * How many articles the account opened on each of the last WINDOW_DAYS days, in the viewer's own timezone. Bucketed
+ * in PHP, not the database: `viewedAt` is naive UTC, and no portable DQL expression can shift it into the viewer's
+ * zone before grouping.
  */
 final readonly class ReadingActivityCounter
 {

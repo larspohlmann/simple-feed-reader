@@ -23,7 +23,7 @@ final readonly class EntryStateResolver
 
     /**
      * An idempotent insert then a reload, never ORM new+persist, which would race concurrent writers into a
-     * duplicate-key flush (#496).
+     * duplicate-key flush.
      */
     public function resolve(User $user, EntryListRow $row): EntryState
     {

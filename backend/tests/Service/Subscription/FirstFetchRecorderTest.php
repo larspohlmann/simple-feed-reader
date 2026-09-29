@@ -67,10 +67,8 @@ final class FirstFetchRecorderTest extends DbTestCase
     }
 
     /**
-     * The #432 ordering trap: EntryIngestor persists but never flushes, so an
-     * entry has no id until record()'s own flush assigns one. This proves the
-     * id the index received is the SAME id the database assigned, which
-     * merely calling index() somewhere inside record() would not catch.
+     * EntryIngestor never flushes, so an entry has no id before record()'s flush: the index must get the id the
+     * database assigned, which calling index() anywhere inside record() would not ensure.
      */
     public function testIndexesTheFirstFetchEntriesWithTheirRealIdsAfterFlush(): void
     {
@@ -107,13 +105,7 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertNotNull($this->findByGuid($feed, 'guid-249'));
     }
 
-    /**
-     * Even a feed well under the cap must come out newest-first: EntryIngestor
-     * persists in array order, so a feed serving its entries oldest-first
-     * would otherwise store them oldest-first too. Only 2 entries here — far
-     * under FIRST_FETCH_MAX_ENTRIES — so this fails if newest() ever special-
-     * cases "small feed, skip the sort" instead of always sorting.
-     */
+    /** Far under the cap and still newest first: fails if newest() ever skips the sort for a small feed. */
     public function testASmallFeedIsStillSortedNewestFirst(): void
     {
         $feed = $this->feed();
@@ -127,12 +119,7 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertSame(['newer', 'older'], $this->guidsByInsertionOrder($feed));
     }
 
-    /**
-     * Two entries sharing a publication date are not sorted apart: the
-     * feed's own relative order survives the tie, so a source that batch-
-     * publishes (a daily digest, a static-site generator, a feed truncating
-     * to whole minutes) does not have its entries reordered arbitrarily.
-     */
+    /** Entries sharing a publication date keep the feed's own order, as a batch-publishing source expects. */
     public function testTiedPublicationDatesKeepTheFeedsOwnOrder(): void
     {
         $feed = $this->feed();
@@ -147,7 +134,6 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertSame(['b', 'a'], $this->guidsByInsertionOrder($feed));
     }
 
-    /** A document sitting exactly at the cap is not truncated. */
     public function testExactlyTwoHundredEntriesAreAllStored(): void
     {
         $feed = $this->feed();
@@ -220,10 +206,8 @@ final class FirstFetchRecorderTest extends DbTestCase
     }
 
     /**
-     * The order EntryIngestor persisted the entries in, read back through the
-     * auto-increment id rather than any query-time ORDER BY — the repository
-     * sorts a feed's list by (effectiveDate, id) for the reader, which would
-     * mask a wrong ingest order behind an incidentally-correct display order.
+     * The order EntryIngestor persisted in, by auto-increment id: the repository's (effectiveDate, id) display order
+     * would mask a wrong ingest order.
      *
      * @return list<string>
      */
@@ -242,12 +226,6 @@ final class FirstFetchRecorderTest extends DbTestCase
         return array_map(static fn (Entry $entry): string => $entry->getGuid(), $entries);
     }
 
-    /**
-     * The unit-level guarantee withEntries() itself must hold: every field
-     * but $entries survives the copy. It says nothing about the capping path
-     * — FirstFetchRecorder::newest(), what a real first fetch actually runs
-     * — which testCappingTheEntryListKeepsTheFeedImage below covers instead.
-     */
     public function testWithEntriesCopiesEveryFeedField(): void
     {
         $document = new ParsedFeedModel(
@@ -267,15 +245,8 @@ final class FirstFetchRecorderTest extends DbTestCase
     }
 
     /**
-     * The regression testWithEntriesCopiesEveryFeedField() cannot catch on its
-     * own: it never calls FirstFetchRecorder::newest(), so it would still pass
-     * if newest() reverted to rebuilding ParsedFeedModel field by field (the exact
-     * bug withEntries() exists to prevent). This drives the real, wired
-     * recorder's own capping method with 250 entries — over
-     * FIRST_FETCH_MAX_ENTRIES, so a cap actually happens — and a non-null
-     * image. Feed::$imageUrl now exists and EntryIngestor persists it, so the
-     * assertion reads the capped image back from the public surface (the
-     * persisted Feed) instead of reaching newest() through reflection.
+     * Drives the wired recorder's own cap with 250 entries and an image, so a newest() that rebuilds ParsedFeedModel
+     * field by field instead of calling withEntries() loses the image on the persisted Feed.
      */
     public function testCappingTheEntryListKeepsTheFeedImage(): void
     {

@@ -9,9 +9,8 @@ use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
 
 /**
- * Marks read every unread member of the caller's saved searches no newer than $until, the rows the combined
- * unread list shows (#1116). By entry state: a search spans feeds, so a watermark would leave the entry unread
- * in its feed list.
+ * Marks read every unread member of the caller's saved searches no newer than $until, the rows the combined unread
+ * list shows. By entry state: a search spans feeds, so a watermark would leave the entry unread in its feed list.
  */
 final readonly class SavedSearchMarkReadService
 {
