@@ -11,14 +11,8 @@ use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 
 /**
- * Scans the article's short blocks for the wording SuspiciousPhrases lists, each
- * family over the region it is allowed to match. Reports each family at most
- * once, with the offending line as the detail, so a page with eight share
- * buttons produces one reviewable finding instead of eight.
- *
- * A block that is a link back into the same page is skipped whatever it says. A
- * "Skip to content" is the page's own accessibility affordance, not a menu, and
- * every Missy Magazine article carries one (#744).
+ * Scans short blocks for SuspiciousPhrases' wording, each family over the region it may match, and reports each family
+ * once with the offending line, so a share bar of eight buttons is one finding.
  */
 final readonly class PhraseMarkers
 {

@@ -8,19 +8,9 @@ use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 
 /**
- * The wording that betrays page furniture the reader pipeline kept, in the two
- * languages this installation's feeds publish in. Data, deliberately apart
- * from the rule that applies it: the list grows every time a publisher is
- * added, and a table is cheaper to review than a method full of str_contains
- * calls. Only wording this codebase could act on — a paywalled source was
- * dropped for the same reason an unreachable page is not reported: a list
- * full of work nobody can do is a list nobody reads (#744).
- *
- * Two kinds, each confined to the region where it means anything. A wall
- * (consent, JavaScript, bot) counts only on a body that never reaches a
- * paragraph, because a wall IS the absence of the article; inside a real
- * article the same words are its own newsletter fine print. Chrome counts
- * only above the first paragraph — below it, it is the site's tail (#744).
+ * The wording that betrays page furniture the reader kept, in German and English: a table apart from the rule that
+ * applies it, because it grows with every publisher. Only wording a cleaner could act on, since a report of work
+ * nobody can do goes unread; each family matches only in its PhraseScope region.
  */
 final readonly class SuspiciousPhrases
 {
@@ -66,9 +56,8 @@ final readonly class SuspiciousPhrases
     }
 
     /**
-     * Short limits on purpose: a navigation word is a menu entry, and a menu
-     * entry is two or three words. The 57-character line "Mehr Deutschlandfunk
-     * in der Google-Suche" is what a wider limit matched on "suche".
+     * Short limits on purpose: a menu entry is two or three words, and a wider limit matched "suche" in a
+     * 57-character "more of this site in Google search" line.
      *
      * @return list<PhraseFamilyModel>
      */

@@ -10,14 +10,8 @@ use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
- * Every marker one audited article earns — and only for an article the pipeline
- * actually extracted.
- *
- * A failed extraction earns nothing. Whatever the reason — the page never
- * arrived, readability found no article, the coverage gate rejected what it did
- * find — the reader falls back to the feed body and shows the user the original.
- * That is a real outcome and no cleaner changes it, so listing it fills the
- * report with work nobody can do (#744).
+ * Every marker one extracted article earns. A failed extraction earns none: the reader falls back to the feed body
+ * and no cleaner changes that, so reporting it is work nobody can do (#746).
  */
 final readonly class CleanupMarkers
 {
@@ -30,12 +24,7 @@ final readonly class CleanupMarkers
     ) {
     }
 
-    /**
-     * The body is measured by the caller, which also reports its numbers, so the
-     * cleaned HTML is parsed once per article rather than once per reader of it.
-     *
-     * @return list<CleanupMarkerModel>
-     */
+    /** @return list<CleanupMarkerModel> */
     public function detect(ExtractionResultModel $result, SampledEntryModel $entry, ?ExtractedBodyModel $body): array
     {
         if (!$result->ok || $body === null) {

@@ -7,10 +7,8 @@ namespace App\Service\ReaderAudit\Support;
 use App\Service\ReaderAudit\Exception\UnexpectedDatabaseValueException;
 
 /**
- * Reads one column out of a DBAL row as the type the schema promises. DBAL types
- * every column `mixed`, and the audit's two queries are raw SQL rather than DQL,
- * so this is where that promise is checked instead of assumed — a renamed column
- * then fails loudly on the first row rather than silently sampling zeros.
+ * Reads one column of a DBAL row as the type the schema promises, so a renamed column fails on the first row
+ * instead of silently sampling zeros.
  */
 final readonly class DatabaseValue
 {
