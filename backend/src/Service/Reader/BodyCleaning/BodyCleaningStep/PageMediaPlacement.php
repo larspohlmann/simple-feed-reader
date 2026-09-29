@@ -9,9 +9,9 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\ReaderLeadImage;
 
 /**
- * Places the page's media and restores the lead image between planning and applying (#755): plan() only
- * classifies, so the restore still sees every body image. A top-placed video or embed takes the lead position,
- * so no hero is restored above it; a narration audio player leaves the hero its place (#907).
+ * Restores the lead image between planning and applying the page's media: plan() only classifies, so the restore
+ * still sees every body image. A top-placed video or embed takes the lead position and gets no hero above it; a
+ * narration audio player leaves the hero its place (#907).
  */
 final readonly class PageMediaPlacement implements BodyCleaningStepInterface
 {

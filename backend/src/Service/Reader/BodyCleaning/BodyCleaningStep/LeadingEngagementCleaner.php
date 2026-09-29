@@ -81,8 +81,8 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
     }
 
     /**
-     * A leading <header> is the masthead; an image-only link inside it is a promo
-     * badge, not a poster — a poster never sits in a <header>, so #627 is left be.
+     * An image-only link in a leading <header> is a masthead promo badge, never a poster: the poster link
+     * SubstackGatedVideoPlaceholder inserts does not sit in a <header>.
      */
     private function removeMastheadBadges(Element $root, Element $anchor): bool
     {

@@ -9,8 +9,8 @@ use App\Service\Reader\Model\FeedMediaModel;
 use Dom\Element;
 
 /**
- * Stamps the feed-declared pixel size onto a reader image or video the feed enumerated (#914), so the browser
- * reserves its box instead of reflowing the article. A picture the reader already sized is left untouched.
+ * Stamps the feed-declared pixel size onto a reader image or video the feed enumerated, so the browser reserves its
+ * box instead of reflowing the article. A picture the reader already sized is left untouched.
  */
 final readonly class FeedDimensionStamper implements BodyCleaningStepInterface
 {

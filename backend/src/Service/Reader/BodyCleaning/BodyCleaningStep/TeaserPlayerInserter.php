@@ -14,13 +14,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Puts an inline teaser back where the extraction left its bare thumbnail: the
- * body <img> whose asset is the teaser's still becomes the reconstructed player.
- *
- * A teaser the media pipeline already inserted (its file is among the article's
- * media) is skipped, so the article's own narration or lead video is never
- * mistaken for a teaser and never overwrites its hero. Each teaser claims one
- * thumbnail, and an unmatched teaser is dropped rather than forced into the body.
+ * Replaces the body thumbnail matching a teaser's still with the rebuilt player, one thumbnail per teaser. A teaser
+ * whose file is among the article's media is skipped, so it never overwrites the article's own narration, lead video
+ * or hero; an unmatched teaser is dropped.
  */
 final readonly class TeaserPlayerInserter implements BodyCleaningStepInterface
 {

@@ -9,12 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Substack strips the YouTube iframe but leaves its poster, and that poster's
- * URL contains the video id — so a dead thumbnail becomes a working link with
- * no re-fetch and no new host trust.
- *
- * An image already inside a link is skipped: #627's gated placeholder inserts
- * its own poster anchor before readability, and this rule must not touch it.
+ * Links a Substack YouTube poster to its video: the poster URL carries the video id, so no fetch and no new host.
+ * An image already inside a link is skipped, so the poster anchor SubstackGatedVideoPlaceholder built stays as it is.
  */
 final readonly class SubstackPosterLink implements BodyCleaningStepInterface
 {
