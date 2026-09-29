@@ -126,7 +126,7 @@ final class GrafanaSettingsTest extends TestCase
 
     /**
      * The admin form saves in php-fpm; the worker re-checks the toggle in its own process. A save forgets the shared
-     * pool, so the worker reads the new row once it refreshes its memo, not the stale cache (#1012).
+     * pool, so the worker reads the new row once it refreshes its memo, not the stale cache.
      */
     public function testAnAdminSaveInvalidatesTheSharedCacheSoTheWorkerSeesTheChange(): void
     {

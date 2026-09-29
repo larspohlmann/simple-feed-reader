@@ -76,7 +76,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         self::assertSame('glc_secrettoken', $settings->lokiToken());
     }
 
-    /** A Loki flush reads push URL, username and token in a row (#983): that must cost one lookup, not three. */
+    /** A Loki flush reads push URL, username and token in a row: that must cost one lookup, not three. */
     public function testResolvingPushUrlUsernameAndTokenTogetherQueriesTheRepositoryOnce(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
@@ -88,7 +88,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         self::assertSame('glc_secret', $settings->lokiToken());
     }
 
-    /** The worker calls refresh() every 30 s (#1012); a warm shared pool must keep that off the database. */
+    /** The worker calls refresh() every 30 s; a warm shared pool must keep that off the database. */
     public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);

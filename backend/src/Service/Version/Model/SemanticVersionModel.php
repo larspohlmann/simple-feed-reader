@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Version\Model;
 
 /**
- * A release tag ranked by semver, with one rule that matters here: a prerelease
- * sits BELOW its own final release. The deploy tags this project runs
- * (`v1.4.2-dev.3`) are prereleases of `v1.4.2`, so an instance on a dev tag is
- * ahead of every earlier release and only lapped once its final release ships.
- *
- * Deliberately narrow: it parses `vMAJOR.MINOR.PATCH` with an optional
- * `-dev.N` prerelease and nothing else. A development build (`dev`) or any
- * other shape does not parse, and an unparseable version can never be part of
- * an upgrade — which is exactly the silent-absence behaviour the badge needs.
+ * A prerelease ranks BELOW its own final release, so an instance on `v1.4.2-dev.3` is ahead of every earlier
+ * release. Only `vMAJOR.MINOR.PATCH[-dev.N]` parses, and an unparseable version is never part of an upgrade.
  */
 final readonly class SemanticVersionModel
 {
@@ -71,11 +64,6 @@ final readonly class SemanticVersionModel
         return $this->prereleaseRank() > $other->prereleaseRank();
     }
 
-    /**
-     * A final release outranks any prerelease of the same MAJOR.MINOR.PATCH.
-     * Ranks compare so that release (PHP_INT_MAX) beats every `-dev.N`, and a
-     * higher dev number beats a lower one.
-     */
     private function prereleaseRank(): int
     {
         return $this->prereleaseNumber ?? \PHP_INT_MAX;

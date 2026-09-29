@@ -10,7 +10,7 @@ use Psr\Cache\InvalidArgumentException;
 
 /**
  * Shares the Grafana row between processes: php-fpm saves the admin form while the long-running worker re-checks the
- * profiling toggle, so the invalidation must cross the process boundary (#1012). The lifetime is only a backstop.
+ * profiling toggle, so the invalidation must cross the process boundary. The lifetime is only a backstop.
  */
 final readonly class GrafanaSettingsCache
 {

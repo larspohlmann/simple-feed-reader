@@ -9,13 +9,6 @@ use App\Service\Version\Model\SemanticVersionModel;
 use App\Service\Version\Model\VersionReportModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 
-/**
- * Joins the running build with the newest release upstream and decides whether
- * an update is worth showing. The decision is the strict semver ordering
- * (see SemanticVersionModel): a release only counts as an update when it ranks
- * above the running version, so a dev-tagged instance that is already ahead
- * stays quiet.
- */
 final readonly class VersionReporter
 {
     public function __construct(

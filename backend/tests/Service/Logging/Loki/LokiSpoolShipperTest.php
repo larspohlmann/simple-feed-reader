@@ -74,11 +74,8 @@ final class LokiSpoolShipperTest extends TestCase
     }
 
     /**
-     * A dangling symlink is exactly what a concurrent tick racing unlink()
-     * against glob() can leave behind: glob() lists it, but
-     * file_get_contents() on a target that no longer exists returns false
-     * rather than throwing. That must count as a failure, not a fatal error,
-     * and the link must not be left to trip the next tick.
+     * A concurrent tick racing unlink() against glob() leaves a dangling symlink, which reads as false rather than
+     * throwing: it must count as failed and be deleted, or it trips the next tick.
      */
     public function testCountsAnUnreadableFileAsFailedAndDeletesIt(): void
     {

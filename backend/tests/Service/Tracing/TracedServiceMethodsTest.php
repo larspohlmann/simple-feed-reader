@@ -26,8 +26,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The entry-point methods of the hot API routes are traced as child spans, so the
- * performance dashboard can show where a route spends its time (#1011).
+ * The entry-point methods of the hot API routes are traced as child spans, so the performance dashboard can show
+ * where a route spends its time.
  */
 final class TracedServiceMethodsTest extends TestCase
 {
