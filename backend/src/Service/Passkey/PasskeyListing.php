@@ -9,7 +9,7 @@ use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\Model\AccountPasskeysModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 
-/** One account's passkeys, with the relying party id and shared handle the WebAuthn Signal API needs (#727). */
+/** One account's passkeys, with the relying party id and shared handle the WebAuthn Signal API needs. */
 final readonly class PasskeyListing
 {
     public function __construct(

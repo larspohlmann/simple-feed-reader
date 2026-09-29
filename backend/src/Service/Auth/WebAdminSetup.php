@@ -11,13 +11,8 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * The no-shell bootstrap path. Available only while an operator-set secret is
- * configured AND no administrator exists yet; it self-disables the instant an
- * admin exists, so the endpoint has no standing attack surface.
- *
- * The secret is sourced from the environment — the one config channel every
- * cheap Docker host offers — and compared with hash_equals in constant time.
- * On success the caller gets a JWT and lands logged-in.
+ * The no-shell bootstrap: open only while an operator-set secret is configured and no admin exists, so it disables
+ * itself with the first admin. The secret comes from the environment and is compared with hash_equals().
  */
 final readonly class WebAdminSetup
 {

@@ -31,12 +31,8 @@ final class PasskeyOfferTest extends TestCase
     }
 
     /**
-     * The only safety-critical behaviour of this service: a second answer —
-     * a retried request, a client that fires the answer twice — must not
-     * move an already-set timestamp. Advancing the clock between the two
-     * calls is what makes this test able to fail: without it, a buggy
-     * unconditional overwrite would still land on the same instant and the
-     * assertion would pass by accident.
+     * A second answer must not move the timestamp. The clock advances between the calls, or an unconditional
+     * overwrite would land on the same instant and pass.
      */
     public function testASecondAnswerDoesNotMoveTheAlreadySetTimestamp(): void
     {

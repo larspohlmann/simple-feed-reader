@@ -34,12 +34,8 @@ final readonly class RegistrationService
     }
 
     /**
-     * Silently does nothing when the address is already registered. The caller
-     * returns the same 202 either way — a different response here would let
-     * anyone test which addresses hold accounts.
-     *
-     * The resulting status follows RegistrationPolicy::prospectiveStatusForEmailSignup(),
-     * not a hardcoded value — see that method for the confirm/approve rules.
+     * Does nothing for a taken address: the caller answers 202 either way, so no response tells which addresses hold
+     * accounts. The new status comes from RegistrationPolicy::prospectiveStatusForEmailSignup().
      *
      * @throws TransportExceptionInterface
      * @throws RandomException
@@ -47,10 +43,7 @@ final readonly class RegistrationService
     public function register(string $email, string $plainPassword, string $locale = 'en'): void
     {
         if (null !== $this->users->findOneByEmail($email)) {
-            // A fresh signup pays for an argon2id hash (~174 ms) this path would
-            // skip, and that gap is a reliable timing oracle over the network.
-            // Spend the same work before returning — see
-            // App\Security\PasswordWorkEqualizer, used by login since Task 11.
+            // A fresh signup hashes a password; spend the same work so a taken address does not answer faster.
             $this->work->spendOneHash();
 
             return;
@@ -90,20 +83,8 @@ final readonly class RegistrationService
     }
 
     /**
-     * Always reports success. Whether the address exists, and whether its
-     * account is in a state that may reset, stays private.
-     *
-     * Deliberately does NOT call PasswordWorkEqualizer, unlike register() — on
-     * purpose, not an oversight. Nothing here hashes a password: the eligible
-     * path issues a token and queues mail, the two short paths return after a
-     * SELECT. A dummy hash on the short paths would make "unknown address"
-     * ~174 ms SLOWER than "account exists and got a mail" — a louder oracle
-     * than the one being closed, pointing the other way.
-     *
-     * What actually closed the gap was deferring the SMTP round trip past the
-     * response (see DeferredMailer); what remains is one INSERT and one UPDATE
-     * for the token, sub-millisecond and far under network jitter. Measured,
-     * not assumed — see the timing figures in the task report.
+     * Always reports success. No PasswordWorkEqualizer here, on purpose: nothing on this path hashes, and a dummy
+     * hash would make an unknown address the slow case. Why: docs/security.md#login-timing
      *
      * @throws TransportExceptionInterface
      * @throws RandomException
@@ -128,9 +109,8 @@ final readonly class RegistrationService
     }
 
     /**
-     * Re-sends the address-verification mail for an account that has not yet
-     * proved its address (#636). A no-op once verified, so the endpoint is safe
-     * to call idempotently. Mail is skipped by the gated mailer when disabled.
+     * Re-sends the address-verification mail for an account that has not yet proved its address. A no-op once
+     * verified, so the endpoint is safe to call idempotently. Mail is skipped by the gated mailer when disabled.
      *
      * @throws TransportExceptionInterface
      * @throws RandomException

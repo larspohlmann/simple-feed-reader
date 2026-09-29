@@ -15,11 +15,8 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * Listing and removing passkeys (#624 Task 8): `GET /api/auth/passkeys` and
- * `DELETE /api/auth/passkeys/{id}`. The lock-out decision itself is
- * PasskeyRemovalPolicyTest's job — this class proves the endpoint wires that
- * policy in, scopes every lookup to the caller, and answers 404 (never 403)
- * for a credential somebody else owns.
+ * GET and DELETE /api/auth/passkeys: the endpoint wires in PasskeyRemovalPolicy (tested on its own), scopes every
+ * lookup to the caller, and answers 404, never 403, for someone else's credential.
  */
 final class PasskeyListTest extends ApiTestCase
 {
@@ -27,8 +24,8 @@ final class PasskeyListTest extends ApiTestCase
     use PinsPasskeyRelyingParty;
 
     /**
-     * Pinned so a future addition cannot silently widen the payload: beside
-     * the unchanged rows, exactly the three values the Signal API needs (#727).
+     * Pinned so a future addition cannot silently widen the payload: beside the unchanged rows, exactly the three
+     * values the Signal API needs.
      */
     public function testListingCarriesTheSignalValuesBesideTheUnchangedRows(): void
     {
@@ -167,9 +164,8 @@ final class PasskeyListTest extends ApiTestCase
     }
 
     /**
-     * The list endpoint is one of the six #624 follow-up enforces: a
-     * disabled instance refuses even a read of the caller's own credentials,
-     * the same as it refuses enrolment and login.
+     * Listing is one of the guarded endpoints: a disabled instance refuses even a read of the caller's own
+     * credentials, the same as it refuses enrolment and login.
      */
     public function testListingRefusesWhenPasskeySignInIsDisabled(): void
     {
@@ -184,12 +180,7 @@ final class PasskeyListTest extends ApiTestCase
         $this->assertRejected($client, 403);
     }
 
-    /**
-     * The judgement call #624 follow-up leaves deliberate: DELETE stays
-     * allowed even while sign-in is disabled, so a user can still clean up a
-     * credential they can no longer use. Disabling the feature must not trap
-     * that credential on the account forever.
-     */
+    /** DELETE stays open while sign-in is disabled, so a user can remove a credential they can no longer use. */
     public function testDeletingOwnCredentialStillSucceedsWhenPasskeySignInIsDisabled(): void
     {
         $client = static::createClient();
@@ -215,12 +206,7 @@ final class PasskeyListTest extends ApiTestCase
         $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
     }
 
-    /**
-     * Matches PasskeyRegistrationTest's own convention: $credentialId and
-     * $userHandle are stored verbatim rather than through the real
-     * registration ceremony, since this suite tests listing and removal, not
-     * attestation.
-     */
+    /** Stores the credential id and handle verbatim, not through a ceremony: this suite tests listing and removal. */
     private function givenAPasskeyFor(
         User $user,
         string $credentialId,

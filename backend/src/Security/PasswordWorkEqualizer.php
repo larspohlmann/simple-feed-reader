@@ -8,23 +8,8 @@ use App\Entity\User;
 use Symfony\Component\PasswordHasher\Hasher\PasswordHasherFactoryInterface;
 
 /**
- * Spends one password hash's worth of CPU on a code path that didn't need to
- * hash anything, so that path stops being distinguishable from the one that
- * did.
- *
- * Extracted from LoginTimingEqualizer, now one of two callers: login needs it
- * because an unknown address fails on a bare SELECT miss, and registration
- * needs it because a duplicate address returns before hashing the password a
- * fresh signup would hash. Same shape of leak, same remedy.
- *
- * Measured locally, `algorithm: auto` resolves to argon2id at ~174ms per hash
- * (bcrypt, the fallback without libsodium, ~58ms) — a gap large enough to be a
- * reliable oracle over the open internet, surviving byte-for-byte-equal
- * responses.
- *
- * Deliberately NOT constant time — unreachable in PHP, and not the bar. The
- * bar is removing the argon2-shaped cliff that turns enumeration into timing
- * one request instead of many.
+ * Spends one password hash's worth of CPU on a path that did not hash, so timing cannot tell it from one that did.
+ * Not constant time: it removes the argon2-sized gap. Callers and measurements: docs/security.md#login-timing
  */
 final readonly class PasswordWorkEqualizer implements PasswordWorkEqualizerInterface
 {

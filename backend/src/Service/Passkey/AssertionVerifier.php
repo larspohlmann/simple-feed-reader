@@ -25,34 +25,9 @@ use Webauthn\PublicKeyCredentialDescriptor;
 use Webauthn\TrustPath\EmptyTrustPath;
 
 /**
- * Verifies a WebAuthn assertion ("login") response and resolves it to the stored
- * UserPasskey it was signed by (#624) — the credential PasskeyAuthenticator builds
- * its user from. This class never mints a JWT and never touches token storage: it
- * answers "did an enrolled authenticator sign this challenge?" and hands back a
- * persisted entity to build a Passport from.
- *
- * The steps run in AttestationVerifier's order: the challenge is consumed first,
- * so a replayed or expired handle is rejected before any attacker-controlled
- * bytes are parsed.
- *
- * $userHandle passed to AuthenticatorAssertionResponseValidator::check() is always
- * the stored value read off the resolved UserPasskey, never client-supplied: an
- * assertion resolves the account from the credential id alone, and must never trust
- * a user handle the caller sent — discoverable login exists precisely because the
- * server does not know who is asking until the credential says so.
- *
- * The signature-counter comparison lives in the library: PasskeyCeremony::request()
- * wires CheckCounter to ThrowExceptionIfInvalid, rejecting a counter that failed to
- * advance — the standard cloned-authenticator defence. This class only logs the
- * rejection; see logRejectedCounter().
- *
- * The options checked against come from AssertionOptionsFactory::optionsFor() —
- * the same method the options endpoint uses — not a second private copy, so the
- * two cannot drift apart.
- *
- * verify() flushes explicitly rather than relying on StampLastLoginOnTokenIssueListener's
- * incidental flush on JWTCreatedEvent: this class owns the entity it mutates, so
- * it owns persisting the mutation.
+ * Verifies a login assertion against the stored UserPasskey it names. The challenge is consumed before any client
+ * bytes are parsed, and the user handle checked is the stored one, never the client's. The counter check is the
+ * library's (PasskeyCeremony::request()). Why each step: docs/security.md#passkey-ceremonies
  */
 final readonly class AssertionVerifier
 {
@@ -93,13 +68,8 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * Everything here runs on bytes an attacker fully controls — the WebAuthn
-     * deserializer and the CBOR decoder underneath it — so the catch is
-     * deliberately broad, same reasoning as
-     * AttestationVerifier::checkAgainstLibrary(). Returns the raw credential
-     * id alongside the narrowed response, rather than the whole
-     * PublicKeyCredential, so the instanceof guard below is the only place
-     * that needs to know $response is not yet narrowed.
+     * Every byte here is attacker-controlled (the WebAuthn deserializer and the CBOR decoder under it), so the catch
+     * is broad.
      *
      * @param array<string, mixed> $credential
      *
@@ -128,9 +98,8 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * `credential_id` is unique across every account (UserPasskey's own
-     * unique constraint), so this lookup carries no user. A miss keeps its
-     * own type (#727) — see UnknownPasskeyCredentialException.
+     * `credential_id` is unique across every account, so the lookup carries no user. A miss keeps its own type (see
+     * UnknownPasskeyCredentialException).
      */
     private function resolveCredential(string $rawCredentialId): UserPasskey
     {
@@ -140,12 +109,7 @@ final readonly class AssertionVerifier
             ?? throw new UnknownPasskeyCredentialException();
     }
 
-    /**
-     * Builds a CredentialRecord from the STORED row, checks the assertion
-     * against it, and returns the new signature counter for the caller to
-     * persist. See the class docblock for why $userHandle is read off
-     * $storedPasskey rather than trusted from the client.
-     */
+    /** Checks the assertion against a CredentialRecord built from the stored row and returns the new counter. */
     private function checkAssertion(
         UserPasskey $storedPasskey,
         AuthenticatorAssertionResponse $response,
@@ -174,10 +138,8 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * The one behaviour this class adds around CheckCounter: a counter that
-     * failed to advance means a cloned authenticator or a replayed assertion
-     * — worth an operator's attention even though the caller only ever sees
-     * a generic login failure.
+     * A counter that failed to advance means a cloned authenticator or a replayed assertion: an operator should see
+     * it, though the client only gets a generic login failure.
      */
     private function logRejectedCounter(UserPasskey $storedPasskey): void
     {
@@ -202,12 +164,7 @@ final readonly class AssertionVerifier
         );
     }
 
-    /**
-     * Mirrors UserPasskeyFactory::aaguidOrNull() in reverse: this column is
-     * nullable for the same "no AAGUID assigned" reason, so a null stored
-     * value rehydrates to the spec's all-zero sentinel the library's own
-     * Uuid type expects.
-     */
+    /** The inverse of UserPasskeyFactory::aaguidOrNull(): a stored null becomes the spec's all-zero AAGUID. */
     private static function aaguidOrNil(?string $aaguid): Uuid
     {
         return null === $aaguid ? new NilUuid() : Uuid::fromString($aaguid);

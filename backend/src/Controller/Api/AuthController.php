@@ -66,20 +66,15 @@ final readonly class AuthController
     #[Route('/register', name: 'api_auth_register', methods: ['POST'])]
     public function register(#[MapRequestPayload] RegisterRequest $request, Request $httpRequest): JsonResponse
     {
-        // Limit before the ALTCHA check, not after: the cap is on requests, not
-        // successes. Capping only accepted solutions would leave an attacker free
-        // to hammer the endpoint with junk, and — worse — would make the limiter
-        // an oracle, since only requests that reached the mailer would count.
+        // Limit before the ALTCHA check: the cap is on requests, not successes, or junk would be free and the limiter
+        // an oracle of which requests reached the mailer.
         $this->rateLimitGuard->enforceForClient($this->registrationLimiter, $httpRequest->getClientIp());
 
         $this->altcha->requireSolved($request->altcha);
 
         $this->registration->register($request->email, $request->password, $request->locale);
 
-        // The status a new signup receives under the current policy. Instance-
-        // wide and identical for a duplicate address, so it never becomes an
-        // existence oracle. 202: the account may still need verification or
-        // approval before it can log in.
+        // The instance-wide status a new signup gets, identical for a taken address, so it is no existence oracle.
         return new JsonResponse(
             ['status' => $this->policy->prospectiveStatusForEmailSignup()->value],
             Response::HTTP_ACCEPTED,

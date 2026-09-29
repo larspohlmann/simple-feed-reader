@@ -10,30 +10,9 @@ use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
- * Closes the timing side-channels between the three ways a password login can
- * fail on credentials: unknown address, wrong password, and — since Plan 3b — an
- * address whose account has no password at all.
- *
- * Symfony performs no dummy hash: CheckCredentialsListener reaches the hasher
- * only once a user is loaded, so an unknown address fails on a bare SELECT miss
- * while a known one pays for a full argon2 verify — a gap of tens of ms,
- * measurable over the network and enough to enumerate the user table, though the
- * two responses are byte-identical.
- *
- * The third case arrived with OAuth: OAuthAccountLinker creates accounts with a
- * null passwordHash, for which CheckCredentialsListener returns without hashing.
- * So an OAuth-only address was as fast as a nonexistent one and both faster than
- * a wrong password — sorting addresses into "has a password" and "does not",
- * which tells an attacker which accounts are worth a provider-named phishing mail.
- *
- * The throwaway hash now lives in PasswordWorkEqualizer, shared with
- * registration; this class only decides *when* to spend it on login.
- *
- * Invoked from LoginFailureHandler, not a LoginFailureEvent subscriber:
- * SecurityBundle copies globally registered listeners onto EVERY firewall, so a
- * subscriber would also fire on the api firewall and burn a hash on every
- * unauthenticated JWT request. The failure handler is bound to the login
- * firewall alone.
+ * Spends one hash on each credential failure the security layer answered without hashing (unknown address, no
+ * password hash), so every failure costs the same. Called from LoginFailureHandler, never a global listener, which
+ * would fire on every firewall. Why: docs/security.md#login-timing
  */
 final readonly class LoginTimingEqualizer
 {
@@ -43,11 +22,6 @@ final readonly class LoginTimingEqualizer
     ) {
     }
 
-    /**
-     * @param string|null $submittedIdentifier the address the request tried to
-     *                                         log in as, or null if the body
-     *                                         did not carry a usable one
-     */
     public function equalize(AuthenticationException $exception, ?string $submittedIdentifier): void
     {
         if (!$this->needsEqualizingWork($exception, $submittedIdentifier)) {
@@ -66,11 +40,8 @@ final readonly class LoginTimingEqualizer
             return true;
         }
 
-        // Only credential failures are this class's business. A status rejection
-        // happens post-verify, so it already paid for its hash; a second would
-        // make it the slowest outcome and flip the oracle. Hashing a throttled
-        // request would let an attacker buy an argon2 of our CPU with one cheap
-        // request.
+        // Only credential failures: a status rejection already paid for its hash (a second would flip the oracle),
+        // and hashing a throttled request would sell an argon2 of CPU for one cheap request.
         if (!$exception instanceof BadCredentialsException) {
             return false;
         }
@@ -79,11 +50,8 @@ final readonly class LoginTimingEqualizer
             return true;
         }
 
-        // The remaining case, why this method exists: since Plan 3b a user may
-        // have no password hash, and CheckCredentialsListener skips the hasher
-        // for those. The extra SELECT runs on BOTH branches — hit and miss — so
-        // it is not a side channel itself, and LoginFailureHandler is bound to
-        // the already-throttled login firewall, so it cannot be abused for load.
+        // An account without a password hash skips the hasher too. The lookup runs on hit and miss alike, so it is
+        // no side channel of its own.
         $user = $this->users->findOneByEmail($submittedIdentifier);
 
         return null === $user || null === $user->getPassword();

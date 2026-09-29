@@ -11,21 +11,9 @@ use Symfony\Component\Security\Core\User\UserCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
- * The login firewall's checker. Identical in effect to {@see UserChecker}, but
- * it runs the status check in checkPostAuth instead of checkPreAuth.
- *
- * That difference is the whole point. UserCheckerListener::preCheckCredentials
- * (priority 256) would run before CheckCredentialsListener verifies the
- * password (priority 0), so a preAuth check would answer "this account is
- * suspended" to anyone who merely guesses the address — an enumeration oracle.
- *
- * checkPostAuth fires from AuthenticationSuccessEvent, only once the password
- * is already verified, so a wrong password falls through to the ordinary
- * "invalid credentials" 401, indistinguishable from an unknown address.
- *
- * The api firewall keeps the preAuth UserChecker: there's no password to
- * verify on a JWT request, and preAuth makes revocation take effect on the
- * very next request.
+ * The login firewalls' checker: status is checked post-auth, after the credential verified. A pre-auth check would
+ * tell anyone who guesses an address that it is suspended. Why the api firewall differs: see
+ * docs/security.md#account-status-checks
  */
 final readonly class LoginUserChecker implements UserCheckerInterface
 {

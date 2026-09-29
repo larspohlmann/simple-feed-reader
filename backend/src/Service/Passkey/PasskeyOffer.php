@@ -8,13 +8,8 @@ use App\Entity\User;
 use App\Service\Clock\NaiveUtcClock;
 
 /**
- * Records that the one-time passkey enrolment offer (#624) has been shown to
- * and answered by an account, so the client never presents it a second time.
- *
- * Idempotent by design: the offer is a single yes/no moment. A second call —
- * a retried request, a client firing the answer twice — must not move an
- * already-set timestamp, or a race between two answers could drift the
- * "since" marker forward on every retry.
+ * Records that an account answered the one-time passkey offer. Idempotent: a retried or doubled answer must not move
+ * a timestamp already set.
  */
 final readonly class PasskeyOffer
 {

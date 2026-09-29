@@ -13,12 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The `api` firewall's behaviour, asserted through GET /api/me — a real
- * protected route, so these guarantees are pinned against something that
- * actually ships. The ROLE_ADMIN rule is asserted through GET /api/admin/users,
- * which replaced the test-only probe route once the admin queue existed.
- */
+/** The `api` firewall, asserted through real routes: GET /api/me, and GET /api/admin/users for ROLE_ADMIN. */
 final class JwtAccessTest extends ApiTestCase
 {
     private const PROTECTED = '/api/me';
@@ -108,11 +103,8 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * Revocation must take effect on the very next request — that is the whole
-     * reason there are no refresh tokens. This is also the regression the
-     * split user checkers could have caused: the login firewall moved to
-     * checkPostAuth, but the api firewall must keep checking in checkPreAuth,
-     * where a JWT request has no credentials step to hang the check on.
+     * Revocation must bite on the very next request, as there are no refresh tokens: the api firewall keeps checking
+     * status pre-auth, while the login firewall checks post-auth.
      */
     public function testSuspendingAUserRejectsTheirExistingToken(): void
     {
@@ -123,10 +115,8 @@ final class JwtAccessTest extends ApiTestCase
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
         self::assertResponseIsSuccessful();
 
-        // Re-fetch through the CURRENT kernel's EntityManager: the instance the
-        // factory used belongs to a kernel that has since been rebooted, so
-        // flushing the stale entity would be a silent no-op and this test would
-        // pass without ever revoking anything.
+        // Re-fetch through the current kernel's EntityManager: flushing the factory's entity, from a rebooted kernel,
+        // would be a silent no-op and the test would pass without revoking anything.
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'revoked@example.com']);
@@ -140,18 +130,8 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * A stolen token must not tell the thief why it stopped working. The
-     * account status is disclosed at login only, after a verified password.
-     *
-     * The 401 assertion comes FIRST, and its absence is what made an earlier
-     * version of this test worthless. With only the string checks below, the
-     * whole test passed against a 200 for a user who was never suspended: it
-     * "held" purely because /api/me happens to echo a `status` field whose
-     * value for a live account is `active` rather than `suspended`. It was
-     * therefore asserting a property of the success payload while claiming to
-     * guard revocation, and would have gone completely silent the moment that
-     * field was renamed or dropped. Prove the request was refused, then prove
-     * the refusal says nothing.
+     * A stolen token must not learn why it stopped working. Assert the 401 first: /api/me echoes `status`, so the
+     * string checks alone would pass against a 200.
      */
     public function testSuspendedTokenDoesNotLeakAccountStatus(): void
     {
@@ -177,19 +157,8 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * Pins GET /api/me to an EXACT key set, the way the admin listing is pinned
-     * in AdminUserControllerTest.
-     *
-     * Two reasons. The controller is hand-built precisely so a column added
-     * later cannot leak into the response — but "hand-built" is a convention,
-     * and nothing enforced it, so adding one line here would have shipped a new
-     * field silently. `passwordChangedAt`, added in this very branch, is
-     * exactly the kind of field that must never appear.
-     *
-     * Second, this is the fragility that made the revocation test above
-     * vacuous: that test leaned on `status` existing in the success payload.
-     * Anyone removing the field now fails HERE, loudly and on purpose, instead
-     * of quietly hollowing out a security assertion elsewhere.
+     * Pins /api/me to an exact key set: a new column must not leak into the response (`passwordChangedAt` above
+     * all), and removing `status` must fail here rather than hollow out the revocation test.
      */
     public function testMeExposesExactlyTheIntendedFields(): void
     {
@@ -236,15 +205,7 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * The `iat` vs passwordChangedAt boundary, pinned on both sides.
-     *
-     * The comparison must be STRICTLY less-than. `iat` is a whole-second UNIX
-     * timestamp, so a user who resets their password and immediately signs back
-     * in routinely gets a token stamped in the same second as the change. Under
-     * `<=` that token would be refused and password reset would appear broken
-     * to the very person who just completed it — a self-inflicted lockout in
-     * the recovery flow. Under `<` it is honoured, and only genuinely earlier
-     * tokens die.
+     * The `iat` boundary on both sides: strictly less-than, so a login in the reset's own second survives.
      *
      * @return iterable<string, array{int, bool}>
      */
@@ -263,11 +224,8 @@ final class JwtAccessTest extends ApiTestCase
         $client = self::createClient();
         $user = $this->factory()->create('boundary@example.com');
 
-        // A whole-second instant, so the offsets below are exact rather than
-        // rounded across a sub-second boundary. Anchored ten seconds in the
-        // PAST so that even the +1 case yields an `iat` that is still in the
-        // past: Lexik rejects a future-dated token outright (LoadedJWS checks
-        // iat > now), which would make that case pass for the wrong reason.
+        // Whole seconds, ten in the past, so even the +1 case is a past `iat`: Lexik rejects a future one outright,
+        // which would pass that case for the wrong reason.
         $changedAt = new \DateTimeImmutable('@' . (time() - 10));
 
         /** @var EntityManagerInterface $entityManager */
@@ -344,16 +302,8 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * The OAuth routes sit under `^/api/auth/`, which security.yaml grants
-     * PUBLIC_ACCESS above the `^/api/` catch-all — so they are reachable
-     * without a token. That has to be true: this endpoint tells the login page
-     * which sign-in buttons to render, and it is read before anybody has a
-     * token to present.
-     *
-     * Asserted here rather than in OAuthFlowTest because the property being
-     * pinned belongs to the firewall's access_control ordering, which is what
-     * this file exists to guard. A rule inserted above the auth line would
-     * break sign-in for everyone and would otherwise fail in a distant file.
+     * The OAuth provider listing must be reachable without a token: the login page reads it first. Pinned here, with
+     * the access_control order it depends on, so a rule inserted above `^/api/auth/` fails in this file.
      */
     public function testOAuthProviderListingIsReachableWithoutAToken(): void
     {
@@ -374,18 +324,8 @@ final class JwtAccessTest extends ApiTestCase
     }
 
     /**
-     * An expired trial blocks the account on its next request and — the lazy
-     * transition — flips the stored status to Suspended. Asserted through the
-     * firewall, not by invoking the checker: only the real wiring proves the
-     * guard actually runs on a JWT request.
-     *
-     * The trial is minted as still-active and only expired afterwards, through
-     * the EntityManager directly, for the same reason
-     * testSuspendingAUserRejectsTheirExistingToken re-fetches through the
-     * current kernel's EntityManager rather than flipping status before login:
-     * LoginUserChecker now runs this same guard in checkPostAuth, so logging in
-     * with an already-expired trial would be refused before a token ever
-     * existed to test the API firewall with.
+     * An expired trial blocks the next request and flips the stored status, asserted through the firewall. The trial
+     * expires after login, since LoginUserChecker's own trial check would refuse the login itself.
      */
     public function testExpiredTrialBlocksTheRequestAndFlipsStatusToSuspended(): void
     {

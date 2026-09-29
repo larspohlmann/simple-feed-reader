@@ -35,11 +35,7 @@ final class RegistrationTest extends ApiTestCase
         $this->client = self::createClient();
         $this->seedEnabledMailInstance();
 
-        // The per-IP limiters on /register and /password-reset-request store
-        // their state in a FILESYSTEM pool, which survives the kernel reboot
-        // between requests *and* the end of the run. Without this the budget is
-        // already spent by the second `composer test` and the suite goes red
-        // for reasons that have nothing to do with the code.
+        // The /register and /password-reset-request limiters keep state in a filesystem pool that outlives the run.
         $this->rateLimiterCache()->clear();
     }
 
@@ -158,18 +154,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * The address space OAuthAccountLinker mints for itself is not registrable.
-     *
-     * The linker gives an addressless identity a DETERMINISTIC placeholder,
-     * `<provider>-<sha256 prefix of sub>@oauth.invalid`, so the same identity
-     * reconstructs the same address instead of accumulating an account per
-     * sign-in. Deterministic also means predictable: `Assert\Email` is perfectly
-     * happy with `google-abc…@oauth.invalid`, so somebody who knew a victim's
-     * provider `sub` could register that address here first and make the
-     * victim's very first sign-in die on uniq_user_email.
-     *
-     * Low severity — a provider `sub` is not public and the payoff is denying
-     * one person one login — but the door costs three lines to close.
+     * OAuthAccountLinker's placeholder, `<provider>-<sha256 prefix of sub>@oauth.invalid`, is deterministic: whoever
+     * registered it first would make that identity's first sign-in fail on uniq_user_email.
      */
     public function testTheReservedOAuthPlaceholderDomainCannotBeRegistered(): void
     {
@@ -215,10 +201,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * `invalid` as a LABEL is not the reserved TLD, and must not be swept up:
-     * `invalid.example.com` is a domain somebody can really own. The check is
-     * anchored to the end of the address for the same reason
-     * OAuthIdentityModel::isPrivateRelay() is.
+     * `invalid` as a label is not the reserved TLD: `invalid.example.com` is a real domain. The check is anchored at
+     * the end, like OAuthIdentityModel::isPrivateRelay().
      */
     public function testADomainMerelyContainingInvalidStillRegisters(): void
     {
@@ -241,10 +225,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * The enumeration guarantee, checked on the wire rather than in the
-     * service: status, headers and body must be indistinguishable between a
-     * fresh address and one that is already taken. Date varies by definition
-     * and is excluded.
+     * The enumeration guarantee on the wire: status, headers and body are identical for a fresh and a taken address,
+     * Date aside.
      */
     public function testDuplicateRegistrationIsByteIdentical(): void
     {
@@ -254,14 +236,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * The same guarantee, restated at the policy level: a fresh and a
-     * duplicate address must be indistinguishable not only under the default
-     * policy (email confirmation required) but also under the fully-open one
-     * (both gates off, so a fresh signup lands straight in Active). Those are
-     * the two poles of RegistrationPolicy::prospectiveStatusForEmailSignup();
-     * a divergence under either would let a caller tell new from duplicate by
-     * watching the response, which is the one thing the register endpoint
-     * must never leak.
+     * The same guarantee at both poles of RegistrationPolicy::prospectiveStatusForEmailSignup(): with email
+     * confirmation required, and with both gates off, where a fresh signup lands straight in Active.
      */
     public function testRegisterResponseStaysIdenticalAcrossPolicies(): void
     {
@@ -307,13 +283,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * The second registration must not send a second verification mail either -
-     * an unexpected mail landing in an existing user's inbox is an enumeration
-     * oracle with a delivery mechanism attached.
-     *
-     * The client reboots the kernel between requests, so the mailer event log
-     * only ever holds the most recent request's messages. That is exactly the
-     * scope wanted here: zero mails attributable to the duplicate attempt.
+     * A second verification mail in an existing user's inbox is an enumeration oracle with delivery attached. The
+     * client reboots between requests, so the mailer log holds only the duplicate attempt's messages.
      */
     public function testDuplicateRegistrationSendsNoSecondMail(): void
     {
@@ -325,11 +296,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * Case-variant addresses are the same account. On SQLite an unnormalised
-     * lookup would create a second row here; on MySQL the _ci unique index
-     * would reject the insert and - since the race handler swallows that - the
-     * user would get a 202, no account and no mail, with nothing to explain it.
-     * Same assertion, both engines, which is the point.
+     * Case variants are one account. Unnormalised, SQLite would store a second row and MySQL's _ci index would reject
+     * the insert silently (the race handler swallows it): same assertion on both engines.
      */
     public function testACaseVariantOfAnExistingAddressIsTreatedAsADuplicate(): void
     {
@@ -508,10 +476,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * ALTCHA sizes the cost of abuse; it does not cap it. At the measured
-     * ~60 ms per solved challenge an unlimited endpoint is tens of thousands of
-     * outbound mails a day from a single host. This pins that the cap exists,
-     * and that the client is told when to come back.
+     * ALTCHA sizes the cost of abuse; the limiter caps it. The sixth registration from one IP is refused, with
+     * Retry-After.
      */
     public function testSixthRegistrationFromOneIpIsThrottled(): void
     {
@@ -533,13 +499,8 @@ final class RegistrationTest extends ApiTestCase
     }
 
     /**
-     * The limiter keys on getClientIp(), which ignores X-Forwarded-For unless
-     * the sender is a configured trusted proxy - and nothing is trusted yet.
-     * If that ever stopped holding, a one-line header would buy an unlimited
-     * number of fresh budgets and the cap would be decorative.
-     *
-     * This pins the property rather than the configuration, so it fails loudly
-     * if trusted_proxies is ever widened carelessly during deployment.
+     * getClientIp() ignores X-Forwarded-For from untrusted senders, and nothing is trusted: a spoofed header must not
+     * buy a fresh budget. Fails if trusted_proxies is ever widened carelessly.
      */
     public function testASpoofedForwardedForDoesNotBuyAFreshBudget(): void
     {

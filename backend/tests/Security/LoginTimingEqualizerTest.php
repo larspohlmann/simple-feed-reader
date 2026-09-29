@@ -15,10 +15,8 @@ use Symfony\Component\Security\Core\Exception\TooManyLoginAttemptsAuthentication
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 
 /**
- * Asserts the decision, not the clock. Timing assertions are flaky by nature,
- * and the test environment hashes in plaintext anyway — what has to hold is
- * that every path which skipped the hasher performs exactly one hash, and every
- * path which already paid for one performs none.
+ * Asserts the decision, not the clock (tests hash in plaintext): each path that skipped the hasher spends exactly one
+ * hash, and each that already paid spends none.
  */
 final class LoginTimingEqualizerTest extends TestCase
 {
@@ -33,10 +31,8 @@ final class LoginTimingEqualizerTest extends TestCase
     }
 
     /**
-     * The realistic shape: AuthenticatorManager masks the not-found case behind
-     * a BadCredentialsException, so the equalizer has to walk the chain. If it
-     * only checked the outermost exception it would silently never fire, and
-     * the timing channel would be wide open while looking closed.
+     * AuthenticatorManager masks the not-found case behind BadCredentialsException: the equalizer must walk the chain,
+     * or it never fires.
      */
     public function testHashesWhenUserNotFoundIsWrappedByBadCredentials(): void
     {
@@ -50,12 +46,7 @@ final class LoginTimingEqualizerTest extends TestCase
         self::assertSame(1, $work->calls);
     }
 
-    /**
-     * The gap this case closes. CheckCredentialsListener never reaches the
-     * hasher for a null passwordHash, so without an extra hash here the
-     * response comes back an argon2 faster and tells anyone holding a stopwatch
-     * both that the address is registered and that it is OAuth-only.
-     */
+    /** A null password hash skips the hasher, so without this hash the response would come back an argon2 faster. */
     public function testHashesOnAnOAuthOnlyAccountWithNoPassword(): void
     {
         $work = new HashCountingWork();
@@ -103,12 +94,7 @@ final class LoginTimingEqualizerTest extends TestCase
         self::assertSame(1, $work->calls);
     }
 
-    /**
-     * The equalising lookup must not become a side channel of its own. Both
-     * BadCredentials paths that reach it run exactly one findOneByEmail(),
-     * whether it hits or misses, so the only thing that varies between them is
-     * the hash this class is here to add.
-     */
+    /** Hit or miss, each BadCredentials path runs one findOneByEmail(), so only the added hash varies. */
     public function testTheEqualisingLookupRunsOnceOnEveryBadCredentialsPath(): void
     {
         foreach ([null, $this->userWithoutPassword(), $this->userWithPassword()] as $found) {
@@ -121,13 +107,7 @@ final class LoginTimingEqualizerTest extends TestCase
         }
     }
 
-    /**
-     * Throttling is not a credential outcome. Burning an argon2 on a request
-     * the limiter already rejected would turn the login endpoint into a CPU
-     * amplifier — the attacker pays for one HTTP request, we pay for a hash —
-     * and there is nothing to hide anyway, since a 429 says the same thing to
-     * everyone.
-     */
+    /** A 429 is no credential outcome: hashing it would sell an argon2 of CPU for one cheap request. */
     public function testDoesNotHashOnAThrottledRequest(): void
     {
         $work = new HashCountingWork();

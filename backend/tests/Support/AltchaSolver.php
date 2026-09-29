@@ -7,13 +7,8 @@ namespace App\Tests\Support;
 use App\Service\Auth\AltchaService;
 
 /**
- * Builds the payload the browser widget would submit, by actually brute-forcing
- * a challenge the service issued. There is no shortcut: verify() checks an HMAC
- * we cannot forge and a hash preimage we cannot fake, so a solved payload is
- * the only kind that gets past it.
- *
- * Cost is ~60 ms per call at the configured difficulty. That is the
- * proof-of-work doing its job, not a hung test.
+ * Builds the payload the widget would submit by brute-forcing an issued challenge: verify() checks an HMAC and a
+ * preimage, so only a solved payload passes. About 60 ms per call.
  */
 final class AltchaSolver
 {

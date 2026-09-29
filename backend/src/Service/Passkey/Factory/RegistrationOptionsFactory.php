@@ -20,24 +20,9 @@ use Webauthn\PublicKeyCredentialRpEntity;
 use Webauthn\PublicKeyCredentialUserEntity;
 
 /**
- * Builds options for a WebAuthn registration ("attestation") ceremony
- * (#624): resident-key discoverable credentials only, user verification
- * required since the passkey is this account's sole factor, and no
- * attestation conveyance since nothing here inspects an attestation
- * statement.
- *
- * `rp.name` is set on the serialised array after building
- * `PublicKeyCredentialRpEntity` with an empty name, rather than through its
- * constructor: `rp.name` is a required WebAuthn IDL member, but
- * `web-auth/webauthn-lib` 5.3 deprecated passing it there directly.
- *
- * `create()` mints the user handle once, via `PasskeyCredentials::
- * userHandleFor()`, and threads it through both the options and
- * `PasskeyChallengeStore::issue()`. `optionsFor()` takes the handle as a
- * parameter rather than deriving it, so `AttestationVerifier` rebuilds the
- * same options from the value stored on the consumed challenge instead of
- * minting a new one — `userHandleFor()` mints fresh random values while an
- * account has no credential yet.
+ * Registration options: resident keys, user verification required, no attestation. create() mints the user handle
+ * once and stores it with the challenge; AttestationVerifier rebuilds the options through optionsFor() from that
+ * stored handle, since userHandleFor() mints anew while an account has no credential.
  */
 final readonly class RegistrationOptionsFactory
 {
@@ -69,14 +54,8 @@ final readonly class RegistrationOptionsFactory
     }
 
     /**
-     * Rebuilds the exact options a creation ceremony started with, given the
-     * same user, challenge and user handle PasskeyChallengeStore returns on
-     * consume(). Pulled out of create() so AttestationVerifier can share it:
-     * the resident-key and user-verification requirements below are
-     * security-relevant, and a second, independently written copy could
-     * silently drift from what the browser was actually shown — for instance
-     * stop enforcing user verification — without either call site's tests
-     * noticing.
+     * The exact options a ceremony started with, shared with AttestationVerifier: a second copy of these
+     * security-relevant requirements could drift from what the browser was shown.
      */
     public function optionsFor(User $user, string $challenge, string $userHandle): PublicKeyCredentialCreationOptions
     {
@@ -107,8 +86,8 @@ final readonly class RegistrationOptionsFactory
     }
 
     /**
-     * The class docblock explains why `rp.name` is stitched in here rather
-     * than passed to `PublicKeyCredentialRpEntity`.
+     * `rp.name` is required, but webauthn-lib 5.3 deprecated passing it to PublicKeyCredentialRpEntity, so it is set
+     * on the serialised array.
      *
      * @return array<string, mixed>
      */

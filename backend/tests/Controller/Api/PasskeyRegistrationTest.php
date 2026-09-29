@@ -21,28 +21,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * WebAuthn registration ("attestation"): issuing the options (#624, the
- * relying party, the resident-key/user-verification requirements, and the
- * exclude list that stops one authenticator enrolling twice on the same
- * account) and completing the ceremony — verifying the browser's response
- * and turning it into a stored credential.
- *
- * The completion tests use PasskeyFixtures to build a synthetic
- * `attestation: none` response entirely in PHP rather than capturing one
- * from a real browser — see that class's docblock for why this is possible
- * and not a shortcut. Every completion test pins BOTH the relying-party id
- * AND the public base URL (the origin) to the exact values its fixture was
- * built for, in the test itself, and never relies on `APP_FRONTEND_URL` or
- * any other environment default — the mismatch tests specifically exist to
- * prove what happens when one of the two is wrong, so both must otherwise be
- * pinned with certainty.
- *
- * Every test that reads `options.rp.id` pins the relying party explicitly via
- * the `instance_setting` row rather than asserting against whatever
- * `APP_FRONTEND_URL` happens to resolve to in this environment — see
- * ConfiguredPasskeyRelyingPartyTest for the same reasoning. A hard-coded
- * `'localhost'` would pass locally for the wrong reason and could fail in CI
- * for one unrelated to this feature.
+ * Passkey registration, with `attestation: none` responses built in PHP (PasskeyFixtures). Every test pins the
+ * relying party and origin itself, never the environment's APP_FRONTEND_URL: the mismatch tests depend on it.
  *
  * @phpstan-import-type PasskeyCredentialPayload from PasskeyAttestationFixture
  */
@@ -73,9 +53,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The server-side enforcement half of #624 follow-up: a toggle that only
-     * hides frontend buttons is cosmetic, so every enrolment endpoint must
-     * itself refuse once the instance-wide switch is off.
+     * The server-side half of the sign-in switch: a toggle that only hides frontend buttons is cosmetic, so every
+     * enrolment endpoint must itself refuse once the instance-wide switch is off.
      */
     public function testRegisterOptionsRefusesWhenPasskeySignInIsDisabled(): void
     {
@@ -112,12 +91,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * `rp.name` is a required WebAuthn IDL member, not decoration: the
-     * browser's and the password manager's enrolment prompt show it. Fix
-     * round 1 (#624) found `RegistrationOptionsFactory` had silently emptied
-     * it to dodge a library deprecation — this is the regression test for
-     * that. Pinned separately from `rp.id` above so this test cannot pass by
-     * accident if only one of the two ever gets threaded through.
+     * `rp.name` is required and shown in the enrolment prompt, so it must carry the configured name. Pinned apart
+     * from `rp.id`, so one of the two cannot be threaded through alone.
      */
     public function testTheOptionsCarryTheConfiguredRelyingPartyName(): void
     {
@@ -133,19 +108,6 @@ final class PasskeyRegistrationTest extends ApiTestCase
         self::assertSame('Example Reader', $relyingParty['name']);
     }
 
-    /**
-     * The narrower, single-endpoint form of the brief's four-path check. A
-     * request to a path with no matching route 404s before the security
-     * layer ever runs — confirmed with `bin/console debug:event-dispatcher
-     * kernel.request`: `RouterListener` fires at priority 32, the firewall at
-     * 8, and an unmatched route's `NotFoundHttpException` stops the
-     * `kernel.request` event before the firewall's listener executes. Only
-     * this one path has a controller in this task; `/passkey/register`,
-     * `/passkeys` and `/passkeys/{id}` get their own anonymous-caller checks
-     * once Tasks 7 and 8 give them one. All four paths' access_control
-     * configuration — independent of whether a route exists yet — is proved
-     * by PasskeyEnrolmentAccessControlTest.
-     */
     public function testAnAnonymousCallerCannotRequestRegistrationOptions(): void
     {
         static::createClient()->request('POST', '/api/auth/passkey/register/options');
@@ -169,8 +131,6 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $excludeCredentials = $options['excludeCredentials'];
         self::assertSame(['Y3JlZC1hYmM'], array_column($excludeCredentials, 'id'));
     }
-
-    // -- Completing the ceremony (#624 Task 7) ------------------------------
 
     public function testAValidAttestationStoresACredentialAndListsIt(): void
     {
@@ -229,12 +189,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The window is not driven with a MockClock swapped into the whole test
-     * container — see OAuthFlowTest's comment on the same question for why
-     * that would taint every other functional test's clock. Instead a
-     * throwaway PasskeyChallengeStore is built over the SAME cache pool the
-     * real, container-wired one reads from, with its own MockClock set
-     * minutes in the past; only the one entry it writes is affected.
+     * A throwaway PasskeyChallengeStore over the container's pool, with a MockClock minutes in the past, expires only
+     * this entry: a MockClock in the container would change every functional test's clock.
      */
     public function testAnExpiredHandleIsRejected(): void
     {
@@ -282,11 +238,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * A malformed attestationObject must be rejected cleanly, never crash
-     * the server. This is what keeps deserialize() living inside
-     * AttestationVerifier::checkAgainstLibrary()'s broad catch from silently
-     * becoming an unhandled 500 if a later refactor ever hoists it back out
-     * (#624, fix round 2).
+     * A malformed attestationObject must be rejected, never a 500: deserialize() must stay inside
+     * checkAgainstLibrary()'s broad catch.
      */
     public function testAGarbageAttestationObjectIsRejected(): void
     {
@@ -303,16 +256,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * `attestation: none` carries no signature, so nothing but this
-     * application's OWN configuration stops an authenticated caller from
-     * hand-building this exact payload with the UV bit cleared. User
-     * verification is a passkey's sole authentication factor, so a ceremony
-     * that accepted this would not be verifying a registration, it would be
-     * a bypass. The library enforces USER_VERIFICATION_REQUIREMENT_REQUIRED
-     * today; this test exists so the suite would notice if that enforcement
-     * ever broke (#624, fix round 2) — proved load-bearing by temporarily
-     * relaxing RegistrationOptionsFactory::optionsFor()'s userVerification
-     * to PREFERRED and confirming this test then fails, before restoring it.
+     * `attestation: none` is unsigned, so only our own configuration stops a caller from clearing the UV bit, and user
+     * verification is the passkey's only factor: a UV-less registration must be refused.
      */
     public function testAnAttestationWithoutUserVerificationIsRejected(): void
     {
@@ -337,10 +282,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The reported case (#624): the dev-server proxy rewrites Host to
-     * localhost and the public base URL names localhost too, so the server
-     * cannot see the origin the browser is at. Verification must still accept
-     * a ceremony signed for the configured relying party.
+     * Behind a dev-server proxy that rewrites Host, the server cannot see the browser's origin; a ceremony signed for
+     * the configured relying party must still be accepted.
      */
     public function testACeremonyFromAProxiedOriginTheServerCannotSeeIsAccepted(): void
     {
@@ -377,12 +320,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     public function testAnRpIdMismatchIsRejected(): void
     {
         $client = static::createClient();
-        // The configured relying-party id ('example.test') is still a valid
-        // registrable parent of the public base URL's host
-        // ('sub.example.test'), so PasskeySignInAvailability's guard passes
-        // (#624 follow-up) — but it differs from the id the fixture's
-        // authenticator data actually hashed at capture time
-        // ('different-domain.test'), which is what CheckRpIdHash catches.
+        // 'example.test' is a valid parent of 'sub.example.test', so the availability guard passes, but the fixture's
+        // authenticator data hashed 'different-domain.test': CheckRpIdHash must refuse it.
         $this->pinRelyingParty('example.test', 'Example Reader', 'https://sub.example.test');
         $this->serveFrom($client, 'https://sub.example.test');
         $user = $this->factory()->create('enroller@example.test');
@@ -409,20 +348,9 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->assertRejected($client, 422);
     }
 
-    // -- Fix round 1 (#624): the user handle must survive two requests -----
-
     /**
-     * THE regression test for fix round 1. PasskeyCredentials::userHandleFor()
-     * mints a fresh random value for an account's FIRST credential on every
-     * call. Before this fix, RegistrationOptionsFactory::create() (at options
-     * time) and AttestationVerifier (at verification time, a SEPARATE HTTP
-     * request) each called it independently and got two different values, so
-     * the row persisted here would never match the handle a real
-     * authenticator remembers from the options response — breaking
-     * discoverable login for every account's very first passkey. This test
-     * cannot use seedRegistrationChallenge()'s shortcut: the bug lives
-     * exactly on the boundary between the two requests, so it drives both
-     * for real, through the actual options endpoint.
+     * userHandleFor() mints a fresh handle per call while an account has no credential, so the stored handle must be
+     * the one advertised at options time. Both requests run for real: the shortcut skips exactly that boundary.
      */
     public function testTheStoredUserHandleMatchesTheOneAdvertisedAtOptionsTime(): void
     {
@@ -489,10 +417,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The exclude list stops an honest client from re-submitting a
-     * credential it already offered, but nothing stops a replayed or forged
-     * request from reaching the database's own unique constraint on
-     * `credential_id` — that must come back as a clean 409, never a 500.
+     * A replayed or forged registration can still reach the unique constraint on `credential_id`: a clean 409,
+     * never a 500.
      */
     public function testADuplicateCredentialIdIsRejected(): void
     {
@@ -530,18 +456,9 @@ final class PasskeyRegistrationTest extends ApiTestCase
         $this->assertRejected($client, 409);
     }
 
-    // -- Fix round 2 (#624) -------------------------------------------------
-
     /**
-     * UserPasskey::$credentialId is VARCHAR(255). The library's own
-     * CheckCredentialId step only rejects a credential id over 1023 RAW
-     * bytes — far looser than the column. Without AttestationVerifier's own
-     * guard, MySQL would 500 here (a data-too-long DBAL exception, a
-     * DIFFERENT one than the unique-constraint violation
-     * testADuplicateCredentialIdIsRejected above exercises) while SQLite
-     * enforces no VARCHAR width at all and would silently accept the
-     * oversized row. This is why the fix round 2 report runs this
-     * specifically against the MySQL leg, not just natively.
+     * The library allows 1023 raw bytes, the column 191. Without UserPasskeyFactory's guard MySQL would 500 on the
+     * flush and SQLite would store the row: both legs catch a missing guard.
      */
     public function testAnOverlongCredentialIdIsRejected(): void
     {
@@ -567,10 +484,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * The exact boundary the guard exists to enforce: 191 raw bytes encodes
-     * to exactly 255 base64url characters, filling VARCHAR(255) to the byte.
-     * Pinned alongside testAnOverlongCredentialIdIsRejected, whose 200-byte
-     * fixture is comfortably over the line and so cannot tell "<=" from "<".
+     * 191 raw bytes encode to exactly 255 characters, the column's limit. The 200-byte test above cannot tell `<=`
+     * from `<`.
      */
     public function testACredentialIdAtTheColumnLimitIsAccepted(): void
     {
@@ -616,12 +531,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * `response.transports` is client-supplied and the WebAuthn library
-     * never validates it (UserPasskeyFactory::knownTransports()'s own
-     * docblock) — an authenticator, or a forged request, can claim any
-     * string. Only the spec's own enum should ever reach storage, since
-     * PasskeyCredentials::excludeListFor() echoes whatever is stored here
-     * back to a browser on every later registration attempt.
+     * `response.transports` is unvalidated client data that excludeListFor() echoes to every later registration, so
+     * only the spec's values may reach storage.
      */
     public function testAnUnknownTransportIsFilteredOutBeforeStorage(): void
     {
@@ -691,11 +602,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Stores $credentialId verbatim, matching UserPasskeyTest's own
-     * convention: it is treated as the value PasskeyCredentials::excludeListFor
-     * decodes as base64url text, so a readable fixture like 'Y3JlZC1hYmM'
-     * round-trips back out through the WebAuthn serializer unchanged. Same
-     * for $userHandle, whose default keeps every existing caller unchanged.
+     * Stores $credentialId and $userHandle verbatim, as base64url text: a readable id like 'Y3JlZC1hYmM' comes back
+     * out of the serializer unchanged.
      */
     private function givenAPasskeyFor(User $user, string $credentialId, string $userHandle = 'aGFuZGxl'): void
     {
@@ -718,14 +626,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Builds a fixture and seeds PasskeyChallengeStore with the exact
-     * challenge (and a made-up but valid user handle) it was signed against,
-     * the way RegistrationOptionsFactory would have — so a test that does not
-     * care about the handle itself can go straight to posting the completed
-     * ceremony without a second round trip through the options endpoint.
-     * testTheStoredUserHandleMatchesTheOneAdvertisedAtOptionsTime and its
-     * mirror case below do NOT use this shortcut, because the fix-round-1 bug
-     * they prove lives exactly on the boundary this shortcut skips.
+     * Seeds PasskeyChallengeStore with a fixture's challenge and a made-up user handle, skipping the options request.
+     * The user-handle tests do not use it: what they prove lives on the boundary it skips.
      *
      * @return array{0: PasskeyAttestationFixture, 1: string}
      */
@@ -768,10 +670,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Reads the three values a completed registration ceremony needs out of
-     * a `/register/options` response: the challenge-store handle, the user
-     * handle the browser was shown (still base64url, as stored), and the
-     * raw challenge bytes a fixture's clientDataJSON must be signed against.
+     * The challenge-store handle, the user handle as stored (base64url) and the raw challenge, read from an options
+     * response.
      *
      * @return array{0: string, 1: string, 2: string}
      */
@@ -803,12 +703,8 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Mutates the CHALLENGE inside an already-built clientDataJSON, leaving
-     * the attestationObject (and so the credential id and public key) alone.
-     * Distinct from the origin/RP-id mismatch tests: those change what the
-     * SERVER is configured to accept, this changes what the CLIENT claims to
-     * have signed, so it exercises CheckChallenge rather than
-     * CheckAllowedOrigins or CheckRelyingPartyIdIdHash.
+     * Changes the challenge the client claims to have signed, leaving the attestationObject alone, so CheckChallenge
+     * refuses it rather than an origin or relying-party check.
      *
      * @param PasskeyCredentialPayload $credential
      *
@@ -829,10 +725,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * Truncates a real, valid attestationObject to 4 bytes — guaranteed
-     * incomplete CBOR, since even the top-level map's header and length
-     * alone take more than that to encode — rather than random garbage,
-     * so the failure is deterministic instead of depending on chance.
+     * Truncates a valid attestationObject to 4 bytes, always incomplete CBOR, so the failure is deterministic.
      *
      * @param PasskeyCredentialPayload $credential
      *

@@ -9,22 +9,8 @@ use App\Service\Settings\InstanceSettings;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * Pins the WebAuthn relying party AND the public base URL (the origin) to
- * exact values a test's fixtures were built for, rather than relying on
- * whatever `APP_FRONTEND_URL` happens to resolve to in this environment.
- *
- * Lifted out of PasskeyRegistrationTest's own private pinRelyingParty()
- * (#624 Task 6) once a third caller (AssertionVerifierTest, PasskeyLoginTest
- * — #624 Task 10) needed the identical setup: CLAUDE.md's DRY rule treats a
- * third occurrence as a refactor, not a copy.
- *
- * Passes `passkeySignInEnabled: true` explicitly (#624 follow-up, addendum):
- * InstanceSettingsUpdate's own constructor default flipped to `false` when
- * the product owner reversed the instance default, so a caller of THIS
- * helper — whose whole point is "set up a working passkey configuration for
- * a ceremony test" — can no longer ride that default the way it could when
- * it meant "on". A test that wants the DISABLED case uses
- * TogglesPasskeySignIn instead.
+ * Pins the relying party and the origin to the values a test's fixtures were built for, never APP_FRONTEND_URL, and
+ * enables sign-in explicitly, as the instance default is off. For the disabled case, use TogglesPasskeySignIn.
  */
 trait PinsPasskeyRelyingParty
 {

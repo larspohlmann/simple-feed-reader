@@ -11,10 +11,8 @@ use Symfony\Component\Security\Core\User\UserCheckerInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
- * Runs on every authenticated request (the Doctrine provider reloads the user
- * anyway), which makes suspension effective immediately instead of waiting
- * for the 7-day token to expire. Also where an expired trial takes effect:
- * TrialExpiryGuard flips the account to Suspended here.
+ * The api firewall's checker, run on every request as the provider reloads the user: a suspension or an expired
+ * trial takes effect on the next request, not when the 7-day token expires.
  */
 final readonly class UserChecker implements UserCheckerInterface
 {

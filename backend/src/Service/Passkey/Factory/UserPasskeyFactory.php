@@ -46,14 +46,8 @@ final readonly class UserPasskeyFactory
     }
 
     /**
-     * The library's CheckCredentialId step only rejects an id over 1023 RAW
-     * bytes — the spec's ceiling, far more than
-     * UserPasskey::$credentialId's VARCHAR(255) holds once base64url-encoded
-     * (~191 raw bytes). MySQL would surface a data-too-long DBAL exception
-     * at flush — DIFFERENT from the UniqueConstraintViolationException
-     * AttestationVerifier::persist() catches, so it would reach the kernel as
-     * an unhandled 500. SQLite doesn't enforce VARCHAR width at all, so this
-     * must be caught here, before the write, never at the database.
+     * The library allows 1023 raw bytes; the column holds 191 once base64url-encoded. MySQL would fail the flush with
+     * a data-too-long error (a 500, not the caught duplicate) and SQLite would not check, so the check is here.
      */
     private static function guardCredentialIdFitsColumn(string $credentialId): void
     {
@@ -64,24 +58,15 @@ final readonly class UserPasskeyFactory
         }
     }
 
-    /**
-     * The spec's "no AAGUID assigned" value is all zero bits; storing that
-     * literally would suggest a real, meaningful identifier where there is
-     * none, so it is normalised to null the same way an absent value would
-     * be.
-     */
+    /** The spec's all-zero "no AAGUID assigned" is stored as null, not as an identifier that looks real. */
     private static function aaguidOrNull(Uuid $aaguid): ?string
     {
         return (new NilUuid())->equals($aaguid) ? null : $aaguid->toRfc4122();
     }
 
     /**
-     * `response.transports` is client-supplied wire data the WebAuthn
-     * library never validates — AuthenticatorAttestationResponseDenormalizer
-     * assigns it verbatim — and PasskeyCredentials::excludeListFor() later
-     * echoes whatever is stored here back to the browser on every future
-     * registration. Filtering to the spec's enum before persisting keeps
-     * that round trip from carrying arbitrary client strings.
+     * `response.transports` is unvalidated client data that excludeListFor() echoes to every later registration, so
+     * only the spec's values are stored.
      *
      * @param array<string> $transports
      *

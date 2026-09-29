@@ -12,42 +12,8 @@ use CBOR\UnsignedIntegerObject;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 
 /**
- * Builds a synthetic "attestation: none" WebAuthn registration ceremony
- * entirely in PHP (#624) — no browser, no Chrome DevTools Protocol virtual
- * authenticator.
- *
- * This is possible, and not a shortcut, because of how the "none" attestation
- * format is defined by the spec: the attestationObject is CBOR of
- * `{fmt: "none", attStmt: {}, authData: <bytes>}`, and NOTHING in it is
- * signed. A real authenticator only produces a signature over `attStmt` for
- * formats such as "packed"; "none" carries no signature at all, so there is
- * no private-key ceremony to fake for REGISTRATION — only bytes to assemble
- * in the shape the spec defines:
- *
- *   authData = SHA-256(rpId) . flags . signCount (4 bytes, big-endian)
- *            . AAGUID (16 bytes) . credentialIdLength (2 bytes, big-endian)
- *            . credentialId . COSE public key (a CBOR map)
- *
- * Every value this depends on — relying-party id, origin, challenge,
- * credential id, user handle, sign count — is a parameter, so the
- * origin-mismatch, RP-id-mismatch and tampered-clientDataJSON test cases are
- * one-line variations on a single call rather than a second capture.
- *
- * The EC P-256 key pair minted per fixture is not thrown away: its private
- * key travels on the returned fixture (see PasskeyAttestationFixture)
- * because a later assertion ("login") ceremony fixture needs to sign over
- * the same identity, and a real authenticator would never invent a new key
- * for a credential it already holds.
- *
- * assertion() (#624 Task 10) builds the sibling ceremony — a WebAuthn LOGIN
- * response over a credential this class already minted. It signs the real
- * bytes CheckSignature verifies (`authData ‖ sha256(clientDataJSON)`) with
- * openssl_sign() over the attestation fixture's own private key: that
- * produces a standard ASN.1 DER ECDSA signature, exactly the shape a real
- * authenticator's WebAuthn API returns, and `Webauthn\Util\CoseSignatureFixer`
- * — already in the library's verification path — is what converts it to the
- * raw fixed-length form the underlying COSE verifier compares. No signature
- * math is duplicated here; only the bytes to sign are assembled.
+ * Builds WebAuthn ceremonies in PHP: `attestation: none` signs nothing, so a registration is bytes in the spec's
+ * layout, and assertion() signs `authData ‖ sha256(clientDataJSON)` with the enrolled key.
  *
  * @phpstan-import-type PasskeyCredentialPayload from PasskeyAttestationFixture
  * @phpstan-type PasskeyAssertionCredentialPayload array{
@@ -68,19 +34,11 @@ final readonly class PasskeyFixtures
     private const int EC_COORDINATE_LENGTH_BYTES = 32;
 
     /**
-     * All-zero: the spec's "no AAGUID assigned" value, and attestation()'s
-     * default. AttestationVerifierTest overrides it with a real 16-byte value
-     * to prove aaguidOrNull() round-trips a genuine AAGUID, not only the nil
-     * one every other test in this feature happens to use.
+     * All zero, the spec's "no AAGUID assigned"; attestation()'s default. AttestationVerifierTest passes a real one.
      */
     private const string AAGUID = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00";
 
-    /**
-     * Public (#624, fix round 2): PasskeyRegistrationTest builds a
-     * deliberately UV-cleared fixture with these to prove the ceremony
-     * refuses it, since $flags below defaults to requiring UV and a test
-     * cannot override a default it cannot name.
-     */
+    /** Public so a test can build a fixture with user verification cleared: $flags defaults to requiring it. */
     final public const int FLAG_USER_PRESENT = 0x01;
     final public const int FLAG_USER_VERIFIED = 0x04;
     final public const int FLAG_ATTESTED_CREDENTIAL_DATA_INCLUDED = 0x40;
@@ -101,10 +59,8 @@ final readonly class PasskeyFixtures
     private const int COSE_CURVE_P256 = 1;
 
     /**
-     * $flags defaults to UP|UV|AT — user verification is required elsewhere
-     * in this feature (spec §4.1.1), so a fixture built with the default is
-     * "a valid attestation"; one built with FLAG_USER_VERIFIED cleared is
-     * the one case that must NOT verify (#624, fix round 2).
+     * $flags defaults to UP|UV|AT, a valid attestation; clearing FLAG_USER_VERIFIED gives the one that must not
+     * verify, as user verification is required.
      */
     public static function attestation(
         string $relyingPartyId,
@@ -143,18 +99,8 @@ final readonly class PasskeyFixtures
     }
 
     /**
-     * The WebAuthn LOGIN ("assertion") ceremony sibling to attestation()
-     * above: signs a fresh authenticatorData/clientDataJSON pair, over the
-     * SAME identity, with the private key attestation() minted and kept on
-     * $enrolledCredential — a real authenticator never invents a new key for
-     * a credential it already holds, so neither does this fixture.
-     *
-     * $relyingPartyId, $origin and $challenge are independent parameters
-     * rather than read off $enrolledCredential, the same reasoning
-     * PasskeyRegistrationTest's mismatch tests rely on for attestation(): a
-     * caller can sign against the credential's real identity while telling
-     * the SERVER to check a different one, exercising the origin/RP-id
-     * mismatch checks without a second capture.
+     * A login assertion over the enrolled credential, signed with the key attestation() kept. The relying party,
+     * origin and challenge are parameters, so a test can sign one identity and have the server check another.
      *
      * @return PasskeyAssertionCredentialPayload
      */
@@ -210,10 +156,7 @@ final readonly class PasskeyFixtures
     }
 
     /**
-     * OpenSSL does not guarantee a coordinate comes back at the curve's full
-     * width: a value with leading zero bytes can come back shorter. The COSE
-     * and WebAuthn wire formats both require the fixed width, so a short
-     * coordinate is zero-padded on the left rather than trusted as-is.
+     * OpenSSL may return a coordinate shorter than the curve width; COSE and WebAuthn need it left-padded with zeros.
      */
     private static function leftPadded(string $coordinate): string
     {
@@ -277,15 +220,8 @@ final readonly class PasskeyFixtures
     }
 
     /**
-     * The exact bytes CheckSignature verifies: authenticatorData followed by
-     * the SHA-256 of the raw clientDataJSON bytes — never the JSON re-decoded
-     * and re-encoded, which could disagree byte-for-byte with what the
-     * "browser" claims to have hashed.
-     *
-     * openssl_sign() over an EC key returns a standard ASN.1 DER signature —
-     * the same shape a real authenticator's assertion carries — so nothing
-     * here needs to know about the library's internal raw-r‖s COSE format;
-     * Webauthn\Util\CoseSignatureFixer converts on the verifying side.
+     * Signs authenticatorData plus the SHA-256 of the raw clientDataJSON bytes, never re-encoded JSON. openssl_sign()
+     * returns DER, like a real authenticator; CoseSignatureFixer converts it on the verifying side.
      */
     private static function sign(
         string $authenticatorData,
@@ -324,10 +260,7 @@ final readonly class PasskeyFixtures
     {
         $object = MapObject::create()
             ->add(TextStringObject::create('fmt'), TextStringObject::create('none'))
-            // An empty map, not an empty list: NoneAttestationStatementSupport
-            // requires attStmt to decode back to `[]`, which an empty CBOR map
-            // and an empty CBOR list both normalize to in PHP — but the map is
-            // what the spec actually requires here, so that is what is built.
+            // An empty map, which the spec requires; an empty CBOR list would also decode to [] in PHP.
             ->add(TextStringObject::create('attStmt'), MapObject::create())
             ->add(TextStringObject::create('authData'), ByteStringObject::create($authenticatorData));
 
