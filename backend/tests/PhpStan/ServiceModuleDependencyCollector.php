@@ -32,7 +32,11 @@ final readonly class ServiceModuleDependencyCollector implements Collector
         return FileNode::class;
     }
 
-    /** @return list<array{string, string, int}>|null */
+    /**
+     * @param FileNode $node
+     *
+     * @return list<array{string, string, int}>|null
+     */
     public function processNode(Node $node, Scope $scope): ?array
     {
         $fileClassName = basename($scope->getFile(), '.php');
