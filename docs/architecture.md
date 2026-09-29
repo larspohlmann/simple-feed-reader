@@ -217,7 +217,8 @@ A class loose in the `Service` root counts as a module of its own.
 
 ## 10. Class roles
 
-Every class in `backend/src/Service` and `backend/src/Http` has one role, and its folder and its name say which.
+Every class in `backend/src/Service` and `backend/src/Http` has one role, and so does every event listener anywhere in
+`backend/src`; its folder and its name say which.
 Decided in #1202.
 
 | Folder, inside a module or area | Holds | Contract |
@@ -227,7 +228,7 @@ Decided in #1202.
 | `Dto/` | transfer shapes whose form something outside the module dictates (the backup file's lines) | `final readonly`, data only, no domain rule, never named `…Model`; mapped to and from models at the boundary |
 | `Factory/` | factories (class names end in `Factory`) | stateless services that build and return an object and never persist it |
 | `Pass/` | per-call objects: one run, one import, one page, one tick | built with `new` by a service or a factory, never by the container; may hold collaborators its creator passes in; may be mutable |
-| `Support/` | static-only helpers | `final`, a private constructor, static methods only, no state |
+| `Support/` | static-only helpers | `final`, a private constructor, static methods only, no state (no static property) |
 | `Exception/` | typed exceptions and their marker interfaces (`…ExceptionInterface`) | as before; a marker interface stays flat |
 | a folder named after an interface | the `…Interface` and its implementations in the same module | an implementation in another module stays in its own module (§9 relies on that inversion) |
 
@@ -245,8 +246,9 @@ Decided in #1202.
 - **Per call or process lifetime.** A class production code builds with `new` outside a constructor is a model or a
   per-call object, never a service. A service that keeps state implements `ResetInterface`, so the Messenger worker
   drops it between messages, or carries `#[ProcessLifetimeState('why')]` when the state must outlive messages.
-- **Messaging.** Event listeners end in `Listener`; a message handler is its message's name plus `Handler`;
-  `Worker/Message/` holds imperative names with no suffix; `src/Event/` holds past-tense facts.
+- **Messaging.** Event listeners anywhere in `src`, Doctrine ones included, end in `Listener`; a message handler is its
+  message's name plus `Handler`; `Worker/Message/` holds imperative names with no suffix; `src/Event/` holds past-tense
+  facts.
 - **The container** registers `src/` except `Service/**/{Model,Dto,Pass,Support,Exception}/`, so a service that
   type-hints a model, a DTO or a per-call object cannot be autowired. For a private service Symfony reports that only when
   it is first built (`lint:container` passes), so `ServiceRoleRule`'s `rootService` and `EveryApplicationServiceBuildsTest`
