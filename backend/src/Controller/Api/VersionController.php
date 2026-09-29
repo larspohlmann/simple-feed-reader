@@ -16,7 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * release. `latest`/`updateAvailable` drive the sidebar's update badge; both
  * fall silent (null / false) whenever the upstream check has nothing to report.
  */
-final class VersionController
+final readonly class VersionController
 {
     #[Route('/api/version', name: 'api_version', methods: ['GET'])]
     public function __invoke(VersionReporter $reporter): JsonResponse

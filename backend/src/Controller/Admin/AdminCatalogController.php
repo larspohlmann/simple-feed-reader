@@ -20,16 +20,16 @@ use Symfony\Component\Routing\Attribute\Route;
  * with AdminUserController.
  */
 #[Route('/api/admin/catalog')]
-final class AdminCatalogController
+final readonly class AdminCatalogController
 {
     /** Comfortably inside any sane PHP max_execution_time, and long enough that
      *  111 icons take a handful of polls rather than dozens. */
     private const int WARM_BUDGET_SECONDS = 15;
 
     public function __construct(
-        private readonly CatalogCategoryRepository $categories,
-        private readonly CatalogFeedRepository $feeds,
-        private readonly CatalogFaviconWarmer $warmer,
+        private CatalogCategoryRepository $categories,
+        private CatalogFeedRepository $feeds,
+        private CatalogFaviconWarmer $warmer,
     ) {
     }
 

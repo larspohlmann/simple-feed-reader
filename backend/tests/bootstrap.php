@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Tests\Support\WorkerIsolation;
 use Symfony\Component\Dotenv\Dotenv;
 

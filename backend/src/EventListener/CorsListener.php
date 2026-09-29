@@ -52,7 +52,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * of a site. The flow cookie's `SameSite=None` is for Apple's cross-site callback
  * POST, not for local dev, which would work without it.
  */
-final class CorsListener
+final readonly class CorsListener
 {
     /**
      * Everything the SPA is allowed to preflight. Deliberately a fixed list of
@@ -78,7 +78,7 @@ final class CorsListener
      * misconfigured frontend URL must break the SPA loudly, not silently widen
      * who may call this API with cookies attached.
      */
-    private readonly ?string $allowedOrigin;
+    private ?string $allowedOrigin;
 
     public function __construct(
         #[Autowire('%env(APP_FRONTEND_URL)%')] string $frontendUrl,

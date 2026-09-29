@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class HealthController
+final readonly class HealthController
 {
     #[Route('/api/health', name: 'api_health', methods: ['GET'])]
     public function __invoke(DatabaseHealthRepository $database): JsonResponse

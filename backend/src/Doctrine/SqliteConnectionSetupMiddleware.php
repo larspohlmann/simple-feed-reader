@@ -11,7 +11,7 @@ use Doctrine\DBAL\Driver\Middleware;
 // Priority above DAMA's 100 so the pragmas run on the raw connection before any
 // wrapping transaction starts — both of them are no-ops inside a transaction.
 #[AsMiddleware(priority: 150)]
-final class SqliteConnectionSetupMiddleware implements Middleware
+final readonly class SqliteConnectionSetupMiddleware implements Middleware
 {
     public function wrap(Driver $driver): Driver
     {
