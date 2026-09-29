@@ -7,15 +7,14 @@ namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -47,7 +46,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             100,
             'TestAgent/1.0',
             $egressProxySource,
-            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
+            FetchWiring::retryPolicy($urlGuard),
         );
     }
 
@@ -108,7 +107,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             100,
             'TestAgent/1.0',
             $egressProxySource,
-            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
+            FetchWiring::retryPolicy($urlGuard),
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([

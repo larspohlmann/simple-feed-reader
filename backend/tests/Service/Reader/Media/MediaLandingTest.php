@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\MediaLanding;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -41,10 +39,7 @@ final class MediaLandingTest extends TestCase
             }
         };
         return new MediaLanding(
-            new RedirectFollower(
-                new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover()),
-                new UrlGuard($dns, new IpValidator()),
-            ),
+            FetchWiring::redirectFollower($client, $this->noEgressProxy(), new UrlGuard($dns, new IpValidator())),
             'TestAgent/1.0',
         );
     }

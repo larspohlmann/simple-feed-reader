@@ -11,38 +11,45 @@ use Symfony\Component\HttpClient\Exception\TransportException;
 
 final class CrossFamilyFailoverTest extends TestCase
 {
+    private CrossFamilyFailover $failover;
+
+    protected function setUp(): void
+    {
+        $this->failover = new CrossFamilyFailover();
+    }
+
     public function testAConnectionResetWarrantsAnotherFamily(): void
     {
-        self::assertTrue((new CrossFamilyFailover())->isWarranted(new TransportException('Connection reset by peer')));
+        self::assertTrue($this->failover->isWarranted(new TransportException('Connection reset by peer')));
     }
 
     public function testATimeoutDoesNotWarrantAnotherFamily(): void
     {
         // A timeout means the family answered the connect but is slow, not that
         // the route is dead; re-driving every family would only multiply the wait.
-        self::assertFalse((new CrossFamilyFailover())->isWarranted(new TimeoutException('Idle timeout reached')));
+        self::assertFalse($this->failover->isWarranted(new TimeoutException('Idle timeout reached')));
     }
 
     public function testAnAbsentTransportErrorWarrantsNothing(): void
     {
-        self::assertFalse((new CrossFamilyFailover())->isWarranted(null));
+        self::assertFalse($this->failover->isWarranted(null));
     }
 
     public function testAClientOrServerErrorStatusWarrantsAnotherFamily(): void
     {
         // A 403 from taz over IPv6 while IPv4 serves 200 is an address-family
         // block, not a genuine refusal — the other family is worth a try.
-        self::assertTrue((new CrossFamilyFailover())->isRetryableStatus(400));
-        self::assertTrue((new CrossFamilyFailover())->isRetryableStatus(403));
-        self::assertTrue((new CrossFamilyFailover())->isRetryableStatus(503));
+        self::assertTrue($this->failover->isRetryableStatus(400));
+        self::assertTrue($this->failover->isRetryableStatus(403));
+        self::assertTrue($this->failover->isRetryableStatus(503));
     }
 
     public function testASuccessOrRedirectStatusDoesNotWarrantAnotherFamily(): void
     {
         // 2xx and 304 are answers; 3xx is a redirect the caller follows. None is
         // a failure to route around.
-        self::assertFalse((new CrossFamilyFailover())->isRetryableStatus(200));
-        self::assertFalse((new CrossFamilyFailover())->isRetryableStatus(304));
-        self::assertFalse((new CrossFamilyFailover())->isRetryableStatus(301));
+        self::assertFalse($this->failover->isRetryableStatus(200));
+        self::assertFalse($this->failover->isRetryableStatus(304));
+        self::assertFalse($this->failover->isRetryableStatus(301));
     }
 }

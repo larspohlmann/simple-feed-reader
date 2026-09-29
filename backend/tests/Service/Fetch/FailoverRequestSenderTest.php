@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -21,7 +21,7 @@ final class FailoverRequestSenderTest extends TestCase
 
     private function sender(MockHttpClient $client): FailoverRequestSender
     {
-        return new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover());
+        return FetchWiring::failoverSender($client, $this->noEgressProxy());
     }
 
     public function testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders(): void

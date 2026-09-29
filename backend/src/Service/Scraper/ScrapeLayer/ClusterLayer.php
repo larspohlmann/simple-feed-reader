@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Scraper\ScrapeLayer;
 
 use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\CardTitle;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;

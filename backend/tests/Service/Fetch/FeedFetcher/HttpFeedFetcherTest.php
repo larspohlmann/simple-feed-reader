@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch\FeedFetcher;
 
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FeedFetcher\HttpFeedFetcher;
-use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -56,7 +55,7 @@ final class HttpFeedFetcherTest extends TestCase
             100,
             'TestAgent/1.0',
             $this->noEgressProxy(),
-            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
+            FetchWiring::retryPolicy($urlGuard),
         ));
     }
 

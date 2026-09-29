@@ -4,11 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Sibling;
 
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
@@ -21,6 +18,7 @@ use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -56,10 +54,7 @@ final class SiblingMediaExtenderTest extends TestCase
             }
         };
         $landing = new MediaLanding(
-            new RedirectFollower(
-                new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover()),
-                new UrlGuard($dns, new IpValidator()),
-            ),
+            FetchWiring::redirectFollower($client, $this->noEgressProxy(), new UrlGuard($dns, new IpValidator())),
             'TestAgent/1.0',
         );
 
