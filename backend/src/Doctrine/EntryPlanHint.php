@@ -6,7 +6,7 @@ namespace App\Doctrine;
 
 /**
  * The join-order plans EntryPlanHintWalker can render onto an entry query's
- * outer SELECT, keyed to the entry table's own SQL alias (#1040, #1098).
+ * outer SELECT, keyed to the entry table's own SQL alias.
  */
 enum EntryPlanHint
 {

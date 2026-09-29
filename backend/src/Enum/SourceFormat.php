@@ -5,23 +5,17 @@ declare(strict_types=1);
 namespace App\Enum;
 
 /**
- * The Feed::sourceFormat vocabulary: how a fetched body is turned into
- * entries. Deliberately a constants holder and NOT a backed enum, unlike its
- * neighbours here — the value set is open by design: refresh parsers register
- * formats via the app.feed_body_parser container tag (see
- * FeedBodyParserInterface), and a row may carry a value this deployment does
- * not know (written by a newer version, or by a strategy since removed).
- * Exhaustive enum matching would defeat that seam; these consts just make
- * sure the known values are written once.
+ * The Feed::sourceFormat vocabulary. Constants, not a backed enum: parsers register formats through the
+ * app.feed_body_parser tag, and a row may carry a value this deployment does not know.
  */
 final class SourceFormat
 {
-    /** RSS/Atom feed documents — the pre-scraper default of every row. */
+    /** RSS/Atom feed documents; the column default. */
     public const string XML = 'xml';
 
     /** Feeds synthesized from a plain HTML page by the item extractor. */
     public const string SCRAPED = 'scraped';
 
-    /** WordPress REST posts endpoint (wp/v2/posts?_embed) — full-content JSON. */
+    /** WordPress REST posts endpoint (wp/v2/posts with `_fields`, never `_embed`): full-content JSON. */
     public const string WP_JSON = 'wp-json';
 }
