@@ -154,7 +154,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] BulkUnsubscribeRequest $request,
     ): JsonResponse {
-        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, $user->requireId());
+        $byId = $this->ownedSubscriptions->resolve($user->requireId(), $request->subscriptionIds);
 
         return new JsonResponse(['removed' => $this->subscriptions->unsubscribeAll(array_values($byId))]);
     }

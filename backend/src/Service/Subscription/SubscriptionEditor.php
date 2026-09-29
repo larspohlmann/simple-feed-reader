@@ -41,7 +41,7 @@ final readonly class SubscriptionEditor
     {
         $this->reorderer->reorder(
             $orderedSubscriptionIds,
-            $this->ownedSubscriptions->resolve($orderedSubscriptionIds, $user->requireId()),
+            $this->ownedSubscriptions->resolve($user->requireId(), $orderedSubscriptionIds),
         );
     }
 

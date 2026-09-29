@@ -47,7 +47,7 @@ final readonly class BulkSubscriptionUpdater
         // The eager variant: the controller serializes every changed
         // subscription's feed and tags into the response, and the plain
         // resolve() leaves both lazy — up to 500 extra SELECTs for one request.
-        $byId = $this->ownedSubscriptions->resolveWithAssociations($change->subscriptionIds, $userId);
+        $byId = $this->ownedSubscriptions->resolveWithAssociations($userId, $change->subscriptionIds);
 
         $changed = [];
         foreach ($change->subscriptionIds as $subscriptionId) {
