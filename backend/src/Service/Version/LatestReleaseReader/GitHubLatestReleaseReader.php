@@ -32,14 +32,14 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
         private HttpClientInterface $httpClient,
         private CacheItemPoolInterface $githubReleaseCache,
         private LoggerInterface $logger,
-        private string $repository,
+        private string $gitHubRepository,
         private string $userAgent,
     ) {
     }
 
     public function read(): ?LatestReleaseModel
     {
-        if ('' === $this->repository) {
+        if ('' === $this->gitHubRepository) {
             return null;
         }
 
@@ -108,6 +108,6 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
 
     private function endpoint(): string
     {
-        return sprintf('https://api.github.com/repos/%s/releases/latest', $this->repository);
+        return sprintf('https://api.github.com/repos/%s/releases/latest', $this->gitHubRepository);
     }
 }

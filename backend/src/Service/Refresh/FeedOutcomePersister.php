@@ -32,7 +32,7 @@ final readonly class FeedOutcomePersister
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private FeedRepository $feedRepository,
+        private FeedRepository $feeds,
         private FeedBodyParser $bodyParser,
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
@@ -158,7 +158,7 @@ final readonly class FeedOutcomePersister
             return;
         }
         // The url column is unique: a target another feed already claims leaves this feed where it is.
-        if ($this->feedRepository->findOneBy(['url' => $response->finalUrl]) !== null) {
+        if ($this->feeds->findOneBy(['url' => $response->finalUrl]) !== null) {
             return;
         }
         $feed->setUrl($response->finalUrl);

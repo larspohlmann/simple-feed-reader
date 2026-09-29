@@ -32,7 +32,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     private const int COOLDOWN_MINUTES = 5;
 
     public function __construct(
-        private FeedRepository $feedRepository,
+        private FeedRepository $feeds,
         private BatchFeedFetcherInterface $fetcher,
         private FeedOutcomePersister $outcomePersister,
         private MissingFaviconResolver $missingFavicons,
@@ -66,7 +66,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 
         $now = $this->clock->now();
         $criteria = $this->dueCriteria($request, $now);
-        $feeds = $this->feedRepository->findDue($criteria, self::BATCH_LIMIT);
+        $feeds = $this->feeds->findDue($criteria, self::BATCH_LIMIT);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
         $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $this->persistOutcomes($pass, $now);
@@ -139,6 +139,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     // rationed feed as remaining forever and keep the client polling (#302).
     private function countRemaining(DueFeedCriteria $criteria, RefreshPass $pass): int
     {
-        return $this->feedRepository->countDue($criteria->excluding($pass->startedFeedIds()));
+        return $this->feeds->countDue($criteria->excluding($pass->startedFeedIds()));
     }
 }
