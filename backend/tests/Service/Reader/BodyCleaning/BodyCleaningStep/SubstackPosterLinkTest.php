@@ -39,10 +39,6 @@ final class SubstackPosterLinkTest extends TestCase
         self::assertStringContainsString('href="https://www.youtube-nocookie.com/embed/_ipOL6Zq7Z8"', $out);
     }
 
-    /**
-     * #627's gated placeholder inserts its own poster anchor before readability,
-     * so an already-linked image belongs to that rule and must be left alone.
-     */
     public function testLeavesAnImageThatIsAlreadyLinked(): void
     {
         $html = '<body><a href="https://example.test/post"><img '

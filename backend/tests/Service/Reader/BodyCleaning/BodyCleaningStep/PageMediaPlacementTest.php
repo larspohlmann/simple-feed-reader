@@ -52,7 +52,6 @@ final class PageMediaPlacementTest extends TestCase
         self::assertStringContainsString('i.ytimg.example/hqdefault.jpg', $out);
     }
 
-    /** #907: narration audio is not a lead visual, so the hero stays and the player sits below it. */
     public function testSeatsATopPlacedAudioPlayerBelowTheRestoredHero(): void
     {
         $audio = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);

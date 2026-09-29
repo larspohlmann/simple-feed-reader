@@ -325,11 +325,8 @@ final class LeadingEngagementCleanerTest extends TestCase
 
     public function testKeepsAnImageLinkThatCarriesVisibleTextInsideALeadingHeader(): void
     {
-        // An image plus a visible label is a real link, not an image-only
-        // badge — the image alone is what marks a masthead promo (#627). The
-        // label is a full sentence so it is neither a navigation label (too
-        // long) nor prose (entirely link text), leaving isBadgeLink as the
-        // only thing that decides this link's fate.
+        // An image plus a visible label is a real link, not a badge. The label is a sentence of link text, neither
+        // a navigation label nor prose, so only isBadgeLink decides this link.
         $html = '<div><article><header><div><p>'
             . '<a href="https://x.test/subscribe">'
             . '<img src="https://x.test/img/bell.png" alt="Bell">' . self::PROSE . '</a>'
@@ -427,9 +424,8 @@ final class LeadingEngagementCleanerTest extends TestCase
     }
 
     /**
-     * Substack 481600: the byline card's date is removed as engagement, and the
-     * remainder sweep must not take the #627 poster link with it — an <img>
-     * element is media itself, not an empty remainder.
+     * The byline date goes as engagement, and the remainder sweep keeps the poster link: an <img> is media itself,
+     * not an empty remainder.
      */
     public function testKeepsALeadingPosterLinkWhenTheSweepRuns(): void
     {

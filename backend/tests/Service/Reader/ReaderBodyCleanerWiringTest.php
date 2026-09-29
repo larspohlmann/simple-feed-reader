@@ -28,7 +28,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class ReaderBodyCleanerWiringTest extends KernelTestCase
 {
-    /** The call sequence ReaderBodyCleaner::clean() hard-coded before #1163. The order is behaviour. */
+    /** The order is behaviour. */
     private const array ORDER = [
         InBodyEmbedRewriter::class,
         SubstackPosterLink::class,
