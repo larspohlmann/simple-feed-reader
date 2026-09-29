@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Parser\Pass\FeedMediaNode;
 
 /**
  * Enumerates the media a feed item declares into the two lists the entry keeps:

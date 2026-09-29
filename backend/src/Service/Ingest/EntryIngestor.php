@@ -9,6 +9,8 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\Model\IncomingEntryModel;
+use App\Service\Ingest\Pass\EntryDeduplicator;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Url\UrlNormalizer;

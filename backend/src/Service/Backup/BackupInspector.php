@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Service\Backup\Model\BackupInventoryModel;
+use App\Service\Backup\Pass\BackupTally;
 
 /**
  * Pass 1 of a restore start: reads the foundation through BackupReader, counts

@@ -9,6 +9,7 @@ use App\Service\Recommendation\Prompt\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Recommendation\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /**

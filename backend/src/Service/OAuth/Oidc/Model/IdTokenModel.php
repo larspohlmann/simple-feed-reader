@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\Oidc\Model;
 
-use App\Service\OAuth\Oidc\IdTokenVerifier;
-use App\Service\OAuth\Oidc\TokenEndpoint;
+use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
 
 /**
  * An ID token that came back from an OIDC token endpoint, over a TLS connection

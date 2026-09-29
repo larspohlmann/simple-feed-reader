@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth\Oidc\Model;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\Oidc\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
 
 /**
  * The decoded payload of an ID token, and the one place that knows what shape a

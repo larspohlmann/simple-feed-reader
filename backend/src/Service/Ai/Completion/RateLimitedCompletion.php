@@ -10,6 +10,7 @@ use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\RateLimitedResultModel;
 use App\Service\Ai\Completion\Model\RetryPlanModel;
+use App\Service\Ai\Completion\Pass\ConcurrentCompletion;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Model\ProviderConnectionModel;
 use Symfony\Component\Clock\ClockInterface;

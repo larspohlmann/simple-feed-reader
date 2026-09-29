@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ingest;
 
+use App\Service\Ingest\Pass\FeedIngestContext;
+
 /**
  * The instant an entry takes its place in the reader's list.
  *

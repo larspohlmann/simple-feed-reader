@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Fetch\PageUrls;
+use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
 
 /**

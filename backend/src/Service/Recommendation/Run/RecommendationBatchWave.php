@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
 use App\Service\Ai\Completion\Model\RateLimitedResultModel;
+use App\Service\Ai\Completion\Pass\ConcurrentCompletion;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
@@ -21,6 +21,9 @@ use App\Service\Recommendation\Prompt\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\Pass\WaveContext;
 
 /**
  * The batch phase's concurrent fan-out (#344): an unusable batch retries alone up to MAX_ATTEMPTS rounds, then

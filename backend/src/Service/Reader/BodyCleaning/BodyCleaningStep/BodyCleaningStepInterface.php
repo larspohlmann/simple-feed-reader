@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 
 /** One step of the reader body clean; it mutates the pass's shared document in place. */
 interface BodyCleaningStepInterface

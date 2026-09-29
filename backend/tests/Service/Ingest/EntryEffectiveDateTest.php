@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingest;
 
 use App\Service\Ingest\EntryEffectiveDate;
-use App\Service\Ingest\FeedIngestContext;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use PHPUnit\Framework\TestCase;
 
 final class EntryEffectiveDateTest extends TestCase

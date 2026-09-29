@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Prompt\PromptContext;
+use App\Service\Recommendation\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\Pass\WaveContext;
 
 final readonly class WaveContextLoader
 {

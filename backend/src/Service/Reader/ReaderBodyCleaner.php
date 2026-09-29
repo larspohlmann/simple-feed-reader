@@ -6,9 +6,9 @@ namespace App\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**

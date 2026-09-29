@@ -6,7 +6,7 @@ namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BlockText;
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use Dom\Element;
 use Dom\HTMLDocument;
 

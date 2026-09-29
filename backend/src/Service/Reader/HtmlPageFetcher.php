@@ -6,7 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Fetch\ContentTypeCharset;
 use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\LandedResponse;
+use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;

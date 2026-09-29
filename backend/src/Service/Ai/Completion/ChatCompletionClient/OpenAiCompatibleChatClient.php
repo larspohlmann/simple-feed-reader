@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Completion\CompletionBodyDecoder;
-use App\Service\Ai\Completion\CompletionCallSlot;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\CompletionStreamReader;
-use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\Reasoning;
+use App\Service\Ai\Completion\Pass\CompletionCallSlot;
+use App\Service\Ai\Completion\Pass\CompletionStreamReader;
+use App\Service\Ai\Completion\Pass\ConcurrentCompletion;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\ProviderRunawayException;

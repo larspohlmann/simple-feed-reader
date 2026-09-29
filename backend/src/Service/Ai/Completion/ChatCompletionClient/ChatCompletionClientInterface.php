@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Pass\ConcurrentCompletion;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderConnectionModel;

@@ -10,6 +10,7 @@ use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use App\Service\Search\Membership\Model\SweepBudgetModel;
+use App\Service\Search\Membership\Pass\SweepTally;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Search\SavedSearchTerms;

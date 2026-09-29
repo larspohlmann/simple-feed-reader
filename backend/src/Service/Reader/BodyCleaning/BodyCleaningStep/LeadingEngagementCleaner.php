@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\LeadingEngagementBlocks;
 use App\Service\Reader\LeadingEngagementRules;
-use App\Service\Reader\LeadingFurniture;
 use App\Service\Reader\Model\LeadingBlockModel;
+use App\Service\Reader\Pass\LeadingFurniture;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;

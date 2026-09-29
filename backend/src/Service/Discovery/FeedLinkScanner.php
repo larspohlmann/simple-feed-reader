@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Fetch\PageUrls;
+use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Scraper\TextNormalizer;
 use Dom\Element;

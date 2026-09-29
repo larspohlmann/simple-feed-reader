@@ -16,6 +16,7 @@ use App\Repository\UserRepository;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\FoundationSnapshotModel;
+use App\Service\Backup\Pass\BackupPartWalk;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

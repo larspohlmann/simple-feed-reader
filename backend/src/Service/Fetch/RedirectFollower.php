@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\RedirectChainException;
+use App\Service\Fetch\Pass\LandedResponse;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 

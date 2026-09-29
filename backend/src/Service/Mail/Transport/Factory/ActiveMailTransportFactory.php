@@ -6,7 +6,7 @@ namespace App\Service\Mail\Transport\Factory;
 
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\CurlSmtpTransport;
+use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
 use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;

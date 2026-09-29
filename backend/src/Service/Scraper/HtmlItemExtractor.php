@@ -11,6 +11,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\Model\ScrapedItemModel;
+use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;

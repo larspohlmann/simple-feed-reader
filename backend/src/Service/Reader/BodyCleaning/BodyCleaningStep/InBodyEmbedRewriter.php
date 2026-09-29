@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaMarkup;
 use Dom\Element;

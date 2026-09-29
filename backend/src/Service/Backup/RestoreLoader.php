@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Backup\Pass\RestoreLoadPass;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 

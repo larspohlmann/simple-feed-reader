@@ -1,0 +1,216 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Backup\Pass;
+
+use App\Entity\Feed;
+use App\Entity\SavedSearch;
+use App\Entity\Tag;
+use App\Entity\User;
+use App\Repository\FeedRepository;
+use App\Service\Backup\Dto\AccountLine;
+use App\Service\Backup\Dto\FeedLine;
+use App\Service\Backup\Dto\SavedSearchLine;
+use App\Service\Backup\Dto\SubscriptionLine;
+use App\Service\Backup\Dto\TagLine;
+use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Search\SavedSearchSlug;
+use Doctrine\DBAL\Exception as DbalException;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * The foundation's own load: settings, tags, saved searches, feeds and
+ * subscriptions, plus the dispatch over the line stream. Constructed per
+ * restore and thrown away with it: the name ⇒ Tag and url ⇒ Feed maps it
+ * holds are working state, which is exactly why they do not live on the
+ * autowired RestoreLoader.
+ *
+ * The account is assumed to be freshly reset. Nothing here reads or updates a
+ * row the wipe left behind. Entries and entry states belong to
+ * EntryPartRestorer; this pass never sees them.
+ */
+final class RestoreLoadPass
+{
+    /** @var array<string, Tag> */
+    private array $tagsByName = [];
+
+    /** @var array<string, Feed> */
+    private array $feedsByUrl = [];
+
+    /** @var list<FeedLine> held back until one lookup resolves them all (#455) */
+    private array $heldFeedLines = [];
+
+    /** @var list<SavedSearch> held back until the flush that assigns their id (#1118) */
+    private array $loadedSavedSearches = [];
+
+    /** @var array{tags: int, savedSearches: int, feeds: int, subscriptions: int} */
+    private array $counts = ['tags' => 0, 'savedSearches' => 0, 'feeds' => 0, 'subscriptions' => 0];
+
+    private User $user;
+
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly FeedRepository $feeds,
+        private readonly SavedSearchSlug $slug,
+        private readonly RestoredFoundationFactory $rows,
+    ) {
+    }
+
+    /**
+     * @param \Generator<int, object> $lines
+     */
+    public function run(User $user, \Generator $lines): RestoreResultModel
+    {
+        $this->user = $user;
+        foreach ($lines as $line) {
+            $this->accept($line);
+        }
+        $this->resolveHeldFeeds();
+        $this->flush();
+        $this->regenerateSavedSearchSlugs();
+
+        return RestoreResultModel::ofFoundation(
+            tags: $this->counts['tags'],
+            savedSearches: $this->counts['savedSearches'],
+            feeds: $this->counts['feeds'],
+            subscriptions: $this->counts['subscriptions'],
+        );
+    }
+
+    private function accept(object $line): void
+    {
+        match (true) {
+            $line instanceof AccountLine => $this->loadAccount($line),
+            $line instanceof TagLine => $this->loadTag($line),
+            $line instanceof SavedSearchLine => $this->loadSavedSearch($line),
+            $line instanceof FeedLine => $this->holdFeed($line),
+            $line instanceof SubscriptionLine => $this->loadSubscription($line),
+            // The header carries provenance for the preview, nothing to load.
+            default => null,
+        };
+    }
+
+    private function loadAccount(AccountLine $line): void
+    {
+        $this->user->setLocale($line->locale);
+        $this->user->getPreferences()->setScrapeFallbackEnabled($line->scrapeFallbackEnabled);
+        $this->user->getPreferences()->setMagazineStyle($line->magazineStyle);
+    }
+
+    private function loadTag(TagLine $line): void
+    {
+        $tag = $this->rows->tag($this->user, $line);
+        $this->em->persist($tag);
+        $this->tagsByName[$line->name] = $tag;
+        ++$this->counts['tags'];
+    }
+
+    private function loadSavedSearch(SavedSearchLine $line): void
+    {
+        $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord, $line->phrase);
+        $savedSearch->setPosition($line->position);
+        $this->em->persist($savedSearch);
+        $this->loadedSavedSearches[] = $savedSearch;
+        ++$this->counts['savedSearches'];
+    }
+
+    /**
+     * The slug embeds the row's id, which does not exist until the flush
+     * above assigns it — so it cannot be built alongside the rest of
+     * loadSavedSearch(), and restoring the file's own (now-stale) id is not
+     * an option: RestoreLoadPass never restores an id at all.
+     */
+    private function regenerateSavedSearchSlugs(): void
+    {
+        if ([] === $this->loadedSavedSearches) {
+            return;
+        }
+
+        foreach ($this->loadedSavedSearches as $savedSearch) {
+            $this->slug->assignTo($savedSearch);
+        }
+        $this->flush();
+    }
+
+    private function holdFeed(FeedLine $line): void
+    {
+        $this->heldFeedLines[] = $line;
+    }
+
+    /**
+     * BackupReader puts every feed line before the first subscription, so by
+     * the time anything needs a Feed the file's whole set is known and one
+     * query resolves it (#455).
+     *
+     * A feed row is shared between accounts, so a known one is referenced and
+     * never touched — not even to improve a null title. sourceFormat is
+     * therefore written only on a row this restore creates, which is
+     * SubscriptionCreator's trust rule at its strictest: a value asserted by
+     * an uploaded file may not overwrite what the instance already learned.
+     */
+    private function resolveHeldFeeds(): void
+    {
+        $lines = $this->heldFeedLines;
+        $this->heldFeedLines = [];
+        if ([] === $lines) {
+            return;
+        }
+
+        $urls = array_map(static fn (FeedLine $line): string => $line->url, $lines);
+        $this->feedsByUrl += $this->feeds->findByUrlsIndexedByUrl($urls);
+        foreach ($lines as $line) {
+            $this->feedsByUrl[$line->url] ??= $this->createFeed($line);
+        }
+    }
+
+    private function createFeed(FeedLine $line): Feed
+    {
+        $feed = $this->rows->feed($line);
+        $this->em->persist($feed);
+        ++$this->counts['feeds'];
+
+        return $feed;
+    }
+
+    private function loadSubscription(SubscriptionLine $line): void
+    {
+        $this->resolveHeldFeeds();
+        $feed = $this->feedsByUrl[$line->feedUrl] ?? throw BackupLoadFailedException::danglingReference(sprintf(
+            'Subscription to "%s" has no matching feed line.',
+            $line->feedUrl,
+        ));
+
+        $subscription = $this->rows->subscription($this->user, $feed, $line);
+        foreach ($line->tags as $ref) {
+            $subscription->addTag($this->tagNamed($ref->name), $ref->position);
+        }
+
+        $this->em->persist($subscription);
+        ++$this->counts['subscriptions'];
+    }
+
+    /**
+     * A backstop: BackupInspector refuses an undeclared tag reference in pass
+     * 1, while the account is still whole. Reaching this means the wipe has
+     * already run, so the user must be told the account is empty.
+     */
+    private function tagNamed(string $name): Tag
+    {
+        return $this->tagsByName[$name] ?? throw BackupLoadFailedException::danglingReference(sprintf(
+            'A subscription names tag "%s", which the backup never declares.',
+            $name,
+        ));
+    }
+
+    private function flush(): void
+    {
+        try {
+            $this->em->flush();
+        } catch (DbalException $e) {
+            throw BackupLoadFailedException::from($e);
+        }
+    }
+}

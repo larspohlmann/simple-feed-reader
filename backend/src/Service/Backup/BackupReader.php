@@ -16,6 +16,7 @@ use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\BackupLineOrderModel;
+use App\Service\Backup\Pass\BackupPartGuard;
 
 /**
  * Reads a backup file front to back, enforcing its grammar: one header first,

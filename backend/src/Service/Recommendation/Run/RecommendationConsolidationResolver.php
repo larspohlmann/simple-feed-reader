@@ -10,7 +10,7 @@ use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
 use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Prompt\PromptContext;
+use App\Service\Recommendation\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
@@ -18,6 +18,7 @@ use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
  * The consolidation phase's one provider call (#493): re-score, reason and dedupe the top of the pool in one pass.
