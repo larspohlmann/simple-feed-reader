@@ -27,7 +27,6 @@ final class FeedLinkScannerTest extends TestCase
 
     public function testItReadsTheAdvertisedFeedsAndTheirDialects(): void
     {
-        // @lang TEXT: the hrefs are the subject of the test, not files to resolve.
         $html = /** @lang TEXT */ <<<'HTML'
             <!doctype html><html><head>
               <link rel="alternate" type="application/rss+xml" title="Main" href="/rss.xml">

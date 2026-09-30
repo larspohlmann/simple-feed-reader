@@ -106,7 +106,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'account that sees it.',
         EntryCategory::class => 'A feed-declared entry↔category link (#953); identical for every '
             . 'account, since it names no account.',
-        WorkerHeartbeat::class => 'Liveness telemetry for the refresh worker.',
+        WorkerHeartbeat::class => 'Liveness telemetry for the "For you" run drivers, one row per '
+            . 'RecommendationDriverKind.',
         MailSendFailure::class => 'The instance\'s automated-mail failure log (#882); operational telemetry, '
             . 'cleared on the next successful send.',
     ];
