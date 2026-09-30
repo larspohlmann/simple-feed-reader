@@ -40,6 +40,7 @@ final class OriginCookiesTest extends TestCase
                 new UrlGuard(new StaticDnsResolver([
                     'www.oxmoxhh.de' => ['85.13.150.207'],
                     'oxmoxhh.de' => ['85.13.150.207'],
+                    'plain.example' => ['93.184.216.35'],
                     'elsewhere.example' => ['93.184.216.34'],
                 ]), new IpValidator()),
             ),
@@ -76,6 +77,14 @@ final class OriginCookiesTest extends TestCase
 
         self::assertSame('conz_bild=1', $second);
         self::assertCount(1, $this->requested);
+    }
+
+    public function testKeepsEachHostsCookiesSeparate(): void
+    {
+        $cookies = $this->originCookies([self::homepage('a=1'), self::homepage()]);
+
+        self::assertSame('a=1', $cookies->for(self::IMAGE));
+        self::assertSame('', $cookies->for('https://plain.example/pic.png'));
     }
 
     public function testFollowsARedirectOnTheSameHostFamily(): void

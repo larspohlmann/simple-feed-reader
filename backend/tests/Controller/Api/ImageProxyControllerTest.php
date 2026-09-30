@@ -96,14 +96,15 @@ final class ImageProxyControllerTest extends ApiTestCase
         $client = self::createClient();
         $client->disableReboot();
         $headers = $this->bearer('image-proxy-limit@example.com');
-        $this->install(new ProxiedImageModel('png-bytes', 'image/png'));
+        $proxy = $this->install(new ProxiedImageModel('png-bytes', 'image/png'));
 
-        for ($request = 0; $request < 300; $request++) {
+        for ($attempt = 0; $attempt < 300; $attempt++) {
             $client->request('GET', '/api/image-proxy', ['url' => self::IMAGE], [], $headers);
         }
         self::assertResponseIsSuccessful();
 
         $client->request('GET', '/api/image-proxy', ['url' => self::IMAGE], [], $headers);
         self::assertResponseStatusCodeSame(429);
+        self::assertCount(300, $proxy->fetched);
     }
 }
