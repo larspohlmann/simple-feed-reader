@@ -148,9 +148,9 @@ Non-negotiables:
   leave it out. When in doubt, no comment. Do not add or keep a comment to
   satisfy a reviewer; a moved or deleted comment that does not clear this bar
   stays gone.
-- **One line. Three at the absolute most.** More than three lines needs a VERY
-  GOOD reason, and the reason goes in the comment. Holds for every language in
-  the tree and for docblocks.
+- **Keep a comment to one line; three at most is the recommendation.** Longer
+  needs a good reason, and the reason goes in the comment. Recommended, not
+  enforced, in every language in the tree and in docblocks.
 - **Delete on sight**, in code you write and code you touch: a comment that
   restates the next line, a `@param`/`@return` that repeats the signature, a
   docblock that repeats the class name, a section banner, a narration of the
@@ -220,8 +220,6 @@ Enforced mechanically by `composer check` and `composer md`:
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
   every event listener anywhere in `src` that sits outside its role, and names
   the folder it belongs in.
-- **`CommentBlockLengthRule`** (`tests/PhpStan/CommentBlockLengthRule.php`) — a comment block holds three lines
-  of prose at most; PHPDoc types and tool directives are not prose, and a blank line does not split a block.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design
