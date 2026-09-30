@@ -116,7 +116,7 @@ final class EmptiedWrapperRemoverTest extends TestCase
     public static function contentWithoutText(): iterable
     {
         yield 'image' => ['<img src="https://pub.test/photo.jpg" alt="">'];
-        yield 'picture' => ['<picture><source srcset="https://pub.test/photo.webp"></picture>'];
+        yield 'picture' => ['<picture></picture>'];
         yield 'svg' => ['<svg viewBox="0 0 10 10"><path d="M0 0h10v10z"></path></svg>'];
         yield 'video' => ['<video src="https://pub.test/clip.mp4"></video>'];
         yield 'audio' => ['<audio src="https://pub.test/talk.mp3"></audio>'];
