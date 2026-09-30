@@ -22,7 +22,6 @@ final readonly class EmptiedWrapperRemover
         }
     }
 
-    /** Removes the element when it holds nothing, then each ancestor that leaves empty. */
     public function removeIfEmptied(Element $element): void
     {
         if ($this->isEmptied($element)) {
