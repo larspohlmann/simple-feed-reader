@@ -3,7 +3,7 @@
   [tags]="headerTags()"
   [activeTagId]="activeTagId()"
   [allItemsActive]="allItemsActive()"
-  [searchLoading]="searching()"
+  [searchLoading]="heading.searching()"
   [searchTerm]="selection().term ?? ''"
   [populateSearchTerm]="!viewingSavedSearch()"
   [drawerOpen]="sidebarOpen()"
@@ -73,12 +73,12 @@
       [keptCount]="subs.keptCount()"
       [viewedCount]="subs.viewedCount()"
       [savedSearches]="savedSearchesStore.savedSearches()"
-      [activeSavedSearchId]="activeSavedSearchId()"
+      [activeSavedSearchId]="heading.activeSavedSearchId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="selection()"
       [loading]="subs.loading()"
-      [searchLoading]="searching()"
+      [searchLoading]="heading.searching()"
       (refresh)="onRefresh()"
       (addFeed)="onAddFeed()"
       (search)="onSearch($event)"
@@ -118,29 +118,29 @@
     <section class="list">
       <app-entry-list
         [layout]="layout.mode()"
-        [title]="title()"
-        [titleTag]="selectedTag()"
-        [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
-        [searchTitlePrefix]="searchTitlePrefix()"
-        [searchTitleTerm]="searchTitleTerm()"
-        [searchCountLabel]="searchCountLabel()"
-        [titleCount]="titleCount()"
+        [title]="heading.title()"
+        [titleTag]="heading.selectedTag()"
+        [titleFaviconUrl]="heading.selectedSubscription()?.faviconUrl ?? null"
+        [searchTitlePrefix]="heading.searchTitlePrefix()"
+        [searchTitleTerm]="heading.searchTitleTerm()"
+        [searchCountLabel]="heading.searchCountLabel()"
+        [titleCount]="heading.titleCount()"
         [savedSearchCount]="savedSearchesStore.savedSearches().length"
         [entries]="entries.entries()"
         [matchedWords]="entries.matchedWords()"
         [loading]="listLoading()"
         [loadingMore]="entries.loadingMore()"
         [error]="entries.error()"
-        [hasMore]="hasMore()"
+        [hasMore]="heading.hasMore()"
         [canMarkAllRead]="canMarkAllRead()"
         [selection]="selection()"
         [openEntryId]="entryId()"
         [leavingIds]="leavingIds()"
         [feedTags]="feedTags()"
         [refreshing]="refreshSvc.running()"
-        [lastRefreshed]="listLastRefreshed()"
-        [nextRefresh]="listNextRefresh()"
-        [newestRunId]="listNewestRunId()"
+        [lastRefreshed]="heading.lastRefreshed()"
+        [nextRefresh]="heading.nextRefresh()"
+        [newestRunId]="heading.newestRunId()"
         [headerActions]="headerActions"
         [leadingActions]="listEditAction"
         [topBlock]="feedIntro"
@@ -175,7 +175,7 @@
      is scoped to, sparing a trip through the sidebar's overflow menu (behind
      the drawer on phone). Same `ManageActions` as the sidebar calls; empty otherwise. -->
 <ng-template #listEditAction>
-  @if (selectedSubscription(); as sub) {
+  @if (heading.selectedSubscription(); as sub) {
     <button
       appListAction
       class="list-edit"
@@ -189,7 +189,7 @@
            on narrow the same way they are so a long feed title keeps the row. -->
       <span class="txt">{{ 'reader.editFeed' | transloco }}</span>
     </button>
-  } @else if (selectedTag(); as tag) {
+  } @else if (heading.selectedTag(); as tag) {
     <button
       appListAction
       class="list-edit"
@@ -208,7 +208,7 @@
      row and scrolls away with them instead of growing the sticky header (#321,
      #419). Declared once and handed to both list instances. -->
 <ng-template #feedIntro>
-  @if (feedIntroSubscription(); as sub) {
+  @if (heading.feedIntroSubscription(); as sub) {
     <app-feed-intro
       [title]="sub.title"
       [description]="sub.description"

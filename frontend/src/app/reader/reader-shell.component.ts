@@ -16,6 +16,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-actions/entry-action-handler';
 import { ReaderRouteState } from './shell/reader-route-state.service';
+import { ListHeading } from './shell/list-heading.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
@@ -23,7 +24,6 @@ import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
 import { isPasskeySupported } from '../core/webauthn';
-import { LanguageService } from '../core/language.service';
 import { ReaderApi } from './reader-api';
 import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
@@ -66,7 +66,7 @@ import {
 } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
-import { EntryListComponent, TitleCount } from './entry-list/entry-list.component';
+import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
@@ -114,6 +114,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
   providers: [
     SidebarCountsPoll,
     ReaderRouteState,
+    ListHeading,
     { provide: EntryActionHandler, useExisting: forwardRef(() => ReaderShellComponent) },
   ],
 })
@@ -125,7 +126,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
-  private readonly language = inject(LanguageService);
   private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
   protected readonly auth = inject(AuthService);
@@ -285,6 +285,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly selection = this.routeState.selection;
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
+  readonly heading = inject(ListHeading);
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
@@ -292,22 +293,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly canToggleSavedSearch = computed(
     () => isDirectSearch(this.selection()) || this.viewingSavedSearch(),
   );
-
-  /** The single saved search the list is showing, by id, or null. Read straight
-   *  off the selection now that a saved search is addressed by id in the path,
-   *  not re-matched by term the way `currentSavedSearch` does for a search result. */
-  readonly activeSavedSearchId = computed(() => {
-    const s = this.selection();
-    return s.kind === 'saved-search' ? s.id : null;
-  });
-
-  /** That saved search resolved against the store, for the list title. Null
-   *  until the store has the row, so the title falls back to the combined label. */
-  readonly activeSavedSearch = computed(() => {
-    const id = this.activeSavedSearchId();
-    if (id === null) return null;
-    return this.savedSearchesStore.savedSearches().find((s) => s.id === id) ?? null;
-  });
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
@@ -320,33 +305,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     const e = this.openEntry();
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
-  readonly hasMore = computed(() => this.entries.nextCursor() !== null);
-  /** A search request is actually in flight -- not merely "some list is
-   *  loading": `entries.loading()` is true for every list load, so gating on
-   *  that alone would show the spinner while an unrelated feed list loads. */
-  readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
   readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
-  /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
-   *  or the for-you list's generation time. Null everywhere else. */
-  readonly listLastRefreshed = computed(() => {
-    const s = this.selection();
-    if (s.kind === 'for-you') return this.recs.generatedAt();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
-  });
-  /** When the selected feed is next due to be fetched — the header's "Next
-   *  refresh" hint. Only a single feed has one; null for every other view. */
-  readonly listNextRefresh = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id)?.nextFetchAt ?? null;
-  });
-  /** The id of the run whose picks head the for-you list — the one the header
-   *  already names, so the list suppresses its boundary divider. Null off the
-   *  for-you view, where there are no run dividers. */
-  readonly listNewestRunId = computed(() =>
-    this.selection().kind === 'for-you' ? this.recs.newestRunId() : null,
-  );
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
@@ -419,156 +378,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     if (!this.sidebarWasVisible) return;
     this.sidebarWasVisible = false;
     this.showSidebarButton()?.nativeElement.focus();
-  });
-
-  /** The tag the list is scoped to, or null for every other selection. The list
-   *  header renders its glyph beside the name; the name itself comes from here
-   *  too, so the heading and the glyph can never describe different tags. */
-  readonly selectedTag = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'tag') return null;
-    return this.subs.tagTree().find((n) => n.tag.id === s.id)?.tag ?? null;
-  });
-
-  /** The feed the list is scoped to, or null for every other selection. The
-   *  header's edit action needs the whole subscription, not the name alone
-   *  that `title` below takes from it. */
-  readonly selectedSubscription = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
-  });
-
-  /** The selected feed, but only where the intro block belongs: the magazine
-   *  layout, and only when the feed has something to introduce itself with.
-   *  Magazine only because the block is a column member -- reads as the card
-   *  above the cards; the list layout is a dense stack where it would be a
-   *  wide slab on top of the rows. A feed with nothing to show renders no
-   *  block at all; the check lives here since a component can't decline to be
-   *  created, so a self-guard inside `FeedIntroComponent` couldn't suppress
-   *  the host element's own padding. */
-  readonly feedIntroSubscription = computed(() => {
-    if (this.layout.mode() !== 'magazine') return null;
-    const sub = this.selectedSubscription();
-    if (sub === null) return null;
-    return sub.description !== null || sub.imageUrl !== null || sub.siteUrl !== null ? sub : null;
-  });
-
-  readonly title = computed(() => {
-    // Read as a dependency, not used directly: TranslocoService.translate() is
-    // one-shot, so the heading keeps the language it was first computed in
-    // unless a language signal pulls this through a re-evaluation (#411).
-    this.language.lang();
-    const s = this.selection();
-    // A switch with no default, like `titleCount` and `queryFromSelection`: a
-    // new selection kind must fail to compile here rather than quietly
-    // rendering as a feed title.
-    switch (s.kind) {
-      case 'favorites':
-        return this.i18n.translate('reader.favorites');
-      case 'kept':
-        return this.i18n.translate('reader.kept');
-      case 'viewed':
-        return this.i18n.translate('reader.viewed');
-      case 'for-you':
-        return this.i18n.translate('reader.forYou');
-      case 'saved-searches':
-        return this.i18n.translate('reader.savedSearches');
-      case 'saved-search':
-        return this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches');
-      case 'all':
-        return this.i18n.translate('reader.allItems');
-      case 'tag':
-        return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-      case 'search':
-        return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
-      case 'subscription':
-        return (
-          this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
-          this.i18n.translate('reader.feedFallback')
-        );
-    }
-  });
-
-  /** The sidebar's unread number under "Only unread", the list's total under
-   *  "All posts" (#709, #1154). Zero means "nothing to say": an empty list, a
-   *  search (which has its own count), or a count that hasn't loaded yet. */
-  readonly titleCount = computed<TitleCount>(() => {
-    const s = this.selection();
-    switch (s.kind) {
-      case 'all':
-        return bySwitch(s, this.subs.totalUnread(), this.subs.totalEntries());
-      case 'tag': {
-        const node = this.subs.tagTree().find((n) => n.tag.id === s.id);
-        return bySwitch(s, node?.unreadCount ?? 0, node?.entryCount ?? 0);
-      }
-      case 'subscription': {
-        const sub = this.subs.subscriptions().find((x) => x.id === s.id);
-        return bySwitch(s, sub?.unreadCount ?? 0, sub?.entryCount ?? 0);
-      }
-      case 'favorites':
-        return items(this.subs.favoritesCount());
-      case 'kept':
-        return items(this.subs.keptCount());
-      case 'viewed':
-        return items(this.subs.viewedCount());
-      case 'for-you':
-        return bySwitch(s, this.recs.forYouCount(), this.recs.forYouTotal());
-      case 'saved-searches':
-        return bySwitch(s, this.savedSearchesUnread(), this.savedSearchesTotal());
-      case 'saved-search': {
-        const saved = this.activeSavedSearch();
-        return bySwitch(s, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
-      }
-      case 'search':
-        return items(0);
-    }
-  });
-
-  /** The search title's small, muted lead ("Results for"). Split from the body
-   *  below so the entry list can render it muted while the term/count stay
-   *  prominent (#581 follow-up) — `title()` concatenates the two for the tab. */
-  readonly searchTitlePrefix = computed(() => {
-    this.language.lang();
-    return this.i18n.translate('reader.searchResultsPrefix');
-  });
-
-  /** The search heading's body — the quoted term and, unlike every other
-   *  title, a result count with its own rules about when it may be shown. */
-  readonly searchTitleBody = computed(() => {
-    this.language.lang();
-    const term = visibleSearchTerm(this.selection().term ?? '');
-    // No count while the search is in flight: `load()` clears nextCursor
-    // synchronously but keeps the PREVIOUS list rendered until the response
-    // lands (#254), so `entries()` still holds the old term's rows and
-    // `hasMore()` reads false. Gated on the same condition the spinner uses.
-    if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
-
-    // The loaded count, not a COUNT(*) total — the list pages 50 at a time, so
-    // it lies unless it is labelled: a trailing '+' when another page is still
-    // out there, the exact number once there isn't.
-    const count = this.entries.entries().length;
-    const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
-
-    return this.i18n.translate(key, { term, count });
-  });
-
-  /** The quoted term alone (#581 follow-up round 2) — what the entry list
-   *  renders as `.results-term`, now that the count moves to its own pill
-   *  instead of trailing as "— {{count}}". Reuses `searchTitleBody`'s loading-state key. */
-  readonly searchTitleTerm = computed(() => {
-    this.language.lang();
-    const term = visibleSearchTerm(this.selection().term ?? '');
-    return this.i18n.translate('reader.searchResults', { term });
-  });
-
-  /** The pill's own text — the number, with a trailing '+' when another page
-   *  is out there, or null for no pill: a search in flight (same #254 trap as
-   *  `searchTitleBody`), or a reload that hasn't landed a first count yet. */
-  readonly searchCountLabel = computed<string | null>(() => {
-    if (this.searching()) return null;
-    const count = this.entries.entries().length;
-    return this.hasMore() ? `${count}+` : `${count}`;
   });
 
   private readonly viewedOnOpen = new Set<number>();
@@ -646,7 +455,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
         this.pageTitle.useText(entry.title);
         return;
       }
-      this.pageTitle.useText(this.title(), this.titleCount().value);
+      this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);
     });
 
     // Nothing to read and nothing skipped: send the user to the picker. Purely
@@ -1060,7 +869,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
    *  identity is its visible term plus its mode — the whole-word and phrase
    *  flags — so all three must match. */
   readonly currentSavedSearch = computed(() => {
-    if (this.selection().kind === 'saved-search') return this.activeSavedSearch();
+    if (this.selection().kind === 'saved-search') return this.heading.activeSavedSearch();
     const current = this.searchedTermAndMode();
     if (current === null) return null;
 
@@ -1075,19 +884,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
         ) ?? null
     );
   });
-
-  /** The badge the sidebar's Saved searches row shows: the sum of the per-search
-   *  counts. A post matching two searches counts twice here and once in the
-   *  list — accepted, so the row and the heading show one number (#769). */
-  readonly savedSearchesUnread = computed(() =>
-    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
-  );
-
-  /** The heading and tab total across every saved search under "All posts" —
-   *  the same double-counting rule as `savedSearchesUnread` (#1154). */
-  readonly savedSearchesTotal = computed(() =>
-    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.memberCount, 0),
-  );
 
   protected readonly savedSearchActionLabel = computed(() =>
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
@@ -1172,7 +968,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       case 'tag':
         return s.id != null ? { tagId: s.id } : null;
       case 'subscription': {
-        const feedId = this.subs.subscriptions().find((x) => x.id === s.id)?.feedId;
+        const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;
       }
       default:
@@ -1253,24 +1049,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }
-}
-
-/** A count of unread posts — what the sidebar badge counts, and what the
- *  heading and tab show under "Only unread" (#1154). */
-function unread(value: number): TitleCount {
-  return { value, counts: 'unread' };
-}
-
-/** A count of posts, read or not — what the sidebar counts for the saved views,
- *  where "unread" is not the question the list answers, and every list's total
- *  under "All posts" (#1154). */
-function items(value: number): TitleCount {
-  return { value, counts: 'items' };
-}
-
-/** The unread count under "Only unread", every post under "All posts". */
-function bySwitch(selection: Selection, unreadCount: number, allCount: number): TitleCount {
-  return selection.unread ? unread(unreadCount) : items(allCount);
 }
 
 /** The entry flag a saved view filters on, or null for a list that shows every
