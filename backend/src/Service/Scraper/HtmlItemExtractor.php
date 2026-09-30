@@ -11,7 +11,6 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
@@ -26,6 +25,7 @@ final readonly class HtmlItemExtractor
 {
     private const int MIN_ITEMS = 3;
     private const int MAX_ITEMS = 50;
+    private const int MAX_TEASER_LENGTH = 1000;
 
     /** @param iterable<ScrapeLayerInterface> $layers */
     public function __construct(
@@ -126,7 +126,7 @@ final readonly class HtmlItemExtractor
         // The teaser cap applies here, at the funnel every layer's output passes, so no layer's teasers escape it.
         $teaser = $item->teaser === null
             ? null
-            : mb_substr($item->teaser, 0, CardFields::MAX_TEASER_LENGTH);
+            : mb_substr($item->teaser, 0, self::MAX_TEASER_LENGTH);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->url, $item->url, $item->title),

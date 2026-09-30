@@ -7,7 +7,6 @@ namespace App\Tests\Service\Scraper;
 use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ClusterLayer;
 use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
 use App\Service\Scraper\ScrapeLayer\SemanticLayer;
@@ -101,7 +100,7 @@ final class HtmlItemExtractorTest extends TestCase
         $parsed = $this->extractor()->extract($html, 'https://long.test/');
 
         self::assertCount(3, $parsed->entries);
-        self::assertSame(CardFields::MAX_TEASER_LENGTH, mb_strlen((string) $parsed->entries[0]->summary));
+        self::assertSame(1000, mb_strlen((string) $parsed->entries[0]->summary));
     }
 
     public function testHostilePagesThrow(): void

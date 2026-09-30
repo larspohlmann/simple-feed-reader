@@ -18,7 +18,6 @@ final readonly class CardFields
     public const int MIN_TITLE_LENGTH = 5;
     public const int MAX_TITLE_LENGTH = 300;
     public const int MIN_TEASER_LENGTH = 40;
-    public const int MAX_TEASER_LENGTH = 1000;
 
     private const array NON_LEAF_CHILDREN = ['P', 'DIV', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'ARTICLE', 'SECTION'];
 
