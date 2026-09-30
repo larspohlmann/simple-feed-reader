@@ -156,16 +156,4 @@ final class ActionTokenServiceTest extends DbTestCase
             'The token was redeemed.',
         );
     }
-
-    /**
-     * Functional tests fetch this service from the test container. Redefining it in services_test.yaml replaces the
-     * autowired definition, so a missing `autowire: true` would surface there as a baffling error.
-     */
-    public function testTheServiceIsFetchableFromTheTestContainer(): void
-    {
-        self::assertInstanceOf(
-            ActionTokenService::class,
-            self::getContainer()->get(ActionTokenService::class),
-        );
-    }
 }

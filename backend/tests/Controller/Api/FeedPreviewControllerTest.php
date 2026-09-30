@@ -52,8 +52,8 @@ final class FeedPreviewControllerTest extends WebTestCase
     }
 
     /**
-     * FeedPreviewService is final and privately wired, so the test swaps its one I/O dependency, FeedFetcherInterface
-     * (public in services_test.yaml for this), and lets the real service and parser run.
+     * FeedPreviewService is final and privately wired, so the test swaps its one I/O dependency,
+     * FeedFetcherInterface, and lets the real service and parser run.
      */
     private function installFetcher(StubFeedFetcher $fetcher): void
     {

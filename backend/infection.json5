@@ -49,16 +49,10 @@
         Throw_: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::options'] },
         // EntryMediaAssembler::visualMedia() reads $seen only through isset(), which true and false both satisfy.
         TrueValue: { ignore: ['App\\Service\\Ingest\\Support\\EntryMediaAssembler::visualMedia'] },
-        // Cast on (int) $entity->getId() as an array key only narrows ?int for
-        // PHPStan; the id is always set, so the key is identical.
+        // The COUNT() cast matters on MySQL, which returns a numeric string; SQLite returns an int, so on the native
+        // mutation run dropping it is equivalent.
         CastInt: {
             ignore: [
-                'App\\Controller\\Api\\SavedSearchController::list',
-                'App\\Controller\\Api\\SubscriptionController::list',
-                'App\\Service\\Search\\SavedSearchTallies::forAll',
-                'App\\Service\\Search\\SavedSearchTallies::forOne',
-                // MySQL returns COUNT() as numeric string, so cast stays;
-                // SQLite returns int.
                 'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
                 'App\\Repository\\SubscriptionRepository::entryCountsForUser',
             ],
