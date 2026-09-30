@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  forwardRef,
   OnDestroy,
   OnInit,
   afterRenderEffect,
@@ -12,6 +13,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { EntryActionHandler } from './entry-actions/entry-action-handler';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -110,9 +112,12 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
   styleUrl: './reader-shell.component.scss',
   // Provided here, not in the root injector, so the poll cannot outlive the
   // reader that it keeps up to date (#708).
-  providers: [SidebarCountsPoll],
+  providers: [
+    SidebarCountsPoll,
+    { provide: EntryActionHandler, useExisting: forwardRef(() => ReaderShellComponent) },
+  ],
 })
-export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
+export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, EntryActionHandler {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
@@ -841,17 +846,17 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
   // reverting the count if the PATCH fails (mirrors the unread-count handling).
   // In the matching saved view the row also leaves — patchInList owns that.
-  onFavorite = (e: EntryDto): void => {
+  favorite = (e: EntryDto): void => {
     const delta = e.isFavorite ? -1 : 1;
     this.subs.bumpFavorites(delta);
     this.patchInList(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
   };
-  onKeep = (e: EntryDto): void => {
+  keep = (e: EntryDto): void => {
     const delta = e.isKept ? -1 : 1;
     this.subs.bumpKept(delta);
     this.patchInList(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
   };
-  onToggleViewed = (e: EntryDto): void => this.setViewed(e, !e.isViewed);
+  toggleRead = (e: EntryDto): void => this.setViewed(e, !e.isViewed);
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
   withOpen(fn: (e: EntryDto) => void): void {
@@ -973,7 +978,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  onOpen(e: EntryDto): void {
+  open(e: EntryDto): void {
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { entry: entryParam(e.id, e.title) },

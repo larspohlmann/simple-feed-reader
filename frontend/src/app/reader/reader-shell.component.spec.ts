@@ -853,7 +853,7 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    f.componentInstance.onToggleViewed(f.componentInstance.openEntry()!);
+    f.componentInstance.toggleRead(f.componentInstance.openEntry()!);
     f.detectChanges();
 
     const patches = ctrl.match((r) => r.url.endsWith('/entries/1/state'));
@@ -1792,7 +1792,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const f = boot();
 
-      f.componentInstance.onOpen(entry);
+      f.componentInstance.open(entry);
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');
@@ -2885,7 +2885,7 @@ describe('ReaderShellComponent', () => {
 
     it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
       expect(f.componentInstance.leavingIds().has(1)).toBe(true);
@@ -2895,7 +2895,7 @@ describe('ReaderShellComponent', () => {
 
     it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
       const f = bootInto('all', { isFavorite: true });
-      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
       expect(f.componentInstance.leavingIds().has(1)).toBe(false);
@@ -2906,7 +2906,7 @@ describe('ReaderShellComponent', () => {
       const subs = TestBed.inject(SubscriptionsStore);
       expect(subs.viewedCount()).toBe(3);
 
-      f.componentInstance.onToggleViewed(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
       expect(f.componentInstance.leavingIds().has(1)).toBe(true);
@@ -2917,7 +2917,7 @@ describe('ReaderShellComponent', () => {
       const f = bootInto('viewed', { isHidden: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
 
-      f.componentInstance.onToggleViewed(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));
@@ -2928,7 +2928,7 @@ describe('ReaderShellComponent', () => {
 
     it('clears the collapsed set when the selection changes', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.onFavorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
       expect(f.componentInstance.leavingIds().has(1)).toBe(true);
 
