@@ -13,14 +13,13 @@ mail_fallback_value() {
 }
 
 mail_fallback_wait_for_api() {
-  local attempt
-  for attempt in $(seq 1 60); do
+  for _ in $(seq 1 60); do
     if curl -fsS -o /dev/null "$1/api/health"; then
       return 0
     fi
     sleep 1
   done
-  echo "ERROR: $1/api/health did not come back after recreating php (${attempt} s)." >&2
+  echo "ERROR: $1/api/health did not come back after recreating php." >&2
   return 1
 }
 
@@ -46,6 +45,9 @@ force_mail_fallback() {
   if [ "$(mail_fallback_value "$repo_root")" != "1" ]; then
     echo "ERROR: php still does not read MAILER_FORCE_FALLBACK=1; refusing to run e2e against a real mail server." >&2
     return 1
+  fi
+  if mail_fallback_compose "$repo_root" ps --status running --services 2>/dev/null | grep -x worker >/dev/null; then
+    echo "WARNING: the worker still sends through the saved mail server; stop it for e2e runs (docker compose stop worker)." >&2
   fi
   echo forced
 }

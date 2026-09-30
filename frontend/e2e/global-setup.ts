@@ -25,7 +25,7 @@ const FIXTURE_COMMANDS: readonly string[][] = [
   ['app:e2e:seed-admin-subscription'],
 ];
 
-const API_BASE_URL = process.env['E2E_API_BASE_URL'] ?? 'https://localhost:8443';
+const API_BASE_URL = process.env['E2E_BASE_URL'] ?? 'https://localhost:8443';
 
 export default function globalSetup(): (() => void) | undefined {
   const repoRoot = resolve(__dirname, '..', '..');
@@ -53,8 +53,9 @@ export default function globalSetup(): (() => void) | undefined {
   return restoreMailTransport;
 }
 
-// #1287: the app mails through the admin's saved mail server; the run switches it to Mailpit and back.
-// Exit 2 (no Docker, no stack) stays best-effort like the rest; exit 1 means the switch failed, so no spec runs.
+// #1287: the app mails through the admin's saved mail server; the run switches it to Mailpit and
+// back. Exit 2 (no Docker, no stack) stays best-effort; exit 1 means the switch failed, so no
+// spec runs.
 function sendMailToMailpit(repoRoot: string): (() => void) | undefined {
   const script = resolve(repoRoot, 'backend', 'bin', 'e2e-mail-fallback.sh');
   let outcome: string;
@@ -67,6 +68,9 @@ function sendMailToMailpit(repoRoot: string): (() => void) | undefined {
     if ((error as { status?: number }).status !== 2) {
       throw error;
     }
+    if (stackAnswers()) {
+      throw new Error('The stack is up but its mail could not be switched to Mailpit.');
+    }
     console.warn('[global-setup] No running stack; mail transport left as it is.');
     return undefined;
   }
@@ -76,6 +80,15 @@ function sendMailToMailpit(repoRoot: string): (() => void) | undefined {
   return () => {
     execFileSync('bash', [script, 'restore', repoRoot, API_BASE_URL], { stdio: 'inherit' });
   };
+}
+
+function stackAnswers(): boolean {
+  try {
+    execFileSync('curl', ['-fsS', '-o', '/dev/null', `${API_BASE_URL}/api/health`]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // #615: the Docker project name is pinned, so a stack started from another

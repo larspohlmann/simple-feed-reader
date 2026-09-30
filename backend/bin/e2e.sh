@@ -80,7 +80,10 @@ cleanup() {
 trap cleanup EXIT
 
 echo "==> Sending the stack's mail to Mailpit for this run ..."
-MAIL_FALLBACK_OUTCOME="$(force_mail_fallback "$REPO_ROOT" "$BASE_URL")"
+MAIL_FALLBACK_OUTCOME="$(force_mail_fallback "$REPO_ROOT" "$BASE_URL")" || {
+  echo "ERROR: could not switch the stack's mail to Mailpit; not running the suite." >&2
+  exit 1
+}
 if [ "$MAIL_FALLBACK_OUTCOME" = "forced" ]; then
   MAIL_FALLBACK_FORCED=1
 fi

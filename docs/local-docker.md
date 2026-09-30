@@ -200,7 +200,11 @@ Both e2e entry points (`composer e2e`, `npm run e2e`) send their mail to Mailpit
 even when an admin has saved a real mail server: they recreate `php` with
 `MAILER_FORCE_FALLBACK=1` for the run and put it back afterwards (#1287). If a
 run is killed before its cleanup, `docker compose up -d php` followed by
-`docker compose restart nginx` puts it back by hand.
+`docker compose restart nginx` puts it back by hand. `php` is recreated from the
+invoking shell's environment, so any other override the stack was booted with
+(such as #1262's tracing gates) is dropped unless set in that shell; a stack
+already at `MAILER_FORCE_FALLBACK=1` is left as it is. The switch does not cover
+the worker, and the two suites should not run at the same time.
 
 **`docker compose down` is safe; `docker compose down -v` DELETES the MySQL
 data volume.** Plain `down` stops and removes the containers but keeps your
