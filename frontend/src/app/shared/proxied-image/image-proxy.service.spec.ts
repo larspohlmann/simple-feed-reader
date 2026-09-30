@@ -85,6 +85,19 @@ describe('ImageProxyService', () => {
     http.expectNone(() => true);
   });
 
+  it('drops the srcset and sizes that would override the swapped src', async () => {
+    const img = image(IMAGE);
+    img.srcset = 'https://www.oxmoxhh.de/cover-768x836.png 768w';
+    img.sizes = '100vw';
+    const recovered = service.recover(img);
+    http.expectOne(() => true).flush(new Blob(['png']));
+    await recovered;
+
+    expect(img.hasAttribute('srcset')).toBe(false);
+    expect(img.hasAttribute('sizes')).toBe(false);
+    expect(img.src).toBe('blob:https://app.test/7f3');
+  });
+
   it('leaves blob, data and same-origin sources alone', async () => {
     expect(await service.recover(image('blob:https://app.test/1'))).toBe(false);
     expect(await service.recover(image('data:image/png;base64,AAAA'))).toBe(false);

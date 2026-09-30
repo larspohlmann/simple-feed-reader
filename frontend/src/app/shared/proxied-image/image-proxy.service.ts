@@ -39,5 +39,7 @@ function swapIn(image: HTMLImageElement, objectUrl: string): void {
   const release = () => URL.revokeObjectURL(objectUrl);
   image.addEventListener('load', release, { once: true });
   image.addEventListener('error', release, { once: true });
+  image.removeAttribute('srcset');
+  image.removeAttribute('sizes');
   image.src = objectUrl;
 }
