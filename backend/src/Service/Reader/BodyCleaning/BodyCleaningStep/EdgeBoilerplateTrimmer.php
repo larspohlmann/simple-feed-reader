@@ -6,8 +6,7 @@ namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\LinkListDetector;
-use App\Service\Reader\Support\BlockText;
+use App\Service\Reader\SubstantialProseDetector;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
@@ -18,12 +17,9 @@ use Dom\Text;
  */
 final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
 {
-    /** Characters of text that mark a block as a real, substantial paragraph. */
-    private const int SUBSTANTIAL_PROSE_LENGTH = 200;
-
     public function __construct(
         private BoilerplateVerdict $verdict,
-        private LinkListDetector $linkLists,
+        private SubstantialProseDetector $prose,
     ) {
     }
 
@@ -145,21 +141,11 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
     {
         $indexes = [];
         foreach ($blocks as $index => $block) {
-            if ($this->isSubstantialProse($block)) {
+            if ($this->prose->isSubstantial($block)) {
                 $indexes[] = $index;
             }
         }
 
         return $indexes;
-    }
-
-    /**
-     * Prose long enough to anchor an edge. A link-dominated block of any length
-     * is a list, not prose, so a teaser carousel cannot shield itself (#779).
-     */
-    private function isSubstantialProse(Element $block): bool
-    {
-        return mb_strlen(BlockText::collapsed($block)) >= self::SUBSTANTIAL_PROSE_LENGTH
-            && !$this->linkLists->isLinkDominated($block);
     }
 }

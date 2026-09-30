@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\PageRepair\OrphanIconGlyphRemover;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
@@ -16,7 +17,7 @@ final class OrphanIconGlyphRemoverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->remover = new OrphanIconGlyphRemover();
+        $this->remover = new OrphanIconGlyphRemover(new EmptiedWrapperRemover());
     }
 
     public function testRemovesAnOrphanIconGlyphAndPrunesTheHoldersItEmpties(): void
@@ -56,6 +57,14 @@ final class OrphanIconGlyphRemoverTest extends TestCase
 
         self::assertStringNotContainsString("\u{E80F}", $html);
         self::assertStringContainsString('BeforeAfter', html_entity_decode($html));
+    }
+
+    public function testPrunesAHolderLeftWithOnlyALineBreak(): void
+    {
+        $html = $this->repaired("<p>Intro paragraph.</p><p><span>\u{E80F}</span><br></p>");
+
+        self::assertStringContainsString('Intro paragraph.', $html);
+        self::assertStringNotContainsString('<br>', $html);
     }
 
     private function repaired(string $bodyHtml): string

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Support\LeadingEngagementBlocks;
-use App\Service\Text\Support\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -22,14 +22,14 @@ final readonly class PlayerChromeCleaner implements BodyCleaningStepInterface
 
     private const string READOUT_PATTERN = '/^' . self::CLOCK . '(?:\s*[\/|]\s*' . self::CLOCK . ')*$/';
 
-    private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
-
     /** A code block whose literal text is an <iframe> embed snippet (src and
      *  all) is a "copy this embed" widget, not a code sample a reader wrote. */
     private const string EMBED_SNIPPET_PATTERN = '/<iframe\b[^>]*\bsrc=/i';
 
-    public function __construct(private NarrationSignals $narration)
-    {
+    public function __construct(
+        private NarrationSignals $narration,
+        private EmptiedWrapperRemover $wrapperRemover,
+    ) {
     }
 
     public function cleanIn(BodyCleaningPass $pass): void
@@ -47,14 +47,14 @@ final readonly class PlayerChromeCleaner implements BodyCleaningStepInterface
         $this->restoreOrDropPlayers($document);
         foreach (LeadingEngagementBlocks::in($body) as $block) {
             if (preg_match(self::READOUT_PATTERN, $block->text) === 1) {
-                $this->removeWithEmptiedWrappers($block->element, $body);
+                $this->wrapperRemover->removeWithEmptiedWrappers($block->element);
             }
         }
         foreach ($this->embedCodeBlocks($document) as $code) {
-            $this->removeWithEmptiedWrappers($this->embedRow($code, $body) ?? $code, $body);
+            $this->wrapperRemover->removeWithEmptiedWrappers($this->embedRow($code, $body) ?? $code);
         }
         foreach ($this->silentNarrationWidgets($document) as $widget) {
-            $this->removeWithEmptiedWrappers($widget, $body);
+            $this->wrapperRemover->removeWithEmptiedWrappers($widget);
         }
     }
 
@@ -129,25 +129,5 @@ final readonly class PlayerChromeCleaner implements BodyCleaningStepInterface
 
         return ($source !== null && $source !== '')
             || $player->getElementsByTagName('source')->length > 0;
-    }
-
-    private function removeWithEmptiedWrappers(Element $readout, Element $body): void
-    {
-        $wrapper = $readout->parentElement;
-        $readout->remove();
-        while ($wrapper !== null && $wrapper !== $body && $this->isEmptied($wrapper)) {
-            $next = $wrapper->parentElement;
-            $wrapper->remove();
-            $wrapper = $next;
-        }
-    }
-
-    private function isEmptied(Element $wrapper): bool
-    {
-        return Whitespace::collapse($wrapper->textContent) === ''
-            && !array_any(
-                self::MEDIA_TAGS,
-                static fn (string $tag): bool => $wrapper->getElementsByTagName($tag)->length > 0,
-            );
     }
 }

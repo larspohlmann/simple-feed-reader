@@ -6,8 +6,7 @@ namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\LinkListDetector;
-use App\Service\Reader\Support\BlockText;
+use App\Service\Reader\SubstantialProseDetector;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -17,11 +16,9 @@ use Dom\HTMLDocument;
  */
 final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
 {
-    private const int SUBSTANTIAL_PROSE_LENGTH = 200;
-
     public function __construct(
         private AuthorProfileLink $authorProfileLink,
-        private LinkListDetector $linkLists,
+        private SubstantialProseDetector $prose,
     ) {
     }
 
@@ -90,18 +87,12 @@ final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
     {
         $count = 0;
         foreach ($element->getElementsByTagName('p') as $paragraph) {
-            if ($this->isSubstantialProse($paragraph)) {
+            if ($this->prose->isSubstantial($paragraph)) {
                 ++$count;
             }
         }
 
         return $count;
-    }
-
-    private function isSubstantialProse(Element $paragraph): bool
-    {
-        return mb_strlen(BlockText::collapsed($paragraph)) >= self::SUBSTANTIAL_PROSE_LENGTH
-            && !$this->linkLists->isLinkDominated($paragraph);
     }
 
     /** @return list<Element> */

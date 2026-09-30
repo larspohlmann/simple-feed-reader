@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
@@ -25,7 +26,7 @@ final class PlayerChromeCleanerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cleaner = new PlayerChromeCleaner(new NarrationSignals());
+        $this->cleaner = new PlayerChromeCleaner(new NarrationSignals(), new EmptiedWrapperRemover());
     }
 
     public function testRemovesTheClockReadoutsBesideAPlayerWithTheirEmptiedRegion(): void

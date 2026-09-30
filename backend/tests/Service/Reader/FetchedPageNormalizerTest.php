@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Service\Html\DesktopViewport;
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\PictureSources;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\PageRepair\CustomElementUnwrapper;
@@ -46,7 +47,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new ShareIntentLinkRemover(),
             new SubstackGatedVideoPlaceholder(),
             new ScreenReaderOnlyElementRemover(),
-            new OrphanIconGlyphRemover(),
+            new OrphanIconGlyphRemover(new EmptiedWrapperRemover()),
             new ImageWrapperClassRemover(new PageFurniture()),
             new HeadingClassRemover(),
             new HorizontalRuleUnwrapper(),

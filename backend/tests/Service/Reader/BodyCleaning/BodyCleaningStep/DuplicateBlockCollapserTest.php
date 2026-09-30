@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -22,6 +23,7 @@ final class DuplicateBlockCollapserTest extends TestCase
     {
         $this->collapser = new DuplicateBlockCollapser(
             new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]),
+            new EmptiedWrapperRemover(),
         );
     }
 
@@ -128,15 +130,15 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(1, substr_count($html, 'clair news.'));
     }
 
-    /** A structural section is never dissolved, even when a collapse leaves it empty. */
-    public function testKeepsAStructuralSectionLeftEmptyByACollapse(): void
+    /** A section a collapse leaves empty goes too, or the reader would draw it as an empty inset card. */
+    public function testDissolvesASectionLeftEmptyByACollapse(): void
     {
         $html = $this->collapsed(
             '<section><p>Same dek line.</p></section><section><p>Same dek line.</p></section>'
         );
 
         self::assertSame(1, substr_count($html, 'Same dek line.'));
-        self::assertSame(2, substr_count($html, '<section'));
+        self::assertSame(1, substr_count($html, '<section'));
     }
 
     private function collapsed(string $bodyHtml): string

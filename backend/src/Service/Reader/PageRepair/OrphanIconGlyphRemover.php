@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
+use App\Service\Reader\EmptiedWrapperRemover;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
@@ -21,10 +22,9 @@ final readonly class OrphanIconGlyphRemover implements PageRepairInterface
      */
     private const string PRIVATE_USE_PATTERN = '/[\x{E000}-\x{F8FF}\x{F0000}-\x{FFFFD}\x{100000}-\x{10FFFD}]/u';
 
-    /** Elements that carry content without text, so an empty one still counts. */
-    private const array EMBEDDED_TAGS = [
-        'img', 'picture', 'source', 'svg', 'video', 'audio', 'iframe', 'br', 'hr', 'input',
-    ];
+    public function __construct(private EmptiedWrapperRemover $wrapperRemover)
+    {
+    }
 
     public function repairIn(HTMLDocument $document): void
     {
@@ -44,7 +44,7 @@ final readonly class OrphanIconGlyphRemover implements PageRepairInterface
             }
         }
         foreach ($emptiedHolders as $holder) {
-            $this->pruneWhileEmpty($holder);
+            $this->wrapperRemover->removeIfEmptied($holder);
         }
     }
 
@@ -59,37 +59,5 @@ final readonly class OrphanIconGlyphRemover implements PageRepairInterface
         }
 
         return $nodes;
-    }
-
-    /**
-     * Drop an element the glyph strip left empty, then walk up dropping each
-     * ancestor the removal in turn empties — a pull-quote's icon <span> and the
-     * <p> that held nothing else both go.
-     */
-    private function pruneWhileEmpty(Element $element): void
-    {
-        while (
-            $element->parentNode !== null
-            && trim((string) $element->textContent) === ''
-            && !$this->holdsEmbeddedContent($element)
-        ) {
-            $parent = $element->parentNode;
-            $parent->removeChild($element);
-            if (!$parent instanceof Element) {
-                return;
-            }
-            $element = $parent;
-        }
-    }
-
-    private function holdsEmbeddedContent(Element $element): bool
-    {
-        foreach ($element->getElementsByTagName('*') as $descendant) {
-            if (in_array($descendant->localName, self::EMBEDDED_TAGS, true)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

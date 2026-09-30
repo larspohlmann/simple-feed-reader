@@ -32,8 +32,8 @@ final readonly class ShareWidgetRemover implements PageRepairInterface
     public function repairIn(HTMLDocument $document): void
     {
         foreach ($this->elementsWithClass($document) as $element) {
-            if ($element->parentNode !== null && $this->isShareWidget($element)) {
-                $element->parentNode->removeChild($element);
+            if ($this->isShareWidget($element)) {
+                $element->remove();
             }
         }
     }

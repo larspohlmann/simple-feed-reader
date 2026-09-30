@@ -19,11 +19,8 @@ final readonly class ScreenReaderOnlyElementRemover implements PageRepairInterfa
     public function repairIn(HTMLDocument $document): void
     {
         foreach ($document->querySelectorAll('[class]') as $element) {
-            if (
-                $element->parentNode !== null
-                && preg_match(self::HIDDEN_CLASS_PATTERN, $element->getAttribute('class') ?? '') === 1
-            ) {
-                $element->parentNode->removeChild($element);
+            if (preg_match(self::HIDDEN_CLASS_PATTERN, $element->getAttribute('class') ?? '') === 1) {
+                $element->remove();
             }
         }
     }
