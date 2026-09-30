@@ -13,9 +13,6 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\Model\FetchedFaviconModel;
-use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -58,13 +55,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     {
         try {
             [$bytes, $contentType] = $this->fetchFollowingRedirects($iconUrl);
-        } catch (
-            FetchException |
-            TransportExceptionInterface |
-            ClientExceptionInterface |
-            RedirectionExceptionInterface |
-            ServerExceptionInterface $exception
-        ) {
+        } catch (FetchException | TransportExceptionInterface $exception) {
             throw $this->asFetchFailure($exception);
         }
 
@@ -100,9 +91,6 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
      * itself, so a redirect to a private address would slip the SSRF boundary.
      *
      * @return array{0: string, 1: string} the body bytes and their content type
-     * @throws ClientExceptionInterface
-     * @throws RedirectionExceptionInterface
-     * @throws ServerExceptionInterface
      * @throws TransportExceptionInterface
      */
     private function fetchFollowingRedirects(string $url): array
@@ -155,9 +143,6 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     /**
      * @return array{0: string, 1: string}
      * @throws TransportExceptionInterface
-     * @throws ClientExceptionInterface
-     * @throws RedirectionExceptionInterface
-     * @throws ServerExceptionInterface
      */
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
