@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\LinkListDetector;
+use App\Service\Reader\SubstantialProseDetector;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ProseParagraphs;
@@ -27,7 +28,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         $this->trimmer = new EdgeBoilerplateTrimmer(
             new BoilerplateVerdict(new LinkListDetector()),
-            new LinkListDetector(),
+            new SubstantialProseDetector(new LinkListDetector()),
         );
     }
 

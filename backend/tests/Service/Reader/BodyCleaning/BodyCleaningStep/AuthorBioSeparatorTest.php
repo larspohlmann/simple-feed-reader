@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\LinkListDetector;
+use App\Service\Reader\SubstantialProseDetector;
 use App\Tests\Support\BodyCleaningPasses;
 use App\Tests\Support\ParsesHtml;
 use App\Tests\Support\ProseParagraphs;
@@ -26,7 +27,10 @@ final class AuthorBioSeparatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->separator = new AuthorBioSeparator(new AuthorProfileLink(), new LinkListDetector());
+        $this->separator = new AuthorBioSeparator(
+            new AuthorProfileLink(),
+            new SubstantialProseDetector(new LinkListDetector()),
+        );
     }
 
     public function testWrapsTheTrailingBioContainerThatFollowsTheArticleBody(): void

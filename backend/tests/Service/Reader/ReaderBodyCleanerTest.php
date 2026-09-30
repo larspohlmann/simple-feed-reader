@@ -39,6 +39,7 @@ use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
 use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Service\Reader\SubstantialProseDetector;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;
 use App\Tests\Support\ProseParagraphs;
@@ -67,14 +68,17 @@ final class ReaderBodyCleanerTest extends TestCase
             new NavigationChromeTrimmer(),
             LeadingEngagementCleaners::cleaner(),
             new LeadingTitleRemover(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict(new LinkListDetector()), new LinkListDetector()),
+            new EdgeBoilerplateTrimmer(
+                new BoilerplateVerdict(new LinkListDetector()),
+                new SubstantialProseDetector(new LinkListDetector()),
+            ),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
             new DuplicateBlockCollapser($embedProviders),
             new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new AuthorBioSeparator(new AuthorProfileLink(), new LinkListDetector()),
+            new AuthorBioSeparator(new AuthorProfileLink(), new SubstantialProseDetector(new LinkListDetector())),
             new FeedDimensionStamper(),
         ];
     }
