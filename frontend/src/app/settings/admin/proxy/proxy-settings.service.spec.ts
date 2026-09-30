@@ -143,6 +143,20 @@ describe('ProxySettingsService', () => {
     expect(service.state()).toEqual(state({ hasPassword: false }));
   });
 
+  it('failureMessage falls back from detail to title', () => {
+    service.failure.set({ type: 'about:blank', title: 'Request failed', status: 502 });
+    expect(service.failureMessage()).toBe('Request failed');
+    service.failure.set({
+      type: 'about:blank',
+      title: 'Request failed',
+      status: 400,
+      detail: 'Bad port',
+    });
+    expect(service.failureMessage()).toBe('Bad port');
+    service.failure.set(null);
+    expect(service.failureMessage()).toBeNull();
+  });
+
   it('removePassword() carries a pending typed edit rather than discarding it', () => {
     loadState({ hasPassword: true, host: 'old.example' });
 

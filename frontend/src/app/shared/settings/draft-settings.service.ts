@@ -21,6 +21,10 @@ export abstract class DraftSettingsService<State, Body extends object, TypedEdit
   readonly state = signal<State | null>(null);
   readonly busy = signal(false);
   readonly failure = signal<Problem | null>(null);
+  readonly failureMessage = computed(() => {
+    const failure = this.failure();
+    return failure ? (failure.detail ?? failure.title) : null;
+  });
   readonly saved = signal(false);
 
   readonly draft = signal<Partial<TypedEdits>>({});

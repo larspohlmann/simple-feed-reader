@@ -80,10 +80,7 @@ export class GrafanaSectionComponent {
     () => this.svc.state()?.pyroscopePushUrlEffective ?? null,
   );
 
-  readonly failureMessage = computed(() => {
-    const failure = this.svc.failure();
-    return failure ? (failure.detail ?? failure.title) : null;
-  });
+  readonly failureMessage = this.svc.failureMessage;
 
   constructor() {
     this.svc.load();

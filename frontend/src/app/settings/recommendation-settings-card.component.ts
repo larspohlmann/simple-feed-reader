@@ -169,8 +169,6 @@ export class RecommendationSettingsCardComponent {
     return messages.length > 0 ? messages.join(' ') : (failure.detail ?? failure.title);
   });
 
-  /** Same fallback as `failureMessage`; the 409 while a run is active
-   *  arrives with a `detail` already written for the account to read. */
   readonly purgeFailureMessage = computed(() => {
     const failure = this.svc.purgeFailure();
     return failure ? (failure.detail ?? failure.title) : null;

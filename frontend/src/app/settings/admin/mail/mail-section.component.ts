@@ -161,10 +161,7 @@ export class MailSectionComponent {
   readonly proxyConfigured = computed(() => this.svc.state()?.proxyConfigured ?? false);
   readonly proxyLabel = computed(() => this.svc.state()?.proxyLabel ?? '');
 
-  readonly failureMessage = computed(() => {
-    const failure = this.svc.failure();
-    return failure ? (failure.detail ?? failure.title) : null;
-  });
+  readonly failureMessage = this.svc.failureMessage;
 
   /** Google rejects a normal account password once 2-Step Verification is on
    *  and asks for an App Password instead; the raw SMTP reply says so only in
