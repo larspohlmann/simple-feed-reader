@@ -1,0 +1,35 @@
+name: Set up the backend
+description: PHP 8.4 with the backend's extensions, and its Composer packages installed.
+
+inputs:
+  coverage:
+    description: The coverage driver setup-php installs (none, pcov or xdebug).
+    default: none
+
+runs:
+  using: composite
+  steps:
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: intl, pdo_sqlite, pdo_mysql, zip
+        coverage: ${{ inputs.coverage }}
+
+    - name: Locate Composer's download cache
+      id: composer-cache
+      shell: bash
+      working-directory: backend
+      run: echo "directory=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Composer's download cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.composer-cache.outputs.directory }}
+        key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+        restore-keys: composer-${{ runner.os }}-
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: backend
+      run: composer install --prefer-dist --no-progress

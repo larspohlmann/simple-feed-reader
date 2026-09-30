@@ -6,27 +6,10 @@ on:
   pull_request:
 
 jobs:
-  backend:
-    name: Backend (${{ matrix.database }})
+  # Nothing here reads a database, so it runs once instead of in each leg below.
+  backend-static:
+    name: Backend (static)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        database: [sqlite, mysql]
-
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: feedreader_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -proot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     defaults:
       run:
@@ -35,15 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: intl, pdo_sqlite, pdo_mysql, zip
-          coverage: none
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
+      - uses: ./.github/actions/setup-backend
 
       - name: PHPCS (PSR-12)
         run: composer cs
@@ -51,12 +26,21 @@ jobs:
       - name: Warm cache for PHPStan
         run: php bin/console cache:warmup
 
+      # PHPStan drops whatever a change invalidated, so any earlier run's cache
+      # is a safe start. It must stay before tramp:update, which rewrites vendor.
+      - name: Restore PHPStan's result cache
+        uses: actions/cache@v6
+        with:
+          path: /tmp/phpstan
+          key: phpstan-${{ github.sha }}
+          restore-keys: phpstan-
+
       - name: PHPStan
         run: composer stan
 
       # PHPMD codesize was a local-only discipline gate and silently broke once
       # (pdepend could not parse PHP 8.4 syntax, #183) — so the sweep now runs
-      # here too. It is a static check, unaffected by the database matrix leg.
+      # here too.
       - name: PHPMD (codesize)
         run: composer md
 
@@ -75,17 +59,45 @@ jobs:
       # the chains grew, which is the argument for a gate rather than a habit.
       # Thresholds live in phptramp.dist.json; --format github annotates the
       # offending hop inline, the way the mutation leg annotates escaped
-      # mutants. Static, so the database matrix leg does not affect it.
+      # mutants.
       - name: phptramp (tramp data)
         run: |
           composer show phptramp/phptramp | grep -E '^(name|source|versions)'
           composer tramp -- --format github
 
+  backend:
+    name: Backend (${{ matrix.database }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mysql]
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      # Awaited only before its first use, so its first boot overlaps checkout and install.
+      - name: Start MySQL
+        if: matrix.database == 'mysql'
+        working-directory: ${{ github.workspace }}
+        run: >-
+          docker run --detach --name mysql
+          --env MYSQL_ROOT_PASSWORD=root
+          --env MYSQL_DATABASE=feedreader_test
+          --publish 3306:3306
+          mysql:8.4
+
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-backend
+
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the
       # migration check below cannot disturb the suite: it also runs in dev,
-      # whereas doctrine.yaml's when@test dbname_suffix puts PHPUnit on
-      # feedreader_test_test (MySQL) and var/data_test.db (SQLite).
+      # whereas when@test gives each ParaTest worker feedreader_test_test<N> (MySQL,
+      # dbname_suffix) or var/data_test<N>.db (SQLite, WorkerDatabaseUrl).
       - name: Select database DSN
         run: |
           if [ "${{ matrix.database }}" = "mysql" ]; then
@@ -94,6 +106,21 @@ jobs:
           else
             echo 'MIGRATION_DATABASE_URL=sqlite:///%kernel.project_dir%/var/migration-check.db' >> "$GITHUB_ENV"
           fi
+
+      # The image first boots a temporary server with networking off, so only a
+      # TCP connection proves the real one is up; `mysqladmin ping` answers early.
+      - name: Wait for MySQL
+        if: matrix.database == 'mysql'
+        run: |
+          for _ in $(seq 1 90); do
+            if docker exec mysql mysql --host=127.0.0.1 --user=root --password=root --execute='SELECT 1' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mysql
+          echo 'MySQL accepted no TCP connection within 90s.' >&2
+          exit 1
 
       # Proves what the PHPUnit step structurally cannot. tests/bootstrap.php
       # builds its schema with doctrine:schema:create, straight from ORM
@@ -128,8 +155,8 @@ jobs:
           # that ships green, so it fails the build here.
           php bin/console doctrine:schema:validate
 
-      - name: PHPUnit
-        run: php bin/phpunit
+      - name: PHPUnit (ParaTest)
+        run: composer test:parallel
 
   # Line coverage says a line ran; it does not say a test would notice if the
   # line were wrong. Infection changes the line and reports whether anything
@@ -158,18 +185,12 @@ jobs:
           # default clone is not enough — the base ref has to be present.
           fetch-depth: 0
 
-      - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+      # The one job that needs a coverage driver: Infection maps each mutant
+      # to the tests that reach it. PCOV over Xdebug because it is several
+      # times faster and this job runs the suite many times over.
+      - uses: ./.github/actions/setup-backend
         with:
-          php-version: '8.4'
-          extensions: intl, pdo_sqlite, zip
-          # The one job that needs a coverage driver: Infection maps each mutant
-          # to the tests that reach it. PCOV over Xdebug because it is several
-          # times faster and this job runs the suite many times over.
           coverage: pcov
-
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-progress
 
       - name: Fetch the base branch
         run: git fetch --no-tags origin '${{ github.event.pull_request.base.ref }}'

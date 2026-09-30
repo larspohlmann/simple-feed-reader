@@ -58,6 +58,7 @@
     "require-dev": {
         "ext-openssl": "*",
         "ext-zip": "*",
+        "brianium/paratest": "^7.20",
         "dama/doctrine-test-bundle": "^8.6",
         "infection/infection": "^0.34.1",
         "phpmd/phpmd": "^2.15",
@@ -134,6 +135,10 @@
         "test": [
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
             "@php bin/phpunit"
+        ],
+        "test:parallel": [
+            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
+            "paratest"
         ],
         "infection": [
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",

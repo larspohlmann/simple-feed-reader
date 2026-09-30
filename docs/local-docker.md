@@ -160,7 +160,14 @@ enter the repository, and each developer's cert is signed by their own local
 CA. The first `up` also creates both databases: `feedreader` for dev (via the
 image's `MYSQL_DATABASE` variable) and `feedreader_test` for the suite (via
 `docker/mysql/init.sql`, which also grants the `feedreader` user access to
-it).
+it and to the per-worker `feedreader_test<N>` databases that `composer test:parallel` creates).
+
+A volume created before that pattern grant needs it applied by hand:
+
+```bash
+docker compose exec mysql mysql -uroot -proot \
+  -e "GRANT ALL PRIVILEGES ON \`feedreader\\_test%\`.* TO 'feedreader'@'%'; FLUSH PRIVILEGES"
+```
 
 ---
 
