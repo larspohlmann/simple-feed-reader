@@ -64,25 +64,23 @@ jobs:
       matrix:
         database: [sqlite, mysql]
 
-    services:
-      mysql:
-        image: mysql:8.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: feedreader_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping -proot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     defaults:
       run:
         working-directory: backend
 
     steps:
+      # Awaited only before its first use, so the pull and first boot overlap
+      # checkout and install.
+      - name: Start MySQL
+        if: matrix.database == 'mysql'
+        working-directory: ${{ github.workspace }}
+        run: >-
+          docker run --detach --name mysql
+          --env MYSQL_ROOT_PASSWORD=root
+          --env MYSQL_DATABASE=feedreader_test
+          --publish 3306:3306
+          mysql:8.4
+
       - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-backend
@@ -100,6 +98,21 @@ jobs:
           else
             echo 'MIGRATION_DATABASE_URL=sqlite:///%kernel.project_dir%/var/migration-check.db' >> "$GITHUB_ENV"
           fi
+
+      # The image first boots a temporary server with networking off, so only a
+      # TCP connection proves the real one is up; `mysqladmin ping` answers early.
+      - name: Wait for MySQL
+        if: matrix.database == 'mysql'
+        run: |
+          for _ in $(seq 1 90); do
+            if docker exec mysql mysql --host=127.0.0.1 --user=root --password=root --execute='SELECT 1' >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs mysql
+          echo 'MySQL accepted no TCP connection within 90s.' >&2
+          exit 1
 
       # Proves what the PHPUnit step structurally cannot. tests/bootstrap.php
       # builds its schema with doctrine:schema:create, straight from ORM
