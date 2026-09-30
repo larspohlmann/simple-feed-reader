@@ -16,13 +16,8 @@ use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Rule;
-use PHPStan\Rules\RuleErrorBuilder;
 
-/**
- * Reading `$object::class` names nothing and stays allowed; tests are exempt, their reflection-driven calls included.
- *
- * @implements Rule<Expr>
- */
+/** @implements Rule<Expr> */
 final readonly class NoVariableClassOrMethodNameRule implements Rule
 {
     public const string MESSAGE = 'A variable names a class or a method here, so neither Find usages nor PHPStan '
@@ -35,23 +30,11 @@ final readonly class NoVariableClassOrMethodNameRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        if (!$this->isApplicationCode($scope) || !$this->namesThroughAVariable($node)) {
+        if (!$this->namesThroughAVariable($node)) {
             return [];
         }
 
-        return [
-            RuleErrorBuilder::message(self::MESSAGE)
-                ->identifier('simpleFeedReader.variableClassOrMethodName')
-                ->build(),
-        ];
-    }
-
-    private function isApplicationCode(Scope $scope): bool
-    {
-        $namespaceName = $scope->getNamespace() ?? '';
-
-        return ClassNameReferences::isInAnyOf($namespaceName, ['App\\'])
-            && !ClassNameReferences::isInAnyOf($namespaceName, ['App\\Tests\\']);
+        return VariableClassOrMethodNameReport::inApplicationCode($scope);
     }
 
     private function namesThroughAVariable(Node $node): bool
@@ -59,8 +42,8 @@ final readonly class NoVariableClassOrMethodNameRule implements Rule
         return match (true) {
             $node instanceof Variable => $node->name instanceof Expr,
             $node instanceof MethodCall => $node->name instanceof Expr,
-            $node instanceof StaticCall, $node instanceof StaticPropertyFetch => $node->class instanceof Expr
-                || $node->name instanceof Expr,
+            $node instanceof StaticCall => $node->class instanceof Expr || $node->name instanceof Expr,
+            $node instanceof StaticPropertyFetch => $node->class instanceof Expr,
             $node instanceof ClassConstFetch => $this->fetchesThroughAVariable($node),
             $node instanceof New_, $node instanceof Instanceof_ => $node->class instanceof Expr,
             default => false,

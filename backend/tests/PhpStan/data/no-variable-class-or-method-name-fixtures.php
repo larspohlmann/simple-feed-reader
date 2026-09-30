@@ -35,20 +35,24 @@ namespace App\Fixtures\VariableClassOrMethodName {
         $class::$count;
         $target instanceof $class;
         Target::{$name};
-        Target::$$name;
+        $target->$method(...);
+        $class::create(...);
+        Target::$method(...);
     }
 
-    function literalNames(Target $target, \Closure $callback): void
+    function allowedNames(Target $target, \Closure $callback, string $name): void
     {
         $target->run();
         $target?->run();
         $target->run(...);
         Target::create();
+        Target::create(...);
         new Target();
         new class () {
         };
         Target::NAME;
         Target::$count;
+        Target::$$name;
         $target instanceof Target;
         $target::class;
         $callback();

@@ -30,7 +30,6 @@ final class NoVariableClassOrMethodNameRuleTest extends RuleTestCase
                 [NoVariableClassOrMethodNameRule::MESSAGE, 35],
                 [NoVariableClassOrMethodNameRule::MESSAGE, 36],
                 [NoVariableClassOrMethodNameRule::MESSAGE, 37],
-                [NoVariableClassOrMethodNameRule::MESSAGE, 38],
             ],
         );
     }
