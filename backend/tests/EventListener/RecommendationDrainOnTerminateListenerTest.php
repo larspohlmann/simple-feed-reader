@@ -30,8 +30,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Drives the real kernel with the container's RecordingProcessLauncher (services_test.yaml): handle() never launches,
- * terminate() may, and a console exit never does.
+ * Drives the real kernel with a RecordingProcessLauncher in the launcher's place: handle() never launches, terminate()
+ * may, and a console exit never does.
  */
 final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
 {

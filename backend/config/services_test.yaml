@@ -1,188 +1,25 @@
 services:
-    # Test-only: `public: true` keeps a service the compiler would inline or remove, so a test can fetch or replace
-    # it through self::getContainer(). Naming a class here replaces its services.yaml definition, and this file has
-    # no `_defaults`, so a class with constructor arguments needs `autowire: true`.
-    App\Service\Mail\MailFailureRecorder\MailDeliveryHealth:
-        autowire: true
-        public: true
-
-    App\Service\Mail\Settings\MailConnectionTester:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Run\WorkerPresence:
-        autowire: true
-        public: true
-
-    App\Service\Reader\Media\EmbedProviders:
-        autowire: true
-        public: true
-
-    App\Service\Reader\Media\PageMediaScanner:
-        autowire: true
-        public: true
-
-    App\Service\Ai\ModelCatalog\ModelCatalogInterface:
-        alias: App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog
-        public: true
-
-    App\Service\Ai\AiProviderConfigurator:
-        autowire: true
-        public: true
-
-    App\Service\Ai\AiConfigurationForUser:
-        autowire: true
-        public: true
-
-    App\Service\Ai\Crypto\ApiKeyCipher:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Settings\RecommendationSettingsResolver:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Prompt\RecommendationHistoryLoader:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Prompt\RecommendationCandidateLoader:
-        autowire: true
-        public: true
-
-    App\Service\Fetch\FeedFetcher\FeedFetcherInterface:
-        alias: App\Service\Fetch\FeedFetcher\HttpFeedFetcher
-        public: true
-
-    # HttpFeedFetcher sends through this too, so replacing it stubs discovery, preview and favicon fetches at once.
-    App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface:
-        alias: App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher
-        public: true
-
-    App\Service\Reader\ArticleExtractor\ArticleExtractorInterface:
-        alias: App\Service\Reader\ArticleExtractor\ArticleExtractor
-        public: true
-
-    # services.yaml's target: #[AsDecorator] turns AccountMailer's id into MailGatedAccountMailer.
-    App\Service\Mail\AccountMailer\AccountMailerInterface:
-        alias: App\Service\Mail\AccountMailer\AccountMailer
-        public: true
-
-    # Tests acquire the refresh lock up front to assert the "busy" path.
-    Symfony\Component\Lock\LockFactory:
-        alias: lock.default.factory
-        public: true
+    # Test doubles and test-only ids. The test container already reaches every private service the app depends on, so
+    # an entry is `public: true` only when nothing in the app does. Naming a class here replaces its services.yaml
+    # definition; this file has no `_defaults`, so a class with constructor arguments needs `autowire: true`.
 
     # login_throttling's FILESYSTEM pool outlives the kernel reboot and the test run; tests clear it between cases,
     # or the per-IP limiter fills up and every login answers 429.
     test.cache.rate_limiter:
         alias: cache.rate_limiter
-        public: true
-
-    Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface:
-        alias: security.user_password_hasher
-        public: true
-
-    App\Service\Auth\ActionTokenService:
-        autowire: true
-        public: true
-
-    App\Service\Auth\AltchaService:
-        autowire: true
-        public: true
-
-    App\Service\Auth\RegistrationService:
-        autowire: true
-        public: true
-
-    App\Security\PasswordWorkEqualizer:
-        autowire: true
-        public: true
-
-    App\Service\Mail\DeferredMailer:
-        autowire: true
-        public: true
-
-    test.cache.altcha_replay:
-        alias: altcha.replay.cache
-        public: true
 
     # tests/ is outside services.yaml's App\ resource, so the tag is explicit. At the default priority the recorder
     # wraps dama's StaticDriver (priority 100) from outside: it records the app's statements, not dama's savepoints.
     App\Tests\Support\QueryRecorder:
-        public: true
         tags:
             - { name: doctrine.middleware }
 
-    test.cache.oauth_state:
-        alias: oauth.state.cache
-        public: true
-
-    App\Service\OAuth\OAuthStateStore:
-        autowire: true
-        public: true
-
-    test.cache.oauth_login_code:
-        alias: oauth.login_code.cache
-        public: true
-
-    App\Service\OAuth\LoginCodeStore:
-        autowire: true
-        public: true
-
-    App\Service\OAuth\OAuthAccountLinker:
-        autowire: true
-        public: true
-
-    App\Service\Scraper\HtmlItemExtractor:
-        autowire: true
-        public: true
-
-    App\Service\Refresh\FeedBodyParser:
-        autowire: true
-        public: true
-
-    App\Service\OAuth\OAuthProviderRegistry:
-        autowire: true
-        public: true
-
-    App\Service\Catalog\CatalogDocument:
-        autowire: true
-        public: true
-
-    App\Service\Catalog\CatalogImporter:
-        autowire: true
-        public: true
-
-    App\Service\Catalog\CatalogSubscriber:
-        autowire: true
-        public: true
-
-    App\Service\Auth\BootstrapAdminProvisioner:
-        autowire: true
-        public: true
-
-    App\Service\Mail\MailCapability:
-        autowire: true
-        public: true
-
-    App\Service\Settings\InstanceSettings:
-        autowire: true
-        autoconfigure: true
-        public: true
-
     App\Tests\Support\StubChatClient:
         autowire: true
-        public: true
 
     # Every test talks to StubChatClient, never to a real provider.
     App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
-        public: true
-
-    App\Service\Recommendation\Run\RecommendationRunStarter:
-        autowire: true
-        public: true
 
     # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
@@ -190,106 +27,15 @@ services:
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface:
         alias: App\Tests\Support\NullShellCommandRunner
 
-    App\Service\Recommendation\Run\RecommendationRunAdvancer:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Run\TickPhases:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Run\RecommendationPollDriver:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Run\DueRecommendationRunFinder:
-        autowire: true
-        public: true
-
-    App\Service\Recommendation\Run\ForYouSweep:
-        autowire: true
-        public: true
-
-    App\Service\Worker\WorkerSchedule:
-        autowire: true
-        public: true
-
-    App\Service\Worker\Handler\AdvanceRecommendationRunsHandler:
-        autowire: true
-        public: true
-
-    App\Service\Worker\Handler\RefreshDueFeedsHandler:
-        autowire: true
-        public: true
-
-    App\Service\Worker\Handler\PurgeFailedMessagesHandler:
-        autowire: true
-        public: true
-
-    App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface:
-        alias: App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher
-        public: true
-
-    App\Service\Recommendation\Run\TickLockKeepalive:
-        autowire: true
-        autoconfigure: true
-        public: true
-
-    App\Service\Recommendation\Run\SweepStreamHeartbeat:
-        autowire: true
-        autoconfigure: true
-        public: true
-
+    # Public: nothing here takes it, as StubChatClient replaces its one consumer, OpenAiCompatibleChatClient.
     App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface:
         alias: App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat
         public: true
 
-    App\Repository\EntryListRepository:
-        autowire: true
-        public: true
-
-    App\Service\Backup\AccountBackupExporter:
-        autowire: true
-        public: true
-
-    App\Service\Account\AccountReset:
-        autowire: true
-        public: true
-
-    App\Service\Backup\BackupFitCheck:
-        autowire: true
-        public: true
-
-    App\Service\Backup\RestorePreviewer:
-        autowire: true
-        public: true
-
-    App\Repository\EntryBatchInserter:
-        autowire: true
-        public: true
-
-    App\Service\Backup\AccountRestorer:
-        autowire: true
-        public: true
-
-    App\Service\Backup\EntryPartRestorer:
-        autowire: true
-        public: true
-
-    App\Service\Passkey\PasskeyChallengeStore:
-        autowire: true
-        public: true
-
     test.cache.passkey_challenge:
         alias: passkey.challenge.cache
-        public: true
 
     # A FILESYSTEM pool that outlives the test run while ids repeat after tests/bootstrap.php rebuilds the database;
     # RefreshControllerTest clears it, or a stale run could be resumed by a same-id user.
     test.cache.refresh_run:
         alias: refresh.run.cache
-        public: true
-
-    App\Repository\SavedSearchMembershipLoader:
-        autowire: true
-        public: true
