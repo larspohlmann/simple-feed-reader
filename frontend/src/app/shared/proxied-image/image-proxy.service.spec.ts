@@ -51,7 +51,7 @@ describe('ImageProxyService', () => {
     expect(request.request.responseType).toBe('blob');
     request.flush(new Blob(['png']));
 
-    expect(await recovered).toBe(true);
+    expect(await recovered).toBe('recovered');
     expect(img.src).toBe('blob:https://app.test/7f3');
   });
 
@@ -71,7 +71,7 @@ describe('ImageProxyService', () => {
     const recovered = service.recover(img);
     http.expectOne(() => true).flush(new Blob(['{}']), { status: 404, statusText: 'Not Found' });
 
-    expect(await recovered).toBe(false);
+    expect(await recovered).toBe('failed');
     expect(img.src).toBe(IMAGE);
   });
 
@@ -81,7 +81,7 @@ describe('ImageProxyService', () => {
     http.expectOne(() => true).flush(new Blob(['{}']), { status: 404, statusText: 'Not Found' });
     await first;
 
-    expect(await service.recover(img)).toBe(false);
+    expect(await service.recover(img)).toBe('failed');
     http.expectNone(() => true);
   });
 
@@ -99,9 +99,57 @@ describe('ImageProxyService', () => {
   });
 
   it('leaves blob, data and same-origin sources alone', async () => {
-    expect(await service.recover(image('blob:https://app.test/1'))).toBe(false);
-    expect(await service.recover(image('data:image/png;base64,AAAA'))).toBe(false);
-    expect(await service.recover(image(`${location.origin}/assets/logo.png`))).toBe(false);
+    expect(await service.recover(image('blob:https://app.test/1'))).toBe('failed');
+    expect(await service.recover(image('data:image/png;base64,AAAA'))).toBe('failed');
+    expect(await service.recover(image(`${location.origin}/assets/logo.png`))).toBe('failed');
     http.expectNone(() => true);
+  });
+
+  it('does not swap in a proxied result once the element shows another image', async () => {
+    const img = image(IMAGE);
+    const outcome = service.recover(img);
+    img.src = 'https://www.oxmoxhh.de/other.png';
+    http.expectOne(() => true).flush(new Blob(['png']));
+
+    expect(await outcome).toBe('superseded');
+    expect(img.src).toBe('https://www.oxmoxhh.de/other.png');
+  });
+
+  it('reports a failure as superseded once the element shows another image', async () => {
+    const img = image(IMAGE);
+    const outcome = service.recover(img);
+    img.src = 'https://www.oxmoxhh.de/other.png';
+    http.expectOne(() => true).flush(new Blob(['{}']), { status: 404, statusText: 'Not Found' });
+
+    expect(await outcome).toBe('superseded');
+  });
+
+  it('resolves to failed without a request for an unparseable source', async () => {
+    const img = document.createElement('img');
+    img.setAttribute('src', 'https://[bad');
+
+    expect(await service.recover(img)).toBe('failed');
+    http.expectNone(() => true);
+  });
+
+  it('keeps at most four proxy requests in flight and starts the next as one ends', async () => {
+    const outcomes = Array.from({ length: 6 }, (_, index) =>
+      service.recover(image(`https://www.oxmoxhh.de/${index}.png`)),
+    );
+    const open = () => http.match(() => true);
+
+    const first = open();
+    expect(first).toHaveLength(4);
+    first[0].flush(new Blob(['png']));
+    await outcomes[0];
+
+    const next = open();
+    expect(next).toHaveLength(1);
+    [...first.slice(1), ...next].forEach((request) => request.flush(new Blob(['png'])));
+    await new Promise((resolve) => setTimeout(resolve));
+    const last = open();
+    expect(last).toHaveLength(1);
+    last[0].flush(new Blob(['png']));
+    await Promise.all(outcomes);
   });
 });

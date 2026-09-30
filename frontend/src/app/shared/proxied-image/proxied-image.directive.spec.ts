@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ImageProxyService } from './image-proxy.service';
+import { ImageProxyService, ProxyOutcome } from './image-proxy.service';
 import { ProxiedImageDirective } from './proxied-image.directive';
 
 @Component({
@@ -13,7 +13,7 @@ class HostComponent {
 }
 
 describe('ProxiedImageDirective', () => {
-  let recover: jest.Mock<Promise<boolean>, [HTMLImageElement]>;
+  let recover: jest.Mock<Promise<ProxyOutcome>, [HTMLImageElement]>;
 
   function mount() {
     const fixture = TestBed.createComponent(HostComponent);
@@ -30,7 +30,7 @@ describe('ProxiedImageDirective', () => {
   });
 
   it('hands a failed image to the proxy and stays quiet when the proxy recovers it', async () => {
-    recover.mockResolvedValue(true);
+    recover.mockResolvedValue('recovered');
     const fixture = mount();
     const img = fixture.nativeElement.querySelector('img') as HTMLImageElement;
 
@@ -42,12 +42,23 @@ describe('ProxiedImageDirective', () => {
   });
 
   it('reports the failure once the proxy cannot help', async () => {
-    recover.mockResolvedValue(false);
+    recover.mockResolvedValue('failed');
     const fixture = mount();
 
     fixture.nativeElement.querySelector('img').dispatchEvent(new Event('error'));
     await fixture.whenStable();
 
     expect(fixture.componentInstance.failed()).toBe(true);
+  });
+
+  it('stays quiet when the result was superseded by a newer image', async () => {
+    recover.mockResolvedValue('superseded');
+    const fixture = mount();
+
+    fixture.nativeElement.querySelector('img').dispatchEvent(new Event('error'));
+    await fixture.whenStable();
+
+    expect(recover).toHaveBeenCalled();
+    expect(fixture.componentInstance.failed()).toBe(false);
   });
 });

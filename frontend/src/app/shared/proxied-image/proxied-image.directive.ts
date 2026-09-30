@@ -17,8 +17,8 @@ export class ProxiedImageDirective {
     void this.injector
       .get(ImageProxyService)
       .recover(this.image)
-      .then((recovered) => {
-        if (!recovered) this.imageFailed.emit();
+      .then((outcome) => {
+        if (outcome === 'failed') this.imageFailed.emit();
       });
   }
 }

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
+import { ImageProxyService, ProxyOutcome } from '../../shared/proxied-image/image-proxy.service';
 import { FeedIntroComponent } from './feed-intro.component';
 
 describe('FeedIntroComponent', () => {
   let fixture: ComponentFixture<FeedIntroComponent>;
-  let recovered: boolean;
+  let outcome: ProxyOutcome;
 
   beforeEach(async () => {
-    recovered = false;
+    outcome = 'failed';
     await TestBed.configureTestingModule({
       imports: [FeedIntroComponent, provideTranslocoTesting()],
       providers: [
-        { provide: ImageProxyService, useValue: { recover: () => Promise.resolve(recovered) } },
+        { provide: ImageProxyService, useValue: { recover: () => Promise.resolve(outcome) } },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedIntroComponent);
@@ -149,7 +149,7 @@ describe('FeedIntroComponent', () => {
   });
 
   it('keeps the feed image while the proxy recovers it', async () => {
-    recovered = true;
+    outcome = 'recovered';
     const host = render({ imageUrl: 'https://example.com/hotlinked.png' });
     host.querySelector('img')?.dispatchEvent(new Event('error'));
     await fixture.whenStable();

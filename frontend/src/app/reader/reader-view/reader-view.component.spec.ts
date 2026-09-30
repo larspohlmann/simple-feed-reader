@@ -14,7 +14,7 @@ import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 import { CommentsService, CommentsState } from '../comments.service';
-import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
+import { ImageProxyService, ProxyOutcome } from '../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
@@ -166,10 +166,10 @@ function stubComments(state: Signal<CommentsState>): void {
 }
 
 describe('ReaderViewComponent', () => {
-  let imageProxy: { recover: jest.Mock<Promise<boolean>, [HTMLImageElement]> };
+  let imageProxy: { recover: jest.Mock<Promise<ProxyOutcome>, [HTMLImageElement]> };
 
   beforeEach(() => {
-    imageProxy = { recover: jest.fn().mockResolvedValue(false) };
+    imageProxy = { recover: jest.fn().mockResolvedValue('failed') };
     localStorage.clear();
     MockResizeObserver.instances = [];
     (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
