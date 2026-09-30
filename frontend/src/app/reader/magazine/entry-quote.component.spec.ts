@@ -43,40 +43,42 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
+function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryQuoteComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryQuoteComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryQuoteComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntryQuoteComponent', () => {
   it('leads with the first sentence and never renders an image', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.pull')!.textContent).toContain('First sentence here.');
-    expect(el.querySelector('.pull')!.textContent).not.toContain('Second sentence');
-    expect(el.querySelector('img.img')).toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.pull')!.textContent).toContain('First sentence here.');
+    expect(element.querySelector('.pull')!.textContent).not.toContain('Second sentence');
+    expect(element.querySelector('img.img')).toBeNull();
   });
 
   it('falls back to the whole snippet when there is no sentence break', () => {
-    const el = mount(entry({ excerpt: 'One long clause with no terminator' }))
+    const element = mount(entry({ excerpt: 'One long clause with no terminator' }))
       .nativeElement as HTMLElement;
-    expect(el.querySelector('.pull')!.textContent).toContain('One long clause with no terminator');
+    expect(element.querySelector('.pull')!.textContent).toContain(
+      'One long clause with no terminator',
+    );
   });
 
   it('carries the three actions on its meta row', () => {
-    const f = mount(entry());
-    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
-      3,
-    );
+    const fixture = mount(entry());
+    expect(
+      fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
+    ).toBe(3);
 
     const read = jest.fn();
     entryActions.toggleRead.mockImplementation(read);
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[2] as HTMLElement).click();
     expect(read).toHaveBeenCalled();
   });

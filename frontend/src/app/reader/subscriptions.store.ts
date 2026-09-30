@@ -28,64 +28,83 @@ export interface TagNode {
  * Falls back to the tags embedded on subscriptions, name-ordered, before the
  * tag list has loaded, so tagged feeds never briefly vanish.
  */
-export function buildTagTree(subs: SubscriptionDto[], orderedTags: TagDto[] = []): TagNode[] {
-  const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subs);
+export function buildTagTree(
+  subscriptions: SubscriptionDto[],
+  orderedTags: TagDto[] = [],
+): TagNode[] {
+  const tags = orderedTags.length > 0 ? orderedTags : embeddedTagsByName(subscriptions);
 
   // One pass over subscriptions buckets each feed under every tag it carries,
   // capturing the per-tag position up front so the sort reads it once.
   const byTagId = new Map<number, { sub: SubscriptionDto; pos: number }[]>();
-  for (const sub of subs) {
-    for (const t of sub.tags) {
-      let bucket = byTagId.get(t.id);
+  for (const sub of subscriptions) {
+    for (const tag of sub.tags) {
+      let bucket = byTagId.get(tag.id);
       if (!bucket) {
         bucket = [];
-        byTagId.set(t.id, bucket);
+        byTagId.set(tag.id, bucket);
       }
-      bucket.push({ sub, pos: t.position });
+      bucket.push({ sub, pos: tag.position });
     }
   }
 
   return tags.map((tag) => {
     const feeds = (byTagId.get(tag.id) ?? [])
-      .sort((a, b) => a.pos - b.pos || a.sub.title.localeCompare(b.sub.title))
-      .map((e) => e.sub);
+      .sort((left, right) => left.pos - right.pos || left.sub.title.localeCompare(right.sub.title))
+      .map((tagged) => tagged.sub);
     return {
       tag,
       subscriptions: feeds,
-      unreadCount: feeds.reduce((n, s) => n + s.unreadCount, 0),
-      entryCount: feeds.reduce((n, s) => n + s.entryCount, 0),
+      unreadCount: feeds.reduce((total, subscription) => total + subscription.unreadCount, 0),
+      entryCount: feeds.reduce((total, subscription) => total + subscription.entryCount, 0),
     };
   });
 }
 
 /** Fallback tag set derived from subscriptions (only non-empty tags), by name. */
-function embeddedTagsByName(subs: SubscriptionDto[]): TagDto[] {
+function embeddedTagsByName(subscriptions: SubscriptionDto[]): TagDto[] {
   const byId = new Map<number, TagDto>();
-  for (const s of subs) {
-    for (const t of s.tags) {
-      if (!byId.has(t.id)) {
-        byId.set(t.id, { id: t.id, name: t.name, color: t.color, icon: t.icon, position: 0 });
+  for (const subscription of subscriptions) {
+    for (const tag of subscription.tags) {
+      if (!byId.has(tag.id)) {
+        byId.set(tag.id, {
+          id: tag.id,
+          name: tag.name,
+          color: tag.color,
+          icon: tag.icon,
+          position: 0,
+        });
       }
     }
   }
-  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...byId.values()].sort((left, right) => left.name.localeCompare(right.name));
 }
 
-export function untaggedSubs(subs: SubscriptionDto[]): SubscriptionDto[] {
-  return subs.filter((s) => s.tags.length === 0).sort((a, b) => a.position - b.position);
+export function untaggedSubscriptions(subscriptions: SubscriptionDto[]): SubscriptionDto[] {
+  return subscriptions
+    .filter((subscription) => subscription.tags.length === 0)
+    .sort((left, right) => left.position - right.position);
 }
 
 /** All-items badge total: a feed excluded from All items (`includeInAllItems:
  *  false`) contributes nothing here, though it still counts under its own
  *  per-feed row and any tag it carries (see `buildTagTree`). */
-export function sumUnread(subs: SubscriptionDto[]): number {
-  return subs.reduce((n, s) => (s.includeInAllItems ? n + s.unreadCount : n), 0);
+export function sumUnread(subscriptions: SubscriptionDto[]): number {
+  return subscriptions.reduce(
+    (total, subscription) =>
+      subscription.includeInAllItems ? total + subscription.unreadCount : total,
+    0,
+  );
 }
 
 /** All-items list total: the same inclusion rule as `sumUnread`, over entry
  *  counts instead of unread counts. */
-export function sumEntries(subs: SubscriptionDto[]): number {
-  return subs.reduce((n, s) => (s.includeInAllItems ? n + s.entryCount : n), 0);
+export function sumEntries(subscriptions: SubscriptionDto[]): number {
+  return subscriptions.reduce(
+    (total, subscription) =>
+      subscription.includeInAllItems ? total + subscription.entryCount : total,
+    0,
+  );
 }
 
 export type ZeroTarget = 'all' | { tag: number } | { subscription: number };
@@ -108,7 +127,7 @@ export class SubscriptionsStore {
   readonly resolved = signal(false);
 
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
-  readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
+  readonly untagged = computed(() => untaggedSubscriptions(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
   readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
@@ -134,15 +153,15 @@ export class SubscriptionsStore {
     this.resolved.set(false);
     this.inFlight = this.trackWhileOpen(
       this.api.subscriptions().subscribe({
-        next: (r) => {
+        next: (response) => {
           if (!this.settle(request)) return;
-          this.applyCounts(r);
+          this.applyCounts(response);
           this.loading.set(false);
           this.resolved.set(true);
         },
-        error: (e: HttpErrorResponse) => {
+        error: (error: HttpErrorResponse) => {
           if (!this.settle(request)) return;
-          this.error.set(parseProblem(e));
+          this.error.set(parseProblem(error));
           this.loading.set(false);
           this.resolved.set(true);
         },
@@ -201,7 +220,7 @@ export class SubscriptionsStore {
   reloadQuietlyIfStale(): void {
     this.quietReload(
       () => this.api.subscriptions(),
-      (r) => this.applyCounts(r),
+      (response) => this.applyCounts(response),
     );
   }
 
@@ -212,7 +231,7 @@ export class SubscriptionsStore {
   reloadCountsIfStale(): void {
     this.quietReload(
       () => this.api.subscriptionCounts(),
-      (r) => this.applyCountsOnly(r),
+      (response) => this.applyCountsOnly(response),
     );
   }
 
@@ -224,7 +243,7 @@ export class SubscriptionsStore {
     if (!this.resolved() || this.inFlight) return;
     this.quietFetch(
       () => this.api.subscriptions(),
-      (r) => this.applyCounts(r),
+      (response) => this.applyCounts(response),
     );
   }
 
@@ -254,13 +273,13 @@ export class SubscriptionsStore {
     const editsWhenSent = this.localEdits;
     this.inFlight = this.trackWhileOpen(
       fetch().subscribe({
-        next: (r) => {
+        next: (response) => {
           if (!this.settle(request)) return;
           // The user changed a count while this was on the wire (marked read,
           // favourited, emptied a feed). The server counted before that, so
           // adopting the response now would put the badge back up; drop it.
           if (this.localEdits !== editsWhenSent) return;
-          apply(r);
+          apply(response);
         },
         error: () => void this.settle(request),
       }),
@@ -278,7 +297,7 @@ export class SubscriptionsStore {
    *  array only when a number actually moved, so an unchanged tick keeps
    *  array identity and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
-    const countsById = new Map(response.subscriptions.map((s) => [s.id, s]));
+    const countsById = new Map(response.subscriptions.map((counts) => [counts.id, counts]));
     let moved = false;
     const next = this.subscriptions().map((sub) => {
       const unreadCount = countsById.get(sub.id)?.unreadCount ?? 0;
@@ -317,18 +336,22 @@ export class SubscriptionsStore {
 
   private bumpCount(count: WritableSignal<number>, by: number): void {
     ++this.localEdits;
-    count.update((n) => Math.max(0, n + by));
+    count.update((current) => Math.max(0, current + by));
   }
 
   decrementUnread(subscriptionId: number, by = 1): void {
-    this.patchSubscriptions((s) =>
-      s.id === subscriptionId ? { ...s, unreadCount: Math.max(0, s.unreadCount - by) } : s,
+    this.patchSubscriptions((subscription) =>
+      subscription.id === subscriptionId
+        ? { ...subscription, unreadCount: Math.max(0, subscription.unreadCount - by) }
+        : subscription,
     );
   }
 
   incrementUnread(subscriptionId: number, by = 1): void {
-    this.patchSubscriptions((s) =>
-      s.id === subscriptionId ? { ...s, unreadCount: s.unreadCount + by } : s,
+    this.patchSubscriptions((subscription) =>
+      subscription.id === subscriptionId
+        ? { ...subscription, unreadCount: subscription.unreadCount + by }
+        : subscription,
     );
   }
 
@@ -338,15 +361,21 @@ export class SubscriptionsStore {
     id: number,
     flags: Partial<Pick<SubscriptionDto, 'includeInAllItems' | 'includeInForYou'>>,
   ): void {
-    this.patchSubscriptions((s) => (s.id === id ? { ...s, ...flags } : s));
+    this.patchSubscriptions((subscription) =>
+      subscription.id === id ? { ...subscription, ...flags } : subscription,
+    );
   }
 
   zeroUnread(target: ZeroTarget): void {
-    this.patchSubscriptions((s) => {
-      if (target === 'all') return { ...s, unreadCount: 0 };
+    this.patchSubscriptions((subscription) => {
+      if (target === 'all') return { ...subscription, unreadCount: 0 };
       if ('tag' in target)
-        return s.tags.some((t) => t.id === target.tag) ? { ...s, unreadCount: 0 } : s;
-      return s.id === target.subscription ? { ...s, unreadCount: 0 } : s;
+        return subscription.tags.some((tag) => tag.id === target.tag)
+          ? { ...subscription, unreadCount: 0 }
+          : subscription;
+      return subscription.id === target.subscription
+        ? { ...subscription, unreadCount: 0 }
+        : subscription;
     });
   }
 
@@ -354,6 +383,6 @@ export class SubscriptionsStore {
    *  here so none can forget to register itself against an in-flight reload. */
   private patchSubscriptions(patch: (sub: SubscriptionDto) => SubscriptionDto): void {
     ++this.localEdits;
-    this.subscriptions.update((subs) => subs.map(patch));
+    this.subscriptions.update((subscriptions) => subscriptions.map(patch));
   }
 }

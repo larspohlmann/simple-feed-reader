@@ -97,18 +97,20 @@ function pressSpace(target: HTMLElement): void {
   }
 }
 
-function mount(e: EntryDto = entry()) {
-  const f = TestBed.createComponent(HostComponent);
-  f.componentInstance.entry = e;
-  f.detectChanges();
-  return f;
+function mount(testEntry: EntryDto = entry()) {
+  const fixture = TestBed.createComponent(HostComponent);
+  fixture.componentInstance.entry = testEntry;
+  fixture.detectChanges();
+  return fixture;
 }
 
-const buttons = (f: { nativeElement: HTMLElement }) =>
-  Array.from(f.nativeElement.querySelectorAll('button'));
+const buttons = (fixture: { nativeElement: HTMLElement }) =>
+  Array.from(fixture.nativeElement.querySelectorAll('button'));
 
-const iconSizes = (f: ReturnType<typeof mount>) =>
-  f.debugElement.queryAll(By.directive(IconComponent)).map((d) => d.componentInstance.size());
+const iconSizes = (fixture: ReturnType<typeof mount>) =>
+  fixture.debugElement
+    .queryAll(By.directive(IconComponent))
+    .map((icon) => icon.componentInstance.size());
 
 describe('EntryActionsComponent', () => {
   beforeEach(() => {
@@ -116,26 +118,26 @@ describe('EntryActionsComponent', () => {
   });
 
   it('renders the three actions with their labels', () => {
-    const labels = buttons(mount()).map((b) => b.getAttribute('aria-label'));
+    const labels = buttons(mount()).map((button) => button.getAttribute('aria-label'));
     expect(labels).toEqual(['Favorite', 'Keep', 'Toggle read']);
   });
 
   it('reports each action state through aria-pressed', () => {
     // The third toggle is the tick: it reflects "viewed", not "read" (#482).
-    const f = mount(entry({ isFavorite: true, isKept: false, isViewed: true }));
-    const pressed = buttons(f).map((b) => b.getAttribute('aria-pressed'));
+    const fixture = mount(entry({ isFavorite: true, isKept: false, isViewed: true }));
+    const pressed = buttons(fixture).map((button) => button.getAttribute('aria-pressed'));
     expect(pressed).toEqual(['true', 'false', 'true']);
   });
 
   it('marks every active toggle the same way, the tick one included', () => {
-    const f = mount(entry({ isFavorite: true, isKept: true, isViewed: true }));
-    const on = buttons(f).map((b) => b.classList.contains('on'));
+    const fixture = mount(entry({ isFavorite: true, isKept: true, isViewed: true }));
+    const on = buttons(fixture).map((button) => button.classList.contains('on'));
     expect(on).toEqual([true, true, true]);
   });
 
   it('leaves an inactive toggle unmarked', () => {
-    const f = mount(entry({ isFavorite: false, isKept: false, isHidden: false }));
-    const on = buttons(f).map((b) => b.classList.contains('on'));
+    const fixture = mount(entry({ isFavorite: false, isKept: false, isHidden: false }));
+    const on = buttons(fixture).map((button) => button.classList.contains('on'));
     expect(on).toEqual([false, false, false]);
   });
 
@@ -150,62 +152,66 @@ describe('EntryActionsComponent', () => {
   });
 
   it('emits the entry and does not open the card', () => {
-    const f = mount();
-    const [favorite, keep, read] = buttons(f);
+    const fixture = mount();
+    const [favorite, keep, read] = buttons(fixture);
 
     favorite.click();
     keep.click();
     read.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.favoriteCount).toBe(1);
-    expect(f.componentInstance.kept).toBe(f.componentInstance.entry);
-    expect(f.componentInstance.marked).toBe(f.componentInstance.entry);
-    expect(f.componentInstance.cardOpened).toBe(false);
+    expect(fixture.componentInstance.favoriteCount).toBe(1);
+    expect(fixture.componentInstance.kept).toBe(fixture.componentInstance.entry);
+    expect(fixture.componentInstance.marked).toBe(fixture.componentInstance.entry);
+    expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
   it('favorites exactly once on Enter, and does not open the card', () => {
-    const f = mount();
-    const [favorite] = buttons(f);
+    const fixture = mount();
+    const [favorite] = buttons(fixture);
 
     pressEnter(favorite);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.favoriteCount).toBe(1);
-    expect(f.componentInstance.cardOpened).toBe(false);
+    expect(fixture.componentInstance.favoriteCount).toBe(1);
+    expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
   it('favorites exactly once on Space, and does not open the card', () => {
-    const f = mount();
-    const [favorite] = buttons(f);
+    const fixture = mount();
+    const [favorite] = buttons(fixture);
 
     pressSpace(favorite);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.favoriteCount).toBe(1);
-    expect(f.componentInstance.cardOpened).toBe(false);
+    expect(fixture.componentInstance.favoriteCount).toBe(1);
+    expect(fixture.componentInstance.cardOpened).toBe(false);
   });
 
   it('renders sm glyphs by default, so the magazine cards are unchanged', () => {
-    const f = mount();
-    expect(iconSizes(f)).toEqual(['sm', 'sm', 'sm']);
-    expect(f.nativeElement.querySelector('app-entry-actions')!.classList).not.toContain('glyph-md');
+    const fixture = mount();
+    expect(iconSizes(fixture)).toEqual(['sm', 'sm', 'sm']);
+    expect(fixture.nativeElement.querySelector('app-entry-actions')!.classList).not.toContain(
+      'glyph-md',
+    );
   });
 
   it('renders md glyphs on request, and advertises it for the tap-target math', () => {
-    const f = mount();
-    f.componentInstance.size = 'md';
-    f.detectChanges();
+    const fixture = mount();
+    fixture.componentInstance.size = 'md';
+    fixture.detectChanges();
 
-    expect(iconSizes(f)).toEqual(['md', 'md', 'md']);
-    expect(f.nativeElement.querySelector('app-entry-actions')!.classList).toContain('glyph-md');
+    expect(iconSizes(fixture)).toEqual(['md', 'md', 'md']);
+    expect(fixture.nativeElement.querySelector('app-entry-actions')!.classList).toContain(
+      'glyph-md',
+    );
   });
 
   it('fills the star and bookmark only while they are on', () => {
-    const fills = (e: EntryDto) =>
-      mount(e)
+    const fills = (testEntry: EntryDto) =>
+      mount(testEntry)
         .debugElement.queryAll(By.directive(IconComponent))
-        .map((d) => d.componentInstance.fill());
+        .map((icon) => icon.componentInstance.fill());
 
     expect(fills(entry({ isFavorite: false, isKept: false }))).toEqual([false, false, false]);
     expect(fills(entry({ isFavorite: true, isKept: true, isViewed: true }))).toEqual([
@@ -216,7 +222,7 @@ describe('EntryActionsComponent', () => {
   });
 
   it('styles every toggle through the shared flag-toggle look', () => {
-    const shared = buttons(mount()).map((b) => b.classList.contains('flag-toggle'));
+    const shared = buttons(mount()).map((button) => button.classList.contains('flag-toggle'));
     expect(shared).toEqual([true, true, true]);
   });
 });

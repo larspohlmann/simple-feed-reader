@@ -3,16 +3,16 @@ import { markNarrationPlayers } from './reader-narration';
 const LABEL = 'Listen — machine-generated narration';
 
 function host(html: string): HTMLElement {
-  const el = document.createElement('div');
-  el.innerHTML = html;
-  markNarrationPlayers(el, LABEL);
-  return el;
+  const element = document.createElement('div');
+  element.innerHTML = html;
+  markNarrationPlayers(element, LABEL);
+  return element;
 }
 
 describe('markNarrationPlayers', () => {
   it('wraps a marked player in a labelled details box', () => {
-    const el = host('<audio class="reader-narration" src="https://x.test/full.mp3"></audio>');
-    const box = el.querySelector('details.reader-narration-box');
+    const element = host('<audio class="reader-narration" src="https://x.test/full.mp3"></audio>');
+    const box = element.querySelector('details.reader-narration-box');
 
     expect(box).not.toBeNull();
     expect(box!.querySelector('summary')!.textContent).toBe(LABEL);
@@ -20,24 +20,24 @@ describe('markNarrationPlayers', () => {
   });
 
   it('leaves an ordinary player alone', () => {
-    const el = host('<audio src="https://x.test/podcast.mp3"></audio>');
+    const element = host('<audio src="https://x.test/podcast.mp3"></audio>');
 
-    expect(el.querySelector('.reader-narration-box')).toBeNull();
-    expect(el.querySelector('audio')).not.toBeNull();
+    expect(element.querySelector('.reader-narration-box')).toBeNull();
+    expect(element.querySelector('audio')).not.toBeNull();
   });
 
   it('is idempotent on a second pass', () => {
-    const el = host('<audio class="reader-narration" src="https://x.test/full.mp3"></audio>');
-    markNarrationPlayers(el, LABEL);
+    const element = host('<audio class="reader-narration" src="https://x.test/full.mp3"></audio>');
+    markNarrationPlayers(element, LABEL);
 
-    expect(el.querySelectorAll('.reader-narration-box')).toHaveLength(1);
+    expect(element.querySelectorAll('.reader-narration-box')).toHaveLength(1);
   });
 
   it('sets the summary as text, never as markup', () => {
-    const el = document.createElement('div');
-    el.innerHTML = '<audio class="reader-narration" src="https://x.test/full.mp3"></audio>';
-    markNarrationPlayers(el, '<b>x</b>');
-    const summary = el.querySelector('summary')!;
+    const element = document.createElement('div');
+    element.innerHTML = '<audio class="reader-narration" src="https://x.test/full.mp3"></audio>';
+    markNarrationPlayers(element, '<b>x</b>');
+    const summary = element.querySelector('summary')!;
 
     expect(summary.querySelector('b')).toBeNull();
     expect(summary.textContent).toBe('<b>x</b>');

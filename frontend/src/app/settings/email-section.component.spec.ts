@@ -65,7 +65,7 @@ describe('EmailSectionComponent', () => {
   let digest: DigestService;
   let searchesStub: SavedSearchesStoreStub;
 
-  function mount(u: CurrentUser, searches: readonly SavedSearchDto[] = []) {
+  function mount(signedInUser: CurrentUser, searches: readonly SavedSearchDto[] = []) {
     TestBed.resetTestingModule();
     resendVerification = jest.fn().mockReturnValue(of(undefined));
     searchesStub = {
@@ -76,47 +76,49 @@ describe('EmailSectionComponent', () => {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
       providers: [
-        { provide: AuthService, useValue: { user: signal(u), resendVerification } },
+        { provide: AuthService, useValue: { user: signal(signedInUser), resendVerification } },
         { provide: SavedSearchesStore, useValue: searchesStub },
       ],
     });
     digest = TestBed.inject(DigestService);
-    digest.adopt(u);
-    const f = TestBed.createComponent(EmailSectionComponent);
-    f.detectChanges();
-    return f;
+    digest.adopt(signedInUser);
+    const fixture = TestBed.createComponent(EmailSectionComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   describe('mail disabled on this instance', () => {
     it('shows the disabled box and no interactive controls', () => {
-      const f = mount(user({ mail: { enabled: false } }));
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user({ mail: { enabled: false } }));
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).toContain(en.settings.email.mailDisabled);
-      expect(el.querySelector('app-toggle')).toBeNull();
-      expect(el.querySelector('select')).toBeNull();
-      expect(el.querySelector('button')).toBeNull();
+      expect(element.textContent).toContain(en.settings.email.mailDisabled);
+      expect(element.querySelector('app-toggle')).toBeNull();
+      expect(element.querySelector('select')).toBeNull();
+      expect(element.querySelector('button')).toBeNull();
     });
   });
 
   describe('unverified address', () => {
     it('shows the resend button and disabled controls', () => {
-      const f = mount(user({ mail: { enabled: true }, emailVerified: false }));
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user({ mail: { enabled: true }, emailVerified: false }));
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).toContain(en.settings.email.unverified);
-      const toggle = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+      expect(element.textContent).toContain(en.settings.email.unverified);
+      const toggle = element.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
       expect(toggle.disabled).toBe(true);
-      const selects = Array.from(el.querySelectorAll('select')) as HTMLSelectElement[];
+      const selects = Array.from(element.querySelectorAll('select')) as HTMLSelectElement[];
       expect(selects.length).toBeGreaterThan(0);
       for (const select of selects) expect(select.disabled).toBe(true);
     });
 
     it('calls the resend API exactly once when the resend button is clicked', () => {
-      const f = mount(user({ mail: { enabled: true }, emailVerified: false }));
-      const el = f.nativeElement as HTMLElement;
-      const buttons = Array.from(el.querySelectorAll('button'));
-      const resend = buttons.find((b) => b.textContent?.includes(en.settings.email.resend));
+      const fixture = mount(user({ mail: { enabled: true }, emailVerified: false }));
+      const element = fixture.nativeElement as HTMLElement;
+      const buttons = Array.from(element.querySelectorAll('button'));
+      const resend = buttons.find((button) =>
+        button.textContent?.includes(en.settings.email.resend),
+      );
 
       (resend as HTMLButtonElement).click();
 
@@ -126,99 +128,105 @@ describe('EmailSectionComponent', () => {
 
   describe('ready', () => {
     it('shows no box and an enabled master toggle, cadence and hour', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).not.toContain(en.settings.email.mailDisabled);
-      expect(el.textContent).not.toContain(en.settings.email.unverified);
+      expect(element.textContent).not.toContain(en.settings.email.mailDisabled);
+      expect(element.textContent).not.toContain(en.settings.email.unverified);
 
-      const toggle = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+      const toggle = element.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
       expect(toggle.disabled).toBe(false);
 
-      const cadence = el.querySelector('[data-testid="digest-cadence"]') as HTMLSelectElement;
-      const sendHour = el.querySelector('[data-testid="digest-send-hour"]') as HTMLSelectElement;
+      const cadence = element.querySelector('[data-testid="digest-cadence"]') as HTMLSelectElement;
+      const sendHour = element.querySelector(
+        '[data-testid="digest-send-hour"]',
+      ) as HTMLSelectElement;
       expect(cadence.disabled).toBe(false);
       expect(sendHour.disabled).toBe(false);
     });
 
     it('renders each send-hour option as a zero-padded clock time', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
 
-      const sendHour = el.querySelector('[data-testid="digest-send-hour"]') as HTMLSelectElement;
+      const sendHour = element.querySelector(
+        '[data-testid="digest-send-hour"]',
+      ) as HTMLSelectElement;
       const eightAm = Array.from(sendHour.options).find((option) => option.value === '8');
 
       expect(eightAm?.textContent?.trim()).toBe('08:00');
     });
 
     it('shows the instance timezone adopted from the account next to the send hour', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).toContain('Europe/Berlin');
+      expect(element.textContent).toContain('Europe/Berlin');
     });
 
     it('shows no weekday selector while cadence is daily', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.querySelector('[data-testid="digest-weekday"]')).toBeNull();
+      expect(element.querySelector('[data-testid="digest-weekday"]')).toBeNull();
     });
 
     it('shows the weekday selector once cadence is weekly', () => {
-      const f = mount(user());
+      const fixture = mount(user());
       digest.setCadence('weekly');
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('[data-testid="digest-weekday"]')).not.toBeNull();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('[data-testid="digest-weekday"]')).not.toBeNull();
     });
 
     it('writes the master toggle through DigestService', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
-      const toggle = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
+      const toggle = element.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
 
       toggle.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(digest.enabled()).toBe(true);
     });
 
     it('writes the cadence when changed', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
-      const cadence = el.querySelector('[data-testid="digest-cadence"]') as HTMLSelectElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
+      const cadence = element.querySelector('[data-testid="digest-cadence"]') as HTMLSelectElement;
 
       cadence.value = 'weekly';
       cadence.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(digest.cadence()).toBe('weekly');
     });
 
     it('writes the send hour when changed', () => {
-      const f = mount(user());
-      const el = f.nativeElement as HTMLElement;
-      const sendHour = el.querySelector('[data-testid="digest-send-hour"]') as HTMLSelectElement;
+      const fixture = mount(user());
+      const element = fixture.nativeElement as HTMLElement;
+      const sendHour = element.querySelector(
+        '[data-testid="digest-send-hour"]',
+      ) as HTMLSelectElement;
 
       sendHour.value = '20';
       sendHour.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(digest.sendHour()).toBe(20);
     });
 
     it('writes the weekday when changed', () => {
-      const f = mount(user());
+      const fixture = mount(user());
       digest.setCadence('weekly');
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      const weekday = el.querySelector('[data-testid="digest-weekday"]') as HTMLSelectElement;
+      const element = fixture.nativeElement as HTMLElement;
+      const weekday = element.querySelector('[data-testid="digest-weekday"]') as HTMLSelectElement;
       weekday.value = '5';
       weekday.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(digest.weekday()).toBe(5);
     });
@@ -226,23 +234,23 @@ describe('EmailSectionComponent', () => {
 
   describe('included saved searches', () => {
     it('shows the empty state when the user has no saved searches', () => {
-      const f = mount(user(), []);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), []);
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).toContain(en.settings.email.includedSearchesEmpty);
+      expect(element.textContent).toContain(en.settings.email.includedSearchesEmpty);
     });
 
     it('lists each saved search with a toggle bound to includeInDigest', () => {
-      const f = mount(user(), [
+      const fixture = mount(user(), [
         search({ id: 1, term: 'kubernetes', includeInDigest: true }),
         search({ id: 2, term: 'rust', includeInDigest: false }),
       ]);
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(el.textContent).toContain('kubernetes');
-      expect(el.textContent).toContain('rust');
+      expect(element.textContent).toContain('kubernetes');
+      expect(element.textContent).toContain('rust');
       const toggles = Array.from(
-        el.querySelectorAll('app-toggle input[type="checkbox"]'),
+        element.querySelectorAll('app-toggle input[type="checkbox"]'),
       ) as HTMLInputElement[];
       // one master digest toggle + one per saved search
       expect(toggles.length).toBe(3);
@@ -251,14 +259,14 @@ describe('EmailSectionComponent', () => {
     });
 
     it('writes a toggle through setIncludeInDigest', () => {
-      const f = mount(user(), [search({ id: 7, term: 'rust', includeInDigest: false })]);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), [search({ id: 7, term: 'rust', includeInDigest: false })]);
+      const element = fixture.nativeElement as HTMLElement;
       const toggles = Array.from(
-        el.querySelectorAll('app-toggle input[type="checkbox"]'),
+        element.querySelectorAll('app-toggle input[type="checkbox"]'),
       ) as HTMLInputElement[];
 
       toggles[1].click();
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(searchesStub.setIncludeInDigest).toHaveBeenCalledWith(7, true);
     });
@@ -271,18 +279,18 @@ describe('EmailSectionComponent', () => {
   });
 
   describe('test-mail row', () => {
-    function daysInput(el: HTMLElement): HTMLInputElement {
-      return el.querySelector('[data-testid="test-mail-days"]') as HTMLInputElement;
+    function daysInput(element: HTMLElement): HTMLInputElement {
+      return element.querySelector('[data-testid="test-mail-days"]') as HTMLInputElement;
     }
 
-    function sendButton(el: HTMLElement): HTMLButtonElement {
-      return el.querySelector('[data-testid="test-mail-send"] button') as HTMLButtonElement;
+    function sendButton(element: HTMLElement): HTMLButtonElement {
+      return element.querySelector('[data-testid="test-mail-send"] button') as HTMLButtonElement;
     }
 
     it('defaults the days input to 7, with a 1-30 range', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
-      const el = f.nativeElement as HTMLElement;
-      const input = daysInput(el);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
+      const element = fixture.nativeElement as HTMLElement;
+      const input = daysInput(element);
 
       expect(input.value).toBe('7');
       expect(input.min).toBe('1');
@@ -290,130 +298,130 @@ describe('EmailSectionComponent', () => {
     });
 
     it('disables the send button when no saved search is included', () => {
-      const f = mount(user(), [search({ includeInDigest: false })]);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), [search({ includeInDigest: false })]);
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(sendButton(el).disabled).toBe(true);
+      expect(sendButton(element).disabled).toBe(true);
     });
 
     it('enables the send button once a search is included', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
+      const element = fixture.nativeElement as HTMLElement;
 
-      expect(sendButton(el).disabled).toBe(false);
+      expect(sendButton(element).disabled).toBe(false);
     });
 
     it('sends the chosen number of days', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
+      const element = fixture.nativeElement as HTMLElement;
       const sendTest = jest.spyOn(digest, 'sendTest').mockReturnValue(of('sent'));
 
-      const input = daysInput(el);
+      const input = daysInput(element);
       input.value = '14';
       input.dispatchEvent(new Event('change'));
-      f.detectChanges();
-      sendButton(el).click();
-      f.detectChanges();
+      fixture.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
       expect(sendTest).toHaveBeenCalledWith(14);
     });
 
     it('flags an out-of-range day count and blocks the send', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
+      const element = fixture.nativeElement as HTMLElement;
 
-      const input = daysInput(el);
+      const input = daysInput(element);
       input.value = '60';
       input.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(input.getAttribute('aria-invalid')).toBe('true');
-      expect(sendButton(el).disabled).toBe(true);
-      expect(el.textContent).toContain('Choose between');
+      expect(sendButton(element).disabled).toBe(true);
+      expect(element.textContent).toContain('Choose between');
     });
 
     it('clears the error and re-enables the send once the day count is back in range', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
-      const el = f.nativeElement as HTMLElement;
-      const input = daysInput(el);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
+      const element = fixture.nativeElement as HTMLElement;
+      const input = daysInput(element);
 
       input.value = '60';
       input.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
       input.value = '20';
       input.dispatchEvent(new Event('change'));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(input.getAttribute('aria-invalid')).toBe('false');
-      expect(sendButton(el).disabled).toBe(false);
+      expect(sendButton(element).disabled).toBe(false);
     });
 
     it('shows a confirmation on a successful send', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('sent' as DigestTestMailResult));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      sendButton(el).click();
-      f.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
-      expect(el.textContent).toContain(en.settings.email.testMailSent);
+      expect(element.textContent).toContain(en.settings.email.testMailSent);
     });
 
     it('shows the nothing-to-send message when the result is empty', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('empty' as DigestTestMailResult));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      sendButton(el).click();
-      f.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
-      expect(el.textContent).toContain(en.settings.email.testMailEmpty);
+      expect(element.textContent).toContain(en.settings.email.testMailEmpty);
     });
 
     it('shows the rate-limit message on a 429', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('rateLimited' as DigestTestMailResult));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      sendButton(el).click();
-      f.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
-      expect(el.textContent).toContain(en.settings.email.testMailRateLimited);
+      expect(element.textContent).toContain(en.settings.email.testMailRateLimited);
     });
 
     it('never throws when the caller observable errors', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(throwError(() => new Error('boom')));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
       expect(() => {
-        sendButton(el).click();
-        f.detectChanges();
+        sendButton(element).click();
+        fixture.detectChanges();
       }).not.toThrow();
     });
 
     it('styles a failed send as an error, not the neutral info callout', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('failed' as DigestTestMailResult));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      sendButton(el).click();
-      f.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
-      const result = el.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
+      const result = element.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
       expect(result.classList).toContain('callout--error');
       expect(result.classList).not.toContain('callout--success');
     });
 
     it('styles a successful send as success', () => {
-      const f = mount(user(), [search({ includeInDigest: true })]);
+      const fixture = mount(user(), [search({ includeInDigest: true })]);
       jest.spyOn(digest, 'sendTest').mockReturnValue(of('sent' as DigestTestMailResult));
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
 
-      sendButton(el).click();
-      f.detectChanges();
+      sendButton(element).click();
+      fixture.detectChanges();
 
-      const result = el.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
+      const result = element.querySelector('[data-testid="test-mail-result"]') as HTMLElement;
       expect(result.classList).toContain('callout--success');
       expect(result.classList).not.toContain('callout--error');
     });

@@ -27,7 +27,7 @@ const TAG = tag;
 const SUBSCRIPTION = sub;
 
 describe('ManageActions', () => {
-  let svc: ManageActions;
+  let service: ManageActions;
   let ctrl: HttpTestingController;
   let closed: unknown;
   const open = jest.fn(() => ({ closed: of(closed) }));
@@ -42,7 +42,7 @@ describe('ManageActions', () => {
         { provide: Dialog, useValue: { open } },
       ],
     });
-    svc = TestBed.inject(ManageActions);
+    service = TestBed.inject(ManageActions);
     ctrl = TestBed.inject(HttpTestingController);
     open.mockClear();
   });
@@ -53,7 +53,7 @@ describe('ManageActions', () => {
     const spy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.editSubscription(sub);
+    service.editSubscription(sub);
     expect(spy).toHaveBeenCalled();
   });
 
@@ -62,14 +62,14 @@ describe('ManageActions', () => {
     const spy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.unsubscribe(sub);
+    service.unsubscribe(sub);
     ctrl.expectOne('https://api.test/api/subscriptions/5').flush(null);
     expect(spy).toHaveBeenCalled();
   });
 
   it('unsubscribe: on cancel, does nothing', () => {
     closed = undefined;
-    svc.unsubscribe(sub);
+    service.unsubscribe(sub);
     ctrl.expectNone('https://api.test/api/subscriptions/5');
   });
 
@@ -81,22 +81,22 @@ describe('ManageActions', () => {
     const subSpy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.deleteTag(tag);
+    service.deleteTag(tag);
     ctrl.expectOne('https://api.test/api/tags/3').flush(null);
     expect(tagSpy).toHaveBeenCalled();
     expect(subSpy).toHaveBeenCalled();
   });
 
   it('moveFeedToTag: PATCHes /move-to-tag with from/to/position then reloads', () => {
-    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([s]);
+    store.subscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    svc.moveFeedToTag(s, 3, 7, 1);
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ fromTagId: 3, toTagId: 7, position: 1 });
-    req.flush({ subscription: s });
+    service.moveFeedToTag(tagged, 3, 7, 1);
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({ fromTagId: 3, toTagId: 7, position: 1 });
+    testRequest.flush({ subscription: tagged });
     expect(spy).toHaveBeenCalled();
   });
 
@@ -105,69 +105,71 @@ describe('ManageActions', () => {
     const tags = TestBed.inject(TagsStore);
     const news: TagDto = { id: 7, name: 'News', color: null, icon: null, position: 1 };
     tags.tags.set([tag, news]);
-    const s: SubscriptionDto = { ...sub, tags: [tag] };
-    store.subscriptions.set([s]);
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
+    store.subscriptions.set([tagged]);
     jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    svc.moveFeedToTag(s, 3, 7, 0);
+    service.moveFeedToTag(tagged, 3, 7, 0);
     expect(
       store
         .subscriptions()
         .find((x) => x.id === 5)!
-        .tags.map((t) => t.id),
+        .tags.map((assignedTag) => assignedTag.id),
     ).toEqual([7]);
-    ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag').flush({ subscription: s });
+    ctrl
+      .expectOne('https://api.test/api/subscriptions/5/move-to-tag')
+      .flush({ subscription: tagged });
   });
 
   it('moveFeedToTag: does nothing when the source and target lists are the same', () => {
-    svc.moveFeedToTag(sub, 3, 3, 0);
+    service.moveFeedToTag(sub, 3, 3, 0);
     ctrl.expectNone('https://api.test/api/subscriptions/5/move-to-tag');
   });
 
   it('setIncludeInAllItems: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
-    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([s]);
+    store.subscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    svc.setIncludeInAllItems(s, false);
+    service.setIncludeInAllItems(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInAllItems).toBe(false);
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({
-      customTitle: s.customTitle,
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({
+      customTitle: tagged.customTitle,
       tagIds: [3],
       includeInAllItems: false,
       includeInForYou: true,
     });
-    req.flush({ subscription: { ...s, includeInAllItems: false } });
+    testRequest.flush({ subscription: { ...tagged, includeInAllItems: false } });
     expect(spy).toHaveBeenCalled();
   });
 
   it('setIncludeInForYou: PATCHes the full body with the flag flipped and optimistically updates the store', () => {
-    const s: SubscriptionDto = { ...sub, tags: [tag] };
+    const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     const store = TestBed.inject(SubscriptionsStore);
-    store.subscriptions.set([s]);
+    store.subscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    svc.setIncludeInForYou(s, false);
+    service.setIncludeInForYou(tagged, false);
     expect(store.subscriptions().find((x) => x.id === 5)!.includeInForYou).toBe(false);
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({
-      customTitle: s.customTitle,
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({
+      customTitle: tagged.customTitle,
       tagIds: [3],
       includeInAllItems: true,
       includeInForYou: false,
     });
-    req.flush({ subscription: { ...s, includeInForYou: false } });
+    testRequest.flush({ subscription: { ...tagged, includeInForYou: false } });
     expect(spy).toHaveBeenCalled();
   });
 
   it('reorderTags: PATCHes /api/tags/reorder then reloads tags', () => {
     const spy = jest.spyOn(TestBed.inject(TagsStore), 'load').mockImplementation(() => undefined);
-    svc.reorderTags([3, 1, 2]);
-    const req = ctrl.expectOne('https://api.test/api/tags/reorder');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ tagIds: [3, 1, 2] });
-    req.flush({ tags: [] });
+    service.reorderTags([3, 1, 2]);
+    const testRequest = ctrl.expectOne('https://api.test/api/tags/reorder');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({ tagIds: [3, 1, 2] });
+    testRequest.flush({ tags: [] });
     expect(spy).toHaveBeenCalled();
   });
 
@@ -175,11 +177,11 @@ describe('ManageActions', () => {
     const spy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.reorderUntagged([9, 8, 7]);
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/reorder');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ subscriptionIds: [9, 8, 7] });
-    req.flush(null);
+    service.reorderUntagged([9, 8, 7]);
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/reorder');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({ subscriptionIds: [9, 8, 7] });
+    testRequest.flush(null);
     expect(spy).toHaveBeenCalled();
   });
 
@@ -187,11 +189,11 @@ describe('ManageActions', () => {
     const spy = jest
       .spyOn(TestBed.inject(SubscriptionsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.reorderTagFeeds(4, [2, 1]);
-    const req = ctrl.expectOne('https://api.test/api/tags/4/feed-order');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ subscriptionIds: [2, 1] });
-    req.flush(null);
+    service.reorderTagFeeds(4, [2, 1]);
+    const testRequest = ctrl.expectOne('https://api.test/api/tags/4/feed-order');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({ subscriptionIds: [2, 1] });
+    testRequest.flush(null);
     expect(spy).toHaveBeenCalled();
   });
 
@@ -200,12 +202,12 @@ describe('ManageActions', () => {
     const tagSpy = jest
       .spyOn(TestBed.inject(TagsStore), 'load')
       .mockImplementation(() => undefined);
-    svc.createTag();
+    service.createTag();
     expect(tagSpy).toHaveBeenCalled();
   });
 
   describe('bulk actions', () => {
-    const subs = (count: number): SubscriptionDto[] =>
+    const subscriptions = (count: number): SubscriptionDto[] =>
       Array.from({ length: count }, (_, index) => ({
         ...SUBSCRIPTION,
         id: index + 1,
@@ -258,10 +260,10 @@ describe('ManageActions', () => {
 
       actions.bulkAddTag([1, 2, 3], TAG).subscribe(() => (emitted = true));
 
-      const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(req.request.method).toBe('PATCH');
-      expect(req.request.body).toEqual({ subscriptionIds: [1, 2, 3], addTagIds: [TAG.id] });
-      req.flush({ subscriptions: [] });
+      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
+      expect(testRequest.request.method).toBe('PATCH');
+      expect(testRequest.request.body).toEqual({ subscriptionIds: [1, 2, 3], addTagIds: [TAG.id] });
+      testRequest.flush({ subscriptions: [] });
 
       expect(emitted).toBe(true);
     });
@@ -272,12 +274,12 @@ describe('ManageActions', () => {
 
       actions.bulkRemoveTag([4], TAG).subscribe(() => (emitted = true));
 
-      const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(req.request.body).toEqual({
+      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
+      expect(testRequest.request.body).toEqual({
         subscriptionIds: [4],
         removeTagIds: [TAG.id],
       });
-      req.flush({ subscriptions: [] });
+      testRequest.flush({ subscriptions: [] });
 
       expect(emitted).toBe(true);
     });
@@ -288,12 +290,12 @@ describe('ManageActions', () => {
 
       actions.bulkSetFlags([7], { includeInAllItems: false }).subscribe(() => (emitted = true));
 
-      const req = http.expectOne(`${BASE}/api/subscriptions/bulk`);
-      expect(req.request.body).toEqual({
+      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk`);
+      expect(testRequest.request.body).toEqual({
         subscriptionIds: [7],
         includeInAllItems: false,
       });
-      req.flush({ subscriptions: [] });
+      testRequest.flush({ subscriptions: [] });
 
       expect(emitted).toBe(true);
     });
@@ -320,7 +322,7 @@ describe('ManageActions', () => {
     it('asks the user to type the count from five feeds up', () => {
       const { actions, dialogOpen } = setup();
 
-      actions.bulkUnsubscribe(subs(5)).subscribe();
+      actions.bulkUnsubscribe(subscriptions(5)).subscribe();
 
       expect(dialogOpen.mock.calls[0][1].data.requireText).toBe('5');
     });
@@ -328,7 +330,7 @@ describe('ManageActions', () => {
     it('does not ask for typed text at four feeds', () => {
       const { actions, dialogOpen } = setup();
 
-      actions.bulkUnsubscribe(subs(4)).subscribe();
+      actions.bulkUnsubscribe(subscriptions(4)).subscribe();
 
       expect(dialogOpen.mock.calls[0][1].data.requireText).toBeUndefined();
     });
@@ -336,7 +338,7 @@ describe('ManageActions', () => {
     it('singularises the confirmation title at a selection of one', () => {
       const { actions, dialogOpen } = setup();
 
-      actions.bulkUnsubscribe(subs(1)).subscribe();
+      actions.bulkUnsubscribe(subscriptions(1)).subscribe();
 
       expect(dialogOpen.mock.calls[0][1].data.title).toBe('Unsubscribe from 1 feed?');
     });
@@ -344,7 +346,7 @@ describe('ManageActions', () => {
     it('names at most five titles and counts the rest', () => {
       const { actions, dialogOpen } = setup();
 
-      actions.bulkUnsubscribe(subs(7)).subscribe();
+      actions.bulkUnsubscribe(subscriptions(7)).subscribe();
 
       const message: string = dialogOpen.mock.calls[0][1].data.message;
       expect(message).toContain('Feed 1');
@@ -356,7 +358,7 @@ describe('ManageActions', () => {
       const { actions, http } = setup({ confirmAnswer: false });
       let outcome: boolean | undefined;
 
-      actions.bulkUnsubscribe(subs(2)).subscribe((ok) => (outcome = ok));
+      actions.bulkUnsubscribe(subscriptions(2)).subscribe((ok) => (outcome = ok));
 
       expect(outcome).toBe(false);
       http.expectNone(`${BASE}/api/subscriptions/bulk-unsubscribe`);
@@ -365,10 +367,10 @@ describe('ManageActions', () => {
     it('unsubscribes and reloads after a confirmed bulk unsubscribe', () => {
       const { actions, http, subLoad } = setup({ confirmAnswer: true });
 
-      actions.bulkUnsubscribe(subs(2)).subscribe();
-      const req = http.expectOne(`${BASE}/api/subscriptions/bulk-unsubscribe`);
-      expect(req.request.body).toEqual({ subscriptionIds: [1, 2] });
-      req.flush({ removed: 2 });
+      actions.bulkUnsubscribe(subscriptions(2)).subscribe();
+      const testRequest = http.expectOne(`${BASE}/api/subscriptions/bulk-unsubscribe`);
+      expect(testRequest.request.body).toEqual({ subscriptionIds: [1, 2] });
+      testRequest.flush({ removed: 2 });
 
       expect(subLoad).toHaveBeenCalled();
     });
@@ -437,9 +439,9 @@ describe('ManageActions', () => {
 
       actions.retryFeed(sub).subscribe();
 
-      const req = http.expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`);
-      expect(req.request.method).toBe('POST');
-      req.flush(refreshReport({ failed: 0, fetched: 1 }));
+      const testRequest = http.expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`);
+      expect(testRequest.request.method).toBe('POST');
+      testRequest.flush(refreshReport({ failed: 0, fetched: 1 }));
       flushReload(http);
     });
 
@@ -447,7 +449,7 @@ describe('ManageActions', () => {
       const { actions, http, toast, translate } = setup();
 
       let stillFailing: boolean | undefined;
-      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
+      actions.retryFeed(sub).subscribe((failing) => (stillFailing = failing));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 0, fetched: 1, notModified: 0 }));
@@ -466,7 +468,7 @@ describe('ManageActions', () => {
       const { actions, http, translate } = setup();
 
       let stillFailing: boolean | undefined;
-      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
+      actions.retryFeed(sub).subscribe((failing) => (stillFailing = failing));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 0, fetched: 0, notModified: 1 }));
@@ -482,7 +484,7 @@ describe('ManageActions', () => {
       const { actions, http, toast } = setup();
 
       let stillFailing: boolean | undefined;
-      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
+      actions.retryFeed(sub).subscribe((failing) => (stillFailing = failing));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush(refreshReport({ failed: 1, fetched: 0, notModified: 0 }));
@@ -496,7 +498,7 @@ describe('ManageActions', () => {
       const { actions, http, toast } = setup();
 
       let stillFailing: boolean | undefined;
-      actions.retryFeed(sub).subscribe((v) => (stillFailing = v));
+      actions.retryFeed(sub).subscribe((failing) => (stillFailing = failing));
       http
         .expectOne(`${BASE}/api/refresh?feedId=${sub.feedId}`)
         .flush('fail', { status: 500, statusText: 'Server Error' });

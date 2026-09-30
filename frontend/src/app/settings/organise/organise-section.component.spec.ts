@@ -23,8 +23,8 @@ import { makeSubscription } from '../../reader/testing/subscription.factory';
 /** The real store derives `unhealthy`/`unhealthyCount` from `subscriptions`;
  *  the mock reproduces that so the health group renders off the same signal
  *  the tests set. */
-function makeSubscriptionsStoreMock(subs: SubscriptionDto[]) {
-  const subscriptions: WritableSignal<SubscriptionDto[]> = signal(subs);
+function makeSubscriptionsStoreMock(initialSubscriptions: SubscriptionDto[]) {
+  const subscriptions: WritableSignal<SubscriptionDto[]> = signal(initialSubscriptions);
   const unhealthy = computed(() => unhealthyFeeds(subscriptions()));
   return {
     subscriptions,
@@ -82,7 +82,7 @@ describe('OrganiseSectionComponent', () => {
     reorderUntagged: jest.fn(),
   };
 
-  async function renderWithMocks(subs: SubscriptionDto[] = SUBS) {
+  async function renderWithMocks(subscriptions: SubscriptionDto[] = SUBS) {
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
     manage.bulkAddTag.mockReturnValue(of(undefined));
@@ -102,7 +102,7 @@ describe('OrganiseSectionComponent', () => {
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
           { provide: LanguageService, useValue: { lang: () => 'en' } },
-          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subs) },
+          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subscriptions) },
           { provide: TagsStore, useValue: { tags: signal([TECH]), load: jest.fn() } },
         ],
       })
@@ -280,7 +280,7 @@ describe('OrganiseSectionComponent', () => {
     store.tagFilter.set(new Set(['untagged']));
     fixture.detectChanges();
 
-    expect(store.filteredSubscriptions().map((s) => s.id)).toEqual([11]);
+    expect(store.filteredSubscriptions().map((subscription) => subscription.id)).toEqual([11]);
   });
 
   // Selection and filtering are separate state on the store; a bulk write must
@@ -349,7 +349,7 @@ describe('OrganiseSectionComponent', () => {
   // tag the user can't see, so both must refuse while a filter is active.
   it('disables tag reordering under an active filter, and writes nothing', async () => {
     const NEWS: TagDto = { id: 3, name: 'News', color: null, icon: null, position: 1 };
-    const subsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
+    const subscriptionsWithNews = [...SUBS.slice(0, 1), feed(11, 'heise', [NEWS.id]), SUBS[2]];
     localStorage.clear();
     for (const spy of Object.values(manage)) spy.mockReset();
     manage.addFeed.mockReturnValue(of(undefined));
@@ -364,7 +364,10 @@ describe('OrganiseSectionComponent', () => {
           { provide: LayoutService, useValue: { isCoarse: signal(false) } },
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
           { provide: LanguageService, useValue: { lang: () => 'en' } },
-          { provide: SubscriptionsStore, useValue: makeSubscriptionsStoreMock(subsWithNews) },
+          {
+            provide: SubscriptionsStore,
+            useValue: makeSubscriptionsStoreMock(subscriptionsWithNews),
+          },
           { provide: TagsStore, useValue: { tags: signal([TECH, NEWS]), load: jest.fn() } },
         ],
       })

@@ -57,6 +57,8 @@ grep -rniE "^\s*(//|\*|/\*\*).*\b(previously|used to|no longer|was (moved|rename
 
 ### Task 2: reader/ folders by role
 
+> **Moved out of #1304:** the folder moves run once, as the wider reorganisation in #1314.
+
 **Files:** 88 moves (listed in Step 1) plus every importer. The script rewrites the importers.
 
 The `reader/` root keeps the modules that several subfolders or other features share:
@@ -204,12 +206,14 @@ console.log(unresolved.length ? `CHECK by hand:\n${unresolved.join('\n')}` : 'no
             ref: false,
             params: false,
             param: false,
-            req: { testRequest: true },
+            req: { request: false, testRequest: true },
             f: { fixture: true },
           },
         },
       ],
 ```
+
+  `request: false` drops unicorn's built-in `req → request`; with two suggestions the autofix skips the name.
 
   `f` is always a fixture in the specs (`const f = mount(…)` / `createComponent` / `boot` / `create`, 865 hits). A helper that returns something other than a fixture gets its own name in Step 3.
 

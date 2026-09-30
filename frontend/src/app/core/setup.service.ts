@@ -21,13 +21,13 @@ export class SetupService {
   ensureLoaded(): Observable<boolean> {
     if (this.cached !== null) return of(this.cached);
     return this.api.status().pipe(
-      tap((r) => {
-        this.cached = r.needsSetup;
-        this.needsSetup.set(r.needsSetup);
-        this.mailEnabled.set(r.mailEnabled);
-        this.passkeySignInAvailable.set(r.passkeySignInAvailable);
+      tap((status) => {
+        this.cached = status.needsSetup;
+        this.needsSetup.set(status.needsSetup);
+        this.mailEnabled.set(status.mailEnabled);
+        this.passkeySignInAvailable.set(status.passkeySignInAvailable);
       }),
-      map((r) => r.needsSetup),
+      map((status) => status.needsSetup),
     );
   }
 

@@ -34,11 +34,13 @@ describe('PreviewEntryRowComponent', () => {
 
   it('renders title, source, snippet and the https thumbnail', () => {
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.title')!.textContent).toContain('A sample headline');
-    expect(el.querySelector('.meta')!.textContent).toContain('The Verge');
-    expect(el.querySelector('.snippet')!.textContent).toContain('A short snippet');
-    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://img.example/a.jpg');
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.title')!.textContent).toContain('A sample headline');
+    expect(element.querySelector('.meta')!.textContent).toContain('The Verge');
+    expect(element.querySelector('.snippet')!.textContent).toContain('A short snippet');
+    expect(element.querySelector('img.thumb')!.getAttribute('src')).toBe(
+      'https://img.example/a.jpg',
+    );
   });
 
   it('omits the thumbnail when there is no image', () => {
@@ -49,9 +51,9 @@ describe('PreviewEntryRowComponent', () => {
 
   it('is inert: no button role and no action buttons', () => {
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[role="button"]')).toBeNull();
-    expect(el.querySelector('app-entry-actions')).toBeNull();
-    expect(el.querySelector('button')).toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[role="button"]')).toBeNull();
+    expect(element.querySelector('app-entry-actions')).toBeNull();
+    expect(element.querySelector('button')).toBeNull();
   });
 });

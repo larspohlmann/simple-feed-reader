@@ -17,7 +17,7 @@ import { CatalogStore } from '../reader/catalog/catalog.store';
 import { ReaderLocationService } from './reader-location.service';
 
 describe('AuthService', () => {
-  let svc: AuthService;
+  let service: AuthService;
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
   let events: Subject<unknown>;
@@ -40,7 +40,7 @@ describe('AuthService', () => {
         { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
       ],
     });
-    svc = TestBed.inject(AuthService);
+    service = TestBed.inject(AuthService);
     ctrl = TestBed.inject(HttpTestingController);
     tokens = TestBed.inject(TokenStore);
   });
@@ -70,15 +70,15 @@ describe('AuthService', () => {
   }
 
   it('login stores the returned JWT', () => {
-    svc.login('a@b.c', 'password12345').subscribe();
-    const req = ctrl.expectOne('https://api.test/api/auth/login');
-    expect(req.request.body).toEqual({ email: 'a@b.c', password: 'password12345' });
-    req.flush({ token: 'jwt-xyz' });
+    service.login('a@b.c', 'password12345').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/auth/login');
+    expect(testRequest.request.body).toEqual({ email: 'a@b.c', password: 'password12345' });
+    testRequest.flush({ token: 'jwt-xyz' });
     expect(tokens.token()).toBe('jwt-xyz');
   });
 
   it('loadMe populates the current-user signal and adopts the account locale, without writing it back', () => {
-    svc.loadMe().subscribe();
+    service.loadMe().subscribe();
     ctrl.expectOne('https://api.test/api/me').flush({
       id: 1,
       email: 'a@b.c',
@@ -102,7 +102,7 @@ describe('AuthService', () => {
       emailVerified: true,
     });
 
-    expect(svc.user()?.email).toBe('a@b.c');
+    expect(service.user()?.email).toBe('a@b.c');
     expect(TestBed.inject(AiAvailabilityService).ready()).toBe(true);
     expect(TestBed.inject(AiAvailabilityService).model()).toBe('gpt-4o');
     // The one place the account's locale is adopted into the UI.
@@ -119,33 +119,33 @@ describe('AuthService', () => {
   });
 
   it('loadMe records a failed account load, and a later success clears it', () => {
-    svc.loadMe().subscribe({ error: () => undefined });
+    service.loadMe().subscribe({ error: () => undefined });
     ctrl
       .expectOne('https://api.test/api/me')
       .flush('boom', { status: 500, statusText: 'Server Error' });
-    expect(svc.accountLoadFailed()).toBe(true);
+    expect(service.accountLoadFailed()).toBe(true);
 
-    svc.loadMe().subscribe();
+    service.loadMe().subscribe();
     ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
-    expect(svc.accountLoadFailed()).toBe(false);
+    expect(service.accountLoadFailed()).toBe(false);
   });
 
   it('logout forgets a failed account load', () => {
-    svc.loadMe().subscribe({ error: () => undefined });
+    service.loadMe().subscribe({ error: () => undefined });
     ctrl
       .expectOne('https://api.test/api/me')
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
-    svc.logout();
+    service.logout();
 
-    expect(svc.accountLoadFailed()).toBe(false);
+    expect(service.accountLoadFailed()).toBe(false);
   });
 
   it('logout clears token and user and routes to /login', () => {
     tokens.set('jwt');
-    svc.logout();
+    service.logout();
     expect(tokens.token()).toBeNull();
-    expect(svc.user()).toBeNull();
+    expect(service.user()).toBeNull();
     expect(navigate).toHaveBeenCalledWith(['/login']);
   });
 
@@ -154,7 +154,7 @@ describe('AuthService', () => {
     events.next(new NavigationEnd(1, '/?tag=17', '/?tag=17&entry=42-example#comments'));
     location.rememberSavedReaderUrlForSignIn();
 
-    svc.logout();
+    service.logout();
 
     expect(location.savedReaderUrl()).toBe('/?tag=17&entry=42-example#comments');
     expect(location.consumeSignInReturnUrl()).toBe('/');
@@ -165,7 +165,7 @@ describe('AuthService', () => {
     preferences.setScrapeFallbackEnabled(true);
     expect(preferences.scrapeFallbackEnabled()).toBe(true);
 
-    svc.logout();
+    service.logout();
 
     expect(preferences.scrapeFallbackEnabled()).toBe(false);
   });
@@ -175,7 +175,7 @@ describe('AuthService', () => {
     digest.setEnabled(true);
     expect(digest.enabled()).toBe(true);
 
-    svc.logout();
+    service.logout();
 
     expect(digest.enabled()).toBe(false);
   });
@@ -185,31 +185,31 @@ describe('AuthService', () => {
     ai.adopt({ ai: { ready: true, model: 'gpt-4o' } } as CurrentUser);
     expect(ai.ready()).toBe(true);
 
-    svc.logout();
+    service.logout();
 
     expect(ai.ready()).toBe(false);
     expect(ai.model()).toBeNull();
   });
 
   it('answerPasskeyOffer posts the answer and marks the local user answered on success', () => {
-    svc.loadMe().subscribe();
+    service.loadMe().subscribe();
     ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
 
-    svc.answerPasskeyOffer().subscribe();
-    const req = ctrl.expectOne('https://api.test/api/me/passkey-offer/answer');
-    expect(req.request.method).toBe('POST');
-    req.flush(null);
+    service.answerPasskeyOffer().subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/me/passkey-offer/answer');
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush(null);
 
-    expect(svc.user()?.preferences.passkeyOfferAnswered).toBe(true);
+    expect(service.user()?.preferences.passkeyOfferAnswered).toBe(true);
   });
 
   it('markPasskeyOfferAnswered flips the local flag without any request', () => {
-    svc.loadMe().subscribe();
+    service.loadMe().subscribe();
     ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
 
-    svc.markPasskeyOfferAnswered();
+    service.markPasskeyOfferAnswered();
 
-    expect(svc.user()?.preferences.passkeyOfferAnswered).toBe(true);
+    expect(service.user()?.preferences.passkeyOfferAnswered).toBe(true);
     ctrl.expectNone('https://api.test/api/me/passkey-offer/answer');
   });
 
@@ -244,7 +244,7 @@ describe('AuthService', () => {
     });
     expect(catalog.resolved()).toBe(true);
 
-    svc.logout();
+    service.logout();
     TestBed.tick();
 
     expect(catalog.resolved()).toBe(false);

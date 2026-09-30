@@ -22,43 +22,43 @@ describe('PreferencesSectionComponent', () => {
       ],
     });
     preferences = TestBed.inject(PreferencesService);
-    const f = TestBed.createComponent(PreferencesSectionComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(PreferencesSectionComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('renders the section as a settings group', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('app-settings-group')).not.toBeNull();
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('app-settings-group')).not.toBeNull();
   });
 
   it('shows the experimental badge beside the scraping row title', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('.row-title .badge')?.textContent?.trim()).toBe(
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('.row-title .badge')?.textContent?.trim()).toBe(
       en.settings.experimental,
     );
   });
 
   it('offers a segmented choice for the language and for the magazine style', () => {
-    const el = mount().nativeElement as HTMLElement;
-    const labels = Array.from(el.querySelectorAll('app-segmented-choice [role="group"]')).map((g) =>
-      g.getAttribute('aria-label'),
+    const element = mount().nativeElement as HTMLElement;
+    const labels = Array.from(element.querySelectorAll('app-segmented-choice [role="group"]')).map(
+      (group) => group.getAttribute('aria-label'),
     );
 
     expect(labels).toEqual(['Language', 'Magazine style']);
   });
 
   it('shows no banner while the language write has not failed', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('app-error-banner')).toBeNull();
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('app-error-banner')).toBeNull();
   });
 
   it('surfaces a banner when the language write failed', () => {
-    const f = mount();
+    const fixture = mount();
     saveFailed.set(true);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    const banner = el.querySelector('app-error-banner');
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const banner = element.querySelector('app-error-banner');
     expect(banner).not.toBeNull();
     expect(banner?.textContent).toContain('could not be saved to your account');
   });
@@ -104,9 +104,9 @@ describe('PreferencesSectionComponent', () => {
 
   it('toggles the control when the visible label text is clicked, not only the switch', () => {
     const fixture = mount();
-    const el = fixture.nativeElement as HTMLElement;
-    const label = el.querySelector('.row-title label') as HTMLLabelElement;
-    const input = el.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
+    const element = fixture.nativeElement as HTMLElement;
+    const label = element.querySelector('.row-title label') as HTMLLabelElement;
+    const input = element.querySelector('app-toggle input[type="checkbox"]') as HTMLInputElement;
 
     expect(label.htmlFor).toBe(input.id);
     label.click();

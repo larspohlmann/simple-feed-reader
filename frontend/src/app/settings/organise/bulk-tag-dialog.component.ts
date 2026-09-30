@@ -82,8 +82,9 @@ export class BulkTagDialogComponent {
     const tag = this.chosen();
     if (tag === null || this.data.mode !== 'remove') return 0;
 
-    return this.data.subscriptions.filter((s) => s.tags.length === 1 && s.tags[0].id === tag.id)
-      .length;
+    return this.data.subscriptions.filter(
+      (subscription) => subscription.tags.length === 1 && subscription.tags[0].id === tag.id,
+    ).length;
   });
 
   /** i18n key for the "N of them lose their last tag" sentence. */

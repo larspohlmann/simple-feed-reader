@@ -27,33 +27,33 @@ describe('SettingsHubComponent', () => {
         { provide: MailHealthStore, useValue: { failureCount: signal(0), refresh: jest.fn() } },
       ],
     });
-    const f = TestBed.createComponent(SettingsHubComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(SettingsHubComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('renders the hub nav on a narrow viewport and stays put', async () => {
     isWide.set(false);
-    const f = mount();
-    await f.whenStable();
-    expect(f.nativeElement.querySelector('app-settings-nav')).not.toBeNull();
+    const fixture = mount();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('app-settings-nav')).not.toBeNull();
     expect(TestBed.inject(Router).url).toBe('/');
   });
 
   it('forwards to the first section on a wide viewport', async () => {
     isWide.set(true);
-    const f = mount();
-    await f.whenStable();
+    const fixture = mount();
+    await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/settings/organise');
   });
 
   it('forwards when the viewport grows past the breakpoint while open', async () => {
     isWide.set(false);
-    const f = mount();
-    await f.whenStable();
+    const fixture = mount();
+    await fixture.whenStable();
     isWide.set(true);
-    f.detectChanges();
-    await f.whenStable();
+    fixture.detectChanges();
+    await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/settings/organise');
   });
 });

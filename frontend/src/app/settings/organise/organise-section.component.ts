@@ -177,9 +177,9 @@ export class OrganiseSectionComponent implements OnInit {
         this.store.busy.set(false);
         if (removed) this.store.clearSelection();
       },
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         this.store.busy.set(false);
-        this.error.set(parseProblem(e));
+        this.error.set(parseProblem(error));
         this.subs.load();
       },
     });
@@ -190,9 +190,9 @@ export class OrganiseSectionComponent implements OnInit {
     this.error.set(null);
     write$.subscribe({
       next: () => this.store.busy.set(false),
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         this.store.busy.set(false);
-        this.error.set(parseProblem(e));
+        this.error.set(parseProblem(error));
         // Reload so the row that caused the 422 — a feed another tab already
         // deleted — disappears. The selection stays; the user decides.
         this.subs.load();
@@ -206,7 +206,7 @@ export class OrganiseSectionComponent implements OnInit {
     // list while this swaps within the full, unfiltered tags() list; under
     // a filter that mismatch can silently swap with an invisible tag.
     if (this.store.filterActive()) return;
-    const ids = this.tags.tags().map((t) => t.id);
+    const ids = this.tags.tags().map((tag) => tag.id);
     const from = ids.indexOf(group.tag?.id ?? -1);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= ids.length) return;

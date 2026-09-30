@@ -53,36 +53,36 @@ describe('DigestService', () => {
   });
 
   it('defaults to disabled, daily, 8am, Monday, UTC, html', () => {
-    const s = service();
+    const digestService = service();
 
-    expect(s.enabled()).toBe(false);
-    expect(s.cadence()).toBe('daily');
-    expect(s.sendHour()).toBe(8);
-    expect(s.weekday()).toBe(1);
-    expect(s.timezone()).toBe('UTC');
-    expect(s.format()).toBe('html');
+    expect(digestService.enabled()).toBe(false);
+    expect(digestService.cadence()).toBe('daily');
+    expect(digestService.sendHour()).toBe(8);
+    expect(digestService.weekday()).toBe(1);
+    expect(digestService.timezone()).toBe('UTC');
+    expect(digestService.format()).toBe('html');
   });
 
   it('applies a changed field locally and writes the full config through', () => {
-    const s = service();
+    const digestService = service();
 
-    s.setEnabled(true);
+    digestService.setEnabled(true);
 
-    expect(s.enabled()).toBe(true);
+    expect(digestService.enabled()).toBe(true);
     expect(writer.written).toEqual([
       { enabled: true, cadence: 'daily', sendHour: 8, weekday: 1, format: 'html' },
     ]);
-    expect(s.saveFailed()).toBe(false);
+    expect(digestService.saveFailed()).toBe(false);
   });
 
   it('writes the full config for each field, not just the one that changed', () => {
-    const s = service();
+    const digestService = service();
 
-    s.setEnabled(true);
-    s.setCadence('weekly');
-    s.setSendHour(20);
-    s.setWeekday(5);
-    s.setFormat('text');
+    digestService.setEnabled(true);
+    digestService.setCadence('weekly');
+    digestService.setSendHour(20);
+    digestService.setWeekday(5);
+    digestService.setFormat('text');
 
     expect(writer.written).toEqual([
       { enabled: true, cadence: 'daily', sendHour: 8, weekday: 1, format: 'html' },
@@ -94,11 +94,11 @@ describe('DigestService', () => {
   });
 
   it('writes the full config when only the format changes', () => {
-    const s = service();
+    const digestService = service();
 
-    s.setFormat('text');
+    digestService.setFormat('text');
 
-    expect(s.format()).toBe('text');
+    expect(digestService.format()).toBe('text');
     expect(writer.written).toEqual([
       { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, format: 'text' },
     ]);
@@ -106,35 +106,35 @@ describe('DigestService', () => {
 
   it('flags a failed write without reverting the local value', () => {
     writer.result = false;
-    const s = service();
+    const digestService = service();
 
-    s.setEnabled(true);
+    digestService.setEnabled(true);
 
-    expect(s.enabled()).toBe(true);
-    expect(s.saveFailed()).toBe(true);
+    expect(digestService.enabled()).toBe(true);
+    expect(digestService.saveFailed()).toBe(true);
   });
 
   it('adopts the account values without writing them back', () => {
-    const s = service();
+    const digestService = service();
 
-    s.adopt(
+    digestService.adopt(
       user(
         { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
         'Europe/Berlin',
       ),
     );
 
-    expect(s.enabled()).toBe(true);
-    expect(s.cadence()).toBe('weekly');
-    expect(s.sendHour()).toBe(20);
-    expect(s.weekday()).toBe(5);
-    expect(s.timezone()).toBe('Europe/Berlin');
-    expect(s.format()).toBe('text');
+    expect(digestService.enabled()).toBe(true);
+    expect(digestService.cadence()).toBe('weekly');
+    expect(digestService.sendHour()).toBe(20);
+    expect(digestService.weekday()).toBe(5);
+    expect(digestService.timezone()).toBe('Europe/Berlin');
+    expect(digestService.format()).toBe('text');
     expect(writer.written).toEqual([]);
   });
 
   it('adopts defaults without throwing when preferences.digest is missing', () => {
-    const s = service();
+    const digestService = service();
     const malformedUser = {
       ...user(
         { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
@@ -143,43 +143,43 @@ describe('DigestService', () => {
       preferences: { scrapeFallbackEnabled: false } as unknown as CurrentUser['preferences'],
     };
 
-    expect(() => s.adopt(malformedUser)).not.toThrow();
+    expect(() => digestService.adopt(malformedUser)).not.toThrow();
 
-    expect(s.enabled()).toBe(false);
-    expect(s.cadence()).toBe('daily');
-    expect(s.sendHour()).toBe(8);
-    expect(s.weekday()).toBe(1);
-    expect(s.timezone()).toBe('UTC');
-    expect(s.format()).toBe('html');
+    expect(digestService.enabled()).toBe(false);
+    expect(digestService.cadence()).toBe('daily');
+    expect(digestService.sendHour()).toBe(8);
+    expect(digestService.weekday()).toBe(1);
+    expect(digestService.timezone()).toBe('UTC');
+    expect(digestService.format()).toBe('html');
     expect(writer.written).toEqual([]);
   });
 
   it('resets to defaults', () => {
-    const s = service();
-    s.adopt(
+    const digestService = service();
+    digestService.adopt(
       user(
         { enabled: true, cadence: 'weekly', sendHour: 20, weekday: 5, format: 'text' },
         'Europe/Berlin',
       ),
     );
 
-    s.reset();
+    digestService.reset();
 
-    expect(s.enabled()).toBe(false);
-    expect(s.cadence()).toBe('daily');
-    expect(s.sendHour()).toBe(8);
-    expect(s.weekday()).toBe(1);
-    expect(s.timezone()).toBe('UTC');
-    expect(s.format()).toBe('html');
-    expect(s.saveFailed()).toBe(false);
+    expect(digestService.enabled()).toBe(false);
+    expect(digestService.cadence()).toBe('daily');
+    expect(digestService.sendHour()).toBe(8);
+    expect(digestService.weekday()).toBe(1);
+    expect(digestService.timezone()).toBe('UTC');
+    expect(digestService.format()).toBe('html');
+    expect(digestService.saveFailed()).toBe(false);
   });
 
   it('forwards sendTest to the writer with the requested days', () => {
     writer.testMailResult = 'empty';
-    const s = service();
+    const digestService = service();
 
     let result: DigestTestMailResult | undefined;
-    s.sendTest(14).subscribe((r) => (result = r));
+    digestService.sendTest(14).subscribe((mailResult) => (result = mailResult));
 
     expect(writer.testMailDaysRequested).toEqual([14]);
     expect(result).toBe('empty');

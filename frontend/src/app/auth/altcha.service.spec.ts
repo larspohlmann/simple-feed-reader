@@ -13,10 +13,10 @@ describe('AltchaService', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
-    const svc = TestBed.inject(AltchaService);
+    const service = TestBed.inject(AltchaService);
     const ctrl = TestBed.inject(HttpTestingController);
     let got: unknown;
-    svc.challenge().subscribe((c) => (got = c));
+    service.challenge().subscribe((challenge) => (got = challenge));
     ctrl
       .expectOne('https://api.test/api/auth/altcha-challenge')
       .flush({ algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'x', maxnumber: 5 });

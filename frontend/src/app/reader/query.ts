@@ -116,13 +116,13 @@ export interface RefreshScope {
 
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */
-export function sameSelection(a: Selection, b: Selection): boolean {
+export function sameSelection(left: Selection, right: Selection): boolean {
   return (
-    a.kind === b.kind &&
-    a.id === b.id &&
-    a.unread === b.unread &&
-    a.term === b.term &&
-    listOrderOf(a) === listOrderOf(b)
+    left.kind === right.kind &&
+    left.id === right.id &&
+    left.unread === right.unread &&
+    left.term === right.term &&
+    listOrderOf(left) === listOrderOf(right)
   );
 }
 
@@ -143,13 +143,13 @@ export function visibleSearchTerm(term: string): string {
 
 /** Whether the list offers the "All posts / only unread" switch. Favorites,
  *  kept and viewed are already filters on entry state, so they do not. */
-export function hasUnreadFilter(s: Selection): boolean {
+export function hasUnreadFilter(selection: Selection): boolean {
   return (
-    canScopedRefresh(s) ||
-    s.kind === 'for-you' ||
-    s.kind === 'saved-searches' ||
-    s.kind === 'saved-search' ||
-    s.kind === 'search'
+    canScopedRefresh(selection) ||
+    selection.kind === 'for-you' ||
+    selection.kind === 'saved-searches' ||
+    selection.kind === 'saved-search' ||
+    selection.kind === 'search'
   );
 }
 
@@ -159,12 +159,12 @@ export function withUnreadPreference(selection: Selection, unreadOnly: boolean):
 
 /** Whether the list offers the newest/oldest-first toggle; the ranked for-you
  *  feed has no date order to reverse. */
-export function hasListOrder(s: Selection): boolean {
-  return s.kind !== 'for-you';
+export function hasListOrder(selection: Selection): boolean {
+  return selection.kind !== 'for-you';
 }
 
-export function listOrderOf(s: Selection): ListOrder {
-  return s.order ?? 'newest';
+export function listOrderOf(selection: Selection): ListOrder {
+  return selection.order ?? 'newest';
 }
 
 /** Applies an order to a selection parsed from the URL, which never carries one. */
@@ -174,23 +174,23 @@ export function withListOrder(selection: Selection, order: ListOrder): Selection
 
 /** Where a list's order is remembered: per feed, tag, saved search and view, and
  *  once for every direct search, whose terms are throwaway. */
-export function listOrderKey(s: Selection): string | null {
-  if (!hasListOrder(s)) return null;
-  if (s.kind === 'search') return 'search';
-  return s.id === null ? s.kind : `${s.kind}:${s.id}`;
+export function listOrderKey(selection: Selection): string | null {
+  if (!hasListOrder(selection)) return null;
+  if (selection.kind === 'search') return 'search';
+  return selection.id === null ? selection.kind : `${selection.kind}:${selection.id}`;
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
  *  saved views (favorites/kept) don't map to any feed scope, so they can't. */
-export function canScopedRefresh(s: Selection): boolean {
-  return s.kind === 'all' || s.kind === 'tag' || s.kind === 'subscription';
+export function canScopedRefresh(selection: Selection): boolean {
+  return selection.kind === 'all' || selection.kind === 'tag' || selection.kind === 'subscription';
 }
 
 /** A view that shows one logical stream, not an aggregation of feeds: a single
  *  subscription, or the ranked for-you list. Carries a "last refreshed" label and
  *  never collapses same-source runs into a group widget (would hide/reorder entries). */
-export function isSingleStreamView(s: Selection): boolean {
-  return s.kind === 'subscription' || s.kind === 'for-you';
+export function isSingleStreamView(selection: Selection): boolean {
+  return selection.kind === 'subscription' || selection.kind === 'for-you';
 }
 
 /** Every query parameter that names which list is on screen. A navigation that
@@ -203,8 +203,8 @@ type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
 /** The only way `selectionFromParams` may pull a selection-identity value
  *  out of the URL. Its parameter type is `SelectionParamName`, so this is
  *  where the compile error in the comment above actually fires. */
-function selectionParam(p: ParamMap, name: SelectionParamName): string | null {
-  return p.get(name);
+function selectionParam(paramMap: ParamMap, name: SelectionParamName): string | null {
+  return paramMap.get(name);
 }
 
 type SelectionParamValue = string | number | null;
@@ -240,20 +240,20 @@ export function selectionQueryParams(set: Partial<SelectionParams>): SelectionPa
   return params;
 }
 
-export function selectionFromParams(p: ParamMap): {
+export function selectionFromParams(paramMap: ParamMap): {
   selection: Selection;
   entryId: number | null;
 } {
-  const view = selectionParam(p, 'view');
-  const tag = posInt(selectionParam(p, 'tag'));
-  const subscription = posInt(selectionParam(p, 'subscription'));
+  const view = selectionParam(paramMap, 'view');
+  const tag = posInt(selectionParam(paramMap, 'tag'));
+  const subscription = posInt(selectionParam(paramMap, 'subscription'));
   // The entry param is an id or an id-prefixed slug ("514-some-title").
-  const entryId = entryIdFromParam(selectionParam(p, 'entry'));
+  const entryId = entryIdFromParam(selectionParam(paramMap, 'entry'));
 
   // Not a plain trim(): a trailing space is the whole-word-match signal (#408
   // follow-up) and must survive into `Selection.term`, so only MEANINGLESS
   // whitespace — leading, and collapsed runs between terms — is removed here.
-  const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
+  const term = normalizeSearchInput(selectionParam(paramMap, 'q') ?? '');
   if (isSearchableTerm(term)) {
     // A `?q=` search is its own view over every subscription, so a tag or feed
     // parameter left in the URL by hand is ignored rather than combined.
@@ -287,13 +287,13 @@ export function listSelectionFrom(params: Params): Selection {
   return selectionFromParams(convertToParamMap({ ...params, q: null })).selection;
 }
 
-export function queryFromSelection(s: Selection): EntryQuery {
-  const query = viewQuery(s);
-  return listOrderOf(s) === 'oldest' ? { ...query, order: 'oldest' } : query;
+export function queryFromSelection(selection: Selection): EntryQuery {
+  const query = viewQuery(selection);
+  return listOrderOf(selection) === 'oldest' ? { ...query, order: 'oldest' } : query;
 }
 
-function viewQuery(s: Selection): EntryQuery {
-  switch (s.kind) {
+function viewQuery(selection: Selection): EntryQuery {
+  switch (selection.kind) {
     case 'favorites':
       return { view: 'favorites' };
     case 'kept':
@@ -303,25 +303,29 @@ function viewQuery(s: Selection): EntryQuery {
     case 'for-you':
       // The one list whose unread filter is not a view of its own: the ranked
       // feed IS the view, so the filter travels beside it (#710).
-      return s.unread ? { view: 'for-you', unread: true } : { view: 'for-you' };
+      return selection.unread ? { view: 'for-you', unread: true } : { view: 'for-you' };
     case 'tag':
-      return { view: s.unread ? 'unread' : 'all', tag: s.id ?? undefined };
+      return { view: selection.unread ? 'unread' : 'all', tag: selection.id ?? undefined };
     case 'subscription':
-      return { view: s.unread ? 'unread' : 'all', subscription: s.id ?? undefined };
+      return { view: selection.unread ? 'unread' : 'all', subscription: selection.id ?? undefined };
     case 'all':
-      return { view: s.unread ? 'unread' : 'all' };
+      return { view: selection.unread ? 'unread' : 'all' };
     case 'saved-searches':
       // Its own endpoint, so the filter rides beside the view exactly as for
       // you's does rather than becoming a view of its own.
-      return s.unread ? { view: 'saved-searches', unread: true } : { view: 'saved-searches' };
+      return selection.unread
+        ? { view: 'saved-searches', unread: true }
+        : { view: 'saved-searches' };
     case 'saved-search':
       // A single saved search reads the membership table by id, not a live
       // query, so it carries the id and takes the unread refinement like any list.
-      return s.unread
-        ? { view: 'all', savedSearchId: s.id ?? undefined, unread: true }
-        : { view: 'all', savedSearchId: s.id ?? undefined };
+      return selection.unread
+        ? { view: 'all', savedSearchId: selection.id ?? undefined, unread: true }
+        : { view: 'all', savedSearchId: selection.id ?? undefined };
     case 'search':
-      return s.unread ? { view: 'all', q: s.term, unread: true } : { view: 'all', q: s.term };
+      return selection.unread
+        ? { view: 'all', q: selection.term, unread: true }
+        : { view: 'all', q: selection.term };
   }
 }
 
@@ -336,16 +340,16 @@ export type MarkReadTarget =
   | { scope: 'saved-searches' }
   | { scope: 'saved-search'; id: number };
 
-export function markReadTarget(s: Selection): MarkReadTarget | null {
-  switch (s.kind) {
+export function markReadTarget(selection: Selection): MarkReadTarget | null {
+  switch (selection.kind) {
     case 'all':
       return { scope: 'all' };
     case 'tag':
-      return s.id != null ? { scope: 'tag', id: s.id } : null;
+      return selection.id != null ? { scope: 'tag', id: selection.id } : null;
     case 'subscription':
-      return s.id != null ? { scope: 'feed', id: s.id } : null;
+      return selection.id != null ? { scope: 'feed', id: selection.id } : null;
     case 'search':
-      return s.term ? { scope: 'search', term: s.term } : null;
+      return selection.term ? { scope: 'search', term: selection.term } : null;
     case 'for-you':
       // No id and no term: the list is the reader's own ranked feed, so the
       // endpoint needs nothing beyond who is asking (#710).
@@ -354,14 +358,14 @@ export function markReadTarget(s: Selection): MarkReadTarget | null {
       // No id and no term: the endpoint needs nothing beyond who is asking.
       return { scope: 'saved-searches' };
     case 'saved-search':
-      return s.id != null ? { scope: 'saved-search', id: s.id } : null;
+      return selection.id != null ? { scope: 'saved-search', id: selection.id } : null;
     default:
       return null;
   }
 }
 
-function posInt(v: string | null): number | null {
-  if (v == null) return null;
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : null;
+function posInt(value: string | null): number | null {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }

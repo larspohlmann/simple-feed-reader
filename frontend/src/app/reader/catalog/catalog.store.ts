@@ -47,16 +47,16 @@ export class CatalogStore {
     this.loading.set(true);
     this.error.set(null);
     this.inFlight = this.api.load().subscribe({
-      next: (r) => {
-        this.categories.set(r.categories);
+      next: (response) => {
+        this.categories.set(response.categories);
         this.loading.set(false);
         this.resolved.set(true);
       },
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         // Resolve as empty on failure: a redirect into a picker that cannot load
         // is worse than leaving the user in the reader with a link.
         this.categories.set([]);
-        this.error.set(parseProblem(e));
+        this.error.set(parseProblem(error));
         this.loading.set(false);
         this.resolved.set(true);
       },

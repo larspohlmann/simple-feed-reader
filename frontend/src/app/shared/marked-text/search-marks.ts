@@ -43,7 +43,7 @@ function compile(usable: string[], terms: string[]): CompiledTerms {
  * markup stays text.
  */
 export function markTerms(text: string, terms: string[]): TextSegment[] {
-  const usable = terms.filter((t) => t.length > 0);
+  const usable = terms.filter((term) => term.length > 0);
   if (!text || usable.length === 0) return [{ text, marked: false }];
 
   const { pattern, lowered } = compile(usable, terms);

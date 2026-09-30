@@ -23,7 +23,7 @@ describe('ToggleComponent', () => {
 
   it('emits the new value when clicked', () => {
     const seen: boolean[] = [];
-    fixture.componentInstance.toggled.subscribe((v) => seen.push(v));
+    fixture.componentInstance.toggled.subscribe((value) => seen.push(value));
 
     input().click();
     fixture.detectChanges();

@@ -258,8 +258,8 @@ export class RecommendationsService {
     this.stopping.set(false);
     this.markRunning();
     source.subscribe({
-      next: (r) => this.onReport(r),
-      error: (e: HttpErrorResponse) => this.stopWithHttpError(e),
+      next: (report) => this.onReport(report),
+      error: (error: HttpErrorResponse) => this.stopWithHttpError(error),
     });
   }
 
@@ -311,7 +311,7 @@ export class RecommendationsService {
     if (!this.running() || this.stopping()) return;
     this.stopping.set(true);
     this.api.stopRecommendations().subscribe({
-      next: (r) => this.onReport(r),
+      next: (report) => this.onReport(report),
       error: () => this.stopping.set(false),
     });
   }
@@ -321,7 +321,7 @@ export class RecommendationsService {
    *  the last known report in place rather than surfacing a second error path. */
   refreshStatus(): void {
     this.api.currentRecommendations().subscribe({
-      next: (r) => this.applyReport(r),
+      next: (report) => this.applyReport(report),
       error: () => {
         // Best-effort; see the docblock above.
       },
@@ -333,13 +333,14 @@ export class RecommendationsService {
    *  silently ignored; nothing to tell the user about a run they didn't start. */
   resume(): void {
     this.api.currentRecommendations().subscribe({
-      next: (r) => {
-        this.applyReport(r); // even a finished run carries the for-you summary the sidebar needs
+      next: (report) => {
+        // even a finished run carries the for-you summary the sidebar needs
+        this.applyReport(report);
         // The reader shell calls this on every mount, so reader -> another route
         // -> reader runs it again mid-run. Re-raising the pill would undo a ✕
         // already pressed, and starting a second `step()` would double the poll loop.
         if (this.running()) return;
-        if (r.status !== 'pending' && r.status !== 'running') return;
+        if (report.status !== 'pending' && report.status !== 'running') return;
         this.markRunning();
         this.step(NO_ATTEMPTS);
       },
@@ -363,8 +364,8 @@ export class RecommendationsService {
       : this.api.tickRecommendations();
 
     poll.subscribe({
-      next: (r) => this.onReport(r),
-      error: (e: HttpErrorResponse) => this.retryOrStop(e, attempts),
+      next: (report) => this.onReport(report),
+      error: (error: HttpErrorResponse) => this.retryOrStop(error, attempts),
     });
   }
 
@@ -394,16 +395,16 @@ export class RecommendationsService {
     }
   }
 
-  private onReport(r: RecommendationRunReport): void {
-    this.applyReport(r);
-    switch (r.status) {
+  private onReport(report: RecommendationRunReport): void {
+    this.applyReport(report);
+    switch (report.status) {
       case 'pending':
       case 'running':
         if (this.workerOwnsRun()) this.stepLater(NO_ATTEMPTS, BACKGROUND_POLL_MS);
         else this.step(NO_ATTEMPTS);
         break;
       case 'completed':
-        this.completedStamp.update((n) => n + 1);
+        this.completedStamp.update((stamp) => stamp + 1);
         this.finish();
         this.toast.show({
           message: this.i18n.translate('reader.forYouReady'),
@@ -418,7 +419,7 @@ export class RecommendationsService {
         this.finish();
         break;
       case 'failed':
-        this.failure.set({ kind: 'failed', error: r.error });
+        this.failure.set({ kind: 'failed', error: report.error });
         this.finish();
         this.toast.show({ message: this.i18n.translate('reader.forYouFailed'), width: 'fixed' });
         break;
@@ -438,13 +439,13 @@ export class RecommendationsService {
    *  429 is different — the server is healthy, the client just asked too
    *  often — so it gets its own branch, counter, and longer wait instead of
    *  spending the transport ceiling meant for an unhealthy server. */
-  private retryOrStop(e: HttpErrorResponse, attempts: PollAttempts): void {
-    if (e.status === 429) {
-      this.backOffWhileRateLimited(e, attempts);
+  private retryOrStop(error: HttpErrorResponse, attempts: PollAttempts): void {
+    if (error.status === 429) {
+      this.backOffWhileRateLimited(error, attempts);
       return;
     }
     if (attempts.transport >= MAX_TRANSPORT_RETRIES) {
-      this.stopWithHttpError(e);
+      this.stopWithHttpError(error);
       return;
     }
     this.stepLater({ ...attempts, transport: attempts.transport + 1 });
@@ -453,9 +454,9 @@ export class RecommendationsService {
   /** Waits out the `ai_recommendations` limiter's sliding window rather than
    *  declaring the run dead -- but only so long: a server that keeps
    *  rejecting for good must still end the run rather than poll forever. */
-  private backOffWhileRateLimited(e: HttpErrorResponse, attempts: PollAttempts): void {
+  private backOffWhileRateLimited(error: HttpErrorResponse, attempts: PollAttempts): void {
     if (attempts.rateLimited >= MAX_RATE_LIMIT_RETRIES) {
-      this.stopWithHttpError(e);
+      this.stopWithHttpError(error);
       return;
     }
     this.stopTicker(); // freeze the bar: with no ticker bump, progress() holds its last value
@@ -467,8 +468,8 @@ export class RecommendationsService {
     setTimeout(() => this.step(attempts), delayMs);
   }
 
-  private stopWithHttpError(e: HttpErrorResponse): void {
-    this.failure.set({ kind: 'http', problem: parseProblem(e) });
+  private stopWithHttpError(error: HttpErrorResponse): void {
+    this.failure.set({ kind: 'http', problem: parseProblem(error) });
     this.finish();
     // The run's only surface is the app-wide pill, and `finish()` has just
     // taken it down. A request that fails outright (start POST, or the poll
@@ -492,7 +493,7 @@ export class RecommendationsService {
 
   private startTicker(): void {
     if (this.tickerId !== null) return;
-    this.tickerId = setInterval(() => this.frame.update((n) => n + 1), TICK_MS);
+    this.tickerId = setInterval(() => this.frame.update((frame) => frame + 1), TICK_MS);
   }
 
   private stopTicker(): void {

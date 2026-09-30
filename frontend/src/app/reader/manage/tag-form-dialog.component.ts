@@ -54,13 +54,15 @@ export class TagFormDialogComponent {
     };
     this.loading.set(true);
     this.error.set(null);
-    const req = this.isEdit ? this.api.updateTag(this.data!.id, body) : this.api.createTag(body);
-    req.subscribe({
-      next: (r) => this.ref.close(r.tag),
-      error: (e: HttpErrorResponse) => {
+    const request = this.isEdit
+      ? this.api.updateTag(this.data!.id, body)
+      : this.api.createTag(body);
+    request.subscribe({
+      next: (response) => this.ref.close(response.tag),
+      error: (error: HttpErrorResponse) => {
         this.loading.set(false);
-        const p = parseProblem(e);
-        this.error.set(p.errors?.['name']?.[0] ?? p.detail ?? p.title);
+        const problem = parseProblem(error);
+        this.error.set(problem.errors?.['name']?.[0] ?? problem.detail ?? problem.title);
       },
     });
   }

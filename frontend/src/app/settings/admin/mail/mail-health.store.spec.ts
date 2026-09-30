@@ -33,9 +33,9 @@ describe('MailHealthStore', () => {
   it('refresh() GETs the mail errors endpoint and sets failures/failureCount', () => {
     store.refresh();
 
-    const req = http.expectOne(ERRORS_ENDPOINT);
-    expect(req.request.method).toBe('GET');
-    req.flush({
+    const testRequest = http.expectOne(ERRORS_ENDPOINT);
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({
       failures: [
         {
           kind: 'digest',
@@ -61,8 +61,8 @@ describe('MailHealthStore', () => {
     store.refresh();
     store.refresh();
 
-    const req = http.expectOne(ERRORS_ENDPOINT); // expectOne fails if two were issued
-    req.flush({ failures: [] });
+    const testRequest = http.expectOne(ERRORS_ENDPOINT); // expectOne fails if two were issued
+    testRequest.flush({ failures: [] });
 
     // Once the in-flight request settles, a later refresh issues a fresh GET.
     store.refresh();

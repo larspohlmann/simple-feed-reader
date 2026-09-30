@@ -71,25 +71,25 @@ describe('adminGuard', () => {
   it('redirects an already-loaded non-admin to /', () => {
     userSignal = () => plain;
     isAdmin.mockReturnValue(false);
-    const res = run();
-    expect(res instanceof UrlTree).toBe(true);
-    expect((res as UrlTree).toString()).toBe('/');
+    const result = run();
+    expect(result instanceof UrlTree).toBe(true);
+    expect((result as UrlTree).toString()).toBe('/');
   });
 
   it('loads the user first on a deep link, then allows an admin', async () => {
     userSignal = () => null;
     loadMe.mockReturnValue(of(admin));
     isAdmin.mockReturnValue(true);
-    const res = run();
-    expect(isObservable(res)).toBe(true);
-    await expect(firstValueFrom(res as never)).resolves.toBe(true);
+    const result = run();
+    expect(isObservable(result)).toBe(true);
+    await expect(firstValueFrom(result as never)).resolves.toBe(true);
   });
 
   it('redirects to / when loadMe fails', async () => {
     userSignal = () => null;
     loadMe.mockReturnValue(throwError(() => new Error('401')));
-    const res = run();
-    const val = await firstValueFrom(res as never);
-    expect(val instanceof UrlTree).toBe(true);
+    const result = run();
+    const value = await firstValueFrom(result as never);
+    expect(value instanceof UrlTree).toBe(true);
   });
 });

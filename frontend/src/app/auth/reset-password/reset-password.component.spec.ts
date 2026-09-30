@@ -20,19 +20,19 @@ describe('ResetPasswordComponent', () => {
         { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: () => token }) } },
       ],
     });
-    const f = TestBed.createComponent(ResetPasswordComponent);
-    f.detectChanges();
-    return { f, ctrl: TestBed.inject(HttpTestingController) };
+    const fixture = TestBed.createComponent(ResetPasswordComponent);
+    fixture.detectChanges();
+    return { fixture, controller: TestBed.inject(HttpTestingController) };
   }
 
   it('posts token+password and navigates to login on success', () => {
     navigate.mockReset();
-    const { f, ctrl } = setup('tok-9');
-    f.componentInstance.form.setValue({ password: 'newpassword12' });
-    f.componentInstance.submit();
-    const req = ctrl.expectOne('https://api.test/api/auth/password-reset');
-    expect(req.request.body).toEqual({ token: 'tok-9', password: 'newpassword12' });
-    req.flush({});
+    const { fixture, controller } = setup('tok-9');
+    fixture.componentInstance.form.setValue({ password: 'newpassword12' });
+    fixture.componentInstance.submit();
+    const testRequest = controller.expectOne('https://api.test/api/auth/password-reset');
+    expect(testRequest.request.body).toEqual({ token: 'tok-9', password: 'newpassword12' });
+    testRequest.flush({});
     expect(navigate).toHaveBeenCalledWith(['/login'], { queryParams: { reset: '1' } });
   });
 });

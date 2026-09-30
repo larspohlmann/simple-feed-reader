@@ -12,24 +12,24 @@ describe('SkeletonComponent', () => {
   }
 
   it('renders three placeholder rows by default', async () => {
-    const el = await render();
-    expect(el.querySelectorAll('.row')).toHaveLength(3);
+    const element = await render();
+    expect(element.querySelectorAll('.row')).toHaveLength(3);
   });
 
   it('renders the requested number of rows', async () => {
-    const el = await render(6);
-    expect(el.querySelectorAll('.row')).toHaveLength(6);
+    const element = await render(6);
+    expect(element.querySelectorAll('.row')).toHaveLength(6);
   });
 
   it('announces the load with the given label', async () => {
-    const el = await render();
-    const status = el.querySelector('[role="status"]');
+    const element = await render();
+    const status = element.querySelector('[role="status"]');
     expect(status?.getAttribute('aria-label')).toBe('Loading tags');
   });
 
   it('hides the placeholder rows from assistive technology', async () => {
-    const el = await render();
+    const element = await render();
     // The rows are decoration; the role=status label is what gets announced.
-    expect(el.querySelector('.rows')?.getAttribute('aria-hidden')).toBe('true');
+    expect(element.querySelector('.rows')?.getAttribute('aria-hidden')).toBe('true');
   });
 });

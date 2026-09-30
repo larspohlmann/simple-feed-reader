@@ -92,7 +92,7 @@ function flushProblem(request: TestRequest, type: string, status: number): void 
 }
 
 describe('PasskeyService', () => {
-  let svc: PasskeyService;
+  let service: PasskeyService;
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
   let create: jest.Mock;
@@ -111,7 +111,7 @@ describe('PasskeyService', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
-    svc = TestBed.inject(PasskeyService);
+    service = TestBed.inject(PasskeyService);
     ctrl = TestBed.inject(HttpTestingController);
     tokens = TestBed.inject(TokenStore);
   });
@@ -125,11 +125,11 @@ describe('PasskeyService', () => {
   it('enrol posts to register/options then register, in order, base64url-encoding the credential', async () => {
     create.mockResolvedValue(fixtureAttestationCredential());
 
-    const enrolment = svc.enrol('MacBook Touch ID');
+    const enrolment = service.enrol('MacBook Touch ID');
 
-    const optionsReq = ctrl.expectOne('https://api.test/api/auth/passkey/register/options');
-    expect(optionsReq.request.method).toBe('POST');
-    optionsReq.flush({ options: creationOptions, handle: 'register-handle' });
+    const optionsTestRequest = ctrl.expectOne('https://api.test/api/auth/passkey/register/options');
+    expect(optionsTestRequest.request.method).toBe('POST');
+    optionsTestRequest.flush({ options: creationOptions, handle: 'register-handle' });
 
     await flushMicrotasks();
 
@@ -138,9 +138,9 @@ describe('PasskeyService', () => {
     expect(new Uint8Array(publicKey.challenge)).toEqual(new TextEncoder().encode('challenge'));
     expect(new Uint8Array(publicKey.user.id)).toEqual(new TextEncoder().encode('user-handle'));
 
-    const registerReq = ctrl.expectOne('https://api.test/api/auth/passkey/register');
-    expect(registerReq.request.method).toBe('POST');
-    expect(registerReq.request.body).toEqual({
+    const registerTestRequest = ctrl.expectOne('https://api.test/api/auth/passkey/register');
+    expect(registerTestRequest.request.method).toBe('POST');
+    expect(registerTestRequest.request.body).toEqual({
       handle: 'register-handle',
       label: 'MacBook Touch ID',
       credential: {
@@ -153,7 +153,7 @@ describe('PasskeyService', () => {
         },
       },
     });
-    registerReq.flush({ passkeys: [] }, { status: 201, statusText: 'Created' });
+    registerTestRequest.flush({ passkeys: [] }, { status: 201, statusText: 'Created' });
 
     await expect(enrolment).resolves.toBeUndefined();
   });
@@ -161,7 +161,7 @@ describe('PasskeyService', () => {
   it('surfaces a rejected registration ceremony as a Problem, not an unhandled rejection', async () => {
     create.mockRejectedValue(new DOMException('User cancelled.', 'NotAllowedError'));
 
-    const enrolment = svc.enrol('MacBook Touch ID');
+    const enrolment = service.enrol('MacBook Touch ID');
     ctrl
       .expectOne('https://api.test/api/auth/passkey/register/options')
       .flush({ options: creationOptions, handle: 'register-handle' });
@@ -182,7 +182,7 @@ describe('PasskeyService', () => {
     async (name) => {
       create.mockRejectedValue(new DOMException(`${name} message`, name));
 
-      const enrolment = svc.enrol('MacBook Touch ID');
+      const enrolment = service.enrol('MacBook Touch ID');
       ctrl
         .expectOne('https://api.test/api/auth/passkey/register/options')
         .flush({ options: creationOptions, handle: 'register-handle' });
@@ -198,7 +198,7 @@ describe('PasskeyService', () => {
   it('degrades a non-DOMException ceremony rejection to about:blank', async () => {
     create.mockRejectedValue(new Error('something else went wrong'));
 
-    const enrolment = svc.enrol('MacBook Touch ID');
+    const enrolment = service.enrol('MacBook Touch ID');
     ctrl
       .expectOne('https://api.test/api/auth/passkey/register/options')
       .flush({ options: creationOptions, handle: 'register-handle' });
@@ -212,7 +212,7 @@ describe('PasskeyService', () => {
   });
 
   it('surfaces a failed options request as a Problem', async () => {
-    const enrolment = svc.enrol('MacBook Touch ID');
+    const enrolment = service.enrol('MacBook Touch ID');
     ctrl
       .expectOne('https://api.test/api/auth/passkey/register/options')
       .flush(
@@ -227,7 +227,7 @@ describe('PasskeyService', () => {
   // branch, but must NOT carry ceremonyRejected -- it never reached the
   // browser's ceremony, so its own "could not reach the server" text stays.
   it('does not mark a genuine network failure as a rejected ceremony', async () => {
-    const enrolment = svc.enrol('MacBook Touch ID');
+    const enrolment = service.enrol('MacBook Touch ID');
     ctrl
       .expectOne('https://api.test/api/auth/passkey/register/options')
       .error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
@@ -244,7 +244,7 @@ describe('PasskeyService', () => {
       register: TestRequest;
     }> {
       create.mockResolvedValue(fixtureAttestationCredential());
-      const enrolment = svc.enrol('MacBook Touch ID');
+      const enrolment = service.enrol('MacBook Touch ID');
       ctrl
         .expectOne('https://api.test/api/auth/passkey/register/options')
         .flush({ options: creationOptions, handle: 'register-handle' });
@@ -303,7 +303,7 @@ describe('PasskeyService', () => {
       const { unknown } = installSignalApi();
       create.mockRejectedValue(new DOMException('User cancelled.', 'NotAllowedError'));
 
-      const enrolment = svc.enrol('MacBook Touch ID');
+      const enrolment = service.enrol('MacBook Touch ID');
       ctrl
         .expectOne('https://api.test/api/auth/passkey/register/options')
         .flush({ options: creationOptions, handle: 'register-handle' });
@@ -319,7 +319,7 @@ describe('PasskeyService', () => {
     ];
     let received: PasskeySummary[] | undefined;
 
-    svc.list().subscribe((list) => (received = list));
+    service.list().subscribe((list) => (received = list));
     ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
 
     expect(received).toEqual(passkeys);
@@ -329,7 +329,7 @@ describe('PasskeyService', () => {
     it('hands the browser the authoritative set exactly as the server sent it', async () => {
       const { allAccepted } = installSignalApi();
 
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl
         .expectOne('https://api.test/api/auth/passkeys')
         .flush(listingBody({ acceptedCredentialIds: ['Zmlyc3Q', 'c2Vjb25k'] }));
@@ -348,9 +348,9 @@ describe('PasskeyService', () => {
     it('uses the remembered handle when the account has no passkeys left', async () => {
       const { allAccepted } = installSignalApi();
 
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl
         .expectOne('https://api.test/api/auth/passkeys')
         .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
@@ -367,12 +367,12 @@ describe('PasskeyService', () => {
     // over from account A would sweep A's passkeys with account B's empty list.
     it('forgets the handle once another identity signs in', async () => {
       const { allAccepted } = installSignalApi();
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody());
       tokens.set('another-accounts-jwt');
       TestBed.tick();
 
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl
         .expectOne('https://api.test/api/auth/passkeys')
         .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
@@ -388,8 +388,8 @@ describe('PasskeyService', () => {
     // list and would delete the passkey enrolled in between.
     it('lets only the newest listing sweep', async () => {
       const { allAccepted } = installSignalApi();
-      svc.list().subscribe();
-      svc.list().subscribe();
+      service.list().subscribe();
+      service.list().subscribe();
       const [older, newer] = ctrl.match('https://api.test/api/auth/passkeys');
 
       newer.flush(listingBody({ acceptedCredentialIds: ['a', 'new'] }));
@@ -405,7 +405,7 @@ describe('PasskeyService', () => {
     it('signals nothing when no handle was ever seen', async () => {
       const { allAccepted } = installSignalApi();
 
-      svc.list().subscribe();
+      service.list().subscribe();
       ctrl
         .expectOne('https://api.test/api/auth/passkeys')
         .flush(listingBody({ userHandle: null, acceptedCredentialIds: [] }));
@@ -422,7 +422,7 @@ describe('PasskeyService', () => {
       ];
       let received: PasskeySummary[] | undefined;
 
-      svc.list().subscribe((list) => (received = list));
+      service.list().subscribe((list) => (received = list));
       ctrl.expectOne('https://api.test/api/auth/passkeys').flush(listingBody({ passkeys }));
       await flushMicrotasks();
 
@@ -431,19 +431,19 @@ describe('PasskeyService', () => {
   });
 
   it('remove deletes by id', () => {
-    svc.remove(7).subscribe();
-    const req = ctrl.expectOne('https://api.test/api/auth/passkeys/7');
-    expect(req.request.method).toBe('DELETE');
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    service.remove(7).subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/auth/passkeys/7');
+    expect(testRequest.request.method).toBe('DELETE');
+    testRequest.flush(null, { status: 204, statusText: 'No Content' });
   });
 
   it('signIn resolves to the token from the login call and stores it', async () => {
     get.mockResolvedValue(fixtureAssertionCredential());
 
-    const signIn = svc.signIn();
+    const signIn = service.signIn();
 
-    const optionsReq = ctrl.expectOne('https://api.test/api/auth/passkey/login/options');
-    optionsReq.flush({ options: requestOptions, handle: 'login-handle' });
+    const optionsTestRequest = ctrl.expectOne('https://api.test/api/auth/passkey/login/options');
+    optionsTestRequest.flush({ options: requestOptions, handle: 'login-handle' });
 
     await flushMicrotasks();
 
@@ -451,8 +451,8 @@ describe('PasskeyService', () => {
     expect(get.mock.calls[0][0].mediation).toBeUndefined();
     expect(get.mock.calls[0][0].signal).toBeUndefined();
 
-    const loginReq = ctrl.expectOne('https://api.test/api/auth/passkey/login');
-    expect(loginReq.request.body).toEqual({
+    const loginTestRequest = ctrl.expectOne('https://api.test/api/auth/passkey/login');
+    expect(loginTestRequest.request.body).toEqual({
       handle: 'login-handle',
       credential: {
         id: 'credential-id',
@@ -466,7 +466,7 @@ describe('PasskeyService', () => {
         },
       },
     });
-    loginReq.flush({ token: 'jwt-abc' });
+    loginTestRequest.flush({ token: 'jwt-abc' });
 
     await expect(signIn).resolves.toBe('jwt-abc');
     expect(tokens.token()).toBe('jwt-abc');
@@ -476,7 +476,7 @@ describe('PasskeyService', () => {
     get.mockResolvedValue(fixtureAssertionCredential(false));
     const controller = new AbortController();
 
-    const signIn = svc.signInConditionally(controller.signal);
+    const signIn = service.signInConditionally(controller.signal);
 
     ctrl
       .expectOne('https://api.test/api/auth/passkey/login/options')
@@ -497,7 +497,7 @@ describe('PasskeyService', () => {
     it('asks enrolment for the passkey store on the machine the user is at', async () => {
       create.mockResolvedValue(fixtureAttestationCredential());
 
-      const enrolment = svc.enrol('MacBook Touch ID');
+      const enrolment = service.enrol('MacBook Touch ID');
       ctrl
         .expectOne('https://api.test/api/auth/passkey/register/options')
         .flush({ options: creationOptions, handle: 'register-handle' });
@@ -513,7 +513,7 @@ describe('PasskeyService', () => {
     it('asks sign-in for the same, so a local passkey beats the QR flow', async () => {
       get.mockResolvedValue(fixtureAssertionCredential());
 
-      const signIn = svc.signIn();
+      const signIn = service.signIn();
       ctrl
         .expectOne('https://api.test/api/auth/passkey/login/options')
         .flush({ options: requestOptions, handle: 'login-handle' });
@@ -530,7 +530,7 @@ describe('PasskeyService', () => {
   it('surfaces a rejected login ceremony as a Problem', async () => {
     get.mockRejectedValue(new DOMException('No credential available.', 'NotAllowedError'));
 
-    const signIn = svc.signIn();
+    const signIn = service.signIn();
     ctrl
       .expectOne('https://api.test/api/auth/passkey/login/options')
       .flush({ options: requestOptions, handle: 'login-handle' });
@@ -546,7 +546,7 @@ describe('PasskeyService', () => {
     /** Runs the options + ceremony half of a login and returns the pending
      *  login request, so each test decides only how the server answers. */
     async function signInUpToLogin(
-      start: () => Promise<string> = () => svc.signIn(),
+      start: () => Promise<string> = () => service.signIn(),
     ): Promise<{ signIn: Promise<string>; login: TestRequest }> {
       get.mockResolvedValue(fixtureAssertionCredential());
       const signIn = start();
@@ -585,7 +585,7 @@ describe('PasskeyService', () => {
     it('signals from the conditional ceremony as well', async () => {
       const { unknown } = installSignalApi();
       const { signIn, login } = await signInUpToLogin(() =>
-        svc.signInConditionally(new AbortController().signal),
+        service.signInConditionally(new AbortController().signal),
       );
 
       flushProblem(login, 'unknown_passkey_credential', 401);

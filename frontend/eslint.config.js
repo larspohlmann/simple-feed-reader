@@ -64,9 +64,9 @@ module.exports = defineConfig([
       "@typescript-eslint/max-params": ["warn", { max: 3 }],
       "sonarjs/cognitive-complexity": ["warn", 15],
       "sonarjs/no-identical-functions": "error",
-      "id-length": ["warn", { min: 2, exceptions: ["x", "y", "_"], properties: "never" }],
+      "id-length": ["error", { min: 2, exceptions: ["x", "y", "_"], properties: "never" }],
       "unicorn/prevent-abbreviations": [
-        "warn",
+        "error",
         {
           checkFilenames: false,
           checkProperties: false,
@@ -76,6 +76,9 @@ module.exports = defineConfig([
             subs: { subscriptions: true },
             hdr: { header: true },
             grp: { group: true },
+            ref: false,
+            params: false,
+            param: false,
           },
         },
       ],
@@ -105,6 +108,25 @@ module.exports = defineConfig([
       "max-lines": "off",
       "max-lines-per-function": "off",
       "sonarjs/no-identical-functions": "off",
+      "unicorn/prevent-abbreviations": [
+        "error",
+        {
+          checkFilenames: false,
+          checkProperties: false,
+          replacements: {
+            svc: { service: true },
+            recs: { recommendations: true },
+            subs: { subscriptions: true },
+            hdr: { header: true },
+            grp: { group: true },
+            ref: false,
+            params: false,
+            param: false,
+            req: { request: false, testRequest: true },
+            f: { fixture: true },
+          },
+        },
+      ],
     },
   },
   {

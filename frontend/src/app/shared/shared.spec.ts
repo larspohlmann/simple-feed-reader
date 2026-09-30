@@ -20,8 +20,8 @@ describe('shared primitives', () => {
     await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('app-form-error')?.textContent).toContain('Bad input');
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('app-form-error')?.textContent).toContain('Bad input');
   });
 
   it('spinner exposes an accessible status role', async () => {

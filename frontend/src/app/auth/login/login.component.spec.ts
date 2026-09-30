@@ -31,23 +31,25 @@ describe('LoginComponent', () => {
   });
 
   function create() {
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges(); // triggers ngOnInit → providers GET
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges(); // triggers ngOnInit → providers GET
     ctrl.expectOne('https://api.test/api/auth/oauth/providers').flush({ providers: ['google'] });
-    return f;
+    return fixture;
   }
 
   it('lists OAuth providers and builds provider URLs', () => {
-    const f = create();
-    expect(f.componentInstance.providers()).toEqual(['google']);
-    expect(f.componentInstance.oauthUrl('google')).toBe('https://api.test/api/auth/oauth/google');
+    const fixture = create();
+    expect(fixture.componentInstance.providers()).toEqual(['google']);
+    expect(fixture.componentInstance.oauthUrl('google')).toBe(
+      'https://api.test/api/auth/oauth/google',
+    );
   });
 
   it('restores the pending reader destination after password sign-in', () => {
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
-    const f = create();
-    f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
-    f.componentInstance.submit();
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
     ctrl.expectOne('https://api.test/api/me').flush({
       id: 1,
@@ -65,9 +67,9 @@ describe('LoginComponent', () => {
   });
 
   it('falls back to the reader root after loadMe fails following password sign-in', () => {
-    const f = create();
-    f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
-    f.componentInstance.submit();
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
     ctrl
       .expectOne('https://api.test/api/me')
@@ -80,9 +82,9 @@ describe('LoginComponent', () => {
   });
 
   it('renders the problem detail on a failed login', () => {
-    const f = create();
-    f.componentInstance.form.setValue({ email: 'a@b.c', password: 'wrongpass1234' });
-    f.componentInstance.submit();
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ email: 'a@b.c', password: 'wrongpass1234' });
+    fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/auth/login').flush(
       {
         type: 'invalid_credentials',
@@ -92,7 +94,7 @@ describe('LoginComponent', () => {
       },
       { status: 401, statusText: 'Unauthorized' },
     );
-    expect(f.componentInstance.error()).toBe('Email address or password is incorrect.');
+    expect(fixture.componentInstance.error()).toBe('Email address or password is incorrect.');
   });
 });
 
@@ -111,33 +113,35 @@ describe('LoginComponent — forgot-password link visibility', () => {
       ],
     }).compileComponents();
     ctrl = TestBed.inject(HttpTestingController);
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
     ctrl.expectOne('https://api.test/api/auth/oauth/providers').flush({ providers: [] });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function resetLink(f: ReturnType<typeof create>) {
+  function resetLink(fixture: ReturnType<typeof create>) {
     const anchors = Array.from(
-      (f.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'),
+      (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'),
     );
-    return anchors.find((a) => a.getAttribute('routerLink') === '/reset-password-request');
+    return anchors.find(
+      (anchor) => anchor.getAttribute('routerLink') === '/reset-password-request',
+    );
   }
 
   it('hides the reset link when mail is disabled', () => {
-    const f = create(false);
-    expect(resetLink(f)).toBeUndefined();
+    const fixture = create(false);
+    expect(resetLink(fixture)).toBeUndefined();
   });
 
   it('shows the reset link when mail is enabled', () => {
-    const f = create(true);
-    expect(resetLink(f)).toBeDefined();
+    const fixture = create(true);
+    expect(resetLink(fixture)).toBeDefined();
   });
 
   it('shows the reset link while mail capability is still unknown', () => {
-    const f = create(null);
-    expect(resetLink(f)).toBeDefined();
+    const fixture = create(null);
+    expect(resetLink(fixture)).toBeDefined();
   });
 });
 
@@ -175,27 +179,27 @@ describe('LoginComponent — passkey sign-in availability (#624 follow-up)', () 
       ],
     }).compileComponents();
     ctrl = TestBed.inject(HttpTestingController);
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
     ctrl.expectOne('https://api.test/api/auth/oauth/providers').flush({ providers: [] });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function passkeyButton(f: ReturnType<typeof create>): HTMLButtonElement | null {
-    return (f.nativeElement as HTMLElement).querySelector('[data-test="passkey-login"]');
+  function passkeyButton(fixture: ReturnType<typeof create>): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('[data-test="passkey-login"]');
   }
 
   it('hides the passkey button once the instance reports it unavailable', () => {
     stubPasskeySupport();
-    const f = create(false);
-    expect(passkeyButton(f)).toBeNull();
+    const fixture = create(false);
+    expect(passkeyButton(fixture)).toBeNull();
   });
 
   it('shows the passkey button once the instance reports it available', () => {
     stubPasskeySupport();
-    const f = create(true);
-    expect(passkeyButton(f)).not.toBeNull();
+    const fixture = create(true);
+    expect(passkeyButton(fixture)).not.toBeNull();
   });
 
   /** Fails open while the flag is in flight, mirroring mailEnabled's `!== false`
@@ -203,8 +207,8 @@ describe('LoginComponent — passkey sign-in availability (#624 follow-up)', () 
    *  the unknown state is transient in practice. */
   it('shows the passkey button while availability is still unknown', () => {
     stubPasskeySupport();
-    const f = create(null);
-    expect(passkeyButton(f)).not.toBeNull();
+    const fixture = create(null);
+    expect(passkeyButton(fixture)).not.toBeNull();
   });
 });
 
@@ -256,15 +260,15 @@ describe('LoginComponent — passkey login', () => {
   });
 
   function create() {
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges(); // triggers ngOnInit → providers GET
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges(); // triggers ngOnInit → providers GET
     ctrl.expectOne('https://api.test/api/auth/oauth/providers').flush({ providers: [] });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function passkeyButton(f: ReturnType<typeof create>): HTMLButtonElement | null {
-    return (f.nativeElement as HTMLElement).querySelector('[data-test="passkey-login"]');
+  function passkeyButton(fixture: ReturnType<typeof create>): HTMLButtonElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector('[data-test="passkey-login"]');
   }
 
   async function flushMicrotasks(): Promise<void> {
@@ -285,13 +289,13 @@ describe('LoginComponent — passkey login', () => {
   }
 
   it('hides the passkey button when the browser has no WebAuthn support', () => {
-    const f = create();
-    expect(passkeyButton(f)).toBeNull();
+    const fixture = create();
+    expect(passkeyButton(fixture)).toBeNull();
   });
 
   it('gives the e-mail field the webauthn autocomplete token, unconditionally', () => {
-    const f = create();
-    const email = (f.nativeElement as HTMLElement).querySelector(
+    const fixture = create();
+    const email = (fixture.nativeElement as HTMLElement).querySelector(
       'input[formControlName="email"]',
     ) as HTMLInputElement;
     expect(email.getAttribute('autocomplete')).toBe('username webauthn');
@@ -301,14 +305,14 @@ describe('LoginComponent — passkey login', () => {
     stubPasskeySupport(false);
     passkeyService.signIn.mockResolvedValue('jwt');
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
-    const f = create();
-    f.detectChanges();
+    const fixture = create();
+    fixture.detectChanges();
 
-    const button = passkeyButton(f);
+    const button = passkeyButton(fixture);
     expect(button).not.toBeNull();
     button?.click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
     flushSuccessfulLogin();
     expect(navigateByUrl).toHaveBeenCalledWith('/?tag=17&entry=42-example');
@@ -322,14 +326,14 @@ describe('LoginComponent — passkey login', () => {
       status: 0,
       detail: 'The passkey server could not be reached.',
     });
-    const f = create();
-    f.detectChanges();
+    const fixture = create();
+    fixture.detectChanges();
 
-    passkeyButton(f)?.click();
+    passkeyButton(fixture)?.click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const banner = (f.nativeElement as HTMLElement).querySelector('.err');
+    const banner = (fixture.nativeElement as HTMLElement).querySelector('.err');
     expect(banner?.textContent).toContain('The passkey server could not be reached.');
   });
 
@@ -359,13 +363,13 @@ describe('LoginComponent — passkey login', () => {
         rejectConditional = reject;
       });
     });
-    const f = create();
+    const fixture = create();
     await flushMicrotasks();
     expect(passkeyService.signInConditionally).toHaveBeenCalledTimes(1);
     expect(capturedSignal?.aborted).toBe(false);
 
-    f.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
-    f.componentInstance.submit();
+    fixture.componentInstance.form.setValue({ email: 'a@b.c', password: 'password12345' });
+    fixture.componentInstance.submit();
 
     expect(capturedSignal?.aborted).toBe(true);
 
@@ -374,9 +378,9 @@ describe('LoginComponent — passkey login', () => {
     // -- it must not flash an error on ordinary password sign-in.
     rejectConditional({ type: 'AbortError', title: 'The operation was aborted.', status: 0 });
     await flushMicrotasks();
-    f.detectChanges();
-    expect(f.componentInstance.error()).toBeNull();
-    expect((f.nativeElement as HTMLElement).querySelector('.err')).toBeNull();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.error()).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.err')).toBeNull();
 
     ctrl.expectOne('https://api.test/api/auth/login').flush({ token: 'jwt' });
     flushSuccessfulLogin();
@@ -403,11 +407,11 @@ describe('LoginComponent — passkey login', () => {
       title: 'The operation either timed out or was not allowed.',
       status: 0,
     });
-    const f = create();
+    const fixture = create();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.error()).toBeNull();
+    expect(fixture.componentInstance.error()).toBeNull();
   });
 
   it('renders no banner for a rate-limit failure from the conditional ceremony (finding 7: a background ceremony must fail silently)', async () => {
@@ -421,12 +425,12 @@ describe('LoginComponent — passkey login', () => {
       status: 429,
       detail: 'Too many attempts. Try again later.',
     });
-    const f = create();
+    const fixture = create();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.error()).toBeNull();
-    expect((f.nativeElement as HTMLElement).querySelector('.err')).toBeNull();
+    expect(fixture.componentInstance.error()).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.err')).toBeNull();
   });
 
   it('aborts the conditional request on destroy', async () => {
@@ -436,10 +440,10 @@ describe('LoginComponent — passkey login', () => {
       capturedSignal = signal;
       return new Promise(() => undefined);
     });
-    const f = create();
+    const fixture = create();
     await flushMicrotasks();
 
-    f.destroy();
+    fixture.destroy();
 
     expect(capturedSignal?.aborted).toBe(true);
   });

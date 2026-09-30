@@ -29,7 +29,7 @@ const UNPRICED_RUN: RunHistoryRow = {
   costNanoCredits: null,
 };
 
-interface MountProps {
+interface MountProperties {
   month: string;
   runCount: number;
   costNanoCredits: number | null;
@@ -39,7 +39,7 @@ interface MountProps {
   failed: boolean;
 }
 
-const DEFAULT_PROPS: MountProps = {
+const DEFAULT_PROPS: MountProperties = {
   month: '2026-08',
   runCount: 3,
   costNanoCredits: 41_230_000,
@@ -53,16 +53,16 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   let lang: ReturnType<typeof signal<Lang>>;
   let fixture: ReturnType<typeof TestBed.createComponent<RecommendationRunHistoryMonthComponent>>;
 
-  function mount(overrides: Partial<MountProps> = {}) {
-    const props = { ...DEFAULT_PROPS, ...overrides };
+  function mount(overrides: Partial<MountProperties> = {}) {
+    const properties = { ...DEFAULT_PROPS, ...overrides };
     fixture = TestBed.createComponent(RecommendationRunHistoryMonthComponent);
-    fixture.componentRef.setInput('month', props.month);
-    fixture.componentRef.setInput('runCount', props.runCount);
-    fixture.componentRef.setInput('costNanoCredits', props.costNanoCredits);
-    fixture.componentRef.setInput('runs', props.runs);
-    fixture.componentRef.setInput('nextCursor', props.nextCursor);
-    fixture.componentRef.setInput('loading', props.loading);
-    fixture.componentRef.setInput('failed', props.failed);
+    fixture.componentRef.setInput('month', properties.month);
+    fixture.componentRef.setInput('runCount', properties.runCount);
+    fixture.componentRef.setInput('costNanoCredits', properties.costNanoCredits);
+    fixture.componentRef.setInput('runs', properties.runs);
+    fixture.componentRef.setInput('nextCursor', properties.nextCursor);
+    fixture.componentRef.setInput('loading', properties.loading);
+    fixture.componentRef.setInput('failed', properties.failed);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -77,81 +77,87 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('renders the month label through Intl on the active language', () => {
-    const el = mount({ month: '2026-08' });
+    const element = mount({ month: '2026-08' });
 
-    expect(el.querySelector('.run-history-month__label')?.textContent?.trim()).toBe('August 2026');
+    expect(element.querySelector('.run-history-month__label')?.textContent?.trim()).toBe(
+      'August 2026',
+    );
   });
 
   it('renders the month label in German, and it differs from the English label', () => {
     lang.set('de');
-    const elDe = mount({ month: '2026-12' });
-    expect(elDe.querySelector('.run-history-month__label')?.textContent?.trim()).toBe(
+    const elementDe = mount({ month: '2026-12' });
+    expect(elementDe.querySelector('.run-history-month__label')?.textContent?.trim()).toBe(
       'Dezember 2026',
     );
 
     lang.set('en');
-    const elEn = mount({ month: '2026-12' });
-    expect(elEn.querySelector('.run-history-month__label')?.textContent?.trim()).toBe(
+    const elementEn = mount({ month: '2026-12' });
+    expect(elementEn.querySelector('.run-history-month__label')?.textContent?.trim()).toBe(
       'December 2026',
     );
   });
 
   it("shows the month's own run count and cost in the header", () => {
-    const el = mount({ runCount: 5, costNanoCredits: 41_230_000 });
+    const element = mount({ runCount: 5, costNanoCredits: 41_230_000 });
 
-    const meta = el.querySelector('.run-history-month__meta')?.textContent ?? '';
+    const meta = element.querySelector('.run-history-month__meta')?.textContent ?? '';
     expect(meta).toContain('5');
     expect(meta).toContain('$ 0.0412');
   });
 
   it('shows an em dash in the header when nothing in the month reported a price', () => {
-    const el = mount({ costNanoCredits: null });
+    const element = mount({ costNanoCredits: null });
 
-    expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('—');
+    expect(element.querySelector('.run-history-month__meta')?.textContent).toContain('—');
   });
 
   it('uses the singular phrasing for a month with exactly one run', () => {
-    const el = mount({ runCount: 1 });
+    const element = mount({ runCount: 1 });
 
-    expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('1 run ·');
+    expect(element.querySelector('.run-history-month__meta')?.textContent).toContain('1 run ·');
   });
 
   it('uses the plural phrasing for a month with more than one run', () => {
-    const el = mount({ runCount: 2 });
+    const element = mount({ runCount: 2 });
 
-    expect(el.querySelector('.run-history-month__meta')?.textContent).toContain('2 runs ·');
+    expect(element.querySelector('.run-history-month__meta')?.textContent).toContain('2 runs ·');
   });
 
   it('renders no rows while the month has not been opened', () => {
-    const el = mount({ runs: null });
+    const element = mount({ runs: null });
 
-    expect(el.querySelectorAll('.run-history-month__list .run-history-month__row')).toHaveLength(0);
+    expect(
+      element.querySelectorAll('.run-history-month__list .run-history-month__row'),
+    ).toHaveLength(0);
   });
 
   it('renders one row per run once the month has rows', () => {
-    const el = mount({ runs: [PRICED_RUN, UNPRICED_RUN] });
+    const element = mount({ runs: [PRICED_RUN, UNPRICED_RUN] });
 
     // Scoped to `&__list`: the header strip above it carries the same
     // `&__row` class (so its grid can never drift from the rows'), and an
     // unscoped query would count it as a seventh "row".
-    expect(el.querySelectorAll('.run-history-month__list .run-history-month__row')).toHaveLength(2);
+    expect(
+      element.querySelectorAll('.run-history-month__list .run-history-month__row'),
+    ).toHaveLength(2);
   });
 
   it('starts open when it already has rows', () => {
-    const el = mount({ runs: [PRICED_RUN] });
+    const element = mount({ runs: [PRICED_RUN] });
 
-    expect((el.querySelector('details') as HTMLDetailsElement).open).toBe(true);
+    expect((element.querySelector('details') as HTMLDetailsElement).open).toBe(true);
   });
 
   it('starts closed while it has not been opened', () => {
-    const el = mount({ runs: null });
+    const element = mount({ runs: null });
 
-    expect((el.querySelector('details') as HTMLDetailsElement).open).toBe(false);
+    expect((element.querySelector('details') as HTMLDetailsElement).open).toBe(false);
   });
 
   it('can be collapsed again once it has rows, and stays collapsed across a re-render', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const details = el.querySelector('details') as HTMLDetailsElement;
+    const element = mount({ runs: [PRICED_RUN] });
+    const details = element.querySelector('details') as HTMLDetailsElement;
     expect(details.open).toBe(true);
 
     details.open = false;
@@ -164,19 +170,19 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('falls back to the translated "unknown provider" for a run that was never stamped', () => {
-    const el = mount({ runs: [{ ...PRICED_RUN, providerHost: null }] });
+    const element = mount({ runs: [{ ...PRICED_RUN, providerHost: null }] });
 
     // Scoped to `&__list`: the header strip above it shares the `&__provider`
     // class too (see the header-columns test), so an unscoped query would
     // hit the "Provider" column label instead of this run's cell.
     expect(
-      el.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
+      element.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
     ).toContain('unknown provider');
   });
 
   it('renders no duration value for a run that has not finished, only its label', () => {
-    const el = mount({ runs: [{ ...PRICED_RUN, durationSeconds: null }] });
-    const cell = el.querySelector(
+    const element = mount({ runs: [{ ...PRICED_RUN, durationSeconds: null }] });
+    const cell = element.querySelector(
       '.run-history-month__list .run-history-month__duration',
     ) as HTMLElement;
     const label = cell.querySelector('.run-history-month__cell-label') as HTMLElement;
@@ -188,9 +194,9 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('renders the day without the month’s year, since the section is already headed with it', () => {
-    const el = mount({ runs: [PRICED_RUN] });
+    const element = mount({ runs: [PRICED_RUN] });
     const when =
-      el.querySelector('.run-history-month__list .run-history-month__when')?.textContent ?? '';
+      element.querySelector('.run-history-month__list .run-history-month__when')?.textContent ?? '';
 
     expect(when).not.toContain('2026');
     expect(when).toContain('16');
@@ -202,16 +208,16 @@ describe('RecommendationRunHistoryMonthComponent', () => {
       providerHost: 'openrouter.ai',
       model: 'deepseek/deepseek-v4-pro',
     };
-    const el = mount({ runs: [longModelRun] });
+    const element = mount({ runs: [longModelRun] });
 
     expect(
-      el.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
+      element.querySelector('.run-history-month__list .run-history-month__provider')?.textContent,
     ).toContain('deepseek/deepseek-v4-pro');
   });
 
   it('renders the six row-1 column headers, hidden from assistive tech, and no provider header', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const header = el.querySelector('.run-history-month__row--header') as HTMLElement;
+    const element = mount({ runs: [PRICED_RUN] });
+    const header = element.querySelector('.run-history-month__row--header') as HTMLElement;
 
     expect(header.getAttribute('aria-hidden')).toBe('true');
     expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
@@ -249,9 +255,9 @@ describe('RecommendationRunHistoryMonthComponent', () => {
      fit at 390px. The glyph must exist in the DOM for the stylesheet to
      swap it in. */
   it('carries a status header glyph for the mobile track, in the DOM at every width', () => {
-    const el = mount({ runs: [PRICED_RUN] });
+    const element = mount({ runs: [PRICED_RUN] });
 
-    const glyph = el.querySelector(
+    const glyph = element.querySelector(
       '.run-history-month__row--header .run-history-month__status .run-history-month__col-icon .material-symbols-outlined',
     );
 
@@ -259,8 +265,8 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('carries the short "In"/"Out" header text for the mobile track, in the DOM at every width', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const header = el.querySelector('.run-history-month__row--header') as HTMLElement;
+    const element = mount({ runs: [PRICED_RUN] });
+    const header = element.querySelector('.run-history-month__row--header') as HTMLElement;
 
     expect(
       header
@@ -275,8 +281,10 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('gives every row cell a label carrying that column’s name, provider included', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const row = el.querySelector('.run-history-month__row:not(.run-history-month__row--header)');
+    const element = mount({ runs: [PRICED_RUN] });
+    const row = element.querySelector(
+      '.run-history-month__row:not(.run-history-month__row--header)',
+    );
     const labels = Array.from(row?.querySelectorAll('.run-history-month__cell-label') ?? []).map(
       (label) => label.textContent?.trim(),
     );
@@ -293,8 +301,10 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('renders the provider cell last, on its own full-width row, carrying its own label', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const row = el.querySelector('.run-history-month__list .run-history-month__row') as HTMLElement;
+    const element = mount({ runs: [PRICED_RUN] });
+    const row = element.querySelector(
+      '.run-history-month__list .run-history-month__row',
+    ) as HTMLElement;
     const cells = Array.from(row.children);
 
     // Row 1's six named cells, then the provider cell -- grid auto-placement
@@ -311,11 +321,11 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('renders tokens in and tokens out as separate cells holding bare numbers', () => {
-    const el = mount({ runs: [PRICED_RUN] });
-    const tokensInCell = el.querySelector(
+    const element = mount({ runs: [PRICED_RUN] });
+    const tokensInCell = element.querySelector(
       '.run-history-month__list .run-history-month__tokens-in',
     ) as HTMLElement;
-    const tokensOutCell = el.querySelector(
+    const tokensOutCell = element.querySelector(
       '.run-history-month__list .run-history-month__tokens-out',
     ) as HTMLElement;
     const tokensInLabel = tokensInCell.querySelector(
@@ -337,9 +347,9 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('renders the icon matching the row status', () => {
-    const el = mount({ runs: [PRICED_RUN] }); // status: 'completed'
+    const element = mount({ runs: [PRICED_RUN] }); // status: 'completed'
 
-    const icon = el.querySelector(
+    const icon = element.querySelector(
       '.run-history-month__list .run-history-month__status-icon .material-symbols-outlined',
     );
 
@@ -347,37 +357,37 @@ describe('RecommendationRunHistoryMonthComponent', () => {
   });
 
   it('keeps the raw status word in the DOM for assistive technology, alongside the icon', () => {
-    const el = mount({ runs: [PRICED_RUN] });
+    const element = mount({ runs: [PRICED_RUN] });
 
-    const word = el.querySelector('.run-history-month__list .run-history-month__status-word');
+    const word = element.querySelector('.run-history-month__list .run-history-month__status-word');
 
     expect(word?.textContent?.trim()).toBe('completed');
   });
 
   it('hides "show more" when the month has no further page', () => {
-    const el = mount({ runs: [PRICED_RUN], nextCursor: null });
+    const element = mount({ runs: [PRICED_RUN], nextCursor: null });
 
-    expect(el.querySelector('.run-history-month__more')).toBeNull();
+    expect(element.querySelector('.run-history-month__more')).toBeNull();
   });
 
   it('shows "show more" when another page is available', () => {
-    const el = mount({ runs: [PRICED_RUN], nextCursor: 40 });
+    const element = mount({ runs: [PRICED_RUN], nextCursor: 40 });
 
-    expect(el.querySelector('.run-history-month__more')).not.toBeNull();
+    expect(element.querySelector('.run-history-month__more')).not.toBeNull();
   });
 
   it('emits showMore when "show more" is clicked', () => {
-    const el = mount({ runs: [PRICED_RUN], nextCursor: 40 });
+    const element = mount({ runs: [PRICED_RUN], nextCursor: 40 });
     let emitted = 0;
     fixture.componentInstance.showMore.subscribe(() => emitted++);
 
-    (el.querySelector('.run-history-month__more') as HTMLButtonElement).click();
+    (element.querySelector('.run-history-month__more') as HTMLButtonElement).click();
 
     expect(emitted).toBe(1);
   });
 
   it('emits opened when a closed month is opened', () => {
-    const el = mount({ runs: null });
+    const element = mount({ runs: null });
     let emitted = 0;
     fixture.componentInstance.opened.subscribe(() => emitted++);
 
@@ -385,7 +395,7 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     // not dispatch the `toggle` event (a known jsdom gap), so this drives the
     // event directly -- the same workaround the shared disclosure's own spec
     // uses.
-    const details = el.querySelector('details') as HTMLDetailsElement;
+    const details = element.querySelector('details') as HTMLDetailsElement;
     details.open = true;
     details.dispatchEvent(new Event('toggle'));
 
@@ -396,22 +406,24 @@ describe('RecommendationRunHistoryMonthComponent', () => {
    *  nobody has opened yet -- no rows and nothing loading -- so the failure
    *  needs a flag of its own, and a line, or the open section is just blank. */
   it('renders a failure line when the first page could not be fetched', () => {
-    const el = mount({ runs: null, loading: false, failed: true });
+    const element = mount({ runs: null, loading: false, failed: true });
 
-    expect(el.querySelector('.run-history-month__failed')?.textContent?.trim()).toBe(
+    expect(element.querySelector('.run-history-month__failed')?.textContent?.trim()).toBe(
       'This month could not be loaded. Close and open it to try again.',
     );
   });
 
   it('renders no failure line for a month that has simply never been opened', () => {
-    const el = mount({ runs: null, loading: false, failed: false });
+    const element = mount({ runs: null, loading: false, failed: false });
 
-    expect(el.querySelector('.run-history-month__failed')).toBeNull();
+    expect(element.querySelector('.run-history-month__failed')).toBeNull();
   });
 
   it('renders the loading label while a closed month is being fetched', () => {
-    const el = mount({ runs: null, loading: true });
+    const element = mount({ runs: null, loading: true });
 
-    expect(el.querySelector('.run-history-month__loading')?.textContent?.trim()).toBe('Loading…');
+    expect(element.querySelector('.run-history-month__loading')?.textContent?.trim()).toBe(
+      'Loading…',
+    );
   });
 });

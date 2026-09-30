@@ -25,19 +25,19 @@ describe('ResetRequestComponent', () => {
   });
 
   it('solves ALTCHA, posts the request, and shows a neutral confirmation', async () => {
-    const f = TestBed.createComponent(ResetRequestComponent);
-    const c = f.componentInstance;
-    c.form.setValue({ email: 'a@b.c' });
-    const done = c.submit();
+    const fixture = TestBed.createComponent(ResetRequestComponent);
+    const component = fixture.componentInstance;
+    component.form.setValue({ email: 'a@b.c' });
+    const done = component.submit();
     ctrl
       .expectOne('https://api.test/api/auth/altcha-challenge')
       .flush({ algorithm: 'SHA-256', challenge: 'c', salt: 's', signature: 'x', maxnumber: 5 });
-    await new Promise((r) => setTimeout(r)); // drain the challenge→solve→post microtask chain
-    const req = ctrl.expectOne('https://api.test/api/auth/password-reset-request');
-    expect(req.request.body).toEqual({ email: 'a@b.c', altcha: 'SOLVED' });
-    req.flush({});
+    await new Promise((resolve) => setTimeout(resolve)); // drain the challenge→solve→post microtask chain
+    const testRequest = ctrl.expectOne('https://api.test/api/auth/password-reset-request');
+    expect(testRequest.request.body).toEqual({ email: 'a@b.c', altcha: 'SOLVED' });
+    testRequest.flush({});
     await done;
-    expect(c.done()).toBe(true);
+    expect(component.done()).toBe(true);
   });
 });
 
@@ -53,36 +53,36 @@ describe('ResetRequestComponent — mailless instance', () => {
         { provide: SetupService, useValue: { mailEnabled: signal(mailEnabled) } },
       ],
     }).compileComponents();
-    const f = TestBed.createComponent(ResetRequestComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(ResetRequestComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function emailInput(f: ReturnType<typeof create>) {
-    return (f.nativeElement as HTMLElement).querySelector('input[type="email"]');
+  function emailInput(fixture: ReturnType<typeof create>) {
+    return (fixture.nativeElement as HTMLElement).querySelector('input[type="email"]');
   }
 
-  function unavailableMessage(f: ReturnType<typeof create>) {
-    return Array.from((f.nativeElement as HTMLElement).querySelectorAll('p')).find((p) =>
-      p.textContent?.includes('unavailable'),
+  function unavailableMessage(fixture: ReturnType<typeof create>) {
+    return Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('p')).find(
+      (paragraph) => paragraph.textContent?.includes('unavailable'),
     );
   }
 
   it('hides the form and shows an unavailable message when mail is disabled', () => {
-    const f = create(false);
-    expect(emailInput(f)).toBeNull();
-    expect(unavailableMessage(f)).toBeDefined();
+    const fixture = create(false);
+    expect(emailInput(fixture)).toBeNull();
+    expect(unavailableMessage(fixture)).toBeDefined();
   });
 
   it('shows the form when mail is enabled', () => {
-    const f = create(true);
-    expect(emailInput(f)).not.toBeNull();
-    expect(unavailableMessage(f)).toBeUndefined();
+    const fixture = create(true);
+    expect(emailInput(fixture)).not.toBeNull();
+    expect(unavailableMessage(fixture)).toBeUndefined();
   });
 
   it('shows the form while mail capability is still unknown', () => {
-    const f = create(null);
-    expect(emailInput(f)).not.toBeNull();
-    expect(unavailableMessage(f)).toBeUndefined();
+    const fixture = create(null);
+    expect(emailInput(fixture)).not.toBeNull();
+    expect(unavailableMessage(fixture)).toBeUndefined();
   });
 });

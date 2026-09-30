@@ -8,11 +8,11 @@ class MockResizeObserver {
   constructor(readonly callback: ResizeObserverCallback) {
     MockResizeObserver.instances.push(this);
   }
-  observe(t: Element): void {
-    this.targets.add(t);
+  observe(target: Element): void {
+    this.targets.add(target);
   }
-  unobserve(t: Element): void {
-    this.targets.delete(t);
+  unobserve(target: Element): void {
+    this.targets.delete(target);
   }
   disconnect(): void {
     this.targets.clear();
@@ -23,18 +23,20 @@ class MockResizeObserver {
 }
 
 const frames = (): Promise<void> =>
-  new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+  new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
 function scrollerWith(count: number): { scroller: HTMLElement; blocks: () => HTMLElement[] } {
   const scroller = document.createElement('div');
-  for (let i = 0; i < count; i++) scroller.appendChild(document.createElement('article'));
+  for (let index = 0; index < count; index++)
+    scroller.appendChild(document.createElement('article'));
   const blocks = (): HTMLElement[] => Array.from(scroller.children) as HTMLElement[];
   return { scroller, blocks };
 }
 
-const opacities = (blocks: () => HTMLElement[]): string[] => blocks().map((b) => b.style.opacity);
+const opacities = (blocks: () => HTMLElement[]): string[] =>
+  blocks().map((block) => block.style.opacity);
 const blank = (blocks: () => HTMLElement[]): void =>
-  blocks().forEach((b) => (b.style.opacity = ''));
+  blocks().forEach((block) => (block.style.opacity = ''));
 
 let observer: () => MockResizeObserver;
 
@@ -59,7 +61,7 @@ it('runs an initial pass on construction when active', async () => {
 
 it('clears every block when inactive', async () => {
   const { scroller, blocks } = scrollerWith(3);
-  blocks().forEach((b) => (b.style.opacity = '0.5'));
+  blocks().forEach((block) => (block.style.opacity = '0.5'));
   const applier = new ReadingFocusApplier({
     scroller,
     blocks,
@@ -79,7 +81,7 @@ it('clear() blanks synchronously', () => {
     curve: LIST_FOCUS_CURVE,
     isActive: () => true,
   });
-  blocks().forEach((b) => (b.style.opacity = '1'));
+  blocks().forEach((block) => (block.style.opacity = '1'));
   applier.clear();
   expect(opacities(blocks)).toEqual(['', '']);
   applier.destroy();
@@ -126,7 +128,7 @@ it('observes the scroller and every block', () => {
     isActive: () => true,
   });
   expect(observer().targets.has(scroller)).toBe(true);
-  for (const b of blocks()) expect(observer().targets.has(b)).toBe(true);
+  for (const block of blocks()) expect(observer().targets.has(block)).toBe(true);
   applier.destroy();
 });
 
@@ -186,8 +188,8 @@ describe('splitting a tall block into sections', () => {
     'Sentence one is long enough here. Sentence two is long enough here. ' +
     'Sentence three is long enough here. Sentence four is long enough here.';
 
-  function stubRect(el: HTMLElement, top: number, height: number): void {
-    el.getBoundingClientRect = () =>
+  function stubRect(element: HTMLElement, top: number, height: number): void {
+    element.getBoundingClientRect = () =>
       ({ top, height, bottom: top + height, left: 0, right: 0, width: 0, x: 0, y: 0 }) as DOMRect;
   }
 
@@ -223,13 +225,13 @@ describe('splitting a tall block into sections', () => {
 
     const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
     expect(spans).toHaveLength(4);
-    spans.forEach((span, i) => stubRect(span, i * 100, 100)); // stacked down the scroller
+    spans.forEach((span, index) => stubRect(span, index * 100, 100)); // stacked down the scroller
     observer().fire();
     await frames();
 
     expect(block.style.opacity).toBe(''); // the block is not a focus target any more
-    expect(spans.map((s) => s.style.opacity).every((o) => o !== '')).toBe(true);
-    expect(new Set(spans.map((s) => s.style.opacity)).size).toBeGreaterThan(1);
+    expect(spans.map((span) => span.style.opacity).every((opacity) => opacity !== '')).toBe(true);
+    expect(new Set(spans.map((span) => span.style.opacity)).size).toBeGreaterThan(1);
     applier.destroy();
   });
 
@@ -238,7 +240,7 @@ describe('splitting a tall block into sections', () => {
     const applier = articleApplier(scroller, blocks);
     await frames();
     const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
-    spans.forEach((span, i) => stubRect(span, i * 100, 100));
+    spans.forEach((span, index) => stubRect(span, index * 100, 100));
     observer().fire();
     await frames();
 
@@ -247,7 +249,7 @@ describe('splitting a tall block into sections', () => {
     await frames();
 
     expect(block.style.opacity).not.toBe(''); // the block carries the opacity again
-    expect(spans.map((s) => s.style.opacity)).toEqual(['', '', '', '']); // spans cleared
+    expect(spans.map((span) => span.style.opacity)).toEqual(['', '', '', '']); // spans cleared
     applier.destroy();
   });
 
@@ -256,12 +258,12 @@ describe('splitting a tall block into sections', () => {
     const applier = articleApplier(scroller, blocks);
     await frames();
     const spans = Array.from(block.querySelectorAll<HTMLElement>(`span.${SENTENCE_CLASS}`));
-    spans.forEach((span, i) => stubRect(span, i * 100, 100));
+    spans.forEach((span, index) => stubRect(span, index * 100, 100));
     observer().fire();
     await frames();
 
     applier.clear();
-    expect(spans.map((s) => s.style.opacity)).toEqual(['', '', '', '']);
+    expect(spans.map((span) => span.style.opacity)).toEqual(['', '', '', '']);
     expect(block.style.opacity).toBe('');
     applier.destroy();
   });

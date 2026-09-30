@@ -48,18 +48,18 @@ describe('SettingsStackComponent', () => {
   }
 
   it('projects every child', async () => {
-    const el = await render();
+    const element = await render();
 
-    expect(el.querySelector('app-settings-stack [data-first]')?.textContent).toBe('one');
-    expect(el.querySelector('app-settings-stack [data-second]')?.textContent).toBe('two');
+    expect(element.querySelector('app-settings-stack [data-first]')?.textContent).toBe('one');
+    expect(element.querySelector('app-settings-stack [data-second]')?.textContent).toBe('two');
   });
 
   // The stack uses a flex `gap`, so children must be direct element children
   // of the host -- the old adjacent-sibling rule died at a component host
   // boundary (#454). A wrapper in this template would silently reintroduce it.
   it('makes a component host a direct child, exactly like an inline element', async () => {
-    const el = await renderMixed();
-    const stack = el.querySelector('app-settings-stack')!;
+    const element = await renderMixed();
+    const stack = element.querySelector('app-settings-stack')!;
 
     expect(Array.from(stack.children).map((child) => child.tagName.toLowerCase())).toEqual([
       'div',

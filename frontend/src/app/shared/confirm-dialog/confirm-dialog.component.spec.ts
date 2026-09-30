@@ -20,23 +20,23 @@ describe('ConfirmDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: dialogData },
       ],
     });
-    const f = TestBed.createComponent(ConfirmDialogComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(ConfirmDialogComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   beforeEach(() => close.mockReset());
 
   it('renders the title, message and confirm label', () => {
-    const el: HTMLElement = render(data).nativeElement;
-    expect(el.textContent).toContain('Delete tag');
-    expect(el.textContent).toContain('Sure?');
-    expect(el.textContent).toContain('Delete');
+    const element: HTMLElement = render(data).nativeElement;
+    expect(element.textContent).toContain('Delete tag');
+    expect(element.textContent).toContain('Sure?');
+    expect(element.textContent).toContain('Delete');
   });
 
   it('closes true on confirm and false on cancel', () => {
-    const el: HTMLElement = render(data).nativeElement;
-    const buttons = el.querySelectorAll('button');
+    const element: HTMLElement = render(data).nativeElement;
+    const buttons = element.querySelectorAll('button');
     (buttons[0] as HTMLButtonElement).click(); // Cancel
     expect(close).toHaveBeenCalledWith(false);
     (buttons[1] as HTMLButtonElement).click(); // Confirm
@@ -47,16 +47,16 @@ describe('ConfirmDialogComponent', () => {
   // an <app-button> host is not focusable -- the marker has to reach the real
   // button inside it or the dialog opens with nothing focused.
   it('marks the real confirm button as the dialog focus target', () => {
-    const el: HTMLElement = render(data).nativeElement;
-    const marked = el.querySelectorAll('[cdkFocusInitial]');
+    const element: HTMLElement = render(data).nativeElement;
+    const marked = element.querySelectorAll('[cdkFocusInitial]');
     expect(marked).toHaveLength(1);
     expect(marked[0].tagName).toBe('BUTTON');
     expect(marked[0].textContent?.trim()).toBe('Delete');
   });
 
   it('weights a destructive confirmation as danger', () => {
-    const el: HTMLElement = render(data).nativeElement;
-    const confirm = el.querySelectorAll('button')[1];
+    const element: HTMLElement = render(data).nativeElement;
+    const confirm = element.querySelectorAll('button')[1];
     expect(confirm.classList.contains('danger')).toBe(true);
   });
 
@@ -107,14 +107,14 @@ describe('ConfirmDialogComponent', () => {
   // app as focus falling through to the dialog container. Moving the focus
   // target to the text input keeps the dialog usable from the keyboard.
   it('moves the initial focus target to the text input when text is required', () => {
-    const el: HTMLElement = render({
+    const element: HTMLElement = render({
       title: 'Delete account',
       message: 'This cannot be undone.',
       confirmLabel: 'Delete',
       requireText: 'user@example.com',
     }).nativeElement;
 
-    const marked = el.querySelectorAll('[cdkFocusInitial]');
+    const marked = element.querySelectorAll('[cdkFocusInitial]');
     expect(marked).toHaveLength(1);
     expect(marked[0].tagName).toBe('INPUT');
   });

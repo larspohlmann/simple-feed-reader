@@ -26,12 +26,12 @@ export function isBackSwipe(dx: number, dy: number): boolean {
 
 /**
  * A decisive, mostly-horizontal swipe that opens or closes the mobile sidebar
- * drawer. `dir` is the intended direction: 1 for a rightward open-swipe, -1 for
+ * drawer. `direction` is the intended direction: 1 for a rightward open-swipe, -1 for
  * a leftward close-swipe. Rejects wrong-direction, too-short, and vertical-
  * dominated moves so it never fires on a plain up/down scroll of the list.
  */
-export function isDrawerSwipe(dx: number, dy: number, dir: 1 | -1): boolean {
-  const along = dx * dir;
+export function isDrawerSwipe(dx: number, dy: number, direction: 1 | -1): boolean {
+  const along = dx * direction;
   return along >= DRAWER_SWIPE_MIN_X && along >= Math.abs(dy) * SWIPE_AXIS_RATIO;
 }
 

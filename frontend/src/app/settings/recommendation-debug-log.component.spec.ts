@@ -127,13 +127,13 @@ describe('RecommendationDebugLogComponent', () => {
   let completedStamp: ReturnType<typeof signal<number>>;
 
   function mount() {
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function expanderFor(el: HTMLElement, index = 0): HTMLButtonElement {
-    return el.querySelectorAll('.debug-panel__expander')[index] as HTMLButtonElement;
+  function expanderFor(element: HTMLElement, index = 0): HTMLButtonElement {
+    return element.querySelectorAll('.debug-panel__expander')[index] as HTMLButtonElement;
   }
 
   beforeEach(() => {
@@ -156,14 +156,14 @@ describe('RecommendationDebugLogComponent', () => {
   });
 
   it('renders nothing when debugLog answers no entries', () => {
-    const f = mount();
-    expect((f.nativeElement as HTMLElement).querySelector('details')).toBeNull();
+    const fixture = mount();
+    expect((fixture.nativeElement as HTMLElement).querySelector('details')).toBeNull();
   });
 
   it('renders one row per entry with the composed label', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY, DEDUP_ENTRY] }));
-    const f = mount();
-    const text = (f.nativeElement as HTMLElement).textContent ?? '';
+    const fixture = mount();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Batch 2');
     expect(text).toContain('412/1 KB');
     expect(text).toContain('Dedup');
@@ -174,7 +174,7 @@ describe('RecommendationDebugLogComponent', () => {
     jest.useFakeTimers();
     debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, runs: [], entries: [BATCH_ENTRY] }));
     running.set(true);
-    const f = mount();
+    const fixture = mount();
     expect(debugLog).toHaveBeenCalledTimes(1);
 
     jest.advanceTimersByTime(2000);
@@ -187,8 +187,8 @@ describe('RecommendationDebugLogComponent', () => {
     // together, so one final fetch on the flip (via the completion effect)
     // is expected and asserted here rather than treated as a bug.
     running.set(false);
-    completedStamp.update((n) => n + 1);
-    f.detectChanges();
+    completedStamp.update((stamp) => stamp + 1);
+    fixture.detectChanges();
     expect(debugLog).toHaveBeenCalledTimes(4);
 
     jest.advanceTimersByTime(2000);
@@ -198,53 +198,53 @@ describe('RecommendationDebugLogComponent', () => {
 
   it("lazily loads a row's request body on toggle, once", () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
-    const f = mount();
+    const fixture = mount();
 
-    const el = f.nativeElement as HTMLElement;
-    const expander = expanderFor(el);
+    const element = fixture.nativeElement as HTMLElement;
+    const expander = expanderFor(element);
     expander.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(debugLogEntry).toHaveBeenCalledWith(1);
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
-    expect(el.querySelector('pre')!.textContent).toContain('{"prompt":"x"}');
+    expect(element.querySelector('pre')!.textContent).toContain('{"prompt":"x"}');
 
     expander.click();
-    f.detectChanges();
+    fixture.detectChanges();
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
-    expect(el.querySelector('.debug-panel__body')).toBeNull();
+    expect(element.querySelector('.debug-panel__body')).toBeNull();
   });
 
   it('does not re-fetch a request body still in flight from an earlier toggle', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
     const pending = new Subject<DebugLogDetail>();
     debugLogEntry.mockReturnValue(pending.asObservable());
-    const f = mount();
+    const fixture = mount();
 
-    const el = f.nativeElement as HTMLElement;
-    const expander = expanderFor(el);
+    const element = fixture.nativeElement as HTMLElement;
+    const expander = expanderFor(element);
 
     expander.click(); // opens; request still unresolved
-    f.detectChanges();
+    fixture.detectChanges();
     expander.click(); // collapses without waiting for the response
-    f.detectChanges();
+    fixture.detectChanges();
     expander.click(); // re-opens before the first response has landed
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
 
     pending.next(DETAIL);
     pending.complete();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(el.querySelector('pre')!.textContent).toContain('{"prompt":"x"}');
+    expect(element.querySelector('pre')!.textContent).toContain('{"prompt":"x"}');
   });
 
   it('shows the streaming row text without any detail fetch', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.debug-panel__stream')!.textContent).toContain('partial…');
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.debug-panel__stream')!.textContent).toContain('partial…');
     expect(debugLogEntry).not.toHaveBeenCalled();
   });
 
@@ -255,14 +255,14 @@ describe('RecommendationDebugLogComponent', () => {
     debugLogEntry.mockReturnValue(
       of({ ...DETAIL, id: 3, verdict: null, responseText: 'partial…' }),
     );
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
     // Expand the row while the call is still streaming: the live branch
     // renders `streamingText` unconditionally, but the expander still
     // fetches and caches a partial detail underneath it.
-    expanderFor(el).click();
-    f.detectChanges();
+    expanderFor(element).click();
+    fixture.detectChanges();
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
 
     // The call finishes: the next poll reports a settled verdict and the
@@ -280,10 +280,10 @@ describe('RecommendationDebugLogComponent', () => {
       of({ ...DETAIL, id: 3, verdict: 'usable', responseText: 'final answer' }),
     );
     jest.advanceTimersByTime(2000);
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(debugLogEntry).toHaveBeenCalledTimes(2);
-    const preTexts = Array.from(el.querySelectorAll('pre')).map((pre) => pre.textContent);
+    const preTexts = Array.from(element.querySelectorAll('pre')).map((pre) => pre.textContent);
     expect(preTexts.some((text) => text?.includes('final answer'))).toBe(true);
     expect(preTexts.some((text) => text?.includes('partial…'))).toBe(false);
   });
@@ -302,9 +302,11 @@ describe('RecommendationDebugLogComponent', () => {
         entries: [BATCH_ENTRY],
       }),
     );
-    const f = mount();
+    const fixture = mount();
 
-    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__runs-select')).toBeNull();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__runs-select'),
+    ).toBeNull();
   });
 
   it('offers one option per retained run and asks for the one picked', () => {
@@ -318,15 +320,15 @@ describe('RecommendationDebugLogComponent', () => {
         entries: [BATCH_ENTRY],
       }),
     );
-    const f = mount();
-    const select = (f.nativeElement as HTMLElement).querySelector(
+    const fixture = mount();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
       '.debug-panel__runs-select',
     ) as HTMLSelectElement;
     expect(select.options).toHaveLength(2);
 
     select.value = '7';
     select.dispatchEvent(new Event('change'));
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(debugLog).toHaveBeenLastCalledWith(7);
   });
@@ -342,14 +344,14 @@ describe('RecommendationDebugLogComponent', () => {
         entries: [BATCH_ENTRY],
       }),
     );
-    const f = mount();
-    const select = (f.nativeElement as HTMLElement).querySelector(
+    const fixture = mount();
+    const select = (fixture.nativeElement as HTMLElement).querySelector(
       '.debug-panel__runs-select',
     ) as HTMLSelectElement;
 
     select.value = '9';
     select.dispatchEvent(new Event('change'));
-    f.detectChanges();
+    fixture.detectChanges();
 
     // undefined, not 9: an explicit pin would stop the panel following the
     // next run that starts.
@@ -372,74 +374,74 @@ describe('RecommendationDebugLogComponent', () => {
         ],
       }),
     );
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    const wire = (f.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
     expect(wire!.textContent).toContain('1855');
     expect(wire!.textContent).toContain('no answer');
   });
 
   it('reports bytes streamed alongside an answer', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    const wire = (f.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
     expect(wire!.textContent).toContain('16');
     expect(wire!.textContent).not.toContain('no answer');
   });
 
   it('hides the wire line when nothing was streamed', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__wire')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire')).toBeNull();
   });
 
   it('names max_tokens truncation when the provider stopped on length', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }));
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    const finish = (f.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
     expect(finish!.textContent).toContain('max_tokens');
     expect(finish!.classList).toContain('debug-panel__finish--truncated');
   });
 
   it('reports a natural stop without the truncation styling', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    const finish = (f.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
     expect(finish!.textContent).toContain('stop');
     expect(finish!.classList).not.toContain('debug-panel__finish--truncated');
   });
 
   it('shows no finish line until the provider stamps a reason', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
-    const f = TestBed.createComponent(RecommendationDebugLogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
+    fixture.detectChanges();
 
-    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__finish')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish')).toBeNull();
   });
 
   it('renders the summary strip from a completed run', () => {
     debugLog.mockReturnValue(of({ run: RUN_SUMMARY, runs: [], entries: [DEDUP_ENTRY] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    const status = el.querySelector('.debug-panel__status');
+    const status = element.querySelector('.debug-panel__status');
     expect(status!.textContent).toContain('completed');
     expect(status!.className).toContain('debug-panel__status--completed');
 
-    const summaryText = el.querySelector('.debug-panel__summary')!.textContent ?? '';
+    const summaryText = element.querySelector('.debug-panel__summary')!.textContent ?? '';
     expect(summaryText).toContain('1/3');
     expect(summaryText).toContain('0/5');
 
-    const timeline = el.querySelector('.debug-panel__timeline')!.textContent ?? '';
+    const timeline = element.querySelector('.debug-panel__timeline')!.textContent ?? '';
     // Date beside the clock time on both ends of the timeline (#541).
     expect(timeline.trim()).toMatch(
       /^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → [A-Za-z]{3,} \d{1,2} \d{2}:\d{2}$/,
@@ -450,59 +452,61 @@ describe('RecommendationDebugLogComponent', () => {
     debugLog.mockReturnValue(
       of({ run: FAILED_RUN_SUMMARY, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }),
     );
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    const status = el.querySelector('.debug-panel__status');
+    const status = element.querySelector('.debug-panel__status');
     expect(status!.className).toContain('debug-panel__status--failed');
-    expect(el.querySelector('.debug-panel__run-error')!.textContent).toContain(
+    expect(element.querySelector('.debug-panel__run-error')!.textContent).toContain(
       'Too many transport failures',
     );
   });
 
   it('does not render a half-empty summary strip when the user has never run', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
-    const f = mount();
-    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__summary')).toBeNull();
+    const fixture = mount();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__summary'),
+    ).toBeNull();
   });
 
   it('shows an in-progress timeline without a completion time while the run is still going', () => {
     debugLog.mockReturnValue(of({ run: RUNNING_RUN_SUMMARY, runs: [], entries: [BATCH_ENTRY] }));
-    const f = mount();
-    const timeline = (f.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
+    const fixture = mount();
+    const timeline = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__timeline');
     expect(timeline!.textContent!.trim()).toMatch(/^[A-Za-z]{3,} \d{1,2} \d{2}:\d{2} → …$/);
   });
 
   it("renders a transport-failed row's errorDetail as a full-width danger line", () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [TRANSPORT_FAILED_ENTRY] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.debug-panel__error')!.textContent).toContain(
+    expect(element.querySelector('.debug-panel__error')!.textContent).toContain(
       'cURL error 28: Operation timed out',
     );
   });
 
   it('shows no error line for a completed call', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
-    const f = mount();
-    expect((f.nativeElement as HTMLElement).querySelector('.debug-panel__error')).toBeNull();
+    const fixture = mount();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__error')).toBeNull();
   });
 
   it('renders a settled call’s duration on the row, in seconds, without expanding', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.debug-panel__dur')!.textContent).toContain('5 s');
+    expect(element.querySelector('.debug-panel__dur')!.textContent).toContain('5 s');
   });
 
   it('leaves the duration cell empty for the row still streaming (no NaN, no negative)', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [BATCH_ENTRY] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.debug-panel__dur')!.textContent?.trim()).toBe('');
+    expect(element.querySelector('.debug-panel__dur')!.textContent?.trim()).toBe('');
   });
 
   it('renders a sub-second settled call as 0 s, not an empty cell', () => {
@@ -512,34 +516,34 @@ describe('RecommendationDebugLogComponent', () => {
       finishedAt: '2026-08-08T10:01:00Z',
     };
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [instant] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.debug-panel__dur')!.textContent).toContain('0 s');
+    expect(element.querySelector('.debug-panel__dur')!.textContent).toContain('0 s');
   });
 
   it('clusters entries by run, newest run first, under one header each', () => {
     const older = { ...BATCH_ENTRY, id: 1, runId: 7 };
     const newer = { ...DEDUP_ENTRY, id: 2, runId: 8 };
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [older, newer] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    const groups = el.querySelectorAll('.debug-panel__group');
+    const groups = element.querySelectorAll('.debug-panel__group');
     expect(groups).toHaveLength(2);
     // Newest run on top: the group holding the dedup row comes first.
     expect(groups[0].textContent).toContain('Dedup');
     expect(groups[1].textContent).toContain('Batch');
-    expect(el.querySelectorAll('.debug-panel__group-head')).toHaveLength(2);
+    expect(element.querySelectorAll('.debug-panel__group-head')).toHaveLength(2);
   });
 
   it('keeps one run’s calls in a single group', () => {
     const first = { ...BATCH_ENTRY, id: 1, runId: 7 };
     const second = { ...DEDUP_ENTRY, id: 2, runId: 7 };
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [first, second] }));
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelectorAll('.debug-panel__group')).toHaveLength(1);
+    expect(element.querySelectorAll('.debug-panel__group')).toHaveLength(1);
   });
 });

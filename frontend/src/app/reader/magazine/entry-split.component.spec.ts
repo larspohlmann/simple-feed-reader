@@ -43,39 +43,39 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto, side: 'left' | 'right' = 'right') {
+function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
   TestBed.configureTestingModule({
     imports: [EntrySplitComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntrySplitComponent);
-  f.componentRef.setInput('entry', e);
-  f.componentRef.setInput('imageSide', side);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntrySplitComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.componentRef.setInput('imageSide', side);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntrySplitComponent', () => {
   it('renders the title, snippet and image', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.textContent).toContain('A medium headline');
-    expect(el.textContent).toContain('A meaningful summary.');
-    expect(el.querySelector('img.img')).not.toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.textContent).toContain('A medium headline');
+    expect(element.textContent).toContain('A meaningful summary.');
+    expect(element.querySelector('img.img')).not.toBeNull();
   });
 
   it('flips the image to the left on request', () => {
-    const el = mount(entry(), 'left').nativeElement as HTMLElement;
-    expect(el.querySelector('.split.img-left')).not.toBeNull();
+    const element = mount(entry(), 'left').nativeElement as HTMLElement;
+    expect(element.querySelector('.split.img-left')).not.toBeNull();
   });
 
   it('gives a portrait image a portrait side box, bounded at 3:4', () => {
-    const f = mount(entry({ imageWidth: 900, imageHeight: 1100 }));
+    const fixture = mount(entry({ imageWidth: 900, imageHeight: 1100 }));
     const ratio = () => {
-      f.detectChanges();
-      return ((f.nativeElement as HTMLElement).querySelector('img.img') as HTMLImageElement).style
-        .aspectRatio;
+      fixture.detectChanges();
+      return ((fixture.nativeElement as HTMLElement).querySelector('img.img') as HTMLImageElement)
+        .style.aspectRatio;
     };
-    const swap = (over: Partial<EntryDto>) => f.componentRef.setInput('entry', entry(over));
+    const swap = (over: Partial<EntryDto>) => fixture.componentRef.setInput('entry', entry(over));
 
     // A moderate portrait keeps its true ratio…
     expect(ratio()).toBe('900 / 1100');
@@ -91,33 +91,35 @@ describe('EntrySplitComponent', () => {
   });
 
   it('emits open on click', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     let opened: EntryDto | null = null;
-    entryActions.open.mockImplementation((e: EntryDto) => (opened = e));
-    (f.nativeElement as HTMLElement).querySelector('article')!.dispatchEvent(new Event('click'));
+    entryActions.open.mockImplementation((openedEntry: EntryDto) => (opened = openedEntry));
+    (fixture.nativeElement as HTMLElement)
+      .querySelector('article')!
+      .dispatchEvent(new Event('click'));
     expect(opened).not.toBeNull();
   });
 
   it('resets the image-error gate when the host recycles the component for a new entry', () => {
-    const f = mount(entry());
-    f.componentInstance.imgError.set(true);
-    f.detectChanges();
+    const fixture = mount(entry());
+    fixture.componentInstance.imgError.set(true);
+    fixture.detectChanges();
 
-    f.componentRef.setInput('entry', entry({ id: 2 }));
-    f.detectChanges();
+    fixture.componentRef.setInput('entry', entry({ id: 2 }));
+    fixture.detectChanges();
 
-    expect(f.componentInstance.imgError()).toBe(false);
+    expect(fixture.componentInstance.imgError()).toBe(false);
   });
 
   it('carries the three actions on its meta row', () => {
-    const f = mount(entry());
-    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
-      3,
-    );
+    const fixture = mount(entry());
+    expect(
+      fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
+    ).toBe(3);
 
     const favorite = jest.fn();
     entryActions.favorite.mockImplementation(favorite);
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();
   });

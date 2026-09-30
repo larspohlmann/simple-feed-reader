@@ -44,7 +44,7 @@ export class EditSubscriptionDialogComponent implements OnInit {
   readonly form = this.fb.group({
     customTitle: [this.data.title, [Validators.maxLength(512)]],
   });
-  readonly checked = signal<Set<number>>(new Set(this.data.tags.map((t) => t.id)));
+  readonly checked = signal<Set<number>>(new Set(this.data.tags.map((tag) => tag.id)));
   readonly includeInAllItems = signal<boolean>(this.data.includeInAllItems);
   readonly includeInForYou = signal<boolean>(this.data.includeInForYou);
   readonly loading = signal(false);
@@ -83,11 +83,11 @@ export class EditSubscriptionDialogComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     this.api.updateSubscription(this.data.id, body).subscribe({
-      next: (r) => this.ref.close(r.subscription),
-      error: (e: HttpErrorResponse) => {
+      next: (response) => this.ref.close(response.subscription),
+      error: (error: HttpErrorResponse) => {
         this.loading.set(false);
-        const p = parseProblem(e);
-        this.error.set(p.errors?.['customTitle']?.[0] ?? p.detail ?? p.title);
+        const problem = parseProblem(error);
+        this.error.set(problem.errors?.['customTitle']?.[0] ?? problem.detail ?? problem.title);
       },
     });
   }

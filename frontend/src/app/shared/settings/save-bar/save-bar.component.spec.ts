@@ -31,8 +31,10 @@ describe('SettingsSaveBarComponent', () => {
     return { fixture, host: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
-  const saveButton = (el: HTMLElement) => el.querySelector('button.primary') as HTMLButtonElement;
-  const resetButton = (el: HTMLElement) => el.querySelector('button.ghost') as HTMLButtonElement;
+  const saveButton = (element: HTMLElement) =>
+    element.querySelector('button.primary') as HTMLButtonElement;
+  const resetButton = (element: HTMLElement) =>
+    element.querySelector('button.ghost') as HTMLButtonElement;
 
   it('shows the unsaved indicator and enables Save when dirty', async () => {
     const { fixture, host, el } = await render();

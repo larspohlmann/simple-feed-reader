@@ -8,24 +8,24 @@ describe('ToTopButtonComponent', () => {
     TestBed.configureTestingModule({
       imports: [ToTopButtonComponent, provideTranslocoTesting()],
     });
-    const f = TestBed.createComponent(ToTopButtonComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(ToTopButtonComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('renders a labelled button with the up arrow', () => {
-    const el = mount().nativeElement as HTMLElement;
-    const btn = el.querySelector('button') as HTMLButtonElement;
-    expect(btn.getAttribute('aria-label')).toBe('Back to top');
-    expect(btn.getAttribute('type')).toBe('button');
-    expect(el.querySelector('app-icon')).not.toBeNull();
+    const element = mount().nativeElement as HTMLElement;
+    const button = element.querySelector('button') as HTMLButtonElement;
+    expect(button.getAttribute('aria-label')).toBe('Back to top');
+    expect(button.getAttribute('type')).toBe('button');
+    expect(element.querySelector('app-icon')).not.toBeNull();
   });
 
   it('emits activate when clicked', () => {
-    const f = mount();
+    const fixture = mount();
     const fired = jest.fn();
-    f.componentInstance.activate.subscribe(fired);
-    (f.nativeElement as HTMLElement).querySelector('button')!.click();
+    fixture.componentInstance.activate.subscribe(fired);
+    (fixture.nativeElement as HTMLElement).querySelector('button')!.click();
     expect(fired).toHaveBeenCalledTimes(1);
   });
 });

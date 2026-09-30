@@ -75,7 +75,7 @@ describe('ReaderShellComponent', () => {
     markPasskeyOfferAnswered: jest.fn(),
   };
 
-  const subsBody = {
+  const subscriptionsBody = {
     subscriptions: [
       {
         id: 5,
@@ -189,15 +189,15 @@ describe('ReaderShellComponent', () => {
   }
 
   function boot(entryOverride: Partial<typeof entry> = {}) {
-    const f = TestBed.createComponent(ReaderShellComponent);
-    f.detectChanges(); // ngOnInit + initial effects
+    const fixture = TestBed.createComponent(ReaderShellComponent);
+    fixture.detectChanges(); // ngOnInit + initial effects
     const subscriptions = ctrl.match('https://api.test/api/subscriptions');
     expect(subscriptions.length).toBeLessThanOrEqual(1);
-    subscriptions.forEach((request) => request.flush(subsBody));
+    subscriptions.forEach((request) => request.flush(subscriptionsBody));
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
     // resume() fires on init to pick up a run left in flight by an earlier
     // session; 'none' means there is nothing to resume.
@@ -219,8 +219,8 @@ describe('ReaderShellComponent', () => {
       latest: null,
       updateAvailable: false,
     });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
   // One subscription row in the shape the shell reads. Overlay `id`/`lastFetchedAt`
@@ -244,15 +244,15 @@ describe('ReaderShellComponent', () => {
   // requests it always fires (subscriptions, tags, entries) so a later
   // expectOne/expectNone on '/api/catalog' or '/api/refresh' is unambiguous.
   function bootWith(subscriptions: unknown[]) {
-    const f = TestBed.createComponent(ReaderShellComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(ReaderShellComponent);
+    fixture.detectChanges();
     ctrl
       .expectOne('https://api.test/api/subscriptions')
       .flush({ subscriptions, favoritesCount: 0, keptCount: 0 });
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
     ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
     ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
       status: 'none',
@@ -272,8 +272,8 @@ describe('ReaderShellComponent', () => {
       latest: null,
       updateAvailable: false,
     });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
   const CATALOG_WITH_FEEDS = {
@@ -299,15 +299,15 @@ describe('ReaderShellComponent', () => {
   };
 
   it('renders header + sidebar and loads the initial list', () => {
-    const el = boot().nativeElement as HTMLElement;
-    expect(el.querySelector('app-reader-header')).not.toBeNull();
-    expect(el.querySelector('app-sidebar')!.textContent).toContain('heise');
+    const element = boot().nativeElement as HTMLElement;
+    expect(element.querySelector('app-reader-header')).not.toBeNull();
+    expect(element.querySelector('app-sidebar')!.textContent).toContain('heise');
     // The shell's default layout is 'magazine'; the single loaded entry renders
     // as some magazine block. Assert the list mounted and rendered a block rather
     // than pinning the exact tier, which is planner-tuning-dependent.
-    expect(el.querySelector('app-entry-list')).not.toBeNull();
+    expect(element.querySelector('app-entry-list')).not.toBeNull();
     expect(
-      el.querySelector(
+      element.querySelector(
         'app-entry-hero, app-entry-wide, app-entry-quote, app-entry-split, ' +
           'app-entry-kicker, app-entry-thumb, app-entry-compact',
       ),
@@ -316,40 +316,40 @@ describe('ReaderShellComponent', () => {
 
   describe('manual sidebar visibility (wide layout)', () => {
     it('marks the body hidden and offers the show button when the sidebar is hidden', () => {
-      const f = boot();
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
-      expect(el.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+      const fixture = boot();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+      expect(element.querySelector('[aria-label="Show sidebar"]')).toBeNull();
 
       TestBed.inject(SidebarVisibilityService).hide();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.body')!.classList).toContain('sidebar-hidden');
-      expect(el.querySelector('.title-row [aria-label="Show sidebar"]')).not.toBeNull();
+      expect(element.querySelector('.body')!.classList).toContain('sidebar-hidden');
+      expect(element.querySelector('.title-row [aria-label="Show sidebar"]')).not.toBeNull();
     });
 
     it('shows the sidebar again when the show button is clicked', () => {
-      const f = boot();
-      const el = f.nativeElement as HTMLElement;
+      const fixture = boot();
+      const element = fixture.nativeElement as HTMLElement;
       TestBed.inject(SidebarVisibilityService).hide();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      (el.querySelector('[aria-label="Show sidebar"]') as HTMLButtonElement).click();
-      f.detectChanges();
+      (element.querySelector('[aria-label="Show sidebar"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
       expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(false);
-      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+      expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
     });
 
     it('never hides the body column on a narrow layout, where the drawer rules', () => {
       screen.isNarrow.set(true);
-      const f = boot();
-      const el = f.nativeElement as HTMLElement;
+      const fixture = boot();
+      const element = fixture.nativeElement as HTMLElement;
       TestBed.inject(SidebarVisibilityService).hide();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
-      expect(el.querySelector('[aria-label="Show sidebar"]')).toBeNull();
+      expect(element.querySelector('.body')!.classList).not.toContain('sidebar-hidden');
+      expect(element.querySelector('[aria-label="Show sidebar"]')).toBeNull();
     });
   });
 
@@ -357,231 +357,241 @@ describe('ReaderShellComponent', () => {
   // nothing else — no layout pass that resizes the scroller under the finger.
   describe('hide-on-scroll header', () => {
     it('publishes a bar height that does not move when the bar does', () => {
-      const f = boot();
-      const el = f.nativeElement as HTMLElement;
+      const fixture = boot();
+      const element = fixture.nativeElement as HTMLElement;
       // jsdom has no ResizeObserver, so nothing measures the header; stand in
       // for the measurement to exercise everything that depends on it.
-      f.componentInstance.headerHeight.set(90);
-      f.detectChanges();
-      expect(el.style.getPropertyValue('--app-bar-h')).toBe('90px');
-      expect(el.style.getPropertyValue('--app-bar-shift')).toBe('0px');
+      fixture.componentInstance.headerHeight.set(90);
+      fixture.detectChanges();
+      expect(element.style.getPropertyValue('--app-bar-h')).toBe('90px');
+      expect(element.style.getPropertyValue('--app-bar-shift')).toBe('0px');
 
       // Retract the bar the only way there is now: scroll the list down on the
       // narrow layout, which collapses the list and the app bar mirrors it.
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
+      fixture.detectChanges();
       // The reservation is unchanged — only the shift moves. That is the fix:
       // the panes' geometry cannot depend on whether the bar is showing.
-      expect(el.style.getPropertyValue('--app-bar-h')).toBe('90px');
-      expect(el.style.getPropertyValue('--app-bar-shift')).toBe('-90px');
-      expect(el.querySelector('app-reader-header')!.classList).toContain('hidden');
+      expect(element.style.getPropertyValue('--app-bar-h')).toBe('90px');
+      expect(element.style.getPropertyValue('--app-bar-shift')).toBe('-90px');
+      expect(element.querySelector('app-reader-header')!.classList).toContain('hidden');
       // The old mechanism, and the whole bug: no margin may be involved.
-      expect(el.querySelector<HTMLElement>('app-reader-header')!.style.marginTop).toBe('');
+      expect(element.querySelector<HTMLElement>('app-reader-header')!.style.marginTop).toBe('');
     });
 
     it('shows the header again when the mobile drawer opens', () => {
       // The drawer hangs below the bar, so opening it under a retracted header
       // would leave a strip of backdrop where the bar belongs.
-      const f = boot();
-      const rows = listScroller(f);
+      const fixture = boot();
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
-      expect(f.componentInstance.sidebarOpen()).toBe(true);
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.sidebarOpen()).toBe(true);
     });
 
     it('keeps the header shown when momentum scroll fires after the drawer opens', () => {
       // #121: the open-swipe's touchend shows the header, but inertial scrolling
       // keeps firing scroll events afterwards. One arriving under the open drawer
       // must not re-hide the header — the drawer would then hang below a gap.
-      const f = boot();
+      const fixture = boot();
       // Only a narrow layout hides the header at all; force it so the residual
       // scroll would otherwise register as a hide.
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      f.componentInstance.headerHeight.set(90);
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      fixture.componentInstance.headerHeight.set(90);
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
       // A residual downward scroll (100 → 500) on the list while the drawer is
       // open. It collapses the list, but the open overlay force-shows the bar.
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
     it('re-minimizes the header when the drawer closes over a scrolled-down list', () => {
       // #121 follow-up: opening forces the header back (so the drawer never hangs
       // below a retracted bar), but closing must not leave it expanded over
       // scrolled-down content — that strip overlays the list but isn't its scroller.
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
 
       // Swipe up / scroll down: the header minimizes.
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false); // shown while open
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false); // shown while open
 
-      f.componentInstance.setSidebarOpen(false);
-      f.detectChanges();
+      fixture.componentInstance.setSidebarOpen(false);
+      fixture.detectChanges();
       // Back to the resting state the scroll offset implies — minimized.
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
     });
 
     it('stays shown while the header reports its own search bar open, even across a scroll', () => {
       // The bar holds the live term and, on a phone, the keyboard — sliding it
       // away under a scroll would hide the text the results depend on.
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
       // The trigger that sets searchOpen true only ever renders on a narrow
       // layout (#408): patch isNarrow alongside isWide so the header's own
       // "close on layout growth" effect doesn't immediately undo the line below.
-      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
-      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+      (fixture.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () =>
+        true;
+      const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
       header.searchOpen.set(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
     it('returns to the resting state for the current offset once the search bar closes', () => {
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
-      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      (fixture.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () =>
+        true;
+      const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
       // Scroll down first so the resting state the bar returns to is minimized,
       // not just whatever the header happened to hold before opening.
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
       header.searchOpen.set(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
       header.searchOpen.set(false);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
     });
 
     it('stays shown when the search bar closes while the drawer is still open', () => {
       // Both overlays open, then only search closes: the drawer alone is still
       // reason enough to keep the header shown. Two independent force-show/resolve
       // writers (one per overlay) would overwrite each other's resting-state resolution.
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
-      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      (fixture.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () =>
+        true;
+      const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
-      f.componentInstance.setSidebarOpen(true);
+      fixture.componentInstance.setSidebarOpen(true);
       header.searchOpen.set(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
       header.searchOpen.set(false);
-      f.detectChanges();
+      fixture.detectChanges();
       // The drawer is still open — the header must not retract under it.
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
     it('stays shown when the drawer closes while the search bar is still open', () => {
       // The reverse order: search opens first, then the drawer opens and
       // closes (e.g. the edge-swipe gesture). The search bar alone is still
       // reason enough to keep the header shown.
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      (f.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () => true;
-      const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      (fixture.componentInstance.screen as unknown as { isNarrow: () => boolean }).isNarrow = () =>
+        true;
+      const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
         .componentInstance as ReaderHeaderComponent;
 
-      const rows = listScroller(f);
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
       header.searchOpen.set(true);
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
-      f.componentInstance.setSidebarOpen(false);
-      f.detectChanges();
+      fixture.componentInstance.setSidebarOpen(false);
+      fixture.detectChanges();
       // The search bar is still open — the header must not retract under it.
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
     it('shows the bar again when a new list is chosen while scrolled down (#630)', () => {
       // The drawer auto-closes while the OUTGOING list is still rendered and
       // scrolled down (#254); the bar must not take its state from that offset.
-      const f = boot();
-      const rows = listScroller(f);
+      const fixture = boot();
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(500);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
       // Open the drawer (bar shows), then pick a saved search from it. The
       // selection change auto-closes the drawer; the outgoing list is still at
       // 500 at that instant.
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
       qp.next(convertToParamMap({ q: 'news' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
   });
 
   /** Drive the entry list's real scroll container: assign an offset and fire the
    *  scroll event `onRowsScroll` handles, updating the `collapsed` signal the app
    *  bar mirrors — tests must scroll the element the component actually consults. */
-  function listScroller(f: ReturnType<typeof boot>) {
-    const el = (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
+  function listScroller(fixture: ReturnType<typeof boot>) {
+    const element = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.rows')!;
     return {
-      el,
+      el: element,
       scrollTo(top: number): void {
-        el.scrollTop = top;
-        el.dispatchEvent(new Event('scroll'));
+        element.scrollTop = top;
+        element.dispatchEvent(new Event('scroll'));
       },
     };
   }
@@ -589,34 +599,35 @@ describe('ReaderShellComponent', () => {
   describe('returning from a full-screen article (#128)', () => {
     /** An extra scroller under the shell (the article overlay's, say), with its
      *  own coordinate space, heard by the same capture-phase listener. */
-    function scroller(f: ReturnType<typeof boot>) {
-      const el = document.createElement('div');
+    function scroller(fixture: ReturnType<typeof boot>) {
+      const element = document.createElement('div');
       let top = 0;
-      Object.defineProperty(el, 'scrollTop', { get: () => top, configurable: true });
-      (f.nativeElement as HTMLElement).appendChild(el);
+      Object.defineProperty(element, 'scrollTop', { get: () => top, configurable: true });
+      (fixture.nativeElement as HTMLElement).appendChild(element);
       return {
-        el,
+        el: element,
         scrollTo(next: number): void {
           top = next;
-          el.dispatchEvent(new Event('scroll'));
+          element.dispatchEvent(new Event('scroll'));
         },
       };
     }
 
     function bootNarrowScrolledDown() {
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      const rows = listScroller(f);
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      const rows = listScroller(fixture);
       rows.scrollTo(100);
       rows.scrollTo(800);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
-      return { f, rows };
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
+      return { fixture, rows };
     }
 
-    function openArticle(f: ReturnType<typeof boot>): void {
+    function openArticle(fixture: ReturnType<typeof boot>): void {
       qp.next(convertToParamMap({ entry: '1' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl.expectOne('https://api.test/api/entries/1/state').flush({
         state: {
           entryId: 1,
@@ -628,86 +639,87 @@ describe('ReaderShellComponent', () => {
           viewedAt: 'x',
         },
       });
-      f.detectChanges();
-      expect(f.componentInstance.articleFullscreen()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.articleFullscreen()).toBe(true);
     }
 
-    function closeArticle(f: ReturnType<typeof boot>): void {
+    function closeArticle(fixture: ReturnType<typeof boot>): void {
       qp.next(convertToParamMap({ entry: null }));
-      f.detectChanges();
-      expect(f.componentInstance.articleFullscreen()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.articleFullscreen()).toBe(false);
     }
 
     it('leaves the list bar alone across article open and close', () => {
       // The full-screen article is a layer above the whole list, bar included,
       // with its own toolbar. Opening and closing it must not touch the bar's
       // hide-on-scroll state — the list is revealed exactly as it was left (#128).
-      const { f } = bootNarrowScrolledDown();
-      openArticle(f);
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      const { fixture } = bootNarrowScrolledDown();
+      openArticle(fixture);
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
-      closeArticle(f);
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      closeArticle(fixture);
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
     });
 
     it('hears no scroller but the list', () => {
       // #128: only the entry list's typed scrolled output drives the bar, never
       // the article overlay's scroller or the tag row's re-snap.
-      const { f, rows } = bootNarrowScrolledDown();
-      openArticle(f);
+      const { fixture, rows } = bootNarrowScrolledDown();
+      openArticle(fixture);
 
-      const article = scroller(f);
+      const article = scroller(fixture);
       article.scrollTo(100);
       article.scrollTo(2000);
-      const tagRowLike = scroller(f);
+      const tagRowLike = scroller(fixture);
       tagRowLike.scrollTo(0); // horizontal snap: scrollTop stays 0
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
-      closeArticle(f);
+      closeArticle(fixture);
       rows.scrollTo(810); // a small further scroll DOWN on the list
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(true);
 
       rows.scrollTo(300); // a real scroll UP still expands the header
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
 
     it('restores the drawer-close header state from the list, not the article', () => {
       // setSidebarOpen(false) re-derives the header from "the" scroll offset.
       // After deep-scrolling an article, that offset must be the list's own —
       // here near the top, so the header must stay expanded.
-      const f = boot();
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => false;
-      const rows = listScroller(f);
+      const fixture = boot();
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        false;
+      const rows = listScroller(fixture);
       rows.scrollTo(30);
       rows.scrollTo(10);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
 
-      openArticle(f);
-      const article = scroller(f);
+      openArticle(fixture);
+      const article = scroller(fixture);
       article.scrollTo(100);
       article.scrollTo(2000);
-      f.detectChanges();
-      closeArticle(f);
+      fixture.detectChanges();
+      closeArticle(fixture);
 
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
-      f.componentInstance.setSidebarOpen(false);
-      f.detectChanges();
-      expect(f.componentInstance.headerHidden()).toBe(false);
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
+      fixture.componentInstance.setSidebarOpen(false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.headerHidden()).toBe(false);
     });
   });
 
   it('marks the opened entry read and viewed', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
-    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isViewed: true });
-    req.flush({
+    fixture.detectChanges();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(testRequest.request.body).toEqual({ isViewed: true });
+    testRequest.flush({
       state: {
         entryId: 1,
         isHidden: true,
@@ -718,12 +730,12 @@ describe('ReaderShellComponent', () => {
         viewedAt: 'x',
       },
     });
-    expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-reader-view')).not.toBeNull();
   });
 
   it('drops the saved-search unread count when an unread matching entry is opened (#645)', () => {
-    const f = boot();
-    const store = f.componentInstance.savedSearchesStore;
+    const fixture = boot();
+    const store = fixture.componentInstance.savedSearchesStore;
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
       savedSearches: [
@@ -740,7 +752,7 @@ describe('ReaderShellComponent', () => {
     expect(store.savedSearches()[0].unreadCount).toBe(2);
 
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
+    fixture.detectChanges();
 
     // Opening reads entry 1 optimistically, so the badge drops at once — before
     // the state PATCH even resolves, no reload of the saved searches.
@@ -760,8 +772,8 @@ describe('ReaderShellComponent', () => {
   });
 
   it('restores the saved-search unread count when the open PATCH fails (#645)', () => {
-    const f = boot();
-    const store = f.componentInstance.savedSearchesStore;
+    const fixture = boot();
+    const store = fixture.componentInstance.savedSearchesStore;
     store.load();
     ctrl.expectOne('https://api.test/api/saved-searches').flush({
       savedSearches: [
@@ -777,39 +789,39 @@ describe('ReaderShellComponent', () => {
     });
 
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
+    fixture.detectChanges();
     expect(store.savedSearches()[0].unreadCount).toBe(1);
 
     ctrl
       .expectOne('https://api.test/api/entries/1/state')
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-    f.detectChanges();
+    fixture.detectChanges();
 
     // The read rolled back, so the entry is unread again and the badge returns.
     expect(store.savedSearches()[0].unreadCount).toBe(2);
   });
 
   it('marks the opened entry read and viewed only once even when the PATCH fails', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
-    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isViewed: true });
-    req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-    f.detectChanges();
+    fixture.detectChanges();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(testRequest.request.body).toEqual({ isViewed: true });
+    testRequest.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    fixture.detectChanges();
     // The entry is still unread/unviewed (rollback), but the effect must NOT
     // re-fire a PATCH.
-    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    ctrl.expectNone((request) => request.url.endsWith('/entries/1/state'));
     ctrl.verify();
   });
 
   it('marks an already-read entry viewed on open', () => {
-    const f = boot({ isHidden: true });
+    const fixture = boot({ isHidden: true });
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
-    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isViewed: true });
-    req.flush({
+    fixture.detectChanges();
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(testRequest.request.body).toEqual({ isViewed: true });
+    testRequest.flush({
       state: {
         entryId: 1,
         isHidden: true,
@@ -823,10 +835,10 @@ describe('ReaderShellComponent', () => {
   });
 
   it('does not re-mark an already-viewed entry on open', () => {
-    const f = boot({ isHidden: true, isViewed: true });
+    const fixture = boot({ isHidden: true, isViewed: true });
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
-    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    fixture.detectChanges();
+    ctrl.expectNone((request) => request.url.endsWith('/entries/1/state'));
     ctrl.verify();
   });
 
@@ -834,9 +846,9 @@ describe('ReaderShellComponent', () => {
     // The tick must turn off and stay off. The auto-open effect (which marks the
     // open entry viewed once) must not re-fire when un-ticking flips isViewed
     // back to false — otherwise it re-marks the entry and the tick never flips.
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl.expectOne('https://api.test/api/entries/1/state').flush({
       state: {
         entryId: 1,
@@ -848,15 +860,15 @@ describe('ReaderShellComponent', () => {
         viewedAt: 'x',
       },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.entryActions.toggleRead(f.componentInstance.openEntry()!);
-    f.detectChanges();
+    fixture.componentInstance.entryActions.toggleRead(fixture.componentInstance.openEntry()!);
+    fixture.detectChanges();
 
-    const patches = ctrl.match((r) => r.url.endsWith('/entries/1/state'));
-    expect(patches.map((p) => p.request.body)).toEqual([{ isViewed: false }]);
-    patches.forEach((p) =>
-      p.flush({
+    const patches = ctrl.match((request) => request.url.endsWith('/entries/1/state'));
+    expect(patches.map((patch) => patch.request.body)).toEqual([{ isViewed: false }]);
+    patches.forEach((patch) =>
+      patch.flush({
         state: {
           entryId: 1,
           isHidden: true,
@@ -868,75 +880,80 @@ describe('ReaderShellComponent', () => {
         },
       }),
     );
-    f.detectChanges();
-    ctrl.expectNone((r) => r.url.endsWith('/entries/1/state'));
+    fixture.detectChanges();
+    ctrl.expectNone((request) => request.url.endsWith('/entries/1/state'));
     ctrl.verify();
   });
 
   it('marks the entry viewed when the original-article link is followed', () => {
     // Open fires only the viewed patch, which fails and rolls back below, so
     // the link click is the real retry path this test exercises.
-    const f = boot({ isHidden: true });
+    const fixture = boot({ isHidden: true });
     qp.next(convertToParamMap({ entry: '1' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
       .expectOne('https://api.test/api/entries/1/state')
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.entryActions.openOriginal({ ...entry, isHidden: true, isViewed: false });
-    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isViewed: true });
+    fixture.componentInstance.entryActions.openOriginal({
+      ...entry,
+      isHidden: true,
+      isViewed: false,
+    });
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(testRequest.request.body).toEqual({ isViewed: true });
   });
 
   // Direct invocation above proves openOriginal's own logic, but not that the
   // template wires the click to it — there are TWO <app-reader-view> sites (wide
   // pane, narrow overlay), and either could silently drop the `(openOriginal)` binding.
   describe('the original-article link, through the real template wiring', () => {
-    function clickOriginalLink(f: ReturnType<typeof boot>): void {
-      const link = f.debugElement.query(By.css('app-reader-view a[target="_blank"]'));
+    function clickOriginalLink(fixture: ReturnType<typeof boot>): void {
+      const link = fixture.debugElement.query(By.css('app-reader-view a[target="_blank"]'));
       expect(link).not.toBeNull();
       link.triggerEventHandler('click', null);
-      f.detectChanges();
+      fixture.detectChanges();
     }
 
     it('marks viewed via the narrow full-screen overlay reader-view', () => {
       // Default test layout is narrow (isWide() is false), so the shell renders
       // the @else branch's overlay <app-reader-view> (reader-shell.component.html:157).
-      const f = boot({ isHidden: true, url: 'https://example.com/story' });
+      const fixture = boot({ isHidden: true, url: 'https://example.com/story' });
       qp.next(convertToParamMap({ entry: '1' }));
-      f.detectChanges();
+      fixture.detectChanges();
       // The on-open effect's own PATCH fails and rolls isViewed back to false,
       // so the link click below is the one exercising the wiring under test.
       ctrl
         .expectOne('https://api.test/api/entries/1/state')
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      clickOriginalLink(f);
+      clickOriginalLink(fixture);
 
-      const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-      expect(req.request.body).toEqual({ isViewed: true });
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+      expect(testRequest.request.body).toEqual({ isViewed: true });
     });
 
     it('marks viewed via the wide split-pane reader-view', () => {
       // Force the wide split-pane layout so the shell renders the @if branch's
       // <app-reader-view> (reader-shell.component.html:112) instead of the overlay.
-      const f = boot({ isHidden: true, url: 'https://example.com/story' });
-      (f.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () => true;
-      f.componentInstance.layout.set('pane');
+      const fixture = boot({ isHidden: true, url: 'https://example.com/story' });
+      (fixture.componentInstance.screen as unknown as { isWide: () => boolean }).isWide = () =>
+        true;
+      fixture.componentInstance.layout.set('pane');
       qp.next(convertToParamMap({ entry: '1' }));
-      f.detectChanges();
-      expect(f.componentInstance.paneMode()).toBe(true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.paneMode()).toBe(true);
       ctrl
         .expectOne('https://api.test/api/entries/1/state')
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      clickOriginalLink(f);
+      clickOriginalLink(fixture);
 
-      const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-      expect(req.request.body).toEqual({ isViewed: true });
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+      expect(testRequest.request.body).toEqual({ isViewed: true });
     });
   });
 
@@ -953,121 +970,123 @@ describe('ReaderShellComponent', () => {
       includeInDigest: false,
     };
 
-    function selectSavedAngular(f: ReturnType<typeof boot>) {
-      f.componentInstance.savedSearchesStore.load();
+    function selectSavedAngular(fixture: ReturnType<typeof boot>) {
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl
         .expectOne('https://api.test/api/saved-searches')
         .flush({ savedSearches: [savedAngular] });
       pp.next(convertToParamMap({ savedSearch: '9-angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
     }
 
     it.each(['magazine', 'list', 'pane'] as const)(
       'uses the selected %s layout for a single saved search',
       (layout) => {
-        const f = boot();
+        const fixture = boot();
         screen.isWide.set(true);
-        f.componentInstance.layout.set(layout);
+        fixture.componentInstance.layout.set(layout);
 
-        selectSavedAngular(f);
+        selectSavedAngular(fixture);
         ctrl
-          .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/9')
+          .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches/9')
           .flush({ entries: [{ ...entry, isHidden: true, isViewed: true }], nextCursor: null });
-        f.detectChanges();
+        fixture.detectChanges();
 
         // A saved search is not a direct search, so it never opens the search
         // pane: it uses the selected layout and only splits under a pane layout.
-        expect(f.componentInstance.splitView()).toBe(layout === 'pane');
-        expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('');
-        expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(
+        expect(fixture.componentInstance.splitView()).toBe(layout === 'pane');
+        expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('');
+        expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(
           layout === 'magazine',
         );
 
         qp.next(convertToParamMap({ entry: '1' }));
-        f.detectChanges();
-        expect(f.componentInstance.articleFullscreen()).toBe(layout !== 'pane');
+        fixture.detectChanges();
+        expect(fixture.componentInstance.articleFullscreen()).toBe(layout !== 'pane');
         ctrl.verify();
       },
     );
 
     it('switches between a saved search and a direct search of the same term', () => {
-      const f = boot();
+      const fixture = boot();
       screen.isWide.set(true);
-      f.componentInstance.layout.set('magazine');
+      fixture.componentInstance.layout.set('magazine');
 
-      selectSavedAngular(f);
+      selectSavedAngular(fixture);
       ctrl
-        .match((r) => r.url === 'https://api.test/api/entries/saved-searches/9')
-        .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
-      f.detectChanges();
-      expect(f.componentInstance.splitView()).toBe(false);
-      expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('');
-      expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
-      expect(f.componentInstance.layout.mode()).toBe('magazine');
+        .match((request) => request.url === 'https://api.test/api/entries/saved-searches/9')
+        .forEach((testRequest) => testRequest.flush({ entries: [entry], nextCursor: null }));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.splitView()).toBe(false);
+      expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('');
+      expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(true);
+      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
 
       pp.next(convertToParamMap({}));
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .match((r) => r.url === 'https://api.test/api/entries/search')
-        .forEach((r) => r.flush({ entries: [entry], nextCursor: null }));
-      f.detectChanges();
-      expect(f.componentInstance.splitView()).toBe(true);
-      expect(f.nativeElement.querySelector('app-sidebar input').value).toBe('angular');
-      expect(f.nativeElement.querySelector('.rows.magazine') !== null).toBe(false);
-      expect(f.componentInstance.layout.mode()).toBe('magazine');
+        .match((request) => request.url === 'https://api.test/api/entries/search')
+        .forEach((testRequest) => testRequest.flush({ entries: [entry], nextCursor: null }));
+      fixture.detectChanges();
+      expect(fixture.componentInstance.splitView()).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-sidebar input').value).toBe('angular');
+      expect(fixture.nativeElement.querySelector('.rows.magazine') !== null).toBe(false);
+      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
       ctrl.verify();
     });
 
     it('uses the split reader and restores the selected magazine layout when search clears', () => {
-      const f = boot();
+      const fixture = boot();
       screen.isWide.set(true);
-      f.componentInstance.layout.set('magazine');
+      fixture.componentInstance.layout.set('magazine');
 
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [{ ...entry, isHidden: true, isViewed: true }], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.paneMode()).toBe(false);
-      expect(f.componentInstance.splitView()).toBe(true);
-      expect(f.componentInstance.layout.mode()).toBe('magazine');
-      expect(f.nativeElement.querySelector('.main.split .reader .placeholder')).not.toBeNull();
+      expect(fixture.componentInstance.paneMode()).toBe(false);
+      expect(fixture.componentInstance.splitView()).toBe(true);
+      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
+      expect(
+        fixture.nativeElement.querySelector('.main.split .reader .placeholder'),
+      ).not.toBeNull();
 
       qp.next(convertToParamMap({ q: 'angular', entry: '1' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.articleFullscreen()).toBe(false);
-      expect(f.nativeElement.querySelector('.main.split .reader h1.title')?.textContent).toContain(
-        'e1',
-      );
-      expect(f.nativeElement.querySelector('.article-overlay')).toBeNull();
+      expect(fixture.componentInstance.articleFullscreen()).toBe(false);
+      expect(
+        fixture.nativeElement.querySelector('.main.split .reader h1.title')?.textContent,
+      ).toContain('e1');
+      expect(fixture.nativeElement.querySelector('.article-overlay')).toBeNull();
 
       qp.next(convertToParamMap({}));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.splitView()).toBe(f.componentInstance.paneMode());
-      expect(f.componentInstance.splitView()).toBe(false);
-      expect(f.componentInstance.layout.mode()).toBe('magazine');
-      expect(f.nativeElement.querySelector('.main.split')).toBeNull();
-      expect(f.nativeElement.querySelector('.rows.magazine')).not.toBeNull();
+      expect(fixture.componentInstance.splitView()).toBe(fixture.componentInstance.paneMode());
+      expect(fixture.componentInstance.splitView()).toBe(false);
+      expect(fixture.componentInstance.layout.mode()).toBe('magazine');
+      expect(fixture.nativeElement.querySelector('.main.split')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.rows.magazine')).not.toBeNull();
     });
   });
 
   describe('the split-pane resize handle (#810)', () => {
     it('mounts a keyboard-operable separator between the panes in split view', () => {
-      const f = boot();
+      const fixture = boot();
       screen.isWide.set(true);
-      f.componentInstance.layout.set('pane');
-      f.detectChanges();
+      fixture.componentInstance.layout.set('pane');
+      fixture.detectChanges();
 
-      const handle = f.nativeElement.querySelector('.main.split .pane-divider');
+      const handle = fixture.nativeElement.querySelector('.main.split .pane-divider');
       expect(handle).not.toBeNull();
       expect(handle.getAttribute('role')).toBe('separator');
       expect(handle.getAttribute('aria-orientation')).toBe('vertical');
@@ -1075,23 +1094,23 @@ describe('ReaderShellComponent', () => {
     });
 
     it('carries no separator when the main area is not split', () => {
-      const f = boot();
-      expect(f.componentInstance.splitView()).toBe(false);
-      expect(f.nativeElement.querySelector('.pane-divider')).toBeNull();
+      const fixture = boot();
+      expect(fixture.componentInstance.splitView()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.pane-divider')).toBeNull();
       ctrl.verify();
     });
   });
 
   it('fetches a deep-linked entry that is not in the loaded list', () => {
-    const f = boot(); // initial list holds only entry id 1
+    const fixture = boot(); // initial list holds only entry id 1
     qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
-    f.detectChanges();
+    fixture.detectChanges();
 
     // Not in the list → the shell fetches it by the id parsed from the slug.
-    const req = ctrl.expectOne('https://api.test/api/entries/514');
-    expect(req.request.method).toBe('GET');
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/514');
+    expect(testRequest.request.method).toBe('GET');
     // isHidden:true, isViewed:true so the on-open effect fires no state PATCH.
-    req.flush({
+    testRequest.flush({
       entry: {
         ...entry,
         id: 514,
@@ -1101,9 +1120,9 @@ describe('ReaderShellComponent', () => {
         isViewed: true,
       },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelector('app-reader-view')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('app-reader-view')).not.toBeNull();
     // The detail response already carries the body — seed the store with it
     // rather than let the reader view issue a redundant fetch of its own.
     expect(bodyStore.seed).toHaveBeenCalledWith(514, '<p>Deep linked body</p>');
@@ -1112,13 +1131,15 @@ describe('ReaderShellComponent', () => {
 
   describe('neighbour prefetch on open (#1100)', () => {
     it('warms the body store for the previous and next entries in list order', () => {
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      ctrl.match('https://api.test/api/subscriptions').forEach((r) => r.flush(subsBody));
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      ctrl
+        .match('https://api.test/api/subscriptions')
+        .forEach((testRequest) => testRequest.flush(subscriptionsBody));
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({
           entries: [
             { ...entry, id: 1 },
@@ -1145,7 +1166,7 @@ describe('ReaderShellComponent', () => {
       });
 
       qp.next(convertToParamMap({ entry: '2' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(bodyStore.prefetch).toHaveBeenCalledWith(1);
       expect(bodyStore.prefetch).toHaveBeenCalledWith(3);
@@ -1153,36 +1174,36 @@ describe('ReaderShellComponent', () => {
     });
 
     it('prefetches only the side with a neighbour, for an edge entry', () => {
-      const f = boot(); // a single-entry list — no neighbour on either side
+      const fixture = boot(); // a single-entry list — no neighbour on either side
       qp.next(convertToParamMap({ entry: '1' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(bodyStore.prefetch).not.toHaveBeenCalled();
     });
   });
 
   it('ignores a stale cold-entry fetch that resolves after navigating to another', () => {
-    const f = boot();
+    const fixture = boot();
     // Open cold entry A (not in the list), then jump to cold entry B before A resolves.
     qp.next(convertToParamMap({ entry: '514-a' }));
-    f.detectChanges();
-    const reqA = ctrl.expectOne('https://api.test/api/entries/514');
+    fixture.detectChanges();
+    const testRequestA = ctrl.expectOne('https://api.test/api/entries/514');
     qp.next(convertToParamMap({ entry: '600-b' }));
-    f.detectChanges();
-    const reqB = ctrl.expectOne('https://api.test/api/entries/600');
+    fixture.detectChanges();
+    const testRequestB = ctrl.expectOne('https://api.test/api/entries/600');
 
     // B resolves first (now open), then A resolves LATE — A must not clobber B.
-    reqB.flush({
+    testRequestB.flush({
       entry: { ...entry, id: 600, title: 'Entry B', contentHtml: '<p>B</p>', isHidden: true },
     });
-    f.detectChanges();
-    reqA.flush({
+    fixture.detectChanges();
+    testRequestA.flush({
       entry: { ...entry, id: 514, title: 'Entry A', contentHtml: '<p>A</p>', isHidden: true },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
     // The list stays mounted beneath the article overlay, so scope to the reader.
-    expect(f.nativeElement.querySelector('app-reader-view .title')?.textContent).toContain(
+    expect(fixture.nativeElement.querySelector('app-reader-view .title')?.textContent).toContain(
       'Entry B',
     );
   });
@@ -1190,44 +1211,50 @@ describe('ReaderShellComponent', () => {
   const refreshDone = refreshReport();
 
   it('scopes an all-items refresh to nothing (sweeps every due feed)', () => {
-    const f = boot();
-    f.componentInstance.onScopedRefresh();
-    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
-    expect(req.request.params.has('feedId')).toBe(false);
-    expect(req.request.params.has('tag')).toBe(false);
-    req.flush(refreshDone);
+    const fixture = boot();
+    fixture.componentInstance.onScopedRefresh();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.has('feedId')).toBe(false);
+    expect(testRequest.request.params.has('tag')).toBe(false);
+    testRequest.flush(refreshDone);
   });
 
   describe('one scoped refresh reloads the list once (#502)', () => {
     it('fires exactly one entries reload and one tags reload after the run finishes', () => {
-      const f = boot();
+      const fixture = boot();
 
-      f.componentInstance.onScopedRefresh();
+      fixture.componentInstance.onScopedRefresh();
 
       // The refresh sweep itself.
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
-      f.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
+      fixture.detectChanges();
 
       // Exactly one reload of each list-backing resource — the double reload
       // (slice effect + onDone) would make entries match twice here.
       // ctrl.match() removes what it finds from the open-request queue, so the
       // counts are captured once and reused below to drain them — matching
       // again would find nothing and throw.
-      const entriesReloads = ctrl.match((r) => r.url === 'https://api.test/api/entries');
-      const tagsReloads = ctrl.match((r) => r.url === 'https://api.test/api/tags');
-      const subsReloads = ctrl.match((r) => r.url === 'https://api.test/api/subscriptions');
+      const entriesReloads = ctrl.match(
+        (request) => request.url === 'https://api.test/api/entries',
+      );
+      const tagsReloads = ctrl.match((request) => request.url === 'https://api.test/api/tags');
+      const subscriptionsReloads = ctrl.match(
+        (request) => request.url === 'https://api.test/api/subscriptions',
+      );
       const savedSearchesReloads = ctrl.match(
-        (r) => r.url === 'https://api.test/api/saved-searches',
+        (request) => request.url === 'https://api.test/api/saved-searches',
       );
       expect(entriesReloads.length).toBe(1);
       expect(tagsReloads.length).toBe(1);
-      expect(subsReloads.length).toBe(1);
+      expect(subscriptionsReloads.length).toBe(1);
       expect(savedSearchesReloads.length).toBe(1);
 
       // Drain the reload requests so verify() is clean.
       entriesReloads[0].flush({ entries: [], nextCursor: null });
       tagsReloads[0].flush({ tags: [] });
-      subsReloads[0].flush(subsBody);
+      subscriptionsReloads[0].flush(subscriptionsBody);
       savedSearchesReloads[0].flush({ savedSearches: [] });
       ctrl.verify();
     });
@@ -1237,10 +1264,10 @@ describe('ReaderShellComponent', () => {
     it('reloads the list on each landing slice, not only at the end', () => {
       // All subscriptions never fetched → awaitingFirstFetch() is true → the shell
       // fires the post-onboarding sweep itself (sweeping() is true for its span).
-      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }]);
+      const fixture = bootWith([{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }]);
 
       // The sweep's own refresh request.
-      const refresh = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+      const refresh = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
 
       // First slice: partial, more feeds still due → the list must reload now.
       // RefreshService.step() re-fires the next /api/refresh synchronously from
@@ -1252,16 +1279,18 @@ describe('ReaderShellComponent', () => {
         fetched: 1,
         remaining: 1,
       });
-      f.detectChanges();
-      const firstSliceEntries = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+      fixture.detectChanges();
+      const firstSliceEntries = ctrl.match(
+        (request) => request.url === 'https://api.test/api/entries',
+      );
       expect(firstSliceEntries.length).toBe(1);
       firstSliceEntries[0].flush({ entries: [], nextCursor: null });
       // subs reload per slice; tags do not (they reload once at finish), so only
       // the subscriptions request is drained here.
       ctrl
-        .match((r) => r.url === 'https://api.test/api/subscriptions')
-        .forEach((req) =>
-          req.flush({
+        .match((request) => request.url === 'https://api.test/api/subscriptions')
+        .forEach((testRequest) =>
+          testRequest.flush({
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: null }],
             favoritesCount: 0,
             keptCount: 0,
@@ -1269,27 +1298,31 @@ describe('ReaderShellComponent', () => {
         );
       // Tags must NOT reload on a partial slice — a refresh never touches them,
       // so they reload once at the finish, not once per sweep slice (#502).
-      expect(ctrl.match((r) => r.url === 'https://api.test/api/tags').length).toBe(0);
+      expect(ctrl.match((request) => request.url === 'https://api.test/api/tags').length).toBe(0);
 
       // Second slice: the sweep's poll loop re-fires /api/refresh on its own;
       // finishing it reloads again — proof the first reload was not the only one.
-      const next = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+      const next = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
       next.flush({ ...refreshDone, progress: { done: 2, total: 2 }, fetched: 2 });
-      f.detectChanges();
+      fixture.detectChanges();
 
       // The finishing slice reloads once more (entries + subs + tags). match()
       // consumes the open queue, so calling it once and flushing that array proves
       // the first slice's reload was not the only one.
       const finishReloads = ctrl.match(() => true);
-      expect(finishReloads.some((req) => req.request.url.endsWith('/api/entries'))).toBe(true);
+      expect(
+        finishReloads.some((testRequest) => testRequest.request.url.endsWith('/api/entries')),
+      ).toBe(true);
       // Tags reload exactly once, here at the finish — never on the partial slice above.
-      expect(finishReloads.filter((req) => req.request.url.endsWith('/api/tags')).length).toBe(1);
+      expect(
+        finishReloads.filter((testRequest) => testRequest.request.url.endsWith('/api/tags')).length,
+      ).toBe(1);
       // Skip the cancelled ones: each store abandons a request the next slice's
       // reload supersedes, so the queue holds some that can no longer answer.
       finishReloads
-        .filter((req) => !req.cancelled)
-        .forEach((req) =>
-          req.flush({
+        .filter((testRequest) => !testRequest.cancelled)
+        .forEach((testRequest) =>
+          testRequest.flush({
             entries: [],
             nextCursor: null,
             subscriptions: [{ ...SUBSCRIPTION_FIXTURE, lastFetchedAt: '2026-08-21T00:00:00Z' }],
@@ -1303,43 +1336,45 @@ describe('ReaderShellComponent', () => {
   });
 
   it('scopes a tag refresh to the tag id', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ tag: '3' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.componentInstance.onScopedRefresh();
-    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
-    expect(req.request.params.get('tag')).toBe('3');
-    req.flush(refreshDone);
+    fixture.componentInstance.onScopedRefresh();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
+    expect(testRequest.request.params.get('tag')).toBe('3');
+    testRequest.flush(refreshDone);
   });
 
   it('scopes a subscription refresh to the underlying feed id', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ subscription: '5' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.componentInstance.onScopedRefresh();
-    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    fixture.componentInstance.onScopedRefresh();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     // The subscription's real feed id (55), not the subscription id (5).
-    expect(req.request.params.get('feedId')).toBe('55');
-    req.flush(refreshDone);
+    expect(testRequest.request.params.get('feedId')).toBe('55');
+    testRequest.flush(refreshDone);
   });
 
   it('offers an edit action in the list header for the selected feed', () => {
-    const f = boot();
+    const fixture = boot();
     const edit = jest.spyOn(TestBed.inject(ManageActions), 'editSubscription');
     qp.next(convertToParamMap({ subscription: '5' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const button = f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      '.list-header .list-edit',
+    ) as HTMLButtonElement;
     expect(button).not.toBeNull();
     button.click();
 
@@ -1349,7 +1384,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('offers the same edit action for the selected tag', () => {
-    const f = boot();
+    const fixture = boot();
     const edit = jest.spyOn(TestBed.inject(ManageActions), 'editTag');
     // The header's glyph and its edit action both read the tag out of the
     // tree, so the tag has to exist there for either to appear.
@@ -1357,69 +1392,69 @@ describe('ReaderShellComponent', () => {
       { id: 3, name: 'Tech', color: null, icon: null, position: 0 },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    (f.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('.list-header .list-edit') as HTMLButtonElement).click();
     expect(edit).toHaveBeenCalledWith(expect.objectContaining({ id: 3 }));
   });
 
   it('leaves the slot empty for a selection that edits nothing', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ view: 'favorites' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelector('.list-header .list-edit')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.list-header .list-edit')).toBeNull();
   });
 
   it('does not refresh from the cross-feed saved views', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ view: 'favorites' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.componentInstance.onScopedRefresh();
-    ctrl.expectNone((r) => r.url === 'https://api.test/api/refresh');
+    fixture.componentInstance.onScopedRefresh();
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/refresh');
   });
 
   it('reloads entries and sidebar counts when the selection changes (#664)', () => {
     jest.useFakeTimers({ now: new Date('2026-08-27T16:00:00Z') });
-    const f = boot();
+    const fixture = boot();
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
     qp.next(convertToParamMap({ subscription: '5' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.params.get('subscription') === '5')
+      .expectOne((request) => request.params.get('subscription') === '5')
       .flush({ entries: [], nextCursor: null });
     ctrl.expectOne('https://api.test/api/subscriptions').flush({
-      ...subsBody,
-      subscriptions: [{ ...subsBody.subscriptions[0], unreadCount: 3 }],
+      ...subscriptionsBody,
+      subscriptions: [{ ...subscriptionsBody.subscriptions[0], unreadCount: 3 }],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(TestBed.inject(SubscriptionsStore).totalUnread()).toBe(3);
-    expect(f.nativeElement.querySelector('.empty')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.empty')).not.toBeNull();
     jest.useRealTimers();
   });
 
   it('loads the for-you view and titles the list for it', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
-    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
-    expect(req.request.params.get('view')).toBe('for-you');
-    req.flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('view')).toBe('for-you');
+    testRequest.flush({ entries: [], nextCursor: null });
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.title()).toBe('For you');
+    expect(fixture.componentInstance.heading.title()).toBe('For you');
   });
 
   // The For-You badge counts unread picks (#724), so the heading and the tab
@@ -1427,7 +1462,7 @@ describe('ReaderShellComponent', () => {
   // feed already do. Otherwise the same number is described two ways.
   it('titles the for-you count as unread, matching the sidebar badge', () => {
     localStorage.setItem('sfr.user.1.unread-only', '1');
-    const f = boot();
+    const fixture = boot();
     TestBed.inject(RecommendationsService).report.set({
       status: 'completed',
       batchesTotal: 1,
@@ -1439,18 +1474,18 @@ describe('ReaderShellComponent', () => {
       forYou: { itemCount: 7, totalCount: 7, generatedAt: null, newestRunId: null },
     });
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const list = f.debugElement.query(By.directive(EntryListComponent));
+    const list = fixture.debugElement.query(By.directive(EntryListComponent));
     expect(list.componentInstance.titleCount()).toEqual({ value: 7, counts: 'unread' });
   });
 
   it('titles the for-you count as its total when All posts is on', () => {
-    const f = boot();
+    const fixture = boot();
     TestBed.inject(RecommendationsService).report.set({
       status: 'completed',
       batchesTotal: 1,
@@ -1462,13 +1497,13 @@ describe('ReaderShellComponent', () => {
       forYou: { itemCount: 7, totalCount: 20, generatedAt: null, newestRunId: null },
     });
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const list = f.debugElement.query(By.directive(EntryListComponent));
+    const list = fixture.debugElement.query(By.directive(EntryListComponent));
     expect(list.componentInstance.titleCount()).toEqual({ value: 20, counts: 'items' });
   });
 
@@ -1477,21 +1512,21 @@ describe('ReaderShellComponent', () => {
   // would, and #549 would be back through the door built for the reader.
   it('names the browser tab after the list on screen, and what it holds', () => {
     localStorage.setItem('sfr.user.1.unread-only', '1');
-    const f = boot();
-    f.detectChanges();
+    const fixture = boot();
+    fixture.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
   });
 
   it('names the browser tab after the selected feed and its unread count', () => {
     localStorage.setItem('sfr.user.1.unread-only', '1');
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ subscription: '5' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe('heise (2) | simple feed reader');
   });
@@ -1500,90 +1535,90 @@ describe('ReaderShellComponent', () => {
   // resolutions of "how much is in this list" would drift apart.
   it('hands the list heading the same count the tab shows', () => {
     localStorage.setItem('sfr.user.1.unread-only', '1');
-    const f = boot();
-    f.detectChanges();
+    const fixture = boot();
+    fixture.detectChanges();
 
-    const list = f.debugElement.query(By.directive(EntryListComponent));
+    const list = fixture.debugElement.query(By.directive(EntryListComponent));
     expect(list.componentInstance.titleCount()).toEqual({ value: 2, counts: 'unread' });
   });
 
   // Task 5 (#1154): the heading and tab total flip with the switch — the
   // sidebar's unread number under "Only unread", the list's total otherwise.
   it('counts every post in the heading and tab when All posts is on', () => {
-    const f = boot();
-    f.detectChanges();
+    const fixture = boot();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
     expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
   });
 
   it('counts every post of a feed when All posts is on', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ subscription: '5' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
   });
 
   it('counts every post of a tag when All posts is on', () => {
-    const f = bootWith([
+    const fixture = bootWith([
       {
-        ...subsBody.subscriptions[0],
+        ...subscriptionsBody.subscriptions[0],
         tags: [{ id: 3, name: 'Tech', color: null, icon: null, position: 0 }],
       },
     ]);
     qp.next(convertToParamMap({ tag: '3' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
   });
 
   it('switches the count when the unread switch flips', () => {
-    const f = boot();
+    const fixture = boot();
     TestBed.inject(UnreadFilterService).set(true);
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
 
-    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 2, counts: 'unread' });
+    expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 2, counts: 'unread' });
   });
 
   // A search names itself with its own result count, in the heading and in the
   // tab; a second count would say the same thing twice and disagree while the
   // search is in flight.
   it('leaves a search without a count of its own', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url.startsWith('https://api.test/api/entries/search'))
+      .expectOne((request) => request.url.startsWith('https://api.test/api/entries/search'))
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.titleCount().value).toBe(0);
+    expect(fixture.componentInstance.heading.titleCount().value).toBe(0);
   });
 
   it('names the browser tab after the open article, cut to what a tab shows', () => {
     const headline = 'A headline far longer than any browser tab has ever been able to show';
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ entry: '514' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries/514')
+      .expectOne((request) => request.url === 'https://api.test/api/entries/514')
       .flush({ entry: { ...entry, id: 514, title: headline, contentHtml: '<p>b</p>' } });
-    f.detectChanges();
+    fixture.detectChanges();
     // A second pass: PageTitleService's toObservable/toSignal pipeline settles
     // one tick after the entry effect writes the page.
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe(`${headline.slice(0, 60)}… | simple feed reader`);
   });
@@ -1592,29 +1627,29 @@ describe('ReaderShellComponent', () => {
   // language switch.
   describe('translated heading (#411)', () => {
     it('titles the default list with the translated all-items label', () => {
-      const f = boot();
-      expect(f.componentInstance.heading.title()).toBe('All items');
+      const fixture = boot();
+      expect(fixture.componentInstance.heading.title()).toBe('All items');
 
       TestBed.inject(LanguageService).set('de');
-      f.detectChanges();
+      fixture.detectChanges();
 
       // The crux of #411: TranslocoService.translate() is one-shot, so without a
       // language signal in the computed's dependency graph the heading would
       // freeze on the English string a switch never revisits.
-      expect(f.componentInstance.heading.title()).toBe('Alle Einträge');
+      expect(fixture.componentInstance.heading.title()).toBe('Alle Einträge');
     });
 
     it('titles the favorites list with the translated label', () => {
-      const f = boot();
+      const fixture = boot();
       TestBed.inject(LanguageService).set('de');
       qp.next(convertToParamMap({ view: 'favorites' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.heading.title()).toBe('Favoriten');
+      expect(fixture.componentInstance.heading.title()).toBe('Favoriten');
     });
   });
 
@@ -1624,21 +1659,21 @@ describe('ReaderShellComponent', () => {
     // load, so all four combinations are pinned to guard against a spinner
     // that lights up for an unrelated feed load.
     it('is false for a non-search selection while its list is not loading', () => {
-      const f = boot();
-      expect(f.componentInstance.heading.searching()).toBe(false);
+      const fixture = boot();
+      expect(fixture.componentInstance.heading.searching()).toBe(false);
     });
 
     it('is false for a non-search selection while its list IS loading', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ tag: '9' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.selection().kind).toBe('tag');
-      expect(f.componentInstance.entries.loading()).toBe(true);
-      expect(f.componentInstance.heading.searching()).toBe(false);
+      expect(fixture.componentInstance.selection().kind).toBe('tag');
+      expect(fixture.componentInstance.entries.loading()).toBe(true);
+      expect(fixture.componentInstance.heading.searching()).toBe(false);
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({
           entries: [],
           nextCursor: null,
@@ -1646,28 +1681,28 @@ describe('ReaderShellComponent', () => {
     });
 
     it('is false for a search selection once its list has finished loading', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.heading.searching()).toBe(false);
+      expect(fixture.componentInstance.heading.searching()).toBe(false);
     });
 
     it('is true for a search selection while its list IS loading', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.selection().kind).toBe('search');
-      expect(f.componentInstance.entries.loading()).toBe(true);
-      expect(f.componentInstance.heading.searching()).toBe(true);
+      expect(fixture.componentInstance.selection().kind).toBe('search');
+      expect(fixture.componentInstance.entries.loading()).toBe(true);
+      expect(fixture.componentInstance.heading.searching()).toBe(true);
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     });
 
@@ -1675,73 +1710,81 @@ describe('ReaderShellComponent', () => {
     // reimplemented `sameSelection` inline and forgot `term`, so two search
     // selections compared equal and the reload effect never re-ran for a new term.
     it('reloads the list when the search term changes (#408 follow-up)', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'daft' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
         .expectOne(
-          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft',
+          (request) =>
+            request.url === 'https://api.test/api/entries/search' &&
+            request.params.get('q') === 'daft',
         )
         .flush({ entries: [{ ...entry, id: 1, title: 'daft' }], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([1]);
+      expect(
+        fixture.componentInstance.entries.entries().map((listedEntry) => listedEntry.id),
+      ).toEqual([1]);
 
       qp.next(convertToParamMap({ q: 'daft punk' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
       // A second request for the new term must actually go out — this is the
       // assertion that catches the bug: with the stale comparator, no request
       // fires and the entries array (and title built from it) stay frozen.
       const secondRequest = ctrl.expectOne(
-        (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft punk',
+        (request) =>
+          request.url === 'https://api.test/api/entries/search' &&
+          request.params.get('q') === 'daft punk',
       );
       secondRequest.flush({ entries: [{ ...entry, id: 2, title: 'daft punk' }], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([2]);
-      expect(f.componentInstance.heading.title()).toContain('daft punk');
+      expect(
+        fixture.componentInstance.entries.entries().map((listedEntry) => listedEntry.id),
+      ).toEqual([2]);
+      expect(fixture.componentInstance.heading.title()).toContain('daft punk');
     });
 
     it('does not reload the list for an entry-only URL change (original comparator intent)', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'daft punk' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [{ ...entry, id: 2 }], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
       // Opening an entry changes only the `entry` param, not the selection —
       // no second list request must fire.
       qp.next(convertToParamMap({ q: 'daft punk', entry: '2-daft-punk' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries/search');
     });
 
     it('treats two search selections with the same term as the same selection, and a different term as different', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'daft' }));
-      f.detectChanges();
-      const first = f.componentInstance.selection();
+      fixture.detectChanges();
+      const first = fixture.componentInstance.selection();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
       // Same params again (e.g. a re-emit with no real change) must not be a
       // new selection reference's worth of behaviour.
       qp.next(convertToParamMap({ q: 'daft' }));
-      f.detectChanges();
-      expect(f.componentInstance.selection()).toBe(first);
-      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries/search');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.selection()).toBe(first);
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries/search');
 
       qp.next(convertToParamMap({ q: 'daft punk' }));
-      f.detectChanges();
-      expect(f.componentInstance.selection()).not.toBe(first);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.selection()).not.toBe(first);
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     });
 
@@ -1749,33 +1792,35 @@ describe('ReaderShellComponent', () => {
       // A search selection always has kind 'search', id null, unread false —
       // the same triple every non-search "all items" selection has too. The
       // comparator must still tell them apart via `term`.
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({}));
-      f.detectChanges();
-      expect(f.componentInstance.selection().kind).toBe('all');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.selection().kind).toBe('all');
 
       qp.next(convertToParamMap({ q: 'daft punk' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.selection().kind).toBe('search');
+      expect(fixture.componentInstance.selection().kind).toBe('search');
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     });
 
     it('strips the trailing whole-word-mode space from the title shown to the user', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'daft ' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
         .expectOne(
-          (r) => r.url === 'https://api.test/api/entries/search' && r.params.get('q') === 'daft ',
+          (request) =>
+            request.url === 'https://api.test/api/entries/search' &&
+            request.params.get('q') === 'daft ',
         )
         .flush({ entries: [{ ...entry, id: 1 }], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.heading.title()).not.toContain('daft "');
-      expect(f.componentInstance.heading.title()).toContain('"daft"');
+      expect(fixture.componentInstance.heading.title()).not.toContain('daft "');
+      expect(fixture.componentInstance.heading.title()).toContain('"daft"');
     });
   });
 
@@ -1786,9 +1831,9 @@ describe('ReaderShellComponent', () => {
     // article opened out of search results land back on those results.
     it('keeps q when opening an article', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = boot();
+      const fixture = boot();
 
-      f.componentInstance.entryActions.open(entry);
+      fixture.componentInstance.entryActions.open(entry);
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');
@@ -1796,9 +1841,9 @@ describe('ReaderShellComponent', () => {
 
     it('keeps q when closing an article', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = boot();
+      const fixture = boot();
 
-      f.componentInstance.onCloseReader();
+      fixture.componentInstance.onCloseReader();
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');
@@ -1806,17 +1851,17 @@ describe('ReaderShellComponent', () => {
 
     it('clears q along with the rest when adding a feed selects its subscription (#408)', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
 
       const ref = { closed: of({ id: 9, lastFetchedAt: 'x' }) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
-      f.componentInstance.onAddFeed();
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      fixture.componentInstance.onAddFeed();
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
 
       expect(nav).toHaveBeenCalledWith(
         ['/'],
@@ -1830,14 +1875,16 @@ describe('ReaderShellComponent', () => {
           },
         }),
       );
-      ctrl.match(() => true).forEach((r) => r.flush({ entries: [], nextCursor: null }));
+      ctrl
+        .match(() => true)
+        .forEach((testRequest) => testRequest.flush({ entries: [], nextCursor: null }));
     });
 
     it('layers a search over the current list, keeping view/tag/subscription in the URL to return to (#542)', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = boot();
+      const fixture = boot();
 
-      f.componentInstance.onSearch('angular');
+      fixture.componentInstance.onSearch('angular');
 
       expect(nav).toHaveBeenCalledWith(
         ['/'],
@@ -1850,9 +1897,9 @@ describe('ReaderShellComponent', () => {
 
     it("onSearch('') drops only the search, so closing it returns to the list it was started from rather than All items (#542)", () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = boot();
+      const fixture = boot();
 
-      f.componentInstance.onSearch('');
+      fixture.componentInstance.onSearch('');
 
       expect(nav).toHaveBeenCalledWith(
         ['/'],
@@ -1868,119 +1915,119 @@ describe('ReaderShellComponent', () => {
     'shows no count for a search that is loading, even though entries() still ' +
       'holds the PREVIOUS list rows (#254 stale-list regression, fix round 2)',
     () => {
-      const f = boot();
+      const fixture = boot();
       // Establish the fixture deliberately: boot() landed one row from the 'all'
       // list, still mounted — this is #254's behaviour (load() clears nextCursor
       // synchronously but leaves the outgoing list rendered until it lands).
-      expect(f.componentInstance.entries.entries().length).toBe(1);
+      expect(fixture.componentInstance.entries.entries().length).toBe(1);
 
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
       // The search request is now in flight. Prove the trap is live before asserting
       // the title: entries() still holds the stale 'all' row and hasMore() reads
       // false (nextCursor already cleared) — a naive read would show "— 1" here.
-      expect(f.componentInstance.entries.entries().length).toBe(1);
-      expect(f.componentInstance.heading.hasMore()).toBe(false);
-      expect(f.componentInstance.heading.searching()).toBe(true);
+      expect(fixture.componentInstance.entries.entries().length).toBe(1);
+      expect(fixture.componentInstance.heading.hasMore()).toBe(false);
+      expect(fixture.componentInstance.heading.searching()).toBe(true);
 
-      expect(f.componentInstance.heading.title()).toBe('Results for "angular"');
-      expect(f.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
-      expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular"');
-      expect(f.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
+      expect(fixture.componentInstance.heading.title()).toBe('Results for "angular"');
+      expect(fixture.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
+      expect(fixture.componentInstance.heading.searchTitleBody()).toBe('"angular"');
+      expect(fixture.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
       // No pill while in flight — the same trap as the dash-form count above:
       // a naive read here would show a stale/false count for a term that has
       // not answered yet.
-      expect(f.componentInstance.heading.searchCountLabel()).toBeNull();
+      expect(fixture.componentInstance.heading.searchCountLabel()).toBeNull();
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
     },
   );
 
   it('titles a search selection with the translated term and the exact loaded count when there is no further page', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .expectOne((request) => request.url === 'https://api.test/api/entries/search')
       .flush({ entries: [entry, { ...entry, id: 2 }], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 2');
-    expect(f.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
-    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 2');
-    expect(f.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
-    expect(f.componentInstance.heading.searchCountLabel()).toBe('2');
+    expect(fixture.componentInstance.heading.title()).toBe('Results for "angular" — 2');
+    expect(fixture.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
+    expect(fixture.componentInstance.heading.searchTitleBody()).toBe('"angular" — 2');
+    expect(fixture.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
+    expect(fixture.componentInstance.heading.searchCountLabel()).toBe('2');
   });
 
   it('titles a settled search with zero results as the exact count, not the loading form', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .expectOne((request) => request.url === 'https://api.test/api/entries/search')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.searching()).toBe(false);
-    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 0');
-    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 0');
-    expect(f.componentInstance.heading.searchCountLabel()).toBe('0');
+    expect(fixture.componentInstance.heading.searching()).toBe(false);
+    expect(fixture.componentInstance.heading.title()).toBe('Results for "angular" — 0');
+    expect(fixture.componentInstance.heading.searchTitleBody()).toBe('"angular" — 0');
+    expect(fixture.componentInstance.heading.searchCountLabel()).toBe('0');
   });
 
   it('titles a search selection with a trailing + when another page exists', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ q: 'angular' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+      .expectOne((request) => request.url === 'https://api.test/api/entries/search')
       .flush({ entries: [entry], nextCursor: 'cursor-2' });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 1+');
-    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 1+');
-    expect(f.componentInstance.heading.searchCountLabel()).toBe('1+');
+    expect(fixture.componentInstance.heading.title()).toBe('Results for "angular" — 1+');
+    expect(fixture.componentInstance.heading.searchTitleBody()).toBe('"angular" — 1+');
+    expect(fixture.componentInstance.heading.searchCountLabel()).toBe('1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    TestBed.inject(RecommendationsService).completedStamp.update((n) => n + 1);
-    f.detectChanges();
+    TestBed.inject(RecommendationsService).completedStamp.update((stamp) => stamp + 1);
+    fixture.detectChanges();
 
-    const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
-    expect(req.request.params.get('view')).toBe('for-you');
-    req.flush({ entries: [], nextCursor: null });
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('view')).toBe('for-you');
+    testRequest.flush({ entries: [], nextCursor: null });
   });
 
   it('does not reload another list when a for-you run completes off-screen', () => {
-    const f = boot();
-    TestBed.inject(RecommendationsService).completedStamp.update((n) => n + 1);
-    f.detectChanges();
-    ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+    const fixture = boot();
+    TestBed.inject(RecommendationsService).completedStamp.update((stamp) => stamp + 1);
+    fixture.detectChanges();
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
   // The run trigger lives in the list header now (#325), gated on AI being
   // ready — the same gate the sidebar's For You link uses — so a booted for-you
   // view marks readiness before it expects the button.
   function bootForYou() {
-    const f = boot();
+    const fixture = boot();
     TestBed.inject(AiAvailabilityService).apply({ ready: true, model: 'gpt' });
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
   const runningReport = {
@@ -2006,30 +2053,32 @@ describe('ReaderShellComponent', () => {
   };
 
   function menuItem(text: string): HTMLElement {
-    const item = [...document.querySelectorAll('[role="menuitem"]')].find((b) =>
-      b.textContent?.includes(text),
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find((menuEntry) =>
+      menuEntry.textContent?.includes(text),
     ) as HTMLElement | undefined;
     expect(item).not.toBeUndefined();
     return item!;
   }
 
   it('withholds the run button until AI is ready', () => {
-    const f = boot();
+    const fixture = boot();
     qp.next(convertToParamMap({ view: 'for-you' }));
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelector('.for-you-run')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.for-you-run')).toBeNull();
   });
 
   it('shows the run button in the list header and starts a run only after the user confirms', () => {
-    const f = bootForYou();
-    const recs = TestBed.inject(RecommendationsService);
+    const fixture = bootForYou();
+    const recommendations = TestBed.inject(RecommendationsService);
 
-    const button = f.nativeElement.querySelector('.list-header .for-you-run') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      '.list-header .for-you-run',
+    ) as HTMLButtonElement;
     expect(button).not.toBeNull();
     // "Refresh", not "Get recommendations" (#710): named after what it produces,
     // like every other header action. The sparkle glyph sets it apart from the
@@ -2046,150 +2095,154 @@ describe('ReaderShellComponent', () => {
     expect(button.classList.contains('primary')).toBe(false);
     // The header never carries the progress caption: it is the pill's, on
     // every route, running or not (#398).
-    expect(f.nativeElement.querySelector('.for-you-progress')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.for-you-progress')).toBeNull();
 
     // The click only opens the confirmation: nothing is requested until it is
     // accepted, because a run is long and spends provider budget.
     button.click();
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl.expectNone('https://api.test/api/recommendations/runs');
 
     const confirm = document.querySelector('[data-testid="confirm"]') as HTMLButtonElement;
     expect(confirm).not.toBeNull();
     confirm.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);
-    f.detectChanges();
-    expect(recs.running()).toBe(true);
+    fixture.detectChanges();
+    expect(recommendations.running()).toBe(true);
     ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
   });
 
   it('starts no run when the confirmation is dismissed', () => {
-    const f = bootForYou();
+    const fixture = bootForYou();
 
-    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
-    f.detectChanges();
+    (fixture.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
+    fixture.detectChanges();
 
     const cancel = [...document.querySelectorAll('app-button button')].find(
-      (b) => b.textContent?.trim() === 'Cancel',
+      (button) => button.textContent?.trim() === 'Cancel',
     ) as HTMLButtonElement;
     expect(cancel).not.toBeUndefined();
     cancel.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     ctrl.expectNone('https://api.test/api/recommendations/runs');
     expect(TestBed.inject(RecommendationsService).running()).toBe(false);
   });
 
   it('offers resume or start-over for a failed run, and resumes on choice', () => {
-    const f = bootForYou();
-    const recs = TestBed.inject(RecommendationsService);
-    recs.report.set(failedReport);
-    f.detectChanges();
+    const fixture = bootForYou();
+    const recommendations = TestBed.inject(RecommendationsService);
+    recommendations.report.set(failedReport);
+    fixture.detectChanges();
 
-    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
-    f.detectChanges();
+    (fixture.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
+    fixture.detectChanges();
 
     // The plain confirm never opens; the choice sheet stands in for it, and
     // nothing is requested until the user picks.
     ctrl.expectNone('https://api.test/api/recommendations/runs');
     menuItem('Resume unfinished run').click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     ctrl.expectOne('https://api.test/api/recommendations/runs/resume').flush(runningReport);
-    f.detectChanges();
-    expect(recs.running()).toBe(true);
+    fixture.detectChanges();
+    expect(recommendations.running()).toBe(true);
     ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
   });
 
   it('starts a fresh run when start-over is chosen over a failed run', () => {
-    const f = bootForYou();
+    const fixture = bootForYou();
     TestBed.inject(RecommendationsService).report.set(failedReport);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    (f.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
-    f.detectChanges();
+    (fixture.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
+    fixture.detectChanges();
 
     menuItem('Start a new run').click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);
-    f.detectChanges();
+    fixture.detectChanges();
     ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
   });
 
   it('replaces the run button with a stop button while a run is in flight', () => {
-    const f = bootForYou();
-    const recs = TestBed.inject(RecommendationsService);
-    recs.running.set(true);
-    recs.report.set(runningReport);
-    f.detectChanges();
+    const fixture = bootForYou();
+    const recommendations = TestBed.inject(RecommendationsService);
+    recommendations.running.set(true);
+    recommendations.report.set(runningReport);
+    fixture.detectChanges();
 
     // Only the Stop button remains — starting a second run over a live one is
     // exactly what the single toggling slot prevents — with the batch count
     // beneath it and no failure alert clutter in the header (#325).
-    const buttons = [...f.nativeElement.querySelectorAll('.for-you-run')];
+    const buttons = [...fixture.nativeElement.querySelectorAll('.for-you-run')];
     expect(buttons.length).toBe(1);
     expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
     // The count, the ETA and the bar left the LIST header in #398 and never
     // came back; a live run leaves nothing but the Stop button there. On this
     // (wide) layout they read out from the app bar instead of the pill (#435).
-    expect(f.nativeElement.querySelector('.list-header .for-you-progress')).toBeNull();
-    expect(f.nativeElement.querySelector('app-reader-header .for-you-progress')).not.toBeNull();
-    expect(f.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.list-header .for-you-progress')).toBeNull();
+    expect(
+      fixture.nativeElement.querySelector('app-reader-header .for-you-progress'),
+    ).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.list-header [role="alert"]')).toBeNull();
   });
 
   it('draws the refresh bar inside the app bar, and nowhere else', () => {
-    const f = boot();
+    const fixture = boot();
     TestBed.inject(RefreshService).running.set(true);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
     // Exactly one. Two bars for one refresh is #721's first symptom.
-    expect(el.querySelectorAll('app-progress-hairline').length).toBe(1);
+    expect(element.querySelectorAll('app-progress-hairline').length).toBe(1);
     // Inside the bar, so it travels with it — parked below, it retracted on scroll
     // and left a 2px band. The hairline gates `.bar` on `active()`, so checking the
     // rendered bar (not just the always-present host) exercises the binding.
-    expect(el.querySelector('app-reader-header app-progress-hairline .bar')).not.toBeNull();
-    expect(el.querySelector('.under-header app-progress-hairline')).toBeNull();
+    expect(element.querySelector('app-reader-header app-progress-hairline .bar')).not.toBeNull();
+    expect(element.querySelector('.under-header app-progress-hairline')).toBeNull();
   });
 
   it('offers a way back to the pill only once the pill has been closed', () => {
     // A phone-layout concern: above the drawer breakpoint the app bar carries
     // the run and there is no ✕, so there is nothing to offer back (#435).
     screen.isNarrow.set(true);
-    const f = bootForYou();
-    const recs = TestBed.inject(RecommendationsService);
+    const fixture = bootForYou();
+    const recommendations = TestBed.inject(RecommendationsService);
     const toast = TestBed.inject(ToastService);
-    recs.running.set(true);
-    recs.report.set(runningReport);
+    recommendations.running.set(true);
+    recommendations.report.set(runningReport);
     toast.show({ message: 'stand-in for the run pill' });
-    f.detectChanges();
+    fixture.detectChanges();
 
     // Nothing to restore while it is on screen.
-    expect(f.nativeElement.querySelector('.for-you-show')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.for-you-show')).toBeNull();
 
     toast.dismiss();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const restore = f.nativeElement.querySelector('.for-you-show button') as HTMLButtonElement;
+    const restore = fixture.nativeElement.querySelector(
+      '.for-you-show button',
+    ) as HTMLButtonElement;
     expect(restore).not.toBeNull();
 
-    const raise = jest.spyOn(recs, 'showRunPill');
+    const raise = jest.spyOn(recommendations, 'showRunPill');
     restore.click();
     expect(raise).toHaveBeenCalledTimes(1);
   });
 
   it('stops the run when the stop button is clicked', () => {
-    const f = bootForYou();
-    const recs = TestBed.inject(RecommendationsService);
-    const stop = jest.spyOn(recs, 'stop');
-    recs.running.set(true);
-    recs.report.set(runningReport);
-    f.detectChanges();
+    const fixture = bootForYou();
+    const recommendations = TestBed.inject(RecommendationsService);
+    const stop = jest.spyOn(recommendations, 'stop');
+    recommendations.running.set(true);
+    recommendations.report.set(runningReport);
+    fixture.detectChanges();
 
-    (f.nativeElement.querySelector('.for-you-run button') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('.for-you-run button') as HTMLElement).click();
 
     expect(stop).toHaveBeenCalledTimes(1);
   });
@@ -2199,12 +2252,12 @@ describe('ReaderShellComponent', () => {
   // can never describe different tags.
   it('hands the list the selected tag, and nothing for any other selection', () => {
     const science = { id: 7, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
-    const f = TestBed.createComponent(ReaderShellComponent);
-    f.detectChanges();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+    const fixture = TestBed.createComponent(ReaderShellComponent);
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [science] });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry], nextCursor: null });
     ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
       status: 'none',
@@ -2215,29 +2268,31 @@ describe('ReaderShellComponent', () => {
       streamedChars: 0,
       forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
     const list = () =>
-      f.debugElement.query(By.directive(EntryListComponent))
+      fixture.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
     expect(list().titleTag()).toBeNull();
 
     qp.next(convertToParamMap({ tag: '7' }));
-    f.detectChanges();
-    ctrl.expectOne((r) => r.params.get('tag') === '7').flush({ entries: [], nextCursor: null });
-    f.detectChanges();
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.params.get('tag') === '7')
+      .flush({ entries: [], nextCursor: null });
+    fixture.detectChanges();
 
     expect(list().titleTag()).toEqual(science);
-    expect(f.componentInstance.heading.title()).toBe('Wissenschaft');
+    expect(fixture.componentInstance.heading.title()).toBe('Wissenschaft');
   });
 
   it('forwards the header tap to the entry list', () => {
-    const f = boot();
-    const list = f.debugElement.query(By.directive(EntryListComponent))
+    const fixture = boot();
+    const list = fixture.debugElement.query(By.directive(EntryListComponent))
       .componentInstance as EntryListComponent;
     const jump = jest.spyOn(list, 'scrollToTop').mockImplementation(() => undefined);
 
-    const header = f.debugElement.query(By.directive(ReaderHeaderComponent))
+    const header = fixture.debugElement.query(By.directive(ReaderHeaderComponent))
       .componentInstance as ReaderHeaderComponent;
     header.scrollTop.emit();
 
@@ -2260,8 +2315,8 @@ describe('ReaderShellComponent', () => {
       tokens.set('user-b.jwt');
       TestBed.tick();
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
 
       const currentSubscriptions = ctrl.expectOne('https://api.test/api/subscriptions');
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
@@ -2285,8 +2340,8 @@ describe('ReaderShellComponent', () => {
         latest: null,
         updateAvailable: false,
       });
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
       ctrl.expectNone('https://api.test/api/catalog');
@@ -2297,8 +2352,8 @@ describe('ReaderShellComponent', () => {
         keptCount: 0,
         viewedCount: 0,
       });
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
       ctrl.expectNone('https://api.test/api/catalog');
@@ -2306,33 +2361,33 @@ describe('ReaderShellComponent', () => {
 
     it('redirects a user with no subscriptions to the picker, replacing the URL', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = bootWith([]);
-      await f.whenStable();
+      const fixture = bootWith([]);
+      await fixture.whenStable();
       ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(nav).toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
 
     it('does not redirect when nobody has imported a catalog yet', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = bootWith([]);
-      await f.whenStable();
+      const fixture = bootWith([]);
+      await fixture.whenStable();
       ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
 
     it('does not redirect when the catalog cannot be loaded', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = bootWith([]);
-      await f.whenStable();
+      const fixture = bootWith([]);
+      await fixture.whenStable();
       ctrl
         .expectOne('https://api.test/api/catalog')
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
 
@@ -2341,15 +2396,15 @@ describe('ReaderShellComponent', () => {
       // must not read as "this user has zero subscriptions": no catalog fetch, no
       // redirect to the picker — the user stays on the reader with the error.
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
       ctrl
         .expectOne('https://api.test/api/subscriptions')
         .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -2367,9 +2422,9 @@ describe('ReaderShellComponent', () => {
         latest: null,
         updateAvailable: false,
       });
-      f.detectChanges();
-      await f.whenStable();
-      f.detectChanges();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
 
       ctrl.expectNone('https://api.test/api/catalog');
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
@@ -2385,8 +2440,8 @@ describe('ReaderShellComponent', () => {
     it('does not redirect when the user skipped this session, and does not fetch the catalog', async () => {
       TestBed.inject(OnboardingSkip).remember();
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = bootWith([]);
-      await f.whenStable();
+      const fixture = bootWith([]);
+      await fixture.whenStable();
       ctrl.expectNone('https://api.test/api/catalog');
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
@@ -2411,14 +2466,14 @@ describe('ReaderShellComponent', () => {
     });
 
     it('shows the counted fetch banner while the onboarding sweep runs', () => {
-      const f = bootWith([
+      const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null },
         { ...SUBSCRIPTION_FIXTURE, id: 2, feedId: 12, lastFetchedAt: null },
       ]);
       // The sweep fired a real refresh; a partial slice keeps it running, so the
       // counted banner shows this-much-done.
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
         .flush({
           ...refreshDone,
           status: 'partial',
@@ -2426,28 +2481,34 @@ describe('ReaderShellComponent', () => {
           remaining: 1,
           fetched: 1,
         });
-      f.detectChanges();
-      const banner = (f.nativeElement as HTMLElement).querySelector('.fetch-banner');
+      fixture.detectChanges();
+      const banner = (fixture.nativeElement as HTMLElement).querySelector('.fetch-banner');
       expect(banner).not.toBeNull();
       expect(banner!.textContent).toContain('1 of 2');
       // The partial re-armed the poll; finish it so the sweep completes.
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
     });
 
     it('does not reshow the fetch banner on a later refresh once the sweep has landed', () => {
-      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
+      const fixture = bootWith([{ ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: null }]);
       // Complete the onboarding sweep successfully → the banner window closes.
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
 
       // A later manual refresh (the sidebar button) must NOT bring the counted
       // banner back over the now-populated reader — it belongs to the sweep only.
-      f.componentInstance.onRefresh();
-      f.detectChanges();
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+      fixture.componentInstance.onRefresh();
+      fixture.detectChanges();
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
     });
 
     // The guard for the clause below: mid-run, with motion allowed, the counted
@@ -2455,13 +2516,13 @@ describe('ReaderShellComponent', () => {
     // (`running()` false) — it would pass even if the banner showed the whole run.
     it('leaves an ordinary refresh uncounted while it is still going', () => {
       // jsdom answers "no" to every media query, so this is the motion-allowed path.
-      const f = bootWith([
+      const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
-      f.componentInstance.onRefresh();
-      f.detectChanges();
+      fixture.componentInstance.onRefresh();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/refresh')
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
         .flush({
           ...refreshDone,
           status: 'partial',
@@ -2469,11 +2530,13 @@ describe('ReaderShellComponent', () => {
           remaining: 180,
           fetched: 20,
         });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect((f.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.fetch-banner')).toBeNull();
 
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
     });
   });
 
@@ -2487,7 +2550,7 @@ describe('ReaderShellComponent', () => {
       ]);
       fixture.componentInstance.onRefresh();
       fixture.detectChanges();
-      respond(ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh'));
+      respond(ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh'));
       fixture.detectChanges();
       return {
         fixture,
@@ -2510,7 +2573,9 @@ describe('ReaderShellComponent', () => {
 
       (banner()!.querySelector('button') as HTMLButtonElement).click();
       fixture.detectChanges();
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh').flush(refreshDone);
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/refresh')
+        .flush(refreshDone);
       fixture.detectChanges();
 
       expect(banner()).toBeNull(); // a clean retry clears it
@@ -2555,15 +2620,15 @@ describe('ReaderShellComponent', () => {
   describe('admin empty-catalog warning', () => {
     it('warns an admin that no catalog has been imported', async () => {
       auth.isAdmin.mockReturnValue(true);
-      const f = bootWith([
+      const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
-      await f.whenStable();
+      await fixture.whenStable();
       // An admin gets the catalog fetched EVEN WITH their own subscriptions — the
       // loadCatalogForAdmin effect, not the redirect (which returns on non-empty subs).
       ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
-      f.detectChanges();
-      const warning = (f.nativeElement as HTMLElement).querySelector(
+      fixture.detectChanges();
+      const warning = (fixture.nativeElement as HTMLElement).querySelector(
         '[data-testid="catalog-empty-warning"]',
       );
       expect(warning).not.toBeNull();
@@ -2572,27 +2637,31 @@ describe('ReaderShellComponent', () => {
 
     it('shows an admin no warning once a catalog exists', async () => {
       auth.isAdmin.mockReturnValue(true);
-      const f = bootWith([
+      const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
-      await f.whenStable();
+      await fixture.whenStable();
       ctrl.expectOne('https://api.test/api/catalog').flush(CATALOG_WITH_FEEDS);
-      f.detectChanges();
+      fixture.detectChanges();
       expect(
-        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '[data-testid="catalog-empty-warning"]',
+        ),
       ).toBeNull();
     });
 
     it('never shows the warning to a non-admin', async () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-      const f = bootWith([]);
-      await f.whenStable();
+      const fixture = bootWith([]);
+      await fixture.whenStable();
       // The redirect effect (empty subs, non-admin) is what fetches the catalog here.
       ctrl.expectOne('https://api.test/api/catalog').flush({ categories: [] });
-      await f.whenStable();
-      f.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       expect(
-        (f.nativeElement as HTMLElement).querySelector('[data-testid="catalog-empty-warning"]'),
+        (fixture.nativeElement as HTMLElement).querySelector(
+          '[data-testid="catalog-empty-warning"]',
+        ),
       ).toBeNull();
       expect(nav).not.toHaveBeenCalledWith(['/discover'], { replaceUrl: true });
     });
@@ -2623,8 +2692,8 @@ describe('ReaderShellComponent', () => {
         { provide: AuthService, useValue: { ...auth, user: signal(undefined) } },
         provideAccountIdentity(signal(null)),
       ]);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
@@ -2643,11 +2712,11 @@ describe('ReaderShellComponent', () => {
         latest: null,
         updateAvailable: false,
       });
-      ctrl.expectNone((r) => r.url === 'https://api.test/api/subscriptions');
-      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
-      f.detectChanges();
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/subscriptions');
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
+      fixture.detectChanges();
 
-      const root = f.nativeElement as HTMLElement;
+      const root = fixture.nativeElement as HTMLElement;
       expect(root.querySelector('.skeleton')).toBeTruthy();
       expect(root.querySelector('.empty')).toBeFalsy();
     });
@@ -2681,26 +2750,28 @@ describe('ReaderShellComponent', () => {
       sessionStorage.clear();
       auth.isAdmin.mockReturnValue(false);
       qp.next(convertToParamMap({}));
-      const c = TestBed.inject(HttpTestingController);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      c.match(() => true).forEach((req) =>
-        req.flush({
-          subscriptions: [],
-          tags: [],
-          entries: [],
-          savedSearches: [],
-          favoritesCount: 0,
-          keptCount: 0,
-          nextCursor: null,
-        }),
-      );
-      f.detectChanges();
+      const controller = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      controller
+        .match(() => true)
+        .forEach((testRequest) =>
+          testRequest.flush({
+            subscriptions: [],
+            tags: [],
+            entries: [],
+            savedSearches: [],
+            favoritesCount: 0,
+            keptCount: 0,
+            nextCursor: null,
+          }),
+        );
+      fixture.detectChanges();
 
-      const body = (f.nativeElement as HTMLElement).querySelector('.body')!;
+      const body = (fixture.nativeElement as HTMLElement).querySelector('.body')!;
       expect(body.classList).toContain('is-narrow');
       (narrow as import('@angular/core').WritableSignal<boolean>).set(false);
-      f.detectChanges();
+      fixture.detectChanges();
       expect(body.classList).not.toContain('is-narrow');
     });
   });
@@ -2728,51 +2799,55 @@ describe('ReaderShellComponent', () => {
     });
 
     it('pauses the drawer swipe while organising', () => {
-      const c = TestBed.inject(HttpTestingController);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      c.match(() => true).forEach((req) =>
-        req.flush({
-          subscriptions: [],
-          tags: [],
-          entries: [],
-          savedSearches: [],
-          favoritesCount: 0,
-          keptCount: 0,
-          nextCursor: null,
-        }),
-      );
-      f.detectChanges();
+      const controller = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      controller
+        .match(() => true)
+        .forEach((testRequest) =>
+          testRequest.flush({
+            subscriptions: [],
+            tags: [],
+            entries: [],
+            savedSearches: [],
+            favoritesCount: 0,
+            keptCount: 0,
+            nextCursor: null,
+          }),
+        );
+      fixture.detectChanges();
 
-      const swipe = f.debugElement
+      const swipe = fixture.debugElement
         .query(By.directive(DrawerSwipeDirective))
         .injector.get(DrawerSwipeDirective);
       expect(swipe.disabled()).toBe(false);
 
-      f.componentInstance.sidebarOrganising.set(true);
-      f.detectChanges();
+      fixture.componentInstance.sidebarOrganising.set(true);
+      fixture.detectChanges();
       expect(swipe.disabled()).toBe(true);
     });
 
     it('resets organising when the drawer closes', () => {
-      const c = TestBed.inject(HttpTestingController);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      c.match(() => true).forEach((req) =>
-        req.flush({
-          subscriptions: [],
-          tags: [],
-          entries: [],
-          savedSearches: [],
-          favoritesCount: 0,
-          keptCount: 0,
-          nextCursor: null,
-        }),
-      );
-      f.componentInstance.setSidebarOpen(true);
-      f.componentInstance.sidebarOrganising.set(true);
-      f.componentInstance.setSidebarOpen(false);
-      expect(f.componentInstance.sidebarOrganising()).toBe(false);
+      const controller = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      controller
+        .match(() => true)
+        .forEach((testRequest) =>
+          testRequest.flush({
+            subscriptions: [],
+            tags: [],
+            entries: [],
+            savedSearches: [],
+            favoritesCount: 0,
+            keptCount: 0,
+            nextCursor: null,
+          }),
+        );
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.componentInstance.sidebarOrganising.set(true);
+      fixture.componentInstance.setSidebarOpen(false);
+      expect(fixture.componentInstance.sidebarOrganising()).toBe(false);
     });
   });
 
@@ -2799,52 +2874,54 @@ describe('ReaderShellComponent', () => {
     });
 
     function bootNarrow() {
-      const c = TestBed.inject(HttpTestingController);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      c.match(() => true).forEach((req) =>
-        req.flush({
-          subscriptions: [],
-          tags: [],
-          entries: [],
-          savedSearches: [],
-          favoritesCount: 0,
-          keptCount: 0,
-          nextCursor: null,
-        }),
-      );
-      f.detectChanges();
-      return f;
+      const controller = TestBed.inject(HttpTestingController);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      controller
+        .match(() => true)
+        .forEach((testRequest) =>
+          testRequest.flush({
+            subscriptions: [],
+            tags: [],
+            entries: [],
+            savedSearches: [],
+            favoritesCount: 0,
+            keptCount: 0,
+            nextCursor: null,
+          }),
+        );
+      fixture.detectChanges();
+      return fixture;
     }
 
-    function avatarButton(f: ComponentFixture<ReaderShellComponent>) {
-      return (f.nativeElement as HTMLElement).querySelector(
+    function avatarButton(fixture: ComponentFixture<ReaderShellComponent>) {
+      return (fixture.nativeElement as HTMLElement).querySelector(
         '[aria-haspopup="menu"]',
       ) as HTMLButtonElement;
     }
 
     it('closes the drawer when the settings menu opens', () => {
-      const f = bootNarrow();
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
+      const fixture = bootNarrow();
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
 
-      avatarButton(f).click();
-      f.detectChanges();
+      avatarButton(fixture).click();
+      fixture.detectChanges();
 
-      expect((f.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
-      expect(f.componentInstance.sidebarOpen()).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
+      expect(fixture.componentInstance.sidebarOpen()).toBe(false);
     });
 
     it('closes the settings menu when the drawer opens', () => {
-      const f = bootNarrow();
-      avatarButton(f).click();
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
+      const fixture = bootNarrow();
+      avatarButton(fixture).click();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.menu')).not.toBeNull();
 
-      f.componentInstance.setSidebarOpen(true);
-      f.detectChanges();
+      fixture.componentInstance.setSidebarOpen(true);
+      fixture.detectChanges();
 
-      expect((f.nativeElement as HTMLElement).querySelector('.menu')).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.menu')).toBeNull();
     });
   });
 
@@ -2853,14 +2930,14 @@ describe('ReaderShellComponent', () => {
     // draining the four requests every boot fires.
     function bootInto(view: string, entryOverride: Partial<EntryDto>) {
       qp.next(convertToParamMap({ view }));
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
       ctrl
         .expectOne('https://api.test/api/subscriptions')
-        .flush({ ...subsBody, favoritesCount: 3, keptCount: 3, viewedCount: 3 });
+        .flush({ ...subscriptionsBody, favoritesCount: 3, keptCount: 3, viewedCount: 3 });
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [{ ...entry, ...entryOverride }], nextCursor: null });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -2871,70 +2948,84 @@ describe('ReaderShellComponent', () => {
         streamedChars: 0,
         forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
       });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     function flushStatePatch() {
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/1/state').flush({ state: {} });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries/1/state')
+        .flush({ state: {} });
     }
 
     it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
-      const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
+      const fixture = bootInto('favorites', { isFavorite: true });
+      fixture.componentInstance.entryActions.favorite(
+        fixture.componentInstance.entries.entries()[0],
+      );
       flushStatePatch();
 
-      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
       // Kept in entries() on purpose: dropping it would re-flow the magazine plan.
-      expect(f.componentInstance.entries.entries().some((e) => e.id === 1)).toBe(true);
+      expect(
+        fixture.componentInstance.entries.entries().some((listedEntry) => listedEntry.id === 1),
+      ).toBe(true);
     });
 
     it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
-      const f = bootInto('all', { isFavorite: true });
-      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
+      const fixture = bootInto('all', { isFavorite: true });
+      fixture.componentInstance.entryActions.favorite(
+        fixture.componentInstance.entries.entries()[0],
+      );
       flushStatePatch();
 
-      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
+      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
     });
 
     it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
-      const f = bootInto('viewed', { isHidden: true, isViewed: true });
-      const subs = TestBed.inject(SubscriptionsStore);
-      expect(subs.viewedCount()).toBe(3);
+      const fixture = bootInto('viewed', { isHidden: true, isViewed: true });
+      const subscriptions = TestBed.inject(SubscriptionsStore);
+      expect(subscriptions.viewedCount()).toBe(3);
 
-      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
+      fixture.componentInstance.entryActions.toggleRead(
+        fixture.componentInstance.entries.entries()[0],
+      );
       flushStatePatch();
 
-      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
-      expect(subs.viewedCount()).toBe(2);
+      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(subscriptions.viewedCount()).toBe(2);
     });
 
     it('un-collapses the row and restores the badge when the PATCH fails', () => {
-      const f = bootInto('viewed', { isHidden: true, isViewed: true });
-      const subs = TestBed.inject(SubscriptionsStore);
+      const fixture = bootInto('viewed', { isHidden: true, isViewed: true });
+      const subscriptions = TestBed.inject(SubscriptionsStore);
 
-      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
+      fixture.componentInstance.entryActions.toggleRead(
+        fixture.componentInstance.entries.entries()[0],
+      );
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));
 
-      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
-      expect(subs.viewedCount()).toBe(3);
+      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
+      expect(subscriptions.viewedCount()).toBe(3);
     });
 
     it('clears the collapsed set when the selection changes', () => {
-      const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
+      const fixture = bootInto('favorites', { isFavorite: true });
+      fixture.componentInstance.entryActions.favorite(
+        fixture.componentInstance.entries.entries()[0],
+      );
       flushStatePatch();
-      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
+      expect(fixture.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
 
       qp.next(convertToParamMap({ view: 'kept' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
 
-      expect(f.componentInstance.entryActions.leavingIds().size).toBe(0);
+      expect(fixture.componentInstance.entryActions.leavingIds().size).toBe(0);
     });
   });
 
@@ -2950,16 +3041,16 @@ describe('ReaderShellComponent', () => {
       },
       layout: ReadingLayout = 'magazine',
     ): HTMLElement {
-      const f = bootWith([{ ...SUBSCRIPTION_FIXTURE, ...overrides }]);
-      f.componentInstance.layout.set(layout);
+      const fixture = bootWith([{ ...SUBSCRIPTION_FIXTURE, ...overrides }]);
+      fixture.componentInstance.layout.set(layout);
       const id = String(SUBSCRIPTION_FIXTURE.id);
       qp.next(convertToParamMap({ subscription: id }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.params.get('subscription') === id)
+        .expectOne((request) => request.params.get('subscription') === id)
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f.nativeElement as HTMLElement;
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
     }
 
     // Drives the shell to the given selection kind via the URL's query params,
@@ -2967,18 +3058,18 @@ describe('ReaderShellComponent', () => {
     // at a previous iteration's params, the next boot() would read a stale selection.
     function mountWithSelectionKind(kind: string): HTMLElement {
       qp.next(convertToParamMap({}));
-      const f = boot();
-      if (kind === 'all') return f.nativeElement as HTMLElement;
+      const fixture = boot();
+      if (kind === 'all') return fixture.nativeElement as HTMLElement;
 
       const params =
         kind === 'tag' ? { tag: '7' } : kind === 'search' ? { q: 'angular' } : { view: kind };
       qp.next(convertToParamMap(params));
-      f.detectChanges();
+      fixture.detectChanges();
       const url =
         kind === 'search' ? 'https://api.test/api/entries/search' : 'https://api.test/api/entries';
-      ctrl.expectOne((r) => r.url === url).flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f.nativeElement as HTMLElement;
+      ctrl.expectOne((request) => request.url === url).flush({ entries: [], nextCursor: null });
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
     }
 
     it('shows the feed intro at the top of the list for a single-feed selection', () => {
@@ -3030,43 +3121,43 @@ describe('ReaderShellComponent', () => {
     // 'search' scope, so canMarkAllRead() (and thus the header button) turns
     // on without any change to the entry-list component.
     function bootWithSearchSelected() {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'climate ' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('calls the search mark-read endpoint with the term verbatim, then reloads entries, subscriptions and saved searches', () => {
-      const f = bootWithSearchSelected();
+      const fixture = bootWithSearchSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
-      const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
-      expect(req.request.method).toBe('POST');
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
+      expect(testRequest.request.method).toBe('POST');
       // The trailing space is the whole-word-match signal the backend reads
       // via SearchTermsModel::fromInput; it must reach the request body unchanged.
-      expect(req.request.body).toEqual({ q: 'climate ', until: expect.any(String) });
-      req.flush(null);
+      expect(testRequest.request.body).toEqual({ q: 'climate ', until: expect.any(String) });
+      testRequest.flush(null);
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
     it('does nothing when the dialog is cancelled', () => {
-      const f = bootWithSearchSelected();
+      const fixture = bootWithSearchSelected();
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
     });
@@ -3074,39 +3165,39 @@ describe('ReaderShellComponent', () => {
 
   describe('mark all read for the ranked feed (#710)', () => {
     function bootWithForYouSelected() {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ view: 'for-you' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('offers the action on the ranked feed at all', () => {
-      const f = bootWithForYouSelected();
+      const fixture = bootWithForYouSelected();
 
-      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
+      expect(fixture.componentInstance.markRead.canMarkAllRead()).toBe(true);
     });
 
     it('calls the for-you endpoint, then reloads the list and the counts beside it', () => {
-      const f = bootWithForYouSelected();
+      const fixture = bootWithForYouSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
-      const req = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
-      expect(req.request.method).toBe('POST');
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
+      expect(testRequest.request.method).toBe('POST');
       // No scope and no id: the ranked feed identifies itself.
-      expect(req.request.body).toEqual({ until: expect.any(String) });
-      req.flush(null);
+      expect(testRequest.request.body).toEqual({ until: expect.any(String) });
+      testRequest.flush(null);
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -3123,9 +3214,9 @@ describe('ReaderShellComponent', () => {
     // drop it to zero — the for-you summary is re-read after the mark-read,
     // since the marked picks do not move a watermark the list reload would see.
     it('refreshes the for-you count to zero after marking all read', () => {
-      const f = bootWithForYouSelected();
-      const recs = TestBed.inject(RecommendationsService);
-      recs.report.set({
+      const fixture = bootWithForYouSelected();
+      const recommendations = TestBed.inject(RecommendationsService);
+      recommendations.report.set({
         status: 'completed',
         batchesTotal: 1,
         batchesDone: 1,
@@ -3135,17 +3226,17 @@ describe('ReaderShellComponent', () => {
         elapsedSeconds: null,
         forYou: { itemCount: 5, totalCount: 5, generatedAt: null, newestRunId: null },
       });
-      expect(recs.forYouCount()).toBe(5);
+      expect(recommendations.forYouCount()).toBe(5);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'completed',
@@ -3157,24 +3248,24 @@ describe('ReaderShellComponent', () => {
         forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
       });
 
-      expect(recs.forYouCount()).toBe(0);
+      expect(recommendations.forYouCount()).toBe(0);
     });
 
     // A watermark is what the feed and tag scopes move; this list must never
     // reach that endpoint (#665, and the reason the backend split them).
     it('never falls back to the watermark endpoint', () => {
-      const f = bootWithForYouSelected();
+      const fixture = bootWithForYouSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/mark-read');
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
       ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
         status: 'none',
@@ -3190,41 +3281,41 @@ describe('ReaderShellComponent', () => {
     // The lag the user saw was the mark-read round trip: nothing showed the
     // wait until its response reloaded the list. The cue must rise on confirm.
     it('raises the list loading cue on confirm, before the mark-read resolves', () => {
-      const f = bootWithForYouSelected();
+      const fixture = bootWithForYouSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
-      expect(f.componentInstance.entries.loading()).toBe(false);
+      expect(fixture.componentInstance.entries.loading()).toBe(false);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
-      expect(f.componentInstance.entries.loading()).toBe(true);
+      expect(fixture.componentInstance.entries.loading()).toBe(true);
     });
   });
 
   describe('titling the combined saved-search list (#769)', () => {
     function bootWithSavedSearches(saved: SavedSearchWire[]) {
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
+      const fixture = boot();
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
       qp.next(convertToParamMap({ view: 'saved-searches' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('titles the combined saved-search list with the sidebar label', () => {
-      const f = bootWithSavedSearches([]);
+      const fixture = bootWithSavedSearches([]);
 
-      expect(f.componentInstance.heading.title()).toBe('Saved searches');
+      expect(fixture.componentInstance.heading.title()).toBe('Saved searches');
     });
 
     it('counts the same unread total the sidebar row shows', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
-      const f = bootWithSavedSearches([
+      const fixture = bootWithSavedSearches([
         {
           id: 1,
           slug: '1-a',
@@ -3249,11 +3340,14 @@ describe('ReaderShellComponent', () => {
         },
       ]);
 
-      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 5, counts: 'unread' });
+      expect(fixture.componentInstance.heading.titleCount()).toEqual({
+        value: 5,
+        counts: 'unread',
+      });
     });
 
     it('counts the combined member total when All posts is on', () => {
-      const f = bootWithSavedSearches([
+      const fixture = bootWithSavedSearches([
         {
           id: 1,
           slug: '1-a',
@@ -3278,7 +3372,7 @@ describe('ReaderShellComponent', () => {
         },
       ]);
 
-      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
+      expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
     });
   });
 
@@ -3296,109 +3390,112 @@ describe('ReaderShellComponent', () => {
     };
 
     function bootSingleSavedSearch() {
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
+      const fixture = boot();
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl
         .expectOne('https://api.test/api/saved-searches')
         .flush({ savedSearches: [savedClimate] });
       pp.next(convertToParamMap({ savedSearch: '4-climate' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches/4')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('keeps the unread filter on when a tag list moves to a saved search (#1126)', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
+      const fixture = boot();
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl
         .expectOne('https://api.test/api/saved-searches')
         .flush({ savedSearches: [savedClimate] });
       qp.next(convertToParamMap({ tag: '3' }));
-      f.detectChanges();
-      const tagList = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      fixture.detectChanges();
+      const tagList = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
       expect(tagList.request.params.get('view')).toBe('unread');
       tagList.flush({ entries: [], nextCursor: null });
 
       qp.next(convertToParamMap({}));
       pp.next(convertToParamMap({ savedSearch: '4-climate' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
       const saved = ctrl.expectOne(
-        (r) => r.url === 'https://api.test/api/entries/saved-searches/4',
+        (request) => request.url === 'https://api.test/api/entries/saved-searches/4',
       );
       expect(saved.request.params.get('unread')).toBe('1');
-      expect(f.componentInstance.selection().unread).toBe(true);
+      expect(fixture.componentInstance.selection().unread).toBe(true);
     });
 
     it('selects the single saved search by the id in its slug', () => {
-      const f = bootSingleSavedSearch();
+      const fixture = bootSingleSavedSearch();
 
-      expect(f.componentInstance.selection()).toEqual(
+      expect(fixture.componentInstance.selection()).toEqual(
         expect.objectContaining({ kind: 'saved-search', id: 4, unread: false }),
       );
-      expect(f.componentInstance.heading.activeSavedSearchId()).toBe(4);
+      expect(fixture.componentInstance.heading.activeSavedSearchId()).toBe(4);
     });
 
     it('titles the list with the saved search term and counts its unread total', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
-      const f = bootSingleSavedSearch();
+      const fixture = bootSingleSavedSearch();
 
-      expect(f.componentInstance.heading.title()).toBe('climate');
-      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 3, counts: 'unread' });
+      expect(fixture.componentInstance.heading.title()).toBe('climate');
+      expect(fixture.componentInstance.heading.titleCount()).toEqual({
+        value: 3,
+        counts: 'unread',
+      });
     });
 
     it('counts the saved search member total when All posts is on', () => {
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
+      const fixture = boot();
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl
         .expectOne('https://api.test/api/saved-searches')
         .flush({ savedSearches: [{ ...savedClimate, memberCount: 6 }] });
       pp.next(convertToParamMap({ savedSearch: '4-climate' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches/4')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 6, counts: 'items' });
+      expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 6, counts: 'items' });
     });
 
     it('turns on Mark all read and the unread filter', () => {
-      const f = bootSingleSavedSearch();
+      const fixture = bootSingleSavedSearch();
 
-      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
-      const list = f.debugElement.query(By.directive(EntryListComponent))
+      expect(fixture.componentInstance.markRead.canMarkAllRead()).toBe(true);
+      const list = fixture.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       expect(list.hasUnreadFilter()).toBe(true);
     });
 
     it('marks it read via its by-id endpoint, then reloads entries, subscriptions and saved searches', () => {
-      const f = bootSingleSavedSearch();
+      const fixture = bootSingleSavedSearch();
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
-      const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/4/mark-read');
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ until: expect.any(String) });
-      req.flush(null);
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/saved-searches/4/mark-read');
+      expect(testRequest.request.method).toBe('POST');
+      expect(testRequest.request.body).toEqual({ until: expect.any(String) });
+      testRequest.flush(null);
 
-      ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4');
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches/4');
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
     it('offers a Remove that deletes the search and returns to the combined list', () => {
-      const f = bootSingleSavedSearch();
+      const fixture = bootSingleSavedSearch();
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-      expect(f.componentInstance.currentSavedSearch()?.id).toBe(4);
-      f.componentInstance.onToggleSavedSearch();
+      expect(fixture.componentInstance.currentSavedSearch()?.id).toBe(4);
+      fixture.componentInstance.onToggleSavedSearch();
 
       ctrl.expectOne('https://api.test/api/saved-searches/4').flush(null);
       expect(nav).toHaveBeenCalledWith(['/searches/saved/all']);
@@ -3407,84 +3504,92 @@ describe('ReaderShellComponent', () => {
 
   describe('the unread filter lives in localStorage (#1126)', () => {
     it('reloads the list when the switch flips, without navigating', () => {
-      const f = boot();
+      const fixture = boot();
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate');
 
-      (f.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
-      f.detectChanges();
+      (fixture.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
-      const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
-      expect(req.request.params.get('view')).toBe('unread');
+      const testRequest = ctrl.expectOne(
+        (request) => request.url === 'https://api.test/api/entries',
+      );
+      expect(testRequest.request.params.get('view')).toBe('unread');
       expect(localStorage.getItem('sfr.user.1.unread-only')).toBe('1');
-      req.flush({ entries: [], nextCursor: null });
+      testRequest.flush({ entries: [], nextCursor: null });
       expect(nav).not.toHaveBeenCalled();
     });
 
     it('filters a direct search to unread', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/search');
-      expect(req.request.params.get('unread')).toBe('1');
-      req.flush({ entries: [], nextCursor: null, matchedWords: [] });
+      const testRequest = ctrl.expectOne(
+        (request) => request.url === 'https://api.test/api/entries/search',
+      );
+      expect(testRequest.request.params.get('unread')).toBe('1');
+      testRequest.flush({ entries: [], nextCursor: null, matchedWords: [] });
     });
 
     it('ignores an unread parameter in the URL', () => {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ unread: '1' }));
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.componentInstance.selection().unread).toBe(false);
-      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+      expect(fixture.componentInstance.selection().unread).toBe(false);
+      ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
     });
   });
 
   describe('list order (#1143)', () => {
     it('reloads a flipped list oldest first and remembers it for that list only', () => {
-      const f = boot();
+      const fixture = boot();
 
-      (f.nativeElement.querySelector('.list-order') as HTMLButtonElement).click();
-      f.detectChanges();
-      const flipped = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      (fixture.nativeElement.querySelector('.list-order') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const flipped = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
       expect(flipped.request.params.get('order')).toBe('asc');
       expect(flipped.request.params.get('cursor')).toBeNull();
       flipped.flush({ entries: [], nextCursor: null });
       expect(JSON.parse(localStorage.getItem('sfr.user.1.oldest-first-views')!)).toEqual(['all']);
 
       qp.next(convertToParamMap({ tag: '9' }));
-      f.detectChanges();
-      const other = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      fixture.detectChanges();
+      const other = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
       expect(other.request.params.get('order')).toBeNull();
       other.flush({ entries: [], nextCursor: null });
     });
 
     it('holds the first list load until the account is known', () => {
       auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } } as never);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      expect(ctrl.match((request) => request.url === 'https://api.test/api/entries')).toHaveLength(
+        0,
+      );
 
       auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
     });
 
     it('loads the list with the defaults when the account never loads', () => {
       reconfigureShell([]);
-      const f = TestBed.createComponent(ReaderShellComponent);
-      f.detectChanges();
-      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+      const fixture = TestBed.createComponent(ReaderShellComponent);
+      fixture.detectChanges();
+      expect(ctrl.match((request) => request.url === 'https://api.test/api/entries')).toHaveLength(
+        0,
+      );
 
       ctrl
         .expectOne('https://api.test/api/me')
         .flush('boom', { status: 500, statusText: 'Server Error' });
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const list = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      const list = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
       expect(list.request.params.get('order')).toBeNull();
       expect(list.request.params.get('view')).toBe('all');
       list.flush({ entries: [], nextCursor: null });
@@ -3493,41 +3598,41 @@ describe('ReaderShellComponent', () => {
 
   describe('mark all read for the combined saved-searches view (#769)', () => {
     function bootWithSavedSearchesSelected() {
-      const f = boot();
+      const fixture = boot();
       qp.next(convertToParamMap({ view: 'saved-searches' }));
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('calls the saved-searches endpoint with only a watermark, then reloads entries, subscriptions and saved searches', () => {
-      const f = bootWithSavedSearchesSelected();
+      const fixture = bootWithSavedSearchesSelected();
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
-      const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/mark-read');
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ until: expect.any(String) });
-      req.flush(null);
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/saved-searches/mark-read');
+      expect(testRequest.request.method).toBe('POST');
+      expect(testRequest.request.body).toEqual({ until: expect.any(String) });
+      testRequest.flush(null);
 
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/saved-searches')
         .flush({ entries: [], nextCursor: null });
-      ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
+      ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
     });
 
     it('does nothing when the dialog is cancelled', () => {
-      const f = bootWithSavedSearchesSelected();
+      const fixture = bootWithSavedSearchesSelected();
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.markRead.confirmMarkAllRead();
+      fixture.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
     });
@@ -3535,29 +3640,29 @@ describe('ReaderShellComponent', () => {
 
   describe('marking everything above the fold as read (#1080)', () => {
     function bootUnreadView() {
-      const f = boot();
+      const fixture = boot();
       TestBed.inject(UnreadFilterService).set(true);
-      f.detectChanges();
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('hides the marked posts in place and lands the boundary at the top, on an unread view', () => {
-      const f = bootUnreadView();
+      const fixture = bootUnreadView();
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const load = jest.spyOn(f.componentInstance.entries, 'load');
-      const list = f.debugElement.query(By.directive(EntryListComponent))
+      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
+      const list = fixture.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       const hideAboveMarked = jest
         .spyOn(list, 'hideAboveMarked')
         .mockImplementation(() => undefined);
 
-      f.componentInstance.onMarkAboveRead([1, 2]);
+      fixture.componentInstance.onMarkAboveRead([1, 2]);
 
       expect(api.markEntriesRead).toHaveBeenCalledWith([1, 2]);
       expect(hideAboveMarked).toHaveBeenCalledWith([1, 2]);
@@ -3565,32 +3670,32 @@ describe('ReaderShellComponent', () => {
     });
 
     it('surfaces a failed request on the entries error banner, on an unread view', () => {
-      const f = bootUnreadView();
+      const fixture = bootUnreadView();
       const api = TestBed.inject(ReaderApi);
       const problem = { type: 'x', title: 'Failed', status: 500 };
       jest
         .spyOn(api, 'markEntriesRead')
         .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const list = f.debugElement.query(By.directive(EntryListComponent))
+      const list = fixture.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       const hideAboveMarked = jest.spyOn(list, 'hideAboveMarked');
 
-      f.componentInstance.onMarkAboveRead([1, 2]);
+      fixture.componentInstance.onMarkAboveRead([1, 2]);
 
-      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(fixture.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
       expect(hideAboveMarked).not.toHaveBeenCalled();
     });
 
     it('restyles in place without a re-fetch, on an all-items view', () => {
-      const f = boot();
+      const fixture = boot();
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
-      const load = jest.spyOn(f.componentInstance.entries, 'load');
+      const markHiddenLocally = jest.spyOn(fixture.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
 
-      f.componentInstance.onMarkAboveRead([5, 6]);
+      fixture.componentInstance.onMarkAboveRead([5, 6]);
 
       expect(api.markEntriesRead).toHaveBeenCalledWith([5, 6]);
       expect(markHiddenLocally).toHaveBeenCalledWith([5, 6]);
@@ -3598,39 +3703,39 @@ describe('ReaderShellComponent', () => {
     });
 
     it('surfaces a failed request on the entries error banner, on an all-items view', () => {
-      const f = boot();
+      const fixture = boot();
       const api = TestBed.inject(ReaderApi);
       const problem = { type: 'x', title: 'Failed', status: 500 };
       jest
         .spyOn(api, 'markEntriesRead')
         .mockReturnValue(throwError(() => new HttpErrorResponse({ error: problem, status: 500 })));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
-      const markHiddenLocally = jest.spyOn(f.componentInstance.entries, 'markHiddenLocally');
-      const load = jest.spyOn(f.componentInstance.entries, 'load');
+      const markHiddenLocally = jest.spyOn(fixture.componentInstance.entries, 'markHiddenLocally');
+      const load = jest.spyOn(fixture.componentInstance.entries, 'load');
 
-      f.componentInstance.onMarkAboveRead([5, 6]);
+      fixture.componentInstance.onMarkAboveRead([5, 6]);
 
-      expect(f.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
+      expect(fixture.componentInstance.entries.error()).toEqual(expect.objectContaining(problem));
       expect(markHiddenLocally).not.toHaveBeenCalled();
       expect(load).not.toHaveBeenCalled();
     });
 
     it('does nothing when the dialog is cancelled', () => {
-      const f = boot();
+      const fixture = boot();
       const api = TestBed.inject(ReaderApi);
       jest.spyOn(api, 'markEntriesRead').mockReturnValue(of(undefined));
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(false) } as never);
 
-      f.componentInstance.onMarkAboveRead([1, 2]);
+      fixture.componentInstance.onMarkAboveRead([1, 2]);
 
       expect(api.markEntriesRead).not.toHaveBeenCalled();
     });
 
     it('does nothing for an empty selection, without opening the dialog', () => {
-      const f = boot();
+      const fixture = boot();
       const dialogOpen = jest.spyOn(TestBed.inject(Dialog), 'open');
 
-      f.componentInstance.onMarkAboveRead([]);
+      fixture.componentInstance.onMarkAboveRead([]);
 
       expect(dialogOpen).not.toHaveBeenCalled();
     });
@@ -3643,17 +3748,17 @@ describe('ReaderShellComponent', () => {
     // boot() drained the shell's own initial saved-searches load with an empty
     // set, so seed through a second real load() — the store maps the wire (ids)
     // to the view the button reads, exactly as production does.
-    function bootWithSearchSelected(saved: SavedSearchWire[], q = 'climate ') {
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
+    function bootWithSearchSelected(saved: SavedSearchWire[], searchTerm = 'climate ') {
+      const fixture = boot();
+      fixture.componentInstance.savedSearchesStore.load();
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: saved });
-      qp.next(convertToParamMap({ q }));
-      f.detectChanges();
+      qp.next(convertToParamMap({ q: searchTerm }));
+      fixture.detectChanges();
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
+      fixture.detectChanges();
+      return fixture;
     }
 
     const savedClimate: SavedSearchWire = {
@@ -3681,36 +3786,38 @@ describe('ReaderShellComponent', () => {
     };
 
     it('saves the decoded term and whole-word flag, adopts the response without reloading the list, and toasts a confirmation', () => {
-      const f = bootWithSearchSelected([]);
+      const fixture = bootWithSearchSelected([]);
       const show = jest.spyOn(TestBed.inject(ToastService), 'show');
 
-      f.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.onToggleSavedSearch();
 
-      const req = ctrl.expectOne('https://api.test/api/saved-searches');
-      expect(req.request.method).toBe('POST');
+      const testRequest = ctrl.expectOne('https://api.test/api/saved-searches');
+      expect(testRequest.request.method).toBe('POST');
       // The trailing space is the whole-word signal; it is decoded to the mode
       // the backend stores, never sent verbatim as the term.
-      expect(req.request.body).toEqual({ term: 'climate', wholeWord: true, phrase: false });
-      req.flush({ savedSearch: savedClimate });
+      expect(testRequest.request.body).toEqual({ term: 'climate', wholeWord: true, phrase: false });
+      testRequest.flush({ savedSearch: savedClimate });
 
       // The POST already answered with the row and its matches — no re-fetch.
       ctrl.expectNone('https://api.test/api/saved-searches');
-      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
+      expect(fixture.componentInstance.savedSearchesStore.savedSearches()).toEqual([
+        savedClimateView,
+      ]);
       expect(show).toHaveBeenCalledWith(
         expect.objectContaining({ message: 'Search saved', durationMs: CONFIRMATION_DURATION_MS }),
       );
     });
 
     it('saves a quoted query as a phrase, with the bare term and the phrase flag', () => {
-      const f = bootWithSearchSelected([], '"climate change"');
+      const fixture = bootWithSearchSelected([], '"climate change"');
 
-      f.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.onToggleSavedSearch();
 
-      const req = ctrl.expectOne('https://api.test/api/saved-searches');
-      expect(req.request.method).toBe('POST');
+      const testRequest = ctrl.expectOne('https://api.test/api/saved-searches');
+      expect(testRequest.request.method).toBe('POST');
       // The wrapping quotes are the phrase signal; decoded to the mode the
       // backend stores, the term is saved bare and phrase is true.
-      expect(req.request.body).toEqual({
+      expect(testRequest.request.body).toEqual({
         term: 'climate change',
         wholeWord: false,
         phrase: true,
@@ -3718,67 +3825,69 @@ describe('ReaderShellComponent', () => {
     });
 
     it('removes the saved search when the current one is already saved and the removal is confirmed', () => {
-      const f = bootWithSearchSelected([savedClimate]);
-      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
+      const fixture = bootWithSearchSelected([savedClimate]);
+      expect(fixture.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.onToggleSavedSearch();
 
-      const req = ctrl.expectOne('https://api.test/api/saved-searches/4');
-      expect(req.request.method).toBe('DELETE');
-      req.flush(null);
+      const testRequest = ctrl.expectOne('https://api.test/api/saved-searches/4');
+      expect(testRequest.request.method).toBe('DELETE');
+      testRequest.flush(null);
 
       ctrl.expectNone('https://api.test/api/saved-searches');
-      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
+      expect(fixture.componentInstance.savedSearchesStore.savedSearches()).toEqual([]);
     });
 
     it('does not remove the saved search when the removal is cancelled', () => {
-      const f = bootWithSearchSelected([savedClimate]);
+      const fixture = bootWithSearchSelected([savedClimate]);
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.onToggleSavedSearch();
 
       ctrl.expectNone('https://api.test/api/saved-searches/4');
-      expect(f.componentInstance.savedSearchesStore.savedSearches()).toEqual([savedClimateView]);
+      expect(fixture.componentInstance.savedSearchesStore.savedSearches()).toEqual([
+        savedClimateView,
+      ]);
     });
 
     it('enables the digest for a row when confirmed, keyed by the row id and its flipped flag', () => {
-      const f = bootWithSearchSelected([savedClimate]);
+      const fixture = bootWithSearchSelected([savedClimate]);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
       const setIncludeInDigest = jest
-        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      f.componentInstance.confirmToggleDigest(savedClimateView);
+      fixture.componentInstance.confirmToggleDigest(savedClimateView);
 
       expect(setIncludeInDigest).toHaveBeenCalledWith(4, true);
     });
 
     it('disables the digest for a row already included, when confirmed', () => {
-      const f = bootWithSearchSelected([savedClimate]);
+      const fixture = bootWithSearchSelected([savedClimate]);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
       const setIncludeInDigest = jest
-        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      f.componentInstance.confirmToggleDigest({ ...savedClimateView, includeInDigest: true });
+      fixture.componentInstance.confirmToggleDigest({ ...savedClimateView, includeInDigest: true });
 
       expect(setIncludeInDigest).toHaveBeenCalledWith(4, false);
     });
 
     it('does nothing when the digest toggle confirmation is cancelled', () => {
-      const f = bootWithSearchSelected([savedClimate]);
+      const fixture = bootWithSearchSelected([savedClimate]);
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
       const setIncludeInDigest = jest
-        .spyOn(f.componentInstance.savedSearchesStore, 'setIncludeInDigest')
+        .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      f.componentInstance.confirmToggleDigest(savedClimateView);
+      fixture.componentInstance.confirmToggleDigest(savedClimateView);
 
       expect(setIncludeInDigest).not.toHaveBeenCalled();
     });
@@ -3786,9 +3895,9 @@ describe('ReaderShellComponent', () => {
     it('matches a saved search by its decoded pair, not by the raw term string', () => {
       // A no-break space is a whole-word signal to the decoder but never equals
       // a plain trailing space, which is what a string comparison would need.
-      const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
+      const fixture = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
-      expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
+      expect(fixture.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
     });
   });
 
@@ -3819,14 +3928,14 @@ describe('ReaderShellComponent', () => {
     });
 
     it('refreshes the sidebar counts on its own while the reader is open', async () => {
-      const f = boot();
+      const fixture = boot();
 
       await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS);
 
       // The cheap counts endpoint and saved searches, with no user action between.
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush(countsBody);
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      f.detectChanges();
+      fixture.detectChanges();
     });
 
     // The property that matters across #708 and #709: there is ONE number per
@@ -3835,7 +3944,7 @@ describe('ReaderShellComponent', () => {
     // at once — none of them can be refreshed and leave another behind.
     it('moves the sidebar badge, the list heading and the tab title on one tick', async () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
-      const f = boot();
+      const fixture = boot();
       expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
 
       await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS);
@@ -3844,18 +3953,18 @@ describe('ReaderShellComponent', () => {
         subscriptions: [{ id: 5, unreadCount: 9 }],
       });
       ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(TestBed.inject(SubscriptionsStore).totalUnread()).toBe(9);
-      const list = f.debugElement.query(By.directive(EntryListComponent));
+      const list = fixture.debugElement.query(By.directive(EntryListComponent));
       expect(list.componentInstance.titleCount()).toEqual({ value: 9, counts: 'unread' });
       expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
     });
 
     it('ends with the reader, so a closed reader polls nothing', async () => {
-      const f = boot();
+      const fixture = boot();
 
-      f.destroy();
+      fixture.destroy();
       await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS * 5);
 
       ctrl.expectNone('https://api.test/api/subscriptions/counts');
@@ -3867,12 +3976,12 @@ describe('ReaderShellComponent', () => {
   // exactly the defect it is here to catch.
   describe('the counts poll and Angular zone stability (#708)', () => {
     it('leaves the zone stable, so anything awaiting the app still resolves', async () => {
-      const f = boot();
+      const fixture = boot();
 
       // A repeating timer scheduled INSIDE the Angular zone is a macrotask that
       // never finishes, so the zone never settles and every `whenStable()` in
       // the app hangs until it times out. The poll schedules outside the zone.
-      await expect(f.whenStable()).resolves.toBeDefined();
+      await expect(fixture.whenStable()).resolves.toBeDefined();
     });
   });
 
@@ -4024,10 +4133,10 @@ describe('ReaderShellComponent', () => {
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);
 
-      const f = boot();
+      const fixture = boot();
       // Re-render without anything about eligibility changing.
-      f.detectChanges();
-      f.detectChanges();
+      fixture.detectChanges();
+      fixture.detectChanges();
 
       expect(open).toHaveBeenCalledTimes(1);
     });

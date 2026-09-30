@@ -49,9 +49,9 @@ describe('FieldComponent', () => {
   };
 
   it('renders the label and projects the control', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.querySelector('label')?.textContent).toContain('Name');
-    expect(el.querySelector('input#probe')).not.toBeNull();
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.querySelector('label')?.textContent).toContain('Name');
+    expect(element.querySelector('input#probe')).not.toBeNull();
   });
 
   it('shows no error region until an error is set', async () => {

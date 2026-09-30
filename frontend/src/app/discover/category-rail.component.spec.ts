@@ -29,8 +29,8 @@ describe('CategoryRailComponent', () => {
   };
 
   it('renders the tinted glyph for a category that has an icon', async () => {
-    const el = await mount([category({ icon: 'memory', color: '#3b82f6' })]);
-    const glyph = el.querySelector('app-tag-glyph') as HTMLElement;
+    const element = await mount([category({ icon: 'memory', color: '#3b82f6' })]);
+    const glyph = element.querySelector('app-tag-glyph') as HTMLElement;
 
     expect(glyph.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('memory');
     expect(glyph.querySelector('.dot')).toBeNull();
@@ -40,8 +40,8 @@ describe('CategoryRailComponent', () => {
      colour but no icon painted an empty box. The shared glyph falls back to the
      colour dot, which is what keeps such a category identifiable. */
   it('falls back to the colour dot for a category with a colour but no icon', async () => {
-    const el = await mount([category({ icon: '', color: '#c08a3e' })]);
-    const glyph = el.querySelector('app-tag-glyph') as HTMLElement;
+    const element = await mount([category({ icon: '', color: '#c08a3e' })]);
+    const glyph = element.querySelector('app-tag-glyph') as HTMLElement;
 
     expect(glyph.querySelector('.material-symbols-outlined')).toBeNull();
     expect((glyph.querySelector('.dot') as HTMLElement).style.background).toBeTruthy();

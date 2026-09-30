@@ -32,8 +32,8 @@ describe('ErrorBannerComponent', () => {
 
   it('renders the message inside an alert region', async () => {
     const fixture = await mount();
-    const el: HTMLElement = fixture.nativeElement;
-    const banner = el.querySelector('[role="alert"]') as HTMLElement;
+    const element: HTMLElement = fixture.nativeElement;
+    const banner = element.querySelector('[role="alert"]') as HTMLElement;
     expect(banner).not.toBeNull();
     expect(banner.textContent).toContain('Something went wrong');
   });

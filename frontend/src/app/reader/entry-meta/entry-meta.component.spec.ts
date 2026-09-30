@@ -56,28 +56,28 @@ function mount(tags: SubscriptionTagDto[]) {
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryMetaComponent);
-  f.componentRef.setInput('entry', entry());
-  f.componentRef.setInput('tags', tags);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryMetaComponent);
+  fixture.componentRef.setInput('entry', entry());
+  fixture.componentRef.setInput('tags', tags);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntryMetaComponent', () => {
   it('renders the tag pills beside the actions', () => {
-    const el = mount([tag(1, 'Tech')]).nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Tech');
-    expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
+    const element = mount([tag(1, 'Tech')]).nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Tech');
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
   it('still renders the actions when the entry has no tags', () => {
-    const el = mount([]).nativeElement as HTMLElement;
-    expect(el.querySelector('.pill')).toBeNull();
-    expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
+    const element = mount([]).nativeElement as HTMLElement;
+    expect(element.querySelector('.pill')).toBeNull();
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
   it('sends each action to the entry action handler', () => {
-    const f = mount([]);
+    const fixture = mount([]);
     const favorite = jest.fn();
     const keep = jest.fn();
     const read = jest.fn();
@@ -85,7 +85,7 @@ describe('EntryMetaComponent', () => {
     entryActions.keep.mockImplementation(keep);
     entryActions.toggleRead.mockImplementation(read);
 
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();

@@ -88,7 +88,7 @@ export class OrganiseTagGroupComponent {
   }
 
   protected moveFeed(subscription: SubscriptionDto, offset: number): void {
-    const ids = this.group().subscriptions.map((s) => s.id);
+    const ids = this.group().subscriptions.map((member) => member.id);
     const from = ids.indexOf(subscription.id);
     const to = from + offset;
     if (from < 0 || to < 0 || to >= ids.length) return;
@@ -139,7 +139,7 @@ export class OrganiseTagGroupComponent {
     const targetTag = this.group().tag;
     if (targetTag === null || draggedTag.id === targetTag.id) return;
 
-    const ids = this.store.tags().map((t) => t.id);
+    const ids = this.store.tags().map((tag) => tag.id);
     const from = ids.indexOf(draggedTag.id);
     const to = ids.indexOf(targetTag.id);
     if (from < 0 || to < 0) return;
@@ -149,7 +149,7 @@ export class OrganiseTagGroupComponent {
 
   private reorderTo(subscription: SubscriptionDto, from: number, to: number): void {
     if (from === to) return;
-    const ids = this.group().subscriptions.map((s) => s.id);
+    const ids = this.group().subscriptions.map((member) => member.id);
     moveItemInArray(ids, from, to);
 
     this.persistOrder(ids);

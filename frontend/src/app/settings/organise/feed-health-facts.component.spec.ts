@@ -46,7 +46,7 @@ describe('FeedHealthFactsComponent', () => {
     // the two timestamp values are the only ones carrying an HH:MM clock.
     const timed = fixture.debugElement
       .queryAll(By.css('.facts dd'))
-      .map((el) => (el.nativeElement.textContent as string).trim())
+      .map((element) => (element.nativeElement.textContent as string).trim())
       .filter((text) => /\d{1,2}:\d{2}/.test(text));
     expect(timed).toHaveLength(2);
   });

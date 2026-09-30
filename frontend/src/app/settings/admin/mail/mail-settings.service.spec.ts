@@ -56,9 +56,9 @@ describe('MailSettingsService', () => {
   it('load() GETs the mail endpoint and sets state', () => {
     service.load();
 
-    const req = http.expectOne(ENDPOINT);
-    expect(req.request.method).toBe('GET');
-    req.flush(state());
+    const testRequest = http.expectOne(ENDPOINT);
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush(state());
 
     expect(service.state()).toEqual(state());
   });
@@ -120,10 +120,10 @@ describe('MailSettingsService', () => {
   it('testConnection() sets probe to ok on { ok: true }', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({});
-    req.flush({ ok: true, reason: null });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({});
+    testRequest.flush({ ok: true, reason: null });
     http.expectOne(ERRORS_ENDPOINT).flush({ failures: [] });
 
     expect(service.probe()).toEqual({ status: 'ok' });
@@ -132,8 +132,8 @@ describe('MailSettingsService', () => {
   it('testConnection() sets probe to error on { ok: false, reason }', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    req.flush({ ok: false, reason: 'connection refused' });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    testRequest.flush({ ok: false, reason: 'connection refused' });
     http.expectOne(ERRORS_ENDPOINT).flush({ failures: [] });
 
     expect(service.probe()).toEqual({ status: 'error', message: 'connection refused' });
@@ -142,8 +142,8 @@ describe('MailSettingsService', () => {
   it('testConnection() sets probe to error via parseProblem on an HTTP error', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    req.flush(
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    testRequest.flush(
       { type: 'about:blank', title: 'Request failed', status: 500, detail: 'boom' },
       { status: 500, statusText: 'Server Error' },
     );
@@ -175,11 +175,11 @@ describe('MailSettingsService', () => {
 
     service.reset();
 
-    const req = http.expectOne(RESET_ENDPOINT);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({});
+    const testRequest = http.expectOne(RESET_ENDPOINT);
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({});
 
-    req.flush(state({ envFallbackConfigured: true }));
+    testRequest.flush(state({ envFallbackConfigured: true }));
 
     expect(service.saved()).toBe(true);
     expect(service.dirty()).toBe(false);

@@ -21,23 +21,23 @@ describe('OpmlSectionComponent', () => {
         { provide: SubscriptionsStore, useValue: { load } },
       ],
     });
-    const f = TestBed.createComponent(OpmlSectionComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(OpmlSectionComponent);
+    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
-    return f;
+    return fixture;
   }
 
   function renderAfterFailedImport(
     problem: Record<string, unknown> = { type: 'about:blank', title: 'Import failed', status: 400 },
   ): HTMLElement {
-    const f = mount();
-    f.componentInstance.text.set('<opml/>');
-    f.componentInstance.importText();
+    const fixture = mount();
+    fixture.componentInstance.text.set('<opml/>');
+    fixture.componentInstance.importText();
     ctrl
       .expectOne('https://api.test/api/opml/import')
       .flush(problem, { status: 400, statusText: 'Bad Request' });
-    f.detectChanges();
-    return f.nativeElement;
+    fixture.detectChanges();
+    return fixture.nativeElement;
   }
 
   beforeEach(() => {
@@ -49,24 +49,24 @@ describe('OpmlSectionComponent', () => {
   afterEach(() => ctrl.verify());
 
   it('exports OPML through HttpClient and triggers a download', () => {
-    const c = mount().componentInstance;
-    c.exportOpml();
-    const req = ctrl.expectOne('https://api.test/api/opml/export');
-    expect(req.request.method).toBe('GET');
-    req.flush('<opml/>');
+    const component = mount().componentInstance;
+    component.exportOpml();
+    const testRequest = ctrl.expectOne('https://api.test/api/opml/export');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush('<opml/>');
     expect(URL.createObjectURL).toHaveBeenCalled();
-    expect(c.exporting()).toBe(false);
+    expect(component.exporting()).toBe(false);
   });
 
   it('imports pasted OPML, shows the result, reloads, and refreshes the new feeds', () => {
-    const c = mount().componentInstance;
-    c.text.set('<opml/>');
-    c.importText();
-    const req = ctrl.expectOne('https://api.test/api/opml/import');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe('<opml/>');
-    req.flush({ imported: 3, alreadySubscribed: 1, invalid: 0, skippedOverLimit: 0 });
-    expect(c.result()?.imported).toBe(3);
+    const component = mount().componentInstance;
+    component.text.set('<opml/>');
+    component.importText();
+    const testRequest = ctrl.expectOne('https://api.test/api/opml/import');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toBe('<opml/>');
+    testRequest.flush({ imported: 3, alreadySubscribed: 1, invalid: 0, skippedOverLimit: 0 });
+    expect(component.result()?.imported).toBe(3);
     expect(load).toHaveBeenCalled();
     // Imported feeds are due but empty until fetched, so a refresh is kicked off.
     const refresh = ctrl.expectOne('https://api.test/api/refresh');
@@ -75,9 +75,9 @@ describe('OpmlSectionComponent', () => {
   });
 
   it('does not refresh when nothing new was imported', () => {
-    const c = mount().componentInstance;
-    c.text.set('<opml/>');
-    c.importText();
+    const component = mount().componentInstance;
+    component.text.set('<opml/>');
+    component.importText();
     ctrl
       .expectOne('https://api.test/api/opml/import')
       .flush({ imported: 0, alreadySubscribed: 2, invalid: 0, skippedOverLimit: 0 });
@@ -85,37 +85,37 @@ describe('OpmlSectionComponent', () => {
   });
 
   it('does not import an empty body', () => {
-    const c = mount().componentInstance;
-    c.text.set('   ');
-    c.importText();
+    const component = mount().componentInstance;
+    component.text.set('   ');
+    component.importText();
     ctrl.expectNone('https://api.test/api/opml/import');
   });
 
   it('reports a failed import through the shared error banner', () => {
-    const el = renderAfterFailedImport();
-    const banner = el.querySelector('app-error-banner');
+    const element = renderAfterFailedImport();
+    const banner = element.querySelector('app-error-banner');
     expect(banner).not.toBeNull();
-    expect(el.querySelector('p.error')).toBeNull();
+    expect(element.querySelector('p.error')).toBeNull();
   });
 
   it('shows the server-provided detail in the failed-import banner', () => {
-    const el = renderAfterFailedImport({
+    const element = renderAfterFailedImport({
       type: 'about:blank',
       title: 'Invalid OPML',
       detail: 'Line 4: unexpected element <foo>.',
       status: 400,
     });
-    expect(el.textContent).toContain('Line 4: unexpected element <foo>.');
+    expect(element.textContent).toContain('Line 4: unexpected element <foo>.');
   });
 
   it('reports a failed export through the shared error banner', () => {
-    const f = mount();
-    f.componentInstance.exportOpml();
+    const fixture = mount();
+    fixture.componentInstance.exportOpml();
     ctrl
       .expectOne('https://api.test/api/opml/export')
       .flush('server error', { status: 500, statusText: 'Server Error' });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect((f.nativeElement as HTMLElement).querySelector('app-error-banner')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-error-banner')).not.toBeNull();
   });
 });

@@ -51,242 +51,253 @@ describe('AdminSettingsComponent', () => {
         { provide: Dialog, useValue: dialogStub },
       ],
     });
-    const f = TestBed.createComponent(AdminSettingsComponent);
-    f.detectChanges(); // ngOnInit → initial load
+    const fixture = TestBed.createComponent(AdminSettingsComponent);
+    fixture.detectChanges(); // ngOnInit → initial load
     ctrl = TestBed.inject(HttpTestingController);
-    return f;
+    return fixture;
   }
 
   afterEach(() => ctrl.verify());
 
-  function flushInitial(f: ReturnType<typeof mount>, settings: InstanceSettings = BASE_SETTINGS) {
+  function flushInitial(
+    fixture: ReturnType<typeof mount>,
+    settings: InstanceSettings = BASE_SETTINGS,
+  ) {
     ctrl.expectOne('https://api.test/api/admin/settings').flush(settings);
-    f.detectChanges();
+    fixture.detectChanges();
   }
 
-  const savebar = (f: ReturnType<typeof mount>) =>
-    (f.nativeElement as HTMLElement).querySelector('app-settings-save-bar')!;
-  const saveButton = (f: ReturnType<typeof mount>) =>
-    savebar(f).querySelector<HTMLButtonElement>('app-button[variant="primary"] button')!;
-  const resetButton = (f: ReturnType<typeof mount>) =>
-    savebar(f).querySelector<HTMLButtonElement>('app-button[variant="ghost"] button')!;
+  const savebar = (fixture: ReturnType<typeof mount>) =>
+    (fixture.nativeElement as HTMLElement).querySelector('app-settings-save-bar')!;
+  const saveButton = (fixture: ReturnType<typeof mount>) =>
+    savebar(fixture).querySelector<HTMLButtonElement>('app-button[variant="primary"] button')!;
+  const resetButton = (fixture: ReturnType<typeof mount>) =>
+    savebar(fixture).querySelector<HTMLButtonElement>('app-button[variant="ghost"] button')!;
 
   /** Text fields are dirty-tracked behind the save bar, so an edit is two
    *  steps: type, then Save. */
-  function type(f: ReturnType<typeof mount>, selector: string, value: string) {
-    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(selector)!;
+  function type(fixture: ReturnType<typeof mount>, selector: string, value: string) {
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(selector)!;
     input.value = value;
     input.dispatchEvent(new Event('input'));
-    f.detectChanges();
+    fixture.detectChanges();
     return input;
   }
 
   it('loads the settings on init and renders both toggles', () => {
-    const f = mount();
-    flushInitial(f);
+    const fixture = mount();
+    flushInitial(fixture);
 
-    const el = f.nativeElement as HTMLElement;
-    const checkboxes = el.querySelectorAll('input[type="checkbox"]');
+    const element = fixture.nativeElement as HTMLElement;
+    const checkboxes = element.querySelectorAll('input[type="checkbox"]');
     expect(checkboxes.length).toBe(3);
   });
 
   it('disables the email-confirmation control and shows an explanation when mail is off', () => {
-    const f = mount();
-    flushInitial(f, {
+    const fixture = mount();
+    flushInitial(fixture, {
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: true,
       mailEnabled: false,
     });
 
-    const el = f.nativeElement as HTMLElement;
-    const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    const element = fixture.nativeElement as HTMLElement;
+    const checkboxes = element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     const emailConfirmation = checkboxes[0];
     const approval = checkboxes[1];
 
     expect(emailConfirmation.checked).toBe(true);
     expect(emailConfirmation.disabled).toBe(true);
     expect(approval.disabled).toBe(false);
-    expect(el.textContent).toContain('This instance sends no mail');
+    expect(element.textContent).toContain('This instance sends no mail');
   });
 
   it('leaves the email-confirmation control enabled and shows no mailless explanation when mail is on', () => {
-    const f = mount();
-    flushInitial(f, { ...BASE_SETTINGS, requireEmailConfirmation: true, requireApproval: true });
+    const fixture = mount();
+    flushInitial(fixture, {
+      ...BASE_SETTINGS,
+      requireEmailConfirmation: true,
+      requireApproval: true,
+    });
 
-    const el = f.nativeElement as HTMLElement;
-    const emailConfirmation = el.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    const element = fixture.nativeElement as HTMLElement;
+    const emailConfirmation = element.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
     expect(emailConfirmation.disabled).toBe(false);
-    expect(el.textContent).not.toContain('This instance sends no mail');
+    expect(element.textContent).not.toContain('This instance sends no mail');
   });
 
   it('toggling approval calls update and applies the response', () => {
-    const f = mount();
-    flushInitial(f, {
+    const fixture = mount();
+    flushInitial(fixture, {
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: true,
       mailEnabled: false,
     });
 
-    const el = f.nativeElement as HTMLElement;
-    const approval = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1];
+    const element = fixture.nativeElement as HTMLElement;
+    const approval = element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1];
     approval.checked = false;
     approval.dispatchEvent(new Event('change'));
 
-    const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(testRequest.request.method).toBe('PUT');
+    expect(testRequest.request.body).toEqual({
       ...BASE_UPDATE,
       requireEmailConfirmation: true,
       requireApproval: false,
     });
-    req.flush({
+    testRequest.flush({
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: false,
       mailEnabled: false,
     });
 
-    f.detectChanges();
-    expect(f.componentInstance.requireApproval()).toBe(false);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.requireApproval()).toBe(false);
   });
 
   /** #624 follow-up: the third toggle, round-tripped the same way `toggling
    *  approval calls update and applies the response` proves the second one. */
   it('toggling passkey sign-in calls update and applies the response', () => {
-    const f = mount();
-    flushInitial(f);
+    const fixture = mount();
+    flushInitial(fixture);
 
-    const el = f.nativeElement as HTMLElement;
-    const passkeyToggle = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[2];
+    const element = fixture.nativeElement as HTMLElement;
+    const passkeyToggle = element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[2];
     expect(passkeyToggle.checked).toBe(true);
     passkeyToggle.checked = false;
     passkeyToggle.dispatchEvent(new Event('change'));
 
-    const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeySignInEnabled: false });
-    req.flush({ ...BASE_SETTINGS, passkeySignInEnabled: false });
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(testRequest.request.method).toBe('PUT');
+    expect(testRequest.request.body).toEqual({ ...BASE_UPDATE, passkeySignInEnabled: false });
+    testRequest.flush({ ...BASE_SETTINGS, passkeySignInEnabled: false });
 
-    f.detectChanges();
-    expect(f.componentInstance.passkeySignInEnabled()).toBe(false);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.passkeySignInEnabled()).toBe(false);
   });
 
   it('surfaces an error banner with a retry when the load fails', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl
       .expectOne('https://api.test/api/admin/settings')
       .flush(
         { type: 'about:blank', title: 'Down', status: 500 },
         { status: 500, statusText: 'Server Error' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-error-banner')).not.toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-error-banner')).not.toBeNull();
 
-    const retry = el.querySelector('[role="alert"] button') as HTMLButtonElement;
+    const retry = element.querySelector('[role="alert"] button') as HTMLButtonElement;
     retry.click();
     ctrl.expectOne('https://api.test/api/admin/settings').flush(BASE_SETTINGS);
   });
 
   it('renders both switches as settings rows in one group', () => {
-    const f = mount();
-    flushInitial(f);
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    flushInitial(fixture);
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelectorAll('app-settings-group').length).toBe(1);
-    expect(el.querySelectorAll('app-settings-row app-toggle').length).toBe(3);
+    expect(element.querySelectorAll('app-settings-group').length).toBe(1);
+    expect(element.querySelectorAll('app-settings-row app-toggle').length).toBe(3);
   });
 
   it('toggles the control when the visible label text is clicked, not only the switch', () => {
-    const f = mount();
-    flushInitial(f);
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    flushInitial(fixture);
+    const element = fixture.nativeElement as HTMLElement;
 
-    const labels = el.querySelectorAll<HTMLLabelElement>('.row-title label');
-    const checkboxes = el.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    const labels = element.querySelectorAll<HTMLLabelElement>('.row-title label');
+    const checkboxes = element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
     // Three toggle rows plus the text rows (publicBaseUrl, passkeyRpId, passkeyRpName).
     expect(labels.length).toBe(6);
     expect(labels[0].htmlFor).toBe(checkboxes[0].id);
     expect(labels[1].htmlFor).toBe(checkboxes[1].id);
 
     labels[1].click();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.body).toEqual({ ...BASE_UPDATE, requireApproval: true });
-    req.flush({ ...BASE_SETTINGS, requireApproval: true });
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(testRequest.request.body).toEqual({ ...BASE_UPDATE, requireApproval: true });
+    testRequest.flush({ ...BASE_SETTINGS, requireApproval: true });
   });
 
   it('saving the public base URL sends it in the update and applies the response', () => {
-    const f = mount();
-    flushInitial(f, { ...BASE_SETTINGS, requireEmailConfirmation: true, requireApproval: true });
+    const fixture = mount();
+    flushInitial(fixture, {
+      ...BASE_SETTINGS,
+      requireEmailConfirmation: true,
+      requireApproval: true,
+    });
 
-    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
       '#public-base-url-input',
     )!;
     input.value = 'https://reader.example.ts.net/reader';
     input.dispatchEvent(new Event('input'));
-    f.detectChanges();
-    saveButton(f).click();
+    fixture.detectChanges();
+    saveButton(fixture).click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(testRequest.request.method).toBe('PUT');
+    expect(testRequest.request.body).toEqual({
       ...BASE_UPDATE,
       requireEmailConfirmation: true,
       requireApproval: true,
       publicBaseUrl: 'https://reader.example.ts.net/reader',
     });
-    req.flush({
+    testRequest.flush({
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: true,
       publicBaseUrl: 'https://reader.example.ts.net/reader',
     });
-    f.detectChanges();
-    expect(f.componentInstance.publicBaseUrl()).toBe('https://reader.example.ts.net/reader');
+    fixture.detectChanges();
+    expect(fixture.componentInstance.publicBaseUrl()).toBe('https://reader.example.ts.net/reader');
   });
 
   it('uses the deployment default as the public base URL placeholder', () => {
-    const f = mount();
-    flushInitial(f, {
+    const fixture = mount();
+    flushInitial(fixture, {
       ...BASE_SETTINGS,
       publicBaseUrlDefault: 'http://localhost:4200',
     });
 
-    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
       '#public-base-url-input',
     )!;
     expect(input.placeholder).toBe('http://localhost:4200');
   });
 
   it('clearing the public base URL sends null', () => {
-    const f = mount();
-    flushInitial(f, {
+    const fixture = mount();
+    flushInitial(fixture, {
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: true,
       publicBaseUrl: 'https://old.example/',
     });
 
-    const input = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
       '#public-base-url-input',
     )!;
     input.value = '   ';
     input.dispatchEvent(new Event('input'));
-    f.detectChanges();
-    saveButton(f).click();
+    fixture.detectChanges();
+    saveButton(fixture).click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/settings');
-    expect(req.request.body).toEqual({
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+    expect(testRequest.request.body).toEqual({
       ...BASE_UPDATE,
       requireEmailConfirmation: true,
       requireApproval: true,
     });
-    req.flush({
+    testRequest.flush({
       ...BASE_SETTINGS,
       requireEmailConfirmation: true,
       requireApproval: true,
@@ -295,104 +306,104 @@ describe('AdminSettingsComponent', () => {
 
   describe('passkey relying-party fields', () => {
     it('renders both fields and round-trips a saved value', () => {
-      const f = mount();
-      flushInitial(f, {
+      const fixture = mount();
+      flushInitial(fixture, {
         ...BASE_SETTINGS,
         passkeyRpId: 'reader.example.com',
         passkeyRpName: 'My Reader',
       });
 
-      const el = f.nativeElement as HTMLElement;
-      const idInput = el.querySelector<HTMLInputElement>('#passkey-rp-id-input')!;
-      const nameInput = el.querySelector<HTMLInputElement>('#passkey-rp-name-input')!;
+      const element = fixture.nativeElement as HTMLElement;
+      const idInput = element.querySelector<HTMLInputElement>('#passkey-rp-id-input')!;
+      const nameInput = element.querySelector<HTMLInputElement>('#passkey-rp-name-input')!;
 
       expect(idInput.value).toBe('reader.example.com');
       expect(nameInput.value).toBe('My Reader');
 
       idInput.value = 'other.example.com';
       idInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
-      const req = ctrl.expectOne('https://api.test/api/admin/settings');
-      expect(req.request.body).toEqual({
+      const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+      expect(testRequest.request.body).toEqual({
         ...BASE_UPDATE,
         passkeyRpId: 'other.example.com',
         passkeyRpName: 'My Reader',
       });
-      req.flush({
+      testRequest.flush({
         ...BASE_SETTINGS,
         passkeyRpId: 'other.example.com',
         passkeyRpName: 'My Reader',
         passkeyRpIdEffective: 'other.example.com',
       });
-      f.detectChanges();
-      expect(f.componentInstance.passkeyRpId()).toBe('other.example.com');
+      fixture.detectChanges();
+      expect(fixture.componentInstance.passkeyRpId()).toBe('other.example.com');
     });
 
     it('sends an empty relying-party id as null, restoring the fallback', () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
 
-      const idInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const idInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-id-input',
       )!;
       idInput.value = '   ';
       idInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
-      const req = ctrl.expectOne('https://api.test/api/admin/settings');
-      expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeyRpId: null });
-      req.flush(BASE_SETTINGS);
+      const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+      expect(testRequest.request.body).toEqual({ ...BASE_UPDATE, passkeyRpId: null });
+      testRequest.flush(BASE_SETTINGS);
     });
 
     it('sends an empty relying-party name as null', () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpName: 'My Reader' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpName: 'My Reader' });
 
-      const nameInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const nameInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-name-input',
       )!;
       nameInput.value = '';
       nameInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
-      const req = ctrl.expectOne('https://api.test/api/admin/settings');
-      expect(req.request.body).toEqual({ ...BASE_UPDATE, passkeyRpName: null });
-      req.flush(BASE_SETTINGS);
+      const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+      expect(testRequest.request.body).toEqual({ ...BASE_UPDATE, passkeyRpName: null });
+      testRequest.flush(BASE_SETTINGS);
     });
 
     it('uses passkeyRpIdEffective as the placeholder, not a hard-coded host', () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpIdEffective: 'reader.example.org' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpIdEffective: 'reader.example.org' });
 
-      const idInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const idInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-id-input',
       )!;
       expect(idInput.placeholder).toBe('reader.example.org');
     });
 
     it("interpolates passkeyRpIdEffective into the field's description", () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpIdEffective: 'reader.example.org' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpIdEffective: 'reader.example.org' });
 
-      const el = f.nativeElement as HTMLElement;
-      expect(el.textContent).toContain('reader.example.org');
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.textContent).toContain('reader.example.org');
     });
 
     it('renders a 422 validation message from the server', () => {
-      const f = mount();
-      flushInitial(f);
+      const fixture = mount();
+      flushInitial(fixture);
 
-      const idInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const idInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'not-this-host.example';
       idInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {
@@ -408,93 +419,98 @@ describe('AdminSettingsComponent', () => {
         },
         { status: 422, statusText: 'Unprocessable Entity' },
       );
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('app-error-banner')).not.toBeNull();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('app-error-banner')).not.toBeNull();
       // The server's per-field reason, not the shared 422 detail, which names
       // neither the field nor what is wrong with it.
-      expect(el.textContent).toContain(
+      expect(element.textContent).toContain(
         'Must be the host, or a registrable parent domain of the host',
       );
-      expect(el.textContent).not.toContain('One or more fields are invalid.');
+      expect(element.textContent).not.toContain('One or more fields are invalid.');
     });
 
     it('keeps the form and the rejected edit on screen when a save fails', () => {
-      const f = mount();
-      flushInitial(f);
+      const fixture = mount();
+      flushInitial(fixture);
 
-      type(f, '#passkey-rp-id-input', 'not-this-host.example');
-      saveButton(f).click();
+      type(fixture, '#passkey-rp-id-input', 'not-this-host.example');
+      saveButton(fixture).click();
       ctrl
         .expectOne('https://api.test/api/admin/settings')
         .flush(
           { type: 'validation_error', title: 'Validation failed', status: 422 },
           { status: 422, statusText: 'Unprocessable Entity' },
         );
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      const idInput = el.querySelector<HTMLInputElement>('#passkey-rp-id-input');
+      const element = fixture.nativeElement as HTMLElement;
+      const idInput = element.querySelector<HTMLInputElement>('#passkey-rp-id-input');
       expect(idInput).not.toBeNull();
       expect(idInput!.value).toBe('not-this-host.example');
-      expect(el.querySelector('app-settings-save-bar')).not.toBeNull();
+      expect(element.querySelector('app-settings-save-bar')).not.toBeNull();
     });
 
     it('offers Save only once a field is edited, and drops the edit on Reset', () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
 
-      expect(saveButton(f).disabled).toBe(true);
+      expect(saveButton(fixture).disabled).toBe(true);
 
-      type(f, '#passkey-rp-id-input', 'other.example.com');
-      expect(saveButton(f).disabled).toBe(false);
+      type(fixture, '#passkey-rp-id-input', 'other.example.com');
+      expect(saveButton(fixture).disabled).toBe(false);
 
-      resetButton(f).click();
-      f.detectChanges();
+      resetButton(fixture).click();
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector<HTMLInputElement>('#passkey-rp-id-input')!.value).toBe(
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector<HTMLInputElement>('#passkey-rp-id-input')!.value).toBe(
         'reader.example.com',
       );
-      expect(saveButton(f).disabled).toBe(true);
+      expect(saveButton(fixture).disabled).toBe(true);
       // No request at all: Reset is local, it never asks the server to undo.
       ctrl.verify();
     });
 
     it('a toggle never carries an unsaved text edit with it', () => {
-      const f = mount();
-      flushInitial(f, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
+      const fixture = mount();
+      flushInitial(fixture, { ...BASE_SETTINGS, passkeyRpId: 'reader.example.com' });
 
-      type(f, '#passkey-rp-id-input', 'typed-but-not-saved.example.com');
-      (f.nativeElement as HTMLElement)
+      type(fixture, '#passkey-rp-id-input', 'typed-but-not-saved.example.com');
+      (fixture.nativeElement as HTMLElement)
         .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1]
         .dispatchEvent(new Event('change'));
 
-      const req = ctrl.expectOne('https://api.test/api/admin/settings');
-      expect(req.request.body.passkeyRpId).toBe('reader.example.com');
-      req.flush({ ...BASE_SETTINGS, passkeyRpId: 'reader.example.com', requireApproval: true });
-      f.detectChanges();
+      const testRequest = ctrl.expectOne('https://api.test/api/admin/settings');
+      expect(testRequest.request.body.passkeyRpId).toBe('reader.example.com');
+      testRequest.flush({
+        ...BASE_SETTINGS,
+        passkeyRpId: 'reader.example.com',
+        requireApproval: true,
+      });
+      fixture.detectChanges();
 
       // …and the edit is still in the field, waiting for Save.
       expect(
-        (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>('#passkey-rp-id-input')!
-          .value,
+        (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+          '#passkey-rp-id-input',
+        )!.value,
       ).toBe('typed-but-not-saved.example.com');
     });
 
     it('opens a confirm dialog quoting the invalidated count on a 409, and resends only on confirmation', () => {
       dialogStub.open.mockReturnValue({ closed: of(true) });
-      const f = mount();
-      flushInitial(f);
+      const fixture = mount();
+      flushInitial(fixture);
 
-      const idInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const idInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'other.example.com';
       idInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {
@@ -535,16 +551,16 @@ describe('AdminSettingsComponent', () => {
 
     it('sends nothing when the invalidation confirmation is dismissed', () => {
       dialogStub.open.mockReturnValue({ closed: of(false) });
-      const f = mount();
-      flushInitial(f);
+      const fixture = mount();
+      flushInitial(fixture);
 
-      const idInput = (f.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
+      const idInput = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>(
         '#passkey-rp-id-input',
       )!;
       idInput.value = 'other.example.com';
       idInput.dispatchEvent(new Event('input'));
-      f.detectChanges();
-      saveButton(f).click();
+      fixture.detectChanges();
+      saveButton(fixture).click();
 
       ctrl.expectOne('https://api.test/api/admin/settings').flush(
         {
@@ -562,10 +578,12 @@ describe('AdminSettingsComponent', () => {
     });
 
     it('renders the help disclosure closed on first render', () => {
-      const f = mount();
-      flushInitial(f);
+      const fixture = mount();
+      flushInitial(fixture);
 
-      const details = (f.nativeElement as HTMLElement).querySelector('app-disclosure details');
+      const details = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-disclosure details',
+      );
       expect(details).not.toBeNull();
       expect((details as HTMLDetailsElement).open).toBe(false);
     });

@@ -15,18 +15,18 @@ describe('ColorFieldComponent', () => {
   };
 
   it('renders one button per preset swatch', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.querySelectorAll('.swatch').length).toBe(TAG_COLORS.length);
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.querySelectorAll('.swatch').length).toBe(TAG_COLORS.length);
   });
 
   it('marks the swatch matching the current value', async () => {
-    const el: HTMLElement = (await mount(TAG_COLORS[0])).nativeElement;
-    expect(el.querySelector('.swatch.on')).not.toBeNull();
+    const element: HTMLElement = (await mount(TAG_COLORS[0])).nativeElement;
+    expect(element.querySelector('.swatch.on')).not.toBeNull();
   });
 
   it('names every swatch for assistive tech', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    const labels = Array.from(el.querySelectorAll('.swatch')).map((swatch) =>
+    const element: HTMLElement = (await mount()).nativeElement;
+    const labels = Array.from(element.querySelectorAll('.swatch')).map((swatch) =>
       swatch.getAttribute('aria-label'),
     );
     expect(labels).toEqual(TAG_COLORS.map((preset) => `Colour ${preset}`));
@@ -35,7 +35,7 @@ describe('ColorFieldComponent', () => {
   it('emits the picked colour', async () => {
     const fixture = await mount();
     const picked: (string | null)[] = [];
-    fixture.componentInstance.valueChange.subscribe((v: string | null) => picked.push(v));
+    fixture.componentInstance.valueChange.subscribe((value: string | null) => picked.push(value));
 
     (fixture.nativeElement.querySelector('.swatch') as HTMLButtonElement).click();
     expect(picked).toEqual([TAG_COLORS[0]]);
@@ -44,7 +44,7 @@ describe('ColorFieldComponent', () => {
   it('emits null when cleared', async () => {
     const fixture = await mount(TAG_COLORS[0]);
     const picked: (string | null)[] = [];
-    fixture.componentInstance.valueChange.subscribe((v: string | null) => picked.push(v));
+    fixture.componentInstance.valueChange.subscribe((value: string | null) => picked.push(value));
 
     (fixture.nativeElement.querySelector('.clear') as HTMLButtonElement).click();
     expect(picked).toEqual([null]);

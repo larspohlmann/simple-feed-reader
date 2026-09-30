@@ -16,7 +16,7 @@ export class ListPreferences {
   /** Both preferences as one value, so a flip watcher never keeps its own list of them. */
   readonly values = computed(
     () => [this.unreadFilter.unreadOnly(), this.listOrder.oldestFirstViews()] as const,
-    { equal: (a, b) => a[0] === b[0] && a[1] === b[1] },
+    { equal: (left, right) => left[0] === right[0] && left[1] === right[1] },
   );
 
   appliedTo(selection: Selection): Selection {

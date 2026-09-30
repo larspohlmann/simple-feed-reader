@@ -34,7 +34,7 @@ describe('TagsStore', () => {
     expect(store.loading()).toBe(true);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [tag(1, 'Zeta'), tag(2, 'Alpha')] });
     expect(store.loading()).toBe(false);
-    expect(store.tags().map((t) => t.name)).toEqual(['Alpha', 'Zeta']);
+    expect(store.tags().map((listedTag) => listedTag.name)).toEqual(['Alpha', 'Zeta']);
   });
 
   it('records a Problem on error', () => {

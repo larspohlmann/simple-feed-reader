@@ -25,19 +25,19 @@ describe('ImportSectionComponent', () => {
   }
 
   it('renders both the OPML section and the backup section', async () => {
-    const el = await render();
+    const element = await render();
 
-    expect(el.querySelector('app-opml-section')).not.toBeNull();
-    expect(el.querySelector('app-backup-section')).not.toBeNull();
+    expect(element.querySelector('app-opml-section')).not.toBeNull();
+    expect(element.querySelector('app-backup-section')).not.toBeNull();
   });
 
   // The whole point of #454: backup is not nested inside OPML any more, so the
   // stack's gap reaches it and no component carries a compensating margin.
   // Asserting they share a parent is what stops the nest from coming back.
   it('renders them as siblings in one stack', async () => {
-    const el = await render();
-    const opml = el.querySelector('app-opml-section')!;
-    const backup = el.querySelector('app-backup-section')!;
+    const element = await render();
+    const opml = element.querySelector('app-opml-section')!;
+    const backup = element.querySelector('app-backup-section')!;
 
     expect(backup.parentElement).toBe(opml.parentElement);
     expect(opml.parentElement?.tagName.toLowerCase()).toBe('app-settings-stack');

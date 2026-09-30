@@ -185,8 +185,9 @@ export class EntryListComponent implements OnDestroy {
    *  so removing the last row shows "nothing here" immediately. */
   readonly visibleEntryCount = computed(
     () =>
-      this.entries().filter((e) => !this.leavingIds().has(e.id) && !this.hiddenAboveIds().has(e.id))
-        .length,
+      this.entries().filter(
+        (entry) => !this.leavingIds().has(entry.id) && !this.hiddenAboveIds().has(entry.id),
+      ).length,
   );
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();
@@ -286,19 +287,19 @@ export class EntryListComponent implements OnDestroy {
    *  whole-word mode. The badge is the only display of this — `punk` and
    *  `punk ` otherwise render identical titles for very different results (#408). */
   readonly showWholeWordBadge = computed(() => {
-    const s = this.selection();
-    const term = s.term ?? '';
+    const selection = this.selection();
+    const term = selection.term ?? '';
     // A phrase overrides whole-word when both signals are present (#702), so a
     // phrase query shows only the phrase pill, never both.
-    return s.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
+    return selection.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
   });
 
   /** Whether the selection is a phrase search (quoted query). The pill is the
    *  only sign the words matched as one exact run rather than each anywhere —
    *  mirrors the whole-word badge (#702). */
   readonly showPhraseBadge = computed(() => {
-    const s = this.selection();
-    return s.kind === 'search' && isPhraseTerm(s.term ?? '');
+    const selection = this.selection();
+    return selection.kind === 'search' && isPhraseTerm(selection.term ?? '');
   });
 
   /** The heading's leading icon for a fixed view, or null for a tag or a
@@ -573,8 +574,9 @@ export class EntryListComponent implements OnDestroy {
    * the shell's half (`--app-bar-h`) already arrives this way.
    */
   private readonly _publishBarHeight = effect(() => {
-    const h = this.headerHeight();
-    if (h > 0) this.host.nativeElement.style.setProperty('--list-bar-h', `${h}px`);
+    const headerHeight = this.headerHeight();
+    if (headerHeight > 0)
+      this.host.nativeElement.style.setProperty('--list-bar-h', `${headerHeight}px`);
   });
 
   // A new selection, a resize past the wide breakpoint, or a list<->magazine
@@ -628,10 +630,10 @@ export class EntryListComponent implements OnDestroy {
     if (rendered === this.entries()) applier.refresh();
   });
 
-  readonly onRowsScroll = (e: Event): void => {
-    const el = e.target as HTMLElement | null;
-    if (!el || typeof el.scrollTop !== 'number') return;
-    const top = el.scrollTop;
+  readonly onRowsScroll = (scrollEvent: Event): void => {
+    const element = scrollEvent.target as HTMLElement | null;
+    if (!element || typeof element.scrollTop !== 'number') return;
+    const top = element.scrollTop;
     this.collapsed.set(
       nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
     );
@@ -658,12 +660,12 @@ export class EntryListComponent implements OnDestroy {
    * the empty middle of the app bar.
    */
   scrollToTop(): void {
-    const el = this.rows()?.nativeElement;
-    if (!el) return;
+    const element = this.rows()?.nativeElement;
+    if (!element) return;
     // A scroll restore in flight re-asserts its own target every frame; the
     // user's jump has to win.
     this.cancelSettle();
-    el.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    element.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
     // Land focus on the title, not wherever the button was — an unmounted button
     // drops focus to <body>. preventScroll avoids an outer-ancestor scroll, since
     // `.list-header` sits outside `.rows` and default focus() would trigger one.
@@ -699,7 +701,7 @@ export class EntryListComponent implements OnDestroy {
     const measured = this.measuredEntries(scroller);
     const above = entriesAboveFold(measured, this.foldTop(scroller));
     const groups = this.visibleBlocks().filter((block) => block.kind === 'group');
-    const rendered = new Set(measured.map((m) => m.id));
+    const rendered = new Set(measured.map((measurement) => measurement.id));
     return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
   }
 
@@ -717,7 +719,7 @@ export class EntryListComponent implements OnDestroy {
   /** Above-fold ids plus the hidden duplicate copies folded under each row
    *  (EntryDto.duplicates), which share the row but carry their own state. */
   private withHiddenDuplicates(ids: number[]): number[] {
-    const byId = new Map(this.entries().map((e) => [e.id, e]));
+    const byId = new Map(this.entries().map((entry) => [entry.id, entry]));
     const out: number[] = [];
     for (const id of ids) {
       out.push(id);
@@ -735,12 +737,12 @@ export class EntryListComponent implements OnDestroy {
     this.collapsed.set(false);
     this.showToTop.set(false);
     this.hasAboveFold.set(false);
-    const el = this.rows()?.nativeElement;
-    if (!el) return;
+    const element = this.rows()?.nativeElement;
+    if (!element) return;
     this.scroll.save(this.selection(), 0);
     this.zone.runOutsideAngular(() =>
       requestAnimationFrame(() => {
-        el.scrollTop = 0;
+        element.scrollTop = 0;
         this.lastScrollTop = 0;
       }),
     );
@@ -791,35 +793,35 @@ export class EntryListComponent implements OnDestroy {
   // swaps; touchmove is non-passive so a pull can preventDefault the overscroll.
   // Also measures the bar (guarded by `collapsed()`) so the scroller reserves it.
   private readonly _measureHeader = effect(() => {
-    const el = this.listHdr()?.nativeElement;
+    const element = this.listHdr()?.nativeElement;
     this.headerObs?.disconnect();
     this.headerObs = undefined;
-    if (!el || typeof ResizeObserver === 'undefined') return;
+    if (!element || typeof ResizeObserver === 'undefined') return;
     const obs = new ResizeObserver(() => {
-      if (!this.collapsed()) this.headerHeight.set(el.offsetHeight);
+      if (!this.collapsed()) this.headerHeight.set(element.offsetHeight);
     });
-    obs.observe(el);
+    obs.observe(element);
     this.headerObs = obs;
   });
 
   private pullCleanup?: () => void;
   private readonly _wirePull = effect(() => {
-    const el = this.rows()?.nativeElement;
+    const element = this.rows()?.nativeElement;
     this.pullCleanup?.();
     this.pullCleanup = undefined;
-    if (!el) return;
-    const start = (e: TouchEvent): void => this.onPullStart(e, el);
-    const move = (e: TouchEvent): void => this.onPullMove(e, el);
+    if (!element) return;
+    const start = (touchEvent: TouchEvent): void => this.onPullStart(touchEvent, element);
+    const move = (touchEvent: TouchEvent): void => this.onPullMove(touchEvent, element);
     const end = (): void => this.onPullEnd();
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: false });
-    el.addEventListener('touchend', end);
-    el.addEventListener('touchcancel', end);
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchmove', move, { passive: false });
+    element.addEventListener('touchend', end);
+    element.addEventListener('touchcancel', end);
     this.pullCleanup = () => {
-      el.removeEventListener('touchstart', start);
-      el.removeEventListener('touchmove', move);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', end);
+      element.removeEventListener('touchstart', start);
+      element.removeEventListener('touchmove', move);
+      element.removeEventListener('touchend', end);
+      element.removeEventListener('touchcancel', end);
     };
   });
 
@@ -827,26 +829,27 @@ export class EntryListComponent implements OnDestroy {
     return this.canRefresh() && !this.screen.isWide() && !this.reduceMotion && !this.refreshing();
   }
 
-  onPullStart(e: TouchEvent, el: HTMLElement): void {
+  onPullStart(touchEvent: TouchEvent, element: HTMLElement): void {
     // Only arm a pull that begins at the very top with a single finger.
-    this.pullTracking = this.pullEnabled() && e.touches.length === 1 && atTop(el.scrollTop);
-    if (this.pullTracking) this.pullStartY = e.touches[0].clientY;
+    this.pullTracking =
+      this.pullEnabled() && touchEvent.touches.length === 1 && atTop(element.scrollTop);
+    if (this.pullTracking) this.pullStartY = touchEvent.touches[0].clientY;
   }
 
-  onPullMove(e: TouchEvent, el: HTMLElement): void {
-    if (!this.pullTracking || e.touches.length !== 1) return;
-    const dy = e.touches[0].clientY - this.pullStartY;
+  onPullMove(touchEvent: TouchEvent, element: HTMLElement): void {
+    if (!this.pullTracking || touchEvent.touches.length !== 1) return;
+    const dy = touchEvent.touches[0].clientY - this.pullStartY;
     // A downward pull that is still anchored at the top rubber-bands the content;
     // anything else (upward, or the list has since scrolled) releases it and hands
     // the gesture back to normal scrolling.
-    if (dy <= 0 || !atTop(el.scrollTop)) {
+    if (dy <= 0 || !atTop(element.scrollTop)) {
       if (this.dragging()) this.dragging.set(false);
       if (this.pulled() !== 0) this.pulled.set(0);
       return;
     }
     this.pulled.set(dy);
     this.dragging.set(true);
-    e.preventDefault();
+    touchEvent.preventDefault();
   }
 
   onPullEnd(): void {
@@ -870,7 +873,11 @@ export class EntryListComponent implements OnDestroy {
     if (node && typeof IntersectionObserver !== 'undefined') {
       this.observer = new IntersectionObserver(
         (es) => {
-          if (es.some((e) => e.isIntersecting) && this.hasMore() && !this.loadingMore())
+          if (
+            es.some((intersection) => intersection.isIntersecting) &&
+            this.hasMore() &&
+            !this.loadingMore()
+          )
             this.loadMore.emit();
         },
         { root, rootMargin: prefetchMargin(root?.clientHeight ?? 0) },
@@ -885,18 +892,18 @@ export class EntryListComponent implements OnDestroy {
   private wasLoading = false;
   private readonly _restoreScroll = effect(() => {
     const loading = this.loading();
-    const el = this.rows()?.nativeElement;
+    const element = this.rows()?.nativeElement;
     if (loading) {
       this.wasLoading = true;
       return;
     }
     // Wait for the scroll container to render (it only exists once entries show),
     // then land the user back where they were before the page was reloaded.
-    if (this.wasLoading && el) {
+    if (this.wasLoading && element) {
       this.wasLoading = false;
       this.hiddenAboveIds.set(new Set());
       this.renderedSelection = this.selection();
-      this.applyScroll(el, this.scroll.read(this.selection()));
+      this.applyScroll(element, this.scroll.read(this.selection()));
     }
   });
 
@@ -909,23 +916,23 @@ export class EntryListComponent implements OnDestroy {
   private readonly _scrollOnSelectionChange = effect(() => {
     const selection = this.selection();
     untracked(() => {
-      const el = this.rows()?.nativeElement;
-      if (el) this.applyScroll(el, this.scroll.read(selection));
+      const element = this.rows()?.nativeElement;
+      if (element) this.applyScroll(element, this.scroll.read(selection));
     });
   });
 
-  private applyScroll(el: HTMLElement, top: number): void {
+  private applyScroll(element: HTMLElement, top: number): void {
     this.cancelSettle();
     // Assign even for 0 — the scroller outlives a view switch (outgoing list
     // stays rendered, #254), so "no remembered offset" must put it back at the
     // top rather than leave the previous view's offset in place (#267).
-    el.scrollTop = top; // immediate rough landing so the list never flashes at the top
+    element.scrollTop = top; // immediate rough landing so the list never flashes at the top
     // Seed the hide-on-scroll baseline so the very next scroll compares against
     // the restored position, not 0.
-    this.lastScrollTop = el.scrollTop;
+    this.lastScrollTop = element.scrollTop;
     // Only a target below the fold can be nudged off by late layout; the top is
     // where scroll-anchoring holds content anyway, so it needs no settle window.
-    if (top > 0) this.settleTo(el, top);
+    if (top > 0) this.settleTo(element, top);
   }
 
   // A resume-reload re-renders the list from scratch; block heights firm up over
@@ -933,7 +940,7 @@ export class EntryListComponent implements OnDestroy {
   // Re-assert each frame until heights stabilize; aborts on a real user scroll.
   private settleRaf = 0;
   private settleAbort = false;
-  private settleTo(el: HTMLElement, target: number): void {
+  private settleTo(element: HTMLElement, target: number): void {
     if (typeof requestAnimationFrame === 'undefined') return;
     this.settleAbort = false;
     let frames = 0;
@@ -941,9 +948,9 @@ export class EntryListComponent implements OnDestroy {
     let lastHeight = -1;
     const step = (): void => {
       if (this.settleAbort) return;
-      el.scrollTop = target;
-      this.lastScrollTop = el.scrollTop;
-      const height = el.scrollHeight;
+      element.scrollTop = target;
+      this.lastScrollTop = element.scrollTop;
+      const height = element.scrollHeight;
       stableFrames = height === lastHeight ? stableFrames + 1 : 0;
       lastHeight = height;
       if (++frames < MAX_SETTLE_FRAMES && stableFrames < SETTLE_STABLE_FRAMES) {

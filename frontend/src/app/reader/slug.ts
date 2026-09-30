@@ -21,10 +21,10 @@ export function entryParam(id: number, title: string): string {
  * or an id-prefixed slug ("514-some-title"). Returns null for anything without a
  * positive leading integer, so a garbage param reads as "no entry open".
  */
-export function entryIdFromParam(v: string | null): number | null {
-  if (v == null) return null;
-  const m = /^(\d+)(?:-|$)/.exec(v);
-  if (m == null) return null;
-  const n = Number(m[1]);
-  return Number.isInteger(n) && n > 0 && n <= Number.MAX_SAFE_INTEGER ? n : null;
+export function entryIdFromParam(value: string | null): number | null {
+  if (value == null) return null;
+  const match = /^(\d+)(?:-|$)/.exec(value);
+  if (match == null) return null;
+  const id = Number(match[1]);
+  return Number.isInteger(id) && id > 0 && id <= Number.MAX_SAFE_INTEGER ? id : null;
 }

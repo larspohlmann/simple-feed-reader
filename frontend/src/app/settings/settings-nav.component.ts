@@ -33,12 +33,15 @@ export class SettingsNavComponent {
 
   readonly groups = computed<readonly NavGroup[]>(() => {
     const groups: NavGroup[] = [
-      { labelKey: null, sections: SETTINGS_SECTIONS.filter((s) => s.group === 'general') },
+      {
+        labelKey: null,
+        sections: SETTINGS_SECTIONS.filter((section) => section.group === 'general'),
+      },
     ];
     if (this.auth.isAdmin()) {
       groups.push({
         labelKey: 'settings.nav.admin',
-        sections: SETTINGS_SECTIONS.filter((s) => s.group === 'admin'),
+        sections: SETTINGS_SECTIONS.filter((section) => section.group === 'admin'),
       });
     }
     return groups;

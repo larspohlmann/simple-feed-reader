@@ -14,18 +14,18 @@ describe('LayoutService', () => {
   });
 
   it('tracks the wide breakpoint', () => {
-    const svc = TestBed.inject(LayoutService);
+    const service = TestBed.inject(LayoutService);
     changes.next({ matches: true, breakpoints: {} });
-    expect(svc.isWide()).toBe(true);
+    expect(service.isWide()).toBe(true);
     changes.next({ matches: false, breakpoints: {} });
-    expect(svc.isWide()).toBe(false);
+    expect(service.isWide()).toBe(false);
   });
 
   it('tracks the coarse-pointer capability', () => {
-    const svc = TestBed.inject(LayoutService);
+    const service = TestBed.inject(LayoutService);
     changes.next({ matches: true, breakpoints: {} });
-    expect(svc.isCoarse()).toBe(true);
+    expect(service.isCoarse()).toBe(true);
     changes.next({ matches: false, breakpoints: {} });
-    expect(svc.isCoarse()).toBe(false);
+    expect(service.isCoarse()).toBe(false);
   });
 });

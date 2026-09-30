@@ -46,16 +46,16 @@ describe('authInterceptor', () => {
   it('attaches the bearer header to API requests when a token exists', () => {
     tokens.set('jwt-abc');
     http.get('https://api.test/api/me').subscribe();
-    const req = ctrl.expectOne('https://api.test/api/me');
-    expect(req.request.headers.get('Authorization')).toBe('Bearer jwt-abc');
-    req.flush({});
+    const testRequest = ctrl.expectOne('https://api.test/api/me');
+    expect(testRequest.request.headers.get('Authorization')).toBe('Bearer jwt-abc');
+    testRequest.flush({});
   });
 
   it('does not attach a header when there is no token', () => {
     http.get('https://api.test/api/me').subscribe();
-    const req = ctrl.expectOne('https://api.test/api/me');
-    expect(req.request.headers.has('Authorization')).toBe(false);
-    req.flush({});
+    const testRequest = ctrl.expectOne('https://api.test/api/me');
+    expect(testRequest.request.headers.has('Authorization')).toBe(false);
+    testRequest.flush({});
   });
 
   it('clears the token and routes to /login on 401', () => {

@@ -22,34 +22,34 @@ describe('shouldFillColumn', () => {
 
 describe('fitReaderImages', () => {
   function host(width: number): HTMLElement {
-    const el = document.createElement('div');
-    Object.defineProperty(el, 'clientWidth', { value: width, configurable: true });
-    return el;
+    const element = document.createElement('div');
+    Object.defineProperty(element, 'clientWidth', { value: width, configurable: true });
+    return element;
   }
 
   it('marks a substantial image to fill the column and leaves a small one alone', () => {
-    const el = host(600);
+    const element = host(600);
     const big = document.createElement('img');
     const small = document.createElement('img');
-    el.append(big, small);
+    element.append(big, small);
     const widths = new Map<HTMLImageElement, number>([
       [big, 400],
       [small, 100],
     ]);
 
-    fitReaderImages(el, (img) => widths.get(img) ?? 0);
+    fitReaderImages(element, (img) => widths.get(img) ?? 0);
 
     expect(big.classList.contains('reader-fill')).toBe(true);
     expect(small.classList.contains('reader-fill')).toBe(false);
   });
 
   it('defers the decision until an unloaded image reports its natural size', () => {
-    const el = host(600);
+    const element = host(600);
     const img = document.createElement('img');
-    el.append(img);
+    element.append(img);
     let natural = 0;
 
-    fitReaderImages(el, () => natural);
+    fitReaderImages(element, () => natural);
     expect(img.classList.contains('reader-fill')).toBe(false);
 
     natural = 400;

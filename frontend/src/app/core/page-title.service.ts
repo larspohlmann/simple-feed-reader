@@ -90,8 +90,9 @@ function cutToTab(name: string): string {
   return `${name.slice(0, NAME_LIMIT)}…`;
 }
 
-function sameName(a: PageName, b: PageName): boolean {
-  if (a === null || b === null) return a === b;
-  if ('text' in a) return 'text' in b && a.text === b.text && a.count === b.count;
-  return 'key' in b && a.key === b.key;
+function sameName(left: PageName, right: PageName): boolean {
+  if (left === null || right === null) return left === right;
+  if ('text' in left)
+    return 'text' in right && left.text === right.text && left.count === right.count;
+  return 'key' in right && left.key === right.key;
 }

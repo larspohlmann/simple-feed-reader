@@ -108,8 +108,8 @@ export class LoginComponent implements OnInit, OnDestroy {
     const { email, password } = this.form.getRawValue();
     this.auth.login(email, password).subscribe({
       next: () => this.afterSignIn(),
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.login.failed'));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error).detail ?? this.i18n.translate('auth.login.failed'));
         this.loading.set(false);
       },
     });

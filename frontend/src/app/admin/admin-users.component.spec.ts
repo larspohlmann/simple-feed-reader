@@ -47,10 +47,10 @@ describe('AdminUsersComponent', () => {
         { provide: Dialog, useValue: { open: dialogOpen } },
       ],
     });
-    const f = TestBed.createComponent(AdminUsersComponent);
-    f.detectChanges(); // ngOnInit → initial list
+    const fixture = TestBed.createComponent(AdminUsersComponent);
+    fixture.detectChanges(); // ngOnInit → initial list
     ctrl = TestBed.inject(HttpTestingController);
-    return f;
+    return fixture;
   }
 
   beforeEach(() => {
@@ -61,35 +61,35 @@ describe('AdminUsersComponent', () => {
   afterEach(() => ctrl.verify());
 
   it('loads all users on init and renders rows', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1), user(2)] });
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).textContent).toContain('u1@x');
-    expect((f.nativeElement as HTMLElement).textContent).toContain('u2@x');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('u1@x');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('u2@x');
   });
 
   it('offers Approve+Reject for a pending user, and re-fetches after an action', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
-    f.detectChanges();
-    const c = f.componentInstance;
-    expect(c.canApprove(user(1))).toBe(true);
-    expect(c.canReject(user(1))).toBe(true);
-    expect(c.canSuspend(user(1))).toBe(false);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.canApprove(user(1))).toBe(true);
+    expect(component.canReject(user(1))).toBe(true);
+    expect(component.canSuspend(user(1))).toBe(false);
 
-    c.act(user(1), 'approve');
+    component.act(user(1), 'approve');
     ctrl.expectOne('https://api.test/api/admin/users/1/approve').flush({ status: 'active' });
     // action triggers a reload of the current filter:
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
   });
 
   it('keeps the loaded list and shows an inline error when an action fails', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
-    f.detectChanges();
-    const c = f.componentInstance;
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
 
-    c.act(user(1), 'approve');
+    component.act(user(1), 'approve');
     ctrl
       .expectOne('https://api.test/api/admin/users/1/approve')
       .flush(
@@ -99,28 +99,30 @@ describe('AdminUsersComponent', () => {
 
     // The failure surfaces on actionError (inline), NOT on error (which would
     // replace the whole list), and the rows survive.
-    expect(c.actionError()?.title).toBe('Gone');
-    expect(c.error()).toBeNull();
-    expect(c.users().length).toBe(1);
+    expect(component.actionError()?.title).toBe('Gone');
+    expect(component.error()).toBeNull();
+    expect(component.users().length).toBe(1);
 
-    f.detectChanges();
-    const dismiss = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    fixture.detectChanges();
+    const dismiss = fixture.nativeElement.querySelector(
+      '[role="alert"] button',
+    ) as HTMLButtonElement;
     expect(dismiss.textContent?.trim()).toBe('Dismiss');
     dismiss.click();
-    expect(c.actionError()).toBeNull();
+    expect(component.actionError()).toBeNull();
   });
 
   it('retries the load when the load-error banner action is clicked', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl
       .expectOne('https://api.test/api/admin/users')
       .flush(
         { type: 'about:blank', title: 'Down', status: 500 },
         { status: 500, statusText: 'Server Error' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const retry = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    const retry = fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
     expect(retry.textContent?.trim()).toBe('Retry');
     retry.click();
 
@@ -128,42 +130,43 @@ describe('AdminUsersComponent', () => {
   });
 
   it('offers only Suspend for an active user', () => {
-    const c = mount().componentInstance;
+    const component = mount().componentInstance;
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
     const active = user(1, { status: 'active' });
-    expect(c.canApprove(active)).toBe(false);
-    expect(c.canSuspend(active)).toBe(true);
-    expect(c.canReject(active)).toBe(false);
+    expect(component.canApprove(active)).toBe(false);
+    expect(component.canSuspend(active)).toBe(true);
+    expect(component.canReject(active)).toBe(false);
   });
 
   it('hides Reject/Suspend on the current admin’s own row', () => {
-    const c = mount(1).componentInstance;
+    const component = mount(1).componentInstance;
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
     const self = user(1, { status: 'active' });
-    expect(c.canSuspend(self)).toBe(false);
-    expect(c.canReject(user(1, { status: 'pending_approval' }))).toBe(false); // id 1 == self
+    expect(component.canSuspend(self)).toBe(false);
+    expect(component.canReject(user(1, { status: 'pending_approval' }))).toBe(false); // id 1 == self
   });
 
   it('changing the filter refetches with the status param', () => {
-    const c = mount().componentInstance;
+    const component = mount().componentInstance;
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
-    c.setFilter('suspended');
+    component.setFilter('suspended');
     ctrl
       .expectOne(
-        (r) =>
-          r.url === 'https://api.test/api/admin/users' && r.params.get('status') === 'suspended',
+        (request) =>
+          request.url === 'https://api.test/api/admin/users' &&
+          request.params.get('status') === 'suspended',
       )
       .flush({ users: [] });
   });
 
   it('suspends only after the confirm dialog is confirmed', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [user(1, { status: 'active' })],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
+    fixture.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
     expect(dialogOpen).toHaveBeenCalled();
     ctrl.expectNone('https://api.test/api/admin/users/1/suspend');
 
@@ -173,19 +176,19 @@ describe('AdminUsersComponent', () => {
   });
 
   it('does nothing when the confirm dialog is cancelled', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [user(1, { status: 'active' })],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
+    fixture.componentInstance.confirmThenAct(user(1, { status: 'active' }), 'suspend');
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/1/suspend');
   });
 
   it('shows the footprint counts and links each row to the detail page', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [
         user(1, {
@@ -196,36 +199,36 @@ describe('AdminUsersComponent', () => {
         }),
       ],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
     // Full rendered substrings, not bare numbers: a dropped or typo'd i18n key
     // (e.g. `admin.feedsLabel` → `admin.zzzA`) must fail this test.
-    const text = f.nativeElement.textContent as string;
+    const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('12 feeds');
     expect(text).toContain('3 tags');
 
-    const link = f.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
+    const link = fixture.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
     expect(link).not.toBeNull();
   });
 
   it('renders an account that never signed in as never', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [user(1, { status: 'active', feedsCount: 0, tagsCount: 0, lastLoginAt: null })],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.textContent).toContain('never');
+    expect(fixture.nativeElement.textContent).toContain('never');
   });
 
   it('does not run adjacent counts together in the rendered text', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [user(1, { status: 'active', feedsCount: 12, tagsCount: 3 })],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const text = f.nativeElement.textContent as string;
+    const text = fixture.nativeElement.textContent as string;
     expect(text).not.toContain('feeds3');
   });
 
@@ -252,44 +255,44 @@ describe('AdminUsersComponent', () => {
   });
 
   it("uses the openDetail translation as the row link's accessible name, alongside the email", () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const link = f.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
+    const link = fixture.nativeElement.querySelector('a[href="/settings/admin/users/1"]');
     const label = link.getAttribute('aria-label') as string;
     expect(label).toContain('u1@x');
     expect(label).toContain('View details');
   });
 
   it('shows skeleton rows instead of a spinner while the list loads', () => {
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-skeleton')).not.toBeNull();
-    expect(el.querySelector('app-spinner')).toBeNull();
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-skeleton')).not.toBeNull();
+    expect(element.querySelector('app-spinner')).toBeNull();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [] });
   });
 
   it('renders the queue as a settings group with its filters in the header', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({ users: [user(1)] });
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('app-settings-group')).not.toBeNull();
-    expect(el.querySelector('.g-head .filters')).not.toBeNull();
+    expect(element.querySelector('app-settings-group')).not.toBeNull();
+    expect(element.querySelector('.g-head .filters')).not.toBeNull();
   });
 
   it('flags a row whose trial has expired', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users').flush({
       users: [
         user(1, { trialEndsAt: new Date(Date.now() - 86_400_000).toISOString() }),
         user(2, { trialEndsAt: null }),
       ],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelectorAll('.trial-expired').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.trial-expired').length).toBe(1);
   });
 });

@@ -141,11 +141,11 @@ export class AddFeedDialogComponent implements OnInit {
     this.subscribe(this.form.getRawValue().url);
   }
 
-  pick(c: FeedCandidate): void {
+  pick(candidate: FeedCandidate): void {
     this.subscribe(
-      c.url,
-      this.storedFormat(c),
-      c.format === 'wp-json' ? (c.title ?? undefined) : undefined,
+      candidate.url,
+      this.storedFormat(candidate),
+      candidate.format === 'wp-json' ? (candidate.title ?? undefined) : undefined,
     );
   }
 
@@ -163,8 +163,10 @@ export class AddFeedDialogComponent implements OnInit {
   /** Formats the backend must persist verbatim (it cannot re-derive them by
    *  parsing): scraped pages and WordPress REST endpoints. Others re-run
    *  discovery, so they pass no format. */
-  private storedFormat(c: FeedCandidate): string | undefined {
-    return c.format === 'scraped' || c.format === 'wp-json' ? c.format : undefined;
+  private storedFormat(candidate: FeedCandidate): string | undefined {
+    return candidate.format === 'scraped' || candidate.format === 'wp-json'
+      ? candidate.format
+      : undefined;
   }
 
   private subscribe(url: string, format?: string, title?: string): void {
@@ -178,29 +180,29 @@ export class AddFeedDialogComponent implements OnInit {
     this.candidates.set([]);
     this.previews.set({});
     this.api.subscribe(url, format, [...this.checked()], title).subscribe({
-      next: (res) => {
+      next: (response) => {
         this.loading.set(false);
-        if ('subscription' in res) this.ref.close(res.subscription);
-        else if (res.scrapeFailureReason) {
-          this.failureReason.set(res.scrapeFailureReason);
+        if ('subscription' in response) this.ref.close(response.subscription);
+        else if (response.scrapeFailureReason) {
+          this.failureReason.set(response.scrapeFailureReason);
           this.searched.set(false);
         } else {
-          this.candidates.set(res.candidates);
+          this.candidates.set(response.candidates);
           this.searched.set(true);
           this.previews.set({});
           this.expanded.set(null);
           // Open the first candidate immediately so a preview is always in view
           // — discovery orders native feeds first, so the leading card is the
           // recommended one. The rest stay collapsed, fetching lazily.
-          if (res.candidates.length > 0) {
-            this.toggle(res.candidates[0]);
+          if (response.candidates.length > 0) {
+            this.toggle(response.candidates[0]);
           }
         }
       },
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         this.loading.set(false);
-        const p = parseProblem(e);
-        this.error.set(p.errors?.['url']?.[0] ?? p.detail ?? p.title);
+        const problem = parseProblem(error);
+        this.error.set(problem.errors?.['url']?.[0] ?? problem.detail ?? problem.title);
       },
     });
   }
@@ -211,17 +213,20 @@ export class AddFeedDialogComponent implements OnInit {
     if (this.previews()[candidate.url]) {
       return;
     }
-    this.previews.update((m) => ({ ...m, [candidate.url]: { status: 'loading' } }));
+    this.previews.update((previewsByUrl) => ({
+      ...previewsByUrl,
+      [candidate.url]: { status: 'loading' },
+    }));
     this.api.previewFeed(candidate.url, this.storedFormat(candidate)).subscribe({
-      next: (r) =>
-        this.previews.update((m) => ({
-          ...m,
-          [candidate.url]: { status: 'ok', preview: r.feed },
+      next: (response) =>
+        this.previews.update((previewsByUrl) => ({
+          ...previewsByUrl,
+          [candidate.url]: { status: 'ok', preview: response.feed },
         })),
-      error: (e: HttpErrorResponse) =>
-        this.previews.update((m) => ({
-          ...m,
-          [candidate.url]: { status: 'error', message: parseProblem(e).detail },
+      error: (error: HttpErrorResponse) =>
+        this.previews.update((previewsByUrl) => ({
+          ...previewsByUrl,
+          [candidate.url]: { status: 'error', message: parseProblem(error).detail },
         })),
     });
   }

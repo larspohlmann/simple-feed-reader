@@ -17,8 +17,8 @@ describe('WarningBoxComponent', () => {
   };
 
   it('renders its projected content', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    const box = el.querySelector('app-warning-box') as HTMLElement;
+    const element: HTMLElement = (await mount()).nativeElement;
+    const box = element.querySelector('app-warning-box') as HTMLElement;
     expect(box).not.toBeNull();
     expect(box.querySelector('.body')?.textContent).toBe('The preview ends here');
   });

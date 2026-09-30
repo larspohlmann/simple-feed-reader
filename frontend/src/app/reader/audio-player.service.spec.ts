@@ -19,8 +19,8 @@ class FakeAudio {
 
   private readonly listeners: Record<string, (() => void)[]> = {};
 
-  addEventListener(type: string, cb: () => void): void {
-    (this.listeners[type] ??= []).push(cb);
+  addEventListener(type: string, callback: () => void): void {
+    (this.listeners[type] ??= []).push(callback);
   }
 
   removeEventListener(): void {
@@ -28,7 +28,7 @@ class FakeAudio {
   }
 
   fire(type: string): void {
-    for (const cb of this.listeners[type] ?? []) cb();
+    for (const callback of this.listeners[type] ?? []) callback();
   }
 }
 

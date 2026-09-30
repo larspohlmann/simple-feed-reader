@@ -38,33 +38,35 @@ export const REQUEST_TOO_LARGE = 'request_too_large';
 /** Map any HttpErrorResponse to the backend's problem+json contract, with a
  *  fallback that names what the response contained when the body is missing
  *  or not problem+json (network errors, gateways, web-server pages). */
-export function parseProblem(err: HttpErrorResponse): Problem {
-  return problemFromBody(err.error, err.status) ?? fallbackProblem(err, responseText(err.error));
+export function parseProblem(error: HttpErrorResponse): Problem {
+  return (
+    problemFromBody(error.error, error.status) ?? fallbackProblem(error, responseText(error.error))
+  );
 }
 
 /** Read an error body that Angular delivered as a Blob before mapping it. */
-export async function parseProblemAsync(err: HttpErrorResponse): Promise<Problem> {
-  if (!(err.error instanceof Blob)) return parseProblem(err);
+export async function parseProblemAsync(error: HttpErrorResponse): Promise<Problem> {
+  if (!(error.error instanceof Blob)) return parseProblem(error);
 
-  const text = await err.error.text().catch(() => '');
-  return problemFromBody(parseJsonOrNull(text), err.status) ?? fallbackProblem(err, text);
+  const text = await error.error.text().catch(() => '');
+  return problemFromBody(parseJsonOrNull(text), error.status) ?? fallbackProblem(error, text);
 }
 
 function problemFromBody(body: unknown, status: number): Problem | null {
   if (!body || body instanceof Blob || typeof body !== 'object' || !('type' in body)) return null;
 
-  const b = body as Record<string, unknown>;
+  const fields = body as Record<string, unknown>;
   return {
-    type: String(b['type'] ?? 'about:blank'),
-    title: String(b['title'] ?? 'Request failed'),
-    status: typeof b['status'] === 'number' ? (b['status'] as number) : status,
-    detail: typeof b['detail'] === 'string' ? (b['detail'] as string) : undefined,
-    errors: (b['errors'] as Record<string, string[]> | undefined) ?? undefined,
+    type: String(fields['type'] ?? 'about:blank'),
+    title: String(fields['title'] ?? 'Request failed'),
+    status: typeof fields['status'] === 'number' ? (fields['status'] as number) : status,
+    detail: typeof fields['detail'] === 'string' ? (fields['detail'] as string) : undefined,
+    errors: (fields['errors'] as Record<string, string[]> | undefined) ?? undefined,
     accountStatus:
-      typeof b['accountStatus'] === 'string' ? (b['accountStatus'] as string) : undefined,
+      typeof fields['accountStatus'] === 'string' ? (fields['accountStatus'] as string) : undefined,
     invalidatedPasskeyCount:
-      typeof b['invalidatedPasskeyCount'] === 'number'
-        ? (b['invalidatedPasskeyCount'] as number)
+      typeof fields['invalidatedPasskeyCount'] === 'number'
+        ? (fields['invalidatedPasskeyCount'] as number)
         : undefined,
   };
 }
@@ -87,24 +89,24 @@ function responseText(body: unknown): string {
   return '';
 }
 
-function fallbackProblem(err: HttpErrorResponse, text: string): Problem {
-  if (err.status === 413) {
+function fallbackProblem(error: HttpErrorResponse, text: string): Problem {
+  if (error.status === 413) {
     return {
       type: REQUEST_TOO_LARGE,
       title: 'The file is too large for this server to accept',
-      status: err.status,
+      status: error.status,
     };
   }
-  if (err.status === 0) {
-    return { type: 'about:blank', title: 'Could not reach the server', status: err.status };
+  if (error.status === 0) {
+    return { type: 'about:blank', title: 'Could not reach the server', status: error.status };
   }
-  return { type: 'about:blank', title: unexpectedReplyTitle(err, text), status: err.status };
+  return { type: 'about:blank', title: unexpectedReplyTitle(error, text), status: error.status };
 }
 
-function unexpectedReplyTitle(err: HttpErrorResponse, text: string): string {
+function unexpectedReplyTitle(error: HttpErrorResponse, text: string): string {
   const pageTitle = htmlPageTitle(text);
   if (pageTitle === null) {
-    return `The server answered with an unexpected reply (HTTP ${err.status}).`;
+    return `The server answered with an unexpected reply (HTTP ${error.status}).`;
   }
 
   return `The web server answered "${pageTitle}" instead of the app. Try again in a minute.`;

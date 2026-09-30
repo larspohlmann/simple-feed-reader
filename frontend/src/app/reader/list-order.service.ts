@@ -43,6 +43,6 @@ function parsedJson(stored: string | null): unknown {
   }
 }
 
-function sameViewKeys(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  return a.size === b.size && [...a].every((key) => b.has(key));
+function sameViewKeys(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  return left.size === right.size && [...left].every((key) => right.has(key));
 }

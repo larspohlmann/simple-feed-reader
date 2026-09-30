@@ -19,14 +19,16 @@ export class TagsStore {
     this.loading.set(true);
     this.error.set(null);
     this.api.tags().subscribe({
-      next: (r) => {
+      next: (response) => {
         this.tags.set(
-          [...r.tags].sort((a, b) => a.position - b.position || a.name.localeCompare(b.name)),
+          [...response.tags].sort(
+            (left, right) => left.position - right.position || left.name.localeCompare(right.name),
+          ),
         );
         this.loading.set(false);
       },
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error));
         this.loading.set(false);
       },
     });

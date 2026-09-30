@@ -154,7 +154,9 @@ describe('RecommendationSettingsCardComponent', () => {
     const fixture = mount();
 
     const grid = fixture.nativeElement.querySelector('details .expert-grid') as HTMLElement;
-    const labels = Array.from(grid.querySelectorAll('label')).map((el) => el.textContent?.trim());
+    const labels = Array.from(grid.querySelectorAll('label')).map((element) =>
+      element.textContent?.trim(),
+    );
     expect(labels).toEqual(
       expect.arrayContaining([
         expect.stringContaining('Favorites in history'),
@@ -561,7 +563,7 @@ describe('RecommendationSettingsCardComponent', () => {
     const triggers = Array.from(
       grid.querySelectorAll('app-info-tip button.trigger'),
     ) as HTMLButtonElement[];
-    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+    expect(triggers.map((element) => element.getAttribute('aria-label'))).toEqual([
       'Favorites in history',
       'Kept in history',
       'Viewed in history',
@@ -574,9 +576,9 @@ describe('RecommendationSettingsCardComponent', () => {
   it('shows the persisted preference profile read-only when present', () => {
     const fixture = mount({ ...STATE, profileText: 'Likes self-hosted tooling and Rust.' });
 
-    const el = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
-    expect(el?.textContent).toContain('Likes self-hosted tooling and Rust.');
-    expect(el?.querySelector('textarea')).toBeNull();
+    const element = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
+    expect(element?.textContent).toContain('Likes self-hosted tooling and Rust.');
+    expect(element?.querySelector('textarea')).toBeNull();
   });
 
   it('hides the profile block when no profile has been generated yet', () => {
@@ -594,7 +596,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
       fixture.componentInstance.confirmPurge();
 
-      http.expectNone((r) => r.method === 'DELETE');
+      http.expectNone((request) => request.method === 'DELETE');
     });
 
     it('purges, refreshes the recommendation status and shows the confirmation line', () => {

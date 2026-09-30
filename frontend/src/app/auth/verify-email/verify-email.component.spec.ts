@@ -17,28 +17,30 @@ function setup(token: string | null) {
       { provide: ActivatedRoute, useValue: { queryParamMap: of({ get: () => token }) } },
     ],
   });
-  const f = TestBed.createComponent(VerifyEmailComponent);
+  const fixture = TestBed.createComponent(VerifyEmailComponent);
   // Run init logic without rendering the template: the error/ok branches embed
   // <a routerLink="/login">, which would require a fully-configured Router this
   // spec deliberately does not provide. Assertions target signals only.
-  f.componentInstance.ngOnInit();
-  return { f, ctrl: TestBed.inject(HttpTestingController) };
+  fixture.componentInstance.ngOnInit();
+  return { fixture, controller: TestBed.inject(HttpTestingController) };
 }
 
 describe('VerifyEmailComponent', () => {
   it('posts the token and reports success', () => {
-    const { f, ctrl } = setup('tok-123');
-    ctrl
+    const { fixture, controller } = setup('tok-123');
+    controller
       .expectOne(
-        (r) => r.url === 'https://api.test/api/auth/verify-email' && r.body.token === 'tok-123',
+        (request) =>
+          request.url === 'https://api.test/api/auth/verify-email' &&
+          request.body.token === 'tok-123',
       )
       .flush({});
-    expect(f.componentInstance.state()).toBe('ok');
+    expect(fixture.componentInstance.state()).toBe('ok');
   });
 
   it('reports error when the token is missing', () => {
-    const { f, ctrl } = setup(null);
-    ctrl.expectNone('https://api.test/api/auth/verify-email');
-    expect(f.componentInstance.state()).toBe('error');
+    const { fixture, controller } = setup(null);
+    controller.expectNone('https://api.test/api/auth/verify-email');
+    expect(fixture.componentInstance.state()).toBe('error');
   });
 });

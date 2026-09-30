@@ -20,9 +20,9 @@ export function downloadOpmlExport(
       exporting.set(false);
       saveAs(new Blob([xml], { type: 'text/x-opml' }), 'feeds.opml');
     },
-    error: (e: HttpErrorResponse) => {
+    error: (httpError: HttpErrorResponse) => {
       exporting.set(false);
-      error.set(parseProblem(e));
+      error.set(parseProblem(httpError));
     },
   });
 }

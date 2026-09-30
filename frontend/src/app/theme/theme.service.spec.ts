@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { ThemeService } from './theme.service';
 
 describe('ThemeService', () => {
-  const attr = () => document.documentElement.getAttribute('data-theme');
+  const attribute = () => document.documentElement.getAttribute('data-theme');
   let mql: { matches: boolean; addEventListener: jest.Mock };
 
   beforeEach(() => {
@@ -14,48 +14,48 @@ describe('ThemeService', () => {
   });
 
   it('defaults to the system preference when nothing is saved (light)', () => {
-    const svc = TestBed.inject(ThemeService);
-    expect(svc.mode()).toBe('system');
-    expect(attr()).toBe('light');
+    const service = TestBed.inject(ThemeService);
+    expect(service.mode()).toBe('system');
+    expect(attribute()).toBe('light');
   });
 
   it('resolves system=dark from prefers-color-scheme', () => {
     mql.matches = true;
     TestBed.inject(ThemeService);
-    expect(attr()).toBe('dark');
+    expect(attribute()).toBe('dark');
   });
 
   it('applies and persists an explicit choice', () => {
-    const svc = TestBed.inject(ThemeService);
-    svc.setMode('dark');
-    expect(attr()).toBe('dark');
+    const service = TestBed.inject(ThemeService);
+    service.setMode('dark');
+    expect(attribute()).toBe('dark');
     expect(localStorage.getItem('sfr.theme')).toBe('dark');
   });
 
   it('a saved choice wins over system on construction', () => {
     localStorage.setItem('sfr.theme', 'dark');
     TestBed.inject(ThemeService);
-    expect(attr()).toBe('dark');
+    expect(attribute()).toBe('dark');
   });
 
   it('exposes the resolved theme as a signal', () => {
-    const svc = TestBed.inject(ThemeService);
-    expect(isSignal(svc.resolved)).toBe(true);
-    expect(svc.resolved()).toBe('light');
+    const service = TestBed.inject(ThemeService);
+    expect(isSignal(service.resolved)).toBe(true);
+    expect(service.resolved()).toBe('light');
 
-    svc.setMode('dark');
+    service.setMode('dark');
 
-    expect(svc.resolved()).toBe('dark');
+    expect(service.resolved()).toBe('dark');
   });
 
   it('re-resolves when the OS scheme flips under system mode', () => {
-    const svc = TestBed.inject(ThemeService);
+    const service = TestBed.inject(ThemeService);
     mql.matches = true;
     const onChange = mql.addEventListener.mock.calls[0][1] as () => void;
 
     onChange();
 
-    expect(svc.resolved()).toBe('dark');
-    expect(attr()).toBe('dark');
+    expect(service.resolved()).toBe('dark');
+    expect(attribute()).toBe('dark');
   });
 });

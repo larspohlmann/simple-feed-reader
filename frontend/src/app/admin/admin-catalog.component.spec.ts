@@ -90,9 +90,11 @@ describe('AdminCatalogComponent', () => {
     const fixture = mountLoaded();
     fixture.nativeElement.querySelector('[data-testid="refresh-favicon"]').click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10/favicon');
-    expect(req.request.method).toBe('POST');
-    req.flush({ feed: { ...PAYLOAD.feeds[0], faviconFetchedAt: '2026-07-26T10:00:00+00:00' } });
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/10/favicon');
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush({
+      feed: { ...PAYLOAD.feeds[0], faviconFetchedAt: '2026-07-26T10:00:00+00:00' },
+    });
   });
 
   it('imports the bundled document without transferring a file', () => {
@@ -104,9 +106,9 @@ describe('AdminCatalogComponent', () => {
 
     button.click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled');
-    expect(req.request.body).toEqual({ mode: 'merge' });
-    req.flush({
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/import/bundled');
+    expect(testRequest.request.body).toEqual({ mode: 'merge' });
+    testRequest.flush({
       categoriesCreated: 13,
       categoriesUpdated: 0,
       categoriesRemoved: 0,
@@ -226,9 +228,9 @@ describe('AdminCatalogComponent', () => {
 
     fixture.nativeElement.querySelector('[data-testid="import-run"]').click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/import');
-    expect(req.request.body).toEqual({ mode: 'replace', document });
-    req.flush({
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/import');
+    expect(testRequest.request.body).toEqual({ mode: 'replace', document });
+    testRequest.flush({
       categoriesCreated: 0,
       categoriesUpdated: 0,
       categoriesRemoved: 1,
@@ -254,8 +256,8 @@ describe('AdminCatalogComponent', () => {
     fixture.detectChanges();
 
     const alerts = fixture.nativeElement.querySelectorAll('[role="alert"]');
-    const importAlert = Array.from(alerts).find((el) =>
-      (el as HTMLElement).textContent?.includes('Malformed document'),
+    const importAlert = Array.from(alerts).find((element) =>
+      (element as HTMLElement).textContent?.includes('Malformed document'),
     ) as HTMLElement | undefined;
     expect(importAlert).toBeDefined();
     expect(importAlert!.querySelector('button')).toBeNull();
@@ -276,7 +278,7 @@ describe('AdminCatalogComponent', () => {
       enabled: true,
       locked: false,
     });
-    expect(fixture.componentInstance.categories().some((c) => c.id === 9)).toBe(true);
+    expect(fixture.componentInstance.categories().some((category) => category.id === 9)).toBe(true);
   });
 
   it('ignores a cancelled dialog', () => {
@@ -355,9 +357,9 @@ describe('AdminCatalogComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('app-skeleton')).not.toBeNull();
-    expect(el.querySelector('app-spinner')).toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-skeleton')).not.toBeNull();
+    expect(element.querySelector('app-spinner')).toBeNull();
 
     ctrl.expectOne('https://api.test/api/admin/catalog').flush(PAYLOAD);
     ctrl
@@ -374,9 +376,9 @@ describe('AdminCatalogComponent', () => {
   // block; sharing the loaded @else with the category list would strand it
   // in the default slot (NG8011).
   it('projects the add-category button into the group header, not the panel', () => {
-    const el: HTMLElement = mountLoaded().nativeElement;
-    expect(el.querySelector('.g-actions [data-testid="add-category"]')).not.toBeNull();
-    expect(el.querySelector('.panel [data-testid="add-category"]')).toBeNull();
+    const element: HTMLElement = mountLoaded().nativeElement;
+    expect(element.querySelector('.g-actions [data-testid="add-category"]')).not.toBeNull();
+    expect(element.querySelector('.panel [data-testid="add-category"]')).toBeNull();
   });
 
   // openCategoryDialog has no loading/error guard of its own, so the button
@@ -397,8 +399,8 @@ describe('AdminCatalogComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
 
-    const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[data-testid="add-category"]')).toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[data-testid="add-category"]')).toBeNull();
 
     ctrl
       .expectOne('https://api.test/api/admin/catalog')
@@ -411,6 +413,6 @@ describe('AdminCatalogComponent', () => {
       .flush({ available: false, categories: 0, feeds: 0 });
     fixture.detectChanges();
 
-    expect(el.querySelector('[data-testid="add-category"]')).toBeNull();
+    expect(element.querySelector('[data-testid="add-category"]')).toBeNull();
   });
 });

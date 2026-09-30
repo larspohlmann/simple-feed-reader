@@ -130,7 +130,7 @@ export class AboutSectionComponent implements OnInit {
     const ranked = this.subscriptions
       .subscriptions()
       .filter((subscription) => subscription.unreadCount > 0)
-      .sort((a, b) => b.unreadCount - a.unreadCount)
+      .sort((left, right) => right.unreadCount - left.unreadCount)
       .slice(0, TOP_FEEDS);
 
     return this.toBars(
@@ -147,7 +147,9 @@ export class AboutSectionComponent implements OnInit {
     if (activity === null) {
       return [];
     }
-    const byFeedId = new Map(this.subscriptions.subscriptions().map((s) => [s.feedId, s]));
+    const byFeedId = new Map(
+      this.subscriptions.subscriptions().map((subscription) => [subscription.feedId, subscription]),
+    );
 
     // The backend already ranks by read count; an orphaned feed the user has
     // since unsubscribed from has no subscription to link to, so it is dropped.

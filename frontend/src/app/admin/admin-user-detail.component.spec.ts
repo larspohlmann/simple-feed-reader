@@ -87,10 +87,10 @@ describe('AdminUserDetailComponent', () => {
         { provide: ActivatedRoute, useValue: { paramMap: of({ get: () => id }) } },
       ],
     });
-    const f = TestBed.createComponent(AdminUserDetailComponent);
+    const fixture = TestBed.createComponent(AdminUserDetailComponent);
     ctrl = TestBed.inject(HttpTestingController);
-    f.detectChanges();
-    return f;
+    fixture.detectChanges();
+    return fixture;
   }
 
   beforeEach(() => {
@@ -101,16 +101,16 @@ describe('AdminUserDetailComponent', () => {
   afterEach(() => ctrl.verify());
 
   it('renders the identity, activity and footprint fields in their own labelled slots', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('h2')?.textContent).toContain('detailed@example.com');
+    expect(element.querySelector('h2')?.textContent).toContain('detailed@example.com');
 
     // Account card: status and roles are two DISTINCT dt/dd pairs, not one
     // pair carrying both — a status-as-term regression collapses them.
-    const accountDds = el.querySelectorAll('.card.account dd');
+    const accountDds = element.querySelectorAll('.card.account dd');
     expect(accountDds[0]?.textContent?.trim()).toBe('Active');
     expect(accountDds[1]?.textContent?.trim()).toBe('ROLE_USER');
     expect(accountDds[2]?.textContent?.trim()).toBe('en');
@@ -130,25 +130,25 @@ describe('AdminUserDetailComponent', () => {
 
     // Activity card: a present login next to an absent refresh — proves the
     // two date fields, and their "never" fallbacks, are not interchangeable.
-    const activityDds = el.querySelectorAll('.card.activity dd');
+    const activityDds = element.querySelectorAll('.card.activity dd');
     expect(activityDds[0]?.textContent?.trim()).toBe('July 29, 2026');
     expect(activityDds[1]?.textContent?.trim()).toBe('never');
-    expect(el.querySelector('.card.activity .flag')).toBeNull();
+    expect(element.querySelector('.card.activity .flag')).toBeNull();
 
     // Footprint card: feedsCount (2) and tagsCount (1) are different numbers
     // on purpose, so a swap between them is visible.
-    const footprintPs = el.querySelectorAll('.card.footprint p');
+    const footprintPs = element.querySelectorAll('.card.footprint p');
     expect(footprintPs[0]?.textContent?.trim()).toBe('2 of 500 feeds');
     expect(footprintPs[1]?.textContent?.trim()).toBe('1 tags');
     expect(footprintPs[2]?.textContent?.trim()).toBe('1 not refreshed recently');
-    expect(el.textContent).toContain('Limits');
-    expect(el.textContent).toContain('No trial');
+    expect(element.textContent).toContain('Limits');
+    expect(element.textContent).toContain('No trial');
 
     // The feed row: name, tag chip and a labelled, non-dash freshness date.
     // The label must be real (visually hidden) TEXT in the accessible content
     // — not an aria-label/title attribute on a plain <span>, which ARIA
     // forbids naming (role=generic) and most screen readers ignore.
-    const feedRow = el.querySelector('.rows li.feed') as HTMLElement;
+    const feedRow = element.querySelector('.rows li.feed') as HTMLElement;
     expect(feedRow.querySelector('.name')?.textContent).toContain('Ars Technica');
     expect(feedRow.querySelector('.chip')?.textContent).toContain('Tech');
     const freshness = feedRow.querySelector('.count') as HTMLElement;
@@ -159,11 +159,11 @@ describe('AdminUserDetailComponent', () => {
 
   it('renders dormant only when the server says so', () => {
     const dormantDetail = { ...detail, footprint: { ...detail.footprint, dormant: true } };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(dormantDetail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const flag = f.nativeElement.querySelector('.card.activity .flag');
+    const flag = fixture.nativeElement.querySelector('.card.activity .flag');
     expect(flag).not.toBeNull();
     expect(flag.textContent).toContain('Dormant');
   });
@@ -173,11 +173,11 @@ describe('AdminUserDetailComponent', () => {
       ...detail,
       subscriptions: [{ ...detail.subscriptions[0], lastFetchedAt: null }],
     };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(neverFetched);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const freshness = f.nativeElement.querySelector('.rows li.feed .count') as HTMLElement;
+    const freshness = fixture.nativeElement.querySelector('.rows li.feed .count') as HTMLElement;
     const normalised = freshness.textContent?.replace(/\s+/g, ' ').trim();
     expect(normalised).toBe('Last refresh: never');
     expect(normalised).not.toContain('—');
@@ -185,11 +185,11 @@ describe('AdminUserDetailComponent', () => {
 
   it('renders "never" instead of a dash when the account has not yet been approved', () => {
     const neverApproved = { ...detail, user: { ...detail.user, approvedAt: null } };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(neverApproved);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const approvedDd = f.nativeElement.querySelectorAll('.card.account dd')[4] as HTMLElement;
+    const approvedDd = fixture.nativeElement.querySelectorAll('.card.account dd')[4] as HTMLElement;
     expect(approvedDd.textContent?.trim()).toBe('never');
     expect(approvedDd.textContent?.trim()).not.toBe('—');
   });
@@ -206,11 +206,11 @@ describe('AdminUserDetailComponent', () => {
         },
       ],
     };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(untitled);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const name = f.nativeElement.querySelector('.rows li.feed .name') as HTMLElement;
+    const name = fixture.nativeElement.querySelector('.rows li.feed .name') as HTMLElement;
     expect(name.textContent?.trim()).toBe('https://example.test/never-fetched.xml');
   });
 
@@ -219,11 +219,11 @@ describe('AdminUserDetailComponent', () => {
       ...detail,
       subscriptions: [{ ...detail.subscriptions[0], customTitle: 'My Ars Feed' }],
     };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(renamed);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('.rows li.feed') as HTMLElement;
     expect(row.querySelector('.name')?.textContent?.trim()).toBe('My Ars Feed');
     // The real feed title must still be visible somewhere in the row — not
     // just carried in data and dropped from the render, which is the bug
@@ -232,36 +232,36 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('does not render an "original title" row when the feed has no custom title', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('.rows li.feed') as HTMLElement;
     expect(row.querySelector('.original')).toBeNull();
   });
 
   it('renders the subscribed-on date for every feed row', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const row = f.nativeElement.querySelector('.rows li.feed') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('.rows li.feed') as HTMLElement;
     const subscribed = row.querySelector('.subscribed') as HTMLElement;
     // subscriptions[0].createdAt is 2026-02-01T09:00:00+00:00 in the fixture.
     expect(subscribed.textContent).toContain('February 1, 2026');
   });
 
   it("renders a subscription's tag chip with the tag's own icon, matching the Tags list above it", () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
     // Both the Tags-list glyph and the feed-row chip glyph must render the
     // icon (a <span class="material-symbols-outlined">memory</span>), not a
     // plain colour dot — they describe the same tag and must look the same.
-    const tagsListGlyph = el.querySelector('.rows li .material-symbols-outlined');
-    const feedChipGlyph = el.querySelector('.rows li.feed .chip .material-symbols-outlined');
+    const tagsListGlyph = element.querySelector('.rows li .material-symbols-outlined');
+    const feedChipGlyph = element.querySelector('.rows li.feed .chip .material-symbols-outlined');
     expect(tagsListGlyph?.textContent?.trim()).toBe('memory');
     expect(feedChipGlyph?.textContent?.trim()).toBe('memory');
   });
@@ -278,51 +278,51 @@ describe('AdminUserDetailComponent', () => {
         { ...detail.subscriptions[0], id: 6, title: 'Aardvark Weekly', tags: [] },
       ],
     };
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(scrambled);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
     // Neither name is alphabetically first in both lists at once, so a stray
     // sort — or a reversal — of either list changes what is asserted here.
-    const tagNames = Array.from(el.querySelectorAll('.rows li .name')).map((n) =>
-      n.textContent?.trim(),
+    const tagNames = Array.from(element.querySelectorAll('.rows li .name')).map((node) =>
+      node.textContent?.trim(),
     );
     expect(tagNames[0]).toBe('Zulu');
     expect(tagNames[1]).toBe('Anemone');
 
-    const feedNames = Array.from(el.querySelectorAll('.rows li.feed .name')).map((n) =>
-      n.textContent?.trim(),
+    const feedNames = Array.from(element.querySelectorAll('.rows li.feed .name')).map((node) =>
+      node.textContent?.trim(),
     );
     expect(feedNames[0]).toBe('Second Shelf');
     expect(feedNames[1]).toBe('Aardvark Weekly');
   });
 
   it('renders empty states when the account has no tags and no feeds', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       footprint: { ...detail.footprint, feedsCount: 0, tagsCount: 0 },
       tags: [],
       subscriptions: [],
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const text = f.nativeElement.textContent as string;
+    const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('This account has no tags.');
     expect(text).toContain('This account has no feeds.');
   });
 
   it('shows an active trial with the days remaining', () => {
     const trialEndsAt = new Date(Date.now() + 5 * 86_400_000).toISOString();
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       limits: { ...detail.limits, trialEndsAt },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const line = f.nativeElement.querySelector('[data-testid="trial-status"]') as HTMLElement;
+    const line = fixture.nativeElement.querySelector('[data-testid="trial-status"]') as HTMLElement;
     // Pinned to the exact interpolated fragment, not a bare "5" — the
     // footprint card also renders "2 of 500 feeds", and toContain('5') would
     // pass off that "500" alone, hiding an off-by-one in trialDaysLeft().
@@ -331,81 +331,83 @@ describe('AdminUserDetailComponent', () => {
 
   it('shows that a suspended account was ended by its trial', () => {
     const trialEndsAt = new Date(Date.now() - 86_400_000).toISOString();
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       user: { ...detail.user, status: 'suspended' },
       limits: { ...detail.limits, trialEndsAt },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const flagLine = f.nativeElement.querySelector('.card.footprint .flag') as HTMLElement;
+    const flagLine = fixture.nativeElement.querySelector('.card.footprint .flag') as HTMLElement;
     expect(flagLine).not.toBeNull();
     expect(flagLine.textContent).toContain('Suspended');
     expect(flagLine.textContent).toContain('trial ended');
   });
 
   it('starts a trial through the API', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const daysInput = f.nativeElement.querySelectorAll(
+    const daysInput = fixture.nativeElement.querySelectorAll(
       '.limit-control input[type="number"]',
     )[0] as HTMLInputElement;
     daysInput.value = '30';
     daysInput.dispatchEvent(new Event('input'));
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const startButton = Array.from(f.nativeElement.querySelectorAll('.limit-control button')).find(
-      (b) => (b as HTMLElement).textContent?.trim() === 'Start trial',
+    const startButton = Array.from(
+      fixture.nativeElement.querySelectorAll('.limit-control button'),
+    ).find(
+      (button) => (button as HTMLElement).textContent?.trim() === 'Start trial',
     ) as HTMLButtonElement;
     startButton.click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/users/7/trial');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ days: 30 });
-    req.flush({ status: 'active', trialEndsAt: null });
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/users/7/trial');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({ days: 30 });
+    testRequest.flush({ status: 'active', trialEndsAt: null });
 
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
   it('saves a max-feeds override through the API', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const maxFeedsInput = f.nativeElement.querySelectorAll(
+    const maxFeedsInput = fixture.nativeElement.querySelectorAll(
       '.limit-control input[type="number"]',
     )[1] as HTMLInputElement;
     maxFeedsInput.value = '42';
     maxFeedsInput.dispatchEvent(new Event('input'));
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const saveButton = Array.from(f.nativeElement.querySelectorAll('.limit-control button')).find(
-      (b) => (b as HTMLElement).textContent?.trim() === 'Save',
-    ) as HTMLButtonElement;
+    const saveButton = Array.from(
+      fixture.nativeElement.querySelectorAll('.limit-control button'),
+    ).find((button) => (button as HTMLElement).textContent?.trim() === 'Save') as HTMLButtonElement;
     saveButton.click();
 
-    const req = ctrl.expectOne('https://api.test/api/admin/users/7/subscription-limit');
-    expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ maxSubscriptions: 42 });
-    req.flush({ maxSubscriptions: 42 });
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/users/7/subscription-limit');
+    expect(testRequest.request.method).toBe('PUT');
+    expect(testRequest.request.body).toEqual({ maxSubscriptions: 42 });
+    testRequest.flush({ maxSubscriptions: 42 });
 
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
   it('formats every date in the active UI language via Intl, not a fixed locale', () => {
-    const f = mount(99, '7', 'de');
+    const fixture = mount(99, '7', 'de');
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
-    const accountDds = el.querySelectorAll('.card.account dd');
+    const accountDds = element.querySelectorAll('.card.account dd');
     expect(accountDds[3]?.textContent).toContain('1. Januar 2026');
     expect(accountDds[3]?.textContent).toContain('vor');
     expect(accountDds[4]?.textContent?.trim()).toBe('2. Januar 2026');
-    const activityDds = el.querySelectorAll('.card.activity dd');
+    const activityDds = element.querySelectorAll('.card.activity dd');
     expect(activityDds[0]?.textContent?.trim()).toBe('29. Juli 2026');
     // The German "never" is a different string from the English one, so this
     // also proves the fallback branch (not just formatDate) follows the
@@ -414,31 +416,31 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('shows an error banner instead of a blank screen when the account does not exist', () => {
-    const f = mount(99, '404404');
+    const fixture = mount(99, '404404');
     ctrl
       .expectOne('https://api.test/api/admin/users/404404')
       .flush(
         { type: 'about:blank', title: 'Not found', status: 404 },
         { status: 404, statusText: 'Not Found' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const text = f.nativeElement.textContent as string;
+    const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Not found');
-    expect(f.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).not.toBeNull();
   });
 
   it('retries the load when the load-error banner action is clicked', () => {
-    const f = mount(99, '404404');
+    const fixture = mount(99, '404404');
     ctrl
       .expectOne('https://api.test/api/admin/users/404404')
       .flush(
         { type: 'about:blank', title: 'Not found', status: 404 },
         { status: 404, statusText: 'Not Found' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const retry = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    const retry = fixture.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
     expect(retry.textContent?.trim()).toBe('Retry');
     retry.click();
 
@@ -446,73 +448,75 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('dismisses the action-error banner when its action is clicked', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       user: { ...detail.user, status: 'pending_approval' },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.act('approve');
+    fixture.componentInstance.act('approve');
     ctrl
       .expectOne('https://api.test/api/admin/users/7/approve')
       .flush(
         { type: 'about:blank', title: 'Gone', status: 422 },
         { status: 422, statusText: 'Unprocessable' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const dismiss = f.nativeElement.querySelector('[role="alert"] button') as HTMLButtonElement;
+    const dismiss = fixture.nativeElement.querySelector(
+      '[role="alert"] button',
+    ) as HTMLButtonElement;
     expect(dismiss.textContent?.trim()).toBe('Dismiss');
     dismiss.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelector('[role="alert"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[role="alert"]')).toBeNull();
   });
 
   it('offers Approve and Reject for a pending account, and reloads after approving', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       user: { ...detail.user, status: 'pending_approval' },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
     // The badge tracks the real status, not a value hardcoded from the other
     // fixture (which is 'active') -- a static badge would still pass every
     // other assertion in this file.
-    const statusBadge = f.nativeElement.querySelector('.card.account .badge') as HTMLElement;
+    const statusBadge = fixture.nativeElement.querySelector('.card.account .badge') as HTMLElement;
     expect(statusBadge.getAttribute('data-s')).toBe('pending_approval');
 
-    const approveButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
-      (b) => (b as HTMLElement).textContent?.trim() === 'Approve',
+    const approveButton = Array.from(fixture.nativeElement.querySelectorAll('.acts button')).find(
+      (button) => (button as HTMLElement).textContent?.trim() === 'Approve',
     ) as HTMLButtonElement | undefined;
     expect(approveButton).toBeDefined();
 
-    f.componentInstance.act('approve');
+    fixture.componentInstance.act('approve');
     ctrl.expectOne('https://api.test/api/admin/users/7/approve').flush({ status: 'active' });
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
   it("hides every status action on the admin's own row, even though the DOM would otherwise show one", () => {
-    const f = mount(7); // currentId === detail.user.id, status 'active'
+    const fixture = mount(7); // currentId === detail.user.id, status 'active'
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.querySelectorAll('.acts button').length).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('.acts button').length).toBe(0);
   });
 
   it('suspends only after the confirm dialog is confirmed, for an account that is not the admin', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const suspendButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
-      (b) => (b as HTMLElement).textContent?.trim() === 'Suspend',
+    const suspendButton = Array.from(fixture.nativeElement.querySelectorAll('.acts button')).find(
+      (button) => (button as HTMLElement).textContent?.trim() === 'Suspend',
     ) as HTMLButtonElement | undefined;
     expect(suspendButton).toBeDefined();
 
-    f.componentInstance.confirmThenAct('suspend');
+    fixture.componentInstance.confirmThenAct('suspend');
     expect(dialogOpen).toHaveBeenCalled();
     ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
 
@@ -522,40 +526,40 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('does nothing when the confirm dialog is cancelled', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.confirmThenAct('suspend');
+    fixture.componentInstance.confirmThenAct('suspend');
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/7/suspend');
   });
 
   it('offers Delete in the action row for a rejected account', () => {
-    const f = mount();
+    const fixture = mount();
     // 'rejected' leaves canApprove() true (status !== 'active'), so this also
     // proves Delete does not depend on any one status action being offered.
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       user: { ...detail.user, status: 'rejected' },
     });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const deleteButton = Array.from(f.nativeElement.querySelectorAll('.acts button')).find(
-      (b) => (b as HTMLElement).textContent?.trim() === 'Delete account',
+    const deleteButton = Array.from(fixture.nativeElement.querySelectorAll('.acts button')).find(
+      (button) => (button as HTMLElement).textContent?.trim() === 'Delete account',
     ) as HTMLButtonElement | undefined;
     expect(deleteButton).toBeDefined();
   });
 
   it('deletes the account and returns to the user list once confirmed', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
     const router = TestBed.inject(Router);
     const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
     dialogClosed.next(true);
 
     const request = ctrl.expectOne('https://api.test/api/admin/users/7');
@@ -566,11 +570,11 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('passes the account email as the required confirmation text', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
 
     // dialogOpen is declared with a no-argument implementation above (it only
     // needs to return `{ closed }` for every other test), so its inferred
@@ -582,46 +586,48 @@ describe('AdminUserDetailComponent', () => {
   });
 
   it('does not delete the account when the confirm dialog is cancelled', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
     dialogClosed.next(false);
     ctrl.expectNone('https://api.test/api/admin/users/7');
   });
 
   it('shows skeleton rows instead of a spinner while the account loads', () => {
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-skeleton')).not.toBeNull();
-    expect(el.querySelector('app-spinner')).toBeNull();
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-skeleton')).not.toBeNull();
+    expect(element.querySelector('app-spinner')).toBeNull();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
   });
 
   it('renders the user, their tags and their feeds as three settings groups', () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush(detail);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelectorAll('app-settings-group').length).toBe(3);
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll('app-settings-group').length,
+    ).toBe(3);
   });
 
   it("projects the account actions into the group's header, not its panel", () => {
-    const f = mount();
+    const fixture = mount();
     ctrl.expectOne('https://api.test/api/admin/users/7').flush({
       ...detail,
       user: { ...detail.user, status: 'pending_approval' },
     });
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
 
     // `groupActions` only projects from a direct child of app-settings-group:
     // one `@if` level deep is tolerated, two silently drop the content out of
     // `.g-head` and into the panel instead. Asserting the buttons live inside
     // `.g-head .acts` -- not merely that `.acts` exists somewhere on the page
     // -- is what catches that regression.
-    const actionsInHead = el.querySelectorAll('.g-head .acts app-button');
+    const actionsInHead = element.querySelectorAll('.g-head .acts app-button');
     expect(actionsInHead.length).toBeGreaterThan(0);
-    expect(el.querySelector('.g-head .acts')?.textContent).toContain('Approve');
+    expect(element.querySelector('.g-head .acts')?.textContent).toContain('Approve');
   });
 });

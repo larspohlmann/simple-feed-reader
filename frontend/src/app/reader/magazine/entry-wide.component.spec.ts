@@ -43,42 +43,44 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
+function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryWideComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryWideComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryWideComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntryWideComponent', () => {
   it('renders a full-width image and the title, but no snippet', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('img.img')).not.toBeNull();
-    expect(el.textContent).toContain('A medium headline');
-    expect(el.textContent).not.toContain('A meaningful summary.');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('img.img')).not.toBeNull();
+    expect(element.textContent).toContain('A medium headline');
+    expect(element.textContent).not.toContain('A meaningful summary.');
   });
 
   it('emits open on click', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     let opened: EntryDto | null = null;
-    entryActions.open.mockImplementation((e: EntryDto) => (opened = e));
-    (f.nativeElement as HTMLElement).querySelector('article')!.dispatchEvent(new Event('click'));
+    entryActions.open.mockImplementation((openedEntry: EntryDto) => (opened = openedEntry));
+    (fixture.nativeElement as HTMLElement)
+      .querySelector('article')!
+      .dispatchEvent(new Event('click'));
     expect(opened).not.toBeNull();
   });
 
   it('carries the three actions on its meta row', () => {
-    const f = mount(entry());
-    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
-      3,
-    );
+    const fixture = mount(entry());
+    expect(
+      fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
+    ).toBe(3);
 
     const read = jest.fn();
     entryActions.toggleRead.mockImplementation(read);
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[2] as HTMLElement).click();
     expect(read).toHaveBeenCalled();
   });

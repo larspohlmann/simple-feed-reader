@@ -44,72 +44,73 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
+function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryHeroComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryHeroComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntryHeroComponent', () => {
   it('renders the headline, source and image', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Big headline');
-    expect(el.textContent).toContain('Src');
-    expect(el.querySelector('img.img')).not.toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Big headline');
+    expect(element.textContent).toContain('Src');
+    expect(element.querySelector('img.img')).not.toBeNull();
   });
 
   it('emits open on click', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     const open = jest.fn();
     entryActions.open.mockImplementation(open);
-    (f.nativeElement.querySelector('.hero') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('.hero') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
   });
 
   it('falls back to a text hero when the image errors', () => {
-    const f = mount(entry());
-    f.componentInstance.imgError.set(true);
-    f.detectChanges();
-    expect(f.nativeElement.querySelector('img.img')).toBeNull();
-    expect((f.nativeElement as HTMLElement).textContent).toContain('Big headline');
+    const fixture = mount(entry());
+    fixture.componentInstance.imgError.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Big headline');
   });
 
   it('demotes a tiny image (tracking pixel) to a text hero', () => {
-    const f = mount(entry());
-    f.componentInstance.onLoad({ target: { naturalWidth: 100 } } as unknown as Event);
-    f.detectChanges();
-    expect(f.nativeElement.querySelector('img.img')).toBeNull();
+    const fixture = mount(entry());
+    fixture.componentInstance.onLoad({ target: { naturalWidth: 100 } } as unknown as Event);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
   });
 
   it('sets the aspect ratio from the declared dimensions', () => {
-    const el = mount(entry({ imageUrl: 'https://i/a.jpg', imageWidth: 1232, imageHeight: 1232 }))
-      .nativeElement as HTMLElement;
-    const img = el.querySelector('img.img') as HTMLImageElement;
+    const element = mount(
+      entry({ imageUrl: 'https://i/a.jpg', imageWidth: 1232, imageHeight: 1232 }),
+    ).nativeElement as HTMLElement;
+    const img = element.querySelector('img.img') as HTMLImageElement;
     expect(img.style.aspectRatio).toBe('1232 / 1232');
     expect(img.getAttribute('width')).toBe('1232');
     expect(img.getAttribute('height')).toBe('1232');
   });
 
   it('falls back to 16 / 9 when the feed declared no dimensions', () => {
-    const el = mount(entry({ imageUrl: 'https://i/a.jpg' })).nativeElement as HTMLElement;
-    const img = el.querySelector('img.img') as HTMLImageElement;
+    const element = mount(entry({ imageUrl: 'https://i/a.jpg' })).nativeElement as HTMLElement;
+    const img = element.querySelector('img.img') as HTMLImageElement;
     expect(img.style.aspectRatio).toBe('16 / 9');
     expect(img.getAttribute('width')).toBeNull();
   });
 
   it('carries the actions on the meta row, not on a row of its own', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.actions')).toBeNull();
-    expect(el.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.actions')).toBeNull();
+    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
   });
 
   it('emits favorite, keep and read from the meta row', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     const favorite = jest.fn();
     const keep = jest.fn();
     const read = jest.fn();
@@ -117,7 +118,7 @@ describe('EntryHeroComponent', () => {
     entryActions.keep.mockImplementation(keep);
     entryActions.toggleRead.mockImplementation(read);
 
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();
@@ -128,17 +129,19 @@ describe('EntryHeroComponent', () => {
   });
 
   it('exposes its entry id on the host element', () => {
-    const f = mount(entry({ id: 77 }));
-    expect(f.nativeElement.getAttribute('data-entry-id')).toBe('77');
+    const fixture = mount(entry({ id: 77 }));
+    expect(fixture.nativeElement.getAttribute('data-entry-id')).toBe('77');
   });
 
   it('bubbles open for a duplicate copy through the footer', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
-    const f = mount(entry({ duplicates: [dup] }));
+    const fixture = mount(entry({ duplicates: [dup] }));
     const opened = jest.fn();
     entryActions.open.mockImplementation(opened);
-    (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
-    f.detectChanges();
+    (
+      fixture.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement
+    ).click();
+    fixture.detectChanges();
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();
     (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
     expect(opened).toHaveBeenCalledWith(dup);

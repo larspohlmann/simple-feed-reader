@@ -132,10 +132,10 @@ describe('SettingsRowComponent', () => {
     await TestBed.configureTestingModule({ imports: [BadgeHostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(BadgeHostComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.row-title [data-badge]')?.textContent).toBe('Experimental');
-    expect(el.querySelector('.row-control [data-control]')).not.toBeNull();
+    expect(element.querySelector('.row-title [data-badge]')?.textContent).toBe('Experimental');
+    expect(element.querySelector('.row-control [data-control]')).not.toBeNull();
   });
 
   // A toggle row's title is a click target, not decoration: the `for` has to
@@ -144,9 +144,9 @@ describe('SettingsRowComponent', () => {
     await TestBed.configureTestingModule({ imports: [LabelledHostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(LabelledHostComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.row-title label')?.getAttribute('for')).toBe('scrape-toggle');
+    expect(element.querySelector('.row-title label')?.getAttribute('for')).toBe('scrape-toggle');
   });
 
   it('leaves the title as plain text when labelFor is unset', async () => {
@@ -158,9 +158,9 @@ describe('SettingsRowComponent', () => {
     await TestBed.configureTestingModule({ imports: [ErrorHostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ErrorHostComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
+    const element = fixture.nativeElement as HTMLElement;
 
-    const alert = el.querySelector('p.error[role="alert"]');
+    const alert = element.querySelector('p.error[role="alert"]');
     expect(alert?.textContent).toContain('Bad value');
   });
 

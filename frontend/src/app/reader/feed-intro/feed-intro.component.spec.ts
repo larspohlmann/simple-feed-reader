@@ -38,8 +38,8 @@ describe('FeedIntroComponent', () => {
   // child element and would otherwise land in textContent.
   function linkLabel(link: Element | null): string {
     return [...(link?.childNodes ?? [])]
-      .filter((n) => n.nodeType === Node.TEXT_NODE)
-      .map((n) => n.textContent ?? '')
+      .filter((node) => node.nodeType === Node.TEXT_NODE)
+      .map((node) => node.textContent ?? '')
       .join('')
       .trim();
   }

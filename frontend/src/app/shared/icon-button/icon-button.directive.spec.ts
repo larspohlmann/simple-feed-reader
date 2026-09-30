@@ -16,11 +16,13 @@ describe('IconButtonDirective', () => {
     await TestBed.configureTestingModule({ imports: [Host] }).compileComponents();
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
+    const element: HTMLElement = fixture.nativeElement;
 
-    expect(el.querySelector('button[appIconButton]')?.classList.contains('ib')).toBe(true);
+    expect(element.querySelector('button[appIconButton]')?.classList.contains('ib')).toBe(true);
     // A button without the attribute stays untouched, so the class is opt-in.
-    const plain = Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Plain');
+    const plain = Array.from(element.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Plain',
+    );
     expect(plain?.classList.contains('ib')).toBe(false);
   });
 });
