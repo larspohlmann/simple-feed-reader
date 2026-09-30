@@ -5,7 +5,7 @@
   [allItemsActive]="allItemsActive()"
   [searchLoading]="heading.searching()"
   [searchTerm]="selection().term ?? ''"
-  [populateSearchTerm]="!viewingSavedSearch()"
+  [populateSearchTerm]="!savedSearch.viewing()"
   [drawerOpen]="sidebarOpen()"
   [class.hidden]="headerHidden()"
   (toggleSidebar)="setSidebarOpen(!sidebarOpen())"
@@ -19,10 +19,12 @@
 <div class="under-header">
   <!-- A failed refresh takes the strip whichever refresh it was; the counted
        progress belongs to the onboarding sweep alone. -->
-  @if (fetchFailureKey(); as failureKey) {
+  @if (refresh.failureKey(); as failureKey) {
     <p class="fetch-banner" role="alert">
       {{ failureKey | transloco }}
-      <button type="button" (click)="onRefresh()">{{ 'reader.retryFetch' | transloco }}</button>
+      <button type="button" (click)="refresh.refreshAll()">
+        {{ 'reader.retryFetch' | transloco }}
+      </button>
     </p>
   } @else if (onboarding.showFetchProgress()) {
     <p class="fetch-banner" role="status" aria-live="polite">
@@ -79,10 +81,10 @@
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="heading.searching()"
-      (refresh)="onRefresh()"
-      (addFeed)="onAddFeed()"
+      (refresh)="refresh.refreshAll()"
+      (addFeed)="refresh.addFeed()"
       (search)="onSearch($event)"
-      (toggleDigest)="confirmToggleDigest($event)"
+      (toggleDigest)="savedSearch.confirmToggleDigest($event)"
     />
   </aside>
   <main class="main" #mainEl [class.split]="splitView()">
@@ -152,7 +154,7 @@
         (unreadOnlyChange)="unreadFilter.set($event)"
         (orderChange)="listOrder.set(selection(), $event)"
         (markAboveRead)="onMarkAboveRead($event)"
-        (refresh)="onScopedRefresh()"
+        (refresh)="refresh.refreshScoped()"
       />
     </section>
   </ng-template>
@@ -239,7 +241,7 @@
 </ng-template>
 
 <ng-template #headerActions>
-  @if (canToggleSavedSearch()) {
+  @if (savedSearch.canToggle()) {
     <!-- Save/unsave the search being looked at. It lives here, beside the For You
          control, because both are per-selection commands over a domain object
          the list itself knows nothing about — the list only owns the slot (#581). -->
@@ -247,12 +249,12 @@
       appListAction
       class="save-search"
       type="button"
-      [attr.aria-label]="savedSearchActionLabel() | transloco"
-      [attr.title]="savedSearchActionLabel() | transloco"
-      (click)="onToggleSavedSearch()"
+      [attr.aria-label]="savedSearch.actionLabel() | transloco"
+      [attr.title]="savedSearch.actionLabel() | transloco"
+      (click)="savedSearch.toggle()"
     >
-      <app-icon [name]="currentSavedSearch() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
-      <span class="txt">{{ savedSearchActionLabel() | transloco }}</span>
+      <app-icon [name]="savedSearch.current() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
+      <span class="txt">{{ savedSearch.actionLabel() | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {
@@ -297,7 +299,7 @@
           type="button"
           [attr.aria-label]="'reader.forYouRunLabel' | transloco"
           [attr.title]="'reader.forYouRunLabel' | transloco"
-          (click)="startRecommendations()"
+          (click)="refresh.startRecommendations()"
         >
           <app-icon name="auto_awesome" size="sm" />
           <span class="txt">{{ 'reader.forYouRun' | transloco }}</span>

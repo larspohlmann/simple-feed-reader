@@ -72,7 +72,7 @@ describe('SavedSearchesStore', () => {
     const savedSearches = jest.fn(() => of({ savedSearches: rows }));
     const store = setup({ createSavedSearch, savedSearches });
 
-    store.createSavedSearch('rust lang', true, false);
+    store.createSavedSearch({ term: 'rust lang', wholeWord: true, phrase: false });
 
     expect(createSavedSearch).toHaveBeenCalledWith({
       term: 'rust lang',
@@ -90,7 +90,7 @@ describe('SavedSearchesStore', () => {
     const store = setup({ createSavedSearch });
     const onSuccess = jest.fn();
 
-    store.createSavedSearch('rust lang', true, false, onSuccess);
+    store.createSavedSearch({ term: 'rust lang', wholeWord: true, phrase: false }, onSuccess);
 
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(store.savedSearches()).toEqual([view(rows[0])]);
@@ -103,7 +103,7 @@ describe('SavedSearchesStore', () => {
     store.load();
 
     // Saving a saved term is idempotent server-side (200, the existing row).
-    store.createSavedSearch('climate', false, false);
+    store.createSavedSearch({ term: 'climate', wholeWord: false, phrase: false });
 
     expect(store.savedSearches().map((savedSearch) => savedSearch.id)).toEqual([1, 2]);
     expect(store.savedSearches()[0].unreadCount).toBe(9);

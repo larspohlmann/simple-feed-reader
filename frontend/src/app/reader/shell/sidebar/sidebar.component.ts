@@ -1,6 +1,5 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
   afterRenderEffect,
   computed,
@@ -13,7 +12,6 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import {
   CdkDrag,
@@ -23,23 +21,30 @@ import {
   CdkDropListGroup,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { SidebarFootComponent } from './sidebar-foot.component';
+import { SidebarFeedRowComponent } from './sidebar-feed-row.component';
+import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
+import { SidebarRowActions } from './sidebar-row-actions.service';
 import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../../state/subscriptions.store';
 import { Selection, selectionQueryParams } from '../../query/query';
-import { SavedSearchDto, SubscriptionDto, TagDto, isSubscriptionDrag } from '../../models';
+import {
+  MoveFeedToTag,
+  SavedSearchDto,
+  SubscriptionDto,
+  TagDto,
+  isSubscriptionDrag,
+} from '../../models';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
-import { ActionSheet } from '../../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
@@ -47,26 +52,18 @@ export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
 
 const tagIdOf = (data: DropData): number | null => (data.kind === 'tag' ? data.tag.id : null);
 
+/** A feed dragged from one list to another at a dropped position. A drop back
+ *  onto the list it came from is a reorder, handled before this. */
+const feedMove = (source: DropData, target: DropData, position: number | null): MoveFeedToTag => ({
+  fromTagId: tagIdOf(source),
+  toTagId: tagIdOf(target),
+  position,
+});
+
 /** localStorage keys holding whether each sidebar section is collapsed.
  *  Namespaced under `sfr.*` like the other persisted UI preferences. */
 const TAGS_COLLAPSED_KEY = 'sfr.tags.collapsed';
 const FEEDS_COLLAPSED_KEY = 'sfr.feeds.collapsed';
-
-/** How many saved-search rows the sidebar shows before the "Show more" link. */
-const SIDEBAR_SAVED_SEARCH_LIMIT = 6;
-
-/** Ids of a saved-search list, ranked unread-first (count desc) then newest
- *  first (id desc). Id is the creation-order proxy — there is no date field. */
-const rankedSavedSearchIds = (searches: readonly SavedSearchDto[]): number[] =>
-  [...searches]
-    .sort((left, right) => right.unreadCount - left.unreadCount || right.id - left.id)
-    .map((search) => search.id);
-
-const sameIds = (current: readonly number[], frozen: readonly number[]): boolean => {
-  if (current.length !== frozen.length) return false;
-  const set = new Set(frozen);
-  return current.every((id) => set.has(id));
-};
 
 @Component({
   selector: 'app-sidebar',
@@ -74,9 +71,10 @@ const sameIds = (current: readonly number[], frozen: readonly number[]): boolean
     RouterLink,
     IconComponent,
     TagGlyphComponent,
-    FaviconComponent,
     SearchFieldComponent,
     SidebarFootComponent,
+    SidebarFeedRowComponent,
+    SidebarSavedSearchesComponent,
     TranslocoPipe,
     CdkDropListGroup,
     CdkDropList,
@@ -87,10 +85,12 @@ const sameIds = (current: readonly number[], frozen: readonly number[]): boolean
   ],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.scss',
+  providers: [SidebarRowActions],
 })
 export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
   protected readonly manage = inject(ManageActions);
+  protected readonly rows = inject(SidebarRowActions);
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
@@ -175,81 +175,6 @@ export class SidebarComponent {
     if (!this.screen.isCoarse()) untracked(() => this.organising.set(false));
   });
   readonly expanded = signal<Set<number>>(new Set());
-  readonly menuFor = signal<string | null>(null);
-
-  /** Whether the "Saved searches" group is expanded. In-memory only, default
-   *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
-  readonly savedSearchesExpanded = signal(false);
-
-  /** The frozen display order (saved-search ids). Recomputed only when the
-   *  section opens or the set of searches changes — never on a count change —
-   *  so reading an entry does not reshuffle the list under the reader (#876). */
-  private readonly frozenSavedSearchOrder = signal<number[]>([]);
-
-  /** Re-rank the frozen order from the current unread counts. The two triggers
-   *  that reset the freeze — a structural change and a section open — share this
-   *  one write (#876). */
-  private refreezeSavedSearchOrder(): void {
-    this.frozenSavedSearchOrder.set(rankedSavedSearchIds(this.savedSearches()));
-  }
-
-  /** Re-rank on a structural change: the initial load, a create, or a delete.
-   *  Keyed on the id set only, so a count-only change leaves the order frozen. */
-  private readonly refreezeOnStructuralChange = effect(() => {
-    const ids = this.savedSearches().map((search) => search.id);
-    if (!sameIds(ids, untracked(this.frozenSavedSearchOrder))) {
-      this.refreezeSavedSearchOrder();
-    }
-  });
-
-  /** The saved searches in frozen order, each with live params and count. */
-  protected readonly orderedSavedSearches = computed(() => {
-    const byId = new Map(this.savedSearches().map((row) => [row.id, row]));
-    return this.frozenSavedSearchOrder()
-      .map((id) => byId.get(id))
-      .filter((row): row is NonNullable<typeof row> => row !== undefined);
-  });
-
-  /** Total unread matches across all saved searches, for the collapsed badge. */
-  readonly savedSearchesUnread = computed(() =>
-    this.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
-  );
-
-  /** Whether the "Show more" expansion is open. In memory only, reset when the
-   *  section re-opens (#876) — the section chevron and this are separate states. */
-  readonly savedSearchListExpanded = signal(false);
-
-  /** The rows to render: the whole list when expanded; otherwise the top six,
-   *  plus the active search pinned as an extra row when it is not among them,
-   *  so the current selection is always visible (#876). */
-  protected readonly visibleSavedSearches = computed(() => {
-    const all = this.orderedSavedSearches();
-    if (this.savedSearchListExpanded()) return all;
-    const top = all.slice(0, SIDEBAR_SAVED_SEARCH_LIMIT);
-    const activeId = this.activeSavedSearchId();
-    if (activeId === null || top.some((row) => row.id === activeId)) return top;
-    const active = all.find((row) => row.id === activeId);
-    return active ? [...top, active] : top;
-  });
-
-  /** How many ranked searches are not currently on screen. */
-  protected readonly hiddenSavedSearchCount = computed(
-    () => this.orderedSavedSearches().length - this.visibleSavedSearches().length,
-  );
-
-  toggleSavedSearchList(): void {
-    this.savedSearchListExpanded.update((open) => !open);
-  }
-
-  toggleSavedSearches(): void {
-    const opening = !this.savedSearchesExpanded();
-    this.savedSearchesExpanded.set(opening);
-    if (opening) {
-      // Opening the section is a fresh view: re-rank with the current counts.
-      this.refreezeSavedSearchOrder();
-      this.savedSearchListExpanded.set(false);
-    }
-  }
 
   /** Whether the "Tags" section is expanded. Unlike the in-memory Saved-searches
    *  and per-tag toggles, this one persists across reloads (localStorage). It
@@ -283,90 +208,9 @@ export class SidebarComponent {
    *  handle so no guard is needed. */
   readonly dragDelay = computed(() => (this.organising() ? 0 : { touch: 180, mouse: 0 }));
 
-  private readonly sheet = inject(ActionSheet);
-  private readonly transloco = inject(TranslocoService);
-  private readonly destroyRef = inject(DestroyRef);
-
   /** Coarse pointers may drag only in Organise mode; navigation is read-only. */
   readonly dragLocked = computed(() => this.screen.isCoarse() && !this.organising());
 
-  /** ⋯ on a tag row (coarse): sheet with the tag's actions. */
-  openTagSheet(tag: TagDto): void {
-    this.sheet
-      .open({
-        title: tag.name,
-        actions: [
-          { id: 'edit', label: this.transloco.translate('reader.editTag') },
-          { id: 'delete', label: this.transloco.translate('reader.deleteTag'), danger: true },
-        ],
-      })
-      // A sheet can outlive the sidebar (e.g. the shell unmounts); a late
-      // choice must not emit into destroyed outputs.
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((choice) => {
-        if (choice === 'edit') this.manage.editTag(tag);
-        if (choice === 'delete') this.manage.deleteTag(tag);
-      });
-  }
-
-  /** ⋯ on a feed row (coarse): sheet with the subscription's actions. */
-  openFeedSheet(subscription: SubscriptionDto): void {
-    this.sheet
-      .open({
-        title: subscription.title,
-        actions: [
-          { id: 'edit', label: this.transloco.translate('reader.editFeed') },
-          {
-            id: 'toggleAllItems',
-            label: this.toggleLabel(
-              subscription.includeInAllItems,
-              'reader.excludeFromAllItems',
-              'reader.includeInAllItems',
-            ),
-          },
-          {
-            id: 'toggleForYou',
-            label: this.toggleLabel(
-              subscription.includeInForYou,
-              'reader.excludeFromForYou',
-              'reader.includeInForYou',
-            ),
-          },
-          {
-            id: 'unsubscribe',
-            label: this.transloco.translate('reader.unsubscribe'),
-            danger: true,
-          },
-        ],
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((choice) => {
-        if (choice === 'edit') this.manage.editSubscription(subscription);
-        if (choice === 'toggleAllItems')
-          this.manage.setIncludeInAllItems(subscription, !subscription.includeInAllItems);
-        if (choice === 'toggleForYou')
-          this.manage.setIncludeInForYou(subscription, !subscription.includeInForYou);
-        if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
-      });
-  }
-
-  /** Label for a feed exclusion toggle, state-dependent: when the feed is
-   *  currently included it offers to exclude, and vice versa. */
-  protected toggleLabel(included: boolean, excludeKey: string, includeKey: string): string {
-    return this.transloco.translate(included ? excludeKey : includeKey);
-  }
-
-  /** Tooltip for the row's exclusion marker: names exactly which surface(s)
-   *  the feed is hidden from. */
-  exclusionTitle(subscription: SubscriptionDto): string {
-    if (!subscription.includeInAllItems && !subscription.includeInForYou) {
-      return this.transloco.translate('reader.excludedFromBoth');
-    }
-    if (!subscription.includeInAllItems) {
-      return this.transloco.translate('reader.excludedFromAllItems');
-    }
-    return this.transloco.translate('reader.excludedFromForYou');
-  }
   /** Stable drop-target for the untagged bucket. */
   readonly untaggedDrop: DropData = { kind: 'untagged' };
   /** Typed drop-target for a tag (a template literal wouldn't narrow to DropData). */
@@ -394,7 +238,10 @@ export class SidebarComponent {
 
     if (isSubscriptionDrag(event.item.data)) {
       // A tag header shows no feed list, so a feed dropped on it appends.
-      this.moveFeed(event.item.data, event.previousContainer.data, target, null);
+      this.manage.moveFeedToTag(
+        event.item.data,
+        feedMove(event.previousContainer.data, target, null),
+      );
       return;
     }
     if (target.kind !== 'tag') return;
@@ -431,20 +278,11 @@ export class SidebarComponent {
     }
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.moveFeed(event.item.data, event.previousContainer.data, target, event.currentIndex);
+      this.manage.moveFeedToTag(
+        event.item.data,
+        feedMove(event.previousContainer.data, target, event.currentIndex),
+      );
     }
-  }
-
-  /** Announce a feed dragged from one list to another at a dropped position.
-   *  A drop back onto the same list it came from is a reorder, handled by the
-   *  callers before they reach here. */
-  private moveFeed(
-    sub: SubscriptionDto,
-    source: DropData,
-    target: DropData,
-    position: number | null,
-  ): void {
-    this.manage.moveFeedToTag(sub, tagIdOf(source), tagIdOf(target), position);
   }
 
   toggle(tagId: number): void {
@@ -457,15 +295,5 @@ export class SidebarComponent {
       }
       return next;
     });
-  }
-
-  toggleMenu(key: string, event: Event): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.menuFor.update((openKey) => (openKey === key ? null : key));
-  }
-
-  closeMenu(): void {
-    this.menuFor.set(null);
   }
 }

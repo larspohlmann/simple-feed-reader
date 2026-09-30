@@ -6,20 +6,22 @@ export const HEADER_NEAR_TOP = 40;
 /** Ignore scroll movements smaller than this to avoid jitter-driven flapping. */
 export const HEADER_SCROLL_DELTA = 6;
 
+export interface HeaderScroll {
+  previousHidden: boolean;
+  lastTop: number;
+  top: number;
+  isWide: boolean;
+}
+
 /**
  * Next hidden-state for the header given the last and current scroll offsets.
  * Only hides on a narrow (mobile) layout; on desktop the header always shows.
  */
-export function nextHeaderHidden(
-  previousHidden: boolean,
-  lastTop: number,
-  top: number,
-  isWide: boolean,
-): boolean {
-  if (isWide) return false;
-  if (top <= HEADER_NEAR_TOP) return false;
-  const delta = top - lastTop;
+export function nextHeaderHidden(scroll: HeaderScroll): boolean {
+  if (scroll.isWide) return false;
+  if (scroll.top <= HEADER_NEAR_TOP) return false;
+  const delta = scroll.top - scroll.lastTop;
   if (delta > HEADER_SCROLL_DELTA) return true;
   if (delta < -HEADER_SCROLL_DELTA) return false;
-  return previousHidden;
+  return scroll.previousHidden;
 }

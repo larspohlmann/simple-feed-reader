@@ -1,14 +1,29 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CurrentUser } from '../auth/auth.service';
+import { CurrentUser, UserDigestPreferences } from '../auth/auth.service';
 import { DIGEST_WRITER, DigestConfig, DigestTestMailResult } from './digest-writer';
 
-const DEFAULT_ENABLED = false;
-const DEFAULT_CADENCE = 'daily';
-const DEFAULT_SEND_HOUR = 8;
-const DEFAULT_WEEKDAY = 1;
-const DEFAULT_TIMEZONE = 'UTC';
-const DEFAULT_FORMAT = 'html';
+const DIGEST_DEFAULTS: UserDigestPreferences = {
+  enabled: false,
+  cadence: 'daily',
+  sendHour: 8,
+  weekday: 1,
+  timezone: 'UTC',
+  format: 'html',
+};
+
+function withDefaults(stored: Partial<UserDigestPreferences> | undefined): UserDigestPreferences {
+  const pick = <Key extends keyof UserDigestPreferences>(key: Key): UserDigestPreferences[Key] =>
+    stored?.[key] ?? DIGEST_DEFAULTS[key];
+  return {
+    enabled: pick('enabled'),
+    cadence: pick('cadence'),
+    sendHour: pick('sendHour'),
+    weekday: pick('weekday'),
+    timezone: pick('timezone'),
+    format: pick('format'),
+  };
+}
 
 /**
  * Per-account digest settings, mirroring `PreferencesService`: the account is
@@ -22,14 +37,14 @@ const DEFAULT_FORMAT = 'html';
 export class DigestService {
   private readonly writer = inject(DIGEST_WRITER);
 
-  readonly enabled = signal(DEFAULT_ENABLED);
-  readonly cadence = signal<'daily' | 'weekly'>(DEFAULT_CADENCE);
-  readonly sendHour = signal(DEFAULT_SEND_HOUR);
-  readonly weekday = signal(DEFAULT_WEEKDAY);
+  readonly enabled = signal(DIGEST_DEFAULTS.enabled);
+  readonly cadence = signal<'daily' | 'weekly'>(DIGEST_DEFAULTS.cadence);
+  readonly sendHour = signal(DIGEST_DEFAULTS.sendHour);
+  readonly weekday = signal(DIGEST_DEFAULTS.weekday);
   /** The instance's configured timezone, read-only instance config adopted
    *  from the account -- never written back through `writeAll()`. */
-  readonly timezone = signal(DEFAULT_TIMEZONE);
-  readonly format = signal<'html' | 'text'>(DEFAULT_FORMAT);
+  readonly timezone = signal(DIGEST_DEFAULTS.timezone);
+  readonly format = signal<'html' | 'text'>(DIGEST_DEFAULTS.format);
 
   /** True when the value applied locally but the account write failed. */
   readonly saveFailed = signal(false);
@@ -74,13 +89,7 @@ export class DigestService {
    * back per-field instead of throwing and aborting the adopters after it.
    */
   adopt(user: CurrentUser): void {
-    const digest = user.preferences?.digest;
-    this.enabled.set(digest?.enabled ?? DEFAULT_ENABLED);
-    this.cadence.set(digest?.cadence ?? DEFAULT_CADENCE);
-    this.sendHour.set(digest?.sendHour ?? DEFAULT_SEND_HOUR);
-    this.weekday.set(digest?.weekday ?? DEFAULT_WEEKDAY);
-    this.timezone.set(digest?.timezone ?? DEFAULT_TIMEZONE);
-    this.format.set(digest?.format ?? DEFAULT_FORMAT);
+    this.apply(withDefaults(user.preferences?.digest));
   }
 
   /**
@@ -90,13 +99,17 @@ export class DigestService {
    * resolves.
    */
   reset(): void {
-    this.enabled.set(DEFAULT_ENABLED);
-    this.cadence.set(DEFAULT_CADENCE);
-    this.sendHour.set(DEFAULT_SEND_HOUR);
-    this.weekday.set(DEFAULT_WEEKDAY);
-    this.timezone.set(DEFAULT_TIMEZONE);
-    this.format.set(DEFAULT_FORMAT);
+    this.apply(DIGEST_DEFAULTS);
     this.saveFailed.set(false);
+  }
+
+  private apply(preferences: UserDigestPreferences): void {
+    this.enabled.set(preferences.enabled);
+    this.cadence.set(preferences.cadence);
+    this.sendHour.set(preferences.sendHour);
+    this.weekday.set(preferences.weekday);
+    this.timezone.set(preferences.timezone);
+    this.format.set(preferences.format);
   }
 
   private writeAll(): void {

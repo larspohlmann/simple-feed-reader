@@ -179,7 +179,7 @@ export class AddFeedDialogComponent implements OnInit {
     // warning, where offering subscribe would contradict it.
     this.candidates.set([]);
     this.previews.set({});
-    this.api.subscribe(url, format, [...this.checked()], title).subscribe({
+    this.api.subscribe({ url, format, tagIds: [...this.checked()], title }).subscribe({
       next: (response) => {
         this.loading.set(false);
         if ('subscription' in response) this.ref.close(response.subscription);

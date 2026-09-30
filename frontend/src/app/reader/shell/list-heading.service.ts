@@ -7,7 +7,7 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
-import { TitleCount } from '../list/entry-list/entry-list.component';
+import { TitleCount } from '../list/list-header/list-header.component';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()
@@ -79,73 +79,56 @@ export class ListHeading {
     this.routeState.selection().kind === 'for-you' ? this.recommendations.newestRunId() : null,
   );
 
+  /** Keyed by every kind: a new selection kind must fail to compile here. */
+  private readonly titleByKind: Record<Selection['kind'], () => string> = {
+    favorites: () => this.i18n.translate('reader.favorites'),
+    kept: () => this.i18n.translate('reader.kept'),
+    viewed: () => this.i18n.translate('reader.viewed'),
+    'for-you': () => this.i18n.translate('reader.forYou'),
+    'saved-searches': () => this.i18n.translate('reader.savedSearches'),
+    'saved-search': () =>
+      this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches'),
+    all: () => this.i18n.translate('reader.allItems'),
+    tag: () => this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback'),
+    search: () => `${this.searchTitlePrefix()} ${this.searchTitleBody()}`,
+    subscription: () =>
+      this.selectedSubscription()?.title ?? this.i18n.translate('reader.feedFallback'),
+  };
+
+  private readonly countByKind: Record<Selection['kind'], (selection: Selection) => TitleCount> = {
+    all: (selection) =>
+      bySwitch(selection, this.subscriptions.totalUnread(), this.subscriptions.totalEntries()),
+    tag: (selection) => {
+      const node = this.selectedTagNode();
+      return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
+    },
+    subscription: (selection) => {
+      const subscription = this.selectedSubscription();
+      return bySwitch(selection, subscription?.unreadCount ?? 0, subscription?.entryCount ?? 0);
+    },
+    favorites: () => items(this.subscriptions.favoritesCount()),
+    kept: () => items(this.subscriptions.keptCount()),
+    viewed: () => items(this.subscriptions.viewedCount()),
+    'for-you': (selection) =>
+      bySwitch(selection, this.recommendations.forYouCount(), this.recommendations.forYouTotal()),
+    'saved-searches': (selection) =>
+      bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal()),
+    'saved-search': (selection) => {
+      const saved = this.activeSavedSearch();
+      return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
+    },
+    search: () => items(0),
+  };
+
   readonly title = computed(() => {
     // translate() is one-shot: reading the language re-runs this on a switch.
     this.language.lang();
-    const selection = this.routeState.selection();
-    // No default: a new selection kind must fail to compile here.
-    switch (selection.kind) {
-      case 'favorites':
-        return this.i18n.translate('reader.favorites');
-      case 'kept':
-        return this.i18n.translate('reader.kept');
-      case 'viewed':
-        return this.i18n.translate('reader.viewed');
-      case 'for-you':
-        return this.i18n.translate('reader.forYou');
-      case 'saved-searches':
-        return this.i18n.translate('reader.savedSearches');
-      case 'saved-search':
-        return this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches');
-      case 'all':
-        return this.i18n.translate('reader.allItems');
-      case 'tag':
-        return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-      case 'search':
-        return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
-      case 'subscription':
-        return this.selectedSubscription()?.title ?? this.i18n.translate('reader.feedFallback');
-    }
+    return this.titleByKind[this.routeState.selection().kind]();
   });
 
   readonly titleCount = computed<TitleCount>(() => {
     const selection = this.routeState.selection();
-    switch (selection.kind) {
-      case 'all':
-        return bySwitch(
-          selection,
-          this.subscriptions.totalUnread(),
-          this.subscriptions.totalEntries(),
-        );
-      case 'tag': {
-        const node = this.selectedTagNode();
-        return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
-      }
-      case 'subscription': {
-        const subscription = this.selectedSubscription();
-        return bySwitch(selection, subscription?.unreadCount ?? 0, subscription?.entryCount ?? 0);
-      }
-      case 'favorites':
-        return items(this.subscriptions.favoritesCount());
-      case 'kept':
-        return items(this.subscriptions.keptCount());
-      case 'viewed':
-        return items(this.subscriptions.viewedCount());
-      case 'for-you':
-        return bySwitch(
-          selection,
-          this.recommendations.forYouCount(),
-          this.recommendations.forYouTotal(),
-        );
-      case 'saved-searches':
-        return bySwitch(selection, this.savedSearchesUnread(), this.savedSearchesTotal());
-      case 'saved-search': {
-        const saved = this.activeSavedSearch();
-        return bySwitch(selection, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
-      }
-      case 'search':
-        return items(0);
-    }
+    return this.countByKind[selection.kind](selection);
   });
 
   readonly searchTitlePrefix = computed(() => {

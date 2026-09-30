@@ -1,0 +1,145 @@
+@use 'sidebar-row' as row;
+@include row.nav-row;
+@include row.tag-head;
+@include row.chevzone;
+
+:host {
+  display: contents;
+}
+
+.nav .whole-word-badge,
+.nav .phrase-badge {
+  /* The pill is the global `.whole-word-badge`/`.phrase-badge`; this row uses
+     the compact "W"/"P" glyph since the sidebar is too narrow for the label.
+     Excluded from `.nav > span` above so it doesn't pick up `flex: 1`. */
+  flex: none;
+}
+
+/* Same indent token the tag-feed rows use (`.tag-sub`), so saved-search terms
+   read as nested under their header exactly like feeds under a tag. */
+.savedsearch-item {
+  padding-left: var(--space-6);
+}
+
+/* The mail button is the row's trailing control: dropping right/block padding
+   lets its column line up with the chevron above and its own box drive the
+   height, matching tag rows. Without it the row keeps plain `.nav` (#636). */
+.savedsearch-item.with-digest {
+  padding-right: 0;
+  padding-block: 0;
+}
+
+/* Term + "W" pill as one left group. It takes the row's flexible width, so its
+   trailing slack pushes the unread count and the mail button to a consistent
+   right edge while the pill stays glued to the word (#636). */
+.savedsearch-item .saved-term-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.savedsearch-item .saved-term {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Smaller than the global pill: the sidebar row is narrower than the results
+   header, so the marker takes the sub-chrome --fs-2xs step and a hair of
+   padding here. */
+.savedsearch-item .whole-word-badge,
+.savedsearch-item .phrase-badge {
+  padding: 0 var(--space-1);
+  font-size: var(--fs-2xs);
+}
+
+/* The unread count sits right-aligned, left of the mail button, lining up
+   with the header count above rather than drifting with term width. The
+   term group's flex:1 already packs it right, so no auto margin here. */
+.savedsearch-item .count {
+  flex: none;
+  margin-left: 0;
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* With the mail button present, nudge the count off it so its right edge lands
+   in the same column as the "Saved searches" header count. Without the button
+   the row's own right padding already sets that column, so no nudge. */
+.savedsearch-item.with-digest .count {
+  margin-right: var(--space-1);
+}
+
+/* The per-search mail button matches the exact box metrics of the
+   `.chevzone` chevron — same margin, bordered glyph box — so it reads as a
+   button and its column lines up with the chevron above (#636). */
+.savedsearch-item .digest-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin: var(--space-1);
+}
+
+.savedsearch-item .digest-toggle app-icon {
+  display: inline-flex;
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* The "Show more/less" control: a subdued text link, indented to the same
+   column as the saved-search terms (`--space-6`), with a plain chevron after
+   the label that switches to `expand_less` when expanded (#876). */
+.savedsearch-more {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-6);
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .savedsearch-more:hover {
+    color: var(--text-secondary);
+  }
+}
+
+/* An expanded saved-search list sits on a recessed surface, so it reads as
+   nested under its header (#1114). The negative inline margin with matching
+   padding bleeds the band to the sidebar edges. */
+.savedsearch-list {
+  background: var(--surface-sunken);
+  margin-inline: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-radius: 0;
+}
+
+/* Inside the recessed band the row hover lifts to the sidebar surface, since
+   the default hover (--surface-0) is barely visible against it (#1114). */
+@media (hover: hover) {
+  .savedsearch-list .nav:hover:not(.active) {
+    background: var(--surface-1);
+  }
+}
+
+/* The per-search digest mail icon stays outlined in both states; only its
+   opacity marks whether the search is included, so a glance across the list
+   reads which searches feed the digest without a filled/outlined swap. */
+.digest-toggle .muted {
+  opacity: 0.35;
+}

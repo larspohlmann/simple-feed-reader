@@ -11,9 +11,7 @@ import { SETTINGS_SECTIONS } from './settings-sections';
 describe('SettingsNavComponent', () => {
   function mount(
     roles: string[],
-    variant: 'rail' | 'hub' = 'rail',
-    unhealthyCount = 0,
-    mailFailureCount = 0,
+    options: { variant?: 'rail' | 'hub'; unhealthyCount?: number; mailFailureCount?: number } = {},
   ) {
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -23,15 +21,18 @@ describe('SettingsNavComponent', () => {
           provide: AuthService,
           useValue: { user: () => ({ roles }), isAdmin: () => roles.includes('ROLE_ADMIN') },
         },
-        { provide: SubscriptionsStore, useValue: { unhealthyCount: signal(unhealthyCount) } },
+        {
+          provide: SubscriptionsStore,
+          useValue: { unhealthyCount: signal(options.unhealthyCount ?? 0) },
+        },
         {
           provide: MailHealthStore,
-          useValue: { failureCount: signal(mailFailureCount), refresh: jest.fn() },
+          useValue: { failureCount: signal(options.mailFailureCount ?? 0), refresh: jest.fn() },
         },
       ],
     });
     const fixture = TestBed.createComponent(SettingsNavComponent);
-    fixture.componentRef.setInput('variant', variant);
+    fixture.componentRef.setInput('variant', options.variant ?? 'rail');
     fixture.detectChanges();
     return fixture;
   }
@@ -53,12 +54,12 @@ describe('SettingsNavComponent', () => {
   });
 
   it('carries the variant as a host-level class', () => {
-    const fixture = mount(['ROLE_USER'], 'hub');
+    const fixture = mount(['ROLE_USER'], { variant: 'hub' });
     expect(fixture.nativeElement.querySelector('nav').classList).toContain('hub');
   });
 
   it('badges the Organise entry with the unhealthy-feed count, and no other entry', () => {
-    const fixture = mount(['ROLE_USER'], 'rail', 2);
+    const fixture = mount(['ROLE_USER'], { unhealthyCount: 2 });
     const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     const organise = links.find((anchor) => anchor.getAttribute('href') === '/settings/organise');
     const preferences = links.find(
@@ -69,24 +70,24 @@ describe('SettingsNavComponent', () => {
   });
 
   it('renders no badge anywhere when there are no unhealthy feeds', () => {
-    const fixture = mount(['ROLE_USER'], 'rail', 0);
+    const fixture = mount(['ROLE_USER'], { unhealthyCount: 0 });
     expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
   it('badges the admin Outgoing mail entry with the mail-failure count for an admin', () => {
-    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 3);
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], { mailFailureCount: 3 });
     const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')?.textContent?.trim()).toBe('3');
   });
 
   it('shows no mail badge for a non-admin, even with a nonzero failure count', () => {
-    const fixture = mount(['ROLE_USER'], 'rail', 0, 3);
+    const fixture = mount(['ROLE_USER'], { mailFailureCount: 3 });
     expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
   it('shows no mail badge for an admin with a zero failure count', () => {
-    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 0);
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], { mailFailureCount: 0 });
     const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')).toBeNull();

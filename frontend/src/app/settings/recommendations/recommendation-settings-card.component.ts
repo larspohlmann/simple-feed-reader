@@ -26,10 +26,29 @@ import { formatInteger } from '../../reader/format';
 import {
   RecommendationSettingsService,
   RecommendationBatchSize,
+  RecommendationExpertDefaults,
   RecommendationExpertField,
   RecommendationSettingBounds,
+  RecommendationSettingsState,
   TypedRecommendationEdits,
 } from './recommendation-settings.service';
+
+function typedSeed(state: RecommendationSettingsState | null): RecommendationExpertDefaults {
+  const pick = <Key extends keyof RecommendationSettingsState, Fallback>(
+    key: Key,
+    fallback: Fallback,
+  ): NonNullable<RecommendationSettingsState[Key]> | Fallback => state?.[key] ?? fallback;
+  return {
+    guidancePrompt: pick('guidancePrompt', ''),
+    favoritesCap: pick('favoritesCap', 0),
+    keptCap: pick('keptCap', 0),
+    viewedCap: pick('viewedCap', 0),
+    candidatePoolSize: pick('candidatePoolSize', 0),
+    picksLimit: pick('picksLimit', 0),
+    batchSize: pick('batchSize', 'medium' as const),
+    contextWindow: pick('contextWindowOverride', null),
+  };
+}
 
 /** The "For You" tuning card, rebuilt on the settings primitives (#541). The
  *  "show reasons" switch, auto-generate cadence, and look-back window (#386)
@@ -258,16 +277,7 @@ export class RecommendationSettingsCardComponent {
     if (!defaults) return;
 
     this.svc.resetExpertDraft(defaults);
-    this.guidance.set(defaults.guidancePrompt ?? '');
-    this.favoritesCap.set(defaults.favoritesCap);
-    this.keptCap.set(defaults.keptCap);
-    this.viewedCap.set(defaults.viewedCap);
-    this.candidatePoolSize.set(defaults.candidatePoolSize);
-    this.picksLimit.set(defaults.picksLimit);
-    this.batchSize.set(defaults.batchSize);
-    this.contextWindow.set(defaults.contextWindow);
-    this.clientValidationErrors.set({});
-    this.dismissedServerErrors.set({});
+    this.reseed(defaults);
   }
 
   /** The explicit Save flushes the accumulated typed draft over the last-saved
@@ -304,15 +314,18 @@ export class RecommendationSettingsCardComponent {
    *  the inputs (a `linkedSignal` only recomputes when `state` changes). */
   onReset(): void {
     this.svc.discardDraft();
-    const state = this.svc.state();
-    this.guidance.set(state?.guidancePrompt ?? '');
-    this.favoritesCap.set(state?.favoritesCap ?? 0);
-    this.keptCap.set(state?.keptCap ?? 0);
-    this.viewedCap.set(state?.viewedCap ?? 0);
-    this.candidatePoolSize.set(state?.candidatePoolSize ?? 0);
-    this.picksLimit.set(state?.picksLimit ?? 0);
-    this.batchSize.set(state?.batchSize ?? 'medium');
-    this.contextWindow.set(state?.contextWindowOverride ?? null);
+    this.reseed(typedSeed(this.svc.state()));
+  }
+
+  private reseed(seed: RecommendationExpertDefaults): void {
+    this.guidance.set(seed.guidancePrompt ?? '');
+    this.favoritesCap.set(seed.favoritesCap);
+    this.keptCap.set(seed.keptCap);
+    this.viewedCap.set(seed.viewedCap);
+    this.candidatePoolSize.set(seed.candidatePoolSize);
+    this.picksLimit.set(seed.picksLimit);
+    this.batchSize.set(seed.batchSize);
+    this.contextWindow.set(seed.contextWindow);
     this.clientValidationErrors.set({});
     this.dismissedServerErrors.set({});
   }

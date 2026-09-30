@@ -14,14 +14,18 @@ const tag = (id: number, name: string, position: number): TagDto => ({
   position,
 });
 
-const sub = (id: number, title: string, tagIds: number[] = [], position = 0): SubscriptionDto =>
+const sub = (
+  id: number,
+  title: string,
+  at: { tagIds?: number[]; position?: number } = {},
+): SubscriptionDto =>
   makeSubscription({
     id,
     feedId: id,
     title,
     feedUrl: `https://feed-${id}.example/rss`,
-    position,
-    tags: tagIds.map((tagId, index) => ({
+    position: at.position ?? 0,
+    tags: (at.tagIds ?? []).map((tagId, index) => ({
       id: tagId,
       name: `Tag ${tagId}`,
       color: null,
@@ -33,10 +37,10 @@ const sub = (id: number, title: string, tagIds: number[] = [], position = 0): Su
 describe('OrganiseStore', () => {
   const TAGS = [tag(1, 'Nachrichten', 0), tag(2, 'Tech', 1)];
   const SUBS = [
-    sub(10, 'taz', [1], 0),
-    sub(11, 'heise', [2], 0),
-    sub(12, 'netzpolitik', [1, 2], 1),
-    sub(13, 'Untagged feed', [], 0),
+    sub(10, 'taz', { tagIds: [1] }),
+    sub(11, 'heise', { tagIds: [2] }),
+    sub(12, 'netzpolitik', { tagIds: [1, 2], position: 1 }),
+    sub(13, 'Untagged feed'),
   ];
 
   function make(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = TAGS): OrganiseStore {

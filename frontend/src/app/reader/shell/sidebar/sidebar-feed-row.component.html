@@ -1,0 +1,83 @@
+@let feed = subscription();
+@if (organising()) {
+  <span class="handle" cdkDragHandle aria-hidden="true">
+    <app-icon name="drag_indicator" size="sm" />
+  </span>
+  <span class="feedname"
+    ><app-favicon [url]="feed.faviconUrl" /><span>{{ feed.title }}</span></span
+  >
+  <button
+    class="dots"
+    type="button"
+    [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+    (click)="rows.openFeedSheet(feed)"
+  >
+    <app-icon name="more_horiz" size="sm" />
+  </button>
+} @else {
+  <a
+    class="nav"
+    [class.tag-sub]="tagId() !== null"
+    [class.active]="active()"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ subscription: feed.id })"
+    queryParamsHandling="merge"
+  >
+    <app-favicon [url]="feed.faviconUrl" /><span>{{ feed.title }}</span>
+    @if (!feed.includeInAllItems || !feed.includeInForYou) {
+      <app-icon
+        class="feed-exclusion-marker"
+        name="visibility_off"
+        size="xs"
+        [title]="rows.exclusionTitle(feed)"
+      />
+    }
+    @if (feed.unreadCount > 0) {
+      <span class="count">{{ feed.unreadCount }}</span>
+    }
+  </a>
+  @if (!screen.isCoarse()) {
+    <div
+      class="rowmenu"
+      [appDismissOnOutside]="rows.menuFor() === menuKey()"
+      (dismiss)="rows.closeMenu()"
+    >
+      <button
+        class="dots"
+        type="button"
+        [attr.aria-label]="'reader.manage' | transloco: { name: feed.title }"
+        (click)="rows.toggleMenu(menuKey(), $event)"
+      >
+        <app-icon name="more_horiz" size="sm" />
+      </button>
+      @if (rows.menuFor() === menuKey()) {
+        <div class="pop" role="menu">
+          <button role="menuitem" (click)="manage.editSubscription(feed); rows.closeMenu()">
+            {{ 'reader.editFeed' | transloco }}
+          </button>
+          <button
+            role="menuitem"
+            (click)="manage.setIncludeInAllItems(feed, !feed.includeInAllItems); rows.closeMenu()"
+          >
+            {{
+              (feed.includeInAllItems ? 'reader.excludeFromAllItems' : 'reader.includeInAllItems')
+                | transloco
+            }}
+          </button>
+          <button
+            role="menuitem"
+            (click)="manage.setIncludeInForYou(feed, !feed.includeInForYou); rows.closeMenu()"
+          >
+            {{
+              (feed.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
+                | transloco
+            }}
+          </button>
+          <button role="menuitem" (click)="manage.unsubscribe(feed); rows.closeMenu()">
+            {{ 'reader.unsubscribe' | transloco }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+}

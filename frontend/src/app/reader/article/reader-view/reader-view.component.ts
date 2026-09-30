@@ -1,6 +1,5 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
   HostListener,
   Injector,
@@ -10,13 +9,11 @@ import {
   input,
   output,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
-import { Observable, Subscription, timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -36,93 +33,24 @@ import { EntryCommentsComponent } from '../entry-comments/entry-comments.compone
 import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
-import {
-  EntryDto,
-  ReaderArticle,
-  ReaderContent,
-  ReaderFailure,
-  SubscriptionTagDto,
-} from '../../models';
-import { EntryBodyService } from '../content/entry-body.service';
-import { ReaderContentService } from '../content/reader-content.service';
-import { describeLoadError } from '../content/reader-load-error';
+import { EntryDto, SubscriptionTagDto } from '../../models';
 import { ReaderModeService } from '../content/reader-mode.service';
+import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
-import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
-import { ARTICLE_FOCUS_CURVE, needsReadingTail, readingBlocks } from '../reading/reading-focus';
-import { ReadingFocusApplier } from '../reading/reading-focus-applier';
-import { sectionedUnits } from '../reading/reading-sections';
-import { articleOverflowsViewport, readingProgress } from '../reading/reading-progress';
-import {
-  AXIS_LOCK_MIN,
-  atBottom,
-  isBackSwipe,
-  overscrollTriggersBack,
-  rubberBand,
-} from '../../reader-gestures';
+import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
+import { ReadingScope } from '../reading/reading-scope.service';
+import { prefersReducedMotion } from '../reading/reduced-motion';
+import { TocEntry, collectToc } from '../reading/reading-toc';
+import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
+import { ArticleGestures } from './article-gestures.service';
 import { formatDuration, relativeTime } from '../../format';
-import { markLeadParagraph } from '../decorators/lead-paragraph';
-import { markInsetCards } from '../decorators/reader-cards';
-import { fitReaderImages } from '../decorators/reader-image-fit';
-import { highlightCodeBlocks } from '../decorators/code-highlight';
-import { attachHlsStreams } from '../decorators/hls-streams';
-import { upgradeMediaEmbeds } from '../../media-embeds';
-import { markNarrationPlayers } from '../decorators/reader-narration';
-import { expandFaqDisclosures } from '../decorators/reader-faq';
-import { hydrateSlideshows } from '../decorators/reader-slideshow';
+import { decorateArticle } from '../decorators/decorate-article';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
-import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { AudioPlayerService } from '../../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachment';
-
-/** Give up on a hung extraction and fall back to feed content (backend caps a
- *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
-const READER_LOAD_TIMEOUT_MS = 30_000;
-/** How far the rubber-banded overscroll pull may travel. */
-const MAX_PULL = 160;
-/** Slide-out/return animation before the list takes over. */
-const LEAVE_ANIM_MS = 220;
-
-// Article scroll-restore settle: re-assert the target for at most this many frames
-// per content render, stopping early once the height has held steady this long.
-const ARTICLE_SETTLE_FRAMES = 60;
-const ARTICLE_SETTLE_STABLE = 4;
-
-/** Below this many headings an article is too short to warrant a contents list. */
-const TOC_MIN_HEADINGS = 3;
-
-/** Players whose own horizontal drag (a scrubber, an embed) the back-swipe must yield to (#1057). */
-const MEDIA_CONTROL_SELECTOR = 'audio, video, input[type="range"], .reader-embed';
-
-/** Whether a touch began on a media player's own control rather than the article surface. */
-function startsOnMediaControl(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(MEDIA_CONTROL_SELECTOR) !== null;
-}
-
-/** One heading in the article's table of contents. */
-interface TocEntry {
-  id: string;
-  text: string;
-  /** Heading level (2–4) — drives the TOC indentation. */
-  level: number;
-}
-
-function isPresent(element: HTMLElement | undefined): element is HTMLElement {
-  return element !== undefined;
-}
-
-/** A stable, DOM-id-safe slug for a heading's anchor. */
-function slugify(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'section'
-  );
-}
 
 @Component({
   selector: 'app-reader-view',
@@ -143,12 +71,17 @@ function slugify(text: string): string {
     WarningBoxComponent,
     ErrorBannerComponent,
     EntryCommentsComponent,
+    ReaderTocComponent,
   ],
   providers: [
     {
       provide: READER_SCROLLER,
       useFactory: () => inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
     },
+    ArticleScrollRestore,
+    ArticleGestures,
+    ArticleSource,
+    ReadingScope,
   ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
@@ -176,17 +109,17 @@ export class ReaderViewComponent {
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly reader = inject(ReaderContentService);
-  private readonly bodyService = inject(EntryBodyService);
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
-  private readonly scroll = inject(ListScrollMemory);
   protected readonly screen = inject(LayoutService);
-  private readonly readingFocus = inject(ReadingFocusService);
   private readonly audioPlayer = inject(AudioPlayerService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly reduceMotion = prefersReducedMotion();
+  private readonly restore = inject(ArticleScrollRestore);
+  protected readonly gestures = inject(ArticleGestures);
+  protected readonly source = inject(ArticleSource);
+  protected readonly scope = inject(ReadingScope);
 
   protected readonly formatDuration = formatDuration;
 
@@ -202,66 +135,18 @@ export class ReaderViewComponent {
     if (entry && attachment) this.audioPlayer.play(toAudioTrack(entry, attachment));
   }
 
-  // Article scroll restore: a resume-reload reopens the entry at the top; re-seat
-  // it where the user was. `pendingRestore` holds the target until it lands
-  // (re-asserted across the content swap/image loads) or the user scrolls.
-  private pendingRestore: { id: number; top: number } | null = null;
-  private restoreRaf = 0;
-
-  // Reading-focus: the paragraph nearest the reading centre stays fully opaque
-  // while the rest dims. Skipped entirely when the setting is off or the reader
-  // prefers reduced motion.
-  private readonly reduceMotion =
-    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  private applier?: ReadingFocusApplier;
-  private scopeObs?: ResizeObserver;
-
-  // Touch gestures (full-screen only): a rightward swipe or a pull past the end
-  // returns to the list. dragX follows a horizontal swipe; pull follows an
-  // at-the-end overscroll (rubber-banded). `leaving` commits to going back.
-  private readonly dragX = signal(0);
-  private readonly pull = signal(0);
-  private readonly snapping = signal(false);
-  readonly leaving = signal(false);
-  private touchStartX = 0;
-  private touchStartY = 0;
-  private touchDx = 0;
-  private touchDy = 0;
-  private axis: 'none' | 'h' | 'v' = 'none';
-  private atBottomOnStart = false;
-  // A drag that begins on a player's own control (the scrubber, the embed) is
-  // that control's to handle; the back-swipe must not steal it (#1057).
-  private gestureSuppressed = false;
-  private leaveTimer = 0;
-
-  protected readonly readerTransform = computed(
-    () => `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)`,
-  );
-  protected readonly readerTransition = computed(() =>
-    !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
-  );
-  protected readonly pulling = computed(() => this.pull() > 0);
-  protected readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
-
   // The open entry's reference changes on every optimistic flag update, but its
   // id doesn't. Tracking the loaded id lets the load effect ignore those churns
   // — no re-fetch, and the Reader/Original toggle survives an in-reader action.
   private loadedId: number | null = null;
-  private loadSub: Subscription | null = null;
 
   // Alias the shared mode signal so the template and computeds read it directly;
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
-  private readonly state = signal<
-    | { status: 'idle' | 'loading' }
-    | { status: 'ok'; article: ReaderArticle }
-    | { status: 'failed'; failure: ReaderFailure | null; error: unknown }
-  >({ status: 'idle' });
 
-  // Table of contents, built from the rendered article headings. Collapsed by
-  // default (tocOpen); only shown once an article has enough headings.
+  // Table of contents, built from the rendered article headings. `tocOpen` lives
+  // here, not in the TOC, so it survives the reader/original swap.
   readonly toc = signal<TocEntry[]>([]);
-  readonly showToc = computed(() => this.toc().length >= TOC_MIN_HEADINGS);
   readonly tocOpen = signal(false);
 
   /** Back-to-top affordance: revealed once the reader has scrolled past a screen. */
@@ -273,114 +158,13 @@ export class ReaderViewComponent {
   readonly toolbarHidden = signal(false);
   private lastToolbarScrollTop = 0;
 
-  // The reading scope's extent, re-measured whenever the content, the comments
-  // or the pane changes size — see measureScrollRange(). The tail keys on the
-  // scope's bottom (body + comments); the progress bar keys on the body alone.
-  private readonly contentBottom = signal(0);
-  private readonly readingBottom = signal(0);
-  private readonly viewportHeight = signal(0);
-  private readonly scrollTop = signal(0);
-
-  /** Whether the article carries tail space below it. */
-  readonly hasTail = computed(() => needsReadingTail(this.readingBottom(), this.viewportHeight()));
-
-  /**
-   * The article's length-and-position cue. On a phone it's the only one there is:
-   * a mobile browser paints no scrollbar for the shell's nested scroller, so the
-   * reader had no way to judge how long an article was (#238).
-   */
-  readonly showProgress = computed(() =>
-    articleOverflowsViewport(this.contentBottom(), this.viewportHeight()),
-  );
-  readonly progressPercent = computed(
-    () => readingProgress(this.scrollTop(), this.viewportHeight(), this.contentBottom()) * 100,
-  );
-
-  readonly loading = computed(() => this.state().status === 'loading');
-  readonly failed = computed(() => this.state().status === 'failed');
-  /** The diagnostic detail behind the fallback note's "show error" disclosure.
-   *  A backend failure prefers the server's own cause (the fetch's HTTP status or
-   *  transport message), falling back to the bare reason code when it sent none;
-   *  a transport failure in the browser carries the complete HTTP message. */
-  readonly errorDetail = computed<string | null>(() => {
-    const state = this.state();
-    if (state.status !== 'failed') return null;
-    return state.failure
-      ? (state.failure.detail ?? state.failure.reason)
-      : describeLoadError(state.error);
-  });
-  private readonly article = computed(() => {
-    const state = this.state();
-    return state.status === 'ok' ? state.article : null;
-  });
-  /** The reader body is the free preview of a paywalled article (#785). The
-   *  original view shows the feed's own teaser, which needs no such note. */
-  readonly paywalled = computed(
-    () => this.mode() === 'reader' && (this.article()?.paywalled ?? false),
-  );
-  readonly paywallUrl = computed(() => this.article()?.url || this.entry()?.url || null);
-  /** Set when the original view's hero image fails to load, so a broken picture
-   *  hides rather than leaving a torn placeholder. Reset on every entry change. */
-  protected readonly heroFailed = signal(false);
-
-  /** The payload the heroes come from. Null while loading, and after a
-   *  transport error, where no payload arrived at all. */
-  private readonly heroSource = computed<ReaderContent | null>(() => {
-    const state = this.state();
-    if (state.status === 'ok') return state.article;
-    if (state.status === 'failed') return state.failure;
-    return null;
-  });
-
-  /**
-   * The picture that leads the ORIGINAL view. The reader view carries its own
-   * lead inside contentHtml now (#681), so it needs no hero element here; only
-   * the original view, which renders the raw feed body, still gets one.
-   */
-  readonly hero = computed(() => {
-    const source = this.heroSource();
-    if (source === null || this.mode() === 'reader') return null;
-    const image = source.originalHero;
-    return image === null || this.heroFailed() ? null : image;
-  });
-
   /** Estimated minutes to read the displayed text; null hides the meta chip. */
-  readonly readingMinutes = computed(() => estimateReadingMinutes(this.displayHtml()));
-
-  /** The feed body for the open entry, fetched from the store on demand. Read
-   *  unconditionally (not just in original mode) so the request starts the
-   *  moment the entry opens, not only once the reader toggle falls back to it. */
-  private readonly feedBody = computed(() => {
-    const entry = this.entry();
-    return entry ? this.bodyService.body(entry.id)() : null;
-  });
-
-  /** Whether the feed body failed to load and reader mode has no extracted
-   *  article to show instead — the one case with nothing already on screen to
-   *  fall back to beyond the summary. */
-  readonly feedBodyFailed = computed(() => {
-    if (this.mode() === 'reader' && this.article()) return false;
-    return this.feedBody()?.status === 'error';
-  });
-
-  readonly displayHtml = computed(() => {
-    const entry = this.entry();
-    if (!entry) return '';
-    const article = this.article();
-    if (this.mode() === 'reader' && article) return article.contentHtml;
-    // The summary renders at once; the body (once the store fetches it)
-    // replaces it in place, and a failed fetch leaves the summary standing.
-    const body = this.feedBody();
-    return body?.status === 'ok' && body.html !== null ? body.html : (entry.summary ?? '');
-  });
-
-  /** The inline error's retry action — refetches the open entry's body. */
-  retryBody(): void {
-    const entry = this.entry();
-    if (entry) this.bodyService.retry(entry.id);
-  }
+  readonly readingMinutes = computed(() => estimateReadingMinutes(this.source.displayHtml()));
 
   constructor() {
+    this.source.connect(this.entry);
+    this.gestures.connect({ fullscreen: this.fullscreen, close: () => this.close.emit() });
+
     effect(() => {
       const entry = this.entry();
       const id = entry?.id ?? null;
@@ -389,58 +173,22 @@ export class ReaderViewComponent {
       // load, re-fetch, or reset the mode toggle).
       if (id === this.loadedId) return;
       this.loadedId = id;
+      // Before the source opens: a synchronous load calls enableToggle().
       this.readerMode.reset();
-      this.cancelRestore();
+      this.restore.arm(id);
       // A new article starts at the top, with a fresh, collapsed TOC and its
       // toolbar presented — this instance is reused, and a retracted toolbar
       // must not carry over to the next article.
       this.toc.set([]);
       this.tocOpen.set(false);
-      this.heroFailed.set(false);
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
-      this.scrollTop.set(0);
-      if (!entry) {
-        this.loadSub?.unsubscribe();
-        this.pendingRestore = null;
-        this.state.set({ status: 'idle' });
-        return;
-      }
-      // Arm a scroll restore for this entry if we remember a position for it.
-      const savedTop = this.scroll.readEntry(entry.id);
-      this.pendingRestore = savedTop > 0 ? { id: entry.id, top: savedTop } : null;
-      if (!entry.url) {
-        this.loadSub?.unsubscribe();
-        this.state.set({ status: 'idle' });
-        this.readerMode.setOriginalOnly();
-        return;
-      }
-      this.runLoad(this.reader.load(entry.id));
-    });
-    this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
-
-    // The applier is rebuilt whenever `content` itself is (re)created — per
-    // article and on the reader/original swap — destroying the old one first.
-    effect(() => {
-      const content = this.content()?.nativeElement;
-      this.applier?.destroy();
-      this.applier = undefined;
-      if (!content) return;
-      this.applier = new ReadingFocusApplier({
-        scroller: this.host.nativeElement,
-        blocks: () =>
-          [content, this.commentsHost()].filter(isPresent).flatMap((root) => readingBlocks(root)),
-        curve: ARTICLE_FOCUS_CURVE,
-        isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
-        units: sectionedUnits(() => this.language.lang()),
-      });
+      this.scope.reset();
+      this.source.open(entry);
     });
 
-    effect(() => {
-      if (this.readingFocus.enabled()) this.applier?.refresh();
-      else this.applier?.clear();
-    });
+    this.scope.connect(this.content, this.commentsSection);
 
     // Body images arrive through [innerHTML], so one capturing listener gives them the proxy
     // fallback (error events do not bubble).
@@ -459,7 +207,7 @@ export class ReaderViewComponent {
     // Re-decorate external links and re-seat the reading focus whenever the
     // rendered HTML changes (new article, or Reader/Original toggle).
     effect(() => {
-      this.displayHtml();
+      this.source.displayHtml();
       // Depend on the container too, not just the HTML: when extraction fails,
       // displayHtml() recomputes to the same string and never notifies, so the
       // container replacing the placeholder is the only render signal (#101).
@@ -467,228 +215,49 @@ export class ReaderViewComponent {
       queueMicrotask(() => {
         const host = this.content()?.nativeElement;
         if (!host) return;
-        for (const link of Array.from(host.querySelectorAll('a'))) {
-          // Leave in-page fragment anchors alone; only external links open in a new tab.
-          if ((link.getAttribute('href') ?? '').startsWith('#')) continue;
-          if (link.target !== '_blank') {
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-          }
-        }
-        markLeadParagraph(host);
-        markInsetCards(host);
-        fitReaderImages(host);
-        void highlightCodeBlocks(host);
-        upgradeMediaEmbeds(host);
-        markNarrationPlayers(host, this.i18n.translate('reader.narrationPlayer'));
-        expandFaqDisclosures(host);
-        hydrateSlideshows(host, {
-          previous: this.i18n.translate('reader.slideshowPrevious'),
-          next: this.i18n.translate('reader.slideshowNext'),
-          position: (current, total) =>
-            this.i18n.translate('reader.slideshowPosition', { current, total }),
-        });
-        attachHlsStreams(host);
-        this.buildToc(host);
-        this.applier?.refresh();
-        this.measureScrollRange();
-        // Content just (re-)rendered — re-seat a pending scroll restore. Runs on
-        // the original render and again when the reader content swaps in.
-        if (this.pendingRestore?.id === this.entry()?.id) this.startRestore();
+        decorateArticle(host, this.i18n);
+        this.toc.set(collectToc(host));
+        this.scope.refresh();
+        // Runs on the original render and again when the reader content swaps in.
+        this.restore.reseat(() => this.entry()?.id);
       });
     });
 
-    // A viewport resize changes whether the article still needs tail space —
-    // the applier observes its own geometry and needs no nudge here.
-    const onResize = () => {
-      this.measureScrollRange();
-    };
-    window.addEventListener('resize', onResize, { passive: true });
-    this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
-
-    // The scope's height firms up after first paint (images, fonts, the original→reader
-    // swap), and the comments load after the article, past the applier's last refresh.
-    effect(() => {
-      const content = this.content()?.nativeElement;
-      const comments = this.commentsSection()?.nativeElement;
-      this.scopeObs?.disconnect();
-      this.scopeObs = undefined;
-      if (typeof ResizeObserver === 'undefined') return;
-      const targets = [content, comments].filter(isPresent);
-      if (targets.length === 0) return;
-      const obs = new ResizeObserver(() => {
-        this.applier?.refresh();
-        this.measureScrollRange();
-      });
-      for (const target of targets) obs.observe(target);
-      this.scopeObs = obs;
-    });
-    this.destroyRef.onDestroy(() => this.scopeObs?.disconnect());
-    this.destroyRef.onDestroy(() => this.applier?.destroy());
-
-    // Touch listeners live on the scroll host. touchmove is non-passive so a
-    // committed horizontal swipe / at-end pull can preventDefault the scroll.
-    const element = this.host.nativeElement;
-    const start = (touchEvent: TouchEvent) => this.onTouchStart(touchEvent);
-    const move = (touchEvent: TouchEvent) => this.onTouchMove(touchEvent);
-    const end = () => this.onTouchEnd();
-    element.addEventListener('touchstart', start, { passive: true });
-    element.addEventListener('touchmove', move, { passive: false });
-    element.addEventListener('touchend', end);
-    element.addEventListener('touchcancel', end);
-    // A real wheel/touch gesture hands scrolling back to the user, cancelling any
-    // in-flight restore so it never fights them.
-    const abortRestore = (): void => {
-      this.pendingRestore = null;
-    };
-    element.addEventListener('wheel', abortRestore, { passive: true });
-    this.destroyRef.onDestroy(() => {
-      element.removeEventListener('touchstart', start);
-      element.removeEventListener('touchmove', move);
-      element.removeEventListener('touchend', end);
-      element.removeEventListener('touchcancel', end);
-      element.removeEventListener('wheel', abortRestore);
-      this.cancelRestore();
-      if (this.leaveTimer) clearTimeout(this.leaveTimer);
-    });
-  }
-
-  /** Subscribe to a content source (initial load or cache-busting reload),
-   *  driving the loading → ok/failed lifecycle. Reader/original mode is
-   *  untouched here — only a genuine entry change resets it. */
-  private runLoad(source: Observable<ReaderContent>): void {
-    this.loadSub?.unsubscribe();
-    this.state.set({ status: 'loading' });
-    this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
-      next: (content) => {
-        if (content.status === 'ok') {
-          this.state.set({ status: 'ok', article: content });
-          this.readerMode.enableToggle();
-        } else {
-          this.state.set({ status: 'failed', failure: content, error: null });
-          this.readerMode.setOriginalOnly();
-        }
-      },
-      error: (error: unknown) => {
-        // A timeout or a transport error leaves no payload, so this article
-        // shows the feed's content with no hero. Keep the error so the reader
-        // can reveal the complete HTTP message behind the fallback note.
-        this.state.set({ status: 'failed', failure: null, error });
-        this.readerMode.setOriginalOnly();
-      },
-    });
-  }
-
-  onTouchStart(touchEvent: TouchEvent): void {
-    this.pendingRestore = null; // the user is taking over; stop restoring
-    if (!this.fullscreen() || this.leaving() || touchEvent.touches.length !== 1) return;
-    this.gestureSuppressed = startsOnMediaControl(touchEvent.target);
-    if (this.gestureSuppressed) return;
-    const touch = touchEvent.touches[0];
-    this.touchStartX = touch.clientX;
-    this.touchStartY = touch.clientY;
-    this.touchDx = 0;
-    this.touchDy = 0;
-    this.axis = 'none';
-    const element = this.host.nativeElement;
-    this.atBottomOnStart = atBottom(element.scrollTop, element.clientHeight, element.scrollHeight);
-    this.snapping.set(false);
-  }
-
-  onTouchMove(touchEvent: TouchEvent): void {
-    if (this.gestureSuppressed) return;
-    if (!this.fullscreen() || this.leaving() || touchEvent.touches.length !== 1) return;
-    const touch = touchEvent.touches[0];
-    const dx = touch.clientX - this.touchStartX;
-    const dy = touch.clientY - this.touchStartY;
-    this.touchDx = dx;
-    this.touchDy = dy;
-    if (this.axis === 'none') {
-      if (Math.abs(dx) < AXIS_LOCK_MIN && Math.abs(dy) < AXIS_LOCK_MIN) return;
-      this.axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    }
-    if (this.axis === 'h') {
-      const x = Math.max(0, dx); // rightward-only "back" swipe
-      this.dragX.set(x);
-      if (x > 0) touchEvent.preventDefault();
-    } else if (this.atBottomOnStart && dy < 0) {
-      // Pulling up past the article's end.
-      this.pull.set(rubberBand(-dy, MAX_PULL));
-      touchEvent.preventDefault();
-    }
-  }
-
-  onTouchEnd(): void {
-    if (this.gestureSuppressed) {
-      this.gestureSuppressed = false;
-      return;
-    }
-    if (!this.fullscreen() || this.leaving()) return;
-    const axis = this.axis;
-    this.axis = 'none';
-    this.snapping.set(true);
-    if (axis === 'h' && isBackSwipe(this.touchDx, this.touchDy)) {
-      this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
-      this.pull.set(0);
-      this.leave();
-    } else if (axis === 'v' && overscrollTriggersBack(this.pull())) {
-      this.leave(); // hold the pull spinner while we go back
-    } else {
-      this.dragX.set(0);
-      this.pull.set(0);
-    }
+    this.scope.observeResizes();
   }
 
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
    *  back-swipe rather than cutting straight to the list; the split pane has
    *  no overlay to slide, so it closes directly. */
   onBack(): void {
-    if (this.fullscreen()) this.slideBack();
+    if (this.fullscreen()) this.gestures.slideBack();
     else this.close.emit();
-  }
-
-  private slideBack(): void {
-    if (this.leaving()) return;
-    this.snapping.set(true);
-    this.pull.set(0);
-    this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
-    this.leave();
-  }
-
-  /** Commit to returning to the list once the leave animation has played. */
-  private leave(): void {
-    this.leaving.set(true);
-    this.leaveTimer = window.setTimeout(
-      () => this.close.emit(),
-      this.reduceMotion ? 0 : LEAVE_ANIM_MS,
-    );
   }
 
   @HostListener('scroll')
   protected onScroll(): void {
     const scrollTop = this.host.nativeElement.scrollTop;
-    this.scrollTop.set(scrollTop);
+    this.scope.trackScroll(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists
       // on the narrow layout, and the split pane keeps its toolbar put.
       this.toolbarHidden.set(
-        nextHeaderHidden(this.toolbarHidden(), this.lastToolbarScrollTop, scrollTop, false),
+        nextHeaderHidden({
+          previousHidden: this.toolbarHidden(),
+          lastTop: this.lastToolbarScrollTop,
+          top: scrollTop,
+          isWide: false,
+        }),
       );
     }
     this.lastToolbarScrollTop = scrollTop;
-    // Remember the reading position so a resume-reload can restore it. Skip while
-    // a restore is in flight: the content may still be short and its clamped
-    // scrollTop would overwrite the good target.
-    const id = this.entry()?.id;
-    if (id != null && !this.pendingRestore && !this.leaving()) {
-      this.scroll.saveEntry(id, scrollTop);
-    }
+    if (!this.gestures.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
   }
 
   /** Jump the reading pane back to the top of the article. */
   scrollToTop(): void {
-    this.pendingRestore = null; // don't let a restore fight the jump
+    this.restore.abort(); // don't let a restore fight the jump
     this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
     // Land focus on the title, not wherever the button was — an unmounted button
     // drops focus to <body>. preventScroll is needed since the heading is still
@@ -696,95 +265,11 @@ export class ReaderViewComponent {
     this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 
-  /**
-   * Re-assert the pending scroll target across the frames where the article's
-   * height is still settling (original→reader swap, images loading), stopping
-   * once the height holds steady, the budget is spent, or the user takes over.
-   */
-  private startRestore(): void {
-    this.cancelRestore();
-    const pending = this.pendingRestore;
-    if (!pending) return;
-    // Rough landing right away so the restore holds even where rAF is throttled
-    // (e.g. a backgrounded tab); the loop below then refines it as height settles.
-    this.host.nativeElement.scrollTop = pending.top;
-    if (typeof requestAnimationFrame === 'undefined') return;
-    let frames = 0;
-    let stable = 0;
-    let lastHeight = -1;
-    const step = (): void => {
-      const pending = this.pendingRestore;
-      const element = this.host.nativeElement;
-      if (!pending || pending.id !== this.entry()?.id) return; // aborted or entry changed
-      element.scrollTop = pending.top;
-      const height = element.scrollHeight;
-      stable = height === lastHeight ? stable + 1 : 0;
-      lastHeight = height;
-      if (++frames < ARTICLE_SETTLE_FRAMES && stable < ARTICLE_SETTLE_STABLE) {
-        this.restoreRaf = requestAnimationFrame(step);
-      }
-    };
-    this.restoreRaf = requestAnimationFrame(step);
-  }
-
-  private cancelRestore(): void {
-    if (this.restoreRaf && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.restoreRaf);
-    }
-    this.restoreRaf = 0;
-  }
-
-  /**
-   * Measure how far the article and its comments reach inside the pane. Takes
-   * the article's own content box — never the panel's, which already includes
-   * the tail and would feed the measurement back into itself.
-   */
-  private measureScrollRange(): void {
-    this.viewportHeight.set(this.host.nativeElement.clientHeight);
-    const content = this.content()?.nativeElement;
-    if (!content) {
-      this.contentBottom.set(0);
-      this.readingBottom.set(0);
-      return;
-    }
-    this.contentBottom.set(this.bottomInScroller(content));
-    this.readingBottom.set(this.bottomInScroller(this.commentsHost() ?? content));
-  }
-
-  private bottomInScroller(element: HTMLElement): number {
-    const host = this.host.nativeElement;
-    return (
-      element.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop
-    );
-  }
-
-  // `blocks()` runs inside effects, which must not rerun when the comments mount.
-  private commentsHost(): HTMLElement | undefined {
-    return untracked(this.commentsSection)?.nativeElement;
-  }
-
-  /** Extract the article's headings into a contents list, giving each a unique
-   *  id to anchor the jump. */
-  private buildToc(host: HTMLElement): void {
-    const used = new Set<string>();
-    const entries: TocEntry[] = [];
-    for (const heading of Array.from(host.querySelectorAll<HTMLElement>('h2, h3, h4'))) {
-      const text = (heading.textContent ?? '').trim();
-      if (text === '') continue;
-      let id = heading.id || slugify(text);
-      for (let suffix = 2; used.has(id); suffix++) id = `${slugify(text)}-${suffix}`;
-      used.add(id);
-      heading.id = id;
-      entries.push({ id, text, level: Number(heading.tagName[1]) });
-    }
-    this.toc.set(entries);
-  }
-
   /** Scroll the reading pane to a heading, clearing the sticky bar (split-pane). */
   scrollToHeading(id: string): void {
     const element = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
     if (!element) return;
-    this.pendingRestore = null; // a jump takes over from any in-flight restore
+    this.restore.abort(); // a jump takes over from any in-flight restore
     const host = this.host.nativeElement;
     const offset = this.fullscreen() ? 8 : 52;
     const top =
@@ -795,6 +280,12 @@ export class ReaderViewComponent {
     });
   }
 
+  /** The inline error's retry action — refetches the open entry's body. */
+  retryBody(): void {
+    const entry = this.entry();
+    if (entry) this.source.retryBody(entry.id);
+  }
+
   toggleMode(): void {
     this.readerMode.toggle();
   }
@@ -803,7 +294,7 @@ export class ReaderViewComponent {
   refreshArticle(): void {
     const entry = this.entry();
     if (!entry) return;
-    this.runLoad(this.reader.reload(entry.id));
+    this.source.reload(entry.id);
   }
 
   when(entry: EntryDto): string {

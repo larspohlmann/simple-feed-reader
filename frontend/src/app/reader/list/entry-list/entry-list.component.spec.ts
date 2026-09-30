@@ -4,7 +4,8 @@ import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
-import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
+import { EntryListComponent } from './entry-list.component';
+import { REFRESH_REVEAL } from './pull-to-refresh';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 import { CatalogStore } from '../../feeds/catalog/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
@@ -1422,7 +1423,9 @@ describe('EntryListComponent', () => {
 
   it('remembers the scroll offset per selection as the list is scrolled', () => {
     const fixture = mount();
-    fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+    fixture.componentInstance.scrolling.onScroll({
+      target: { scrollTop: 480 },
+    } as unknown as Event);
     expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
   });
 
@@ -1443,7 +1446,7 @@ describe('EntryListComponent', () => {
 
       fakeScroller(fixture, 900).dispatchEvent(new Event('scroll'));
 
-      expect(fixture.componentInstance.showToTop()).toBe(true);
+      expect(fixture.componentInstance.scrolling.showToTop()).toBe(true);
     });
 
     it('request the reading-focus frame outside the Angular zone', () => {
@@ -1467,10 +1470,7 @@ describe('EntryListComponent', () => {
     // Mount mid-load (skeletons, no scroll container yet) as on a fresh page boot.
     const fixture = mount({ loading: true, entries: [] });
     memory.read.mockReturnValue(420);
-    const apply = jest.spyOn(
-      fixture.componentInstance as unknown as { applyScroll: () => void },
-      'applyScroll',
-    );
+    const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
 
     // The first page lands: loading clears and the rows render.
     fixture.componentRef.setInput('loading', false);
@@ -1484,10 +1484,7 @@ describe('EntryListComponent', () => {
   it('does not restore scroll while the list is still loading', () => {
     memory.read.mockReturnValue(420);
     const fixture = mount({ loading: true, entries: [] });
-    const apply = jest.spyOn(
-      fixture.componentInstance as unknown as { applyScroll: () => void },
-      'applyScroll',
-    );
+    const apply = jest.spyOn(fixture.componentInstance.scrolling, 'applyScroll');
     fixture.detectChanges();
     expect(apply).not.toHaveBeenCalled();
   });
@@ -1546,7 +1543,9 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       memory.save.mockClear();
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 480 },
+      } as unknown as Event);
 
       expect(memory.save).not.toHaveBeenCalled();
     });
@@ -1561,7 +1560,9 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       memory.save.mockClear();
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 480 },
+      } as unknown as Event);
 
       expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
     });
@@ -1581,11 +1582,15 @@ describe('EntryListComponent', () => {
       const element = fixture.nativeElement as HTMLElement;
       expect(element.querySelector('app-to-top-button')).toBeNull();
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
       fixture.detectChanges();
       expect(element.querySelector('app-to-top-button')).not.toBeNull();
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 100 },
+      } as unknown as Event);
       fixture.detectChanges();
       expect(element.querySelector('app-to-top-button')).toBeNull();
     });
@@ -1606,7 +1611,9 @@ describe('EntryListComponent', () => {
     it('clicking the button scrolls to the top', () => {
       const fixture = mount();
       const { scrollTo } = stubScroller(fixture);
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
       fixture.detectChanges();
 
       (
@@ -1622,7 +1629,9 @@ describe('EntryListComponent', () => {
     it('moves focus to the list title instead of dropping it to the body', () => {
       const fixture = mount();
       stubScroller(fixture);
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
       fixture.detectChanges();
 
       (
@@ -1648,7 +1657,9 @@ describe('EntryListComponent', () => {
 
     it('hides the button again when the selection changes', () => {
       const fixture = mount();
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
       fixture.detectChanges();
       expect(
         (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
@@ -1656,17 +1667,21 @@ describe('EntryListComponent', () => {
 
       fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
-      expect(fixture.componentInstance.showToTop()).toBe(false);
+      expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
     });
 
     it('keeps the bar expanded as the smooth scroll travels back up', () => {
       const fixture = mount();
       stubScroller(fixture);
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 3000 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 3000 },
+      } as unknown as Event);
       fixture.componentInstance.scrollToTop();
       // The animation's own first event, still deep in the list. Against a zeroed
       // baseline this would read as a 2900px scroll *down* and re-collapse the bar.
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 2900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 2900 },
+      } as unknown as Event);
       expect(fixture.componentInstance.collapsed()).toBe(false);
     });
 
@@ -1690,21 +1705,20 @@ describe('EntryListComponent', () => {
       }) as unknown as HTMLElement;
 
     /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
-     *  geometry is scripted: `scrollerTop`/`headerBottom` place the fold line,
+     *  geometry is scripted: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
      *  `entries` become the tagged rows `querySelector(All)` finds. */
     function stubGeometry(
       fixture: ReturnType<typeof mount>,
-      scrollerTop: number,
-      headerBottom: number,
       entries: HTMLElement[],
+      fold: { scrollerTop?: number; headerBottom?: number } = {},
     ): void {
       const scroller = {
-        getBoundingClientRect: () => ({ top: scrollerTop }),
+        getBoundingClientRect: () => ({ top: fold.scrollerTop ?? 0 }),
         querySelector: () => entries[0] ?? null,
         querySelectorAll: () => entries as unknown as NodeListOf<Element>,
       } as unknown as HTMLElement;
       const header = {
-        getBoundingClientRect: () => ({ bottom: headerBottom }),
+        getBoundingClientRect: () => ({ bottom: fold.headerBottom ?? 100 }),
       } as unknown as HTMLElement;
 
       jest
@@ -1718,7 +1732,7 @@ describe('EntryListComponent', () => {
     it('collects ids of entries fully above the fold at click', () => {
       const fixture = mount();
       // fold line = max(scroller.top=0, listHdr.bottom=100) = 100
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         measuredEntry('1', 40),
         measuredEntry('2', 90),
         measuredEntry('3', 150),
@@ -1735,7 +1749,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({
         entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
       });
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
       const emitted: number[][] = [];
       fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
@@ -1746,7 +1760,7 @@ describe('EntryListComponent', () => {
 
     it('emits nothing when no entry has cleared the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
+      stubGeometry(fixture, [measuredEntry('1', 150)]);
 
       const emitted: number[][] = [];
       fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
@@ -1760,27 +1774,27 @@ describe('EntryListComponent', () => {
       const element = fixture.nativeElement as HTMLElement;
       expect(element.querySelector('.mark-above')).toBeNull();
 
-      fixture.componentInstance.showToTop.set(true);
+      fixture.componentInstance.scrolling.showToTop.set(true);
       fixture.detectChanges();
       expect(element.querySelector('.mark-above')).toBeNull();
 
-      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
       expect(element.querySelector('.mark-above')).not.toBeNull();
     });
 
     it('hides the button once scrolled back up, even with entries above the fold', () => {
       const fixture = mount();
-      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
       expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
     });
 
     it('emits the collected ids when the rendered button is clicked', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('7', 40)]);
-      fixture.componentInstance.showToTop.set(true);
-      fixture.componentInstance.hasAboveFold.set(true);
+      stubGeometry(fixture, [measuredEntry('7', 40)]);
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const emitted: number[][] = [];
@@ -1800,13 +1814,13 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
-      const group = fixture.componentInstance
+      const group = fixture.componentInstance.content
         .visibleBlocks()
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
       const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
       const tail = group.entries.slice(group.previewCount).map((groupEntry) => groupEntry.id);
       expect(tail.length).toBeGreaterThan(0);
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         ...preview.map((id) => measuredEntry(String(id), 40)),
         measuredEntry('9', 150),
       ]);
@@ -1824,12 +1838,12 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
-      const group = fixture.componentInstance
+      const group = fixture.componentInstance.content
         .visibleBlocks()
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
       const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
       const [last, ...above] = [...preview].reverse();
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         ...above.reverse().map((id) => measuredEntry(String(id), 40)),
         measuredEntry(String(last), 150),
       ]);
@@ -1843,8 +1857,8 @@ describe('EntryListComponent', () => {
 
     it('labels the button with the done_all icon', () => {
       const fixture = mount();
-      fixture.componentInstance.showToTop.set(true);
-      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.detectChanges();
 
       const button = (fixture.nativeElement as HTMLElement).querySelector('.mark-above')!;
@@ -1857,29 +1871,35 @@ describe('EntryListComponent', () => {
     // `stubGeometry` drives the click-time collection above.
     it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
 
-      expect(fixture.componentInstance.hasAboveFold()).toBe(true);
+      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(true);
     });
 
     it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 100 },
+      } as unknown as Event);
 
-      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
 
     it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
+      stubGeometry(fixture, [measuredEntry('1', 150)]);
 
-      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.scrolling.onScroll({
+        target: { scrollTop: 900 },
+      } as unknown as Event);
 
-      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
 
     it('does not throw for a scroll event carrying only scrollTop', () => {
@@ -1888,16 +1908,18 @@ describe('EntryListComponent', () => {
       // the viewChild instead of that target must tolerate it.
       const fixture = mount();
       expect(() =>
-        fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
+        fixture.componentInstance.scrolling.onScroll({
+          target: { scrollTop: 900 },
+        } as unknown as Event),
       ).not.toThrow();
     });
 
     it('resets hasAboveFold when the selection changes', () => {
       const fixture = mount();
-      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
       fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
-      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
   });
 
@@ -1941,20 +1963,22 @@ describe('EntryListComponent', () => {
   describe('refresh reveal', () => {
     it('holds the reveal open while a refresh runs and closes it after', () => {
       const fixture = mount({ refreshing: true });
-      expect(fixture.componentInstance.revealOffset()).toBe(REFRESH_REVEAL);
+      expect(fixture.componentInstance.pull.revealOffset()).toBe(REFRESH_REVEAL);
 
       fixture.componentRef.setInput('refreshing', false);
       fixture.detectChanges();
-      expect(fixture.componentInstance.revealOffset()).toBe(0);
+      expect(fixture.componentInstance.pull.revealOffset()).toBe(0);
     });
 
     it('carries no transform at rest, so a long list is not promoted to its own layer', () => {
       const fixture = mount();
-      expect(fixture.componentInstance.revealTransform()).toBe('none');
+      expect(fixture.componentInstance.pull.revealTransform()).toBe('none');
 
       fixture.componentRef.setInput('refreshing', true);
       fixture.detectChanges();
-      expect(fixture.componentInstance.revealTransform()).toBe(`translateY(${REFRESH_REVEAL}px)`);
+      expect(fixture.componentInstance.pull.revealTransform()).toBe(
+        `translateY(${REFRESH_REVEAL}px)`,
+      );
     });
 
     it('opens the reveal from a button refresh with no pull, and labels it', () => {
@@ -2003,7 +2027,7 @@ describe('EntryListComponent', () => {
 
     it('does not reveal, even while refreshing', () => {
       const fixture = mount({ refreshing: true });
-      expect(fixture.componentInstance.revealOffset()).toBe(0);
+      expect(fixture.componentInstance.pull.revealOffset()).toBe(0);
       expect((fixture.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
     });
   });
@@ -2026,7 +2050,9 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      expect(fixture.componentInstance.blocks().some((block) => block.kind === 'group')).toBe(true);
+      expect(
+        fixture.componentInstance.content.blocks().some((block) => block.kind === 'group'),
+      ).toBe(true);
     });
 
     it('never collapses the for-you list', () => {
@@ -2035,9 +2061,9 @@ describe('EntryListComponent', () => {
         selection: { kind: 'for-you', id: null, unread: false },
         layout: 'magazine',
       });
-      expect(fixture.componentInstance.blocks().some((block) => block.kind === 'group')).toBe(
-        false,
-      );
+      expect(
+        fixture.componentInstance.content.blocks().some((block) => block.kind === 'group'),
+      ).toBe(false);
     });
   });
 
@@ -2225,20 +2251,22 @@ describe('EntryListComponent', () => {
     it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
       const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
 
-      fixture.componentInstance.hiddenAboveIds.set(new Set([2]));
+      fixture.componentInstance.content.hiddenAboveIds.set(new Set([2]));
 
       expect(
-        fixture.componentInstance.visibleRunGroups()[0].entries.map((groupEntry) => groupEntry.id),
+        fixture.componentInstance.content
+          .visibleRunGroups()[0]
+          .entries.map((groupEntry) => groupEntry.id),
       ).toEqual([1, 3]);
     });
 
     it('drops a hidden single-entry magazine block entirely', () => {
       const fixture = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
-      const before = fixture.componentInstance.blocks();
+      const before = fixture.componentInstance.content.blocks();
       const targetId = (before[0] as Extract<MagazineBlock, { entry: EntryDto }>).entry.id;
 
-      fixture.componentInstance.hiddenAboveIds.set(new Set([targetId]));
-      const after = fixture.componentInstance.visibleBlocks();
+      fixture.componentInstance.content.hiddenAboveIds.set(new Set([targetId]));
+      const after = fixture.componentInstance.content.visibleBlocks();
 
       expect(after.length).toBe(before.length - 1);
       expect(
@@ -2255,14 +2283,14 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      const groupBefore = fixture.componentInstance
+      const groupBefore = fixture.componentInstance.content
         .blocks()
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
       expect(groupBefore).toBeDefined();
       const hiddenId = groupBefore.entries[0].id;
 
-      fixture.componentInstance.hiddenAboveIds.set(new Set([hiddenId]));
-      const groupAfter = fixture.componentInstance
+      fixture.componentInstance.content.hiddenAboveIds.set(new Set([hiddenId]));
+      const groupAfter = fixture.componentInstance.content
         .visibleBlocks()
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
 
@@ -2277,16 +2305,16 @@ describe('EntryListComponent', () => {
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      const groupBefore = fixture.componentInstance
+      const groupBefore = fixture.componentInstance.content
         .blocks()
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
 
-      fixture.componentInstance.hiddenAboveIds.set(
+      fixture.componentInstance.content.hiddenAboveIds.set(
         new Set(groupBefore.entries.map((groupEntry) => groupEntry.id)),
       );
 
       expect(
-        fixture.componentInstance.visibleBlocks().some((block) => block.kind === 'group'),
+        fixture.componentInstance.content.visibleBlocks().some((block) => block.kind === 'group'),
       ).toBe(false);
     });
 
@@ -2296,7 +2324,7 @@ describe('EntryListComponent', () => {
 
       fixture.componentInstance.hideAboveMarked([1, 2]);
 
-      expect(fixture.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
+      expect(fixture.componentInstance.content.hiddenAboveIds()).toEqual(new Set([1, 2]));
       expect(memory.save).toHaveBeenCalledWith(fixture.componentInstance.selection(), 0);
       await frames();
       expect(scroller.scrollTop).toBe(0);
@@ -2304,13 +2332,13 @@ describe('EntryListComponent', () => {
 
     it('lowers both corner buttons: nothing is above the fold once the boundary is at the top', () => {
       const fixture = mount({ entries: [entry(1), entry(2)] });
-      fixture.componentInstance.showToTop.set(true);
-      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
 
       fixture.componentInstance.hideAboveMarked([1]);
 
-      expect(fixture.componentInstance.showToTop()).toBe(false);
-      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.scrolling.showToTop()).toBe(false);
+      expect(fixture.componentInstance.scrolling.hasAboveFold()).toBe(false);
     });
 
     it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
@@ -2340,31 +2368,31 @@ describe('EntryListComponent', () => {
       fixture.componentRef.setInput('layout', 'magazine');
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.hiddenAboveIds()).toEqual(new Set([1]));
+      expect(fixture.componentInstance.content.hiddenAboveIds()).toEqual(new Set([1]));
     });
 
     it('counts the hidden rows out of visibleEntryCount', () => {
       const fixture = mount({ entries: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1, 2]);
 
-      expect(fixture.componentInstance.visibleEntryCount()).toBe(0);
+      expect(fixture.componentInstance.content.visibleEntryCount()).toBe(0);
     });
 
     it('resets hiddenAboveIds when the selection changes', () => {
       const fixture = mount({ entries: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1]);
-      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(1);
+      expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
       fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(0);
+      expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
     });
 
     it('resets hiddenAboveIds on a genuine reload', () => {
       const fixture = mount({ entries: [entry(1), entry(2)] });
       fixture.componentInstance.hideAboveMarked([1]);
-      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(1);
+      expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(1);
 
       fixture.componentRef.setInput('loading', true);
       fixture.detectChanges();
@@ -2372,7 +2400,7 @@ describe('EntryListComponent', () => {
       fixture.componentRef.setInput('loading', false);
       fixture.detectChanges();
 
-      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(0);
+      expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
     });
   });
 });

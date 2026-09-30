@@ -63,11 +63,11 @@ describe('overscrollTriggersBack', () => {
 
 describe('atBottom', () => {
   it('is true within the tolerance of the scroll end', () => {
-    expect(atBottom(900, 100, 1001)).toBe(true); // 900+100 = 1000, within 2 of 1001
+    expect(atBottom({ scrollTop: 900, clientHeight: 100, scrollHeight: 1001 })).toBe(true); // 900+100 = 1000, within 2 of 1001
   });
 
   it('is false while there is more to scroll', () => {
-    expect(atBottom(500, 100, 1000)).toBe(false);
+    expect(atBottom({ scrollTop: 500, clientHeight: 100, scrollHeight: 1000 })).toBe(false);
   });
 });
 

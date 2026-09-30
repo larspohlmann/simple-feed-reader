@@ -101,19 +101,23 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
   return articleOverflowsViewport(contentBottom, viewportHeight);
 }
 
+export interface BlockSpan {
+  readonly top: number;
+  readonly bottom: number;
+}
+
 /**
  * Opacity by the distance of the block's nearest edge from the viewport centre, so a
  * block spanning the centre stays opaque however tall (#213). `curve` shapes the fade.
  */
 export function focusOpacityForSpan(
-  blockTop: number,
-  blockBottom: number,
+  span: BlockSpan,
   viewportHeight: number,
   curve: FocusCurve = LIST_FOCUS_CURVE,
 ): number {
   if (viewportHeight <= 0) return 1;
   const center = viewportHeight / 2;
-  const distanceFromCenter = Math.max(blockTop - center, center - blockBottom, 0);
+  const distanceFromCenter = Math.max(span.top - center, center - span.bottom, 0);
   const plateau = viewportHeight * curve.plateau;
   const fadeSpan = center - plateau;
   if (distanceFromCenter <= plateau || fadeSpan <= 0) return 1;

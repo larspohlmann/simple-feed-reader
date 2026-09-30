@@ -7,182 +7,28 @@
   [class.collapsed]="collapsed()"
   [class.is-search]="selection().kind === 'search'"
 >
-  <div class="heading">
-    <!-- Title and badge share one row so the badge never adds a second one:
-         the scroller reserves this bar's height, so a taller header moves the
-         rows (#419). -->
-    <div class="title-row">
-      @if (titleLeading(); as leading) {
-        <ng-container [ngTemplateOutlet]="leading" />
-      }
-      <h2 #listTitle tabindex="-1" [class.search-title]="selection().kind === 'search'">
-        @if (titleTag(); as tag) {
-          <!-- A named step rather than `text`, so the glyph carries the weight of the
-               title beside it. Stepping down on collapse keeps that balance: a fixed
-               px would tower over the 13px the heading drops to. -->
-          <app-tag-glyph [name]="tag.icon" [color]="tag.color" [size]="collapsed() ? 'xs' : 'md'" />
-        }
-        @if (selection().kind === 'subscription') {
-          <!-- The feed's own favicon, the same icon the sidebar row shows, so the
-               heading and the row that led here read as the same feed. It sits
-               inside the ellipsised h2 so the clip (from the end) never touches it. -->
-          <app-favicon [url]="titleFaviconUrl()" [size]="collapsed() ? 16 : 20" />
-        }
-        @if (titleIcon(); as icon) {
-          <!-- The fixed views (All items, Favorites, Kept, Recently read, For you,
-               search) lead with the same glyph their sidebar row shows. Sized like
-               the tag glyph and stepped down on collapse for the same reason (#411). -->
-          <app-icon [name]="icon" [size]="collapsed() ? 'xs' : 'md'" />
-        }
-        @if (selection().kind === 'search') {
-          <!-- Split so "Results for" stays small/muted while the term stays
-               prominent (#581). The `{{ ' ' }}` between them is load-bearing, not
-               decoration: Angular drops a whitespace-only text node between elements. -->
-          <span class="results-prefix">{{ searchTitlePrefix() }}</span
-          ><br class="compact-search-title-break" />{{ ' '
-          }}<span class="results-term">{{ searchTitleTerm() }}</span>
-          @if (searchCountLabel(); as count) {
-            <span class="results-count count-pill">{{ count }}</span>
-          }
-        } @else {
-          <span>{{ title() }}</span>
-          @if (headingCount(); as count) {
-            <!-- The count's meaning, for the heading's accessible name: the visible
-                 pill outside this h2 is a bare number and aria-hidden, so this is
-                 where a screen reader hears what it counts, on heading nav too (#709). -->
-            <span class="sr-only">{{
-              (titleCount().counts === 'unread'
-                ? 'reader.titleCountUnread'
-                : 'reader.titleCountItems'
-              ) | transloco: { count }
-            }}</span>
-          }
-        }
-        @if (showWholeWordBadge()) {
-          <!-- Carries the mode into the heading's own accessible name so it is heard
-               on heading navigation too, not just focus (aria-describedby only fires
-               on focus, #408). The visible badge beside it is aria-hidden to avoid a double announce. -->
-          <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
-        }
-        @if (showPhraseBadge()) {
-          <!-- The phrase mode's accessible name, mirroring the whole-word one
-               above: heard on heading navigation, with the visible pill beside
-               it aria-hidden so it announces once (#702). -->
-          <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
-        }
-      </h2>
-      @if (headingCount(); as count) {
-        <!-- Beside the h2, not inside it: the h2 ellipsises, so a long feed name
-             would clip the very number this pill exists to show. aria-hidden
-             because the h2 above already carries the count in words. -->
-        <span class="title-count count-pill" aria-hidden="true">{{ count }}</span>
-      }
-      @if (showWholeWordBadge()) {
-        <span
-          class="whole-word-badge"
-          aria-hidden="true"
-          [attr.title]="'reader.searchWholeWordHint' | transloco"
-        >
-          {{ 'reader.searchWholeWord' | transloco }}
-        </span>
-      }
-      @if (showPhraseBadge()) {
-        <span
-          class="phrase-badge"
-          aria-hidden="true"
-          [attr.title]="'reader.searchPhraseHint' | transloco"
-        >
-          {{ 'reader.searchPhrase' | transloco }}
-        </span>
-      }
-    </div>
-    @if (lastRefreshedLabel()) {
-      <span class="last-refreshed">
-        {{ 'reader.lastRefreshed' | transloco }} {{ lastRefreshedLabel() }}
-        @if (nextRefreshLabel(); as label) {
-          <span class="next-refresh">({{ 'reader.nextRefresh' | transloco }} {{ label }})</span>
-        }
-      </span>
-    }
-  </div>
-  <div class="tools">
-    @if (leadingActions(); as actions) {
-      <ng-container [ngTemplateOutlet]="actions" />
-    }
-    @if (canRefresh()) {
-      <button
-        appListAction
-        class="refresh"
-        type="button"
-        [class.spinning]="refreshing()"
-        [disabled]="refreshing()"
-        (click)="refresh.emit()"
-        [attr.aria-label]="'reader.refresh' | transloco"
-        [attr.title]="'reader.refresh' | transloco"
-      >
-        <app-icon name="refresh" size="sm" />
-        <span class="txt">{{ 'reader.refresh' | transloco }}</span>
-      </button>
-    }
-    @if (headerActions(); as actions) {
-      <ng-container [ngTemplateOutlet]="actions" />
-    }
-    @if (hasListOrder()) {
-      @let orderHint =
-        (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco;
-      <button
-        appListAction
-        class="list-order"
-        type="button"
-        [attr.aria-label]="orderHint"
-        [attr.title]="orderHint"
-        (click)="orderChange.emit(oldestFirst() ? 'newest' : 'oldest')"
-      >
-        <app-icon [name]="oldestFirst() ? 'arrow_upward' : 'arrow_downward'" size="sm" />
-        <span class="txt">{{
-          (oldestFirst() ? 'reader.oldestFirst' : 'reader.newestFirst') | transloco
-        }}</span>
-      </button>
-    }
-    @if (hasUnreadFilter()) {
-      <!-- One switch, not a two-option toggle: filled circle means unread-only,
-           hollow means all, matching the "filled means unread" row convention (#602). -->
-      <button
-        appListAction
-        class="unread-switch"
-        type="button"
-        role="switch"
-        [attr.aria-checked]="selection().unread"
-        [attr.aria-label]="'reader.unread' | transloco"
-        [attr.title]="'reader.unread' | transloco"
-        (click)="unreadOnlyChange.emit(!selection().unread)"
-      >
-        <!-- One `circle` glyph for both positions, its FILL axis carrying the state
-             (#602): solid while filtered to unread, hollow (FILL 0, the font
-             default) while showing all — one glyph keeps the diameter identical. -->
-        <app-icon name="circle" size="sm" [fill]="selection().unread" />
-        <!-- Wide header only; narrow drops it and lets the circle carry the state,
-             like the action buttons beside it. aria-hidden so it never fights the
-             switch's own constant accessible name and on/off state. -->
-        <span class="txt" aria-hidden="true">{{
-          (selection().unread ? 'reader.unread' : 'reader.all') | transloco
-        }}</span>
-      </button>
-    }
-    @if (canMarkAllRead()) {
-      <button
-        appListAction
-        class="mark-all"
-        type="button"
-        (click)="markAllRead.emit()"
-        [attr.aria-label]="'reader.markAllRead' | transloco"
-        [attr.title]="'reader.markAllRead' | transloco"
-      >
-        <app-icon name="done_all" size="sm" />
-        <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
-      </button>
-    }
-  </div>
+  <app-list-header
+    [selection]="selection()"
+    [title]="title()"
+    [searchTitlePrefix]="searchTitlePrefix()"
+    [searchTitleTerm]="searchTitleTerm()"
+    [searchCountLabel]="searchCountLabel()"
+    [titleCount]="titleCount()"
+    [titleTag]="titleTag()"
+    [titleFaviconUrl]="titleFaviconUrl()"
+    [lastRefreshed]="lastRefreshed()"
+    [nextRefresh]="nextRefresh()"
+    [titleLeading]="titleLeading()"
+    [leadingActions]="leadingActions()"
+    [headerActions]="headerActions()"
+    [collapsed]="collapsed()"
+    [refreshing]="refreshing()"
+    [canMarkAllRead]="canMarkAllRead()"
+    (refresh)="refresh.emit()"
+    (orderChange)="orderChange.emit($event)"
+    (unreadOnlyChange)="unreadOnlyChange.emit($event)"
+    (markAllRead)="markAllRead.emit()"
+  />
 </header>
 
 @if (selection().kind === 'search') {
@@ -197,13 +43,13 @@
 @if (revealVisible()) {
   <div
     class="pull-indicator"
-    [class.armed]="pullArmed()"
-    [class.dragging]="dragging()"
-    [style.transform]="revealTransform()"
+    [class.armed]="pull.pullArmed()"
+    [class.dragging]="pull.dragging()"
+    [style.transform]="pull.revealTransform()"
     aria-hidden="true"
   >
     <div class="pill">
-      <app-spinner [size]="20" [decorative]="true" [animate]="pullArmed() || refreshing()" />
+      <app-spinner [size]="20" [decorative]="true" [animate]="pull.pullArmed() || refreshing()" />
       @if (refreshing()) {
         <span class="label">{{ 'reader.refreshing' | transloco }}</span>
       }
@@ -232,7 +78,7 @@
       <div class="skeleton"></div>
     }
   </div>
-} @else if (visibleEntryCount() === 0) {
+} @else if (content.visibleEntryCount() === 0) {
   <div class="empty-wrap" [class.magazine]="effectiveLayout() === 'magazine'">
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so it can apply the active
@@ -241,21 +87,7 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    <p class="empty">
-      @if (selection().kind === 'search') {
-        {{ 'reader.searchNoResults' | transloco: { term: displayedSearchTerm() } }}
-      } @else if (selection().kind === 'saved-searches' && savedSearchCount() === 0) {
-        {{ 'reader.savedSearchesEmpty' | transloco }}
-      } @else {
-        @if (selection().unread) {
-          <app-caught-up-illustration />
-        }
-        {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
-        @if (suggestFeeds()) {
-          <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
-        }
-      }
-    </p>
+    <app-list-empty-state [selection]="selection()" [savedSearchCount]="savedSearchCount()" />
   </div>
 } @else if (effectiveLayout() === 'magazine') {
   <div
@@ -264,10 +96,10 @@
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
-    [class.dragging]="dragging()"
-    [style.transform]="revealTransform()"
+    [class.dragging]="pull.dragging()"
+    [style.transform]="pull.revealTransform()"
     #rows
-    [appScrollOutsideZone]="onRowsScroll"
+    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -277,7 +109,7 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (b of visibleBlocks(); track blockKey(b)) {
+    @for (b of content.visibleBlocks(); track blockKey(b)) {
       @if (b.kind === 'run-header') {
         <app-run-header [generatedAt]="b.generatedAt" />
       } @else {
@@ -286,60 +118,7 @@
         <div class="row-slot magazine-slot" [class.leaving]="isBlockLeaving(b)">
           <div class="row-slot-inner">
             <app-recommendation-strip [entry]="strippableEntry(b)">
-              @switch (b.kind) {
-                @case ('hero') {
-                  <app-entry-hero
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('wide') {
-                  <app-entry-wide
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('quote') {
-                  <app-entry-quote
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('split') {
-                  <app-entry-split
-                    [entry]="entryOf(b)"
-                    [imageSide]="side(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('kicker') {
-                  <app-entry-kicker
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('thumb') {
-                  <app-entry-thumb
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('compact') {
-                  <app-entry-compact
-                    [entry]="entryOf(b)"
-                    [tags]="tagsFor(entryOf(b).subscriptionId)"
-                  />
-                }
-                @case ('group') {
-                  <app-source-group
-                    [source]="grp(b).source"
-                    [subscriptionId]="grp(b).subscriptionId"
-                    [entries]="grp(b).entries"
-                    [previewCount]="grp(b).previewCount"
-                    [tags]="tagsFor(grp(b).subscriptionId)"
-                  />
-                }
-              }
+              <app-magazine-block [block]="b" [feedTags]="feedTags()" />
             </app-recommendation-strip>
           </div>
         </div>
@@ -364,10 +143,10 @@
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
-    [class.dragging]="dragging()"
-    [style.transform]="revealTransform()"
+    [class.dragging]="pull.dragging()"
+    [style.transform]="pull.revealTransform()"
     #rows
-    [appScrollOutsideZone]="onRowsScroll"
+    [appScrollOutsideZone]="scrolling.onScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -377,8 +156,8 @@
         <ng-container [ngTemplateOutlet]="block" />
       </div>
     }
-    @for (group of visibleRunGroups(); track group.runId) {
-      @if (showRunHeader(group)) {
+    @for (group of content.visibleRunGroups(); track group.runId) {
+      @if (content.showRunHeader(group)) {
         <app-run-header [generatedAt]="group.generatedAt!" />
       }
       @for (e of group.entries; track e.id) {
@@ -421,11 +200,11 @@
   <app-loading-overlay [shown]="reloadSpinner()" [label]="'common.loading' | transloco" />
 }
 
-@if (showToTop()) {
+@if (scrolling.showToTop()) {
   <app-to-top-button (activate)="scrollToTop()" />
 }
 
-@if (showToTop() && hasAboveFold()) {
+@if (scrolling.showToTop() && scrolling.hasAboveFold()) {
   <button
     type="button"
     class="mark-above"

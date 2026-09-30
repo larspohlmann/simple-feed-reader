@@ -1,0 +1,15 @@
+<p class="empty">
+  @if (selection().kind === 'search') {
+    {{ 'reader.searchNoResults' | transloco: { term: displayedSearchTerm() } }}
+  } @else if (selection().kind === 'saved-searches' && savedSearchCount() === 0) {
+    {{ 'reader.savedSearchesEmpty' | transloco }}
+  } @else {
+    @if (selection().unread) {
+      <app-caught-up-illustration />
+    }
+    {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
+    @if (suggestFeeds()) {
+      <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
+    }
+  }
+</p>

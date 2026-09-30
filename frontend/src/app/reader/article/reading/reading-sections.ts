@@ -176,6 +176,11 @@ export function groupIntoSections(unitHeights: number[], targetHeight: number): 
   return groups;
 }
 
+export interface UnitMeasure {
+  readonly measure: MeasureHeight;
+  readonly lang: string;
+}
+
 interface SplitContext {
   readonly tallThreshold: number;
   readonly measure: MeasureHeight;
@@ -190,13 +195,12 @@ interface SplitContext {
 export function focusUnits(
   blocks: HTMLElement[],
   scrollerHeight: number,
-  measure: MeasureHeight,
-  lang: string,
+  unit: UnitMeasure,
 ): FocusUnit[] {
   const context: SplitContext = {
     tallThreshold: scrollerHeight * TALL_BLOCK_FRACTION,
-    measure: measuringOnce(measure),
-    lang,
+    measure: measuringOnce(unit.measure),
+    lang: unit.lang,
   };
   const sectionTarget = scrollerHeight * SECTION_TARGET_FRACTION;
   return blocks.flatMap((block) => {
@@ -210,7 +214,10 @@ export function focusUnits(
 /** The article view's strategy: `focusUnits` over the live layout. */
 export function sectionedUnits(lang: () => string): UnitStrategy {
   return (blocks, scrollerHeight) =>
-    focusUnits(blocks, scrollerHeight, (element) => element.getBoundingClientRect().height, lang());
+    focusUnits(blocks, scrollerHeight, {
+      measure: (element) => element.getBoundingClientRect().height,
+      lang: lang(),
+    });
 }
 
 function measuringOnce(measure: MeasureHeight): MeasureHeight {
@@ -233,24 +240,23 @@ function atomicUnits(block: HTMLElement, context: SplitContext, depth: number): 
   );
 }
 
+const DIVIDERS = new Map<string, (block: HTMLElement) => HTMLElement[]>([
+  ['PRE', () => []],
+  ['FIGURE', () => []],
+  ['VIDEO', () => []],
+  ['IFRAME', () => []],
+  ['IMG', () => []],
+  ['UL', (block) => childElements(block, 'li')],
+  ['OL', (block) => childElements(block, 'li')],
+  ['DL', (block) => childElements(block, 'dt, dd')],
+  ['TABLE', (block) => Array.from(block.querySelectorAll<HTMLElement>('tr'))],
+]);
+
 function divide(block: HTMLElement, lang: string): HTMLElement[] {
-  switch (block.tagName) {
-    case 'PRE':
-    case 'FIGURE':
-    case 'VIDEO':
-    case 'IFRAME':
-    case 'IMG':
-      return [];
-    case 'UL':
-    case 'OL':
-      return childElements(block, 'li');
-    case 'DL':
-      return childElements(block, 'dt, dd');
-    case 'TABLE':
-      return Array.from(block.querySelectorAll<HTMLElement>('tr'));
-    default:
-      return hasBlockChildren(block) ? readingBlocks(block) : wrapSentences(block, lang);
-  }
+  return (
+    DIVIDERS.get(block.tagName)?.(block) ??
+    (hasBlockChildren(block) ? readingBlocks(block) : wrapSentences(block, lang))
+  );
 }
 
 function childElements(block: HTMLElement, selector: string): HTMLElement[] {

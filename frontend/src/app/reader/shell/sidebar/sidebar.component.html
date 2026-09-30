@@ -105,116 +105,13 @@
     }
   }
 
-  @if (savedSearches().length) {
-    <div>
-      <div class="tag savedsearch-head">
-        <!-- savedsearch-toggle carries no CSS; it is a test anchor for specs and e2e. Keep it. -->
-        <a
-          class="nav grow savedsearch-toggle"
-          [class.active]="selection().kind === 'saved-searches'"
-          [routerLink]="['/searches/saved/all']"
-        >
-          <span class="lead"><app-icon name="saved_search" size="sm" /></span>
-          <span>{{ 'reader.savedSearches' | transloco }}</span>
-          @if (savedSearchesUnread() > 0) {
-            <span class="count">{{ savedSearchesUnread() }}</span>
-          }
-        </a>
-        <!-- Flush at the right edge, styled exactly like a tag's `.chevzone`, so
-             the chevron column lines up with the tag chevrons below it. -->
-        <button
-          class="chevzone"
-          type="button"
-          [attr.aria-expanded]="savedSearchesExpanded()"
-          [attr.aria-label]="'reader.toggleSavedSearches' | transloco"
-          (click)="toggleSavedSearches()"
-        >
-          <app-icon [name]="savedSearchesExpanded() ? 'expand_more' : 'chevron_right'" size="sm" />
-        </button>
-      </div>
-      @if (savedSearchesExpanded()) {
-        <div class="savedsearch-list">
-          @for (saved of visibleSavedSearches(); track saved.id) {
-            <a
-              class="nav savedsearch-item"
-              [class.active]="saved.id === activeSavedSearchId()"
-              [class.with-digest]="showDigestToggles()"
-              [routerLink]="['/searches/saved', saved.slug]"
-            >
-              <app-icon name="search" size="sm" />
-              <!-- Term + "W" pill travel together as one left group so the pill
-                 sits directly after the word; the count and mail button anchor
-                 to the right edge past this group's trailing slack (#636). -->
-              <span class="saved-term-group">
-                <span class="saved-term">{{ saved.term }}</span>
-                @if (saved.wholeWord) {
-                  <!-- Compact "W" pill for the sidebar's narrow row; the full word
-                     still reaches screen readers via the sr-only span, mirroring
-                     the results-header badge (#408 follow-up). -->
-                  <span class="sr-only">{{ 'reader.searchWholeWord' | transloco }}</span>
-                  <span
-                    class="whole-word-badge"
-                    aria-hidden="true"
-                    [attr.title]="'reader.searchWholeWordHint' | transloco"
-                  >
-                    {{ 'reader.searchWholeWordShort' | transloco }}
-                  </span>
-                }
-                @if (saved.phrase) {
-                  <!-- Compact "P" pill, the phrase-mode analog of the "W" pill
-                     above; the term itself is stored bare, so no quotes show in
-                     the sidebar (#702). -->
-                  <span class="sr-only">{{ 'reader.searchPhrase' | transloco }}</span>
-                  <span
-                    class="phrase-badge"
-                    aria-hidden="true"
-                    [attr.title]="'reader.searchPhraseHint' | transloco"
-                  >
-                    {{ 'reader.searchPhraseShort' | transloco }}
-                  </span>
-                }
-              </span>
-              @if (saved.unreadCount > 0) {
-                <span class="count">{{ saved.unreadCount }}</span>
-              }
-              @if (showDigestToggles()) {
-                <button
-                  class="digest-toggle"
-                  type="button"
-                  [attr.aria-pressed]="saved.includeInDigest"
-                  [attr.aria-label]="'reader.digest.toggleAria' | transloco: { term: saved.term }"
-                  (click)="
-                    toggleDigest.emit(saved); $event.stopPropagation(); $event.preventDefault()
-                  "
-                >
-                  <app-icon name="mail" size="sm" [class.muted]="!saved.includeInDigest" />
-                </button>
-              }
-            </a>
-          }
-          @if (savedSearchListExpanded() || hiddenSavedSearchCount() > 0) {
-            <button
-              class="savedsearch-more"
-              type="button"
-              [attr.aria-expanded]="savedSearchListExpanded()"
-              (click)="toggleSavedSearchList()"
-            >
-              <span>{{
-                savedSearchListExpanded()
-                  ? ('reader.showLess' | transloco)
-                  : ('reader.showMoreSavedSearches'
-                    | transloco: { count: hiddenSavedSearchCount() })
-              }}</span>
-              <app-icon
-                [name]="savedSearchListExpanded() ? 'expand_less' : 'expand_more'"
-                size="sm"
-              />
-            </button>
-          }
-        </div>
-      }
-    </div>
-  }
+  <app-sidebar-saved-searches
+    [savedSearches]="savedSearches()"
+    [activeSavedSearchId]="activeSavedSearchId()"
+    [combinedActive]="selection().kind === 'saved-searches'"
+    [showDigestToggles]="showDigestToggles()"
+    (toggleDigest)="toggleDigest.emit($event)"
+  />
 
   @if (tagTree().length) {
     <!-- The whole "Tags" section collapses (#612): a full-width toggle plus a
@@ -286,7 +183,7 @@
                   class="dots"
                   type="button"
                   [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                  (click)="openTagSheet(node.tag)"
+                  (click)="rows.openTagSheet(node.tag)"
                 >
                   <app-icon name="more_horiz" size="sm" />
                 </button>
@@ -310,23 +207,29 @@
                   @let tagMenuKey = 'tag-' + node.tag.id;
                   <div
                     class="rowmenu"
-                    [appDismissOnOutside]="menuFor() === tagMenuKey"
-                    (dismiss)="closeMenu()"
+                    [appDismissOnOutside]="rows.menuFor() === tagMenuKey"
+                    (dismiss)="rows.closeMenu()"
                   >
                     <button
                       class="dots"
                       type="button"
                       [attr.aria-label]="'reader.manage' | transloco: { name: node.tag.name }"
-                      (click)="toggleMenu(tagMenuKey, $event)"
+                      (click)="rows.toggleMenu(tagMenuKey, $event)"
                     >
                       <app-icon name="more_horiz" size="sm" />
                     </button>
-                    @if (menuFor() === tagMenuKey) {
+                    @if (rows.menuFor() === tagMenuKey) {
                       <div class="pop" role="menu">
-                        <button role="menuitem" (click)="manage.editTag(node.tag); closeMenu()">
+                        <button
+                          role="menuitem"
+                          (click)="manage.editTag(node.tag); rows.closeMenu()"
+                        >
                           {{ 'reader.editTag' | transloco }}
                         </button>
-                        <button role="menuitem" (click)="manage.deleteTag(node.tag); closeMenu()">
+                        <button
+                          role="menuitem"
+                          (click)="manage.deleteTag(node.tag); rows.closeMenu()"
+                        >
                           {{ 'reader.deleteTag' | transloco }}
                         </button>
                       </div>
@@ -360,111 +263,22 @@
               [class.organising]="organising()"
               (cdkDropListDropped)="onDrop($event)"
             >
-              @for (s of node.subscriptions; track s.id) {
+              @for (subscription of node.subscriptions; track subscription.id) {
                 <div
                   class="feedrow"
                   cdkDrag
-                  [cdkDragData]="s"
+                  [cdkDragData]="subscription"
                   [cdkDragDisabled]="dragLocked()"
                   [cdkDragStartDelay]="dragDelay()"
                   (cdkDragStarted)="onDragStart('feed')"
                   (cdkDragEnded)="onDragEnd()"
                 >
-                  @if (organising()) {
-                    <span class="handle" cdkDragHandle aria-hidden="true">
-                      <app-icon name="drag_indicator" size="sm" />
-                    </span>
-                    <span class="feedname"
-                      ><app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span></span
-                    >
-                    <button
-                      class="dots"
-                      type="button"
-                      [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-                      (click)="openFeedSheet(s)"
-                    >
-                      <app-icon name="more_horiz" size="sm" />
-                    </button>
-                  } @else {
-                    <a
-                      class="nav tag-sub"
-                      [class.active]="
-                        selection().kind === 'subscription' && selection().id === s.id
-                      "
-                      [routerLink]="['/']"
-                      [queryParams]="selectionQueryParams({ subscription: s.id })"
-                      queryParamsHandling="merge"
-                    >
-                      <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
-                      @if (!s.includeInAllItems || !s.includeInForYou) {
-                        <app-icon
-                          class="feed-exclusion-marker"
-                          name="visibility_off"
-                          size="xs"
-                          [title]="exclusionTitle(s)"
-                        />
-                      }
-                      @if (s.unreadCount > 0) {
-                        <span class="count">{{ s.unreadCount }}</span>
-                      }
-                    </a>
-                    @if (!screen.isCoarse()) {
-                      @let taggedFeedMenuKey = 'sub-' + node.tag.id + '-' + s.id;
-                      <div
-                        class="rowmenu"
-                        [appDismissOnOutside]="menuFor() === taggedFeedMenuKey"
-                        (dismiss)="closeMenu()"
-                      >
-                        <button
-                          class="dots"
-                          type="button"
-                          [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-                          (click)="toggleMenu(taggedFeedMenuKey, $event)"
-                        >
-                          <app-icon name="more_horiz" size="sm" />
-                        </button>
-                        @if (menuFor() === taggedFeedMenuKey) {
-                          <div class="pop" role="menu">
-                            <button
-                              role="menuitem"
-                              (click)="manage.editSubscription(s); closeMenu()"
-                            >
-                              {{ 'reader.editFeed' | transloco }}
-                            </button>
-                            <button
-                              role="menuitem"
-                              (click)="
-                                manage.setIncludeInAllItems(s, !s.includeInAllItems); closeMenu()
-                              "
-                            >
-                              {{
-                                (s.includeInAllItems
-                                  ? 'reader.excludeFromAllItems'
-                                  : 'reader.includeInAllItems'
-                                ) | transloco
-                              }}
-                            </button>
-                            <button
-                              role="menuitem"
-                              (click)="
-                                manage.setIncludeInForYou(s, !s.includeInForYou); closeMenu()
-                              "
-                            >
-                              {{
-                                (s.includeInForYou
-                                  ? 'reader.excludeFromForYou'
-                                  : 'reader.includeInForYou'
-                                ) | transloco
-                              }}
-                            </button>
-                            <button role="menuitem" (click)="manage.unsubscribe(s); closeMenu()">
-                              {{ 'reader.unsubscribe' | transloco }}
-                            </button>
-                          </div>
-                        }
-                      </div>
-                    }
-                  }
+                  <app-sidebar-feed-row
+                    [subscription]="subscription"
+                    [selection]="selection()"
+                    [organising]="organising()"
+                    [tagId]="node.tag.id"
+                  />
                 </div>
               }
             </div>
@@ -507,100 +321,21 @@
     (cdkDropListDropped)="onDrop($event)"
   >
     @if (feedsExpanded() || dragging() || organising()) {
-      @for (s of untagged(); track s.id) {
+      @for (subscription of untagged(); track subscription.id) {
         <div
           class="feedrow"
           cdkDrag
-          [cdkDragData]="s"
+          [cdkDragData]="subscription"
           [cdkDragDisabled]="dragLocked()"
           [cdkDragStartDelay]="dragDelay()"
           (cdkDragStarted)="onDragStart('feed')"
           (cdkDragEnded)="onDragEnd()"
         >
-          @if (organising()) {
-            <span class="handle" cdkDragHandle aria-hidden="true">
-              <app-icon name="drag_indicator" size="sm" />
-            </span>
-            <span class="feedname"
-              ><app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span></span
-            >
-            <button
-              class="dots"
-              type="button"
-              [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-              (click)="openFeedSheet(s)"
-            >
-              <app-icon name="more_horiz" size="sm" />
-            </button>
-          } @else {
-            <a
-              class="nav"
-              [class.active]="selection().kind === 'subscription' && selection().id === s.id"
-              [routerLink]="['/']"
-              [queryParams]="selectionQueryParams({ subscription: s.id })"
-              queryParamsHandling="merge"
-            >
-              <app-favicon [url]="s.faviconUrl" /><span>{{ s.title }}</span>
-              @if (!s.includeInAllItems || !s.includeInForYou) {
-                <app-icon
-                  class="feed-exclusion-marker"
-                  name="visibility_off"
-                  size="xs"
-                  [title]="exclusionTitle(s)"
-                />
-              }
-              @if (s.unreadCount > 0) {
-                <span class="count">{{ s.unreadCount }}</span>
-              }
-            </a>
-            @if (!screen.isCoarse()) {
-              @let untaggedFeedMenuKey = 'sub-' + s.id;
-              <div
-                class="rowmenu"
-                [appDismissOnOutside]="menuFor() === untaggedFeedMenuKey"
-                (dismiss)="closeMenu()"
-              >
-                <button
-                  class="dots"
-                  type="button"
-                  [attr.aria-label]="'reader.manage' | transloco: { name: s.title }"
-                  (click)="toggleMenu(untaggedFeedMenuKey, $event)"
-                >
-                  <app-icon name="more_horiz" size="sm" />
-                </button>
-                @if (menuFor() === untaggedFeedMenuKey) {
-                  <div class="pop" role="menu">
-                    <button role="menuitem" (click)="manage.editSubscription(s); closeMenu()">
-                      {{ 'reader.editFeed' | transloco }}
-                    </button>
-                    <button
-                      role="menuitem"
-                      (click)="manage.setIncludeInAllItems(s, !s.includeInAllItems); closeMenu()"
-                    >
-                      {{
-                        (s.includeInAllItems
-                          ? 'reader.excludeFromAllItems'
-                          : 'reader.includeInAllItems'
-                        ) | transloco
-                      }}
-                    </button>
-                    <button
-                      role="menuitem"
-                      (click)="manage.setIncludeInForYou(s, !s.includeInForYou); closeMenu()"
-                    >
-                      {{
-                        (s.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
-                          | transloco
-                      }}
-                    </button>
-                    <button role="menuitem" (click)="manage.unsubscribe(s); closeMenu()">
-                      {{ 'reader.unsubscribe' | transloco }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-          }
+          <app-sidebar-feed-row
+            [subscription]="subscription"
+            [selection]="selection()"
+            [organising]="organising()"
+          />
         </div>
       }
     }

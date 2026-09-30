@@ -28,6 +28,19 @@ import {
   TagInput,
 } from './models';
 
+export interface SavedSearchDraft {
+  term: string;
+  wholeWord: boolean;
+  phrase: boolean;
+}
+
+export interface SubscribeRequest {
+  url: string;
+  format?: string;
+  tagIds?: number[];
+  title?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ReaderApi {
   private readonly http = inject(HttpClient);
@@ -42,13 +55,9 @@ export class ReaderApi {
     return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`);
   }
 
-  subscribe(
-    url: string,
-    format?: string,
-    tagIds?: number[],
-    title?: string,
-  ): Observable<SubscribeResult> {
-    const body: { url: string; format?: string; tagIds?: number[]; title?: string } = { url };
+  subscribe(request: SubscribeRequest): Observable<SubscribeResult> {
+    const { url, format, tagIds, title } = request;
+    const body: SubscribeRequest = { url };
     if (format) body.format = format;
     // Omit an empty selection so the body stays byte-compatible with clients
     // (and tests) that never send tags.
@@ -223,11 +232,7 @@ export class ReaderApi {
     return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`);
   }
 
-  createSavedSearch(body: {
-    term: string;
-    wholeWord: boolean;
-    phrase: boolean;
-  }): Observable<{ savedSearch: SavedSearchWire }> {
+  createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {
     return this.http.post<{ savedSearch: SavedSearchWire }>(
       `${this.base}/api/saved-searches`,
       body,

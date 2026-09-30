@@ -1,11 +1,12 @@
 import { Signal, WritableSignal, signal } from '@angular/core';
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
+import { ArticleGestures } from './article-gestures.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
@@ -99,6 +100,9 @@ class MockResizeObserver {
 
 /** What the body store answers for entry 1 by default (see `beforeEach` below),
  *  so most of these presentational tests need no body-store setup of their own. */
+const gestures = (fixture: ComponentFixture<ReaderViewComponent>): ArticleGestures =>
+  fixture.debugElement.injector.get(ArticleGestures);
+
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -529,7 +533,7 @@ describe('ReaderViewComponent', () => {
     expect(back).not.toBeNull();
     back.click();
     expect(close).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.leaving()).toBe(true);
+    expect(gestures(fixture).leaving()).toBe(true);
     fixture.destroy();
   });
 
@@ -1160,7 +1164,7 @@ describe('ReaderViewComponent', () => {
 
     it('returns to the list on a decisive rightward swipe', () => {
       const fixture = fullscreen();
-      const component = fixture.componentInstance;
+      const component = gestures(fixture);
       component.onTouchStart(touch(0, 0));
       component.onTouchMove(touch(130, 6));
       component.onTouchEnd();
@@ -1176,7 +1180,7 @@ describe('ReaderViewComponent', () => {
       (element.querySelector('.bar .close') as HTMLButtonElement).click();
       fixture.detectChanges();
       // Committed to leaving and slid fully off to the right (same as a swipe).
-      expect(fixture.componentInstance.leaving()).toBe(true);
+      expect(gestures(fixture).leaving()).toBe(true);
       expect((element.querySelector('.reader') as HTMLElement).style.transform).toContain(
         `${window.innerWidth}px`,
       );
@@ -1188,7 +1192,7 @@ describe('ReaderViewComponent', () => {
     }));
 
     it('snaps back (does not return) on a short swipe', () => {
-      const component = fullscreen().componentInstance;
+      const component = gestures(fullscreen());
       component.onTouchStart(touch(0, 0));
       component.onTouchMove(touch(30, 4));
       component.onTouchEnd();
@@ -1197,7 +1201,7 @@ describe('ReaderViewComponent', () => {
 
     it('yields to a media control: a drag from the audio scrubber does not return to the list', () => {
       const fixture = fullscreen();
-      const component = fixture.componentInstance;
+      const component = gestures(fixture);
       component.onTouchStart(touchOnControl(0, 0));
       component.onTouchMove(touchOnControl(130, 6)); // a decisive rightward drag on the scrubber
       component.onTouchEnd();
@@ -1207,7 +1211,7 @@ describe('ReaderViewComponent', () => {
 
     it('still returns to the list on a real swipe right after a suppressed one', () => {
       const fixture = fullscreen();
-      const component = fixture.componentInstance;
+      const component = gestures(fixture);
       component.onTouchStart(touchOnControl(0, 0)); // suppressed: began on the scrubber
       component.onTouchMove(touchOnControl(130, 6));
       component.onTouchEnd();
@@ -1220,7 +1224,7 @@ describe('ReaderViewComponent', () => {
 
     it('returns to the list on a pull past the article end', () => {
       const fixture = fullscreen();
-      const component = fixture.componentInstance;
+      const component = gestures(fixture);
       // jsdom has no layout, so the scroller reads as already at the bottom.
       component.onTouchStart(touch(5, 300));
       component.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
@@ -1230,7 +1234,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('ignores swipes while the in-pane toolbar is shown (split-pane)', () => {
-      const component = mount(entry()).componentInstance; // showToolbar defaults to true
+      const component = gestures(mount(entry())); // showToolbar defaults to true
       component.onTouchStart(touch(0, 0));
       component.onTouchMove(touch(200, 0));
       component.onTouchEnd();
