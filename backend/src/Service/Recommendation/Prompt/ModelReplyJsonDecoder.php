@@ -82,7 +82,7 @@ final readonly class ModelReplyJsonDecoder
                 }
                 ++$depth;
             } elseif ('}' === $character && $depth > 0 && 0 === --$depth) {
-                $objects = [...$objects, ...$this->decodeObject(substr($text, $start, $index - $start + 1))];
+                array_push($objects, ...$this->decodeObject(substr($text, $start, $index - $start + 1)));
             }
         }
 
