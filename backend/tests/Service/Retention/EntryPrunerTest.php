@@ -22,7 +22,7 @@ use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
 {
-    /** EntryPruner's newest-twenty floor: a feed filled to it puts any older entry seeded afterwards past it. */
+    /** EntryPruner's private floor: a feed filled to it puts any older entry seeded afterwards past it. */
     private const int FLOOR = 20;
 
     /** Above the floor, so the pruner's clamp cannot mask the cap boundary a test exercises. */
@@ -124,6 +124,12 @@ final class EntryPrunerTest extends DbTestCase
         );
     }
 
+    /** @return list<string> */
+    private static function entryGuids(int $first, int $last): array
+    {
+        return array_map(static fn (int $index): string => "entry-{$index}", range($first, $last));
+    }
+
     public function testKeepsAnOldArticleThatWasFetchedRecently(): void
     {
         $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(1));
@@ -134,37 +140,30 @@ final class EntryPrunerTest extends DbTestCase
         self::assertNotNull($this->findByGuid($feed, 'archive'));
     }
 
-    /**
-     * 30 entries sharing one `createdAt`, all 100 days old: the floor keeps
-     * exactly 20, tie-broken by id — the 10 lowest ids (entry-0..entry-9,
-     * the ones fetched first in the burst) go, the 20 highest survive.
-     */
+    /** One burst shares a `createdAt`, so the floor breaks the tie by id: the lowest ids, fetched first, go. */
     public function testDeletesAnArticleFetchedBeforeTheRetentionWindow(): void
     {
-        $feed = $this->feedWithEntries(30, $this->daysAgo(100));
+        $feed = $this->feedWithEntries(self::FLOOR + 10, $this->daysAgo(100));
 
         self::assertSame(10, $this->pruner->prune());
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(10, 29)),
-            $this->remainingGuids($feed),
-        );
+        self::assertEqualsCanonicalizing(self::entryGuids(10, self::FLOOR + 9), $this->remainingGuids($feed));
     }
 
     /** Only the cutoff separates the stale entry from the recent one past the floor. */
     public function testAgePassDeletesOnlyTheEntryPastTheCutoff(): void
     {
-        $feed = $this->feedWithEntries(21, $this->daysAgo(1));
+        $feed = $this->feedWithEntries(self::FLOOR + 1, $this->daysAgo(1));
         $this->seedEntry($feed, 'stale', $this->daysAgo(100));
 
         self::assertSame(1, $this->pruner->prune());
         self::assertNull($this->findByGuid($feed, 'stale'));
-        self::assertCount(21, $this->findAllEntries($feed));
+        self::assertCount(self::FLOOR + 1, $this->findAllEntries($feed));
     }
 
     /** A bulk DELETE fires no ORM event, so the pruner forgets the ids itself: exactly the ids the DELETE removed. */
     public function testPruningTellsTheIndexToForgetExactlyTheDeletedIds(): void
     {
-        $feed = $this->feedWithEntries(30, $this->daysAgo(100));
+        $feed = $this->feedWithEntries(self::FLOOR + 10, $this->daysAgo(100));
         $idsByGuid = [];
         foreach ($this->findAllEntries($feed) as $entry) {
             $idsByGuid[$entry->getGuid()] = $entry->getId();
@@ -184,55 +183,39 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testPruningSucceedsEvenWhenTheIndexIsUnreachable(): void
     {
-        $feed = $this->feedWithEntries(30, $this->daysAgo(100));
+        $feed = $this->feedWithEntries(self::FLOOR + 10, $this->daysAgo(100));
         $failingWriter = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
         $pruner = new EntryPruner($this->retention(), $this->clock, new EntryIndexer($failingWriter, new NullLogger()));
 
         self::assertSame(10, $pruner->prune());
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(10, 29)),
-            $this->remainingGuids($feed),
-        );
+        self::assertEqualsCanonicalizing(self::entryGuids(10, self::FLOOR + 9), $this->remainingGuids($feed));
     }
 
-    /**
-     * 25 entries sharing one `createdAt`, all 100 days old: the floor keeps
-     * the 20 highest ids (entry-5..entry-24) and drops the 5 lowest.
-     */
-    public function testNeverDeletesAFeedsNewestTwentyEntries(): void
+    public function testNeverDeletesAFeedsNewestEntriesWithinTheFloor(): void
     {
-        $feed = $this->feedWithEntries(25, $this->daysAgo(100));
+        $feed = $this->feedWithEntries(self::FLOOR + 5, $this->daysAgo(100));
 
         $this->pruner->prune();
 
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(5, 24)),
-            $this->remainingGuids($feed),
-        );
+        self::assertEqualsCanonicalizing(self::entryGuids(5, self::FLOOR + 4), $this->remainingGuids($feed));
     }
 
-    public function testAFeedOfTwentyOldEntriesLosesNone(): void
+    public function testAFeedOfOldEntriesAtTheFloorLosesNone(): void
     {
         $this->feedWithEntries(self::FLOOR, $this->daysAgo(100));
 
         self::assertSame(0, $this->pruner->prune());
     }
 
-    /** Two feeds of 21 old entries each lose entry-0 to the floor; the total sums both feeds, not the last one. */
+    /** Two feeds one old entry past the floor each lose entry-0; the total sums both feeds, not the last one. */
     public function testAgePassSumsDeletionsAcrossFeeds(): void
     {
-        $feedA = $this->feedWithEntries(21, $this->daysAgo(100));
-        $feedB = $this->feedWithEntries(21, $this->daysAgo(100));
+        $feedA = $this->feedWithEntries(self::FLOOR + 1, $this->daysAgo(100));
+        $feedB = $this->feedWithEntries(self::FLOOR + 1, $this->daysAgo(100));
 
         self::assertSame(2, $this->pruner->prune());
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(1, 20)),
-            $this->remainingGuids($feedA),
-        );
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(1, 20)),
-            $this->remainingGuids($feedB),
-        );
+        self::assertEqualsCanonicalizing(self::entryGuids(1, self::FLOOR), $this->remainingGuids($feedA));
+        self::assertEqualsCanonicalizing(self::entryGuids(1, self::FLOOR), $this->remainingGuids($feedB));
     }
 
     /**
@@ -263,10 +246,7 @@ final class EntryPrunerTest extends DbTestCase
         $feed = $this->feedWithEntries($cap + 2, $this->daysAgo(1));
 
         self::assertSame(2, $pruner->prune());
-        self::assertEqualsCanonicalizing(
-            array_map(static fn (int $index): string => "entry-{$index}", range(2, $cap + 1)),
-            $this->remainingGuids($feed),
-        );
+        self::assertEqualsCanonicalizing(self::entryGuids(2, $cap + 1), $this->remainingGuids($feed));
     }
 
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
@@ -449,10 +429,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(2, $pruner->prune());
-        $expected = array_merge(
-            ['favorite-newest'],
-            array_map(static fn (int $index): string => "entry-{$index}", range(2, $cap)),
-        );
+        $expected = array_merge(['favorite-newest'], self::entryGuids(2, $cap));
         self::assertEqualsCanonicalizing($expected, $this->remainingGuids($feed));
     }
 
@@ -538,17 +515,17 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
-     * A `maxEntriesPerFeed` set below the 20-entry floor is raised to it, which also keeps `rankBoundaryBeyond()`
+     * A `maxEntriesPerFeed` set below the floor is raised to it, which also keeps `rankBoundaryBeyond()`
      * from turning a `keep` of 0 into a negative `setFirstResult()`.
      */
     public function testCapBelowTheFloorIsClampedToTheFloor(): void
     {
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 0);
 
-        $feed = $this->feedWithEntries(25, $this->daysAgo(1));
+        $feed = $this->feedWithEntries(self::FLOOR + 5, $this->daysAgo(1));
 
         self::assertSame(5, $pruner->prune());
-        self::assertCount(20, $this->findAllEntries($feed));
+        self::assertCount(self::FLOOR, $this->findAllEntries($feed));
     }
 
     public function testCapIsPerFeedNotGlobal(): void
