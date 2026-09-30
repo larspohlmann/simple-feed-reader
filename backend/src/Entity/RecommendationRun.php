@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Exception\InvalidRunStatusException;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use Doctrine\DBAL\Types\Types;
@@ -378,11 +379,7 @@ final class RecommendationRun
     private function guardStatusOneOf(array $allowedStatuses, string $transition): void
     {
         if (!\in_array($this->status, $allowedStatuses, true)) {
-            throw new \LogicException(sprintf(
-                'Cannot %s a recommendation run from status "%s".',
-                $transition,
-                $this->status->value,
-            ));
+            throw new InvalidRunStatusException($transition, $this->status);
         }
     }
 }

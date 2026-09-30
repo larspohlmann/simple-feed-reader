@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\Exception\InvalidRunStatusException;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
@@ -394,7 +395,7 @@ final class RecommendationRunTest extends TestCase
 
     public function testAPendingRunHandsOutNoThrottle(): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRunStatusException::class);
         $this->expectExceptionMessage('Cannot throttle a recommendation run from status "pending".');
 
         $this->makeRun()->getRunningThrottle();
@@ -402,7 +403,7 @@ final class RecommendationRunTest extends TestCase
 
     public function testAPendingRunHandsOutNoCallAttempts(): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRunStatusException::class);
         $this->expectExceptionMessage('Cannot record a call attempt on a recommendation run from status "pending".');
 
         $this->makeRun()->getRunningCallAttempts();
