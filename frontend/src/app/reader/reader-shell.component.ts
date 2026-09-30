@@ -15,8 +15,8 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-actions/entry-action-handler';
-import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { ReaderRouteState } from './shell/reader-route-state.service';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
@@ -48,11 +48,9 @@ import {
   MarkReadTarget,
   markReadTarget,
   queryFromSelection,
-  sameSelection,
   selectionQueryParams,
   visibleSearchTerm,
 } from './query';
-import { selectionFromRoute } from './reader-matcher';
 import { UnreadFilterService } from './unread-filter.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
@@ -112,10 +110,10 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
   ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
-  // Provided here, not in the root injector, so the poll cannot outlive the
-  // reader that it keeps up to date (#708).
+  // Per-reader state: provided here so none of it outlives the reader.
   providers: [
     SidebarCountsPoll,
+    ReaderRouteState,
     { provide: EntryActionHandler, useExisting: forwardRef(() => ReaderShellComponent) },
   ],
 })
@@ -283,20 +281,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
   readonly listLoading = computed(() => this.entries.loading() || !this.listPreferences.ready());
-  private readonly params = toSignal(this.route.queryParamMap, {
-    initialValue: convertToParamMap({}),
-  });
-  private readonly pathParams = toSignal(this.route.paramMap, {
-    initialValue: convertToParamMap({}),
-  });
-  private readonly parsed = computed(() => selectionFromRoute(this.pathParams(), this.params()));
-  // Structural equality so an entry-only URL change doesn't produce a new
-  // selection reference -- delegates to `sameSelection` rather than
-  // re-listing fields here, which once fell out of step when `term` was
-  // added, silently freezing the list on every second search (#408 follow-up).
-  readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
-    equal: sameSelection,
-  });
+  private readonly routeState = inject(ReaderRouteState);
+  readonly selection = this.routeState.selection;
+  readonly entryId = this.routeState.entryId;
+  readonly openEntry = this.routeState.openEntry;
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
@@ -304,7 +292,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly canToggleSavedSearch = computed(
     () => isDirectSearch(this.selection()) || this.viewingSavedSearch(),
   );
-  readonly entryId = computed(() => this.parsed().entryId);
 
   /** The single saved search the list is showing, by id, or null. Read straight
    *  off the selection now that a saved search is addressed by id in the path,
@@ -322,20 +309,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     return this.savedSearchesStore.savedSearches().find((s) => s.id === id) ?? null;
   });
 
-  // A deep-linked entry the current list page doesn't contain, fetched by id.
-  private readonly fetchedEntry = signal<EntryDto | null>(null);
-  readonly openEntry = computed(() => {
-    const id = this.entryId();
-    if (id == null) return null;
-    const inList = this.entries.entries().find((e) => e.id === id);
-    if (inList) return inList; // the live list copy wins (freshest state)
-    const fetched = this.fetchedEntry();
-    return fetched && fetched.id === id ? fetched : null;
-  });
-  /** The identity of the open entry, isolated from its flags. The auto-open
-   *  effect keys off this so it fires once per opened entry and never re-runs
-   *  when the entry's own state changes — un-ticking it must not re-mark it. */
-  private readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
   readonly feedTags = computed(() => {
@@ -640,7 +613,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     // fails and rolls back. Opening sends the viewed flag alone; the backend
     // reads it too (ViewedImpliesHiddenListener), and localStatePatch mirrors that here.
     effect(() => {
-      if (this.openEntryId() === null) return;
+      if (this.routeState.openEntryId() === null) return;
       untracked(() => {
         const e = this.openEntry();
         if (!e || e.isViewed || this.viewedOnOpen.has(e.id)) return;
@@ -648,39 +621,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
         this.applyOpenedPatch(e, { isViewed: true });
       });
     });
-    // Deep link to an entry the current list page doesn't hold: fetch it by id so
-    // it still opens. Tracks only entryId; the list copy takes over once loaded.
-    effect(() => {
-      const id = this.entryId();
-      untracked(() => {
-        if (id == null) {
-          this.fetchedEntry.set(null); // reader closed — drop the stale fetch
-          return;
-        }
-        if (this.entries.entries().some((e) => e.id === id)) return;
-        if (this.fetchedEntry()?.id === id) return;
-        // Id-guard the async writes: a slow response for a since-abandoned deep
-        // link (e.g. Back/Forward between two cold entries) must not clobber the
-        // entry now open.
-        this.api.entry(id).subscribe({
-          next: (r) => {
-            if (this.entryId() !== id) return;
-            this.fetchedEntry.set(r.entry);
-            // The detail fetch already carries the body — seed the store with
-            // it rather than let the reader view issue a redundant request.
-            this.bodyService.seed(r.entry.id, r.entry.contentHtml);
-          },
-          error: () => {
-            if (this.entryId() === id) this.fetchedEntry.set(null);
-          },
-        });
-      });
-    });
-
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
-      const id = this.openEntryId();
+      const id = this.routeState.openEntryId();
       if (id === null) return;
       untracked(() => {
         const list = this.entries.entries();
@@ -968,16 +912,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       this.entries.setState(e.id, patch, onError);
       return;
     }
-    const before = this.fetchedEntry();
-    this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? { ...cur, ...patch } : cur));
-    this.api.updateState(e.id, patch).subscribe({
-      error: () => {
-        // Only revert if the same cold entry is still open — a Back/Forward to
-        // another cold entry while the PATCH was in flight must not be clobbered.
-        this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? before : cur));
-        onError?.();
-      },
-    });
+    this.routeState.patchFetchedEntry(e.id, patch, onError);
   }
 
   open(e: EntryDto): void {
