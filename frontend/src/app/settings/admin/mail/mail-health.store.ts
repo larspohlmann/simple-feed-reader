@@ -1,26 +1,13 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
-import { API_BASE_URL } from '../../../core/api';
-
-export interface MailFailure {
-  readonly kind: 'digest' | 'account' | 'test';
-  readonly recipient: string;
-  readonly error: string;
-  readonly at: string;
-}
-
-interface MailErrorsResponse {
-  readonly failures: MailFailure[];
-}
+import { MailApi, MailFailure } from './mail-api';
 
 /** App-wide source of the admin mail-failure log (#882), so the settings nav can
  *  badge "Outgoing mail" and the mail section can list failures from one place.
  *  The endpoint is admin-only; callers refresh it only in admin contexts. */
 @Injectable({ providedIn: 'root' })
 export class MailHealthStore {
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly mailApi = inject(MailApi);
 
   readonly failures = signal<MailFailure[]>([]);
   readonly failureCount = computed(() => this.failures().length);
@@ -32,11 +19,11 @@ export class MailHealthStore {
   refresh(): void {
     if (this.loading) return;
     this.loading = true;
-    this.http
-      .get<MailErrorsResponse>(`${this.base}/api/admin/mail/errors`)
+    this.mailApi
+      .failures()
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
-        next: (response) => this.failures.set(response.failures),
+        next: (failures) => this.failures.set(failures),
         error: () => {
           // A failed refresh leaves the last-known count; the badge is advisory.
         },
