@@ -28,7 +28,10 @@ final readonly class AccountLine
         return new self(
             locale: LineField::string($line, 'locale'),
             scrapeFallbackEnabled: LineField::bool($line, 'scrapeFallbackEnabled'),
-            magazineStyle: LineFieldWithDefault::enum($line, 'magazineStyle', MagazineStyle::Boxed),
+            // An unknown style falls back to default: restore over reject.
+            magazineStyle: MagazineStyle::tryFrom(
+                LineFieldWithDefault::string($line, 'magazineStyle', MagazineStyle::Boxed->value),
+            ) ?? MagazineStyle::Boxed,
         );
     }
 }
