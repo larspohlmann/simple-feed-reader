@@ -6,6 +6,7 @@ namespace App\Tests\Service\Backup\Dto;
 
 use App\Enum\MagazineStyle;
 use App\Service\Backup\Dto\AccountLine;
+use App\Service\Backup\Exception\InvalidBackupException;
 use PHPUnit\Framework\TestCase;
 
 final class AccountLineTest extends TestCase
@@ -52,5 +53,13 @@ final class AccountLineTest extends TestCase
         self::assertSame('de', $line->locale);
         self::assertFalse($line->scrapeFallbackEnabled);
         self::assertSame(MagazineStyle::Airy, $line->magazineStyle);
+    }
+
+    public function testANonStringMagazineStyleIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('Field "magazineStyle" is missing or not a string.');
+
+        AccountLine::fromLine(['locale' => 'de', 'scrapeFallbackEnabled' => true, 'magazineStyle' => 5]);
     }
 }

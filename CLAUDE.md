@@ -196,6 +196,12 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.
+- **`NoVariableClassOrMethodNameRule`** (`tests/PhpStan/NoVariableClassOrMethodNameRule.php`, with its siblings
+  `NoVariableClassOrMethodNameThroughMethodCallableRule` and
+  `NoVariableClassOrMethodNameThroughStaticCallableRule`) — in `src`, no
+  variable names a class or a method: `$class::create()`, `new $class`, `$object->$method()`, `$class::NAME`,
+  `$value instanceof $class`, `$$name`. Call it by name, through a `match` or an interface method. Reading
+  `$object::class` and calling a closure held in a variable are fine; tests are exempt (#1294).
 - **`PersistenceClassesAreFinalRule`** (`tests/PhpStan/PersistenceClassesAreFinalRule.php`) — every class
   in `src/Entity` and `src/Repository` is `final`. A test that needs a repository double doubles the
   interface its consumer owns (`SavedSearchMembershipWriterInterface`, `UserByEmailInterface`, #1169).
