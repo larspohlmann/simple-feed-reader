@@ -57,10 +57,11 @@ services:
       GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
       GRAFANA_URL: "http://localhost:3000"
       PYROSCOPE_PUSH_URL: "http://pyroscope:4040"
-      # Always on in dev; the tempo container runs by default (see below), and
-      # the exporter fails open when it is absent -- a dropped export never
-      # breaks a request.
-      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      # On in dev unless the environment turns both gates off, as the e2e rot check
+      # does (#1262). The tempo container runs by default (see below), and the
+      # exporter fails open when it is absent -- a dropped export never breaks a request.
+      OTEL_PHP_AUTOLOAD_ENABLED: "${OTEL_PHP_AUTOLOAD_ENABLED:-true}"
+      OTEL_PHP_DISABLED_INSTRUMENTATIONS: "${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-}"
       OTEL_SERVICE_NAME: "simple-feed-reader"
       OTEL_TRACES_EXPORTER: "otlp"
       OTEL_METRICS_EXPORTER: "none"
@@ -144,7 +145,8 @@ services:
       GRAFANA_LOKI_PUSH_URL: "http://loki:3100/loki/api/v1/push"
       GRAFANA_URL: "http://localhost:3000"
       PYROSCOPE_PUSH_URL: "http://pyroscope:4040"
-      OTEL_PHP_AUTOLOAD_ENABLED: "true"
+      OTEL_PHP_AUTOLOAD_ENABLED: "${OTEL_PHP_AUTOLOAD_ENABLED:-true}"
+      OTEL_PHP_DISABLED_INSTRUMENTATIONS: "${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-}"
       OTEL_SERVICE_NAME: "simple-feed-reader"
       OTEL_TRACES_EXPORTER: "otlp"
       OTEL_METRICS_EXPORTER: "none"

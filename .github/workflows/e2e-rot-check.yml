@@ -23,6 +23,13 @@ jobs:
     # wedged dev server cannot burn an hour.
     timeout-minutes: 45
 
+    # Traced, the stack ran ~3.5x slower and onboarding outgrew Playwright's 30 s
+    # test timeout (#1262). docker-compose.yml reads both gates; job level, so no
+    # step recreates php with tracing on.
+    env:
+      OTEL_PHP_AUTOLOAD_ENABLED: 'false'
+      OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
+
     steps:
       - uses: actions/checkout@v5
 
