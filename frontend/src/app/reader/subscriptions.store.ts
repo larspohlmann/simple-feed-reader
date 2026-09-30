@@ -88,7 +88,7 @@ export function sumEntries(subs: SubscriptionDto[]): number {
   return subs.reduce((n, s) => (s.includeInAllItems ? n + s.entryCount : n), 0);
 }
 
-type ZeroTarget = 'all' | { tag: number } | { subscription: number };
+export type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionsStore {

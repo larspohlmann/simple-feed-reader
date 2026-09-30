@@ -17,14 +17,13 @@ import { EntryActionHandler } from './entry-actions/entry-action-handler';
 import { ReaderRouteState } from './shell/reader-route-state.service';
 import { ListHeading } from './shell/list-heading.service';
 import { EntryStateActions } from './shell/entry-state-actions.service';
+import { MarkReadActions } from './shell/mark-read-actions.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
 import { isPasskeySupported } from '../core/webauthn';
-import { ReaderApi } from './reader-api';
 import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
@@ -44,8 +43,6 @@ import {
   isDirectSearch,
   isWholeWordTerm,
   isPhraseTerm,
-  MarkReadTarget,
-  markReadTarget,
   queryFromSelection,
   selectionQueryParams,
   visibleSearchTerm,
@@ -107,6 +104,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ReaderRouteState,
     ListHeading,
     EntryStateActions,
+    MarkReadActions,
     { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
@@ -118,7 +116,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
-  private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
@@ -279,6 +276,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly openEntry = this.routeState.openEntry;
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
+  readonly markRead = inject(MarkReadActions);
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
@@ -298,7 +296,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     const e = this.openEntry();
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
-  readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
@@ -585,107 +582,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       queryParamsHandling: 'merge',
     });
   }
-  onMarkAllRead(): void {
-    const target = markReadTarget(this.selection());
-    if (!target) return;
-    // A confirm gate, because the action is a bulk, one-click state change over
-    // a whole list (or every list) that a misplaced tap used to fire silently.
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.markAllReadConfirm'),
-      message: this.i18n.translate('reader.markAllReadConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.markAllRead'),
-    };
-    this.confirm.confirmThen(data, () => this.markReadNow(target));
-  }
 
   onMarkAboveRead(ids: number[]): void {
-    if (ids.length === 0) return;
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.markAboveReadConfirm'),
-      message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
-      confirmLabel: this.i18n.translate('reader.markAboveRead'),
-    };
-    this.confirm.confirmThen(data, () => this.markAboveReadNow(ids));
-  }
-
-  /** Never a re-fetch: a reload lets the magazine planner re-run and lift
-   *  newer-but-lower posts above the boundary (#1080). The unread view drops the
-   *  marked blocks from its render; the all-items view restyles them in place. */
-  private markAboveReadNow(ids: number[]): void {
-    const hideLocally = this.selection().unread
-      ? () => this.list()?.hideAboveMarked(ids)
-      : () => this.entries.markHiddenLocally(ids);
-    this.api.markEntriesRead(ids).subscribe({
-      next: () => {
-        hideLocally();
-        this.refreshCountsAfterMarkRead();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
-      },
-    });
-  }
-
-  private refreshCountsAfterMarkRead(): void {
-    this.subs.load();
-    this.savedSearchesStore.load();
-    this.recs.refreshStatus();
-  }
-
-  private markReadNow(target: MarkReadTarget): void {
-    const until = this.entries.loadedAt() || new Date().toISOString();
-    if (target.scope === 'search') {
-      this.entries.runThenReload(this.api.markSearchRead(target.term, until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    // The ranked feed has no scope to name and no watermark to move: the
-    // backend marks picks by their own entry state (#710, #665 for why a
-    // watermark here would be wrong). Both counts beside the list are reloaded.
-    if (target.scope === 'for-you') {
-      this.entries.runThenReload(this.api.markForYouRead(until), () => {
-        this.reloadListAndCounts();
-        // The badge counts unread picks (#724); the marked picks move no
-        // watermark the reload sees, so re-read the for-you summary to zero it.
-        this.recs.refreshStatus();
-      });
-      return;
-    }
-    if (target.scope === 'saved-searches') {
-      this.entries.runThenReload(this.api.markSavedSearchesRead(until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    if (target.scope === 'saved-search') {
-      this.entries.runThenReload(this.api.markSingleSavedSearchRead(target.id, until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    this.entries.runThenReload(
-      this.api.markRead(target.scope, until, target.scope === 'all' ? undefined : target.id),
-      () => {
-        this.subs.zeroUnread(
-          target.scope === 'all'
-            ? 'all'
-            : target.scope === 'tag'
-              ? { tag: target.id }
-              : { subscription: target.id },
-        );
-        this.entries.load(queryFromSelection(this.selection()));
-        this.savedSearchesStore.load();
-      },
-    );
-  }
-
-  /** Reload the list, the sidebar subscription counts, and the saved-search
-   *  badges — the state a scoped mark-read invalidates in one pass. */
-  private reloadListAndCounts(): void {
-    this.entries.load(queryFromSelection(this.selection()));
-    this.subs.load();
-    this.savedSearchesStore.load();
+    this.markRead.confirmMarkAboveRead(ids, () => this.list()?.hideAboveMarked(ids));
   }
 
   // Preserve the underlying list so clearing a direct search returns to it.

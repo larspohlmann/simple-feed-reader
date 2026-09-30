@@ -3049,7 +3049,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3070,7 +3070,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
     });
@@ -3091,7 +3091,7 @@ describe('ReaderShellComponent', () => {
     it('offers the action on the ranked feed at all', () => {
       const f = bootWithForYouSelected();
 
-      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
     });
 
     it('calls the for-you endpoint, then reloads the list and the counts beside it', () => {
@@ -3099,7 +3099,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3143,7 +3143,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
       ctrl
@@ -3171,7 +3171,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/mark-read');
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
@@ -3199,7 +3199,7 @@ describe('ReaderShellComponent', () => {
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
       expect(f.componentInstance.entries.loading()).toBe(false);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
       expect(f.componentInstance.entries.loading()).toBe(true);
@@ -3374,7 +3374,7 @@ describe('ReaderShellComponent', () => {
     it('turns on Mark all read and the unread filter', () => {
       const f = bootSingleSavedSearch();
 
-      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
       const list = f.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       expect(list.hasUnreadFilter()).toBe(true);
@@ -3384,7 +3384,7 @@ describe('ReaderShellComponent', () => {
       const f = bootSingleSavedSearch();
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/4/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3512,7 +3512,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3531,7 +3531,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
     });
