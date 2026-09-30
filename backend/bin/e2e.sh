@@ -34,6 +34,8 @@ fi
 # the other checkout's database.
 # shellcheck source=e2e-preflight.sh
 source "$BACKEND_DIR/bin/e2e-preflight.sh"
+# shellcheck source=e2e-mail-fallback.sh
+source "$BACKEND_DIR/bin/e2e-mail-fallback.sh"
 echo "==> Verifying this checkout owns the running stack ..."
 assert_stack_owns_checkout "$REPO_ROOT"
 
@@ -55,6 +57,7 @@ docker compose -f "$REPO_ROOT/docker-compose.yml" exec -T php \
 # and leak whatever the first one was cleaning up.
 CA_BUNDLE=""
 SETTINGS_TO_RESTORE=""
+MAIL_FALLBACK_FORCED=""
 # shellcheck disable=SC2329  # reached through the EXIT trap below, never by name.
 cleanup() {
   if [ -n "$CA_BUNDLE" ]; then
@@ -67,8 +70,20 @@ cleanup() {
       echo "WARNING: set the registration gates by hand under Settings → Admin → Registration." >&2
     fi
   fi
+  if [ -n "$MAIL_FALLBACK_FORCED" ]; then
+    echo "==> Sending the stack's mail through its saved mail server again ..."
+    if ! restore_mail_fallback "$REPO_ROOT" "$BASE_URL"; then
+      echo "WARNING: php still sends through Mailpit; run: (cd '$REPO_ROOT' && docker compose up -d php && docker compose restart nginx)" >&2
+    fi
+  fi
 }
 trap cleanup EXIT
+
+echo "==> Sending the stack's mail to Mailpit for this run ..."
+MAIL_FALLBACK_OUTCOME="$(force_mail_fallback "$REPO_ROOT" "$BASE_URL")"
+if [ "$MAIL_FALLBACK_OUTCOME" = "forced" ]; then
+  MAIL_FALLBACK_FORCED=1
+fi
 
 # Read one field off a JSON body on stdin. php rather than jq: this script
 # already depends on a php binary, and jq is not guaranteed on a developer's
