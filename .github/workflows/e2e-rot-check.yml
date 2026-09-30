@@ -29,6 +29,8 @@ jobs:
     env:
       OTEL_PHP_AUTOLOAD_ENABLED: 'false'
       OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
+      # Boots php sending through Mailpit, so both e2e scripts find the switch on and recreate nothing (#1287).
+      MAILER_FORCE_FALLBACK: '1'
 
     steps:
       - uses: actions/checkout@v5

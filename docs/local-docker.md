@@ -196,6 +196,12 @@ back to `null://null`, so a test run sends nothing to Mailpit. Run it through
 `composer test`: it turns the stack's OpenTelemetry instrumentation off, which
 a bare `vendor/bin/phpunit` inherits and pays for on every query.
 
+Both e2e entry points (`composer e2e`, `npm run e2e`) send their mail to Mailpit
+even when an admin has saved a real mail server: they recreate `php` with
+`MAILER_FORCE_FALLBACK=1` for the run and put it back afterwards (#1287). If a
+run is killed before its cleanup, `docker compose up -d php` followed by
+`docker compose restart nginx` puts it back by hand.
+
 **`docker compose down` is safe; `docker compose down -v` DELETES the MySQL
 data volume.** Plain `down` stops and removes the containers but keeps your
 databases. Adding `-v` wipes them; the next `up` starts from an empty server
