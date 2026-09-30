@@ -1,4 +1,3 @@
-// src/app/core/http-digest-writer.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';

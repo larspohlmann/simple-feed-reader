@@ -1,4 +1,3 @@
-// src/app/core/boot-language.ts
 import { TranslocoService } from '@jsverse/transloco';
 import { catchError, firstValueFrom, timeout } from 'rxjs';
 import { FALLBACK_LANG, Lang } from './language';

@@ -55,7 +55,7 @@ app-tag-picker {
   margin: 0 0 var(--space-4);
 }
 
-// The one part of the dialog that grows without bound. It no longer scrolls on
+// The one part of the dialog that grows without bound. It does not scroll on
 // its own: the panel's body is the single scroller, so the cards run on and it
 // is the 90dvh cap that stops them.
 .candidates {

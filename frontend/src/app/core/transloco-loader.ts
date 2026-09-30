@@ -1,4 +1,3 @@
-// src/app/core/transloco-loader.ts
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Translation, TranslocoLoader } from '@jsverse/transloco';
@@ -21,9 +20,9 @@ const BUNDLED_DICTIONARIES: Readonly<Record<string, Translation>> = {
 /** Loads a language's dictionary — bundled ones from the build, the rest from
  *  the statically-served `public/i18n/`.
  *
- *  THE FALLBACK LANGUAGE IS BUNDLED, not fetched: the preload used to gate
- *  boot on one uncached request, and a mobile browser resume-reloading on a
- *  reconnecting radio got a permanently blank page (#280). It must live HERE
+ *  THE FALLBACK LANGUAGE IS BUNDLED, not fetched: gating boot on one uncached
+ *  request left a mobile browser resume-reloading on a reconnecting radio with a
+ *  permanently blank page (#280). It must live HERE
  *  in the loader — Transloco's `load()` only consults its own request cache,
  *  so `setTranslation()` would not prevent the HTTP request.
  *

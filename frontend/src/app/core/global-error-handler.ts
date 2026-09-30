@@ -1,4 +1,3 @@
-// src/app/core/global-error-handler.ts
 import { ErrorHandler, Injectable, inject } from '@angular/core';
 import { ClientErrorReporter } from './client-error-reporter';
 

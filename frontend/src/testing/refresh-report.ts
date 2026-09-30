@@ -1,13 +1,7 @@
-// src/testing/refresh-report.ts
 import { RefreshReport } from '../app/reader/models';
 
 /**
  * A `RefreshReport` for specs that flush `POST /api/refresh`.
- *
- * Five spec files used to hand-build this shape, and #721 is what made the cost
- * visible: reshaping the wire contract meant five separate edits, in three of
- * which a newly required field had to be remembered by hand. One builder means
- * the next field lands in one place.
  *
  * The defaults describe a finished run that swept nothing. Override whatever the
  * test is actually about — and override `progress` together with `remaining`,

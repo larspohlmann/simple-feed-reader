@@ -83,8 +83,8 @@ h2 {
   padding: var(--space-3) var(--space-5) var(--space-5);
 }
 
-// A long confirm label used to squeeze its neighbour until "Cancel" broke
-// mid-word. Footer buttons keep their own width and take a second line instead.
+// Footer buttons keep their own width and take a second line, so a long confirm
+// label never squeezes "Cancel" into breaking mid-word.
 .footer > * {
   flex: 0 0 auto;
   max-width: 100%;

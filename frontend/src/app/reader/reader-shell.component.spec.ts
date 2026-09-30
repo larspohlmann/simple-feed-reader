@@ -148,7 +148,7 @@ describe('ReaderShellComponent', () => {
     pp.next(convertToParamMap({}));
     // Provided rather than left to the real service: jsdom's matchMedia answers
     // "no" to every query, so the real one is stuck on wide and a phone-only test
-    // has no way to say so. The defaults below reproduce what jsdom used to give.
+    // has no way to say so. The defaults below match jsdom's all-false answers.
     screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
     configureShell([{ provide: AuthService, useValue: auth }]);
     ctrl = TestBed.inject(HttpTestingController);
@@ -353,9 +353,8 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  // #87: the header used to be pulled out of view with a negative margin-top,
-  // which re-ran layout and resized the scroller under the user's finger. It is
-  // an overlay now, so hiding it must change the header and nothing else.
+  // #87: the header is an overlay, so hiding it must change the header and
+  // nothing else — no layout pass that resizes the scroller under the finger.
   describe('hide-on-scroll header', () => {
     it('publishes a bar height that does not move when the bar does', () => {
       const f = boot();
@@ -548,9 +547,8 @@ describe('ReaderShellComponent', () => {
     });
 
     it('shows the bar again when a new list is chosen while scrolled down (#630)', () => {
-      // Regression: picking a selection from the drawer auto-closes it while the
-      // OUTGOING list is still rendered and scrolled down (#254). The bar used to
-      // resolve state from that stale offset and stay retracted over the new list.
+      // The drawer auto-closes while the OUTGOING list is still rendered and
+      // scrolled down (#254); the bar must not take its state from that offset.
       const f = boot();
       const rows = listScroller(f);
       rows.scrollTo(100);
@@ -653,9 +651,8 @@ describe('ReaderShellComponent', () => {
     });
 
     it('hears no scroller but the list', () => {
-      // A capture-phase listener used to hear EVERY scroller underneath — the
-      // article overlay's own coordinate space and the tag row's re-snap (scrollTop
-      // 0). It's driven by the entry list's typed scrolled output now (#128).
+      // #128: only the entry list's typed scrolled output drives the bar, never
+      // the article overlay's scroller or the tag row's re-snap.
       const { f, rows } = bootNarrowScrolledDown();
       openArticle(f);
 
@@ -1591,9 +1588,8 @@ describe('ReaderShellComponent', () => {
     expect(TestBed.inject(Title).getTitle()).toBe(`${headline.slice(0, 60)}… | simple feed reader`);
   });
 
-  // The heading used to hold hardcoded English literals, so a German user saw
-  // "All items"/"Favorites" while the sidebar row beside it was translated. It
-  // now reuses the sidebar's own keys and reacts to a language switch (#411).
+  // #411: the heading reuses the sidebar's translation keys and follows a
+  // language switch.
   describe('translated heading (#411)', () => {
     it('titles the default list with the translated all-items label', () => {
       const f = boot();

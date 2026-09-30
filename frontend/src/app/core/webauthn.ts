@@ -1,5 +1,3 @@
-// src/app/core/webauthn.ts
-
 /**
  * Pure WebAuthn helpers (#624): base64url<->bytes conversion and capability
  * detection. No Angular imports, so this is testable without a TestBed.

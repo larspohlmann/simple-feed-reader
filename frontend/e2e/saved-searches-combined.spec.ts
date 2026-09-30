@@ -1,4 +1,3 @@
-// e2e/saved-searches-combined.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // The seeded e2e admin, as in `magazine-kicker-one-line.spec.ts`.

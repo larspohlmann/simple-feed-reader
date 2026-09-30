@@ -1,4 +1,3 @@
-// src/app/shared/to-top-button/to-top-button.component.ts
 import { Component, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../icon/icon.component';

@@ -106,11 +106,7 @@ describe('RefreshService', () => {
     expect(ticks).toEqual([0, 1, 2]);
   });
 
-  // The client used to divide a slice's server-capped batch size by a run-wide
-  // count of what was still due. On a 200-feed sweep that is (50 - 180) / 50 —
-  // negative, clamped to 0 — so the bar sat still for minutes, then snapped to
-  // full on the last slice (#721). The server now owns the figure and the client
-  // renders it.
+  // #721: the server owns the progress figure; the client only renders it.
   describe('progress comes from the server, not from arithmetic here', () => {
     it('reports the run the server describes, not the slice', () => {
       svc.run();

@@ -42,7 +42,7 @@ describe('aiFailure', () => {
 
   // The prose the backend sends is not part of the contract. A reworded detail
   // must still classify as the unreadable key, and the sentence on its own must
-  // no longer classify as anything.
+  // not classify as anything.
   it('ignores the detail when it decides the kind', () => {
     expect(aiFailure(response(422, problem('ai_key_unreadable', 'Anything at all.'))).kind).toBe(
       'unreadableKey',

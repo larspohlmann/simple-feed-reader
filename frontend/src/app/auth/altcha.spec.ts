@@ -57,9 +57,8 @@ describe('solveAltcha', () => {
     expect(JSON.parse(atob(payload)).number).toBe(number);
   });
 
-  // A per-candidate `await` used to flood the microtask queue, which drains
-  // before the browser paints -- froze the page (0.7s desktop, worse on
-  // iPhone). This pins the fix: batching candidates and yielding between them.
+  // A per-candidate `await` floods the microtask queue, which drains before the
+  // browser paints and freezes the page; candidates are batched with yields between.
   it('checks in periodically rather than once per candidate', async () => {
     const salt = 'slicing?expires=999';
     const number = 9000;

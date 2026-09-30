@@ -1,4 +1,3 @@
-// src/app/core/preferences-writer.ts
 import { InjectionToken } from '@angular/core';
 import { Observable, of } from 'rxjs';
 

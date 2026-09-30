@@ -1,4 +1,3 @@
-// src/app/shared/marked-text/marked-text.component.ts
 import { Component, computed, input } from '@angular/core';
 import { markTerms } from './search-marks';
 

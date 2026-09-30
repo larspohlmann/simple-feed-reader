@@ -122,9 +122,8 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('shows a translated message, not the raw DOMException text, when the authenticator is already enrolled', async () => {
-    // Mirrors PasskeysGroupComponent's equivalent spec. Near-unreachable here in
-    // practice, but review flagged this branch drifting out of step with
-    // Settings' handling — proving it stays in step is cheap.
+    // Mirrors PasskeysGroupComponent's equivalent spec, so the two handlings
+    // stay in step.
     const alreadyEnrolled: Problem = {
       type: 'InvalidStateError',
       title:

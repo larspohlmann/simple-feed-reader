@@ -86,8 +86,7 @@ export class RefreshService {
           this.backOffWhileBusy(busyRetries, onDone, scope);
         } else if (r.status === 'aborted') {
           // The backend closed the EntityManager and stopped mid-sweep. Feeds
-          // are unfetched and still due, so this is NOT the `completed` case it
-          // used to share a branch with (#119).
+          // are unfetched and still due, so this is NOT `completed` (#119).
           this.stopWith({ kind: 'aborted' }, onDone);
         } else {
           this.finish(onDone);

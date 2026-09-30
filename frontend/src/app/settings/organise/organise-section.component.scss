@@ -246,7 +246,7 @@
 
 // The list has no per-row card the way a tag panel does, so the list itself
 // is the page's one box for that view -- the same card treatment a tag panel
-// gives itself below, not the group panel this page no longer wraps it in.
+// gives itself below.
 .list {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);

@@ -357,11 +357,9 @@ describe('EntryListComponent', () => {
     expect(el.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
-  // The search title alone is split into a small muted lead, a prominent
-  // quoted term, and a count pill (#581 follow-up, round 2) — the shell
-  // assembles all three from the same i18n keys and count logic that used to
-  // fold into one `title` string, so this list only renders the split; every
-  // other selection keeps the plain title.
+  // #581: the shell assembles the search title's muted lead, quoted term and
+  // count pill, so this list only renders the split; every other selection
+  // keeps the plain title.
   describe('the split search title (#581 follow-up)', () => {
     it('renders the muted prefix, the prominent term, and the count pill for a search selection', () => {
       const el = mount({
@@ -565,9 +563,8 @@ describe('EntryListComponent', () => {
     });
   });
 
-  // #87: the collapsing list header is a second bar with the same defect as the
-  // app header — it used to shrink the list's own box, resizing the scroller
-  // mid-gesture. It floats over reserved padding now.
+  // #87: the collapsing list header floats over reserved padding; it must never
+  // shrink the list's own box and resize the scroller mid-gesture.
   describe('collapsing list header', () => {
     it('publishes the expanded bar height and keeps it while collapsed', () => {
       const f = mount({ layout: 'list' });
@@ -586,9 +583,8 @@ describe('EntryListComponent', () => {
     });
 
     it('keeps the scroller reservation constant whether or not an error shows (#996)', () => {
-      // The decouple: the scroller always reserves header clearance itself, so an
-      // error appearing no longer hands the reservation to the banner and reflows
-      // the pane. The `.after-banner` toggle is gone.
+      // The scroller always reserves header clearance itself, so an error
+      // appearing never hands the reservation to the banner or reflows the pane.
       const withError = mount({
         layout: 'list',
         error: { type: 'about:blank', title: 'Request failed', status: 502 },
@@ -2034,11 +2030,8 @@ describe('EntryListComponent', () => {
     });
   });
 
-  // The focus pass used to run only off a scroll event, a resize, and one frame
-  // scheduled at mount. Rows that appeared after that frame therefore stayed
-  // undimmed until the user scrolled — rarely, because a remembered offset makes
-  // the restore write scrollTop, and that write sends the scroll event that
-  // covered the gap (#462).
+  // #462: rows that appear after mount get the focus pass too, not only a
+  // scroll, a resize or the first frame; they must not stay undimmed.
   describe('reading focus', () => {
     const loaded = [entry(1), entry(2), entry(3)];
 

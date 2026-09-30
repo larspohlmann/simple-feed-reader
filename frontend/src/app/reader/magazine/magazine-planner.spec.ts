@@ -498,8 +498,8 @@ describe('planMagazine', () => {
   it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {
     // A dev/link blog: a quarter of posts carry a large image (which holds the
     // IMAGE family), the rest are image-less but have a summary. The image-less
-    // ones used to ride the image ladder down to a title-only `compact`, dropping
-    // their dek. They must settle on `kicker`, which renders the summary.
+    // ones must not ride the image ladder down to a title-only `compact`, dropping
+    // their dek; they settle on `kicker`, which renders the summary.
     const entries = many(80, (i) =>
       i % 4 === 0 ? big(i, { subscriptionId: (i % 6) + 1 }) : e(i, { subscriptionId: (i % 6) + 1 }),
     );

@@ -101,9 +101,8 @@ describe('OAuthCallbackComponent', () => {
   });
 
   /**
-   * #247: a 403 account_not_active/pending_approval used to render "Sign-in
-   * did not complete. Please try again." -- wrong twice, since nothing is
-   * retryable and the account was in fact created.
+   * #247: a 403 account_not_active/pending_approval is no retryable failure —
+   * the account was created and awaits approval.
    */
   it('tells a new user their account awaits approval instead of showing a retry error', () => {
     const rendered = blockWith('pending_approval');

@@ -193,9 +193,8 @@ describe('ReaderHeaderComponent', () => {
       expect(el.querySelector('[aria-label="Search"]')).toBeNull();
     });
 
-    // #408: `searchOpen` used to be plain local state, so growing past
-    // NARROW_QUERY mid-search left it stuck true — the mobile bar (with its own
-    // `/` listener) stayed mounted alongside the sidebar's instance.
+    // #408: growing past NARROW_QUERY mid-search closes the mobile bar, whose
+    // own `/` listener would otherwise stay mounted beside the sidebar's.
     it('closes the bar when the layout stops being narrow', () => {
       const f = create();
       const el = f.nativeElement as HTMLElement;

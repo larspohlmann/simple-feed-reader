@@ -1,4 +1,3 @@
-// e2e/navigation-watchdog.spec.ts
 import { test, expect } from '@playwright/test';
 
 /**

@@ -1,4 +1,3 @@
-// src/app/core/navigation-watchdog.ts
 import { DestroyRef, inject } from '@angular/core';
 import {
   NavigationCancel,

@@ -1,4 +1,3 @@
-// src/app/core/problem.ts
 import { HttpErrorResponse } from '@angular/common/http';
 
 export interface Problem {

@@ -1,4 +1,3 @@
-// src/app/core/digest.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { CurrentUser } from './auth.service';

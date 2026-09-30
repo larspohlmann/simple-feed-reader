@@ -1,4 +1,3 @@
-// src/app/core/version.service.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { API_BASE_URL } from './api';

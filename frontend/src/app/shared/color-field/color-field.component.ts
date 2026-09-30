@@ -1,4 +1,3 @@
-// src/app/shared/color-field/color-field.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TAG_COLORS } from '../icon-choices';

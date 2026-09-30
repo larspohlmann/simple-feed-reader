@@ -1,4 +1,3 @@
-// src/app/shared/toast/toast.component.ts
 import { ChangeDetectionStrategy, Component, Type, inject } from '@angular/core';
 import { NgComponentOutlet } from '@angular/common';
 import { DIALOG_DATA } from '@angular/cdk/dialog';

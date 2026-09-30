@@ -1,5 +1,3 @@
-// src/app/core/gravatar.ts
-
 /** Gravatar hashes the trimmed, lower-cased email. */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();

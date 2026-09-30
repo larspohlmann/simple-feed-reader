@@ -1,4 +1,3 @@
-// e2e/boot-without-dictionary.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 /**

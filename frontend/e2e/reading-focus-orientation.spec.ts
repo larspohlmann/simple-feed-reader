@@ -1,4 +1,3 @@
-// e2e/reading-focus-orientation.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // Same seeded admin as reading-focus-blocks.spec.ts (`bin/console app:e2e:seed-admin`).

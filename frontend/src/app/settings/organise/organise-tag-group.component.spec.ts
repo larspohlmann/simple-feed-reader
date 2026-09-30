@@ -117,9 +117,8 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   /**
-   * `label` used to call translate() directly (a one-shot read that never
-   * re-evaluates on a switch -- the #411 trap), so the untagged name kept
-   * its old language while sibling transloco-pipe labels switched (#659).
+   * #659: the untagged name follows a language switch like its transloco-pipe
+   * siblings; a direct translate() is a one-shot read (the #411 trap).
    */
   it('translates the untagged group name on a language switch', async () => {
     await render(UNTAGGED_GROUP);
@@ -267,9 +266,9 @@ describe('OrganiseTagGroupComponent', () => {
   });
 
   /**
-   * The header's cdkDropList used to act only on dropped feeds, never a
-   * dropped TAG. reorderTags(tagIds) is the write, ordered from the full,
-   * unfiltered tags() list -- not the filtered group() (#659 review).
+   * #659: the header's cdkDropList takes a dropped TAG as well as feeds.
+   * reorderTags(tagIds) is the write, ordered from the full, unfiltered tags()
+   * list -- not the filtered group().
    */
   it('reorders tags when a tag header is dropped on another tag header', async () => {
     const { manage, component } = await render(THIRD_GROUP);

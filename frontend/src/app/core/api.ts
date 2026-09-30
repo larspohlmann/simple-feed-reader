@@ -1,4 +1,3 @@
-// src/app/core/api.ts
 import { InjectionToken } from '@angular/core';
 
 /** Absolute base for every backend call. '' in prod (same-origin), the Docker

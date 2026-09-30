@@ -1,5 +1,3 @@
-// src/app/core/save-as.ts
-
 const CONTENT_DISPOSITION_FILENAME = /filename="?([^";]+)"?/i;
 
 /** Pulls the filename the server chose out of a Content-Disposition header

@@ -1,4 +1,3 @@
-// src/app/core/page-title.service.ts
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';

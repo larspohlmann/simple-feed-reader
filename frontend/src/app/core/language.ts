@@ -1,5 +1,3 @@
-// src/app/core/language.ts
-
 /** The languages the UI ships translations for.
  *
  *  Adding one needs a matching edit in `deploy/strato/.htaccess`, whose

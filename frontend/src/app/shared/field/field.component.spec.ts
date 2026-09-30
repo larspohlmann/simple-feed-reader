@@ -99,9 +99,8 @@ describe('FieldComponent', () => {
   });
 
   /**
-   * #433: the tip used to sit after the projected control with only its
-   * trigger lifted into the label row, opening the explanation below the
-   * input. jsdom has no layout, so this pins document order, not geometry.
+   * #433: the tip and its panel sit in the label row, ahead of the control.
+   * jsdom has no layout, so this pins document order, not geometry.
    */
   it('keeps the tip and its panel in the label row, ahead of the control', async () => {
     const fixture = await mountField({ label: 'Endpoint', info: 'What this endpoint is for.' });

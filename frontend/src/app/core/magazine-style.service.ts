@@ -1,4 +1,3 @@
-// src/app/core/magazine-style.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { CurrentUser } from './auth.service';
 import { MAGAZINE_STYLE_KEY, MagazineStyle, asMagazineStyle } from './magazine-style';

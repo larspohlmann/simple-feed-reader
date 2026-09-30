@@ -1,4 +1,3 @@
-// e2e/sidebar-toggle-desktop.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // The seeded e2e admin, as in the other desktop specs.

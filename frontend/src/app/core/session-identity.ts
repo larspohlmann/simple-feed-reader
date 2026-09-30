@@ -1,4 +1,3 @@
-// src/app/core/session-identity.ts
 import { WritableSignal, effect, inject, signal, untracked } from '@angular/core';
 import { TokenStore } from './token.store';
 

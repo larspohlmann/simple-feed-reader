@@ -1,4 +1,3 @@
-// src/app/core/translated-title.strategy.ts
 import { Injectable, inject } from '@angular/core';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { PageTitleService } from './page-title.service';

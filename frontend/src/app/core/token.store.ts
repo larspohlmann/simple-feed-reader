@@ -1,4 +1,3 @@
-// src/app/core/token.store.ts
 import { Injectable, computed, signal } from '@angular/core';
 
 const KEY = 'sfr.jwt';

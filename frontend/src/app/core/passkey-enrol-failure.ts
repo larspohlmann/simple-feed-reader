@@ -1,4 +1,3 @@
-// src/app/core/passkey-enrol-failure.ts
 import { TranslocoService } from '@jsverse/transloco';
 import { Problem } from './problem';
 

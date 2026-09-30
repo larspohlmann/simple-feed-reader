@@ -1,4 +1,3 @@
-// src/app/core/client-error-http-method.ts
 //
 // Angular-free (see client-error-beacon.ts): only the interceptor knows the
 // request method, but the reporter builds the wire message, so the method

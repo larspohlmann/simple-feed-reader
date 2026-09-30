@@ -6,7 +6,7 @@
 @mixin probe-section {
   // The Test row's control slot: outcome glyph, then button. The glyph's box is
   // always present — an icon appearing from nothing would widen the slot and
-  // shove the button sideways, the same jump the outcome text used to cause.
+  // shove the button sideways.
   .test-control {
     display: flex;
     align-items: center;

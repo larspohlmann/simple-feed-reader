@@ -1,4 +1,3 @@
-// src/app/shared/overlay-panel/overlay-panel.component.ts
 import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 let nextId = 0;

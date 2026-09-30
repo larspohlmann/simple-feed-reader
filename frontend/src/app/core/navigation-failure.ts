@@ -1,4 +1,3 @@
-// src/app/core/navigation-failure.ts
 import { Injectable, Signal, inject, signal } from '@angular/core';
 import { revealBootErrorSurface } from './boot-error-surface';
 import { ClientErrorReporter } from './client-error-reporter';

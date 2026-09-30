@@ -1,5 +1,3 @@
-// src/app/core/magazine-style.ts
-
 export type MagazineStyle = 'boxed' | 'airy';
 
 export const MAGAZINE_STYLES: readonly MagazineStyle[] = ['boxed', 'airy'];

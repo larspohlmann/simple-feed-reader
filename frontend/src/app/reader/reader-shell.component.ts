@@ -307,8 +307,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // The single authority that reloads the list after a refresh (#502): the
     // onboarding sweep reloads on each landing slice, so a new user isn't
     // staring at an empty list (#127); a user-initiated refresh reloads once,
-    // on finish, so it never flickers mid-sweep. Used to also live in each
-    // run()'s onDone (#61), doubling the reload on a scoped refresh -- now lives here alone.
+    // on finish, so it never flickers mid-sweep.
     effect(() => {
       const slice = this.refreshSvc.slice();
       const running = this.refreshSvc.running();
@@ -565,7 +564,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
    *  behind the current selection. The single reload authority (#502) reloads the
-   *  list once the run finishes — this path no longer reloads it itself. */
+   *  list once the run finishes, so this path does not. */
   onScopedRefresh(): void {
     const scope = this.refreshScope();
     if (!scope) return;
@@ -632,7 +631,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       // The single reload authority (#502) reloads the list once the feed's
-      // first fetch finishes — this path no longer reloads it itself.
+      // first fetch finishes, so this path does not.
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }

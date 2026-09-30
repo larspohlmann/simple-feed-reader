@@ -1,4 +1,3 @@
-// e2e/reader-smoke.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // The seeded e2e admin — the same fixture the backend ReaderJourneyE2eTest

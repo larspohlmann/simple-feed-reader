@@ -644,9 +644,8 @@ describe('RecommendationsService', () => {
       }
     });
 
-    /** The reload case: the run is already stalled when the page loads, so
-     *  `resume()` applies the report (freezing the bar) before marking it live.
-     *  Marking it live used to start the ticker outright, undoing that freeze (#439). */
+    /** #439: on reload `resume()` applies the stalled report (freezing the bar)
+     *  before marking the run live, and marking it live must not restart the ticker. */
     it('leaves the bar frozen when resume() picks up a run already waiting for its lock', fakeAsync(() => {
       jest.useFakeTimers();
       nowMs = 0;

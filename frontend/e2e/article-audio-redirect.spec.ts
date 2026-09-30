@@ -1,4 +1,3 @@
-// e2e/article-audio-redirect.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';

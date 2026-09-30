@@ -1,4 +1,3 @@
-// src/app/core/http-locale-writer.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of } from 'rxjs';

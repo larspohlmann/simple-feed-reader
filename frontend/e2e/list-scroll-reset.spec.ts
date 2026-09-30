@@ -1,4 +1,3 @@
-// e2e/list-scroll-reset.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { signInAsAdmin } from './support/auth';
 import { entryWire, oneFeedJson } from './support/reader';

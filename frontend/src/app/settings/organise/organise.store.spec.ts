@@ -147,9 +147,8 @@ describe('OrganiseStore', () => {
   });
 
   /**
-   * expandAll() used to derive its set from groups(), the FILTERED list, so
-   * a search filter silently dropped other groups' expanded state once it
-   * cleared. "Expand all" must mean every group (#659 review).
+   * #659: "Expand all" means every group, not only the FILTERED groups(), so
+   * clearing a search filter keeps the other groups expanded.
    */
   it('expandAll opens every group, not only the ones a filter is currently showing', () => {
     const store = make();

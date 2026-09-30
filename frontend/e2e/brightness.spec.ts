@@ -1,4 +1,3 @@
-// e2e/brightness.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 function mediaFilter(page: Page): Promise<string> {

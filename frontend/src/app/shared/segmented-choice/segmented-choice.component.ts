@@ -1,4 +1,3 @@
-// src/app/shared/segmented-choice/segmented-choice.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 

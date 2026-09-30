@@ -1,4 +1,3 @@
-// src/app/shared/button/button.component.ts
 import { booleanAttribute, ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { SpinnerComponent } from '../spinner/spinner.component';
 
@@ -25,8 +24,7 @@ export type ButtonSize = 'sm' | 'md';
  * view-controls segmented control -- deliberately stay out; forcing them
  * through here would turn this into a grab bag.
  *
- * Full width is opt-in (`block`). It used to be unconditional, which is why no
- * surface outside the auth forms could adopt this component.
+ * Full width is opt-in (`block`).
  */
 @Component({
   selector: 'app-button',

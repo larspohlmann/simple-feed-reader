@@ -1,4 +1,3 @@
-// src/testing/translation-keys.ts
 import en from '../../public/i18n/en.json';
 
 /**

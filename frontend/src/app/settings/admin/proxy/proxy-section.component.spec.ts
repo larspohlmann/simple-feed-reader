@@ -182,8 +182,6 @@ describe('ProxySectionComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('203.0.113.9');
   });
 
-  // The outcome used to sit beside the button inside the control slot, so the
-  // button jumped left the moment a result arrived.
   it('reports the outcome in the row description, leaving the button in place', () => {
     const fixture = mount(state({ host: 'proxy.example.com' }));
 

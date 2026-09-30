@@ -1,4 +1,3 @@
-// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth.guard';
 import { DYNAMIC_TITLE } from './core/translated-title.strategy';

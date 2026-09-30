@@ -1,4 +1,3 @@
-// e2e/boot-watchdog.spec.ts
 import { test, expect } from '@playwright/test';
 
 /**

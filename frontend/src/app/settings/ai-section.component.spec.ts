@@ -559,8 +559,8 @@ describe('AiSectionComponent', () => {
     // below.
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
-    // `tz` is a query param now, so an exact-string match no longer finds the
-    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    // `tz` is a query param, so match the URL alone: `url` excludes the query
+    // string, unlike `urlWithParams`.
     http
       .expectOne((req) => req.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
@@ -835,8 +835,8 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
-    // `tz` is a query param now, so an exact-string match no longer finds the
-    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    // `tz` is a query param, so match the URL alone: `url` excludes the query
+    // string, unlike `urlWithParams`.
     http
       .expectOne((req) => req.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });

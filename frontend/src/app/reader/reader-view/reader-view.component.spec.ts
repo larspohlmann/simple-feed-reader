@@ -97,9 +97,8 @@ class MockResizeObserver {
   }
 }
 
-/** The feed body previously carried as `entry.contentHtml`; now what the body
- *  store answers for entry 1 by default (see `beforeEach` below), so the bulk
- *  of these presentational tests need no body-store setup of their own. */
+/** What the body store answers for entry 1 by default (see `beforeEach` below),
+ *  so most of these presentational tests need no body-store setup of their own. */
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -430,9 +429,8 @@ describe('ReaderViewComponent', () => {
     });
   });
 
-  // #107: the reading focus only ever fully highlights the block at the viewport
-  // centre, and the article used to stop scrolling with its last paragraph at the
-  // bottom edge — the one block that could never be brought into focus.
+  // #107: the reading focus only fully highlights the block at the viewport
+  // centre, so the article needs tail space for its last paragraph to get there.
   describe('tail space below a long article', () => {
     /** Pin the pane's height and where the article's own content box ends. */
     function stubGeometry(f: ReturnType<typeof mount>, contentBottom: number, viewport: number) {

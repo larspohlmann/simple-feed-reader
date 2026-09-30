@@ -1,4 +1,3 @@
-// src/app/shared/searchable-select/searchable-select.component.ts
 import {
   booleanAttribute,
   ChangeDetectionStrategy,
