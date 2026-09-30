@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use function array_diff;
+use function explode;
+use function implode;
 use function putenv;
 
 /**
@@ -20,14 +23,26 @@ final readonly class WorkerIsolation
             return;
         }
 
-        self::write(
+        self::isolate(
             'DATABASE_URL',
             WorkerDatabaseUrl::forWorker(self::read('DATABASE_URL'), $workerToken),
         );
 
         // The rate limiter keeps its windows in the cache pools, so each worker gets its own directory. The directory,
         // not prefix_seed: pool namespaces are fixed when the one shared container is compiled.
-        self::write('CACHE_DIRECTORY', self::read('CACHE_DIRECTORY') . $workerToken);
+        self::isolate('CACHE_DIRECTORY', self::read('CACHE_DIRECTORY') . $workerToken);
+    }
+
+    /**
+     * A console child re-runs Dotenv, which overwrites every name in SYMFONY_DOTENV_VARS; dropping the name keeps the
+     * worker's value.
+     */
+    private static function isolate(string $name, string $value): void
+    {
+        self::write($name, $value);
+
+        $dotenvVariables = explode(',', self::read('SYMFONY_DOTENV_VARS'));
+        self::write('SYMFONY_DOTENV_VARS', implode(',', array_diff($dotenvVariables, [$name, ''])));
     }
 
     private static function read(string $name): string
