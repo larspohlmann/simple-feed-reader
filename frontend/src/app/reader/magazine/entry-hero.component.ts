@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, signal } from '@angular/core';
+import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryMetaComponent } from '../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
@@ -8,7 +9,12 @@ import { EntryBlockBase } from './entry-block-base';
 @Component({
   selector: 'app-entry-hero',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
+  imports: [
+    ProxiedImageDirective,
+    EntryKickerLineComponent,
+    EntryMetaComponent,
+    EntryDuplicatesComponent,
+  ],
   templateUrl: './entry-hero.component.html',
   styleUrl: './entry-hero.component.scss',
 })

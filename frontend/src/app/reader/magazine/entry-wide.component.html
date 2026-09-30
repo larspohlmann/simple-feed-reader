@@ -9,6 +9,7 @@
 >
   @if (showImage()) {
     <img
+      appProxiedImage
       class="img"
       [src]="image()!.url"
       [attr.width]="image()!.width"
@@ -17,7 +18,7 @@
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="imgError.set(true)"
+      (imageFailed)="imgError.set(true)"
     />
   }
   <div class="body">

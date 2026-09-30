@@ -3,6 +3,7 @@ import {
   DestroyRef,
   ElementRef,
   HostListener,
+  Injector,
   computed,
   effect,
   inject,
@@ -12,6 +13,8 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
+import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { Observable, Subscription, timeout } from 'rxjs';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -123,6 +126,7 @@ function slugify(text: string): string {
 @Component({
   selector: 'app-reader-view',
   imports: [
+    ProxiedImageDirective,
     IconComponent,
     ListActionDirective,
     FlagToggleDirective,
@@ -183,6 +187,7 @@ export class ReaderViewComponent {
   private readonly readingFocus = inject(ReadingFocusService);
   private readonly audioPlayer = inject(AudioPlayerService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   protected readonly formatDuration = formatDuration;
 
@@ -434,6 +439,20 @@ export class ReaderViewComponent {
     effect(() => {
       if (this.readingFocus.enabled()) this.applier?.refresh();
       else this.applier?.clear();
+    });
+
+    // Body images arrive through [innerHTML], so one capturing listener gives them the proxy
+    // fallback (error events do not bubble).
+    effect((onCleanup) => {
+      const content = this.content()?.nativeElement;
+      if (!content) return;
+      const recover = (event: Event) => {
+        if (event.target instanceof HTMLImageElement) {
+          void this.injector.get(ImageProxyService).recover(event.target);
+        }
+      };
+      content.addEventListener('error', recover, true);
+      onCleanup(() => content.removeEventListener('error', recover, true));
     });
 
     // Re-decorate external links and re-seat the reading focus whenever the

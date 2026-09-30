@@ -72,3 +72,9 @@ framework:
             host_throttle.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 86400
+
+            # Cookies an image host sets on a first visit, which some hosts require before serving an image (#475).
+            # OriginCookies expires each entry after an hour; this lifetime is the backstop.
+            image_proxy.cookie.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 3600

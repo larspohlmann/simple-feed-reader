@@ -13,13 +13,14 @@
   </div>
   @if (showThumb()) {
     <img
+      appProxiedImage
       class="thumb"
       [src]="item().imageUrl"
       alt=""
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="failedImageUrl.set(item().imageUrl)"
+      (imageFailed)="failedImageUrl.set(item().imageUrl)"
     />
   }
 </article>

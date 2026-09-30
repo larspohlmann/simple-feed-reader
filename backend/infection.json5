@@ -34,10 +34,22 @@
                 'App\\Service\\Fetch\\RedirectFollower::redirectTarget',
                 'App\\Service\\Reader\\HtmlPageFetcher::fetch',
                 'App\\Service\\Reader\\Media\\StreamLocationResolver::landingUrlOf',
+                'App\\Service\\Image\\ImageDownloader::assertServed',
+                'App\\Service\\Image\\ImageDownloader::servedType',
+                'App\\Service\\Image\\OriginCookies::visit',
             ],
         },
-        // content() runs only after fetch() confirmed isSuccess(), and getContent()'s flag differs only on a non-2xx.
-        FalseValue: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::content'] },
+        // Both read the body only after isSuccess() was confirmed, and getContent()'s flag differs only on a non-2xx.
+        FalseValue: {
+            ignore: [
+                'App\\Service\\Reader\\HtmlPageFetcher::content',
+                'App\\Service\\Image\\ImageDownloader::body',
+            ],
+        },
+        // Only the first item goes: without 'private', Symfony still marks a max-age response private (no s-maxage).
+        ArrayItemRemoval: { ignore: ['App\\Http\\ProxiedImageResponse::of'] },
+        // explode()'s limit only bounds the tail; the name=value pair is element 0 at any limit above 1.
+        IncrementInteger: { ignore: ['App\\Service\\Image\\Support\\CookieHeader::fromSetCookies'] },
         // The 3 MB cap is checked twice, while streaming and after the read: `>` vs `>=` on it is not worth a 3 MB
         // fixture, and dropping the streaming throw leaves the post-read check.
         GreaterThan: {

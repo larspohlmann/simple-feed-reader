@@ -208,11 +208,12 @@
                inside contentHtml, #681). Width/height carry the aspect ratio so the
                article doesn't jump; `height: auto` keeps it from overriding the fluid layout. -->
           <img
+            appProxiedImage
             class="lead-image"
             [src]="image.url"
             [attr.width]="image.width"
             [attr.height]="image.height"
-            (error)="heroFailed.set(true)"
+            (imageFailed)="heroFailed.set(true)"
             alt=""
             loading="lazy"
             decoding="async"

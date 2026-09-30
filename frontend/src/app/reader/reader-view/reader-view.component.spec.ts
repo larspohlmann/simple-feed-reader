@@ -14,6 +14,7 @@ import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 import { CommentsService, CommentsState } from '../comments.service';
+import { ImageProxyService, ProxyOutcome } from '../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
@@ -165,7 +166,10 @@ function stubComments(state: Signal<CommentsState>): void {
 }
 
 describe('ReaderViewComponent', () => {
+  let imageProxy: { recover: jest.Mock<Promise<ProxyOutcome>, [HTMLImageElement]> };
+
   beforeEach(() => {
+    imageProxy = { recover: jest.fn().mockResolvedValue('failed') };
     localStorage.clear();
     MockResizeObserver.instances = [];
     (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
@@ -181,6 +185,7 @@ describe('ReaderViewComponent', () => {
         provideRouter([]),
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
         { provide: EntryBodyService, useValue: fakeBody },
+        { provide: ImageProxyService, useValue: imageProxy },
       ],
     });
   });
@@ -956,7 +961,7 @@ describe('ReaderViewComponent', () => {
     expect(hero(mount(entry()))!.getAttribute('src')).toBe('https://img.test/feed.jpg');
   });
 
-  it('hides the original hero whose image fails to load', () => {
+  it('hides the original hero whose image fails to load', async () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(
         failedContent({
@@ -967,9 +972,27 @@ describe('ReaderViewComponent', () => {
     const f = mount(entry());
 
     hero(f)!.dispatchEvent(new Event('error'));
+    await f.whenStable();
     f.detectChanges();
 
     expect(hero(f)).toBeNull();
+  });
+
+  it('hands a failed article-body image to the proxy', async () => {
+    loadMock.mockReturnValue(
+      of<ReaderContent>(
+        okContent({
+          contentHtml: '<p>Lead.</p><img src="https://www.oxmoxhh.de/cover.png" alt="">',
+        }),
+      ),
+    );
+    const f = mount(entry());
+    await f.whenStable();
+    const img = f.nativeElement.querySelector('.content img') as HTMLImageElement;
+
+    img.dispatchEvent(new Event('error'));
+
+    expect(imageProxy.recover).toHaveBeenCalledWith(img);
   });
 
   it('renders no hero in reader mode when the backend resolved none', () => {

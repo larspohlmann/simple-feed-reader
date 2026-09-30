@@ -6,13 +6,14 @@
     <!-- alt is empty on purpose: the feed's name is already the list heading
          directly above, so naming it again only repeats it to a screen reader. -->
     <img
+      appProxiedImage
       class="logo"
       [src]="url"
       alt=""
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="broken.set(true)"
+      (imageFailed)="broken.set(true)"
     />
   } @else if (faviconUrl(); as icon) {
     <!-- Only 8% of feeds publish an image of their own. The site icon stands in

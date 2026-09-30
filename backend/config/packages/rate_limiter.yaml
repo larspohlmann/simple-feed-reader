@@ -41,6 +41,15 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user: only images the browser could not load directly come here, but a magazine page of one
+        # hotlink-protected feed can be dozens at once. Each call is at most three logical outbound
+        # requests (the egress proxy and address-family failover may retry each).
+        image_proxy:
+            policy: 'sliding_window'
+            limit: 300
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Per-user cap on comments-feed fetches. Each call is at most one
         # outbound request, and the client caches for an hour.
         comments:
