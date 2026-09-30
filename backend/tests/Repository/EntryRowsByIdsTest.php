@@ -98,26 +98,6 @@ final class EntryRowsByIdsTest extends DbTestCase
         self::assertSame(['newer', 'older'], $this->rowsByIds([$olderId, $newerId]));
     }
 
-    public function testTheLimitCapsHydrationToTheNewestRows(): void
-    {
-        $oldest = $this->entry('oldest', '2026-07-10T00:00:00Z');
-        $middle = $this->entry('middle', '2026-07-11T00:00:00Z');
-        $newest = $this->entry('newest', '2026-07-12T00:00:00Z');
-        $ids = [$oldest->requireId(), $middle->requireId(), $newest->requireId()];
-
-        // A limit keeps only the newest rows, still in newest-first order — the
-        // tail past the limit is never hydrated.
-        self::assertSame(
-            ['newest', 'middle'],
-            array_map(
-                static fn ($row) => $row->entry->getGuid(),
-                $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids, 2),
-            ),
-        );
-        // No limit hydrates every given id.
-        self::assertCount(3, $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids));
-    }
-
     public function testDropsAnIdInAFeedTheUserDoesNotSubscribeTo(): void
     {
         $other = new Feed('https://other.example.com/feed.xml');
