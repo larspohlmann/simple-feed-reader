@@ -57,6 +57,11 @@ final readonly class RecommendationConsolidationParser
      */
     public function parseCutReply(string $content, array $shownIds): ConsolidationParseResultModel
     {
+        // A cut reply's outer object never closes, so one that decodes was not cut inside its answer.
+        if (null !== $this->decoder->decode($content)) {
+            return ConsolidationParseResultModel::unusable();
+        }
+
         $picks = $this->salvager->salvage($this->decoder->completeItemsOf($content, 'recommendations'), $shownIds);
 
         if ([] === $picks) {

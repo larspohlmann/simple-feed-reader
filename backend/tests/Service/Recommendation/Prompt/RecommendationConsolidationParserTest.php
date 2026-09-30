@@ -286,4 +286,27 @@ final class RecommendationConsolidationParserTest extends TestCase
 
         self::assertFalse($result->usable);
     }
+
+    /** A complete reply is parse()'s to judge, even one the provider flagged: salvage would overrule its verdict. */
+    public function testACompleteReplyIsNotSalvagedAsACutOne(): void
+    {
+        $result = $this->parser->parseCutReply(
+            '{"recommendations":[{"id":5,"score":900,"reason":"x"},{"id":6,"score":800,"reason":"y"}],'
+            . '"duplicates":[5,6]}',
+            [5, 6],
+        );
+
+        self::assertFalse($result->usable);
+    }
+
+    public function testAnObjectAfterAClosedRecommendationsArrayIsNotSalvaged(): void
+    {
+        $result = $this->parser->parseCutReply(
+            '{"recommendations":[{"id":5,"score":900,"reason":"x"}],"duplicates":[]} '
+            . '{"id":6,"score":9,"reason":"after"}',
+            [5, 6],
+        );
+
+        self::assertFalse($result->usable);
+    }
 }
