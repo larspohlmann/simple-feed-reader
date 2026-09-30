@@ -7,8 +7,8 @@ import { filenameFromContentDisposition, saveAs } from '../core/save-as';
 import { downloadOpmlExport } from './opml-export';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
-import { RestoreCounts, RestorePreview, RestoreResult } from '../reader/models';
-import { ReaderApi } from '../reader/reader-api';
+import { RestoreCounts, RestorePreview, RestoreResult } from './settings.models';
+import { SettingsApi } from './settings-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { BackupArchive, isOldFormatBackup, openBackupArchive } from './backup-archive';
@@ -39,7 +39,7 @@ const FALLBACK_BACKUP_FILENAME = 'account-backup.zip';
   styleUrl: './backup-section.component.scss',
 })
 export class BackupSectionComponent {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly subs = inject(SubscriptionsStore);
   private readonly refresh = inject(RefreshService);
   private readonly language = inject(LanguageService);

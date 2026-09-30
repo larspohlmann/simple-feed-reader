@@ -6,20 +6,15 @@ import { Observable, tap } from 'rxjs';
 import { AiAvailabilityService } from './ai-availability.service';
 import { API_BASE_URL } from './api';
 import { DigestService } from './digest.service';
+import { DigestConfig } from './digest-writer';
 import { LanguageService } from './language.service';
 import { MagazineStyleService } from './magazine-style.service';
 import { PreferencesService } from './preferences.service';
 import { ReaderLocationService } from './reader-location.service';
 import { TokenStore } from './token.store';
 
-export interface UserDigestPreferences {
-  enabled: boolean;
-  cadence: 'daily' | 'weekly';
-  sendHour: number;
-  weekday: number;
-  format: 'html' | 'text';
-  /** The instance's configured timezone (`APP_TIMEZONE`), read-only: the send
-   *  hour is interpreted in this zone. Never sent back in a digest PATCH. */
+export interface UserDigestPreferences extends DigestConfig {
+  /** The instance's `APP_TIMEZONE`, which the send hour is in; read-only, never PATCHed. */
   timezone: string;
 }
 

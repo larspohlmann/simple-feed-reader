@@ -9,14 +9,14 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { formatCost } from '../reader/format';
 import {
   RunHistoryMonth,
   RunHistoryMonthPage,
   RunHistoryOverview,
   RunHistoryRow,
-} from '../reader/models';
+} from './settings.models';
 import { RecommendationsService } from '../reader/recommendations.service';
 import { LanguageService } from '../core/language.service';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -64,7 +64,7 @@ interface MonthSection {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecommendationRunHistoryComponent {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly recs = inject(RecommendationsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly language = inject(LanguageService);

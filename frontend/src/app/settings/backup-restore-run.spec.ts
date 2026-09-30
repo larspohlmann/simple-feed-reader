@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
-import { RestoreCounts, RestoreResult } from '../reader/models';
-import { ReaderApi } from '../reader/reader-api';
+import { RestoreCounts, RestoreResult } from './settings.models';
+import { SettingsApi } from './settings-api';
 import { BackupArchive } from './backup-archive';
 import { BackupRestoreRun, RESTORE_WAIT } from './backup-restore-run';
 
@@ -57,7 +57,7 @@ describe('BackupRestoreRun', () => {
 
     TestBed.configureTestingModule({
       providers: [
-        { provide: ReaderApi, useValue: api },
+        { provide: SettingsApi, useValue: api },
         { provide: RESTORE_WAIT, useValue: wait },
       ],
     });

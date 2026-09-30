@@ -12,9 +12,9 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../core/version.service';
 import { LanguageService } from '../core/language.service';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
-import { ReadingActivity } from '../reader/models';
+import { ReadingActivity } from './settings.models';
 import { selectionQueryParams } from '../reader/query';
 import { formatDayInMonth, formatLongDate } from '../reader/format';
 import { DEVELOPMENT_VERSION, buildVersion } from '../../environments/version';
@@ -69,7 +69,7 @@ export class AboutSectionComponent implements OnInit {
   private readonly versions = inject(VersionService);
   private readonly language = inject(LanguageService);
   private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;

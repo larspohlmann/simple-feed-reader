@@ -328,36 +328,6 @@ describe('ReaderApi', () => {
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
-
-    it('GETs OPML export as text', () => {
-      api.exportOpml().subscribe();
-      const req = ctrl.expectOne('https://api.test/api/opml/export');
-      expect(req.request.method).toBe('GET');
-      expect(req.request.responseType).toBe('text');
-      req.flush('<opml/>');
-    });
-
-    it('POSTs OPML import as a raw body', () => {
-      api.importOpml('<opml/>').subscribe();
-      const req = ctrl.expectOne('https://api.test/api/opml/import');
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toBe('<opml/>');
-      req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
-    });
-
-    it('GETs the account backup as a blob, observing the full response for its headers', () => {
-      let filename: string | null = null;
-      api.downloadAccountBackup().subscribe((response) => {
-        filename = response.headers.get('Content-Disposition');
-      });
-      const req = ctrl.expectOne('https://api.test/api/account/backup');
-      expect(req.request.method).toBe('GET');
-      expect(req.request.responseType).toBe('blob');
-      req.flush(new Blob(['gzipped']), {
-        headers: { 'Content-Disposition': 'attachment; filename="account.json.gz"' },
-      });
-      expect(filename).toBe('attachment; filename="account.json.gz"');
-    });
   });
 
   it('GETs reader content for an entry', () => {
@@ -461,29 +431,6 @@ describe('ReaderApi', () => {
       background: false,
       streamedChars: 0,
       forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
-    });
-  });
-
-  it('GETs the debug log', () => {
-    api.debugLog().subscribe();
-    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
-    expect(req.request.method).toBe('GET');
-    req.flush({ run: null, entries: [] });
-  });
-
-  it('GETs one debug log entry', () => {
-    api.debugLogEntry(7).subscribe();
-    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');
-    expect(req.request.method).toBe('GET');
-    req.flush({
-      id: 7,
-      phase: 'batch',
-      batchNumber: 1,
-      attempt: 1,
-      verdict: 'usable',
-      requestBody: '{}',
-      responseText: '{}',
-      finishReason: 'stop',
     });
   });
 });

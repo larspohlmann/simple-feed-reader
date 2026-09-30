@@ -2,11 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
-import { ReaderApi } from '../reader/reader-api';
-import { RestorePreview, RestoreResult } from '../reader/models';
+import { SettingsApi } from './settings-api';
+import { RestorePreview, RestoreResult } from './settings.models';
 
-describe('ReaderApi account backup/restore', () => {
-  let api: ReaderApi;
+describe('SettingsApi', () => {
+  let api: SettingsApi;
   let ctrl: HttpTestingController;
 
   beforeEach(() => {
@@ -17,7 +17,7 @@ describe('ReaderApi account backup/restore', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
-    api = TestBed.inject(ReaderApi);
+    api = TestBed.inject(SettingsApi);
     ctrl = TestBed.inject(HttpTestingController);
   });
 
@@ -118,5 +118,58 @@ describe('ReaderApi account backup/restore', () => {
     req.flush(result);
 
     expect(received).toEqual(result);
+  });
+
+  it('GETs OPML export as text', () => {
+    api.exportOpml().subscribe();
+    const req = ctrl.expectOne('https://api.test/api/opml/export');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('text');
+    req.flush('<opml/>');
+  });
+
+  it('POSTs OPML import as a raw body', () => {
+    api.importOpml('<opml/>').subscribe();
+    const req = ctrl.expectOne('https://api.test/api/opml/import');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBe('<opml/>');
+    req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
+  });
+
+  it('GETs the account backup as a blob, observing the full response for its headers', () => {
+    let filename: string | null = null;
+    api.downloadAccountBackup().subscribe((response) => {
+      filename = response.headers.get('Content-Disposition');
+    });
+    const req = ctrl.expectOne('https://api.test/api/account/backup');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.responseType).toBe('blob');
+    req.flush(new Blob(['gzipped']), {
+      headers: { 'Content-Disposition': 'attachment; filename="account.json.gz"' },
+    });
+    expect(filename).toBe('attachment; filename="account.json.gz"');
+  });
+
+  it('GETs the debug log', () => {
+    api.debugLog().subscribe();
+    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
+    expect(req.request.method).toBe('GET');
+    req.flush({ run: null, entries: [] });
+  });
+
+  it('GETs one debug log entry', () => {
+    api.debugLogEntry(7).subscribe();
+    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');
+    expect(req.request.method).toBe('GET');
+    req.flush({
+      id: 7,
+      phase: 'batch',
+      batchNumber: 1,
+      attempt: 1,
+      verdict: 'usable',
+      requestBody: '{}',
+      responseText: '{}',
+      finishReason: 'stop',
+    });
   });
 });

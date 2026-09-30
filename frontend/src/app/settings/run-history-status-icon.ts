@@ -1,4 +1,4 @@
-import { RunHistoryRow } from '../reader/models';
+import { RunHistoryRow } from './settings.models';
 
 /** The wire vocabulary for a run's status, narrowed off `RunHistoryRow` rather
  *  than redeclared -- a status the API adds shows up here as a type error

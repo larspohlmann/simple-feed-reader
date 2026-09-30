@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../reader/format';
-import { RunHistoryRow } from '../reader/models';
+import { RunHistoryRow } from './settings.models';
 import { LanguageService } from '../core/language.service';
 import { pluralKey } from '../core/plural-key';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';

@@ -5,9 +5,10 @@ import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AboutSectionComponent } from './about-section.component';
 import { ReleaseVersion, VersionService } from '../core/version.service';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
-import { ReadingActivity, SubscriptionDto } from '../reader/models';
+import { SubscriptionDto } from '../reader/models';
+import { ReadingActivity } from './settings.models';
 import { buildVersion } from '../../environments/version';
 
 interface StoreState {
@@ -62,7 +63,7 @@ describe('AboutSectionComponent', () => {
             favoritesCount: signal(store.favoritesCount ?? 0),
           },
         },
-        { provide: ReaderApi, useValue: { readingActivity: () => of(activity) } },
+        { provide: SettingsApi, useValue: { readingActivity: () => of(activity) } },
       ],
     });
     const f = TestBed.createComponent(AboutSectionComponent);
