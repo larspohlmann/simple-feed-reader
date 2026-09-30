@@ -1212,7 +1212,7 @@ describe('ReaderShellComponent', () => {
 
   it('scopes an all-items refresh to nothing (sweeps every due feed)', () => {
     const fixture = boot();
-    fixture.componentInstance.onScopedRefresh();
+    fixture.componentInstance.refresh.refreshScoped();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.has('feedId')).toBe(false);
     expect(testRequest.request.params.has('tag')).toBe(false);
@@ -1223,7 +1223,7 @@ describe('ReaderShellComponent', () => {
     it('fires exactly one entries reload and one tags reload after the run finishes', () => {
       const fixture = boot();
 
-      fixture.componentInstance.onScopedRefresh();
+      fixture.componentInstance.refresh.refreshScoped();
 
       // The refresh sweep itself.
       ctrl
@@ -1342,7 +1342,7 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    fixture.componentInstance.onScopedRefresh();
+    fixture.componentInstance.refresh.refreshScoped();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(testRequest.request.params.get('tag')).toBe('3');
     testRequest.flush(refreshDone);
@@ -1355,7 +1355,7 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    fixture.componentInstance.onScopedRefresh();
+    fixture.componentInstance.refresh.refreshScoped();
     const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     // The subscription's real feed id (55), not the subscription id (5).
     expect(testRequest.request.params.get('feedId')).toBe('55');
@@ -1421,7 +1421,7 @@ describe('ReaderShellComponent', () => {
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
-    fixture.componentInstance.onScopedRefresh();
+    fixture.componentInstance.refresh.refreshScoped();
     ctrl.expectNone((request) => request.url === 'https://api.test/api/refresh');
   });
 
@@ -1860,7 +1860,7 @@ describe('ReaderShellComponent', () => {
 
       const ref = { closed: of({ id: 9, lastFetchedAt: 'x' }) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
-      fixture.componentInstance.onAddFeed();
+      fixture.componentInstance.refresh.addFeed();
       ctrl.expectOne('https://api.test/api/subscriptions').flush(subscriptionsBody);
 
       expect(nav).toHaveBeenCalledWith(
@@ -2502,7 +2502,7 @@ describe('ReaderShellComponent', () => {
 
       // A later manual refresh (the sidebar button) must NOT bring the counted
       // banner back over the now-populated reader — it belongs to the sweep only.
-      fixture.componentInstance.onRefresh();
+      fixture.componentInstance.refresh.refreshAll();
       fixture.detectChanges();
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/refresh')
@@ -2519,7 +2519,7 @@ describe('ReaderShellComponent', () => {
       const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
-      fixture.componentInstance.onRefresh();
+      fixture.componentInstance.refresh.refreshAll();
       fixture.detectChanges();
       ctrl
         .expectOne((request) => request.url === 'https://api.test/api/refresh')
@@ -2548,7 +2548,7 @@ describe('ReaderShellComponent', () => {
       const fixture = bootWith([
         { ...SUBSCRIPTION_FIXTURE, id: 1, lastFetchedAt: '2026-07-26T10:00:00+00:00' },
       ]);
-      fixture.componentInstance.onRefresh();
+      fixture.componentInstance.refresh.refreshAll();
       fixture.detectChanges();
       respond(ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh'));
       fixture.detectChanges();
@@ -3494,8 +3494,8 @@ describe('ReaderShellComponent', () => {
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
 
-      expect(fixture.componentInstance.currentSavedSearch()?.id).toBe(4);
-      fixture.componentInstance.onToggleSavedSearch();
+      expect(fixture.componentInstance.savedSearch.current()?.id).toBe(4);
+      fixture.componentInstance.savedSearch.toggle();
 
       ctrl.expectOne('https://api.test/api/saved-searches/4').flush(null);
       expect(nav).toHaveBeenCalledWith(['/searches/saved/all']);
@@ -3789,7 +3789,7 @@ describe('ReaderShellComponent', () => {
       const fixture = bootWithSearchSelected([]);
       const show = jest.spyOn(TestBed.inject(ToastService), 'show');
 
-      fixture.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.savedSearch.toggle();
 
       const testRequest = ctrl.expectOne('https://api.test/api/saved-searches');
       expect(testRequest.request.method).toBe('POST');
@@ -3811,7 +3811,7 @@ describe('ReaderShellComponent', () => {
     it('saves a quoted query as a phrase, with the bare term and the phrase flag', () => {
       const fixture = bootWithSearchSelected([], '"climate change"');
 
-      fixture.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.savedSearch.toggle();
 
       const testRequest = ctrl.expectOne('https://api.test/api/saved-searches');
       expect(testRequest.request.method).toBe('POST');
@@ -3826,11 +3826,11 @@ describe('ReaderShellComponent', () => {
 
     it('removes the saved search when the current one is already saved and the removal is confirmed', () => {
       const fixture = bootWithSearchSelected([savedClimate]);
-      expect(fixture.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
+      expect(fixture.componentInstance.savedSearch.current()).toEqual(savedClimateView);
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      fixture.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.savedSearch.toggle();
 
       const testRequest = ctrl.expectOne('https://api.test/api/saved-searches/4');
       expect(testRequest.request.method).toBe('DELETE');
@@ -3845,7 +3845,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      fixture.componentInstance.onToggleSavedSearch();
+      fixture.componentInstance.savedSearch.toggle();
 
       ctrl.expectNone('https://api.test/api/saved-searches/4');
       expect(fixture.componentInstance.savedSearchesStore.savedSearches()).toEqual([
@@ -3861,7 +3861,7 @@ describe('ReaderShellComponent', () => {
         .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      fixture.componentInstance.confirmToggleDigest(savedClimateView);
+      fixture.componentInstance.savedSearch.confirmToggleDigest(savedClimateView);
 
       expect(setIncludeInDigest).toHaveBeenCalledWith(4, true);
     });
@@ -3874,7 +3874,10 @@ describe('ReaderShellComponent', () => {
         .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      fixture.componentInstance.confirmToggleDigest({ ...savedClimateView, includeInDigest: true });
+      fixture.componentInstance.savedSearch.confirmToggleDigest({
+        ...savedClimateView,
+        includeInDigest: true,
+      });
 
       expect(setIncludeInDigest).toHaveBeenCalledWith(4, false);
     });
@@ -3887,7 +3890,7 @@ describe('ReaderShellComponent', () => {
         .spyOn(fixture.componentInstance.savedSearchesStore, 'setIncludeInDigest')
         .mockImplementation(() => undefined);
 
-      fixture.componentInstance.confirmToggleDigest(savedClimateView);
+      fixture.componentInstance.savedSearch.confirmToggleDigest(savedClimateView);
 
       expect(setIncludeInDigest).not.toHaveBeenCalled();
     });
@@ -3897,7 +3900,7 @@ describe('ReaderShellComponent', () => {
       // a plain trailing space, which is what a string comparison would need.
       const fixture = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
-      expect(fixture.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
+      expect(fixture.componentInstance.savedSearch.current()).toEqual(savedClimateView);
     });
   });
 

@@ -50,6 +50,23 @@ export class ReaderRouteState {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
     });
+    // Warm the body store for the entries beside the one just opened. Keyed on
+    // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
+    effect(() => {
+      const id = this.openEntryId();
+      if (id === null) return;
+      untracked(() => this.prefetchNeighbours(id));
+    });
+  }
+
+  private prefetchNeighbours(id: number): void {
+    const list = this.entries.entries();
+    const index = list.findIndex((entry) => entry.id === id);
+    if (index === -1) return;
+    const previous = list[index - 1];
+    const next = list[index + 1];
+    if (previous) this.bodyService.prefetch(previous.id);
+    if (next) this.bodyService.prefetch(next.id);
   }
 
   patchFetchedEntry(id: number, patch: EntryStatePatch, onError?: () => void): void {

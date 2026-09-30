@@ -20,47 +20,35 @@ import { EntryStateActions } from './entry-state-actions.service';
 import { MarkReadActions } from './mark-read-actions.service';
 import { ReaderOnboarding } from './reader-onboarding.service';
 import { PasskeyFirstBootOffer } from './passkey-first-boot-offer.service';
+import { SavedSearchToggle } from './saved-search-toggle.service';
+import { RefreshActions } from './refresh-actions.service';
+import { ListReload } from './list-reload.service';
+import { ReaderTabTitle } from './reader-tab-title.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../../core/auth/auth.service';
-import { PageTitleService } from '../../core/i18n/page-title.service';
-import { EntryBodyService } from '../article/content/entry-body.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { TagsStore } from '../state/tags.store';
 import { EntriesStore } from '../state/entries.store';
 import { RefreshService } from '../state/refresh.service';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { refreshFailureKey } from './refresh-message';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { DigestService } from '../../core/preferences/digest.service';
 import { VersionService } from '../../core/version.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
-import {
-  RefreshScope,
-  isDirectSearch,
-  isWholeWordTerm,
-  isPhraseTerm,
-  queryFromSelection,
-  selectionQueryParams,
-  visibleSearchTerm,
-} from '../query/query';
+import { isDirectSearch } from '../query/query';
 import { UnreadFilterService } from '../list/unread-filter.service';
 import { ListOrderService } from '../list/list-order.service';
 import { ListPreferences } from '../list/list-preferences.service';
 import { ListScrollReset } from '../scroll/list-scroll-reset';
-import { EntryDto, SavedSearchDto, SubscriptionDto, SubscriptionTagDto, TagDto } from '../models';
+import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ReaderViewComponent } from '../article/reader-view/reader-view.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
-import { AddFeedDialogComponent } from '../feeds/add-feed/add-feed-dialog.component';
-import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
-import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
-import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
@@ -70,8 +58,7 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
-import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-reader-shell',
@@ -103,18 +90,16 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     MarkReadActions,
     ReaderOnboarding,
     PasskeyFirstBootOffer,
+    SavedSearchToggle,
+    RefreshActions,
+    ListReload,
+    ReaderTabTitle,
     { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
 export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly dialog = inject(Dialog);
-  private readonly confirm = inject(ConfirmService);
-  private readonly toast = inject(ToastService);
-  private readonly actionSheet = inject(ActionSheet);
-  private readonly i18n = inject(TranslocoService);
-  private readonly bodyService = inject(EntryBodyService);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
 
@@ -131,7 +116,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   readonly sidebarVisibility = inject(SidebarVisibilityService);
-  private readonly pageTitle = inject(PageTitleService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
@@ -146,14 +130,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Injected for its effect: holding it opens the passkey offer when due. */
   private readonly passkeyOffer = inject(PasskeyFirstBootOffer);
 
-  /** What to tell the user about a refresh that fetched nothing, from ANY
-   *  refresh — not just the sweep. Gating this on the sweep window is what left
-   *  a failed sidebar refresh, scoped refresh or add-feed silent (#119). */
-  readonly fetchFailureKey = computed(() => {
-    const failure = this.refreshSvc.failure();
-    return failure ? refreshFailureKey(failure) : null;
-  });
-
   readonly unreadFilter = inject(UnreadFilterService);
   readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
@@ -165,13 +141,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly heading = inject(ListHeading);
   readonly entryActions = inject(EntryStateActions);
   readonly markRead = inject(MarkReadActions);
-  readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
-  /** Whether the header offers its Save/Remove control: a direct search can be
-   *  saved, a saved search removed. Named so a third search-like kind can't slip
-   *  the gate the way #1118 dropped this one. */
-  readonly canToggleSavedSearch = computed(
-    () => isDirectSearch(this.selection()) || this.viewingSavedSearch(),
-  );
+  readonly savedSearch = inject(SavedSearchToggle);
+  readonly refresh = inject(RefreshActions);
 
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
@@ -259,83 +230,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.showSidebarButton()?.nativeElement.focus();
   });
 
-  constructor() {
-    // Reload the list and sidebar counts whenever the selection (not the open
-    // entry) changes. A new list has no removed rows, so clear the collapsed
-    // set with it, else a recycled id would render an incoming row already collapsed.
-    effect(() => {
-      if (!this.listPreferences.ready()) return;
-      const query = queryFromSelection(this.selection());
-      untracked(() => {
-        this.entryActions.clearLeaving();
-        this.entries.load(query);
-        this.subs.loadIfStale();
-      });
-    });
-    // Dismiss the mobile drawer once a new selection is chosen from it.
-    effect(() => {
-      this.selection();
-      untracked(() => this.sidebarOpen.set(false));
-    });
-    // Warm the body store for the entries beside the one just opened. Keyed on
-    // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
-    effect(() => {
-      const id = this.routeState.openEntryId();
-      if (id === null) return;
-      untracked(() => {
-        const list = this.entries.entries();
-        const index = list.findIndex((entry) => entry.id === id);
-        if (index === -1) return;
-        const previous = list[index - 1];
-        const next = list[index + 1];
-        if (previous) this.bodyService.prefetch(previous.id);
-        if (next) this.bodyService.prefetch(next.id);
-      });
-    });
-
-    // Name the tab after the open article, or after the list when none is open.
-    // The reader route carries no title of its own, so this is the only writer
-    // while the reader is on screen.
-    effect(() => {
-      const entry = this.openEntry();
-      if (entry !== null) {
-        this.pageTitle.useText(entry.title);
-        return;
-      }
-      this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);
-    });
-
-    // The single authority that reloads the list after a refresh (#502): the
-    // onboarding sweep reloads on each landing slice, so a new user isn't
-    // staring at an empty list (#127); a user-initiated refresh reloads once,
-    // on finish, so it never flickers mid-sweep.
-    effect(() => {
-      const slice = this.refreshSvc.slice();
-      const running = this.refreshSvc.running();
-      untracked(() => {
-        if (slice === 0) return; // nothing has reported yet
-        if (!this.onboarding.sweeping() && running) return; // manual refresh: wait for finish
-        this.subs.load();
-        this.savedSearchesStore.load();
-        // A refresh never touches tags, so reload them once when the run
-        // finishes rather than on every onboarding slice (onDone reloaded them;
-        // the old slice effect did not reload them at all).
-        if (!running) this.tags.load();
-        this.entries.load(queryFromSelection(this.selection()));
-      });
-    });
-
-    // Reload the list when a for-you run completes while the user is already
-    // on that feed. `completedStamp` starts at 0, which is the signal's
-    // initial value, not a completion — the guard keeps a boot from reloading.
-    effect(() => {
-      if (this.recs.completedStamp() === 0) return;
-      untracked(() => {
-        if (this.selection().kind === 'for-you') this.entries.load({ view: 'for-you' });
-      });
-    });
-  }
-
   ngOnInit(): void {
     this.savedSearchesStore.load();
     this.tags.load(); // the sidebar tag tree (order, empty tags) reads TagsStore
@@ -389,6 +283,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     style.setProperty('--app-bar-shift', this.headerHidden() ? `-${height}px` : '0px');
   });
 
+  private readonly listReload = inject(ListReload);
+
+  /** Dismiss the mobile drawer once a new selection is chosen from it. */
+  private readonly _closeDrawerOnSelection = effect(() => {
+    this.selection();
+    untracked(() => this.sidebarOpen.set(false));
+  });
+
+  private readonly tabTitle = inject(ReaderTabTitle);
+
   /**
    * The mobile drawer hangs below the header, so it must never open under a
    * retracted one -- that would leave a strip of backdrop where the bar
@@ -433,207 +337,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     void this.router.navigate(['/'], {
       queryParams: { q: term || null, entry: null },
       queryParamsHandling: 'merge',
-    });
-  }
-
-  /** The current search decoded into the pair a saved search stores: the
-   *  visible term and the whole-word flag. Null outside a search — the one
-   *  place that reads the trailing-space signal, so downstream never re-decodes it (#408). */
-  private readonly searchedTermAndMode = computed(() => {
-    const selection = this.selection();
-    if (selection.kind !== 'search') return null;
-    const raw = selection.term ?? '';
-
-    // A phrase (wrapping quotes) overrides whole-word (a trailing space) when a
-    // query carries both, exactly as the server decides it (#702), so the
-    // whole-word flag is read only when the query is not a phrase.
-    const phrase = isPhraseTerm(raw);
-
-    return { term: visibleSearchTerm(raw), wholeWord: !phrase && isWholeWordTerm(raw), phrase };
-  });
-
-  /** The saved search matching the current selection, or null. A search's
-   *  identity is its visible term plus its mode — the whole-word and phrase
-   *  flags — so all three must match. */
-  readonly currentSavedSearch = computed(() => {
-    if (this.selection().kind === 'saved-search') return this.heading.activeSavedSearch();
-    const current = this.searchedTermAndMode();
-    if (current === null) return null;
-
-    return (
-      this.savedSearchesStore
-        .savedSearches()
-        .find(
-          (saved) =>
-            saved.term === current.term &&
-            saved.wholeWord === current.wholeWord &&
-            saved.phrase === current.phrase,
-        ) ?? null
-    );
-  });
-
-  protected readonly savedSearchActionLabel = computed(() =>
-    this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
-  );
-
-  /** Save the search being looked at, or drop it when already saved -- one
-   *  command, because the header offers one button whose label/icon flip on
-   *  this state. Saving toasts on real HTTP success; removing confirms first (#581). */
-  onToggleSavedSearch(): void {
-    const saved = this.currentSavedSearch();
-    if (saved) {
-      this.confirmRemoveSavedSearch(saved.id);
-
-      return;
-    }
-
-    const current = this.searchedTermAndMode();
-    if (!current) return;
-    this.savedSearchesStore.createSavedSearch(current.term, current.wholeWord, current.phrase, () =>
-      this.toast.show({
-        message: this.i18n.translate('reader.searchSaved'),
-        durationMs: CONFIRMATION_DURATION_MS,
-      }),
-    );
-  }
-
-  private confirmRemoveSavedSearch(id: number): void {
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.removeSavedSearchConfirm'),
-      message: this.i18n.translate('reader.removeSavedSearchConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.removeSavedSearch'),
-    };
-    this.confirm.confirmThen(data, () => {
-      // Removing the search you are viewing by its slug path leaves that path
-      // pointing at nothing, so fall back to the combined list; an unsaved
-      // `?q=` search stays put and simply flips its button back to Save.
-      const returnToCombined = this.viewingSavedSearch()
-        ? () => void this.router.navigate(['/searches/saved/all'])
-        : undefined;
-      this.savedSearchesStore.removeSavedSearch(id, returnToCombined);
-    });
-  }
-
-  /** The sidebar's per-search mail icon: confirm before flipping
-   *  `includeInDigest`, with different copy for turning it on versus off. */
-  confirmToggleDigest(row: SavedSearchDto): void {
-    const enabling = !row.includeInDigest;
-    const data: ConfirmData = enabling
-      ? {
-          title: this.i18n.translate('reader.digest.enableConfirm'),
-          message: this.i18n.translate('reader.digest.enableConfirmMessage', {
-            term: row.term,
-          }),
-          confirmLabel: this.i18n.translate('reader.digest.enableConfirmAction'),
-        }
-      : {
-          title: this.i18n.translate('reader.digest.disableConfirm'),
-          message: this.i18n.translate('reader.digest.disableConfirmMessage', {
-            term: row.term,
-          }),
-          confirmLabel: this.i18n.translate('reader.digest.disableConfirmAction'),
-        };
-    this.confirm.confirmThen(data, () =>
-      this.savedSearchesStore.setIncludeInDigest(row.id, enabling),
-    );
-  }
-
-  /** The global refresh: sweep every due feed. The single reload authority
-   *  (#502) reloads the list once the run finishes. */
-  onRefresh(): void {
-    this.refreshSvc.run();
-  }
-
-  /** Map the current selection to a refresh scope, or null where a scoped
-   *  refresh doesn't apply (the cross-feed favorites/kept views). A subscription
-   *  resolves to its underlying feed id — the API keys refresh by feed, and a
-   *  subscription id is a different id space. */
-  private refreshScope(selection = this.selection()): RefreshScope | null {
-    switch (selection.kind) {
-      case 'all':
-        return {};
-      case 'tag':
-        return selection.id != null ? { tagId: selection.id } : null;
-      case 'subscription': {
-        const feedId = this.heading.selectedSubscription()?.feedId;
-        return feedId != null ? { feedId } : null;
-      }
-      default:
-        return null;
-    }
-  }
-
-  /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
-   *  behind the current selection. The single reload authority (#502) reloads the
-   *  list once the run finishes, so this path does not. */
-  onScopedRefresh(): void {
-    const scope = this.refreshScope();
-    if (!scope) return;
-    this.refreshSvc.run(undefined, scope);
-  }
-
-  /** The header button's start path: a for-you run is long and spends provider
-   *  budget, so it's confirmed every time before it begins. Run, poll loop and
-   *  stop live in `RecommendationsService`; this only guards the door. A
-   *  leftover failed run can resume at its failed batch, but its candidate
-   *  snapshot is frozen from when it started -- so the choice is the user's (#329). */
-  startRecommendations(): void {
-    if (this.recs.report()?.status === 'failed') {
-      this.chooseResumeOrFreshRun();
-      return;
-    }
-    this.confirmFreshRun();
-  }
-
-  private confirmFreshRun(): void {
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.forYouRunConfirm'),
-      message: this.i18n.translate('reader.forYouRunConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.forYouRun'),
-    };
-    this.confirm.confirmThen(data, () => this.recs.start());
-  }
-
-  /** An unfinished (failed) run is waiting: offer to resume it or start over,
-   *  rather than silently picking one. Both choices spend provider budget, so
-   *  the sheet itself stands in for the plain confirm. */
-  private chooseResumeOrFreshRun(): void {
-    this.actionSheet
-      .open({
-        title: this.i18n.translate('reader.forYouUnfinishedTitle'),
-        actions: [
-          { id: 'resume', label: this.i18n.translate('reader.forYouResume') },
-          { id: 'fresh', label: this.i18n.translate('reader.forYouStartOver') },
-        ],
-      })
-      .subscribe((choice) => {
-        if (choice === 'resume') this.recs.resumeRun();
-        else if (choice === 'fresh') this.recs.start();
-      });
-  }
-
-  onAddFeed(): void {
-    const ref = this.dialog.open<SubscriptionDto>(AddFeedDialogComponent, {
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((sub) => {
-      if (!sub) return;
-      this.subs.load();
-      this.savedSearchesStore.load();
-      void this.router.navigate(['/'], {
-        queryParams: selectionQueryParams({ subscription: sub.id }),
-        queryParamsHandling: 'merge',
-      });
-      // A feed discovery could read arrives with its entries already stored
-      // (#290) -- nothing left to fetch, and asking again a second later is
-      // what a rationing site answers with 429. Scope the fetch to that feed alone.
-      if (sub.lastFetchedAt) {
-        this.entries.load(queryFromSelection(this.selection()));
-        return;
-      }
-      // The single reload authority (#502) reloads the list once the feed's
-      // first fetch finishes, so this path does not.
-      this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }
 }
