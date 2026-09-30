@@ -115,3 +115,7 @@ services:
         class: App\Tests\PhpStan\CommentBlockLengthRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\NoVariableClassOrMethodNameRule
+        tags:
+            - phpstan.rules.rule
