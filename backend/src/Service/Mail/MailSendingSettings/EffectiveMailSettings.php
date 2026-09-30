@@ -9,6 +9,7 @@ use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class EffectiveMailSettings implements MailSendingSettingsInterface
 {
@@ -16,6 +17,8 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
         private MailServerSettingsRepository $mailServerSettings,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
+        #[Autowire('%env(bool:MAILER_FORCE_FALLBACK)%')]
+        private bool $fallbackOverridesStoredTransport,
     ) {
     }
 
@@ -41,7 +44,7 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
     {
         $settings = $this->mailServerSettings->findSingleton();
 
-        if (null === $settings || '' === $settings->getHost()) {
+        if ($this->fallbackOverridesStoredTransport || null === $settings || '' === $settings->getHost()) {
             return null;
         }
 
