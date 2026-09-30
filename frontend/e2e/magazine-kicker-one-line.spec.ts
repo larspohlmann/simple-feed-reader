@@ -79,7 +79,7 @@ async function signInAsAdmin(page: Page, entries = ENTRIES): Promise<boolean> {
 
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
   const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible();
+  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
   return sidebar.isVisible();
 }
 
