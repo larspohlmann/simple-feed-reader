@@ -27,7 +27,7 @@ const POLL_MS = 2000;
 
 /** The calls of one run, as the panel groups them: a header line plus the
  *  rows, newest run first. */
-export interface RunGroup {
+export interface DebugLogRunGroup {
   runId: number;
   entries: DebugLogEntry[];
 }
@@ -58,8 +58,8 @@ export class RecommendationDebugLogComponent implements OnInit {
    *  appending to the log, so a flat list would mix runs; grouping keeps each
    *  run's calls under one header. Rows arrive ordered by id and are already
    *  contiguous -- this only marks boundaries and flips the run order. */
-  readonly groups = computed<RunGroup[]>(() => {
-    const groups: RunGroup[] = [];
+  readonly groups = computed<DebugLogRunGroup[]>(() => {
+    const groups: DebugLogRunGroup[] = [];
     for (const entry of this.entries()) {
       const current = groups.at(-1);
       if (current && current.runId === entry.runId) {
@@ -168,13 +168,13 @@ export class RecommendationDebugLogComponent implements OnInit {
   }
 
   /** When a run group's first call went out. */
-  groupStart(group: RunGroup): string {
+  groupStart(group: DebugLogRunGroup): string {
     return this.time(group.entries[0].createdAt);
   }
 
   /** When a run group's last call settled, or null while one is still
    *  streaming -- the header then shows an open-ended range. */
-  groupEnd(group: RunGroup): string | null {
+  groupEnd(group: DebugLogRunGroup): string | null {
     const finishedAt = group.entries.at(-1)?.finishedAt ?? null;
     return finishedAt === null ? null : this.time(finishedAt);
   }
