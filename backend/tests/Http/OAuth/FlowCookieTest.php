@@ -21,9 +21,6 @@ final class FlowCookieTest extends TestCase
         $this->assertNull($issued->getDomain());
         $this->assertTrue($issued->isHttpOnly());
         $this->assertSame(Cookie::SAMESITE_NONE, $issued->getSameSite());
-        // The __Host- prefix mandates Secure; over HTTPS the deployment resolves
-        // the create() default to true. Model that here.
-        $issued->setSecureDefault(true);
         $this->assertTrue($issued->isSecure());
     }
 
@@ -33,7 +30,6 @@ final class FlowCookieTest extends TestCase
         // a cookie whose attributes match the ones it was set with. If they drift,
         // the clear silently does nothing — so assert they agree.
         $issued = $this->issue();
-        $issued->setSecureDefault(true);
 
         $response = new Response();
         (new FlowCookie(new MockClock('2026-07-31 12:00:00')))->clearFrom($response);
