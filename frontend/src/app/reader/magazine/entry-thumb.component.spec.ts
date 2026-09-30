@@ -3,6 +3,18 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryThumbComponent } from './entry-thumb.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -34,7 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryThumbComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryThumbComponent);
   f.componentRef.setInput('entry', e);
@@ -62,7 +74,7 @@ describe('EntryThumbComponent', () => {
     );
 
     const favorite = jest.fn();
-    f.componentInstance.favorite.subscribe(favorite);
+    entryActions.favorite.mockImplementation(favorite);
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();

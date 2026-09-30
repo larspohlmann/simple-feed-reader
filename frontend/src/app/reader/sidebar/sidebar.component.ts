@@ -40,6 +40,7 @@ import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { LayoutService } from '../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
+import { ManageActions } from '../manage/manage-actions.service';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -87,6 +88,7 @@ const sameIds = (current: readonly number[], frozen: readonly number[]): boolean
 })
 export class SidebarComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly manage = inject(ManageActions);
 
   readonly tagTree = input.required<TagNode[]>();
   readonly untagged = input.required<SubscriptionDto[]>();
@@ -120,37 +122,12 @@ export class SidebarComponent {
    *  the search spinner while an unrelated subscriptions fetch runs. */
   readonly searchLoading = input(false);
 
-  readonly editTag = output<TagDto>();
-  readonly deleteTag = output<TagDto>();
-  readonly editFeed = output<SubscriptionDto>();
-  readonly unsubscribe = output<SubscriptionDto>();
-  /** The "Exclude/Show in All items" menu action was chosen; the shell flips
-   *  `includeInAllItems` via `ManageActions`. */
-  readonly toggleAllItems = output<SubscriptionDto>();
-  /** The "Exclude/Show in For You" menu action was chosen; the shell flips
-   *  `includeInForYou` via `ManageActions`. */
-  readonly toggleForYou = output<SubscriptionDto>();
   readonly refresh = output<void>();
   readonly addFeed = output<void>();
   /** The settled search term from the field, or '' when it is cleared. */
   // Semantic "settled search term" output, not a DOM element's search event.
   // eslint-disable-next-line @angular-eslint/no-output-native
   readonly search = output<string>();
-  /** A feed was dragged between lists: out of `fromTagId`, into `toTagId` at
-   *  `position` (a null tag id is the untagged "Feeds" list; a null position
-   *  appends, as when dropped on a collapsed tag header). */
-  readonly moveFeed = output<{
-    sub: SubscriptionDto;
-    fromTagId: number | null;
-    toTagId: number | null;
-    position: number | null;
-  }>();
-  /** Tags were reordered — the full tag id list in its new order. */
-  readonly reorderTags = output<number[]>();
-  /** The untagged "Feeds" list was reordered. */
-  readonly reorderUntagged = output<number[]>();
-  /** Feeds within one tag were reordered. */
-  readonly reorderTagFeeds = output<{ tagId: number; subscriptionIds: number[] }>();
   /** The mail icon on a saved-search row was clicked; the shell confirms and
    *  flips `includeInDigest`. */
   readonly toggleDigest = output<SavedSearchDto>();
@@ -325,8 +302,8 @@ export class SidebarComponent {
       // choice must not emit into destroyed outputs.
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === 'edit') this.editTag.emit(tag);
-        if (choice === 'delete') this.deleteTag.emit(tag);
+        if (choice === 'edit') this.manage.editTag(tag);
+        if (choice === 'delete') this.manage.deleteTag(tag);
       });
   }
 
@@ -362,10 +339,12 @@ export class SidebarComponent {
       })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((choice) => {
-        if (choice === 'edit') this.editFeed.emit(subscription);
-        if (choice === 'toggleAllItems') this.toggleAllItems.emit(subscription);
-        if (choice === 'toggleForYou') this.toggleForYou.emit(subscription);
-        if (choice === 'unsubscribe') this.unsubscribe.emit(subscription);
+        if (choice === 'edit') this.manage.editSubscription(subscription);
+        if (choice === 'toggleAllItems')
+          this.manage.setIncludeInAllItems(subscription, !subscription.includeInAllItems);
+        if (choice === 'toggleForYou')
+          this.manage.setIncludeInForYou(subscription, !subscription.includeInForYou);
+        if (choice === 'unsubscribe') this.manage.unsubscribe(subscription);
       });
   }
 
@@ -413,7 +392,7 @@ export class SidebarComponent {
 
     if (isSubscriptionDrag(event.item.data)) {
       // A tag header shows no feed list, so a feed dropped on it appends.
-      this.emitMove(event.item.data, event.previousContainer.data, target, null);
+      this.moveFeed(event.item.data, event.previousContainer.data, target, null);
       return;
     }
     if (target.kind !== 'tag') return;
@@ -424,7 +403,7 @@ export class SidebarComponent {
     const to = ids.indexOf(target.tag.id);
     if (from < 0 || to < 0 || from === to) return;
     moveItemInArray(ids, from, to);
-    this.reorderTags.emit(ids);
+    this.manage.reorderTags(ids);
   }
 
   /** A drop on a feed list: reorder within it (same list) or move the feed's
@@ -440,35 +419,30 @@ export class SidebarComponent {
           this.tagTree().find((n) => n.tag.id === target.tag.id)?.subscriptions ?? []
         ).map((s) => s.id);
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
-        this.reorderTagFeeds.emit({ tagId: target.tag.id, subscriptionIds: ids });
+        this.manage.reorderTagFeeds(target.tag.id, ids);
       } else {
         const ids = this.untagged().map((s) => s.id);
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
-        this.reorderUntagged.emit(ids);
+        this.manage.reorderUntagged(ids);
       }
       return;
     }
 
     if (isSubscriptionDrag(event.item.data)) {
-      this.emitMove(event.item.data, event.previousContainer.data, target, event.currentIndex);
+      this.moveFeed(event.item.data, event.previousContainer.data, target, event.currentIndex);
     }
   }
 
   /** Announce a feed dragged from one list to another at a dropped position.
    *  A drop back onto the same list it came from is a reorder, handled by the
    *  callers before they reach here. */
-  private emitMove(
+  private moveFeed(
     sub: SubscriptionDto,
     source: DropData,
     target: DropData,
     position: number | null,
   ): void {
-    this.moveFeed.emit({
-      sub,
-      fromTagId: tagIdOf(source),
-      toTagId: tagIdOf(target),
-      position,
-    });
+    this.manage.moveFeedToTag(sub, tagIdOf(source), tagIdOf(target), position);
   }
 
   toggle(tagId: number): void {

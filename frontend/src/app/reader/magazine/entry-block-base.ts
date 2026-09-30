@@ -1,4 +1,5 @@
-import { Directive, computed, inject, input, output } from '@angular/core';
+import { Directive, computed, inject, input } from '@angular/core';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';
 import { entrySnippet } from '../preview-image';
@@ -7,21 +8,14 @@ import { LanguageService } from '../../core/language.service';
 /** The signal inputs/outputs every magazine block shares, whether or not it
  *  renders an image. The `@Directive()` decorator is required — without it
  *  Angular's compiler does not emit input/output metadata for the base class,
- *  so a `@Component` extending it silently loses `entry`/`tags`/`open`. */
+ *  so a `@Component` extending it silently loses `entry`/`tags`. */
 @Directive({
   host: { '[attr.data-entry-id]': 'entry().id' },
 })
 export abstract class EntryBlockBase {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  readonly open = output<EntryDto>();
-
-  /** Every block carries the three per-entry actions. They live here rather
-   *  than on each block so a new block cannot forget them, and so the host
-   *  binds the same four outputs for every kind. */
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
+  protected readonly actions = inject(EntryActionHandler);
 
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>

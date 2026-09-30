@@ -79,18 +79,6 @@
       [selection]="selection()"
       [loading]="subs.loading()"
       [searchLoading]="searching()"
-      (editTag)="manage.editTag($event)"
-      (deleteTag)="manage.deleteTag($event)"
-      (editFeed)="manage.editSubscription($event)"
-      (unsubscribe)="manage.unsubscribe($event)"
-      (toggleAllItems)="manage.setIncludeInAllItems($event, !$event.includeInAllItems)"
-      (toggleForYou)="manage.setIncludeInForYou($event, !$event.includeInForYou)"
-      (moveFeed)="
-        manage.moveFeedToTag($event.sub, $event.fromTagId, $event.toTagId, $event.position)
-      "
-      (reorderTags)="manage.reorderTags($event)"
-      (reorderUntagged)="manage.reorderUntagged($event)"
-      (reorderTagFeeds)="manage.reorderTagFeeds($event.tagId, $event.subscriptionIds)"
       (refresh)="onRefresh()"
       (addFeed)="onAddFeed()"
       (search)="onSearch($event)"
@@ -99,50 +87,7 @@
   </aside>
   <main class="main" #mainEl [class.split]="splitView()">
     @if (splitView()) {
-      <section class="list">
-        <app-entry-list
-          [layout]="layout.mode()"
-          [title]="title()"
-          [titleTag]="selectedTag()"
-          [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
-          [searchTitlePrefix]="searchTitlePrefix()"
-          [searchTitleTerm]="searchTitleTerm()"
-          [searchCountLabel]="searchCountLabel()"
-          [titleCount]="titleCount()"
-          [savedSearchCount]="savedSearchesStore.savedSearches().length"
-          [entries]="entries.entries()"
-          [matchedWords]="entries.matchedWords()"
-          [loading]="listLoading()"
-          [loadingMore]="entries.loadingMore()"
-          [error]="entries.error()"
-          [hasMore]="hasMore()"
-          [canMarkAllRead]="canMarkAllRead()"
-          [selection]="selection()"
-          [openEntryId]="entryId()"
-          [leavingIds]="leavingIds()"
-          [feedTags]="feedTags()"
-          [refreshing]="refreshSvc.running()"
-          [lastRefreshed]="listLastRefreshed()"
-          [nextRefresh]="listNextRefresh()"
-          [newestRunId]="listNewestRunId()"
-          [headerActions]="headerActions"
-          [leadingActions]="listEditAction"
-          [topBlock]="feedIntro"
-          [titleLeading]="sidebarShow"
-          (loadMore)="entries.loadMore()"
-          (retry)="entries.retry()"
-          (dismiss)="entries.dismissError()"
-          (markAllRead)="onMarkAllRead()"
-          (unreadOnlyChange)="unreadFilter.set($event)"
-          (orderChange)="listOrder.set(selection(), $event)"
-          (markAboveRead)="onMarkAboveRead($event)"
-          (refresh)="onScopedRefresh()"
-          (favorite)="onFavorite($event)"
-          (keep)="onKeep($event)"
-          (read)="onToggleViewed($event)"
-          (open)="onOpen($event)"
-        />
-      </section>
+      <ng-container *ngTemplateOutlet="entryListPane" />
       <!-- The draggable seam between the two panes (#810). It writes `--list-width`
            onto `#mainEl` live; PaneResizeDirective owns the pointer, keyboard and
            double-click-reset behaviour and the separator ARIA. -->
@@ -152,83 +97,74 @@
         [attr.aria-label]="'reader.resizeSplit' | transloco"
       ></div>
       <section class="reader">
-        <app-reader-view
-          [entry]="openEntry()"
-          [tags]="openEntryTags()"
-          (favorite)="withOpen(onFavorite)"
-          (keep)="withOpen(onKeep)"
-          (read)="withOpen(onToggleViewed)"
-          (openOriginal)="withOpen(onOpenOriginal)"
-          (close)="onCloseReader()"
-        />
+        <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: false }" />
       </section>
     } @else {
       <!-- The list stays mounted; a full-screen article overlays it, so swiping it
            away reveals the list underneath. The app bar mirrors this list's own
            `collapsed` state, so the list scroller is the bar's only scroll source (#128). -->
-      <section class="list">
-        <app-entry-list
-          [layout]="layout.mode()"
-          [title]="title()"
-          [titleTag]="selectedTag()"
-          [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
-          [searchTitlePrefix]="searchTitlePrefix()"
-          [searchTitleTerm]="searchTitleTerm()"
-          [searchCountLabel]="searchCountLabel()"
-          [titleCount]="titleCount()"
-          [savedSearchCount]="savedSearchesStore.savedSearches().length"
-          [entries]="entries.entries()"
-          [matchedWords]="entries.matchedWords()"
-          [loading]="listLoading()"
-          [loadingMore]="entries.loadingMore()"
-          [error]="entries.error()"
-          [hasMore]="hasMore()"
-          [canMarkAllRead]="canMarkAllRead()"
-          [selection]="selection()"
-          [openEntryId]="entryId()"
-          [leavingIds]="leavingIds()"
-          [feedTags]="feedTags()"
-          [refreshing]="refreshSvc.running()"
-          [lastRefreshed]="listLastRefreshed()"
-          [nextRefresh]="listNextRefresh()"
-          [newestRunId]="listNewestRunId()"
-          [headerActions]="headerActions"
-          [leadingActions]="listEditAction"
-          [topBlock]="feedIntro"
-          [titleLeading]="sidebarShow"
-          (loadMore)="entries.loadMore()"
-          (retry)="entries.retry()"
-          (dismiss)="entries.dismissError()"
-          (markAllRead)="onMarkAllRead()"
-          (unreadOnlyChange)="unreadFilter.set($event)"
-          (orderChange)="listOrder.set(selection(), $event)"
-          (markAboveRead)="onMarkAboveRead($event)"
-          (refresh)="onScopedRefresh()"
-          (favorite)="onFavorite($event)"
-          (keep)="onKeep($event)"
-          (read)="onToggleViewed($event)"
-          (open)="onOpen($event)"
-        />
-      </section>
+      <ng-container *ngTemplateOutlet="entryListPane" />
       @if (openEntry()) {
         <div class="article-overlay">
           <!-- Immersive (own toolbar, above the app bar) only below the wide breakpoint.
                On wide screens the bar is app chrome, so the full-pane article slots
                beneath it with the same toolbar arrangement the split pane uses. -->
-          <app-reader-view
-            [entry]="openEntry()"
-            [tags]="openEntryTags()"
-            [fullscreen]="!screen.isWide()"
-            (favorite)="withOpen(onFavorite)"
-            (keep)="withOpen(onKeep)"
-            (read)="withOpen(onToggleViewed)"
-            (openOriginal)="withOpen(onOpenOriginal)"
-            (close)="onCloseReader()"
-          />
+          <ng-container *ngTemplateOutlet="readerPane; context: { fullscreen: !screen.isWide() }" />
         </div>
       }
     }
   </main>
+  <ng-template #entryListPane>
+    <section class="list">
+      <app-entry-list
+        [layout]="layout.mode()"
+        [title]="title()"
+        [titleTag]="selectedTag()"
+        [titleFaviconUrl]="selectedSubscription()?.faviconUrl ?? null"
+        [searchTitlePrefix]="searchTitlePrefix()"
+        [searchTitleTerm]="searchTitleTerm()"
+        [searchCountLabel]="searchCountLabel()"
+        [titleCount]="titleCount()"
+        [savedSearchCount]="savedSearchesStore.savedSearches().length"
+        [entries]="entries.entries()"
+        [matchedWords]="entries.matchedWords()"
+        [loading]="listLoading()"
+        [loadingMore]="entries.loadingMore()"
+        [error]="entries.error()"
+        [hasMore]="hasMore()"
+        [canMarkAllRead]="canMarkAllRead()"
+        [selection]="selection()"
+        [openEntryId]="entryId()"
+        [leavingIds]="leavingIds()"
+        [feedTags]="feedTags()"
+        [refreshing]="refreshSvc.running()"
+        [lastRefreshed]="listLastRefreshed()"
+        [nextRefresh]="listNextRefresh()"
+        [newestRunId]="listNewestRunId()"
+        [headerActions]="headerActions"
+        [leadingActions]="listEditAction"
+        [topBlock]="feedIntro"
+        [titleLeading]="sidebarShow"
+        (loadMore)="entries.loadMore()"
+        (retry)="entries.retry()"
+        (dismiss)="entries.dismissError()"
+        (markAllRead)="onMarkAllRead()"
+        (unreadOnlyChange)="unreadFilter.set($event)"
+        (orderChange)="listOrder.set(selection(), $event)"
+        (markAboveRead)="onMarkAboveRead($event)"
+        (refresh)="onScopedRefresh()"
+      />
+    </section>
+  </ng-template>
+  <ng-template #readerPane let-fullscreen="fullscreen">
+    <app-reader-view
+      [entry]="openEntry()"
+      [tags]="openEntryTags()"
+      [fullscreen]="fullscreen"
+      (openOriginal)="withOpen(onOpenOriginal)"
+      (close)="onCloseReader()"
+    />
+  </ng-template>
 </div>
 <app-audio-player-bar />
 

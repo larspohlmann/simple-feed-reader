@@ -6,6 +6,18 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -66,7 +78,7 @@ describe('EntryRowComponent', () => {
   beforeEach(() =>
     TestBed.configureTestingModule({
       imports: [EntryRowComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     }),
   );
 
@@ -99,10 +111,10 @@ describe('EntryRowComponent', () => {
   it('emits actions and open', () => {
     const f = mount(entry());
     const out = { favorite: 0, keep: 0, read: 0, open: 0 };
-    f.componentInstance.favorite.subscribe(() => out.favorite++);
-    f.componentInstance.keep.subscribe(() => out.keep++);
-    f.componentInstance.read.subscribe(() => out.read++);
-    f.componentInstance.open.subscribe(() => out.open++);
+    entryActions.favorite.mockImplementation(() => out.favorite++);
+    entryActions.keep.mockImplementation(() => out.keep++);
+    entryActions.toggleRead.mockImplementation(() => out.read++);
+    entryActions.open.mockImplementation(() => out.open++);
     const el = f.nativeElement as HTMLElement;
     (el.querySelector('[aria-label="Favorite"]') as HTMLButtonElement).click();
     (el.querySelector('[aria-label="Keep"]') as HTMLButtonElement).click();
@@ -119,8 +131,8 @@ describe('EntryRowComponent', () => {
   it('favorites exactly once on Enter over an action, and does not open the entry', () => {
     const f = mount(entry());
     const out = { favorite: 0, open: 0 };
-    f.componentInstance.favorite.subscribe(() => out.favorite++);
-    f.componentInstance.open.subscribe(() => out.open++);
+    entryActions.favorite.mockImplementation(() => out.favorite++);
+    entryActions.open.mockImplementation(() => out.open++);
 
     pressEnter(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
     f.detectChanges();
@@ -131,8 +143,8 @@ describe('EntryRowComponent', () => {
   it('favorites exactly once on Space over an action, and does not open the entry', () => {
     const f = mount(entry());
     const out = { favorite: 0, open: 0 };
-    f.componentInstance.favorite.subscribe(() => out.favorite++);
-    f.componentInstance.open.subscribe(() => out.open++);
+    entryActions.favorite.mockImplementation(() => out.favorite++);
+    entryActions.open.mockImplementation(() => out.open++);
 
     pressSpace(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
     f.detectChanges();
@@ -163,7 +175,7 @@ describe('EntryRowComponent', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const f = mount(entry({ duplicates: [dup] }));
     const opened = jest.fn();
-    f.componentInstance.open.subscribe(opened);
+    entryActions.open.mockImplementation(opened);
     (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
     f.detectChanges();
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();

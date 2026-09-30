@@ -19,6 +19,22 @@ import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { of } from 'rxjs';
 import { By } from '@angular/platform-browser';
+import { ManageActions } from '../manage/manage-actions.service';
+
+const manageActions = {
+  editTag: jest.fn(),
+  deleteTag: jest.fn(),
+  editSubscription: jest.fn(),
+  unsubscribe: jest.fn(),
+  setIncludeInAllItems: jest.fn(),
+  setIncludeInForYou: jest.fn(),
+  moveFeedToTag: jest.fn(),
+  reorderTags: jest.fn(),
+  reorderUntagged: jest.fn(),
+  reorderTagFeeds: jest.fn(),
+};
+
+beforeEach(() => Object.values(manageActions).forEach((spy) => spy.mockReset()));
 
 const account = (trialEndsAt: string | null): CurrentUser => ({
   id: 1,
@@ -98,6 +114,7 @@ function mount(
   TestBed.configureTestingModule({
     imports: [SidebarComponent, provideTranslocoTesting()],
     providers: [
+      { provide: ManageActions, useValue: manageActions },
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
@@ -218,7 +235,7 @@ describe('SidebarComponent', () => {
     expect(leads[1].querySelector('.dot')).not.toBeNull();
   });
 
-  it('emits editTag / deleteTag when a tag row menu action is used', () => {
+  it('calls editTag / deleteTag when a tag row menu action is used', () => {
     const node: TagNode = {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [],
@@ -229,8 +246,8 @@ describe('SidebarComponent', () => {
     const el = f.nativeElement as HTMLElement;
     const editTag = jest.fn();
     const deleteTag = jest.fn();
-    f.componentInstance.editTag.subscribe(editTag);
-    f.componentInstance.deleteTag.subscribe(deleteTag);
+    manageActions.editTag.mockImplementation(editTag);
+    manageActions.deleteTag.mockImplementation(deleteTag);
 
     (el.querySelector('.tag .dots') as HTMLButtonElement).click();
     f.detectChanges();
@@ -329,7 +346,14 @@ describe('SidebarComponent', () => {
     function moveOf(ev: CdkDragDrop<DropData>) {
       const f = mount();
       const spy = jest.fn();
-      f.componentInstance.moveFeed.subscribe(spy);
+      manageActions.moveFeedToTag.mockImplementation(
+        (
+          sub: SubscriptionDto,
+          fromTagId: number | null,
+          toTagId: number | null,
+          position: number | null,
+        ) => spy({ sub, fromTagId, toTagId, position }),
+      );
       f.componentInstance.onDrop(ev);
       return spy;
     }
@@ -355,7 +379,14 @@ describe('SidebarComponent', () => {
       const s = withTags(sub(1), [tag(3)]);
       const f = mount();
       const spy = jest.fn();
-      f.componentInstance.moveFeed.subscribe(spy);
+      manageActions.moveFeedToTag.mockImplementation(
+        (
+          sub: SubscriptionDto,
+          fromTagId: number | null,
+          toTagId: number | null,
+          position: number | null,
+        ) => spy({ sub, fromTagId, toTagId, position }),
+      );
       f.componentInstance.onTagHeadDrop(drop(s, onTag(7), onTag(3)));
       expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: 7, position: null });
     });
@@ -392,10 +423,10 @@ describe('SidebarComponent', () => {
       } as unknown as CdkDragDrop<DropData>;
     }
 
-    it('emits reorderTags when a tag is dropped on another tag header', () => {
+    it('calls reorderTags when a tag is dropped on another tag header', () => {
       const f = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
       const spy = jest.fn();
-      f.componentInstance.reorderTags.subscribe(spy);
+      manageActions.reorderTags.mockImplementation(spy);
       // Drop the last tag (30) onto the first tag's header → 30 moves to front.
       f.componentInstance.onTagHeadDrop(
         tagHeadDrop(tagNode(30).tag, { kind: 'tag', tag: tagNode(10).tag }),
@@ -406,7 +437,7 @@ describe('SidebarComponent', () => {
     it('does not emit when a tag is dropped back on its own header', () => {
       const f = mount({ tagTree: [tagNode(10), tagNode(20)] });
       const spy = jest.fn();
-      f.componentInstance.reorderTags.subscribe(spy);
+      manageActions.reorderTags.mockImplementation(spy);
       f.componentInstance.onTagHeadDrop(
         tagHeadDrop(tagNode(10).tag, { kind: 'tag', tag: tagNode(10).tag }),
       );
@@ -416,7 +447,14 @@ describe('SidebarComponent', () => {
     it('moves a feed onto the tag when it is dropped on the tag header', () => {
       const f = mount({ tagTree: [tagNode(10)] });
       const spy = jest.fn();
-      f.componentInstance.moveFeed.subscribe(spy);
+      manageActions.moveFeedToTag.mockImplementation(
+        (
+          sub: SubscriptionDto,
+          fromTagId: number | null,
+          toTagId: number | null,
+          position: number | null,
+        ) => spy({ sub, fromTagId, toTagId, position }),
+      );
       const s = sub(1);
       f.componentInstance.onTagHeadDrop({
         previousContainer: { data: { kind: 'untagged' } },
@@ -426,20 +464,22 @@ describe('SidebarComponent', () => {
       expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: null, toTagId: 10, position: null });
     });
 
-    it('emits reorderTagFeeds when a feed is reordered within its tag', () => {
+    it('calls reorderTagFeeds when a feed is reordered within its tag', () => {
       const feeds = [sub(1), sub(2), sub(3)];
       const f = mount({ tagTree: [tagNode(10, feeds)] });
       const spy = jest.fn();
-      f.componentInstance.reorderTagFeeds.subscribe(spy);
+      manageActions.reorderTagFeeds.mockImplementation((tagId: number, subscriptionIds: number[]) =>
+        spy({ tagId, subscriptionIds }),
+      );
       // Within tag 10, move feed at index 0 to index 2.
       f.componentInstance.onDrop(reorder({ kind: 'tag', tag: tagNode(10).tag }, 0, 2));
       expect(spy).toHaveBeenCalledWith({ tagId: 10, subscriptionIds: [2, 3, 1] });
     });
 
-    it('emits reorderUntagged when an untagged feed is reordered', () => {
+    it('calls reorderUntagged when an untagged feed is reordered', () => {
       const f = mount({ untagged: [sub(1), sub(2), sub(3)] });
       const spy = jest.fn();
-      f.componentInstance.reorderUntagged.subscribe(spy);
+      manageActions.reorderUntagged.mockImplementation(spy);
       f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 2, 0));
       expect(spy).toHaveBeenCalledWith([3, 1, 2]);
     });
@@ -447,20 +487,20 @@ describe('SidebarComponent', () => {
     it('does not emit when an item is dropped back at its own index', () => {
       const f = mount({ untagged: [sub(1), sub(2)] });
       const spy = jest.fn();
-      f.componentInstance.reorderUntagged.subscribe(spy);
+      manageActions.reorderUntagged.mockImplementation(spy);
       f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
       expect(spy).not.toHaveBeenCalled();
     });
   });
 
-  it('emits editFeed / unsubscribe for an untagged feed row', () => {
+  it('calls editFeed / unsubscribe for an untagged feed row', () => {
     const s = sub(1, 0);
     const f = mount({ untagged: [s] });
     const el = f.nativeElement as HTMLElement;
     const editFeed = jest.fn();
     const unsub = jest.fn();
-    f.componentInstance.editFeed.subscribe(editFeed);
-    f.componentInstance.unsubscribe.subscribe(unsub);
+    manageActions.editSubscription.mockImplementation(editFeed);
+    manageActions.unsubscribe.mockImplementation(unsub);
 
     (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     f.detectChanges();
@@ -481,8 +521,12 @@ describe('SidebarComponent', () => {
     const el = f.nativeElement as HTMLElement;
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
-    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
-    f.componentInstance.toggleForYou.subscribe(toggleForYou);
+    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
+      toggleAllItems(sub),
+    );
+    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
+      toggleForYou(sub),
+    );
 
     (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
     f.detectChanges();
@@ -522,8 +566,12 @@ describe('SidebarComponent', () => {
 
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
-    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
-    f.componentInstance.toggleForYou.subscribe(toggleForYou);
+    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
+      toggleAllItems(sub),
+    );
+    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
+      toggleForYou(sub),
+    );
 
     (el.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
     f.detectChanges();
@@ -1418,6 +1466,7 @@ describe('for-you row', () => {
     TestBed.configureTestingModule({
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
+        { provide: ManageActions, useValue: manageActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -1478,6 +1527,7 @@ describe('organise mode', () => {
     TestBed.configureTestingModule({
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
+        { provide: ManageActions, useValue: manageActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -1583,7 +1633,7 @@ describe('organise mode', () => {
   it('the tag dots open the action sheet and route the choice', () => {
     const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
     const deleted = jest.fn();
-    f.componentInstance.deleteTag.subscribe(deleted);
+    manageActions.deleteTag.mockImplementation(deleted);
     f.nativeElement.querySelector('.tag .dots').click();
     const sheet = TestBed.inject(ActionSheet);
     expect(sheet.open).toHaveBeenCalledWith({
@@ -1599,7 +1649,7 @@ describe('organise mode', () => {
   it('the feed dots offer edit, the two exclusion toggles, and unsubscribe', () => {
     const f = mount({ coarse: true, organising: true, untagged: [sub(9)], sheetChoice: 'edit' });
     const edited = jest.fn();
-    f.componentInstance.editFeed.subscribe(edited);
+    manageActions.editSubscription.mockImplementation(edited);
     f.nativeElement.querySelector('.feedrow .dots').click();
     const sheet = TestBed.inject(ActionSheet);
     expect(sheet.open).toHaveBeenCalledWith({
@@ -1624,9 +1674,13 @@ describe('organise mode', () => {
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
     const unsubscribed = jest.fn();
-    f.componentInstance.toggleAllItems.subscribe(toggleAllItems);
-    f.componentInstance.toggleForYou.subscribe(toggleForYou);
-    f.componentInstance.unsubscribe.subscribe(unsubscribed);
+    manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
+      toggleAllItems(sub),
+    );
+    manageActions.setIncludeInForYou.mockImplementation((sub: SubscriptionDto) =>
+      toggleForYou(sub),
+    );
+    manageActions.unsubscribe.mockImplementation(unsubscribed);
     f.nativeElement.querySelector('.feedrow .dots').click();
     expect(toggleAllItems).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
     expect(toggleForYou).not.toHaveBeenCalled();
@@ -1637,8 +1691,8 @@ describe('organise mode', () => {
     const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
     const edited = jest.fn();
     const deleted = jest.fn();
-    f.componentInstance.editTag.subscribe(edited);
-    f.componentInstance.deleteTag.subscribe(deleted);
+    manageActions.editTag.mockImplementation(edited);
+    manageActions.deleteTag.mockImplementation(deleted);
     f.nativeElement.querySelector('.tag .dots').click();
     expect(edited).toHaveBeenCalledWith(tag);
     expect(deleted).not.toHaveBeenCalled();
@@ -1653,8 +1707,8 @@ describe('organise mode', () => {
     });
     const unsubscribed = jest.fn();
     const edited = jest.fn();
-    f.componentInstance.unsubscribe.subscribe(unsubscribed);
-    f.componentInstance.editFeed.subscribe(edited);
+    manageActions.unsubscribe.mockImplementation(unsubscribed);
+    manageActions.editSubscription.mockImplementation(edited);
     f.nativeElement.querySelector('.feedrow .dots').click();
     expect(unsubscribed).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
     expect(edited).not.toHaveBeenCalled();
@@ -1663,8 +1717,8 @@ describe('organise mode', () => {
   it('a dismissed sheet emits nothing', () => {
     const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: undefined });
     const emitted = jest.fn();
-    f.componentInstance.editTag.subscribe(emitted);
-    f.componentInstance.deleteTag.subscribe(emitted);
+    manageActions.editTag.mockImplementation(emitted);
+    manageActions.deleteTag.mockImplementation(emitted);
     f.nativeElement.querySelector('.tag .dots').click();
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
     expect(emitted).not.toHaveBeenCalled();
@@ -1675,6 +1729,7 @@ describe('organise mode', () => {
     TestBed.configureTestingModule({
       imports: [SidebarComponent, provideTranslocoTesting()],
       providers: [
+        { provide: ManageActions, useValue: manageActions },
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
@@ -1709,6 +1764,7 @@ describe('organise mode', () => {
       TestBed.configureTestingModule({
         imports: [SidebarComponent, provideTranslocoTesting()],
         providers: [
+          { provide: ManageActions, useValue: manageActions },
           provideRouter([]),
           provideHttpClient(),
           provideHttpClientTesting(),

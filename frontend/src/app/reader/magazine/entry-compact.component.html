@@ -3,19 +3,14 @@
   role="button"
   tabindex="0"
   [class.read]="entry().isHidden"
-  (click)="open.emit(entry())"
-  (keydown.enter)="open.emit(entry())"
-  (keydown.space)="$event.preventDefault(); open.emit(entry())"
+  (click)="actions.open(entry())"
+  (keydown.enter)="actions.open(entry())"
+  (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()">
       @if (!showSource()) {
-        <app-entry-actions
-          [entry]="entry()"
-          (favorite)="favorite.emit($event)"
-          (keep)="keep.emit($event)"
-          (read)="read.emit($event)"
-        />
+        <app-entry-actions [entry]="entry()" />
       }
     </app-entry-kicker-line>
     <p class="title">{{ entry().title }}</p>
@@ -23,20 +18,8 @@
       <p class="dek">{{ snippet() }}</p>
     }
     @if (showSource()) {
-      <app-entry-meta
-        [entry]="entry()"
-        [tags]="tags()"
-        (favorite)="favorite.emit($event)"
-        (keep)="keep.emit($event)"
-        (read)="read.emit($event)"
-      />
-      <app-entry-duplicates
-        [entry]="entry()"
-        (open)="open.emit($event)"
-        (favorite)="favorite.emit($event)"
-        (keep)="keep.emit($event)"
-        (read)="read.emit($event)"
-      />
+      <app-entry-meta [entry]="entry()" [tags]="tags()" />
+      <app-entry-duplicates [entry]="entry()" />
     }
   </div>
 </article>

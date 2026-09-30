@@ -13,6 +13,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../shared/proxied-image/image-proxy.service';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { Observable, Subscription, timeout } from 'rxjs';
@@ -161,10 +162,8 @@ export class ReaderViewComponent {
    *  is its own layer: its own hide-on-scroll toolbar, slide-out back button,
    *  and return gestures. The shell's app bar stays beneath, untouched (#128). */
   readonly fullscreen = input(false);
+  protected readonly actions = inject(EntryActionHandler);
 
-  readonly favorite = output<void>();
-  readonly keep = output<void>();
-  readonly read = output<void>();
   readonly openOriginal = output<void>();
   // Semantic "back to list" output; not a DOM element's close event.
   // eslint-disable-next-line @angular-eslint/no-output-native

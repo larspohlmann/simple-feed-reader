@@ -3,6 +3,18 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryWideComponent } from './entry-wide.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -34,7 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryWideComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryWideComponent);
   f.componentRef.setInput('entry', e);
@@ -53,7 +65,7 @@ describe('EntryWideComponent', () => {
   it('emits open on click', () => {
     const f = mount(entry());
     let opened: EntryDto | null = null;
-    f.componentInstance.open.subscribe((e: EntryDto) => (opened = e));
+    entryActions.open.mockImplementation((e: EntryDto) => (opened = e));
     (f.nativeElement as HTMLElement).querySelector('article')!.dispatchEvent(new Event('click'));
     expect(opened).not.toBeNull();
   });
@@ -65,7 +77,7 @@ describe('EntryWideComponent', () => {
     );
 
     const read = jest.fn();
-    f.componentInstance.read.subscribe(read);
+    entryActions.toggleRead.mockImplementation(read);
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[2] as HTMLElement).click();
     expect(read).toHaveBeenCalled();

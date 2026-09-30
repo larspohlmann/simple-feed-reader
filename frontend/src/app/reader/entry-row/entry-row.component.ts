@@ -6,9 +6,9 @@ import {
   forwardRef,
   inject,
   input,
-  output,
   signal,
 } from '@angular/core';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
@@ -50,10 +50,8 @@ export class EntryRowComponent {
    *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
    *  for a feature it never uses. */
   readonly marking = computed(() => this.terms().length > 0);
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
-  readonly open = output<EntryDto>();
+
+  protected readonly actions = inject(EntryActionHandler);
 
   readonly imgError = signal(false);
   // The entry's image, from the same shared helper the magazine uses: the

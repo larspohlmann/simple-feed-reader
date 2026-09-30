@@ -4,9 +4,9 @@
   tabindex="0"
   [class.read]="entry().isHidden"
   [class.img-left]="imageSide() === 'left'"
-  (click)="open.emit(entry())"
-  (keydown.enter)="open.emit(entry())"
-  (keydown.space)="$event.preventDefault(); open.emit(entry())"
+  (click)="actions.open(entry())"
+  (keydown.enter)="actions.open(entry())"
+  (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <div class="top">
     @if (showImage()) {
@@ -35,18 +35,6 @@
   <!-- Full-width row under the image+text, so the actions right-align to the
        card's edge rather than to the text column's — which lands mid-card when
        the image is on the right (#486). -->
-  <app-entry-meta
-    [entry]="entry()"
-    [tags]="tags()"
-    (favorite)="favorite.emit($event)"
-    (keep)="keep.emit($event)"
-    (read)="read.emit($event)"
-  />
-  <app-entry-duplicates
-    [entry]="entry()"
-    (open)="open.emit($event)"
-    (favorite)="favorite.emit($event)"
-    (keep)="keep.emit($event)"
-    (read)="read.emit($event)"
-  />
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
 </article>

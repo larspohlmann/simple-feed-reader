@@ -78,7 +78,7 @@
           type="button"
           [attr.aria-label]="'reader.keep' | transloco"
           [appFlagToggle]="e.isKept"
-          (click)="keep.emit()"
+          (click)="actions.keep(e)"
         >
           <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
           <span class="txt">{{ 'reader.keep' | transloco }}</span>
@@ -89,7 +89,7 @@
           type="button"
           [attr.aria-label]="'reader.favorite' | transloco"
           [appFlagToggle]="e.isFavorite"
-          (click)="favorite.emit()"
+          (click)="actions.favorite(e)"
         >
           <app-icon name="star" size="sm" [fill]="e.isFavorite" />
           <span class="txt">{{ 'reader.favorite' | transloco }}</span>
@@ -133,14 +133,7 @@
         }
       </p>
       <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
-      <app-entry-actions
-        class="actions"
-        size="md"
-        [entry]="e"
-        (favorite)="favorite.emit()"
-        (keep)="keep.emit()"
-        (read)="read.emit()"
-      />
+      <app-entry-actions class="actions" size="md" [entry]="e" />
       @if (audioAttachment(); as audio) {
         <button class="listen" type="button" (click)="listen()">
           <app-icon name="play_circle" size="lg" />
