@@ -58,6 +58,7 @@
     "require-dev": {
         "ext-openssl": "*",
         "ext-zip": "*",
+        "brianium/paratest": "^7.20",
         "dama/doctrine-test-bundle": "^8.6",
         "infection/infection": "^0.34.1",
         "phpmd/phpmd": "^2.15",

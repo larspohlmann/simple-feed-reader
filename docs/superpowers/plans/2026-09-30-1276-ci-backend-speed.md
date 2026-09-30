@@ -560,6 +560,8 @@ git commit -m "chore(#1276): run the suite over paratest, one worker per cpu"
 
 ---
 
+> **Amended during execution (ruling):** ParaTest runs on the CI MySQL leg only, with the prep commands in the CI step and no `test:parallel` script or CLAUDE.md line. Natively on SQLite, ParaTest's main process runs `tests/bootstrap.php`, whose Dotenv exports `DATABASE_URL` and `SYMFONY_DOTENV_VARS`. The workers' `bin/console` children then reload `.env.test` and drop the per-worker file, so all workers share `var/data_test.db`. In Docker, the `feedreader` user is granted only `feedreader_test.*` (`docker/mysql/init.sql`), not `feedreader_test<N>`. Both are a follow-up.
+
 ### Task 5: Measure on CI, then open the PR
 
 **Files:** none.

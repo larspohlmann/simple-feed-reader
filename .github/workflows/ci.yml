@@ -97,8 +97,8 @@ jobs:
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the
       # migration check below cannot disturb the suite: it also runs in dev,
-      # whereas doctrine.yaml's when@test dbname_suffix puts PHPUnit on
-      # feedreader_test_test (MySQL) and var/data_test.db (SQLite).
+      # whereas doctrine.yaml's when@test dbname_suffix puts each ParaTest
+      # worker on feedreader_test_test<N> (MySQL) and PHPUnit on var/data_test.db (SQLite).
       - name: Select database DSN
         run: |
           if [ "${{ matrix.database }}" = "mysql" ]; then
@@ -156,8 +156,22 @@ jobs:
           # that ships green, so it fails the build here.
           php bin/console doctrine:schema:validate
 
+      # SQLite stays serial: its workers' bin/console children reload .env.test and
+      # lose the per-worker database file, so they would all share one.
       - name: PHPUnit
+        if: matrix.database == 'sqlite'
         run: php bin/phpunit
+
+      # The workers share the compiled test container and the gitignored JWT
+      # keypair, so both are built once before ParaTest starts them.
+      - name: PHPUnit (ParaTest)
+        if: matrix.database == 'mysql'
+        env:
+          OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
+        run: |
+          php bin/console cache:warmup --env=test --quiet
+          php bin/console lexik:jwt:generate-keypair --env=test --skip-if-exists --quiet
+          vendor/bin/paratest
 
   # Line coverage says a line ran; it does not say a test would notice if the
   # line were wrong. Infection changes the line and reports whether anything
