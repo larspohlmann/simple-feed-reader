@@ -58,11 +58,11 @@ module.exports = defineConfig([
           })),
         },
       ],
-      "max-lines": ["warn", { max: 300, skipBlankLines: true, skipComments: true }],
-      "max-lines-per-function": ["warn", { max: 60, skipBlankLines: true, skipComments: true }],
-      complexity: ["warn", 10],
-      "@typescript-eslint/max-params": ["warn", { max: 3 }],
-      "sonarjs/cognitive-complexity": ["warn", 15],
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 60, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 10],
+      "@typescript-eslint/max-params": ["error", { max: 3 }],
+      "sonarjs/cognitive-complexity": ["error", 15],
       "sonarjs/no-identical-functions": "error",
       "id-length": ["error", { min: 2, exceptions: ["x", "y", "_"], properties: "never" }],
       "unicorn/prevent-abbreviations": [
@@ -133,7 +133,7 @@ module.exports = defineConfig([
     files: ["**/*.html"],
     extends: [angular.configs.templateRecommended, angular.configs.templateAccessibility],
     rules: {
-      "@angular-eslint/template/cyclomatic-complexity": ["warn", { maxComplexity: 25 }],
+      "@angular-eslint/template/cyclomatic-complexity": ["error", { maxComplexity: 25 }],
     },
   },
 ]);
