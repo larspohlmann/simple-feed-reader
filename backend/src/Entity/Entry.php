@@ -159,11 +159,6 @@ final class Entry
         return $this->contentHtml;
     }
 
-    public function getArticleContentHtml(): ?string
-    {
-        return $this->getDiscussion()->bodyIsOpeningPost ? null : $this->contentHtml;
-    }
-
     public function setContentHtml(?string $contentHtml): void
     {
         $this->contentHtml = $contentHtml;

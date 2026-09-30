@@ -105,7 +105,7 @@ final readonly class AuditSampler
                     ?? DatabaseValue::string($row['feed_url']),
                 title: DatabaseValue::string($row['title']),
                 url: DatabaseValue::string($row['url']),
-                feedContentHtml: DatabaseValue::nullableString($row['article_content_html']),
+                feedContentHtml: DatabaseValue::nullableString($row['content_html']),
                 hasFeedImage: DatabaseValue::isPresent($row['image_url']),
                 author: DatabaseValue::nullableString($row['author']),
             );

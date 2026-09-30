@@ -28,19 +28,19 @@ final readonly class ParsedEntryModel
         $this->discussion = $discussion ?? Discussion::none();
     }
 
-    public function withPlatformRewrite(?string $url, ?string $contentHtml, Discussion $discussion): self
+    public function asDiscussionThread(Discussion $thread): self
     {
         return new self(
             guid: $this->guid,
-            url: $url,
+            url: null,
             title: $this->title,
             author: $this->author,
             summary: $this->summary,
-            contentHtml: $contentHtml,
+            contentHtml: $this->contentHtml,
             publishedAt: $this->publishedAt,
             media: $this->media,
             categories: $this->categories,
-            discussion: $discussion,
+            discussion: $thread,
             authorUrl: $this->authorUrl,
         );
     }

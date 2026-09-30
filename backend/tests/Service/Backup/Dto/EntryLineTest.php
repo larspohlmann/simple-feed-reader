@@ -38,13 +38,5 @@ final class EntryLineTest extends TestCase
 
         self::assertSame([], $line->media);
         self::assertSame([], $line->attachments);
-        self::assertFalse($line->bodyIsOpeningPost);
-    }
-
-    public function testReadsAnOpeningPostBody(): void
-    {
-        $line = EntryLine::fromLine($this->baseLine() + ['bodyIsOpeningPost' => true]);
-
-        self::assertTrue($line->bodyIsOpeningPost);
     }
 }

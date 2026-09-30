@@ -72,7 +72,6 @@ final class BackupFieldDeclarations
             'discussion.url' => 'discussionUrl',
             'discussion.commentsFeedUrl' => 'commentsFeedUrl',
             'discussion.commentsLoad' => 'commentsLoad',
-            'discussion.bodyIsOpeningPost' => 'bodyIsOpeningPost',
         ],
         EntryState::class => [
             // Both halves: guidHash picks the entry within its feed, feedUrl the feed. Declaring only one would let

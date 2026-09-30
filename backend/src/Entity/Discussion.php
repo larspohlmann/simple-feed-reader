@@ -12,7 +12,6 @@ final readonly class Discussion
         public ?string $url,
         public ?string $commentsFeedUrl,
         public ?CommentsLoad $commentsLoad,
-        public bool $bodyIsOpeningPost = false,
     ) {
     }
 
@@ -29,10 +28,5 @@ final readonly class Discussion
     public static function of(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
     {
         return new self($pageUrl, $commentsFeedUrl, $commentsFeedUrl === null ? null : $load);
-    }
-
-    public function withOpeningPostBody(): self
-    {
-        return new self($this->url, $this->commentsFeedUrl, $this->commentsLoad, true);
     }
 }

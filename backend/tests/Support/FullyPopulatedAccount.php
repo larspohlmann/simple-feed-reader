@@ -135,7 +135,7 @@ final readonly class FullyPopulatedAccount
             'https://populated.example/article#comments',
             'https://populated.example/article/comments.rss',
             CommentsLoad::Auto,
-        )->withOpeningPostBody());
+        ));
 
         return $entry;
     }

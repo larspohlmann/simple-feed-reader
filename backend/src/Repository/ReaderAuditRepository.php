@@ -53,8 +53,7 @@ final readonly class ReaderAuditRepository
     public function detailRows(int $userId, array $entryIds): array
     {
         return $this->connection->fetchAllAssociative(
-            'SELECT e.id, e.title, e.url, e.author, e.image_url, f.id AS feed_id,
-                    CASE WHEN e.body_is_opening_post THEN NULL ELSE e.content_html END AS article_content_html,
+            'SELECT e.id, e.title, e.url, e.author, e.image_url, e.content_html, f.id AS feed_id,
                     f.title AS feed_title, f.url AS feed_url, s.id AS subscription_id
                FROM entry e
                JOIN feed f ON f.id = e.feed_id
