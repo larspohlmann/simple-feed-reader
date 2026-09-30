@@ -214,7 +214,7 @@ final class RecommendationRun
     {
         $this->guardStatus(RunStatus::Running, 'record a call attempt on');
 
-        return new RunningCallAttempts($this->callAttempts);
+        return new RunningCallAttempts($this, $this->callAttempts);
     }
 
     /**
@@ -276,7 +276,7 @@ final class RecommendationRun
     {
         $this->guardStatus(RunStatus::Running, 'throttle');
 
-        return new RunningThrottle($this->throttle);
+        return new RunningThrottle($this, $this->throttle);
     }
 
     public function stampProvider(?string $providerHost, ?string $model): void
