@@ -136,6 +136,10 @@
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
             "@php bin/phpunit"
         ],
+        "test:parallel": [
+            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
+            "paratest"
+        ],
         "infection": [
             "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
             "infection --threads=max"
