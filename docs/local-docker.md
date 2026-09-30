@@ -373,6 +373,18 @@ A Playwright run where every spec skipped exits 0, which for an unattended
 check is the worst outcome. `scripts/assert-playwright-ran.sh` re-decides that
 verdict and fails the job when nothing was verified.
 
+The runner boots `php` with tracing off. The job exports
+`OTEL_PHP_AUTOLOAD_ENABLED=false` and `OTEL_PHP_DISABLED_INSTRUMENTATIONS=all`,
+and `docker-compose.yml` reads both. With tracing on, every request and query
+became a span, both suites ran about 3.5 times slower, and the onboarding spec
+outran Playwright's 30-second test timeout (#1262). For a like-for-like local
+run, recreate `php` and `nginx` the same way, then bring them back with a plain
+`docker compose up -d php nginx`:
+
+```bash
+OTEL_PHP_AUTOLOAD_ENABLED=false OTEL_PHP_DISABLED_INSTRUMENTATIONS=all docker compose up -d php nginx
+```
+
 When a suite rots, the run opens a single issue labelled `e2e-rot` and comments
 on that issue on later failures rather than opening more. A red run does not
 block a deploy; the deploy guard still only reads `ci.yml`.
