@@ -85,7 +85,7 @@ module.exports = defineConfig([
     files: ["src/app/**/*.component.ts", "src/app/**/*.store.ts"],
     rules: {
       "no-restricted-imports": [
-        "warn",
+        "error",
         {
           paths: [
             {

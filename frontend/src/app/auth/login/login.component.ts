@@ -1,9 +1,9 @@
 import { Component, ElementRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { AuthService } from '../../core/auth.service';
 import { PasskeyService } from '../../core/passkey.service';
 import { Problem, parseProblem } from '../../core/problem';
@@ -34,8 +34,7 @@ import { PasswordInputComponent } from '../../shared/password-input/password-inp
 export class LoginComponent implements OnInit, OnDestroy {
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly auth = inject(AuthService);
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly setup = inject(SetupService);
@@ -76,8 +75,8 @@ export class LoginComponent implements OnInit, OnDestroy {
   private conditionalAbort: AbortController | null = null;
 
   ngOnInit(): void {
-    this.http.get<{ providers: string[] }>(`${this.base}/api/auth/oauth/providers`).subscribe({
-      next: (r) => this.providers.set(r.providers ?? []),
+    this.authApi.oauthProviders().subscribe({
+      next: (providers) => this.providers.set(providers),
       error: () => this.providers.set([]),
     });
 
@@ -134,7 +133,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   }
 
   oauthUrl(provider: string): string {
-    return `${this.base}/api/auth/oauth/${provider}`;
+    return this.authApi.oauthStartUrl(provider);
   }
 
   startOAuth(provider: string): void {

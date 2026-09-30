@@ -1,9 +1,9 @@
 import { Component, ElementRef, OnInit, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { parseProblem } from '../../core/problem';
 import { adoptAutofilledValues } from '../autofill';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
@@ -29,8 +29,7 @@ import { PasswordInputComponent } from '../../shared/password-input/password-inp
 })
 export class ResetPasswordComponent implements OnInit {
   private readonly fb = inject(NonNullableFormBuilder);
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly i18n = inject(TranslocoService);
@@ -59,17 +58,12 @@ export class ResetPasswordComponent implements OnInit {
     }
     this.loading.set(true);
     this.error.set(null);
-    this.http
-      .post(`${this.base}/api/auth/password-reset`, {
-        token,
-        password: this.form.getRawValue().password,
-      })
-      .subscribe({
-        next: () => void this.router.navigate(['/login'], { queryParams: { reset: '1' } }),
-        error: (e: HttpErrorResponse) => {
-          this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.reset.failed'));
-          this.loading.set(false);
-        },
-      });
+    this.authApi.resetPassword(token, this.form.getRawValue().password).subscribe({
+      next: () => void this.router.navigate(['/login'], { queryParams: { reset: '1' } }),
+      error: (e: HttpErrorResponse) => {
+        this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.reset.failed'));
+        this.loading.set(false);
+      },
+    });
   }
 }

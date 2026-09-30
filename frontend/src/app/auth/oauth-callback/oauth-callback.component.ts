@@ -1,8 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { AuthService } from '../../core/auth.service';
 import { parseProblem } from '../../core/problem';
 import { TokenStore } from '../../core/token.store';
@@ -16,8 +16,7 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
   styleUrl: './oauth-callback.component.scss',
 })
 export class OAuthCallbackComponent implements OnInit {
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly route = inject(ActivatedRoute);
   private readonly tokens = inject(TokenStore);
   private readonly auth = inject(AuthService);
@@ -46,21 +45,13 @@ export class OAuthCallbackComponent implements OnInit {
         this.state.set('error');
         return;
       }
-      // CREDENTIALED: the one-time code is only half — the flow cookie is the
-      // other half. Omitting withCredentials yields a 400 identical to a bad code.
-      this.http
-        .post<{ token: string }>(
-          `${this.base}/api/auth/oauth/exchange`,
-          { code },
-          { withCredentials: true },
-        )
-        .subscribe({
-          next: (res) => {
-            this.tokens.set(res.token);
-            this.auth.finishSignIn();
-          },
-          error: (response: HttpErrorResponse) => this.show(response),
-        });
+      this.authApi.exchangeOAuthCode(code).subscribe({
+        next: (token) => {
+          this.tokens.set(token);
+          this.auth.finishSignIn();
+        },
+        error: (response: HttpErrorResponse) => this.show(response),
+      });
     });
   }
 

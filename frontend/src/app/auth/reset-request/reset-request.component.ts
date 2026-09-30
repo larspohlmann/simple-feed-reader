@@ -1,10 +1,9 @@
 import { Component, ElementRef, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { AltchaService } from '../altcha.service';
 import { adoptAutofilledValues } from '../autofill';
 import { solveAltcha } from '../altcha';
@@ -30,8 +29,7 @@ import { SetupService } from '../../core/setup.service';
 })
 export class ResetRequestComponent {
   private readonly fb = inject(NonNullableFormBuilder);
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly altcha = inject(AltchaService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly i18n = inject(TranslocoService);
@@ -61,10 +59,7 @@ export class ResetRequestComponent {
       const challenge = await firstValueFrom(this.altcha.challenge());
       const solution = await solveAltcha(challenge);
       await firstValueFrom(
-        this.http.post(`${this.base}/api/auth/password-reset-request`, {
-          email: this.form.getRawValue().email,
-          altcha: solution,
-        }),
+        this.authApi.requestPasswordReset(this.form.getRawValue().email, solution),
       );
     } catch {
       // Neutral by design: never reveal whether the address exists or the call failed.

@@ -1,10 +1,10 @@
 import { Component, ElementRef, inject, signal } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { parseProblem } from '../../core/problem';
 import { AltchaService } from '../altcha.service';
 import { solveAltcha } from '../altcha';
@@ -32,8 +32,7 @@ import { PasswordInputComponent } from '../../shared/password-input/password-inp
 })
 export class RegisterComponent {
   private readonly fb = inject(NonNullableFormBuilder);
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly altcha = inject(AltchaService);
   private readonly i18n = inject(TranslocoService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -63,16 +62,15 @@ export class RegisterComponent {
       const challenge = await firstValueFrom(this.altcha.challenge());
       const solution = await solveAltcha(challenge);
       const { email, password } = this.form.getRawValue();
-      const response = await firstValueFrom(
-        this.http.post<{ status: string }>(`${this.base}/api/auth/register`, {
+      const status = await firstValueFrom(
+        this.authApi.register({
           email,
           password,
           altcha: solution,
-          // Tell the backend which language to send this account's emails in.
           locale: this.i18n.getActiveLang(),
         }),
       );
-      this.resultStatus.set(response.status);
+      this.resultStatus.set(status);
     } catch (e) {
       const p = parseProblem(e as HttpErrorResponse);
       const firstFieldError = p.errors ? Object.values(p.errors)[0]?.[0] : undefined;

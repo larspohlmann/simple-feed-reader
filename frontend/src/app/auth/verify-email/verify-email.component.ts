@@ -1,8 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { API_BASE_URL } from '../../core/api';
+import { AuthApi } from '../auth-api';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 
@@ -13,8 +12,7 @@ import { SpinnerComponent } from '../../shared/spinner/spinner.component';
   styleUrl: './verify-email.component.scss',
 })
 export class VerifyEmailComponent implements OnInit {
-  private readonly http = inject(HttpClient);
-  private readonly base = inject(API_BASE_URL);
+  private readonly authApi = inject(AuthApi);
   private readonly route = inject(ActivatedRoute);
   readonly state = signal<'loading' | 'ok' | 'error'>('loading');
 
@@ -25,7 +23,7 @@ export class VerifyEmailComponent implements OnInit {
         this.state.set('error');
         return;
       }
-      this.http.post(`${this.base}/api/auth/verify-email`, { token }).subscribe({
+      this.authApi.verifyEmail(token).subscribe({
         next: () => this.state.set('ok'),
         error: () => this.state.set('error'),
       });
