@@ -1790,6 +1790,22 @@ describe('EntryListComponent', () => {
       expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
     });
 
+    it('hides both buttons once the list empties to the caught-up state (#1322)', () => {
+      const fixture = mount();
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.scrolling.showToTop.set(true);
+      fixture.componentInstance.scrolling.hasAboveFold.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('app-to-top-button')).not.toBeNull();
+      expect(element.querySelector('.mark-above')).not.toBeNull();
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.detectChanges();
+
+      expect(element.querySelector('app-to-top-button')).toBeNull();
+      expect(element.querySelector('.mark-above')).toBeNull();
+    });
+
     it('emits the collected ids when the rendered button is clicked', () => {
       const fixture = mount();
       stubGeometry(fixture, [measuredEntry('7', 40)]);

@@ -200,18 +200,18 @@
   <app-loading-overlay [shown]="reloadSpinner()" [label]="'common.loading' | transloco" />
 }
 
-@if (scrolling.showToTop()) {
+@if (scrolling.showToTop() && content.visibleEntryCount() > 0) {
   <app-to-top-button (activate)="scrollToTop()" />
-}
 
-@if (scrolling.showToTop() && scrolling.hasAboveFold()) {
-  <button
-    type="button"
-    class="mark-above"
-    (click)="onMarkAboveRead()"
-    [attr.aria-label]="'reader.markAboveRead' | transloco"
-    [attr.title]="'reader.markAboveRead' | transloco"
-  >
-    <app-icon name="done_all" size="md" />
-  </button>
+  @if (scrolling.hasAboveFold()) {
+    <button
+      type="button"
+      class="mark-above"
+      (click)="onMarkAboveRead()"
+      [attr.aria-label]="'reader.markAboveRead' | transloco"
+      [attr.title]="'reader.markAboveRead' | transloco"
+    >
+      <app-icon name="done_all" size="md" />
+    </button>
+  }
 }
