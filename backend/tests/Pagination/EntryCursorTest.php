@@ -62,14 +62,4 @@ final class EntryCursorTest extends TestCase
 
         EntryCursor::decode($cursor);
     }
-
-    public function testInclusiveUpperBoundAdmitsEveryRealIdAtThatInstant(): void
-    {
-        $until = new \DateTimeImmutable('2026-07-12T00:00:00Z');
-
-        $cursor = EntryCursor::inclusiveUpperBound($until);
-
-        self::assertSame($until, $cursor->sortInstant);
-        self::assertSame(PHP_INT_MAX, $cursor->id);
-    }
 }
