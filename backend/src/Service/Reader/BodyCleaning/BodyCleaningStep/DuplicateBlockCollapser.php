@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Text\Support\Whitespace;
 use Dom\Element;
@@ -17,8 +18,10 @@ use Dom\HTMLDocument;
  */
 final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterface
 {
-    public function __construct(private EmbedProviders $embedProviders)
-    {
+    public function __construct(
+        private EmbedProviders $embedProviders,
+        private EmptiedWrapperRemover $wrapperRemover,
+    ) {
     }
 
     public function cleanIn(BodyCleaningPass $pass): void
@@ -32,7 +35,7 @@ final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterfac
         foreach ($this->prose($document) as $paragraph) {
             $text = $this->normalize((string) $paragraph->textContent);
             if ($text === $previousText) {
-                $this->removeBlock($paragraph);
+                $this->wrapperRemover->removeWithEmptiedWrappers($paragraph);
                 continue;
             }
             $previousText = $text;
@@ -67,29 +70,6 @@ final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterfac
     {
         return $anchor !== null
             && $this->embedProviders->resolve((string) $anchor->getAttribute('href')) !== null;
-    }
-
-    /** Remove the node, then the wrappers it leaves empty, so no blank paragraph or box survives. */
-    private function removeBlock(Element $node): void
-    {
-        $parent = $node->parentElement;
-        $node->remove();
-        while ($parent instanceof Element && $this->isEmptyWrapper($parent)) {
-            $grandparent = $parent->parentElement;
-            $parent->remove();
-            $parent = $grandparent;
-        }
-    }
-
-    /** A structural root is never dissolved; a wrapper with no text and no media is. */
-    private function isEmptyWrapper(Element $element): bool
-    {
-        if (in_array(strtoupper($element->nodeName), ['BODY', 'ARTICLE', 'MAIN', 'SECTION'], true)) {
-            return false;
-        }
-
-        return trim((string) $element->textContent) === ''
-            && $element->querySelector('img, picture, video, iframe, audio, svg') === null;
     }
 
     private function normalize(string $text): string

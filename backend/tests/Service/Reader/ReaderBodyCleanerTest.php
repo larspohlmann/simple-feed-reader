@@ -21,6 +21,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\EmptiedWrapperRemover;
 use App\Service\Reader\LinkListDetector;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
@@ -74,7 +75,7 @@ final class ReaderBodyCleanerTest extends TestCase
             ),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
-            new DuplicateBlockCollapser($embedProviders),
+            new DuplicateBlockCollapser($embedProviders, new EmptiedWrapperRemover()),
             new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
