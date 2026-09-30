@@ -12,7 +12,7 @@ import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';
 import { FieldComponent } from '../../shared/field/field.component';
-import { SetupService } from '../../setup/setup.service';
+import { SetupService } from '../../core/setup.service';
 
 @Component({
   selector: 'app-reset-request',

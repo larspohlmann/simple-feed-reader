@@ -4,7 +4,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { Problem, REQUEST_TOO_LARGE, parseProblemAsync } from '../core/problem';
 import { filenameFromContentDisposition, saveAs } from '../core/save-as';
-import { downloadOpmlExport } from '../core/opml-export';
+import { downloadOpmlExport } from './opml-export';
 import { LanguageService } from '../core/language.service';
 import { formatLongDate } from '../reader/format';
 import { RestoreCounts, RestorePreview, RestoreResult } from '../reader/models';

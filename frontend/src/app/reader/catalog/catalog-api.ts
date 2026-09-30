@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { API_BASE_URL } from '../core/api';
+import { API_BASE_URL } from '../../core/api';
 import { CatalogCategoryDto, CatalogFeedDto, OnboardingSubscribeResult } from './catalog.models';
 
 @Injectable({ providedIn: 'root' })

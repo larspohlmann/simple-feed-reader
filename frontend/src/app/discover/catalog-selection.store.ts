@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { CatalogCategoryDto } from './catalog.models';
+import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
 
 /**
  * Client-side picker state. Nothing is written until Subscribe, so this is the

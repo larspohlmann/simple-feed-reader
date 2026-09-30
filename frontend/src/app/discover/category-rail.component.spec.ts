@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { CatalogCategoryDto } from './catalog.models';
+import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
 import { CategoryRailComponent } from './category-rail.component';
 
 const category = (over: Partial<CatalogCategoryDto>): CatalogCategoryDto => ({

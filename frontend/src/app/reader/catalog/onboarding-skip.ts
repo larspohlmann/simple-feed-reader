@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../../core/session-identity';
 
 const KEY = 'onboarding.skipped';
 

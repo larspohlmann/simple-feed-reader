@@ -13,7 +13,7 @@ const FEATURE_IMPORTS = {
   shared: ["core", "shared", "theme"],
   theme: ["theme"],
   reader: ["core", "shared", "theme", "reader"],
-  settings: ["core", "shared", "theme", "settings", "reader"],
+  settings: ["core", "shared", "theme", "settings", "reader", "admin"],
   admin: ["core", "shared", "theme", "admin", "reader"],
   discover: ["core", "shared", "theme", "discover", "reader"],
   auth: ["core", "shared", "theme", "auth"],
@@ -49,7 +49,7 @@ module.exports = defineConfig([
         { type: "element", prefix: "app", style: "kebab-case" },
       ],
       "boundaries/dependencies": [
-        "warn",
+        "error",
         {
           default: "disallow",
           policies: Object.entries(FEATURE_IMPORTS).map(([from, to]) => ({
@@ -101,6 +101,7 @@ module.exports = defineConfig([
   {
     files: ["**/*.spec.ts"],
     rules: {
+      "boundaries/dependencies": "off",
       "max-lines": "off",
       "max-lines-per-function": "off",
       "sonarjs/no-identical-functions": "off",

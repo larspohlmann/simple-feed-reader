@@ -4,8 +4,8 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { of, throwError } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { SetupApi } from './setup-api';
-import { SetupService } from './setup.service';
+import { SetupApi } from '../core/setup-api';
+import { SetupService } from '../core/setup.service';
 import { SetupComponent } from './setup.component';
 
 describe('SetupComponent', () => {

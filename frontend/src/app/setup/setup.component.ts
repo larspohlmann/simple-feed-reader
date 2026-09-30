@@ -12,8 +12,8 @@ import { ButtonComponent } from '../shared/button/button.component';
 import { FormErrorComponent } from '../shared/form-error/form-error.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
-import { SetupApi } from './setup-api';
-import { SetupService } from './setup.service';
+import { SetupApi } from '../core/setup-api';
+import { SetupService } from '../core/setup.service';
 
 @Component({
   selector: 'app-setup',

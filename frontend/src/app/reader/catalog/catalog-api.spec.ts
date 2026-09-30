@@ -1,7 +1,7 @@
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { API_BASE_URL } from '../core/api';
+import { API_BASE_URL } from '../../core/api';
 import { CatalogApi } from './catalog-api';
 import { CatalogCategoryDto } from './catalog.models';
 

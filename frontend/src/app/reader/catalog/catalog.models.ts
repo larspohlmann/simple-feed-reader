@@ -1,4 +1,4 @@
-import { TagDto } from '../reader/models';
+import { TagDto } from '../models';
 
 export interface CatalogFeedDto {
   id: number;
