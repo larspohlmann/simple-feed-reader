@@ -25,7 +25,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The OAuth flow over HTTP. The client never reboots, or the fake registry would last one request; the registry, not
- * a provider, is replaced; and every request is `https`, because the jar withholds the `Secure` flow cookie otherwise.
+ * a provider, is replaced; and every request that relies on the jar is `https`, because the jar withholds the
+ * `Secure` flow cookie otherwise.
  */
 final class OAuthFlowTest extends WebTestCase
 {
@@ -311,13 +312,13 @@ final class OAuthFlowTest extends WebTestCase
 
     /**
      * `SameSite=None` because Apple's callback is a cross-site POST, which a `Lax` cookie misses; `__Host-` so no
-     * sibling host can write the binding.
+     * sibling host can write the binding. Plain http, because over https Response::prepare() defaults `Secure` on.
      */
     public function testTheFlowCookieCarriesTheAttributesTheCrossSitePostNeeds(): void
     {
         $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
-        $this->startFlow();
+        $this->client->request('GET', 'http://localhost/api/auth/oauth/google');
 
         $cookie = $this->responseCookie(OAuthController::FLOW_COOKIE);
 

@@ -41,6 +41,7 @@ final readonly class FlowCookie
             ->withExpires($this->clock->now()->getTimestamp() + self::LIFETIME_SECONDS)
             ->withPath('/')
             ->withDomain(null)
+            ->withSecure(true)
             ->withSameSite(Cookie::SAMESITE_NONE);
     }
 
