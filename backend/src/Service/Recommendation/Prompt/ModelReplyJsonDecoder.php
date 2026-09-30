@@ -25,19 +25,53 @@ final readonly class ModelReplyJsonDecoder
     }
 
     /**
+     * The complete objects of the `$key` array in a reply cut off before that array closed, in order: the object the
+     * cut split never closes, so it is not among them. Empty when the reply never opened the array.
+     *
+     * @return list<array<mixed>>
+     */
+    public function completeItemsOf(string $content, string $key): array
+    {
+        $keyAt = strpos($content, '"' . $key . '"');
+        if (false === $keyAt) {
+            return [];
+        }
+
+        $arrayAt = strpos($content, '[', $keyAt);
+        if (false === $arrayAt) {
+            return [];
+        }
+
+        return $this->completeObjectsFrom($content, $arrayAt);
+    }
+
+    /**
      * The last complete `{...}` that decodes, the object the model settled on: LM Studio can route an answer through
-     * thinking prose. String literals are skipped, so a brace inside a value cannot end an object early.
+     * thinking prose.
      *
      * @return array<mixed>|null
      */
     private function lastEmbeddedObject(string $text): ?array
     {
-        $found = null;
+        $objects = $this->completeObjectsFrom($text, 0);
+
+        return [] === $objects ? null : $objects[array_key_last($objects)];
+    }
+
+    /**
+     * Every outermost `{...}` from $offset on that closes and decodes, in order. String literals are skipped, so a
+     * brace inside a value cannot end an object early.
+     *
+     * @return list<array<mixed>>
+     */
+    private function completeObjectsFrom(string $text, int $offset): array
+    {
+        $objects = [];
         $depth = 0;
-        $start = 0;
+        $start = $offset;
         $length = \strlen($text);
 
-        for ($index = 0; $index < $length; ++$index) {
+        for ($index = $offset; $index < $length; ++$index) {
             $character = $text[$index];
 
             if ('"' === $character) {
@@ -48,11 +82,11 @@ final readonly class ModelReplyJsonDecoder
                 }
                 ++$depth;
             } elseif ('}' === $character && $depth > 0 && 0 === --$depth) {
-                $found = $this->decodeObject(substr($text, $start, $index - $start + 1)) ?? $found;
+                $objects = [...$objects, ...$this->decodeObject(substr($text, $start, $index - $start + 1))];
             }
         }
 
-        return $found;
+        return $objects;
     }
 
     /**
@@ -76,12 +110,12 @@ final readonly class ModelReplyJsonDecoder
         return $length;
     }
 
-    /** @return array<mixed>|null */
-    private function decodeObject(string $candidate): ?array
+    /** @return list<array<mixed>> the object alone, or nothing when it does not decode */
+    private function decodeObject(string $candidate): array
     {
         $decoded = json_decode($candidate, true);
 
-        return \is_array($decoded) ? $decoded : null;
+        return \is_array($decoded) ? [$decoded] : [];
     }
 
     private function stripCodeFence(string $content): string
