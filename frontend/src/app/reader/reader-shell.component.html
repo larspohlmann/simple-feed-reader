@@ -24,12 +24,12 @@
       {{ failureKey | transloco }}
       <button type="button" (click)="onRefresh()">{{ 'reader.retryFetch' | transloco }}</button>
     </p>
-  } @else if (showFetchProgress()) {
+  } @else if (onboarding.showFetchProgress()) {
     <p class="fetch-banner" role="status" aria-live="polite">
       {{ 'reader.fetchingFeeds' | transloco: refreshSvc.progress() }}
     </p>
   }
-  @if (showCatalogEmptyWarning()) {
+  @if (onboarding.showCatalogEmptyWarning()) {
     <p class="catalog-warning" role="status" data-testid="catalog-empty-warning">
       {{ 'discover.adminEmptyWarning' | transloco }}
       <a routerLink="/settings/admin/catalog">{{ 'discover.adminEmptyAction' | transloco }}</a>

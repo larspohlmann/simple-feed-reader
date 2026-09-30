@@ -18,12 +18,12 @@ import { ReaderRouteState } from './shell/reader-route-state.service';
 import { ListHeading } from './shell/list-heading.service';
 import { EntryStateActions } from './shell/entry-state-actions.service';
 import { MarkReadActions } from './shell/mark-read-actions.service';
+import { ReaderOnboarding } from './shell/reader-onboarding.service';
+import { PasskeyFirstBootOffer } from './shell/passkey-first-boot-offer.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { catchError, of } from 'rxjs';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
-import { isPasskeySupported } from '../core/webauthn';
 import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
@@ -65,15 +65,11 @@ import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
-import { CatalogStore } from './catalog/catalog.store';
-import { OnboardingSkip } from './catalog/onboarding-skip';
-import { SetupService } from '../core/setup.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { IconButtonDirective } from '../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
-import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
@@ -105,6 +101,8 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     ListHeading,
     EntryStateActions,
     MarkReadActions,
+    ReaderOnboarding,
+    PasskeyFirstBootOffer,
     { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
@@ -133,10 +131,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   readonly sidebarVisibility = inject(SidebarVisibilityService);
-  private readonly skip = inject(OnboardingSkip);
-  private readonly catalog = inject(CatalogStore);
   private readonly pageTitle = inject(PageTitleService);
-  private readonly setup = inject(SetupService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
@@ -147,116 +142,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
 
-  /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
-   *  by admin import — so a deployment without one must not redirect anybody
-   *  into a blank page. */
-  private readonly onboardingAvailable = computed(
-    () => this.catalog.resolved() && this.catalog.hasEntries(),
-  );
-
-  /** Admins get the catalog resolved unconditionally — they are the only ones
-   *  who can fix an empty one, and the suppressed onboarding is otherwise
-   *  invisible. One cached request per session. */
-  private readonly loadCatalogForAdmin = effect(() => {
-    if (this.auth.isAdmin()) untracked(() => this.catalog.load());
-  });
-
-  readonly showCatalogEmptyWarning = computed(
-    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
-  );
-
-  /** A brand-new subscription set: rows exist, none has ever been fetched. This
-   *  is what a just-completed onboarding looks like from the shell's side. */
-  private readonly awaitingFirstFetch = computed(
-    () =>
-      this.subs.resolved() &&
-      this.subs.subscriptions().length > 0 &&
-      this.subs.subscriptions().every((s) => s.lastFetchedAt === null),
-  );
-
-  private readonly sweptOnce = signal(false);
-  /** True only for the span of the post-onboarding sweep, cleared once it
-   *  lands without error. `sweptOnce` is a permanent latch that would re-show
-   *  the banner on every later refresh; this flag keeps it to the sweep alone. */
-  private readonly sweeping = signal(false);
-
-  /** The counted banner belongs to the post-onboarding sweep only; every other
-   *  refresh has the hairline, which is context enough for a user who already
-   *  knows their reader. A failure takes the strip over, so the two never compete. */
-  readonly showFetchProgress = computed(
-    () => this.sweeping() && this.refreshSvc.failure() === null,
-  );
-
-  /** An empty subscription list, once resolved, not explicitly skipped this
-   *  session — the redirect effect's own guard, and what #624's onboarding
-   *  guard below reuses instead of re-deriving. A failed load also resolves
-   *  empty, which means "couldn't read them", not "zero subscriptions" — so
-   *  `!this.subs.error()` keeps a retry-able failure from reading as onboarding (#691). */
-  private readonly emptySubscriptionsNeedingOnboarding = computed(
-    () =>
-      this.subs.resolved() &&
-      !this.subs.error() &&
-      this.subs.subscriptions().length === 0 &&
-      !this.skip.wasSkipped(),
-  );
-
-  /** #624: true while a new account's subscriptions are being introduced --
-   *  about to redirect to /discover, or just back from there mid-sweep. A
-   *  modal on top of either window steps on onboarding (spec §5.3), so the
-   *  passkey offer waits for both to clear.
-   *
-   *  Real defect this shipped with: an empty list alone doesn't rule the
-   *  redirect out, because the redirect effect only starts the catalog
-   *  request once subscriptions resolve empty -- there's a window where
-   *  `onboardingAvailable()` reads false only because the catalog hasn't
-   *  answered YET. Reading `!catalog.resolved()` as "running" too closes that
-   *  window until the redirect decision is actually made either way. */
-  private readonly subscriptionOnboardingRunning = computed(() => {
-    if (this.awaitingFirstFetch() || this.sweeping()) return true;
-    if (!this.emptySubscriptionsNeedingOnboarding()) return false;
-    if (!this.catalog.resolved()) return true;
-    return this.onboardingAvailable();
-  });
-
-  /** #624: the shell has loaded enough real state to judge the passkey offer
-   *  -- subscriptions resolved, which lets `subscriptionOnboardingRunning`
-   *  give a real answer. Sign-in is checked in `passkeyOfferEligible` below. */
-  private readonly readerSettled = computed(() => this.subs.resolved());
-
-  /** #624 design spec §5.3: all conditions the first-login passkey offer
-   *  needs before it may show. The fourth (on the reader, not an auth route)
-   *  needs no check: this component exists only on the reader route.
-   *  `isPasskeySupported()` runs first since it's cheapest -- false for
-   *  nearly every test here, since jsdom has no `PublicKeyCredential`.
-   *
-   *  #624 follow-up: `SetupService.passkeySignInAvailable()` must be exactly
-   *  `true` -- offering enrolment when the instance can't complete a passkey
-   *  sign-in would hand the account a credential it can never use, the same
-   *  reasoning `PasskeysGroupComponent.visible` fails CLOSED for. */
-  private readonly passkeyOfferEligible = computed(() => {
-    if (!isPasskeySupported()) return false;
-    if (this.setup.passkeySignInAvailable() !== true) return false;
-    const user = this.auth.user();
-    if (!user || user.preferences.passkeyOfferAnswered) return false;
-    return this.readerSettled() && !this.subscriptionOnboardingRunning();
-  });
-
-  /** Latches true the moment the offer opens so a re-render -- the
-   *  eligibility computed going true again before the answer round-trips --
-   *  can't open a second one in the same boot (spec §5.3/§5.4). Never reset. */
-  private readonly passkeyOfferShown = signal(false);
-
-  /** Opens the first-login passkey offer at most once per boot (#624). The
-   *  dialog owns everything about what happens next -- both ceremonies, both
-   *  states, and marking the offer answered on every way out -- so this
-   *  effect's only job is deciding when. */
-  private readonly offerPasskeyOnFirstBoot = effect(() => {
-    if (!this.passkeyOfferEligible() || this.passkeyOfferShown()) return;
-    untracked(() => {
-      this.passkeyOfferShown.set(true);
-      this.dialog.open<void>(PasskeyOfferDialogComponent, { panelClass: 'app-dialog' });
-    });
-  });
+  protected readonly onboarding = inject(ReaderOnboarding);
+  /** Injected for its effect: holding it opens the passkey offer when due. */
+  private readonly passkeyOffer = inject(PasskeyFirstBootOffer);
 
   /** What to tell the user about a refresh that fetched nothing, from ANY
    *  refresh — not just the sweep. Gating this on the sweep window is what left
@@ -371,19 +259,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   });
 
   constructor() {
-    // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
-    // above -- this route is never behind setupRedirectGuard, so nothing else
-    // triggers the fetch. Gated on isPasskeySupported() first since a browser
-    // that can't run the ceremony has no use for the answer regardless.
-    // catchError mirrors setupRedirectGuard's own handling of this observable:
-    // an uncaught failure would otherwise throw on reader boot rather than
-    // just leaving the offer unavailable.
-    if (isPasskeySupported()) {
-      this.setup
-        .ensureLoaded()
-        .pipe(catchError(() => of(false)))
-        .subscribe();
-    }
     // Reload the list and sidebar counts whenever the selection (not the open
     // entry) changes. A new list has no removed rows, so clear the collapsed
     // set with it, else a recycled id would render an incoming row already collapsed.
@@ -429,40 +304,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);
     });
 
-    // Nothing to read and nothing skipped: send the user to the picker. Purely
-    // state-driven -- no guard, no resolver -- gated on `resolved` so it never
-    // fires against an unanswered list. `replaceUrl` avoids a dead Back button.
-    effect(() => {
-      if (!this.emptySubscriptionsNeedingOnboarding()) return;
-
-      // Ask what the catalog holds before deciding. load() is a no-op once
-      // resolved, shared with /discover. Untracked so the effect depends on
-      // catalog resolution (`onboardingAvailable` below), not the loading flag.
-      untracked(() => this.catalog.load());
-      if (!this.onboardingAvailable()) return;
-
-      void this.router.navigate(['/discover'], { replaceUrl: true });
-    });
-
-    // The post-onboarding sweep, owned BY STATE rather than by being called:
-    // RefreshService.run() early-returns while already running, so a call from
-    // the picker could be swallowed. "Feeds never fetched" removes the ordering question.
-    effect(() => {
-      if (!this.awaitingFirstFetch() || this.sweptOnce()) return;
-      this.sweptOnce.set(true);
-      this.sweeping.set(true);
-      this.refreshSvc.run();
-    });
-
-    // Close the sweep window once it lands without error; a failure keeps it
-    // open so the banner's retry stays available. Gated on `sweeping` so no
-    // unrelated refresh reopens it; expressed as state since onDone fires on both outcomes.
-    effect(() => {
-      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.failure() === null) {
-        untracked(() => this.sweeping.set(false));
-      }
-    });
-
     // The single authority that reloads the list after a refresh (#502): the
     // onboarding sweep reloads on each landing slice, so a new user isn't
     // staring at an empty list (#127); a user-initiated refresh reloads once,
@@ -473,7 +314,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       const running = this.refreshSvc.running();
       untracked(() => {
         if (slice === 0) return; // nothing has reported yet
-        if (!this.sweeping() && running) return; // manual refresh: wait for finish
+        if (!this.onboarding.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
         this.savedSearchesStore.load();
         // A refresh never touches tags, so reload them once when the run
