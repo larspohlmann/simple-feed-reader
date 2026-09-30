@@ -65,7 +65,7 @@ final class ReaderBodyCleanerTest extends TestCase
         return [
             new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
-            new PlayerChromeCleaner(new NarrationSignals()),
+            new PlayerChromeCleaner(new NarrationSignals(), new EmptiedWrapperRemover()),
             new NavigationChromeTrimmer(),
             LeadingEngagementCleaners::cleaner(),
             new LeadingTitleRemover(),
