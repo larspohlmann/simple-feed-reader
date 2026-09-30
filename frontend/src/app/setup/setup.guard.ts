@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
-import { SetupService } from './setup.service';
+import { SetupService } from '../core/setup.service';
 
 /** On login/register: while the instance has no admin, force the operator to the
  *  setup screen. If the status call fails, fail open — do not trap the user. */

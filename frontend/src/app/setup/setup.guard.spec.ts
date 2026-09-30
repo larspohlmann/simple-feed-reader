@@ -3,7 +3,7 @@ import { GuardResult, MaybeAsync, UrlTree } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { runInInjectionContext, EnvironmentInjector } from '@angular/core';
 import { firstValueFrom, isObservable } from 'rxjs';
-import { SetupService } from './setup.service';
+import { SetupService } from '../core/setup.service';
 import { requireSetupGuard, setupRedirectGuard } from './setup.guard';
 
 function resolve(result: MaybeAsync<GuardResult>): Promise<GuardResult> {

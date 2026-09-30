@@ -66,7 +66,7 @@ import { relativeTime, relativeTimeUntil } from '../format';
 import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
-import { CatalogStore } from '../../discover/catalog.store';
+import { CatalogStore } from '../catalog/catalog.store';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';

@@ -20,12 +20,12 @@ import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.com
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { TagsStore } from '../reader/tags.store';
 import { ActiveCategory } from './active-category';
-import { CatalogApi } from './catalog-api';
-import { CatalogStore } from './catalog.store';
+import { CatalogApi } from '../reader/catalog/catalog-api';
+import { CatalogStore } from '../reader/catalog/catalog.store';
 import { CatalogSelection } from './catalog-selection.store';
 import { CategoryChipsComponent } from './category-chips.component';
 import { CategoryRailComponent } from './category-rail.component';
-import { OnboardingSkip } from './onboarding-skip';
+import { OnboardingSkip } from '../reader/catalog/onboarding-skip';
 import { ButtonComponent } from '../shared/button/button.component';
 
 /** How long a smooth scroll is given to settle before observations count again. */

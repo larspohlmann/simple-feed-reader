@@ -9,7 +9,7 @@ import { PasskeyService } from '../../core/passkey.service';
 import { Problem, parseProblem } from '../../core/problem';
 import { isConditionalMediationSupported, isPasskeySupported } from '../../core/webauthn';
 import { adoptAutofilledValues } from '../autofill';
-import { SetupService } from '../../setup/setup.service';
+import { SetupService } from '../../core/setup.service';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';

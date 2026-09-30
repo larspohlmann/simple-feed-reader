@@ -9,7 +9,7 @@ import { API_BASE_URL } from '../core/api';
 import { TokenStore } from '../core/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from './models';
-import { markTerms } from './search-marks';
+import { markTerms } from '../shared/marked-text/search-marks';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,

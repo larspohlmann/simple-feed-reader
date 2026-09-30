@@ -4,8 +4,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
-import { CatalogStore } from './catalog.store';
-import { CatalogCategoryDto } from './catalog.models';
+import { CatalogStore } from '../reader/catalog/catalog.store';
+import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
 import { DiscoverComponent } from './discover.component';
 
 const CATALOG = {

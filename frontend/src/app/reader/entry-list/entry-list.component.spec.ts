@@ -6,7 +6,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
-import { CatalogStore } from '../../discover/catalog.store';
+import { CatalogStore } from '../catalog/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, ListOrder, SubscriptionDto } from '../models';
 import { SubscriptionsStore } from '../subscriptions.store';

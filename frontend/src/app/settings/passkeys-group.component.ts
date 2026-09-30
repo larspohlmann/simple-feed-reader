@@ -10,7 +10,7 @@ import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem, parseProblem } from '../core/problem';
 import { isPasskeySupported } from '../core/webauthn';
 import { formatDateOr, formatLongDate } from '../reader/format';
-import { SetupService } from '../setup/setup.service';
+import { SetupService } from '../core/setup.service';
 import { ButtonComponent } from '../shared/button/button.component';
 import {
   ConfirmData,

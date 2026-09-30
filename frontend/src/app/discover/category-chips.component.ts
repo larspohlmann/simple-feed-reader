@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
-import { CatalogCategoryDto } from './catalog.models';
+import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
 
 /**
  * The rail, laid on its side, for viewports too narrow to carry it. Same state,

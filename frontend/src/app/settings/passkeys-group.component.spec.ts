@@ -7,7 +7,7 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth.service';
 import { PasskeyService, PasskeySummary } from '../core/passkey.service';
 import { Problem } from '../core/problem';
-import { SetupService } from '../setup/setup.service';
+import { SetupService } from '../core/setup.service';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog/confirm-dialog.component';
 import { PasskeyNameDialogComponent } from './passkey-name-dialog.component';
 import { PasskeysGroupComponent } from './passkeys-group.component';

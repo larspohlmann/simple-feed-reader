@@ -1,8 +1,7 @@
-// src/app/core/opml-export.ts
 import { HttpErrorResponse } from '@angular/common/http';
 import { WritableSignal } from '@angular/core';
-import { Problem, parseProblem } from './problem';
-import { saveAs } from './save-as';
+import { Problem, parseProblem } from '../core/problem';
+import { saveAs } from '../core/save-as';
 import { ReaderApi } from '../reader/reader-api';
 
 /** Downloads the account's feeds as feeds.opml, threading loading/error state
