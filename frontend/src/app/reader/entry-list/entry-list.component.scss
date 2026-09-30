@@ -7,6 +7,9 @@
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
 $title-floor: 6rem;
 
+/* Tail room so the last row can scroll up clear of the corner buttons. */
+$corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
+
 :host {
   display: flex;
   flex-direction: column;
@@ -307,6 +310,7 @@ $title-floor: 6rem;
      state nor this list's collapsed one, so the rows never move (#87). They
      pass behind the bars instead, which is the point of retracting them. */
   padding-top: $header-clear;
+  padding-bottom: $corner-clear;
 }
 
 .rows.dragging {
@@ -405,6 +409,7 @@ $title-floor: 6rem;
 
   padding: var(--space-3);
   padding-top: $header-clear;
+  padding-bottom: $corner-clear;
   display: flex;
   flex-direction: column;
   align-items: center;
