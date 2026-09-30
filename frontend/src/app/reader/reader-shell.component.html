@@ -135,7 +135,7 @@
         [canMarkAllRead]="canMarkAllRead()"
         [selection]="selection()"
         [openEntryId]="entryId()"
-        [leavingIds]="leavingIds()"
+        [leavingIds]="entryActions.leavingIds()"
         [feedTags]="feedTags()"
         [refreshing]="refreshSvc.running()"
         [lastRefreshed]="heading.lastRefreshed()"
@@ -161,7 +161,7 @@
       [entry]="openEntry()"
       [tags]="openEntryTags()"
       [fullscreen]="fullscreen"
-      (openOriginal)="withOpen(onOpenOriginal)"
+      (openOriginal)="withOpen(entryActions.openOriginal)"
       (close)="onCloseReader()"
     />
   </ng-template>

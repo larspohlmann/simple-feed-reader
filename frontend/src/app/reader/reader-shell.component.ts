@@ -2,7 +2,6 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
-  forwardRef,
   OnDestroy,
   OnInit,
   afterRenderEffect,
@@ -17,6 +16,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-actions/entry-action-handler';
 import { ReaderRouteState } from './shell/reader-route-state.service';
 import { ListHeading } from './shell/list-heading.service';
+import { EntryStateActions } from './shell/entry-state-actions.service';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, of } from 'rxjs';
@@ -28,7 +28,7 @@ import { ReaderApi } from './reader-api';
 import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
-import { EntriesStore, localStatePatch } from './entries.store';
+import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { SavedSearchesStore } from './saved-searches.store';
@@ -41,7 +41,6 @@ import { LayoutService } from './layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import {
   RefreshScope,
-  Selection,
   isDirectSearch,
   isWholeWordTerm,
   isPhraseTerm,
@@ -55,15 +54,7 @@ import { UnreadFilterService } from './unread-filter.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { ListScrollReset } from './list-scroll-reset';
-import { entryParam } from './slug';
-import {
-  EntryDto,
-  EntryStatePatch,
-  SavedSearchDto,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from './models';
+import { EntryDto, SavedSearchDto, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { EntryListComponent } from './entry-list/entry-list.component';
@@ -115,10 +106,11 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
     SidebarCountsPoll,
     ReaderRouteState,
     ListHeading,
-    { provide: EntryActionHandler, useExisting: forwardRef(() => ReaderShellComponent) },
+    EntryStateActions,
+    { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
-export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, EntryActionHandler {
+export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
@@ -286,6 +278,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly entryId = this.routeState.entryId;
   readonly openEntry = this.routeState.openEntry;
   readonly heading = inject(ListHeading);
+  readonly entryActions = inject(EntryStateActions);
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
@@ -380,13 +373,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     this.showSidebarButton()?.nativeElement.focus();
   });
 
-  private readonly viewedOnOpen = new Set<number>();
-
-  /** Ids of entries removed from the saved view on screen. The entry list
-   *  renders these with the leaving class (row fades, slot collapses); the
-   *  data stays so the magazine plan never re-flows around the hole (#478). */
-  readonly leavingIds = signal<ReadonlySet<number>>(new Set());
-
   constructor() {
     // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
     // above -- this route is never behind setupRedirectGuard, so nothing else
@@ -408,7 +394,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       if (!this.listPreferences.ready()) return;
       const q = queryFromSelection(this.selection());
       untracked(() => {
-        this.leavingIds.set(new Set());
+        this.entryActions.clearLeaving();
         this.entries.load(q);
         this.subs.loadIfStale();
       });
@@ -417,18 +403,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     effect(() => {
       this.selection();
       untracked(() => this.sidebarOpen.set(false));
-    });
-    // Mark the opened entry viewed exactly once per session, even if the PATCH
-    // fails and rolls back. Opening sends the viewed flag alone; the backend
-    // reads it too (ViewedImpliesHiddenListener), and localStatePatch mirrors that here.
-    effect(() => {
-      if (this.routeState.openEntryId() === null) return;
-      untracked(() => {
-        const e = this.openEntry();
-        if (!e || e.isViewed || this.viewedOnOpen.has(e.id)) return;
-        this.viewedOnOpen.add(e.id);
-        this.applyOpenedPatch(e, { isViewed: true });
-      });
     });
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
@@ -598,139 +572,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     this.list()?.scrollToTop();
   }
 
-  // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
-  // reverting the count if the PATCH fails (mirrors the unread-count handling).
-  // In the matching saved view the row also leaves — patchInList owns that.
-  favorite = (e: EntryDto): void => {
-    const delta = e.isFavorite ? -1 : 1;
-    this.subs.bumpFavorites(delta);
-    this.patchInList(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
-  };
-  keep = (e: EntryDto): void => {
-    const delta = e.isKept ? -1 : 1;
-    this.subs.bumpKept(delta);
-    this.patchInList(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
-  };
-  toggleRead = (e: EntryDto): void => this.setViewed(e, !e.isViewed);
-
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
   withOpen(fn: (e: EntryDto) => void): void {
     const e = this.openEntry();
     if (e) fn(e);
   }
 
-  /** The tick toggles "viewed" (#482). Activating it also reads the entry (the
-   *  subset invariant), so an unread entry leaves the unread list and its badge
-   *  drops; deactivating only un-ticks. Recently-read follows both ways. */
-  private setViewed(e: EntryDto, viewed: boolean): void {
-    const alsoReads = viewed && !e.isHidden;
-    this.subs.bumpViewed(viewed ? 1 : -1);
-    if (alsoReads) {
-      this.subs.decrementUnread(e.subscriptionId);
-      this.savedSearchesStore.markEntryRead(e.id);
-    }
-    // Let a later reopen re-mark a now-un-ticked entry.
-    if (!viewed) this.viewedOnOpen.delete(e.id);
-    this.patchInList(e, { isViewed: viewed }, () => {
-      this.subs.bumpViewed(viewed ? -1 : 1);
-      if (alsoReads) {
-        this.subs.incrementUnread(e.subscriptionId);
-        this.savedSearchesStore.markEntryUnread(e.id);
-      }
-    });
-  }
-
-  /** patchOpen plus the single saved-view rule shared by Favorites, Kept and
-   *  Recently-read: when the patch removes the entry from the list on screen,
-   *  fade the row out and drop it, restoring it if the PATCH fails. `onError`
-   *  runs the caller's own badge revert first, then the row comes back. */
-  private patchInList(e: EntryDto, patch: EntryStatePatch, onError: () => void): void {
-    // leaveExcludedRow only flags the row as leaving (it stays in the list data),
-    // so patchOpen still finds it whichever runs first; onError fires only async,
-    // long after revertLeave is bound.
-    const revertLeave = this.leaveExcludedRow(e, patch);
-    this.patchOpen(e, patch, () => {
-      onError();
-      revertLeave();
-    });
-  }
-
-  /** If `patch` drops `e` out of the saved view on screen, play the leave
-   *  animation and remove the row; otherwise a no-op. Reads list membership
-   *  through the same coupling the store applies, so the two never disagree. */
-  private leaveExcludedRow(e: EntryDto, patch: EntryStatePatch): () => void {
-    const flag = savedViewMembership(this.selection().kind);
-    if (flag === null) return () => undefined;
-    const after = localStatePatch(patch);
-    const stillMember = (after[flag] ?? e[flag]) === true;
-    if (stillMember) return () => undefined;
-    return this.leaveList(e);
-  }
-
-  /** Collapse a row out of the list (entry-list `.row-slot.leaving`): the row
-   *  fades, then its slot collapses. The entry stays in list data on purpose
-   *  (dropping it would re-flow the magazine plan); a reload finally clears it.
-   *  Returns a revert that un-collapses the row if the PATCH fails. */
-  private leaveList(e: EntryDto): () => void {
-    this.markLeaving(e.id, true);
-    return () => this.markLeaving(e.id, false);
-  }
-
-  private markLeaving(id: number, leaving: boolean): void {
-    this.leavingIds.update((cur) => {
-      const next = new Set(cur);
-      if (leaving) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  /** The on-open patch: viewed in one request, which the backend also reads
-   *  (#482). Both sidebar badges are kept in sync optimistically and reverted
-   *  together on failure — Recently-read up, unread down when reading a still-unread entry. */
-  private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
-    const alsoReads = patch.isViewed === true && !e.isHidden;
-    if (alsoReads) {
-      this.subs.decrementUnread(e.subscriptionId);
-      this.savedSearchesStore.markEntryRead(e.id);
-    }
-    if (patch.isViewed) this.subs.bumpViewed(1);
-    this.patchOpen(e, patch, () => {
-      if (alsoReads) {
-        this.subs.incrementUnread(e.subscriptionId);
-        this.savedSearchesStore.markEntryUnread(e.id);
-      }
-      if (patch.isViewed) this.subs.bumpViewed(-1);
-    });
-  }
-
-  /** Following the original-article link is an active open even when the
-   *  entry was opened before; the flag is one-way, so an already-viewed
-   *  entry is a no-op (this fires only after an on-open PATCH rolled back). */
-  onOpenOriginal = (e: EntryDto): void => {
-    if (e.isViewed) return;
-    this.subs.bumpViewed(1);
-    this.patchOpen(e, { isViewed: true }, () => this.subs.bumpViewed(-1));
-  };
-
-  /** Apply an entry-state change. Entries in the loaded list go through the
-   *  store's optimistic path; a cold-opened deep-link entry (in no list) is
-   *  patched on its fetched copy and persisted directly, reverting on failure. */
-  private patchOpen(e: EntryDto, patch: EntryStatePatch, onError?: () => void): void {
-    if (this.entries.entries().some((x) => x.id === e.id)) {
-      this.entries.setState(e.id, patch, onError);
-      return;
-    }
-    this.routeState.patchFetchedEntry(e.id, patch, onError);
-  }
-
-  open(e: EntryDto): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { entry: entryParam(e.id, e.title) },
-      queryParamsHandling: 'merge',
-    });
-  }
   onCloseReader(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -1048,21 +895,5 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       // first fetch finishes — this path no longer reloads it itself.
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
-  }
-}
-
-/** The entry flag a saved view filters on, or null for a list that shows every
- *  entry regardless of state. When a patch sets that flag false, the entry no
- *  longer belongs in the view and the row leaves — one rule for all three views. */
-function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
-  switch (kind) {
-    case 'favorites':
-      return 'isFavorite';
-    case 'kept':
-      return 'isKept';
-    case 'viewed':
-      return 'isViewed';
-    default:
-      return null;
   }
 }

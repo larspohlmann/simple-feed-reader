@@ -853,7 +853,7 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    f.componentInstance.toggleRead(f.componentInstance.openEntry()!);
+    f.componentInstance.entryActions.toggleRead(f.componentInstance.openEntry()!);
     f.detectChanges();
 
     const patches = ctrl.match((r) => r.url.endsWith('/entries/1/state'));
@@ -887,12 +887,12 @@ describe('ReaderShellComponent', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     f.detectChanges();
 
-    f.componentInstance.onOpenOriginal({ ...entry, isHidden: true, isViewed: false });
+    f.componentInstance.entryActions.openOriginal({ ...entry, isHidden: true, isViewed: false });
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
     expect(req.request.body).toEqual({ isViewed: true });
   });
 
-  // Direct invocation above proves onOpenOriginal's own logic, but not that the
+  // Direct invocation above proves openOriginal's own logic, but not that the
   // template wires the click to it — there are TWO <app-reader-view> sites (wide
   // pane, narrow overlay), and either could silently drop the `(openOriginal)` binding.
   describe('the original-article link, through the real template wiring', () => {
@@ -1792,7 +1792,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const f = boot();
 
-      f.componentInstance.open(entry);
+      f.componentInstance.entryActions.open(entry);
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');
@@ -2885,20 +2885,20 @@ describe('ReaderShellComponent', () => {
 
     it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
       // Kept in entries() on purpose: dropping it would re-flow the magazine plan.
       expect(f.componentInstance.entries.entries().some((e) => e.id === 1)).toBe(true);
     });
 
     it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
       const f = bootInto('all', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
     });
 
     it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
@@ -2906,10 +2906,10 @@ describe('ReaderShellComponent', () => {
       const subs = TestBed.inject(SubscriptionsStore);
       expect(subs.viewedCount()).toBe(3);
 
-      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
       expect(subs.viewedCount()).toBe(2);
     });
 
@@ -2917,20 +2917,20 @@ describe('ReaderShellComponent', () => {
       const f = bootInto('viewed', { isHidden: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
 
-      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
       expect(subs.viewedCount()).toBe(3);
     });
 
     it('clears the collapsed set when the selection changes', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
 
       qp.next(convertToParamMap({ view: 'kept' }));
       f.detectChanges();
@@ -2938,7 +2938,7 @@ describe('ReaderShellComponent', () => {
         .expectOne((r) => r.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
 
-      expect(f.componentInstance.leavingIds().size).toBe(0);
+      expect(f.componentInstance.entryActions.leavingIds().size).toBe(0);
     });
   });
 
