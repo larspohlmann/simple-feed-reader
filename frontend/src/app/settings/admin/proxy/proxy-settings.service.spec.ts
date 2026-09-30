@@ -143,6 +143,18 @@ describe('ProxySettingsService', () => {
     expect(service.state()).toEqual(state({ hasPassword: false }));
   });
 
+  it('removePassword() carries a pending typed edit rather than discarding it', () => {
+    loadState({ hasPassword: true, host: 'old.example' });
+
+    service.setTypedField('host', 'new.example');
+    service.removePassword();
+
+    const put = http.expectOne(ENDPOINT);
+    expect(put.request.body.removePassword).toBe(true);
+    expect(put.request.body.host).toBe('new.example');
+    put.flush(state({ hasPassword: false, host: 'new.example' }));
+  });
+
   it('a failed PUT leaves saved() false and sets failure()', () => {
     loadState();
 

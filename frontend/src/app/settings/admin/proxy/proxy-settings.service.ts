@@ -61,7 +61,7 @@ export class ProxySettingsService extends DraftSettingsService<
   removePassword(): void {
     const current = this.state();
     if (!current) return;
-    this.put({ ...this.bodyFromState(current), removePassword: true }, (state) => {
+    this.put({ ...this.bodyFromState(current), ...this.draft(), removePassword: true }, (state) => {
       this.commit(state);
       this.saved.set(true);
     });
