@@ -39,7 +39,7 @@ final readonly class OriginCookies
         $root = OriginRoot::of($imageUrl);
 
         return $this->cache->get(
-            'origin_cookies.' . hash('xxh128', $root),
+            hash('xxh128', $root),
             function (ItemInterface $item) use ($root): string {
                 $item->expiresAfter(self::LIFETIME_SECONDS);
 

@@ -18,8 +18,7 @@ final class ProxiedImageResponse
             'X-Content-Type-Options' => 'nosniff',
             'Content-Security-Policy' => "default-src 'none'; sandbox",
         ]);
-        $response->setPrivate();
-        $response->setMaxAge(self::MAX_AGE_SECONDS);
+        $response->setCache(['private' => true, 'max_age' => self::MAX_AGE_SECONDS]);
 
         return $response;
     }

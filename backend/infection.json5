@@ -37,8 +37,6 @@
                 'App\\Service\\Image\\ImageDownloader::assertServed',
                 'App\\Service\\Image\\ImageDownloader::servedType',
                 'App\\Service\\Image\\OriginCookies::visit',
-                // setPrivate(): Symfony already marks a response private when it sets max-age without s-maxage.
-                'App\\Http\\ProxiedImageResponse::of',
             ],
         },
         // Both read the body only after isSuccess() was confirmed, and getContent()'s flag differs only on a non-2xx.
@@ -48,9 +46,8 @@
                 'App\\Service\\Image\\ImageDownloader::body',
             ],
         },
-        // The cookie cache is a pool of its own, so any key that still varies by origin root behaves the same.
-        Concat: { ignore: ['App\\Service\\Image\\OriginCookies::for'] },
-        ConcatOperandRemoval: { ignore: ['App\\Service\\Image\\OriginCookies::for'] },
+        // Only the first item goes: without 'private', Symfony still marks a max-age response private (no s-maxage).
+        ArrayItemRemoval: { ignore: ['App\\Http\\ProxiedImageResponse::of'] },
         // explode()'s limit only bounds the tail; the name=value pair is element 0 at any limit above 1.
         IncrementInteger: { ignore: ['App\\Service\\Image\\Support\\CookieHeader::fromSetCookies'] },
         // The 3 MB cap is checked twice, while streaming and after the read: `>` vs `>=` on it is not worth a 3 MB
