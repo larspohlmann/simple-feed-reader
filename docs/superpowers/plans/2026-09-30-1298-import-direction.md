@@ -72,6 +72,8 @@ for f in catalog.store catalog.store.spec catalog-api catalog-api.spec catalog.m
 
 Afterwards `grep -rn "discover/catalog\|discover/onboarding\|setup/setup.service\|setup/setup-api\|core/opml-export\|reader/search-marks" frontend/src` must print nothing.
 
+- [ ] **Step 3b: Settings mounts the admin pages.** `settings/settings.routes.ts` lazy-loads `../admin/*` components, and admin never imports settings. So settings → admin is a legitimate edge. In `frontend/eslint.config.js`, set the matrix row to `settings: ["core", "shared", "theme", "settings", "reader", "admin"],`.
+
 - [ ] **Step 4: Specs may cross layers.** The two core specs check that logout resets `CatalogStore`, which is an integration concern. In `frontend/eslint.config.js`, add `"boundaries/dependencies": "off"` to the existing `**/*.spec.ts` override block. Then flip the main `boundaries/dependencies` entry from `"warn"` to `"error"`.
 
 - [ ] **Step 5: Verify.** In the container, run `npx eslint "src/**/*.ts"` and expect zero `boundaries/dependencies` findings. Break-test it: add `import { ReaderApi } from '../reader/reader-api';` plus a use to `core/api.ts`, expect an **error**, then remove it by editing, not with `git checkout --`. Then run `npm run build` and `npm run check`.
