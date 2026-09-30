@@ -1,0 +1,22 @@
+name: Set up the backend
+description: PHP 8.4 with the backend's extensions, and its Composer packages installed.
+
+inputs:
+  coverage:
+    description: The coverage driver setup-php installs (none, pcov or xdebug).
+    default: none
+
+runs:
+  using: composite
+  steps:
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: intl, pdo_sqlite, pdo_mysql, zip
+        coverage: ${{ inputs.coverage }}
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: backend
+      run: composer install --prefer-dist --no-progress
