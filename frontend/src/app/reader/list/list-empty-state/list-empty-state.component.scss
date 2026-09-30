@@ -1,0 +1,16 @@
+:host {
+  display: contents;
+}
+
+.empty {
+  color: var(--text-muted);
+  padding: 0 var(--space-6) var(--space-6);
+  text-align: center;
+
+  a {
+    display: inline-block;
+    margin-top: var(--space-3);
+    color: var(--accent);
+    text-decoration: none;
+  }
+}

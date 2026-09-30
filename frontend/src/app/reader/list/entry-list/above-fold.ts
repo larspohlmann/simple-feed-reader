@@ -36,3 +36,26 @@ export function foldedGroupTailsAbove(
     return group.entries.filter((entry) => !rendered.has(entry.id)).map((entry) => entry.id);
   });
 }
+
+/** Every rendered entry in the scroller with its bottom edge, in DOM order. */
+export function measureEntries(scroller: HTMLElement): MeasuredEntry[] {
+  return Array.from(scroller.querySelectorAll('[data-entry-id]')).map((node) => ({
+    id: Number(node.getAttribute('data-entry-id')),
+    bottom: node.getBoundingClientRect().bottom,
+  }));
+}
+
+/** The ids plus the hidden duplicate copies folded under each row
+ *  (EntryDto.duplicates), which share the row but carry their own state. */
+export function withHiddenDuplicates(
+  ids: number[],
+  entries: readonly { id: number; duplicates?: readonly { id: number }[] }[],
+): number[] {
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+  const out: number[] = [];
+  for (const id of ids) {
+    out.push(id);
+    for (const duplicate of byId.get(id)?.duplicates ?? []) out.push(duplicate.id);
+  }
+  return out;
+}

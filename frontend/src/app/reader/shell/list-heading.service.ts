@@ -7,7 +7,7 @@ import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
-import { TitleCount } from '../list/entry-list/entry-list.component';
+import { TitleCount } from '../list/list-header/list-header.component';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()

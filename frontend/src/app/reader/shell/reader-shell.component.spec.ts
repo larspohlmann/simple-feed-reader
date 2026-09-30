@@ -25,6 +25,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { TokenStore } from '../../core/auth/token.store';
 import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
 import { ReaderShellComponent } from './reader-shell.component';
+import { ListHeaderComponent } from '../list/list-header/list-header.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
@@ -3468,9 +3469,9 @@ describe('ReaderShellComponent', () => {
       const fixture = bootSingleSavedSearch();
 
       expect(fixture.componentInstance.markRead.canMarkAllRead()).toBe(true);
-      const list = fixture.debugElement.query(By.directive(EntryListComponent))
-        .componentInstance as EntryListComponent;
-      expect(list.hasUnreadFilter()).toBe(true);
+      const header = fixture.debugElement.query(By.directive(ListHeaderComponent))
+        .componentInstance as ListHeaderComponent;
+      expect(header.hasUnreadFilter()).toBe(true);
     });
 
     it('marks it read via its by-id endpoint, then reloads entries, subscriptions and saved searches', () => {

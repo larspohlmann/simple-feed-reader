@@ -1,8 +1,6 @@
 import {
   Component,
-  DestroyRef,
   ElementRef,
-  NgZone,
   OnDestroy,
   TemplateRef,
   computed,
@@ -11,136 +9,61 @@ import {
   input,
   output,
   signal,
-  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
-import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
-import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
-import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
-import {
-  BACK_TO_TOP_AFTER_PX,
-  ToTopButtonComponent,
-} from '../../../shared/to-top-button/to-top-button.component';
+import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
-import { CaughtUpIllustrationComponent } from '../caught-up-illustration/caught-up-illustration.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
-import { groupByRun, RunGroup } from '../for-you-runs';
-import { EntryHeroComponent } from '../magazine/blocks/entry-hero/entry-hero.component';
-import { EntryCompactComponent } from '../magazine/blocks/entry-compact/entry-compact.component';
-import { SourceGroupComponent } from '../magazine/source-group.component';
-import { LIST_FOCUS_CURVE } from '../../article/reading/reading-focus';
-import { EntrySplitComponent } from '../magazine/blocks/entry-split/entry-split.component';
-import { EntryWideComponent } from '../magazine/blocks/entry-wide/entry-wide.component';
-import { EntryThumbComponent } from '../magazine/blocks/entry-thumb/entry-thumb.component';
-import { EntryQuoteComponent } from '../magazine/blocks/entry-quote/entry-quote.component';
-import { EntryKickerComponent } from '../magazine/blocks/entry-kicker/entry-kicker.component';
 import { MagazineBlock } from '../magazine/magazine-block';
-import { planMagazine } from '../magazine/magazine-planner';
+import { MagazineBlockComponent, NO_TAGS } from '../magazine/magazine-block.component';
+import { ListHeaderComponent, TitleCount } from '../list-header/list-header.component';
+import { ListEmptyStateComponent } from '../list-empty-state/list-empty-state.component';
 import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ReadingLayout } from '../../reading-layout.service';
 import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../../models';
-import {
-  Selection,
-  canScopedRefresh,
-  hasListOrder,
-  hasUnreadFilter,
-  isDirectSearch,
-  isSingleStreamView,
-  isWholeWordTerm,
-  isPhraseTerm,
-  listOrderOf,
-  sameSelection,
-  searchWords,
-  visibleSearchTerm,
-} from '../../query/query';
-import { atTop, pullTriggersRefresh, rubberBand } from '../../reader-gestures';
-import { relativeTime, relativeTimeUntil } from '../../format';
-import { LanguageService } from '../../../core/i18n/language.service';
+import { Selection, canScopedRefresh, isDirectSearch, searchWords } from '../../query/query';
 import { Problem } from '../../../core/problem';
 import { LayoutService } from '../../layout.service';
-import { CatalogStore } from '../../feeds/catalog/catalog.store';
-import { SubscriptionsStore } from '../../state/subscriptions.store';
-import { ListScrollMemory } from '../../scroll/list-scroll-memory';
-import { nextHeaderHidden } from '../../scroll/header-scroll';
-import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
-import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
+import { prefetchMargin } from '../paging';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
-import { ReadingFocusApplier } from '../../article/reading/reading-focus-applier';
-import { entriesAboveFold, foldedGroupTailsAbove, MeasuredEntry } from './above-fold';
-import { blocksWithout, ListBlock, runGroupsWithout } from './hidden-overlay';
+import {
+  entriesAboveFold,
+  foldedGroupTailsAbove,
+  measureEntries,
+  withHiddenDuplicates,
+} from './above-fold';
+import { ListBlock } from './hidden-overlay';
+import { ListContent } from './list-content';
+import { PullToRefresh } from './pull-to-refresh';
+import { ListScrollState } from './list-scroll-state';
+import { ListReadingFocus } from './list-reading-focus';
 
-// Scroll-restore settle window: re-assert the target for at most this many frames,
-// stopping early once the content height has held steady for this many in a row.
-const MAX_SETTLE_FRAMES = 30;
-const SETTLE_STABLE_FRAMES = 3;
-// Ceiling the rubber-banded pull-to-refresh indicator approaches but never reaches.
-const MAX_PULL = 100;
-// How far (px) content slides to reveal the spinner during any refresh trigger
-// (pull, header/sidebar buttons). Matches --space-7; published as --refresh-reveal
-// so the stylesheet sizes the tray and its park offset from the same number.
-export const REFRESH_REVEAL = 48;
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
 const RELOAD_SPINNER_DELAY_MS = 150;
-// One shared instance: a fresh `[]` per check would change every tag-less block's
-// input identity on every tick and re-render it, defeating OnPush (#501).
-const NO_TAGS: SubscriptionTagDto[] = [];
-const FEW_SUBSCRIPTIONS = 5;
-
-/** The heading icon for each fixed view, matching its sidebar row's glyph so the
- *  list a reader lands in reads as the row they clicked (#411). Tag and
- *  subscription are absent — their heading already carries a glyph/favicon. */
-const FIXED_VIEW_ICON: Partial<Record<Selection['kind'], string>> = {
-  all: 'inbox',
-  favorites: 'star',
-  kept: 'bookmark',
-  viewed: 'history',
-  'for-you': 'auto_awesome',
-  'saved-searches': 'saved_search',
-  search: 'search',
-};
-
-/** How much the list holds, and what that number counts — travel together since
- *  the pill needs the value and the heading's accessible name needs what it
- *  counts. The shell resolves both once, for tab title and heading (#709). */
-export interface TitleCount {
-  readonly value: number;
-  readonly counts: 'unread' | 'items';
-}
 
 @Component({
   selector: 'app-entry-list',
   imports: [
     NgTemplateOutlet,
-    RouterLink,
     TranslocoPipe,
     IconComponent,
     ErrorBannerComponent,
-    ListActionDirective,
     SpinnerComponent,
     LoadingOverlayComponent,
-    TagGlyphComponent,
-    FaviconComponent,
     EntryRowComponent,
-    CaughtUpIllustrationComponent,
     RecommendationStripComponent,
     RunHeaderComponent,
-    EntryHeroComponent,
-    EntryCompactComponent,
-    SourceGroupComponent,
-    EntrySplitComponent,
-    EntryWideComponent,
-    EntryThumbComponent,
-    EntryQuoteComponent,
-    EntryKickerComponent,
+    MagazineBlockComponent,
+    ListHeaderComponent,
+    ListEmptyStateComponent,
     ToTopButtonComponent,
     ScrollOutsideZoneDirective,
   ],
@@ -180,15 +103,6 @@ export class EntryListComponent implements OnDestroy {
    *  in `entries` so the magazine plan keeps its shape; a reload clears it. */
   readonly leavingIds = input<ReadonlySet<number>>(new Set());
 
-  /** Rows the user can still see — loaded set minus the collapsed and the
-   *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
-   *  so removing the last row shows "nothing here" immediately. */
-  readonly visibleEntryCount = computed(
-    () =>
-      this.entries().filter(
-        (entry) => !this.leavingIds().has(entry.id) && !this.hiddenAboveIds().has(entry.id),
-      ).length,
-  );
   readonly loading = input.required<boolean>();
   readonly loadingMore = input.required<boolean>();
   readonly error = input.required<Problem | null>();
@@ -246,28 +160,13 @@ export class EntryListComponent implements OnDestroy {
   readonly markAboveRead = output<number[]>();
   readonly refresh = output<void>();
 
-  /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
-  readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
-
-  /** Whether this list offers the All posts / only unread switch. The rule is
-   *  the selection vocabulary's, not this header's — the shell asks the same
-   *  question when it builds the list query. */
-  readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
-
-  readonly hasListOrder = computed(() => hasListOrder(this.selection()));
-  readonly oldestFirst = computed(() => listOrderOf(this.selection()) === 'oldest');
+  /** The refresh pull gesture is off in the cross-feed saved views. */
+  private readonly canRefresh = computed(() => canScopedRefresh(this.selection()));
 
   /** A direct (unsaved) search is the one selection that keeps its short header
    *  labels and list layout; every other list, saved-search results included,
    *  drops to icon-only actions. */
   readonly directSearch = computed(() => isDirectSearch(this.selection()));
-
-  /** The number the heading shows, or 0 for the two cases that show none: a
-   *  list with nothing in it, and a search — whose heading already carries its
-   *  own result count, with its own rules about when it may be shown. */
-  readonly headingCount = computed(() =>
-    this.selection().kind === 'search' ? 0 : this.titleCount().value,
-  );
 
   /** The current search's words, passed to every row for marking. Prefers what
    *  the engine actually matched, since it tolerates typos ("recieve" finds
@@ -278,262 +177,31 @@ export class EntryListComponent implements OnDestroy {
     return matched.length > 0 ? matched : searchWords(this.selection().term ?? '');
   });
 
-  /** The search term for the empty-state message — the trailing space is the
-   *  server's whole-word-match signal, not part of what the user typed, so it
-   *  must not appear in text a human reads (#408 follow-up). */
-  readonly displayedSearchTerm = computed(() => visibleSearchTerm(this.selection().term ?? ''));
-
-  /** Whether the selection is a search whose trailing space puts it in
-   *  whole-word mode. The badge is the only display of this — `punk` and
-   *  `punk ` otherwise render identical titles for very different results (#408). */
-  readonly showWholeWordBadge = computed(() => {
-    const selection = this.selection();
-    const term = selection.term ?? '';
-    // A phrase overrides whole-word when both signals are present (#702), so a
-    // phrase query shows only the phrase pill, never both.
-    return selection.kind === 'search' && isWholeWordTerm(term) && !isPhraseTerm(term);
-  });
-
-  /** Whether the selection is a phrase search (quoted query). The pill is the
-   *  only sign the words matched as one exact run rather than each anywhere —
-   *  mirrors the whole-word badge (#702). */
-  readonly showPhraseBadge = computed(() => {
-    const selection = this.selection();
-    return selection.kind === 'search' && isPhraseTerm(selection.term ?? '');
-  });
-
-  /** The heading's leading icon for a fixed view, or null for a tag or a
-   *  subscription (their glyph and favicon already lead the heading) (#411). */
-  readonly titleIcon = computed(() => FIXED_VIEW_ICON[this.selection().kind] ?? null);
-
   readonly effectiveLayout = computed(() => (this.directSearch() ? 'list' : this.layout()));
 
   /** Search rows dim their excerpt a shade — the marked term stays the row's
    *  focus, and the surrounding prose recedes behind it. */
   readonly isSearch = computed(() => this.selection().kind === 'search');
 
-  private readonly language = inject(LanguageService);
-  /** A localised "last refreshed 5 min ago" label for a single-feed selection
-   *  or the for-you list, or null when it doesn't apply (neither, or never
-   *  generated/fetched). */
-  readonly lastRefreshedLabel = computed(() => {
-    const iso = this.lastRefreshed();
-    if (!isSingleStreamView(this.selection()) || !iso) return null;
-    return relativeTime(iso, this.language.lang());
-  });
-
-  /** A localised "next refresh in 20 min" label beside the last-refreshed hint,
-   *  for a single feed only — a ranking (for-you) has no next fetch, nor does a
-   *  feed with no scheduled run. */
-  readonly nextRefreshLabel = computed(() => {
-    const iso = this.nextRefresh();
-    if (this.selection().kind !== 'subscription' || !iso) return null;
-    return relativeTimeUntil(iso, this.language.lang());
-  });
-
-  // Pull-to-refresh (mobile): pulling past the top rubber-bands an indicator;
-  // releasing past the threshold fires a scoped refresh. Disabled on wide
-  // screens, saved views, and under prefers-reduced-motion.
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // `pulled` is the finger's raw travel; `pullArmed` arms off THIS, never off the
-  // rubber-banded revealOffset — arming off the damped value made the threshold
-  // depend on the indicator's ceiling, so pull never reached it (#105).
-  private readonly pulled = signal(0);
-  /** True only during an active downward drag. Drives the no-transition class so
-   *  the content tracks the finger, and gates the pull branch of revealOffset. */
-  readonly dragging = signal(false);
-  readonly pullArmed = computed(() => pullTriggersRefresh(this.pulled()));
-  /** How far content and the reveal tray push down, in px — one source for
-   *  three states: drag offset, a fixed reveal while any trigger sets
-   *  `refreshing()`, and 0 at rest. Suppressed under reduced motion. */
-  readonly revealOffset = computed(() => {
-    if (this.reduceMotion) return 0;
-    if (this.dragging()) return rubberBand(this.pulled(), MAX_PULL);
-    return this.refreshing() ? REFRESH_REVEAL : 0;
-  });
-  /** The transform applied to both the scroller and the tray. Extracted so the
-   *  three bindings can't drift apart. `none` at rest, never `translateY(0px)`:
-   *  any transform promotes the whole (very tall, far down) scroll content to
-   *  one GPU layer, whose backing store iOS WebKit can fail to paint for a
-   *  frame mid-scroll (#501). */
-  readonly revealTransform = computed(() => {
-    const offset = this.revealOffset();
-    return offset === 0 ? 'none' : `translateY(${offset}px)`;
-  });
-
-  /** The reveal only makes sense over the real list scroller — the skeleton and
-   *  empty states have no content to slide, so a refresh started from those must
-   *  not paint the tray over them. */
-  readonly revealVisible = computed(
-    () => this.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
-  );
-  private pullStartY = 0;
-  private pullTracking = false;
-
-  /** How many of `entries()` are rendered. Trails the list while an appended
-   *  page is revealed a step per frame (#501); equals the length otherwise. */
-  private readonly revealedCount = signal(0);
-  private revealFrame = 0;
-  private lastEntries: EntryDto[] = [];
-
-  private readonly renderedEntries = computed(() => {
-    const all = this.entries();
-    const count = this.revealedCount();
-    return count >= all.length ? all : all.slice(0, count);
-  });
-  private readonly fullyRevealed = computed(() => this.renderedEntries() === this.entries());
-
-  private readonly _revealAppended = effect(() => {
-    const next = this.entries();
-    const previous = this.lastEntries;
-    this.lastEntries = next;
-    untracked(() => this.startReveal(previous, next));
-  });
-
-  private startReveal(previous: EntryDto[], next: EntryDto[]): void {
-    this.cancelReveal();
-    if (!isAppendedPage(previous, next)) {
-      this.revealedCount.set(next.length);
-      return;
-    }
-    this.revealedCount.update((count) => Math.min(count, previous.length));
-    this.scheduleRevealStep();
-  }
-
-  private scheduleRevealStep(): void {
-    if (typeof requestAnimationFrame === 'undefined') {
-      this.revealedCount.set(this.entries().length);
-      return;
-    }
-    this.revealFrame = this.zone.runOutsideAngular(() =>
-      requestAnimationFrame(() => {
-        this.revealFrame = 0;
-        const total = this.entries().length;
-        this.revealedCount.update((count) => Math.min(count + REVEAL_STEP, total));
-        if (this.revealedCount() < total) this.scheduleRevealStep();
-      }),
-    );
-  }
-
-  private cancelReveal(): void {
-    if (this.revealFrame && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.revealFrame);
-    }
-    this.revealFrame = 0;
-  }
-
-  /** The loaded entries split into one group per recommendation run (#348). One
-   *  run-less group for every non-for-you view, so those render exactly as before. */
-  readonly runGroups = computed<RunGroup[]>(() => groupByRun(this.renderedEntries()));
-
-  /** Whether a run group opens with a divider. Suppressed only for the run the
-   *  header already names ("Last refreshed"), matched by id; every other run
-   *  gets one, even at the top. No run id (non-for-you view) means never. */
-  showRunHeader(group: RunGroup): boolean {
-    return group.runId != null && group.runId !== this.newestRunId();
-  }
-
-  readonly blocks = computed<ListBlock[]>(() => {
-    const groups = this.runGroups();
-    // Only aggregated views collapse same-source runs into a group widget; a
-    // single-stream view (a feed, or the for-you list) must not.
-    const grouping = !isSingleStreamView(this.selection());
-    const complete = !this.hasMore() && this.fullyRevealed();
-
-    // Fast path: no dividers (every non-for-you view, and a for-you list showing
-    // only the newest run). Plan the whole list at once — identical to before.
-    if (!groups.some((group) => this.showRunHeader(group))) {
-      return planMagazine({ entries: this.renderedEntries(), grouping, complete });
-    }
-
-    const out: ListBlock[] = [];
-    groups.forEach((group, index) => {
-      if (this.showRunHeader(group)) {
-        out.push({ kind: 'run-header', generatedAt: group.generatedAt! });
-      }
-      // Only the last loaded group may still grow on the next page; every earlier
-      // group is provably complete (a different run follows it).
-      const groupComplete = index === groups.length - 1 ? complete : true;
-      out.push(...planMagazine({ entries: group.entries, grouping, complete: groupComplete }));
-    });
-    return out;
-  });
-
-  /** Ids hidden from the render after a mark-above-read on an unread view — a
-   *  post-plan overlay, never fed back into `entries()`, so the planner does
-   *  not re-run and every block below the boundary keeps its position (#1080). */
-  readonly hiddenAboveIds = signal<ReadonlySet<number>>(new Set());
-
-  /** Keyed by id, not geometry, so a breakpoint or layout swap keeps the overlay;
-   *  only a new selection drops it (the reload edge is `_restoreScroll`'s). */
-  private readonly _resetHiddenAbove = effect(() => {
-    this.selection();
-    this.hiddenAboveIds.set(new Set());
-  });
-
-  readonly visibleBlocks = computed(() => blocksWithout(this.blocks(), this.hiddenAboveIds()));
-  readonly visibleRunGroups = computed(() =>
-    runGroupsWithout(this.runGroups(), this.hiddenAboveIds()),
-  );
-
   private readonly screen = inject(LayoutService);
-  private readonly readingFocus = inject(ReadingFocusService);
-  private readonly zone = inject(NgZone);
-  private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
-  private readonly catalog = inject(CatalogStore);
-  private readonly subscriptions = inject(SubscriptionsStore);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly magazineStyle = inject(MagazineStyleService);
 
-  /** Gates `.rows.magazine.airy`. Style first: computeds track dynamically, so
-   *  a boxed account never takes a dependency on `entries()` at all (#723). */
-  protected readonly isAiryMagazine = computed(
-    () =>
-      this.magazineStyle.style() === 'airy' &&
-      this.effectiveLayout() === 'magazine' &&
-      !(this.loading() && this.entries().length === 0) &&
-      this.visibleEntryCount() !== 0,
-  );
+  private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
+  private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
+  private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
+  private readonly header = viewChild(ListHeaderComponent);
+  private readonly scroller = (): HTMLElement | undefined => this.rows()?.nativeElement;
 
-  /** True only once the catalog has been resolved AND has no entries.
-   *  Unresolved reads as not-empty, so the /discover link is never hidden on a
-   *  guess — it simply shows until the shell (which loads the catalog on the
-   *  onboarding path) proves the catalog empty. */
-  readonly catalogEmpty = computed(() => this.catalog.resolved() && !this.catalog.hasEntries());
-
-  /** The /discover nudge is for an account still building its reading list. */
-  readonly suggestFeeds = computed(
-    () =>
-      !this.catalogEmpty() &&
-      this.subscriptions.resolved() &&
-      this.subscriptions.subscriptions().length < FEW_SUBSCRIPTIONS,
-  );
-
-  constructor() {
-    // Capture so we hear the gesture even though scroll events fire on inner .rows;
-    // passive so we never block scrolling. Both cancel an in-flight scroll restore.
-    const host = this.host.nativeElement;
-    host.addEventListener('wheel', this.onUserScrollIntent, { passive: true, capture: true });
-    host.addEventListener('touchmove', this.onUserScrollIntent, { passive: true, capture: true });
-    host.style.setProperty('--refresh-reveal', `${REFRESH_REVEAL}px`);
-    this.destroyRef.onDestroy(() => this.applier?.destroy());
-  }
-  // On narrow layouts the list header collapses to a slim bar on scroll-down,
-  // expanding on scroll-up (always expanded on wide screens). The shell's app
-  // bar mirrors this same signal; reset by `_resetCollapse` on selection change,
-  // which is why switching lists returns the app bar to the top (#630).
-  readonly collapsed = signal(false);
-  private lastScrollTop = 0;
-
-  /** Drives the corner back-to-top button; set from the scroll handler. */
-  readonly showToTop = signal(false);
-
-  /** Whether at least one entry is fully scrolled past the fold — gates the
-   *  lower-left button so it never offers a no-op. Set cheaply from the scroll
-   *  handler; the click-time collection does the real, full-list work. */
-  readonly hasAboveFold = signal(false);
+  readonly content = new ListContent({
+    entries: this.entries,
+    hasMore: this.hasMore,
+    selection: this.selection,
+    newestRunId: this.newestRunId,
+    leavingIds: this.leavingIds,
+  });
 
   /**
    * Whether this list carries the wait cue for its own reload (dim, then veil).
@@ -563,10 +231,7 @@ export class EntryListComponent implements OnDestroy {
    * shrink the reservation and reintroduce the jump this replaces (#87).
    */
   readonly headerHeight = signal(0);
-  private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private headerObs?: ResizeObserver;
-  /** Focus target for the corner button on activation — see scrollToTop(). */
-  private readonly listTitle = viewChild<ElementRef<HTMLElement>>('listTitle');
 
   /**
    * Published as `--list-bar-h` for the stylesheet to add to the app bar's own
@@ -579,297 +244,37 @@ export class EntryListComponent implements OnDestroy {
       this.host.nativeElement.style.setProperty('--list-bar-h', `${headerHeight}px`);
   });
 
-  // A new selection, a resize past the wide breakpoint, or a list<->magazine
-  // layout toggle each make the collapsed/showToTop state (and lastScrollTop)
-  // stale, so reset them together.
-  private readonly _resetCollapse = effect(() => {
-    this.selection();
-    this.screen.isWide();
-    this.layout();
-    this.collapsed.set(false);
-    this.showToTop.set(false);
-    this.hasAboveFold.set(false);
-    this.lastScrollTop = 0;
+  private readonly readingFocus = new ListReadingFocus({
+    scroller: this.scroller,
+    rendered: this.content.rendered,
+    entries: this.entries,
+    selection: this.selection,
+    reduceMotion: this.reduceMotion,
   });
 
-  private applier?: ReadingFocusApplier;
-
-  // (Re)build the applier when the scroller element appears or swaps (skeleton ->
-  // list, list <-> magazine). Its constructor runs the first pass and starts
-  // observing; nothing here enumerates the causes of a later geometry change.
-  private readonly _bindReadingFocus = effect(() => {
-    const scroller = this.rows()?.nativeElement;
-    this.applier?.destroy();
-    this.applier = undefined;
-    if (!scroller) return;
-    this.applier = new ReadingFocusApplier({
-      scroller,
-      blocks: () =>
-        (Array.from(scroller.children) as HTMLElement[]).filter(
-          (child) => !child.classList.contains('foot'),
-        ),
-      curve: LIST_FOCUS_CURVE,
-      isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
-      runOutsideZone: (run) => this.zone.runOutsideAngular(run),
-    });
-  });
-
-  // The inputs with no geometric signature: the enable gate and the rendered set
-  // (a load, a view switch's retained rows (#254, #462), a fully revealed append —
-  // the scroll listener covers the reveal steps in between).
-  private readonly _pushReadingFocus = effect(() => {
-    const enabled = this.readingFocus.enabled();
-    const rendered = this.renderedEntries();
-    this.selection();
-    const applier = this.applier;
-    if (!applier) return;
-    if (!enabled) {
-      applier.clear();
-      return;
-    }
-    if (rendered === this.entries()) applier.refresh();
-  });
-
-  readonly onRowsScroll = (scrollEvent: Event): void => {
-    const element = scrollEvent.target as HTMLElement | null;
-    if (!element || typeof element.scrollTop !== 'number') return;
-    const top = element.scrollTop;
-    this.collapsed.set(
-      nextHeaderHidden({
-        previousHidden: this.collapsed(),
-        lastTop: this.lastScrollTop,
-        top,
-        isWide: this.screen.isWide(),
-      }),
-    );
-    this.lastScrollTop = top;
-    const pastTop = top > BACK_TO_TOP_AFTER_PX;
-    this.showToTop.set(pastTop);
-    const scroller = this.rows()?.nativeElement;
-    this.hasAboveFold.set(pastTop && !!scroller && this.hasEntryAboveFold(scroller));
-    // Remember where the user is so a browser resume-reload (iOS/Brave discard the
-    // tab and reload it) can drop them back here rather than at the top.
-    if (this.rowsBelongToSelection()) this.scroll.save(this.selection(), top);
-  };
-
-  /** Whether the rows on screen match the current selection — false between a
-   *  view switch and the new page's arrival, since the outgoing list stays
-   *  rendered (#254) and must not write scroll to the incoming key (#267). */
-  private rowsBelongToSelection(): boolean {
-    const rendered = this.renderedSelection;
-    return rendered === null || sameSelection(rendered, this.selection());
-  }
-
-  /**
-   * Jump the list back to the top. Shared by the corner button and by the tap on
-   * the empty middle of the app bar.
-   */
-  scrollToTop(): void {
-    const element = this.rows()?.nativeElement;
-    if (!element) return;
-    // A scroll restore in flight re-asserts its own target every frame; the
-    // user's jump has to win.
-    this.cancelSettle();
-    element.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
-    // Land focus on the title, not wherever the button was — an unmounted button
-    // drops focus to <body>. preventScroll avoids an outer-ancestor scroll, since
-    // `.list-header` sits outside `.rows` and default focus() would trigger one.
-    this.listTitle()?.nativeElement.focus({ preventScroll: true });
-    // Say the bar is expanded now rather than waiting for a scroll event: the
-    // tap expands it immediately instead of ~300ms later, and an interrupted
-    // scroll gesture (wheel/touch — see cancelSettle) may never reach 0 at all.
-    this.collapsed.set(false);
-    // `lastScrollTop` deliberately keeps its pre-jump value — zeroing it would
-    // read the smooth scroll's first event as a large scroll down and re-collapse
-    // the bar. `showToTop` is likewise left to the scroll events (matches article).
-    // Best-effort restore point in case a reload lands before the animation
-    // finishes: `onRowsScroll` overwrites this every frame, so it's a floor for
-    // the reduced-motion/interrupted cases, not a guarantee 0 gets remembered.
-    this.scroll.save(this.selection(), 0);
-  }
-
-  private foldTop(scroller: HTMLElement): number {
-    const header = this.listHdr()?.nativeElement.getBoundingClientRect().bottom ?? 0;
-    return Math.max(scroller.getBoundingClientRect().top, header);
-  }
-
-  private measuredEntries(scroller: HTMLElement): MeasuredEntry[] {
-    return Array.from(scroller.querySelectorAll('[data-entry-id]')).map((node) => ({
-      id: Number(node.getAttribute('data-entry-id')),
-      bottom: node.getBoundingClientRect().bottom,
-    }));
-  }
-
-  private collectAboveFoldIds(): number[] {
-    const scroller = this.rows()?.nativeElement;
-    if (!scroller) return [];
-    const measured = this.measuredEntries(scroller);
-    const above = entriesAboveFold(measured, this.foldTop(scroller));
-    const groups = this.visibleBlocks().filter((block) => block.kind === 'group');
-    const rendered = new Set(measured.map((measurement) => measurement.id));
-    return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
-  }
-
-  private hasEntryAboveFold(scroller: HTMLElement): boolean {
-    const first = scroller.querySelector('[data-entry-id]');
-    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
-  }
-
-  onMarkAboveRead(): void {
-    const ids = this.collectAboveFoldIds();
-    if (ids.length === 0) return;
-    this.markAboveRead.emit(this.withHiddenDuplicates(ids));
-  }
-
-  /** Above-fold ids plus the hidden duplicate copies folded under each row
-   *  (EntryDto.duplicates), which share the row but carry their own state. */
-  private withHiddenDuplicates(ids: number[]): number[] {
-    const byId = new Map(this.entries().map((entry) => [entry.id, entry]));
-    const out: number[] = [];
-    for (const id of ids) {
-      out.push(id);
-      for (const duplicate of byId.get(id)?.duplicates ?? []) out.push(duplicate.id);
-    }
-    return out;
-  }
-
-  /** Freeze & remove: hide the just-marked blocks from the render without
-   *  re-planning, and land the boundary at the top. entries() is untouched, so
-   *  the planner does not re-run and the blocks below keep their positions. */
-  hideAboveMarked(ids: number[]): void {
-    this.cancelSettle();
-    this.hiddenAboveIds.update((current) => new Set([...current, ...ids]));
-    this.collapsed.set(false);
-    this.showToTop.set(false);
-    this.hasAboveFold.set(false);
-    const element = this.rows()?.nativeElement;
-    if (!element) return;
-    this.scroll.save(this.selection(), 0);
-    this.zone.runOutsideAngular(() =>
-      requestAnimationFrame(() => {
-        element.scrollTop = 0;
-        this.lastScrollTop = 0;
-      }),
-    );
-  }
-
-  tagsFor(subscriptionId: number): SubscriptionTagDto[] {
-    return this.feedTags().get(subscriptionId) ?? NO_TAGS;
-  }
-
-  blockKey(block: ListBlock): string {
-    if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
-    return block.kind === 'group'
-      ? `g${block.subscriptionId}:${block.entries[0].id}`
-      : `${block.kind}:${block.entry.id}`;
-  }
-
-  /** Narrow a block to its entry-carrying form for the template. */
-  entryOf(block: MagazineBlock): EntryDto {
-    return (block as Extract<MagazineBlock, { entry: EntryDto }>).entry;
-  }
-
-  /** The entry a recommendation strip should read, or null for a group block
-   *  (which carries several entries and no single reason to show). */
-  strippableEntry(block: MagazineBlock): EntryDto | null {
-    return block.kind === 'group' ? null : block.entry;
-  }
-
-  /** Whether a single-entry magazine block is animating out of the list. A group
-   *  block never leaves as a unit — one of its entries leaving just re-plans the
-   *  widget — so it is never marked leaving. */
-  isBlockLeaving(block: MagazineBlock): boolean {
-    return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
-  }
-
-  side(block: MagazineBlock): 'left' | 'right' {
-    return block.kind === 'split' ? block.imageSide : 'right';
-  }
-
-  grp(block: MagazineBlock): Extract<MagazineBlock, { kind: 'group' }> {
-    return block as Extract<MagazineBlock, { kind: 'group' }>;
-  }
-
-  private readonly rows = viewChild<ElementRef<HTMLElement>>('rows');
-  private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
-  private observer?: IntersectionObserver;
-
-  // (Re)attach pull-to-refresh listeners when the scroll container appears or
-  // swaps; touchmove is non-passive so a pull can preventDefault the overscroll.
-  // Also measures the bar (guarded by `collapsed()`) so the scroller reserves it.
+  // Measures the bar (guarded by `collapsed()`) so the scroller reserves it.
   private readonly _measureHeader = effect(() => {
     const element = this.listHdr()?.nativeElement;
     this.headerObs?.disconnect();
     this.headerObs = undefined;
     if (!element || typeof ResizeObserver === 'undefined') return;
-    const obs = new ResizeObserver(() => {
+    const observer = new ResizeObserver(() => {
       if (!this.collapsed()) this.headerHeight.set(element.offsetHeight);
     });
-    obs.observe(element);
-    this.headerObs = obs;
+    observer.observe(element);
+    this.headerObs = observer;
   });
 
-  private pullCleanup?: () => void;
-  private readonly _wirePull = effect(() => {
-    const element = this.rows()?.nativeElement;
-    this.pullCleanup?.();
-    this.pullCleanup = undefined;
-    if (!element) return;
-    const start = (touchEvent: TouchEvent): void => this.onPullStart(touchEvent, element);
-    const move = (touchEvent: TouchEvent): void => this.onPullMove(touchEvent, element);
-    const end = (): void => this.onPullEnd();
-    element.addEventListener('touchstart', start, { passive: true });
-    element.addEventListener('touchmove', move, { passive: false });
-    element.addEventListener('touchend', end);
-    element.addEventListener('touchcancel', end);
-    this.pullCleanup = () => {
-      element.removeEventListener('touchstart', start);
-      element.removeEventListener('touchmove', move);
-      element.removeEventListener('touchend', end);
-      element.removeEventListener('touchcancel', end);
-    };
+  readonly pull = new PullToRefresh({
+    scroller: this.scroller,
+    enabled: () =>
+      this.canRefresh() && !this.screen.isWide() && !this.reduceMotion && !this.refreshing(),
+    refreshing: this.refreshing,
+    reduceMotion: this.reduceMotion,
+    onTrigger: () => this.refresh.emit(),
   });
 
-  private pullEnabled(): boolean {
-    return this.canRefresh() && !this.screen.isWide() && !this.reduceMotion && !this.refreshing();
-  }
-
-  onPullStart(touchEvent: TouchEvent, element: HTMLElement): void {
-    // Only arm a pull that begins at the very top with a single finger.
-    this.pullTracking =
-      this.pullEnabled() && touchEvent.touches.length === 1 && atTop(element.scrollTop);
-    if (this.pullTracking) this.pullStartY = touchEvent.touches[0].clientY;
-  }
-
-  onPullMove(touchEvent: TouchEvent, element: HTMLElement): void {
-    if (!this.pullTracking || touchEvent.touches.length !== 1) return;
-    const dy = touchEvent.touches[0].clientY - this.pullStartY;
-    // A downward pull that is still anchored at the top rubber-bands the content;
-    // anything else (upward, or the list has since scrolled) releases it and hands
-    // the gesture back to normal scrolling.
-    if (dy <= 0 || !atTop(element.scrollTop)) {
-      if (this.dragging()) this.dragging.set(false);
-      if (this.pulled() !== 0) this.pulled.set(0);
-      return;
-    }
-    this.pulled.set(dy);
-    this.dragging.set(true);
-    touchEvent.preventDefault();
-  }
-
-  onPullEnd(): void {
-    if (!this.pullTracking) return;
-    this.pullTracking = false;
-    const trigger = pullTriggersRefresh(this.pulled());
-    // Drop the drag: revealOffset now follows refreshing(). On an armed release the
-    // emit below flips refreshing() true synchronously (RefreshService.run sets
-    // running immediately, and the shell binds it as a plain signal), so the offset
-    // hands straight off from the pull value to REFRESH_REVEAL with no 0-frame.
-    this.dragging.set(false);
-    this.pulled.set(0);
-    if (trigger) this.refresh.emit();
-  }
-
+  private observer?: IntersectionObserver;
   // Re-observe whenever the sentinel appears/disappears (hasMore toggles it).
   private readonly _wire = effect(() => {
     const node = this.sentinel()?.nativeElement;
@@ -891,99 +296,108 @@ export class EntryListComponent implements OnDestroy {
     }
   });
 
-  // Restore the remembered scroll offset when a fresh load finishes, gated on the
-  // loading edge (true -> false) so it fires once per genuine reload/selection —
-  // never "load more" or an article open/close (list stays mounted, no remount).
-  private wasLoading = false;
-  private readonly _restoreScroll = effect(() => {
-    const loading = this.loading();
-    const element = this.rows()?.nativeElement;
-    if (loading) {
-      this.wasLoading = true;
-      return;
-    }
-    // Wait for the scroll container to render (it only exists once entries show),
-    // then land the user back where they were before the page was reloaded.
-    if (this.wasLoading && element) {
-      this.wasLoading = false;
-      this.hiddenAboveIds.set(new Set());
-      this.renderedSelection = this.selection();
-      this.applyScroll(element, this.scroll.read(this.selection()));
-    }
+  readonly scrolling = new ListScrollState({
+    scroller: this.scroller,
+    selection: this.selection,
+    loading: this.loading,
+    layout: this.layout,
+    reduceMotion: this.reduceMotion,
+    aboveFold: (scroller) => this.hasEntryAboveFold(scroller),
+    onReloaded: () => this.content.clearHidden(),
   });
 
-  /** The selection whose entries are on screen — see rowsBelongToSelection(). */
-  private renderedSelection: Selection | null = null;
+  /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
+  readonly collapsed = this.scrolling.collapsed;
 
-  // A view switch leaves the previous view's list on screen until the new page
-  // lands. Hand the scroller the incoming view's place right away, so the wait
-  // shows that view's window, not the one left. The restore above repeats it.
-  private readonly _scrollOnSelectionChange = effect(() => {
-    const selection = this.selection();
-    untracked(() => {
-      const element = this.rows()?.nativeElement;
-      if (element) this.applyScroll(element, this.scroll.read(selection));
-    });
-  });
+  /** The reveal only makes sense over the real list scroller — the skeleton and
+   *  empty states have no content to slide, so a refresh started from those must
+   *  not paint the tray over them. */
+  readonly revealVisible = computed(
+    () => this.pull.revealOffset() > 0 && !this.loading() && this.entries().length > 0,
+  );
 
-  private applyScroll(element: HTMLElement, top: number): void {
-    this.cancelSettle();
-    // Assign even for 0 — the scroller outlives a view switch (outgoing list
-    // stays rendered, #254), so "no remembered offset" must put it back at the
-    // top rather than leave the previous view's offset in place (#267).
-    element.scrollTop = top; // immediate rough landing so the list never flashes at the top
-    // Seed the hide-on-scroll baseline so the very next scroll compares against
-    // the restored position, not 0.
-    this.lastScrollTop = element.scrollTop;
-    // Only a target below the fold can be nudged off by late layout; the top is
-    // where scroll-anchoring holds content anyway, so it needs no settle window.
-    if (top > 0) this.settleTo(element, top);
+  /** Gates `.rows.magazine.airy`. Style first: computeds track dynamically, so
+   *  a boxed account never takes a dependency on `entries()` at all (#723). */
+  protected readonly isAiryMagazine = computed(
+    () =>
+      this.magazineStyle.style() === 'airy' &&
+      this.effectiveLayout() === 'magazine' &&
+      !(this.loading() && this.entries().length === 0) &&
+      this.content.visibleEntryCount() !== 0,
+  );
+
+  /**
+   * Jump the list back to the top. Shared by the corner button and by the tap on
+   * the empty middle of the app bar.
+   */
+  scrollToTop(): void {
+    if (!this.scrolling.scrollToTop()) return;
+    // Land focus on the title, not wherever the button was — an unmounted button
+    // drops focus to <body>.
+    this.header()?.focusTitle();
   }
 
-  // A resume-reload re-renders the list from scratch; block heights firm up over
-  // the next frames, nudging off a single early scrollTop via scroll-anchoring.
-  // Re-assert each frame until heights stabilize; aborts on a real user scroll.
-  private settleRaf = 0;
-  private settleAbort = false;
-  private settleTo(element: HTMLElement, target: number): void {
-    if (typeof requestAnimationFrame === 'undefined') return;
-    this.settleAbort = false;
-    let frames = 0;
-    let stableFrames = 0;
-    let lastHeight = -1;
-    const step = (): void => {
-      if (this.settleAbort) return;
-      element.scrollTop = target;
-      this.lastScrollTop = element.scrollTop;
-      const height = element.scrollHeight;
-      stableFrames = height === lastHeight ? stableFrames + 1 : 0;
-      lastHeight = height;
-      if (++frames < MAX_SETTLE_FRAMES && stableFrames < SETTLE_STABLE_FRAMES) {
-        this.settleRaf = requestAnimationFrame(step);
-      }
-    };
-    this.settleRaf = requestAnimationFrame(step);
+  onMarkAboveRead(): void {
+    const ids = this.collectAboveFoldIds();
+    if (ids.length === 0) return;
+    this.markAboveRead.emit(withHiddenDuplicates(ids, this.entries()));
   }
 
-  private cancelSettle(): void {
-    this.settleAbort = true;
-    if (this.settleRaf && typeof cancelAnimationFrame !== 'undefined') {
-      cancelAnimationFrame(this.settleRaf);
-    }
-    this.settleRaf = 0;
+  /** Freeze & remove: hide the just-marked blocks from the render without
+   *  re-planning, and land the boundary at the top. entries() is untouched, so
+   *  the planner does not re-run and the blocks below keep their positions. */
+  hideAboveMarked(ids: number[]): void {
+    this.scrolling.cancelSettle();
+    this.content.hide(ids);
+    this.scrolling.landAtTop();
   }
 
-  /** A real scroll gesture during the settle window wins over the restore. */
-  private readonly onUserScrollIntent = (): void => this.cancelSettle();
+  tagsFor(subscriptionId: number): SubscriptionTagDto[] {
+    return this.feedTags().get(subscriptionId) ?? NO_TAGS;
+  }
+
+  blockKey(block: ListBlock): string {
+    if (block.kind === 'run-header') return `run-header:${block.generatedAt}`;
+    return block.kind === 'group'
+      ? `g${block.subscriptionId}:${block.entries[0].id}`
+      : `${block.kind}:${block.entry.id}`;
+  }
+
+  /** The entry a recommendation strip should read, or null for a group block
+   *  (which carries several entries and no single reason to show). */
+  strippableEntry(block: MagazineBlock): EntryDto | null {
+    return block.kind === 'group' ? null : block.entry;
+  }
+
+  /** Whether a single-entry magazine block is animating out of the list. A group
+   *  block never leaves as a unit — one of its entries leaving just re-plans the
+   *  widget — so it is never marked leaving. */
+  isBlockLeaving(block: MagazineBlock): boolean {
+    return block.kind !== 'group' && this.leavingIds().has(block.entry.id);
+  }
 
   ngOnDestroy(): void {
     this.observer?.disconnect();
     this.headerObs?.disconnect();
-    this.pullCleanup?.();
-    this.cancelSettle();
-    this.cancelReveal();
-    const host = this.host.nativeElement;
-    host.removeEventListener('wheel', this.onUserScrollIntent, { capture: true });
-    host.removeEventListener('touchmove', this.onUserScrollIntent, { capture: true });
+  }
+
+  private foldTop(scroller: HTMLElement): number {
+    const header = this.listHdr()?.nativeElement.getBoundingClientRect().bottom ?? 0;
+    return Math.max(scroller.getBoundingClientRect().top, header);
+  }
+
+  private collectAboveFoldIds(): number[] {
+    const scroller = this.rows()?.nativeElement;
+    if (!scroller) return [];
+    const measured = measureEntries(scroller);
+    const above = entriesAboveFold(measured, this.foldTop(scroller));
+    const groups = this.content.visibleBlocks().filter((block) => block.kind === 'group');
+    const rendered = new Set(measured.map((measurement) => measurement.id));
+    return [...above, ...foldedGroupTailsAbove(new Set(above), rendered, groups)];
+  }
+
+  private hasEntryAboveFold(scroller: HTMLElement): boolean {
+    const first = scroller.querySelector('[data-entry-id]');
+    return !!first && first.getBoundingClientRect().bottom <= this.foldTop(scroller);
   }
 }

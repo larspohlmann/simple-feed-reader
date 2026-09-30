@@ -19,7 +19,7 @@ const DIRECT_SEARCH: SplitList = {
   layout: 'magazine',
 };
 
-// The `.heading` flex basis in entry-list.component.scss: 6rem at the 16px root.
+// The `.heading` flex basis in list-header.component.scss: 6rem at the 16px root.
 const TITLE_FLOOR_PX = 96;
 
 interface HeaderGeometry {

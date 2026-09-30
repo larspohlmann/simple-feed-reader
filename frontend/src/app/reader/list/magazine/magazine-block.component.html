@@ -1,0 +1,43 @@
+@let current = block();
+@switch (current.kind) {
+  @case ('hero') {
+    <app-entry-hero [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+  }
+  @case ('wide') {
+    <app-entry-wide [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+  }
+  @case ('quote') {
+    <app-entry-quote [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+  }
+  @case ('split') {
+    <app-entry-split
+      [entry]="entryOf(current)"
+      [imageSide]="side(current)"
+      [tags]="tagsFor(entryOf(current).subscriptionId)"
+    />
+  }
+  @case ('kicker') {
+    <app-entry-kicker
+      [entry]="entryOf(current)"
+      [tags]="tagsFor(entryOf(current).subscriptionId)"
+    />
+  }
+  @case ('thumb') {
+    <app-entry-thumb [entry]="entryOf(current)" [tags]="tagsFor(entryOf(current).subscriptionId)" />
+  }
+  @case ('compact') {
+    <app-entry-compact
+      [entry]="entryOf(current)"
+      [tags]="tagsFor(entryOf(current).subscriptionId)"
+    />
+  }
+  @case ('group') {
+    <app-source-group
+      [source]="group(current).source"
+      [subscriptionId]="group(current).subscriptionId"
+      [entries]="group(current).entries"
+      [previewCount]="group(current).previewCount"
+      [tags]="tagsFor(group(current).subscriptionId)"
+    />
+  }
+}

@@ -5,7 +5,6 @@
    app bar + list header + gap. Was 4 independent copies of this calc
    (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
-$title-floor: 6rem;
 
 /* Tail room so the last row can scroll up clear of the corner buttons. */
 $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
@@ -52,199 +51,14 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
      reintroduces the row jump (#87) this fix removes. It snaps instead. */
 }
 
-/* The basis is the title's floor: past it the tools wrap to a second row
-   (the ResizeObserver re-reserves the taller bar) instead of crushing the title. */
-.heading {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 $title-floor;
-  min-width: 0; /* let the title truncate instead of shoving the tools away */
-}
-
-/* The title's own row: the h2 plus the whole-word badge beside it. The h2
-   shrinks (it truncates), the badge does not — a long title must eat the
-   ellipsis rather than push the badge out of the bar. */
-.title-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-
-  /* Only the search title (below) ever grows past one line; every other title
-     stays ellipsised and never needs the row itself to wrap. */
-  flex-wrap: wrap;
-}
-
-/* A flex line breaks BEFORE its items shrink, so a long feed name pushed the
-   count pill to a second line and grew the bar height the scroller reserves
-   (#87, #419). Held to one line, the h2 gives up width to ellipsis instead (#709). */
-.list-header:not(.is-search) .title-row {
-  flex-wrap: nowrap;
-}
-
-/* Tag glyph, inline before its name, matching the sidebar row. It sits inside
-   the ellipsised h2 on purpose — the clip runs from the end, so the glyph
-   stays put. Margin not flex gap: the h2 must stay plain text for ellipsis. */
-.list-header h2 app-tag-glyph {
-  /* A step wider than it was: the glyph used to be a small marker in front of
-     the name, and at the title's own size it needs room to read as a companion
-     to the word rather than as something stuck to it. */
-  margin-right: var(--space-2);
-
-  /* `vertical-align: middle` sits the glyph low against this heading's larger
-     type (measured 1.73px off at 18px); -0.1em corrects it at any size. A
-     transform not a margin: a margin would grow the line box the scroller reserves. */
-  transform: translateY(-0.1em);
-}
-
-/* Feed favicon, spaced to match the tag glyph above. Keeps its own
-   `vertical-align: middle`; an image box centres cleanly there, so it
-   needs none of the glyph's baseline nudge. */
-.list-header h2 app-favicon {
-  margin-right: var(--space-2);
-}
-
-/* Fixed-view lead icon (All items, Favorites, …), nudged to match the tag
-   glyph above. `> app-icon` (direct child) so it never also reaches the
-   app-icon the tag glyph nests, already nudged once (#411). */
-.list-header h2 > app-icon {
-  margin-right: var(--space-2);
-  transform: translateY(-0.1em);
-}
-
-.list-header h2 {
-  margin: 0;
-  font-size: var(--fs-lg);
-
-  /* A long feed title must truncate rather than shove the Unread/All
-           toggle off-screen (notably on mobile). */
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  /* Not animated either, and for the same reason as the bar's padding above:
-     the type size drives the line box, which drives the bar's height, which is
-     the number the scroller reserves. */
-}
-
-/* The search title alone wraps (#581 follow-up): its "Results for" lead plus
-   term and count run long enough on mobile that ellipsis lost information.
-   Every other title keeps the single-line ellipsis above. */
-.list-header h2.search-title {
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-}
-
-/* Prefix and term share one size, a step down from the h2's `--fs-lg`, so
-   the split reads as one sentence. The prefix's quiet half comes from its
-   muted COLOR, not from being smaller than the term. */
-.results-prefix {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-
-  /* The prefix is two words ("Results for"); left to wrap freely it breaks
-     between them on mobile before the row is full. Only the term should wrap. */
-  white-space: nowrap;
-}
-
-.results-term {
-  font-size: var(--fs-sm);
-}
-
-.compact-search-title-break {
-  display: none;
-}
-
-@container list-header (width <= #{bp.$container-list-header-compact}) {
-  .compact-search-title-break {
-    display: block;
-  }
-}
-
-/* Loaded count as its own quiet chip, not trailing "— {{count}}" text
-   (#581 follow-up). The pill is the global `.count-pill`; only its
-   placement inline after `.results-term`, so it wraps down with it. */
-.results-count {
-  margin-left: var(--space-1);
-}
-
-/* Every other list's own count (#709). Beside the h2, not inside it: the h2
-   ellipsises, so a long feed name would clip the number away. `flex: none`
-   keeps the pill at its text width and leaves truncation to the title. */
-.title-count {
-  flex: none;
-}
-
-/* Shows whole-word/phrase search mode so an accidental trailing space doesn't
-   read as a silently different search (#408). Beside the title, not under it:
-   a second row would raise the bar height the scroller reserves (#419). */
-
-/* The pill itself is the global `.whole-word-badge`/`.phrase-badge` in
-   theme/_utilities.scss; only its behaviour inside this header row belongs
-   here. Both mode pills sit beside the title the same way. */
-.whole-word-badge,
-.phrase-badge {
-  flex: none;
-}
-
-/* "Last refreshed …" hint under a single-feed or for-you title. Shown at
-   every width, but dropped in the narrow header's collapsed state below,
-   so a scrolled-down list keeps a slim bar. */
-.last-refreshed {
-  font-size: var(--fs-xs, var(--fs-sm));
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-// The next-refresh aside sits a step below even the last-refreshed hint it
-// trails; `--text-muted` is the faintest token, so the extra fade is opacity.
-.next-refresh {
-  opacity: 0.7;
-}
-
-/* Narrow layout: as you scroll the list down the header collapses to a slim
-         tag-name-only bar (Unread/All + Mark-all-read drop away), expanding again
-         on scroll up. Wide screens always show the full header. */
+/* Narrow layout: scrolled down, the header collapses to a slim bar; the
+   heading and tools inside step down with it (list-header). */
 @media (width < bp.$bp-lg) {
   .list-header.collapsed {
     padding-top: var(--space-1);
     padding-bottom: var(--space-1);
   }
-
-  .list-header.collapsed h2 {
-    font-size: var(--fs-sm);
-  }
-
-  .list-header.collapsed .tools {
-    display: none;
-  }
-
-  .list-header.collapsed .last-refreshed,
-  .list-header.collapsed .whole-word-badge,
-  .list-header.collapsed .phrase-badge {
-    display: none;
-  }
 }
-
-.tools {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex: none;
-  margin-left: auto;
-}
-
-/* Switch/Mark-all/Refresh share their look with the shell's Edit and
-   Save-search via `app-list-action` (#617). The switch (#602) is a filled
-   circle when unread-filtered; app-icon's `fill` input carries the state. */
-
-/* The Refresh button's in-flight spin lives in the global `_list-action.scss`:
-   it must turn the glyph, not the `app-icon` box that wears the compact-form
-   border, and only a global rule reaches the projected glyph (#698). */
 
 /* Pull-to-refresh reveal tray: parked one --refresh-reveal above the bars,
    drawn down by inline translateY. Offset is measured from the bars, not the
@@ -288,13 +102,6 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
 .pull-indicator.armed .pill {
   color: var(--accent);
   border-color: var(--accent);
-}
-
-/* Bordered icon buttons sit tighter than the text links of the wide header. */
-@container list-header (width <= #{bp.$container-list-header-compact}) {
-  .tools {
-    gap: var(--space-1);
-  }
 }
 
 .rows {
@@ -526,19 +333,6 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
    inside it instead of the message growing an extra gap above. */
 .empty-wrap {
   padding-top: calc(#{$header-clear} + var(--space-6));
-}
-
-.empty {
-  color: var(--text-muted);
-  padding: 0 var(--space-6) var(--space-6);
-  text-align: center;
-
-  a {
-    display: inline-block;
-    margin-top: var(--space-3);
-    color: var(--accent);
-    text-decoration: none;
-  }
 }
 
 /* Overlays the top of the content, just below the floating header, instead of
