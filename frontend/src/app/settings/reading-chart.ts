@@ -1,4 +1,4 @@
-import { ReadingDay } from '../reader/models';
+import { ReadingDay } from './settings.models';
 
 /** The SVG geometry of the reading-activity area chart (#896). `line` and
  *  `area` are paths in the viewBox coordinate space; markers and tooltips are

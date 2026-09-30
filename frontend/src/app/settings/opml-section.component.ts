@@ -3,10 +3,10 @@ import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { downloadOpmlExport } from './opml-export';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { RefreshService } from '../reader/refresh.service';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
-import { OpmlImportResult } from '../reader/models';
+import { OpmlImportResult } from './settings.models';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
@@ -18,7 +18,7 @@ import { SettingsGroupComponent } from '../shared/settings/settings-group/settin
   styleUrl: './opml-section.component.scss',
 })
 export class OpmlSectionComponent {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly subs = inject(SubscriptionsStore);
   private readonly refresh = inject(RefreshService);
 

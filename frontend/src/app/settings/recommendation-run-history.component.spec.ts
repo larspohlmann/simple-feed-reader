@@ -2,14 +2,14 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
 import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { RecommendationsService } from '../reader/recommendations.service';
 import {
   RunHistoryMonth,
   RunHistoryMonthPage,
   RunHistoryOverview,
   RunHistoryRow,
-} from '../reader/models';
+} from './settings.models';
 import { LanguageService } from '../core/language.service';
 import { Lang } from '../core/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
@@ -126,7 +126,7 @@ describe('RecommendationRunHistoryComponent', () => {
     TestBed.configureTestingModule({
       imports: [RecommendationRunHistoryComponent, provideTranslocoTesting()],
       providers: [
-        { provide: ReaderApi, useValue: { runHistory, runHistoryMonth } },
+        { provide: SettingsApi, useValue: { runHistory, runHistoryMonth } },
         { provide: RecommendationsService, useValue: { completedStamp } },
         { provide: LanguageService, useValue: { lang } },
       ],

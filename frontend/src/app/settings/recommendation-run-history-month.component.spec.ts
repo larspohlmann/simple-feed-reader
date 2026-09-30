@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
-import { RunHistoryRow } from '../reader/models';
+import { RunHistoryRow } from './settings.models';
 import { LanguageService } from '../core/language.service';
 import { Lang } from '../core/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';

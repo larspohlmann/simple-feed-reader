@@ -2,14 +2,14 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { WritableSignal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
 import { saveAs } from '../core/save-as';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 
 /** Downloads the account's feeds as feeds.opml, threading loading/error state
  *  through the two signals the caller renders. OpmlSectionComponent's own
  *  export button and BackupSectionComponent's safety-net export both call
  *  this, so the blob shape, filename and error mapping have exactly one home. */
 export function downloadOpmlExport(
-  api: ReaderApi,
+  api: SettingsApi,
   exporting: WritableSignal<boolean>,
   error: WritableSignal<Problem | null>,
 ): void {

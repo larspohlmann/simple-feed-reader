@@ -1,5 +1,5 @@
 import { buildReadingChart } from './reading-chart';
-import { ReadingDay } from '../reader/models';
+import { ReadingDay } from './settings.models';
 
 function days(...counts: number[]): ReadingDay[] {
   return counts.map((count, index) => ({

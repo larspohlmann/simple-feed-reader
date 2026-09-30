@@ -2,8 +2,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, InjectionToken, Signal, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Problem, outcomeIsUnproven, parseProblem } from '../core/problem';
-import { RestoreCounts, RestoreResult } from '../reader/models';
-import { ReaderApi } from '../reader/reader-api';
+import { RestoreCounts, RestoreResult } from './settings.models';
+import { SettingsApi } from './settings-api';
 import { BackupArchive } from './backup-archive';
 import { CLIENT_CHECK_FAILED, restoreErrorProblem } from './backup-problem';
 
@@ -70,7 +70,7 @@ async function withRetry<T>(
  *  clear every field, or state survives a logout into the next run. */
 @Injectable({ providedIn: 'root' })
 export class BackupRestoreRun {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly wait = inject(RESTORE_WAIT);
 
   private readonly progressSignal = signal<{ done: number; total: number } | null>(null);

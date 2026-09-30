@@ -3,9 +3,9 @@ import { signal } from '@angular/core';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { RecommendationsService } from '../reader/recommendations.service';
-import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../reader/models';
+import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from './settings.models';
 
 const BATCH_ENTRY: DebugLogEntry = {
   id: 1,
@@ -145,7 +145,7 @@ describe('RecommendationDebugLogComponent', () => {
     TestBed.configureTestingModule({
       imports: [RecommendationDebugLogComponent, provideTranslocoTesting()],
       providers: [
-        { provide: ReaderApi, useValue: { debugLog, debugLogEntry } },
+        { provide: SettingsApi, useValue: { debugLog, debugLogEntry } },
         { provide: RecommendationsService, useValue: { running, completedStamp } },
       ],
     });

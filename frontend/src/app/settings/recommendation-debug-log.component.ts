@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
-import { ReaderApi } from '../reader/reader-api';
+import { SettingsApi } from './settings-api';
 import { bytesToKb, formatDayInMonth, formatTime } from '../reader/format';
 import { LanguageService } from '../core/language.service';
 import {
@@ -20,7 +20,7 @@ import {
   DebugLogEntry,
   DebugLogRunChoice,
   DebugLogRunSummary,
-} from '../reader/models';
+} from './settings.models';
 import { RecommendationsService } from '../reader/recommendations.service';
 
 const POLL_MS = 2000;
@@ -48,7 +48,7 @@ export interface RunGroup {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RecommendationDebugLogComponent implements OnInit {
-  private readonly api = inject(ReaderApi);
+  private readonly api = inject(SettingsApi);
   private readonly recs = inject(RecommendationsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly language = inject(LanguageService);
