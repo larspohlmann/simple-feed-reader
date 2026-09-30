@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Problem, parseProblem } from '../../core/problem';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
 import { ReaderApi } from '../../reader/reader-api';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 
 export type ContextWindowSource = 'user' | 'provider' | 'fallback';
 

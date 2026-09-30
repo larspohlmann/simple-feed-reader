@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
 import { ReaderApi } from './reader-api';
-import { PAGE_SIZE } from './paging';
+import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
 import { refreshReport } from '../../testing/refresh-report';
 

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { ReaderApi } from '../../reader/reader-api';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 import {
   RecommendationSettingsService,
   RecommendationSettingsState,

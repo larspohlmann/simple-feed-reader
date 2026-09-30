@@ -4,7 +4,7 @@ import { Router, provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
 import { LayoutService } from '../reader/layout.service';
-import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsHubComponent } from './settings-hub.component';
 

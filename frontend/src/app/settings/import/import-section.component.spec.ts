@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { API_BASE_URL } from '../../core/api';
 import { ImportSectionComponent } from './import-section.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 describe('ImportSectionComponent', () => {
   const load = jest.fn();

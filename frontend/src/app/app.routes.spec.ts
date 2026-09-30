@@ -3,7 +3,7 @@ import { hasTranslation } from '../testing/translation-keys';
 import { routes } from './app.routes';
 import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { DYNAMIC_TITLE } from './core/i18n/translated-title.strategy';
-import { readerMatcher } from './reader/reader-matcher';
+import { readerMatcher } from './reader/query/reader-matcher';
 import { setupRedirectGuard } from './setup/setup.guard';
 
 describe('routes', () => {

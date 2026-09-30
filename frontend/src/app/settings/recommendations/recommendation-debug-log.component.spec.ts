@@ -4,7 +4,7 @@ import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { RecommendationDebugLogComponent } from './recommendation-debug-log.component';
 import { SettingsApi } from '../settings-api';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 import { DebugLogDetail, DebugLogEntry, DebugLogRunSummary } from '../settings.models';
 
 const BATCH_ENTRY: DebugLogEntry = {

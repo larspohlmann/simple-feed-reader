@@ -8,7 +8,7 @@ import { ClientErrorReporter } from '../errors/client-error-reporter';
 import { httpMethodOf } from '../errors/client-error-http-method';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
-import { CatalogStore } from '../../reader/catalog/catalog.store';
+import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { AiAvailabilityService } from '../ai-availability.service';
 import { AuthService, CurrentUser } from './auth.service';
 import { ReaderLocationService } from './reader-location.service';

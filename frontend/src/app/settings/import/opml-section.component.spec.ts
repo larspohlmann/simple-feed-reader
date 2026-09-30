@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
 import { OpmlSectionComponent } from './opml-section.component';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { refreshReport } from '../../../testing/refresh-report';
 
 describe('OpmlSectionComponent', () => {

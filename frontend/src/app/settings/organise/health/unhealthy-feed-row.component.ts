@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { feedHealthReason, isGone as feedIsGone } from '../../../reader/feed-health';
+import { feedHealthReason, isGone as feedIsGone } from '../../../reader/feeds/feed-health';
 import { SubscriptionDto } from '../../../reader/models';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';

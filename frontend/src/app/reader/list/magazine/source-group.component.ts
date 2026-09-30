@@ -1,0 +1,47 @@
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { FaviconComponent } from '../../../shared/favicon/favicon.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { EntryCompactComponent } from './blocks/entry-compact/entry-compact.component';
+import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
+import { EntryDto, SubscriptionTagDto } from '../../models';
+import { selectionQueryParams } from '../../query/query';
+
+@Component({
+  selector: 'app-source-group',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    RouterLink,
+    FaviconComponent,
+    IconComponent,
+    EntryCompactComponent,
+    EntryPillsComponent,
+    TranslocoPipe,
+  ],
+  templateUrl: './source-group.component.html',
+  styleUrl: './source-group.component.scss',
+})
+export class SourceGroupComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
+  readonly source = input.required<string>();
+  readonly subscriptionId = input.required<number>();
+  /** The run's whole owned tail. */
+  readonly entries = input.required<EntryDto[]>();
+  /** How many rows to show before the tail is expanded. */
+  readonly previewCount = input.required<number>();
+  readonly tags = input<SubscriptionTagDto[]>([]);
+
+  /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
+   *  article open/close (the list stays mounted), resets on reload/reselect. */
+  readonly expanded = signal(false);
+  readonly visibleEntries = computed(() =>
+    this.expanded() ? this.entries() : this.entries().slice(0, this.previewCount()),
+  );
+  readonly hiddenCount = computed(() => this.entries().length - this.previewCount());
+
+  toggle(): void {
+    this.expanded.update((open) => !open);
+  }
+}

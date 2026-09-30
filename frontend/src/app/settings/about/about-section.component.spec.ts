@@ -6,7 +6,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AboutSectionComponent } from './about-section.component';
 import { ReleaseVersion, VersionService } from '../../core/version.service';
 import { SettingsApi } from '../settings-api';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { SubscriptionDto } from '../../reader/models';
 import { ReadingActivity } from '../settings.models';
 import { buildVersion } from '../../../environments/version';

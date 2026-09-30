@@ -1,11 +1,11 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EntryActionHandler } from '../entry-actions/entry-action-handler';
-import { EntriesStore, localStatePatch } from '../entries.store';
-import { SubscriptionsStore } from '../subscriptions.store';
-import { SavedSearchesStore } from '../saved-searches.store';
-import { Selection } from '../query';
-import { entryParam } from '../slug';
+import { EntryActionHandler } from '../entry/entry-actions/entry-action-handler';
+import { EntriesStore, localStatePatch } from '../state/entries.store';
+import { SubscriptionsStore } from '../state/subscriptions.store';
+import { SavedSearchesStore } from '../state/saved-searches.store';
+import { Selection } from '../query/query';
+import { entryParam } from '../query/slug';
 import { EntryDto, EntryStatePatch } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
 

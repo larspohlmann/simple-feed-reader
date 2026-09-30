@@ -1,13 +1,13 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
-import { SubscriptionsStore } from '../subscriptions.store';
-import { EntriesStore } from '../entries.store';
-import { RecommendationsService } from '../recommendations.service';
-import { SavedSearchesStore } from '../saved-searches.store';
+import { SubscriptionsStore } from '../state/subscriptions.store';
+import { EntriesStore } from '../state/entries.store';
+import { RecommendationsService } from '../state/recommendations.service';
+import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
-import { Selection, visibleSearchTerm } from '../query';
-import { TitleCount } from '../entry-list/entry-list.component';
+import { Selection, visibleSearchTerm } from '../query/query';
+import { TitleCount } from '../list/entry-list/entry-list.component';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()

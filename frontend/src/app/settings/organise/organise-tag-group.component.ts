@@ -6,7 +6,7 @@ import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
-import { ManageActions } from '../../reader/manage/manage-actions.service';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto, isSubscriptionDrag, isTagDrag } from '../../reader/models';

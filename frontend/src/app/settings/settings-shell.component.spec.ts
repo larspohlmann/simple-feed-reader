@@ -7,7 +7,7 @@ import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
 import { ReaderLocationService } from '../core/auth/reader-location.service';
 import { LayoutService } from '../reader/layout.service';
-import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsShellComponent } from './settings-shell.component';
 

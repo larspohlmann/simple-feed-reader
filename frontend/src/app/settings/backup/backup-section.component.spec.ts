@@ -6,8 +6,8 @@ import { API_BASE_URL } from '../../core/api';
 import { BackupArchive, InvalidBackupArchiveError, openBackupArchive } from './backup-archive';
 import { BackupRestoreRun } from './backup-restore-run';
 import { BackupSectionComponent } from './backup-section.component';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
-import { RefreshService } from '../../reader/refresh.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { RefreshService } from '../../reader/state/refresh.service';
 
 jest.mock('./backup-archive', () => ({
   ...jest.requireActual('./backup-archive'),

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth/auth.service';
-import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { IconComponent } from '../shared/icon/icon.component';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SETTINGS_SECTIONS, SettingsSection } from './settings-sections';

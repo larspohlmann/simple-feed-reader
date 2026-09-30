@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { Subject, of, throwError } from 'rxjs';
 import { RecommendationRunHistoryComponent } from './recommendation-run-history.component';
 import { SettingsApi } from '../settings-api';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 import {
   RunHistoryMonth,
   RunHistoryMonthPage,

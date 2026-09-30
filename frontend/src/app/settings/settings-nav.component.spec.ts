@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AuthService } from '../core/auth/auth.service';
-import { SubscriptionsStore } from '../reader/subscriptions.store';
+import { SubscriptionsStore } from '../reader/state/subscriptions.store';
 import { MailHealthStore } from './admin/mail/mail-health.store';
 import { SettingsNavComponent } from './settings-nav.component';
 import { SETTINGS_SECTIONS } from './settings-sections';

@@ -5,7 +5,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { DigestService } from '../../core/preferences/digest.service';
 import { DigestTestMailResult } from '../../core/preferences/digest-writer';
-import { SavedSearchesStore } from '../../reader/saved-searches.store';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { SavedSearchDto } from '../../reader/models';
 import { EmailSectionComponent } from './email-section.component';
 import en from '../../../../public/i18n/en.json';

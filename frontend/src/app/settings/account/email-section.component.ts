@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../../core/auth/auth.service';
 import { DigestService } from '../../core/preferences/digest.service';
 import { DigestTestMailResult } from '../../core/preferences/digest-writer';
-import { SavedSearchesStore } from '../../reader/saved-searches.store';
+import { SavedSearchesStore } from '../../reader/state/saved-searches.store';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';

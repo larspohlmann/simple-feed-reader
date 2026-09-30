@@ -13,7 +13,7 @@ import { HttpLocaleWriter } from '../i18n/http-locale-writer';
 import { PreferencesService } from '../preferences/preferences.service';
 import { DigestService } from '../preferences/digest.service';
 import { AiAvailabilityService } from '../ai-availability.service';
-import { CatalogStore } from '../../reader/catalog/catalog.store';
+import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { ReaderLocationService } from './reader-location.service';
 
 describe('AuthService', () => {

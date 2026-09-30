@@ -5,9 +5,9 @@ import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LanguageService } from '../../../core/i18n/language.service';
-import { ManageActions } from '../../../reader/manage/manage-actions.service';
+import { ManageActions } from '../../../reader/feeds/manage/manage-actions.service';
 import { makeSubscription } from '../../../reader/testing/subscription.factory';
-import { SubscriptionsStore } from '../../../reader/subscriptions.store';
+import { SubscriptionsStore } from '../../../reader/state/subscriptions.store';
 import { SubscriptionDto } from '../../../reader/models';
 import { HealthErrorDialogComponent } from './health-error-dialog.component';
 

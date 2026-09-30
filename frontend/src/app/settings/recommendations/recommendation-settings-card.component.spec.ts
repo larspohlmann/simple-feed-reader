@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 import { RecommendationSettingsCardComponent } from './recommendation-settings-card.component';
 import { RecommendationSettingsState } from './recommendation-settings.service';
 

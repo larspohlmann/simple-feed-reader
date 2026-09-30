@@ -21,7 +21,7 @@ import {
   DebugLogRunChoice,
   DebugLogRunSummary,
 } from '../settings.models';
-import { RecommendationsService } from '../../reader/recommendations.service';
+import { RecommendationsService } from '../../reader/state/recommendations.service';
 
 const POLL_MS = 2000;
 

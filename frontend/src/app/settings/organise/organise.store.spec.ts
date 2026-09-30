@@ -1,8 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { OrganiseStore } from './organise.store';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
-import { TagsStore } from '../../reader/tags.store';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 
