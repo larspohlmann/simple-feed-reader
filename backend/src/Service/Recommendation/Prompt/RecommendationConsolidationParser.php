@@ -50,6 +50,23 @@ final readonly class RecommendationConsolidationParser
     }
 
     /**
+     * A reply the provider cut short, read for the recommendations it finished. The schema puts the duplicates after
+     * them, so none arrived.
+     *
+     * @param list<int> $shownIds
+     */
+    public function parseCutReply(string $content, array $shownIds): ConsolidationParseResultModel
+    {
+        $picks = $this->salvager->salvage($this->decoder->completeItemsOf($content, 'recommendations'), $shownIds);
+
+        if ([] === $picks) {
+            return ConsolidationParseResultModel::unusable();
+        }
+
+        return ConsolidationParseResultModel::usable($picks, []);
+    }
+
+    /**
      * @param list<int> $shownIds
      *
      * @return list<int>

@@ -263,4 +263,27 @@ final class RecommendationConsolidationParserTest extends TestCase
     {
         self::assertFalse($this->parser->parse('{"duplicates":[]}', [5])->usable);
     }
+
+    public function testACutReplyKeepsTheRecommendationsItFinishedAndNamesNoDuplicates(): void
+    {
+        $result = $this->parser->parseCutReply(
+            '{"recommendations":[{"id":5,"score":900,"reason":"On Rust."},{"id":6,"score":300,"reason":"We',
+            [5, 6],
+        );
+
+        self::assertTrue($result->usable);
+        self::assertSame([5], array_map(static fn ($pick) => $pick->entryId, $result->picks));
+        self::assertSame('On Rust.', $result->picks[0]->reason);
+        self::assertSame([], $result->duplicateIds);
+    }
+
+    public function testACutReplyThatFinishedNoShownRecommendationIsUnusable(): void
+    {
+        $result = $this->parser->parseCutReply(
+            '{"recommendations":[{"id":999,"score":900,"reason":"x"},{"id":5,"sc',
+            [5],
+        );
+
+        self::assertFalse($result->usable);
+    }
 }
