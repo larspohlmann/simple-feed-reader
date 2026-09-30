@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { UserDeviceStorage } from '../core/user-device-storage';
+import { UserDeviceStorage } from '../core/preferences/user-device-storage';
 
 const NAME = 'unread-only';
 const LEGACY_DEVICE_KEY = 'sfr.unread-only';

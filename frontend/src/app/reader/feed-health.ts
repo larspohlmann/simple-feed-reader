@@ -1,4 +1,4 @@
-import { pluralKey } from '../core/plural-key';
+import { pluralKey } from '../core/i18n/plural-key';
 import { RefreshReport, SubscriptionDto } from './models';
 
 export interface HealthReason {

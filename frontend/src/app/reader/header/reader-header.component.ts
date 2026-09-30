@@ -20,7 +20,7 @@ import { ProgressHairlineComponent } from '../../shared/progress-hairline/progre
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { ForYouProgressComponent } from '../for-you-progress/for-you-progress.component';
-import { AuthService } from '../../core/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { RefreshService } from '../refresh.service';
 import { LayoutService } from '../layout.service';
 import { TagDto } from '../models';

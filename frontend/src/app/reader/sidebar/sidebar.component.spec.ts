@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
-import { AuthService, CurrentUser } from '../../core/auth.service';
+import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { AiAvailabilityService } from '../../core/ai-availability.service';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';

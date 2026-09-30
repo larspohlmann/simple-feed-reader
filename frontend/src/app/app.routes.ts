@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth.guard';
-import { DYNAMIC_TITLE } from './core/translated-title.strategy';
+import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { DYNAMIC_TITLE } from './core/i18n/translated-title.strategy';
 import { readerMatcher } from './reader/reader-matcher';
 import { requireSetupGuard, setupRedirectGuard } from './setup/setup.guard';
 

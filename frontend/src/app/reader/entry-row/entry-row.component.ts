@@ -15,7 +15,7 @@ import { MarkedTextComponent } from '../../shared/marked-text/marked-text.compon
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { entryImage, entrySnippet } from '../preview-image';
 import { relativeTime } from '../format';

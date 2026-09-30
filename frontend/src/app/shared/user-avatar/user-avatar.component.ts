@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
-import { gravatarUrl, normalizeEmail, sha256Hex } from '../../core/gravatar';
+import { gravatarUrl, normalizeEmail, sha256Hex } from './gravatar';
 
 /**
  * The user's Gravatar when their email has one, falling back to the generic

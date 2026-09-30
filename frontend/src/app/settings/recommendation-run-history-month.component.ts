@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { formatCost, formatDayInMonth, formatDuration, formatTime } from '../reader/format';
 import { RunHistoryRow } from './settings.models';
-import { LanguageService } from '../core/language.service';
-import { pluralKey } from '../core/plural-key';
+import { LanguageService } from '../core/i18n/language.service';
+import { pluralKey } from '../core/i18n/plural-key';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { IconComponent } from '../shared/icon/icon.component';
 import { runHistoryStatusIcon } from './run-history-status-icon';

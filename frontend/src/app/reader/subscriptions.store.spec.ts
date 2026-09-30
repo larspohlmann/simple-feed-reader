@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { TokenStore } from '../core/token.store';
+import { TokenStore } from '../core/auth/token.store';
 import { ReaderApi } from './reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import {

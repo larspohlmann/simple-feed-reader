@@ -7,7 +7,7 @@ import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
 import { AccountSectionComponent } from './account-section.component';
-import { AuthService, CurrentUser } from '../core/auth.service';
+import { AuthService, CurrentUser } from '../core/auth/auth.service';
 
 const user: CurrentUser = {
   id: 1,

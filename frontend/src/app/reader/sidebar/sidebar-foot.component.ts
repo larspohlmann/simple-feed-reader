@@ -4,7 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { BrightnessControlComponent } from './brightness-control.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
-import { AuthService } from '../../core/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { buildVersion } from '../../../environments/version';

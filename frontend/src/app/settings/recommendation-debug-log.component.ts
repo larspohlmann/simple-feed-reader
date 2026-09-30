@@ -14,7 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
 import { SettingsApi } from './settings-api';
 import { bytesToKb, formatDayInMonth, formatTime } from '../reader/format';
-import { LanguageService } from '../core/language.service';
+import { LanguageService } from '../core/i18n/language.service';
 import {
   DebugLogDetail,
   DebugLogEntry,

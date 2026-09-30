@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { UserDeviceStorage } from '../core/user-device-storage';
+import { UserDeviceStorage } from '../core/preferences/user-device-storage';
 import { ListOrder } from './models';
 import { Selection, listOrderKey } from './query';
 

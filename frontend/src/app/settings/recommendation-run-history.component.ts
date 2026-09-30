@@ -18,7 +18,7 @@ import {
   RunHistoryRow,
 } from './settings.models';
 import { RecommendationsService } from '../reader/recommendations.service';
-import { LanguageService } from '../core/language.service';
+import { LanguageService } from '../core/i18n/language.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
 import {

@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { AuthService } from '../core/auth.service';
-import { defaultPasskeyName } from '../core/passkey-device-name';
-import { toEnrolFailureProblem } from '../core/passkey-enrol-failure';
-import { PasskeyService } from '../core/passkey.service';
+import { AuthService } from '../core/auth/auth.service';
+import { defaultPasskeyName } from '../core/auth/passkey-device-name';
+import { toEnrolFailureProblem } from '../core/auth/passkey-enrol-failure';
+import { PasskeyService } from '../core/auth/passkey.service';
 import { Problem } from '../core/problem';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { ButtonComponent } from '../shared/button/button.component';

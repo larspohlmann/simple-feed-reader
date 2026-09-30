@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { WritableSignal } from '@angular/core';
 import { Problem, parseProblem } from '../core/problem';
-import { saveAs } from '../core/save-as';
+import { saveAs } from './backup/save-as';
 import { SettingsApi } from './settings-api';
 
 /** Downloads the account's feeds as feeds.opml, threading loading/error state

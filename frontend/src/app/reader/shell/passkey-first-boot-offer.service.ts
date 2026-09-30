@@ -1,9 +1,9 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Dialog } from '@angular/cdk/dialog';
 import { catchError, of } from 'rxjs';
-import { AuthService } from '../../core/auth.service';
-import { SetupService } from '../../core/setup.service';
-import { isPasskeySupported } from '../../core/webauthn';
+import { AuthService } from '../../core/auth/auth.service';
+import { SetupService } from '../../core/setup/setup.service';
+import { isPasskeySupported } from '../../core/auth/webauthn';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { PasskeyOfferDialogComponent } from '../passkey-offer-dialog.component';
 import { ReaderOnboarding } from './reader-onboarding.service';

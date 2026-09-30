@@ -3,7 +3,7 @@ import { Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
-import { ReaderLocationService } from '../core/reader-location.service';
+import { ReaderLocationService } from '../core/auth/reader-location.service';
 import { ListOrderService } from './list-order.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';

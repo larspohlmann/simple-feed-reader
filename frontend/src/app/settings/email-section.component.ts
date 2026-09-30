@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AuthService } from '../core/auth.service';
-import { DigestService } from '../core/digest.service';
-import { DigestTestMailResult } from '../core/digest-writer';
+import { AuthService } from '../core/auth/auth.service';
+import { DigestService } from '../core/preferences/digest.service';
+import { DigestTestMailResult } from '../core/preferences/digest-writer';
 import { SavedSearchesStore } from '../reader/saved-searches.store';
 import { ButtonComponent } from '../shared/button/button.component';
 import { IconComponent } from '../shared/icon/icon.component';

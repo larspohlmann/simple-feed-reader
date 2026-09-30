@@ -1,5 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../core/auth/session-identity';
 import { ReaderApi } from './reader-api';
 
 /** How many article bodies stay cached at once — one browsing session's worth

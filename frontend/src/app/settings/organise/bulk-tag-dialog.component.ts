@@ -6,7 +6,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { ButtonComponent } from '../../shared/button/button.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SubscriptionDto, TagDto } from '../../reader/models';
-import { pluralKey } from '../../core/plural-key';
+import { pluralKey } from '../../core/i18n/plural-key';
 
 export interface BulkTagDialogData {
   readonly mode: 'add' | 'remove';

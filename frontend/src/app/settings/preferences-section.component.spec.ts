@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { LanguageService } from '../core/language.service';
-import { PreferencesService } from '../core/preferences.service';
+import { LanguageService } from '../core/i18n/language.service';
+import { PreferencesService } from '../core/preferences/preferences.service';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { PreferencesSectionComponent } from './preferences-section.component';
 import en from '../../../public/i18n/en.json';

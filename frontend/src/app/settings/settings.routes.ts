@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from '../core/admin.guard';
+import { adminGuard } from '../core/auth/admin.guard';
 import { sectionLabelKey } from './settings-sections';
 
 /** Children of /settings. Every section is lazy; the admin pair repeats the

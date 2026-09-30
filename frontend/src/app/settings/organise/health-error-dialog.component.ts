@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LanguageService } from '../../core/language.service';
-import { pluralKey } from '../../core/plural-key';
+import { LanguageService } from '../../core/i18n/language.service';
+import { pluralKey } from '../../core/i18n/plural-key';
 import { daysSince, isGone } from '../../reader/feed-health';
 import { formatLongDateTime } from '../../reader/format';
 import { ManageActions } from '../../reader/manage/manage-actions.service';

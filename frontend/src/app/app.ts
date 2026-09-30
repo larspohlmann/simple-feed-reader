@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ErrorBannerComponent } from './shared/error-banner/error-banner.component';
-import { NavigationFailureReporter } from './core/navigation-failure';
+import { NavigationFailureReporter } from './core/errors/navigation-failure';
 
 @Component({
   selector: 'app-root',

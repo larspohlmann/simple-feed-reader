@@ -100,7 +100,7 @@ console.log(unresolved.length ? `CHECK by hand:\n${unresolved.join('\n')}` : 'no
 ### Task 1: core/
 
 Root keeps `api`, `problem`, `ai-availability.service` and `version.service`. Three single-consumer modules move to their consumer:
-- `reader-location.service` → `settings/`
+- `reader-location.service` → `core/auth/` (amended: core/auth's guard, interceptor and service use it, and boundaries forbid core → settings)
 - `gravatar` → `shared/user-avatar/`
 - `save-as` → `settings/backup/`
 
@@ -113,7 +113,7 @@ mods $C $C/errors boot-error-surface client-error-beacon client-error-http-metho
 mods $C $C/i18n boot-language language language.service i18n-dictionaries plural-key transloco-loader translated-title.strategy page-title.service locale-writer http-locale-writer
 mods $C $C/preferences preferences.service preferences-writer http-preferences-writer magazine-style magazine-style.service magazine-style-writer http-magazine-style-writer digest.service digest-writer http-digest-writer reading-focus.service user-device-storage
 mods $C $C/setup setup-api setup.service
-mods $C src/app/settings reader-location.service
+mods $C $C/auth reader-location.service
 mods $C src/app/shared/user-avatar gravatar
 mods $C src/app/settings/backup save-as
 ' > /tmp/moves-core.txt; wc -l < /tmp/moves-core.txt
@@ -125,7 +125,7 @@ mods $C src/app/settings/backup save-as
 
 ### Task 2: settings/ and admin/
 
-- `settings/` root keeps the shell, hub, nav, sections list, routes, api and models, plus `reader-location.service` from Task 1. Each settings section gets a folder.
+- `settings/` root keeps the shell, hub, nav, sections list, routes, api and models, Each settings section gets a folder.
 - `organise/` keeps its page, store and rows; the health views move to `organise/health/`.
 - `admin/` root keeps its api and models.
 
@@ -149,7 +149,7 @@ mods $D $D/catalog admin-catalog.component category-form-dialog.component feed-f
   Expect 109. Then run the script.
 
 - [ ] **Step 2: Verify.**
-  - `ls src/app/settings` shows only `settings-*`, `settings.*` and `reader-location.service*` files, plus the folders `about account admin ai backup import organise preferences recommendations`.
+  - `ls src/app/settings` shows only `settings-*` and `settings.*` files, plus the folders `about account admin ai backup import organise preferences recommendations`.
   - `ls src/app/admin` shows `admin-api.ts`, `admin.models.ts`, `catalog/` and `users/`.
   - The lazy `loadComponent` imports in `settings.routes.ts` point into the new folders.
   - Run format, build and the gate. Commit `refactor(#1314): settings sections and admin pages get folders`.

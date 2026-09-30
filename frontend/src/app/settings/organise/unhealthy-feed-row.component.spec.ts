@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
 

@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
-import { TokenStore } from '../core/token.store';
+import { TokenStore } from '../core/auth/token.store';
 import { EntryBodyService } from './entry-body.service';
 
 describe('EntryBodyService', () => {

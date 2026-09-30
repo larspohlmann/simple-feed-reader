@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, finalize } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
-import { accountSignal, onIdentityChange } from '../core/session-identity';
+import { accountSignal, onIdentityChange } from '../core/auth/session-identity';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
 

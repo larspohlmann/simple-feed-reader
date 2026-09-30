@@ -6,9 +6,9 @@ import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { Subject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { API_BASE_URL } from '../core/api';
-import { AuthService } from '../core/auth.service';
-import { Lang } from '../core/language';
-import { LanguageService } from '../core/language.service';
+import { AuthService } from '../core/auth/auth.service';
+import { Lang } from '../core/i18n/language';
+import { LanguageService } from '../core/i18n/language.service';
 import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
 import { AdminUserDetailComponent } from './admin-user-detail.component';
 

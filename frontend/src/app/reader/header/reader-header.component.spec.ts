@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
-import { AuthService } from '../../core/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { ReaderHeaderComponent } from './reader-header.component';
 import { SearchFieldComponent } from '../search-field/search-field.component';
 import { signal } from '@angular/core';

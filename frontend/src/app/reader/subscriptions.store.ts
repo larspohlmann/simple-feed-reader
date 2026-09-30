@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, WritableSignal, computed, inject, signal } from '@angular/core';
 import { Observable, Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../core/auth/session-identity';
 import { unhealthyFeeds } from './feed-health';
 import { ReaderApi } from './reader-api';
 import { countsAreStale } from './sidebar-freshness';

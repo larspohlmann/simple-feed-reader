@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { relativeTime } from '../format';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 
 /** The run-boundary divider inside the for-you list: a quiet, non-sticky rule
  *  reading "Generated {relative}". One per older run (#348); the newest run's

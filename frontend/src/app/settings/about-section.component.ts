@@ -11,7 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { ReleaseVersion, VersionService } from '../core/version.service';
-import { LanguageService } from '../core/language.service';
+import { LanguageService } from '../core/i18n/language.service';
 import { SettingsApi } from './settings-api';
 import { SubscriptionsStore } from '../reader/subscriptions.store';
 import { ReadingActivity } from './settings.models';

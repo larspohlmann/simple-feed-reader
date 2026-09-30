@@ -1,0 +1,253 @@
+import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { API_BASE_URL } from '../api';
+import { TokenStore } from './token.store';
+import { AuthService, CurrentUser } from './auth.service';
+import { LanguageService } from '../i18n/language.service';
+import { LOCALE_WRITER } from '../i18n/locale-writer';
+import { HttpLocaleWriter } from '../i18n/http-locale-writer';
+import { PreferencesService } from '../preferences/preferences.service';
+import { DigestService } from '../preferences/digest.service';
+import { AiAvailabilityService } from '../ai-availability.service';
+import { CatalogStore } from '../../reader/catalog/catalog.store';
+import { ReaderLocationService } from './reader-location.service';
+
+describe('AuthService', () => {
+  let service: AuthService;
+  let ctrl: HttpTestingController;
+  let tokens: TokenStore;
+  let events: Subject<unknown>;
+  const navigate = jest.fn();
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    events = new Subject<unknown>();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: Router, useValue: { events, navigate } },
+        // Wire the real, HttpClient-backed writer rather than LOCALE_WRITER's
+        // no-op default: the "no write-through on adopt" test below needs an
+        // actual PATCH to *not* happen, which only the real writer can prove.
+        { provide: LOCALE_WRITER, useExisting: HttpLocaleWriter },
+      ],
+    });
+    service = TestBed.inject(AuthService);
+    ctrl = TestBed.inject(HttpTestingController);
+    tokens = TestBed.inject(TokenStore);
+  });
+  afterEach(() => ctrl.verify());
+
+  // A minimal /api/me body for the two tests below, which care only about
+  // the passkey-offer flag, not the rest of the account shape loadMe() above
+  // already exercises in full.
+  function meFixture(preferences: { passkeyOfferAnswered: boolean }) {
+    return {
+      id: 1,
+      email: 'a@b.c',
+      roles: ['ROLE_USER'],
+      status: 'active',
+      createdAt: '2026-07-01T00:00:00+00:00',
+      locale: 'en',
+      trialEndsAt: null,
+      preferences: {
+        scrapeFallbackEnabled: false,
+        digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
+        ...preferences,
+      },
+      ai: { ready: false, model: null },
+      mail: { enabled: true },
+      emailVerified: true,
+    };
+  }
+
+  it('login stores the returned JWT', () => {
+    service.login('a@b.c', 'password12345').subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/auth/login');
+    expect(testRequest.request.body).toEqual({ email: 'a@b.c', password: 'password12345' });
+    testRequest.flush({ token: 'jwt-xyz' });
+    expect(tokens.token()).toBe('jwt-xyz');
+  });
+
+  it('loadMe populates the current-user signal and adopts the account locale, without writing it back', () => {
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush({
+      id: 1,
+      email: 'a@b.c',
+      roles: ['ROLE_USER'],
+      status: 'active',
+      createdAt: '2026-07-01T00:00:00+00:00',
+      locale: 'de',
+      preferences: {
+        scrapeFallbackEnabled: false,
+        digest: {
+          enabled: true,
+          cadence: 'weekly',
+          sendHour: 20,
+          weekday: 5,
+          timezone: 'Europe/Berlin',
+        },
+        passkeyOfferAnswered: true,
+      },
+      ai: { ready: true, model: 'gpt-4o' },
+      mail: { enabled: true },
+      emailVerified: true,
+    });
+
+    expect(service.user()?.email).toBe('a@b.c');
+    expect(TestBed.inject(AiAvailabilityService).ready()).toBe(true);
+    expect(TestBed.inject(AiAvailabilityService).model()).toBe('gpt-4o');
+    // The one place the account's locale is adopted into the UI.
+    expect(TestBed.inject(LanguageService).lang()).toBe('de');
+    const digest = TestBed.inject(DigestService);
+    expect(digest.enabled()).toBe(true);
+    expect(digest.cadence()).toBe('weekly');
+    expect(digest.sendHour()).toBe(20);
+    expect(digest.weekday()).toBe(5);
+    expect(digest.timezone()).toBe('Europe/Berlin');
+    // A value that just arrived from the server must never be PATCHed
+    // straight back to it.
+    ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });
+  });
+
+  it('loadMe records a failed account load, and a later success clears it', () => {
+    service.loadMe().subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    expect(service.accountLoadFailed()).toBe(true);
+
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+    expect(service.accountLoadFailed()).toBe(false);
+  });
+
+  it('logout forgets a failed account load', () => {
+    service.loadMe().subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+
+    service.logout();
+
+    expect(service.accountLoadFailed()).toBe(false);
+  });
+
+  it('logout clears token and user and routes to /login', () => {
+    tokens.set('jwt');
+    service.logout();
+    expect(tokens.token()).toBeNull();
+    expect(service.user()).toBeNull();
+    expect(navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('logout clears the pending sign-in destination but keeps the saved reader URL', () => {
+    const location = TestBed.inject(ReaderLocationService);
+    events.next(new NavigationEnd(1, '/?tag=17', '/?tag=17&entry=42-example#comments'));
+    location.rememberSavedReaderUrlForSignIn();
+
+    service.logout();
+
+    expect(location.savedReaderUrl()).toBe('/?tag=17&entry=42-example#comments');
+    expect(location.consumeSignInReturnUrl()).toBe('/');
+  });
+
+  it('logout resets the cached preferences, so the next account never sees a stale toggle', () => {
+    const preferences = TestBed.inject(PreferencesService);
+    preferences.setScrapeFallbackEnabled(true);
+    expect(preferences.scrapeFallbackEnabled()).toBe(true);
+
+    service.logout();
+
+    expect(preferences.scrapeFallbackEnabled()).toBe(false);
+  });
+
+  it('logout resets the cached digest settings, so the next account never sees a stale one', () => {
+    const digest = TestBed.inject(DigestService);
+    digest.setEnabled(true);
+    expect(digest.enabled()).toBe(true);
+
+    service.logout();
+
+    expect(digest.enabled()).toBe(false);
+  });
+
+  it('logout drops AI availability, so the next account never inherits it', () => {
+    const ai = TestBed.inject(AiAvailabilityService);
+    ai.adopt({ ai: { ready: true, model: 'gpt-4o' } } as CurrentUser);
+    expect(ai.ready()).toBe(true);
+
+    service.logout();
+
+    expect(ai.ready()).toBe(false);
+    expect(ai.model()).toBeNull();
+  });
+
+  it('answerPasskeyOffer posts the answer and marks the local user answered on success', () => {
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
+
+    service.answerPasskeyOffer().subscribe();
+    const testRequest = ctrl.expectOne('https://api.test/api/me/passkey-offer/answer');
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush(null);
+
+    expect(service.user()?.preferences.passkeyOfferAnswered).toBe(true);
+  });
+
+  it('markPasskeyOfferAnswered flips the local flag without any request', () => {
+    service.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: false }));
+
+    service.markPasskeyOfferAnswered();
+
+    expect(service.user()?.preferences.passkeyOfferAnswered).toBe(true);
+    ctrl.expectNone('https://api.test/api/me/passkey-offer/answer');
+  });
+
+  // Driven through the real logout() rather than through TokenStore, because
+  // the wiring under test IS "logout clears the token, and the token is what
+  // voids per-user caches" (#263).
+  it('logout voids the cached catalog, so the next account never sees its subscribed marks', () => {
+    tokens.set('jwt');
+    const catalog = TestBed.inject(CatalogStore);
+
+    catalog.load();
+    ctrl.expectOne('https://api.test/api/catalog').flush({
+      categories: [
+        {
+          id: 1,
+          key: 'technology',
+          name: 'Technology',
+          icon: 'memory',
+          color: '#3b82f6',
+          feeds: [
+            {
+              id: 10,
+              title: 'The Verge',
+              description: null,
+              siteUrl: null,
+              faviconUrl: '/f/10',
+              subscribed: true,
+            },
+          ],
+        },
+      ],
+    });
+    expect(catalog.resolved()).toBe(true);
+
+    service.logout();
+    TestBed.tick();
+
+    expect(catalog.resolved()).toBe(false);
+    expect(catalog.categories()).toEqual([]);
+  });
+});

@@ -7,7 +7,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime } from '../../reader/format';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 

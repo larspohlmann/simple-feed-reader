@@ -16,7 +16,7 @@ import { TagsStore } from '../../reader/tags.store';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 import { makeSubscription } from '../../reader/testing/subscription.factory';
 

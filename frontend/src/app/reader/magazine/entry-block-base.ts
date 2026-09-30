@@ -3,7 +3,7 @@ import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { relativeTime } from '../format';
 import { entrySnippet } from '../preview-image';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 
 /** The signal inputs/outputs every magazine block shares, whether or not it
  *  renders an image. The `@Directive()` decorator is required — without it

@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { AccountIdentity } from '../core/account-identity';
+import { AccountIdentity } from '../core/auth/account-identity';
 import { ListOrderService } from './list-order.service';
 import { Selection, withListOrder, withUnreadPreference } from './query';
 import { UnreadFilterService } from './unread-filter.service';

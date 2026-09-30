@@ -11,7 +11,7 @@ import { EntryBodyService, EntryBodyState } from '../entry-body.service';
 import { entryScrollKey } from '../list-scroll-memory';
 import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models';
 import { ReaderModeService } from '../reader-mode.service';
-import { ReadingFocusService } from '../../core/reading-focus.service';
+import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 import { CommentsService, CommentsState } from '../comments.service';
 import { ImageProxyService, ProxyOutcome } from '../../shared/proxied-image/image-proxy.service';

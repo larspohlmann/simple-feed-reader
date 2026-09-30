@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { AUDIO_ELEMENT_FACTORY, AudioPlayerService, AudioTrack } from './audio-player.service';
-import { TokenStore } from '../core/token.store';
+import { TokenStore } from '../core/auth/token.store';
 
 class FakeAudio {
   src = '';

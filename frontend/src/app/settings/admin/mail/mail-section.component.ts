@@ -9,7 +9,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { LanguageService } from '../../../core/language.service';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { formatLongDateTime } from '../../../reader/format';
 import { ButtonComponent } from '../../../shared/button/button.component';
 import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';

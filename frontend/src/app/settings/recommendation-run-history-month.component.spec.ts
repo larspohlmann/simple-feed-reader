@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { RecommendationRunHistoryMonthComponent } from './recommendation-run-history-month.component';
 import { RunHistoryRow } from './settings.models';
-import { LanguageService } from '../core/language.service';
-import { Lang } from '../core/language';
+import { LanguageService } from '../core/i18n/language.service';
+import { Lang } from '../core/i18n/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 
 const PRICED_RUN: RunHistoryRow = {

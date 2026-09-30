@@ -11,9 +11,9 @@ import { REVEAL_STEP, prefetchMargin } from '../paging';
 import { EntryDto, ListOrder, SubscriptionDto } from '../models';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { MagazineBlock } from '../magazine/magazine-block';
-import { ReadingFocusService } from '../../core/reading-focus.service';
-import { MagazineStyleService } from '../../core/magazine-style.service';
-import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
+import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
+import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
+import { MAGAZINE_STYLE_WRITER } from '../../core/preferences/magazine-style-writer';
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];

@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EntryDto } from '../models';
 import { relativeTime, relativeTimeNarrow } from '../format';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { selectionQueryParams } from '../query';
 

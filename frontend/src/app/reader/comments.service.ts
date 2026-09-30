@@ -1,6 +1,6 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
 import { catchError, of } from 'rxjs';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../core/auth/session-identity';
 import { CommentsResponse, EntryCommentDto } from './models';
 import { ReaderApi } from './reader-api';
 

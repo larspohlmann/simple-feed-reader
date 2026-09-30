@@ -16,7 +16,7 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
 import { SkeletonComponent } from '../../shared/skeleton/skeleton.component';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { CommentsService } from '../comments.service';
 import { relativeTime } from '../format';
 import { EntryDto } from '../models';

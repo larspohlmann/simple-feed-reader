@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { MAGAZINE_STYLE_WRITER } from '../../core/magazine-style-writer';
-import { MagazineStyleService } from '../../core/magazine-style.service';
+import { MAGAZINE_STYLE_WRITER } from '../../core/preferences/magazine-style-writer';
+import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { ThemeService } from '../../theme/theme.service';
 import { ViewControlsComponent } from './view-controls.component';

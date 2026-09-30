@@ -21,7 +21,7 @@ import { SettingsSaveBarComponent } from '../shared/settings/save-bar/save-bar.c
 import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../shared/toggle/toggle.component';
 import { toastOnSaved } from '../shared/toast/saved-toast';
-import { LanguageService } from '../core/language.service';
+import { LanguageService } from '../core/i18n/language.service';
 import { formatInteger } from '../reader/format';
 import {
   RecommendationSettingsService,

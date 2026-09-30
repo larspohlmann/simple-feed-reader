@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { TokenStore } from '../../core/token.store';
+import { TokenStore } from '../../core/auth/token.store';
 import { OnboardingSkip } from './onboarding-skip';
 
 describe('OnboardingSkip', () => {

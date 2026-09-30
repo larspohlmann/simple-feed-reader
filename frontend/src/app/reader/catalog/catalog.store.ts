@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
-import { onIdentityChange } from '../../core/session-identity';
+import { onIdentityChange } from '../../core/auth/session-identity';
 import { CatalogApi } from './catalog-api';
 import { CatalogCategoryDto } from './catalog.models';
 

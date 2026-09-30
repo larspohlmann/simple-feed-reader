@@ -3,9 +3,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthApi } from '../auth-api';
-import { AuthService } from '../../core/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { parseProblem } from '../../core/problem';
-import { TokenStore } from '../../core/token.store';
+import { TokenStore } from '../../core/auth/token.store';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 

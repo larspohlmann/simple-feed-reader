@@ -6,9 +6,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../core/api';
-import { AuthService } from '../core/auth.service';
-import { Lang } from '../core/language';
-import { LanguageService } from '../core/language.service';
+import { AuthService } from '../core/auth/auth.service';
+import { Lang } from '../core/i18n/language';
+import { LanguageService } from '../core/i18n/language.service';
 import { AdminUsersComponent } from './admin-users.component';
 import { AdminUserDto } from './admin.models';
 

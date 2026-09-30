@@ -8,7 +8,7 @@ import { OrganiseGroup, OrganiseStore } from './organise.store';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionDto, TagDto, isSubscriptionDrag, isTagDrag } from '../../reader/models';
 
 /** One tag panel: a header row, and -- when open -- its feeds.

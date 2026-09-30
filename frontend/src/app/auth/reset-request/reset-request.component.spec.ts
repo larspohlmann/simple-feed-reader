@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
 import { ResetRequestComponent } from './reset-request.component';
 import * as altcha from '../altcha';
-import { SetupService } from '../../core/setup.service';
+import { SetupService } from '../../core/setup/setup.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('ResetRequestComponent', () => {

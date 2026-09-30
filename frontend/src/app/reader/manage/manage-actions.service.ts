@@ -20,7 +20,7 @@ import { ToastService, CONFIRMATION_DURATION_MS } from '../../shared/toast/toast
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { TagFormDialogComponent } from './tag-form-dialog.component';
 import { AddFeedDialogComponent } from '../add-feed/add-feed-dialog.component';
-import { pluralKey } from '../../core/plural-key';
+import { pluralKey } from '../../core/i18n/plural-key';
 
 /** The most feed titles a bulk confirmation names before it says "and N more".
  *  Five is enough to recognise the selection and short enough to read. */

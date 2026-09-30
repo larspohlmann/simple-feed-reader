@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
-import { AuthService, CurrentUser } from '../../core/auth.service';
+import { AuthService, CurrentUser } from '../../core/auth/auth.service';
 import { VersionService } from '../../core/version.service';
 import { LayoutService } from '../layout.service';
 import { SidebarFootComponent } from './sidebar-foot.component';

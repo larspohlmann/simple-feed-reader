@@ -3,8 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { AuthService } from '../core/auth.service';
-import { TokenStore } from '../core/token.store';
+import { AuthService } from '../core/auth/auth.service';
+import { TokenStore } from '../core/auth/token.store';
 import { parseProblem } from '../core/problem';
 import { adoptAutofilledValues } from '../auth/autofill';
 import { AuthShellComponent } from '../auth/auth-shell/auth-shell.component';
@@ -12,8 +12,8 @@ import { ButtonComponent } from '../shared/button/button.component';
 import { FormErrorComponent } from '../shared/form-error/form-error.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { PasswordInputComponent } from '../shared/password-input/password-input.component';
-import { SetupApi } from '../core/setup-api';
-import { SetupService } from '../core/setup.service';
+import { SetupApi } from '../core/setup/setup-api';
+import { SetupService } from '../core/setup/setup.service';
 
 @Component({
   selector: 'app-setup',

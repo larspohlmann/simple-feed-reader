@@ -1,7 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
-import { LanguageService } from '../../../core/language.service';
+import { LanguageService } from '../../../core/i18n/language.service';
 import { relativeTime } from '../../format';
 import { FeedPreviewItem } from '../../models';
 

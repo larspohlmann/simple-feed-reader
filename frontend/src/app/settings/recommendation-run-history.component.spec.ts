@@ -10,8 +10,8 @@ import {
   RunHistoryOverview,
   RunHistoryRow,
 } from './settings.models';
-import { LanguageService } from '../core/language.service';
-import { Lang } from '../core/language';
+import { LanguageService } from '../core/i18n/language.service';
+import { Lang } from '../core/i18n/language';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 
 const BROWSER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;

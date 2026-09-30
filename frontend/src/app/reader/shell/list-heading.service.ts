@@ -1,6 +1,6 @@
 import { Injectable, computed, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { SubscriptionsStore } from '../subscriptions.store';
 import { EntriesStore } from '../entries.store';
 import { RecommendationsService } from '../recommendations.service';

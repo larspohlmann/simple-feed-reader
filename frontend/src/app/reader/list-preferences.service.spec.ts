@@ -1,6 +1,6 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AuthService } from '../core/auth.service';
+import { AuthService } from '../core/auth/auth.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { UnreadFilterService } from './unread-filter.service';

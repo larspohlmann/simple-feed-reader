@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, NgZone, inject } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../core/auth/session-identity';
 import { SavedSearchesStore } from './saved-searches.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
 import { SubscriptionsStore } from './subscriptions.store';

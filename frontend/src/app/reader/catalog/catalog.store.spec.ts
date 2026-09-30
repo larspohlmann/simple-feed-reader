@@ -2,7 +2,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { API_BASE_URL } from '../../core/api';
-import { TokenStore } from '../../core/token.store';
+import { TokenStore } from '../../core/auth/token.store';
 import { CatalogStore } from './catalog.store';
 
 const WITH_FEEDS = {

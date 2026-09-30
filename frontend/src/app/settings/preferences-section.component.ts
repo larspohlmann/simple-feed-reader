@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LANGS } from '../core/language';
-import { LanguageService } from '../core/language.service';
-import { MAGAZINE_STYLES } from '../core/magazine-style';
-import { MagazineStyleService } from '../core/magazine-style.service';
-import { PreferencesService } from '../core/preferences.service';
-import { ReadingFocusService } from '../core/reading-focus.service';
+import { LANGS } from '../core/i18n/language';
+import { LanguageService } from '../core/i18n/language.service';
+import { MAGAZINE_STYLES } from '../core/preferences/magazine-style';
+import { MagazineStyleService } from '../core/preferences/magazine-style.service';
+import { PreferencesService } from '../core/preferences/preferences.service';
+import { ReadingFocusService } from '../core/preferences/reading-focus.service';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { SegmentedChoiceComponent } from '../shared/segmented-choice/segmented-choice.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';

@@ -47,7 +47,7 @@ import { EntryBodyService } from '../entry-body.service';
 import { ReaderContentService } from '../reader-content.service';
 import { describeLoadError } from '../reader-load-error';
 import { ReaderModeService } from '../reader-mode.service';
-import { LanguageService } from '../../core/language.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { LayoutService } from '../layout.service';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
@@ -74,7 +74,7 @@ import { expandFaqDisclosures } from '../reader-faq';
 import { hydrateSlideshows } from '../reader-slideshow';
 import { estimateReadingMinutes } from '../reading-time';
 import { selectionQueryParams } from '../query';
-import { ReadingFocusService } from '../../core/reading-focus.service';
+import { ReadingFocusService } from '../../core/preferences/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from '../audio-attachment';
 

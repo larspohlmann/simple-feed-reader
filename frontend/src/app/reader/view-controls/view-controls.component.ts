@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { MagazineStyle } from '../../core/magazine-style';
-import { MagazineStyleService } from '../../core/magazine-style.service';
+import { MagazineStyle } from '../../core/preferences/magazine-style';
+import { MagazineStyleService } from '../../core/preferences/magazine-style.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ThemeService } from '../../theme/theme.service';
 import { ThemeMode } from '../../theme/themes/registry';
