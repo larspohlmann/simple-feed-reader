@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\MailSendingSettings;
 
 use App\Enum\MailEncryption;
+use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\MailSendingSettings\EffectiveMailSettings;
+use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\MailSettings;
 use App\Tests\Support\ConfiguresAProxy;
@@ -44,6 +46,23 @@ final class EffectiveMailSettingsTest extends KernelTestCase
         );
 
         self::assertTrue($this->effective()->isSendingEnabled());
+    }
+
+    public function testTheFallbackSwitchIgnoresASavedMailServer(): void
+    {
+        $this->settings()->update(
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', password: 'p')->toUpdate(),
+        );
+        $fallbackOnly = new EffectiveMailSettings(
+            self::getContainer()->get(MailServerSettingsRepository::class),
+            self::getContainer()->get(MailPasswordCipher::class),
+            self::getContainer()->get(MailFallback::class),
+            fallbackOverridesStoredTransport: true,
+        );
+
+        self::assertNull($fallbackOnly->configuredTransport());
+        self::assertTrue($fallbackOnly->isSendingEnabled());
+        self::assertNotNull($this->effective()->configuredTransport());
     }
 
     public function testTheConfiguredTransportCarriesEveryFieldAndTheOpenedPassword(): void

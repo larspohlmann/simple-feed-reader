@@ -25,12 +25,15 @@ const FIXTURE_COMMANDS: readonly string[][] = [
   ['app:e2e:seed-admin-subscription'],
 ];
 
-export default function globalSetup(): void {
+const API_BASE_URL = process.env['E2E_BASE_URL'] ?? 'https://localhost:8443';
+
+export default function globalSetup(): (() => void) | undefined {
   const repoRoot = resolve(__dirname, '..', '..');
   const composeFile = resolve(repoRoot, 'docker-compose.yml');
   const preflightScript = resolve(repoRoot, 'backend', 'bin', 'e2e-preflight.sh');
 
   assertStackOwnsCheckout(preflightScript, repoRoot);
+  const restoreMailTransport = sendMailToMailpit(repoRoot);
 
   for (const consoleArgs of FIXTURE_COMMANDS) {
     try {
@@ -45,6 +48,46 @@ export default function globalSetup(): void {
         `[global-setup] Skipping e2e fixture step "${consoleArgs.join(' ')}": ${reason}`,
       );
     }
+  }
+
+  return restoreMailTransport;
+}
+
+// #1287: the app mails through the admin's saved mail server; the run switches it to Mailpit and
+// back. Exit 2 (no Docker, no stack) stays best-effort; exit 1 means the switch failed, so no
+// spec runs.
+function sendMailToMailpit(repoRoot: string): (() => void) | undefined {
+  const script = resolve(repoRoot, 'backend', 'bin', 'e2e-mail-fallback.sh');
+  let outcome: string;
+  try {
+    outcome = execFileSync('bash', [script, 'force', repoRoot, API_BASE_URL], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'inherit'],
+    }).trim();
+  } catch (error) {
+    if ((error as { status?: number }).status !== 2) {
+      throw error;
+    }
+    if (stackAnswers()) {
+      throw new Error('The stack is up but its mail could not be switched to Mailpit.');
+    }
+    console.warn('[global-setup] No running stack; mail transport left as it is.');
+    return undefined;
+  }
+  if (outcome !== 'forced') {
+    return undefined;
+  }
+  return () => {
+    execFileSync('bash', [script, 'restore', repoRoot, API_BASE_URL], { stdio: 'inherit' });
+  };
+}
+
+function stackAnswers(): boolean {
+  try {
+    execFileSync('curl', ['-fsS', '-o', '/dev/null', `${API_BASE_URL}/api/health`]);
+    return true;
+  } catch {
+    return false;
   }
 }
 
