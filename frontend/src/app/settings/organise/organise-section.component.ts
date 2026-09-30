@@ -23,9 +23,12 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
-import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
+import { UnhealthyFeedRowComponent } from './health/unhealthy-feed-row.component';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
-import { HealthErrorDialogComponent, HealthErrorData } from './health-error-dialog.component';
+import {
+  HealthErrorDialogComponent,
+  HealthErrorData,
+} from './health/health-error-dialog.component';
 import { ManageActions } from '../../reader/manage/manage-actions.service';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';

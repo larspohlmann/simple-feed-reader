@@ -30,13 +30,15 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'import',
         title: sectionLabelKey('import'),
         loadComponent: () =>
-          import('./import-section.component').then((module) => module.ImportSectionComponent),
+          import('./import/import-section.component').then(
+            (module) => module.ImportSectionComponent,
+          ),
       },
       {
         path: 'preferences',
         title: sectionLabelKey('preferences'),
         loadComponent: () =>
-          import('./preferences-section.component').then(
+          import('./preferences/preferences-section.component').then(
             (module) => module.PreferencesSectionComponent,
           ),
       },
@@ -44,39 +46,45 @@ export const SETTINGS_ROUTES: Routes = [
         path: 'email',
         title: sectionLabelKey('email'),
         loadComponent: () =>
-          import('./email-section.component').then((module) => module.EmailSectionComponent),
+          import('./account/email-section.component').then(
+            (module) => module.EmailSectionComponent,
+          ),
       },
       {
         path: 'account',
         title: sectionLabelKey('account'),
         loadComponent: () =>
-          import('./account-section.component').then((module) => module.AccountSectionComponent),
+          import('./account/account-section.component').then(
+            (module) => module.AccountSectionComponent,
+          ),
       },
       {
         path: 'ai',
         title: sectionLabelKey('ai'),
         loadComponent: () =>
-          import('./ai-section.component').then((module) => module.AiSectionComponent),
+          import('./ai/ai-section.component').then((module) => module.AiSectionComponent),
       },
       {
         path: 'about',
         title: sectionLabelKey('about'),
         loadComponent: () =>
-          import('./about-section.component').then((module) => module.AboutSectionComponent),
+          import('./about/about-section.component').then((module) => module.AboutSectionComponent),
       },
       {
         path: 'admin/users',
         title: sectionLabelKey('admin/users'),
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('../admin/admin-users.component').then((module) => module.AdminUsersComponent),
+          import('../admin/users/admin-users.component').then(
+            (module) => module.AdminUsersComponent,
+          ),
       },
       {
         path: 'admin/users/:id',
         title: 'admin.detail.title',
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('../admin/admin-user-detail.component').then(
+          import('../admin/users/admin-user-detail.component').then(
             (module) => module.AdminUserDetailComponent,
           ),
       },
@@ -85,7 +93,9 @@ export const SETTINGS_ROUTES: Routes = [
         title: sectionLabelKey('admin/catalog'),
         canActivate: [adminGuard],
         loadComponent: () =>
-          import('../admin/admin-catalog.component').then((module) => module.AdminCatalogComponent),
+          import('../admin/catalog/admin-catalog.component').then(
+            (module) => module.AdminCatalogComponent,
+          ),
       },
       {
         path: 'admin/settings',

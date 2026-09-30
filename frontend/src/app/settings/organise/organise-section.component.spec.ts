@@ -9,7 +9,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { OrganiseSectionComponent } from './organise-section.component';
 import { OrganiseStore } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
-import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
+import { UnhealthyFeedRowComponent } from './health/unhealthy-feed-row.component';
 import { SubscriptionsStore } from '../../reader/subscriptions.store';
 import { unhealthyFeeds } from '../../reader/feed-health';
 import { TagsStore } from '../../reader/tags.store';

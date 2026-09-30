@@ -1,0 +1,145 @@
+@use '../../theme/breakpoints' as bp;
+
+// `.state` (base styling in theme/_utilities.scss) marks panel-level blocks;
+// `.users`/`.pad` take their inset in their own rules below instead, since
+// each needs a different padding shape. This adds only the gap before them.
+.state {
+  margin-bottom: var(--space-4);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.filters button {
+  padding: var(--row-pad-y) var(--row-pad-x);
+  font-size: var(--fs-sm);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.filters button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.users {
+  list-style: none;
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.users li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--row-pad-comfy-y) var(--row-pad-comfy-x);
+  border-bottom: 1px solid var(--border);
+}
+
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.email-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.footprint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+a.email {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+a.email:hover .email-text {
+  text-decoration: underline;
+}
+
+.chev {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+}
+
+.badge[data-s='active'] {
+  background: var(--bg-success);
+  color: var(--success);
+}
+
+.badge[data-s='suspended'],
+.badge[data-s='rejected'] {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.trial-expired {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.acts {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+@media (width <= bp.$bp-sm) {
+  .users li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .acts {
+    justify-content: flex-end;
+  }
+}
+
+.pad {
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  text-align: center;
+}
+
+.muted {
+  color: var(--text-muted);
+}

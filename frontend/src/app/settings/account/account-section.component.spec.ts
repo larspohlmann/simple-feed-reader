@@ -1,0 +1,198 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { Dialog } from '@angular/cdk/dialog';
+import { Router, provideRouter } from '@angular/router';
+import { Subject, of } from 'rxjs';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { API_BASE_URL } from '../../core/api';
+import { AccountSectionComponent } from './account-section.component';
+import { AuthService, CurrentUser } from '../../core/auth/auth.service';
+
+const user: CurrentUser = {
+  id: 1,
+  email: 'me@x',
+  roles: ['ROLE_USER'],
+  status: 'active',
+  createdAt: '2026-01-01T00:00:00Z',
+  locale: 'en',
+  trialEndsAt: null,
+  preferences: {
+    scrapeFallbackEnabled: false,
+    digest: {
+      enabled: false,
+      cadence: 'daily',
+      sendHour: 8,
+      weekday: 1,
+      format: 'html',
+      timezone: 'UTC',
+    },
+    passkeyOfferAnswered: true,
+    magazineStyle: 'boxed',
+  },
+  ai: { ready: false, model: null },
+  mail: { enabled: true },
+  emailVerified: true,
+};
+
+const base = 'https://api.test';
+
+describe('AccountSectionComponent', () => {
+  let httpMock: HttpTestingController;
+  let auth: AuthService;
+  let logoutSpy: jest.SpyInstance;
+  const dialogStub = { open: jest.fn() };
+  const navigate = jest.fn();
+
+  function mount(signedInUser: CurrentUser | null) {
+    TestBed.resetTestingModule();
+    const events = new Subject<unknown>();
+    TestBed.configureTestingModule({
+      imports: [provideTranslocoTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: base },
+        { provide: Router, useValue: { events, navigate } },
+        { provide: Dialog, useValue: dialogStub },
+      ],
+    });
+    // The real AuthService, not a stub: `deleteAccount()` must issue a real
+    // DELETE that HttpTestingController can intercept, exactly like
+    // AdminApi.deleteUser does in admin-user-detail.component.spec.ts.
+    auth = TestBed.inject(AuthService);
+    auth.user.set(signedInUser);
+    // Spied rather than left real: logout() also clears the token, resets
+    // preferences and navigates -- none of that is this component's concern,
+    // only whether it gets called once the delete succeeds.
+    logoutSpy = jest.spyOn(auth, 'logout').mockReturnValue(undefined);
+    httpMock = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(AccountSectionComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  beforeEach(() => {
+    dialogStub.open.mockReset();
+    navigate.mockReset();
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('shows the email and a sign-out button', () => {
+    const fixture = mount(user);
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('me@x');
+    // The sign-out button carries no class hook of its own, so it is found by
+    // its own label rather than by DOM position among the two `.actions`
+    // blocks (account and danger zone both have one).
+    const buttons = Array.from(element.querySelectorAll('button'));
+    const signOut = buttons.find((button) => button.textContent?.includes('Sign out'));
+    (signOut as HTMLButtonElement).click();
+    expect(logoutSpy).toHaveBeenCalled();
+  });
+
+  it('renders the account and the danger zone as separate settings groups', () => {
+    const fixture = mount(user);
+    const element = fixture.nativeElement as HTMLElement;
+
+    expect(element.querySelectorAll('app-settings-group').length).toBe(2);
+  });
+
+  it('deletes the account and logs out once confirmed', () => {
+    const fixture = mount(user);
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    fixture.componentInstance.confirmThenDelete();
+
+    const request = httpMock.expectOne(`${base}/api/me`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(logoutSpy).toHaveBeenCalled();
+  });
+
+  it("forgets this account's device settings once the delete succeeds", () => {
+    const fixture = mount(user);
+    localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    fixture.componentInstance.confirmThenDelete();
+    httpMock.expectOne(`${base}/api/me`).flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBeNull();
+  });
+
+  it('does nothing when the dialog is dismissed', () => {
+    const fixture = mount(user);
+    dialogStub.open.mockReturnValue({ closed: of(false) });
+
+    fixture.componentInstance.confirmThenDelete();
+
+    httpMock.expectNone(`${base}/api/me`);
+    expect(logoutSpy).not.toHaveBeenCalled();
+  });
+
+  it('passes the account email as the required confirmation text', () => {
+    const fixture = mount(user);
+    dialogStub.open.mockReturnValue({ closed: of(false) });
+
+    fixture.componentInstance.confirmThenDelete();
+    httpMock.expectNone(`${base}/api/me`);
+
+    const [, config] = dialogStub.open.mock.calls.at(-1) as [
+      unknown,
+      { data: { requireText: string } },
+    ];
+    expect(config.data.requireText).toBe('me@x');
+  });
+
+  it('shows the problem detail in an error banner when the delete request fails', () => {
+    const fixture = mount(user);
+    localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    fixture.componentInstance.confirmThenDelete();
+
+    // Mirrors the real AccountDeleter guard's shape (LastAdminException /
+    // ApiProblem::toArray()): `type` is a bare slug, and `detail` is present
+    // -- the `error.detail` half of the template's fallback expression.
+    httpMock.expectOne(`${base}/api/me`).flush(
+      {
+        type: 'last_admin',
+        title: 'Last administrator',
+        status: 409,
+        detail: 'This is the only administrator account. Promote another account first.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    fixture.detectChanges();
+
+    expect(logoutSpy).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'This is the only administrator account. Promote another account first.',
+    );
+    expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBe('1');
+  });
+
+  it('falls back to the problem title when the response has no detail', () => {
+    const fixture = mount(user);
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    fixture.componentInstance.confirmThenDelete();
+
+    // No `detail` field at all -- exercises the `|| error.title` half of the
+    // template expression, which the fixture above never touches.
+    httpMock
+      .expectOne(`${base}/api/me`)
+      .flush(
+        { type: 'about:blank', title: 'Something went wrong', status: 500 },
+        { status: 500, statusText: 'Internal Server Error' },
+      );
+    fixture.detectChanges();
+
+    expect(logoutSpy).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Something went wrong');
+  });
+});

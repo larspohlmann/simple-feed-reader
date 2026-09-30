@@ -1,0 +1,112 @@
+@use '../../theme/breakpoints' as bp;
+
+/* The spending record: a total line, then one collapsible section per month
+   (#409). The row grid moved to recommendation-run-history-month.component.scss;
+   this file owns the total, the month list, and the mobile status legend. */
+:host {
+  display: block;
+}
+
+.run-history {
+  /* Rendered inside the Diagnostics "Run history" drill-in (#541). The drill-in
+     does not pad its projected body, so this panel insets itself to the same
+     horizontal measure as the drill-in label above it (`--space-5`). */
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+
+  &__hint {
+    margin: 0 0 var(--space-3);
+    color: var(--text-secondary);
+  }
+
+  &__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin: var(--space-2) 0 var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-0);
+  }
+
+  &__total-label {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__total-value {
+    color: var(--text-primary);
+    font-size: var(--fs-base);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Flat sibling rows, not nested cards: a panel wraps a section, not a row,
+     and a border on every row here would read as one card per month rather
+     than one list. */
+  &__months {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__month {
+    border-bottom: 1px solid var(--border-strong);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  /* Decodes the row's icon-only status column (#409), shown at the same
+     `bp.$bp-md` boundary the row itself switches to an icon at (a
+     deliberately different boundary than the column-compression switch). */
+  &__legend {
+    display: none;
+
+    @media (width <= bp.$bp-md) {
+      display: block;
+      margin-block-start: var(--space-3);
+    }
+  }
+
+  &__legend-heading {
+    margin: 0 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  &__legend-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Same three colours as the row's `&__status` modifiers, kept as a second
+     short copy rather than a shared mixin (view encapsulation splits the two
+     stylesheets); see run-history-status-icon.ts for the icon mapping itself. */
+  &__legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-secondary);
+    font-size: var(--fs-xs);
+
+    &--completed {
+      color: var(--success);
+    }
+
+    &--failed,
+    &--cancelled {
+      color: var(--danger);
+    }
+  }
+}
