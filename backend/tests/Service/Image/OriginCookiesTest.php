@@ -12,6 +12,7 @@ use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -24,11 +25,26 @@ final class OriginCookiesTest extends TestCase
     /** @var list<string> */
     private array $requested = [];
 
+    /** @var array<mixed> */
+    private array $sentOptions = [];
+
+    private MockClock $clock;
+
+    protected function setUp(): void
+    {
+        $this->clock = new MockClock();
+    }
+
     /** @param list<MockResponse> $responses */
     private function originCookies(array $responses): OriginCookies
     {
-        $client = new MockHttpClient(function (string $method, string $url) use (&$responses): MockResponse {
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$responses): MockResponse {
             $this->requested[] = $url;
+            $this->sentOptions = $options;
 
             return array_shift($responses) ?? new MockResponse('', ['http_code' => 500]);
         });
@@ -44,14 +60,14 @@ final class OriginCookiesTest extends TestCase
                     'elsewhere.example' => ['93.184.216.34'],
                 ]), new IpValidator()),
             ),
-            new ArrayAdapter(),
+            new ArrayAdapter(clock: $this->clock),
             'TestAgent/1.0',
         );
     }
 
     private static function homepage(string ...$setCookies): MockResponse
     {
-        return new MockResponse('<html>home</html>', [
+        return new MockResponse('<html lang="de">home</html>', [
             'http_code' => 200,
             'response_headers' => array_map(
                 static fn (string $cookie): string => 'Set-Cookie: ' . $cookie,
@@ -121,5 +137,49 @@ final class OriginCookiesTest extends TestCase
         $cookies = $this->originCookies([]);
 
         self::assertSame('', $cookies->for('https://unresolvable.example/x.png'));
+    }
+
+    public function testVisitsTheHostAgainAfterAnHour(): void
+    {
+        $cookies = $this->originCookies([self::homepage('conz_bild=1'), self::homepage('conz_bild=2')]);
+
+        $cookies->for(self::IMAGE);
+        $this->clock->sleep(3601);
+
+        self::assertSame('conz_bild=2', $cookies->for(self::IMAGE));
+    }
+
+    public function testAsksForTheHomepageAsABrowserWould(): void
+    {
+        $cookies = $this->originCookies([self::homepage()]);
+
+        $cookies->for(self::IMAGE);
+
+        $headers = \is_array($this->sentOptions['headers'] ?? null) ? $this->sentOptions['headers'] : [];
+        self::assertContains('Accept: text/html,application/xhtml+xml;q=0.9,*/*;q=0.8', $headers);
+        self::assertContains('Accept-Encoding: identity', $headers);
+        self::assertContains('User-Agent: TestAgent/1.0', $headers);
+    }
+
+    public function testGivesTheVisitTwiceTheIdleTimeoutInAll(): void
+    {
+        $cookies = $this->originCookies([self::homepage()]);
+
+        $cookies->for(self::IMAGE);
+
+        self::assertSame(10.0, $this->sentOptions['timeout'] ?? null);
+        self::assertSame(20.0, $this->sentOptions['max_duration'] ?? null);
+    }
+
+    public function testAnOversizedHomepageIsNoCookies(): void
+    {
+        $cookies = $this->originCookies([
+            new MockResponse(str_repeat('x', 5_000_001), [
+                'http_code' => 200,
+                'response_headers' => ['Set-Cookie: big=1'],
+            ]),
+        ]);
+
+        self::assertSame('', $cookies->for(self::IMAGE));
     }
 }

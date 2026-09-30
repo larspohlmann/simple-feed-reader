@@ -80,7 +80,46 @@ final class ImageDownloaderTest extends TestCase
         self::assertContains('Referer: https://www.oxmoxhh.de/', $sent);
         self::assertContains('User-Agent: TestAgent/1.0', $sent);
         self::assertContains('Accept-Encoding: identity', $sent);
+        self::assertContains('Accept: image/avif,image/webp,image/*;q=0.8', $sent);
         self::assertEmpty(array_filter($sent, static fn (string $header): bool => str_starts_with($header, 'Cookie:')));
+    }
+
+    public function testAcceptsATypeWithSpaceBeforeItsParameters(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse('png-bytes', [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type: image/png ; charset=binary'],
+            ]),
+        ]);
+
+        self::assertSame('image/png', $downloader->download(new ImageRequestModel(self::IMAGE))->contentType);
+    }
+
+    public function testNamesTheRefusedTypeInLowerCase(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse('eps', ['http_code' => 200, 'response_headers' => ['Content-Type: IMAGE/ÉPS']]),
+        ]);
+
+        $this->expectExceptionMessage('"image/éps" is not a served image type');
+        $downloader->download(new ImageRequestModel(self::IMAGE));
+    }
+
+    public function testGivesTheDownloadTwiceTheIdleTimeoutInAll(): void
+    {
+        /** @var array<string, mixed> $sent */
+        $sent = [];
+        $downloader = $this->downloader(static function (string $method, string $url, array $options) use (&$sent) {
+            $sent = $options;
+
+            return self::png();
+        });
+
+        $downloader->download(new ImageRequestModel(self::IMAGE));
+
+        self::assertSame(10.0, $sent['timeout'] ?? null);
+        self::assertSame(20.0, $sent['max_duration'] ?? null);
     }
 
     public function testSendsTheCookiesItWasGiven(): void

@@ -51,6 +51,16 @@ final class ResponseHeaderTest extends TestCase
         self::assertSame([], ResponseHeader::all($response, 'x-absent'));
     }
 
+    public function testAllStillReadsAnErrorStatus(): void
+    {
+        $response = $this->response(new MockResponse('', [
+            'http_code' => 503,
+            'response_headers' => ['Set-Cookie: a=1'],
+        ]));
+
+        self::assertSame(['a=1'], ResponseHeader::all($response, 'set-cookie'));
+    }
+
     public function testAllOfAResponseThatCannotBeReadIsEmpty(): void
     {
         $response = $this->response(new MockResponse('', ['error' => 'connection reset']));
