@@ -9,6 +9,12 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
 
+// Below, the database DATABASE_URL names is deleted and rebuilt; run elsewhere, that is the dev database.
+if ($_SERVER['APP_ENV'] !== 'test') {
+    fwrite(STDERR, "\ntests/bootstrap.php rebuilds the database and runs only with APP_ENV=test; aborting.\n");
+    exit(1);
+}
+
 // A parallel worker's TEST_TOKEN must reach SQLite and the cache pools before anything reads the environment or the
 // database below is rebuilt; doctrine.yaml turns it into MySQL's dbname suffix.
 WorkerIsolation::applyToEnvironment();
