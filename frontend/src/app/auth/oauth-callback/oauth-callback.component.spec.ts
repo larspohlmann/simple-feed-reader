@@ -4,8 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
-import { ReaderLocationService } from '../../core/reader-location.service';
-import { TokenStore } from '../../core/token.store';
+import { ReaderLocationService } from '../../core/auth/reader-location.service';
+import { TokenStore } from '../../core/auth/token.store';
 import { OAuthCallbackComponent } from './oauth-callback.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 

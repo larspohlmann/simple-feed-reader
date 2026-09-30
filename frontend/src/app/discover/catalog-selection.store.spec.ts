@@ -1,4 +1,4 @@
-import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
+import { CatalogCategoryDto } from '../reader/feeds/catalog/catalog.models';
 import { CatalogSelection } from './catalog-selection.store';
 
 function category(overrides: Partial<CatalogCategoryDto> = {}): CatalogCategoryDto {

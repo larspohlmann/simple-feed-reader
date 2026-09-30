@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
-import { CatalogCategoryDto } from '../reader/catalog/catalog.models';
+import { CatalogCategoryDto } from '../reader/feeds/catalog/catalog.models';
 
 /**
  * Desktop navigation for the picker. Two jobs: jump to a category, and show how

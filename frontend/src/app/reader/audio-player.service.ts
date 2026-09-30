@@ -1,5 +1,5 @@
 import { DestroyRef, InjectionToken, Injectable, inject, signal } from '@angular/core';
-import { onIdentityChange } from '../core/session-identity';
+import { onIdentityChange } from '../core/auth/session-identity';
 
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */

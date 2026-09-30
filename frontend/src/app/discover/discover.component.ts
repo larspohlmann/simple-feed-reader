@@ -17,15 +17,15 @@ import { Problem, parseProblem } from '../core/problem';
 import { IconComponent } from '../shared/icon/icon.component';
 import { TagGlyphComponent } from '../shared/tag-glyph/tag-glyph.component';
 import { OverlayPanelComponent } from '../shared/overlay-panel/overlay-panel.component';
-import { SubscriptionsStore } from '../reader/subscriptions.store';
-import { TagsStore } from '../reader/tags.store';
+import { SubscriptionsStore } from '../reader/state/subscriptions.store';
+import { TagsStore } from '../reader/state/tags.store';
 import { ActiveCategory } from './active-category';
-import { CatalogApi } from '../reader/catalog/catalog-api';
-import { CatalogStore } from '../reader/catalog/catalog.store';
+import { CatalogApi } from '../reader/feeds/catalog/catalog-api';
+import { CatalogStore } from '../reader/feeds/catalog/catalog.store';
 import { CatalogSelection } from './catalog-selection.store';
 import { CategoryChipsComponent } from './category-chips.component';
 import { CategoryRailComponent } from './category-rail.component';
-import { OnboardingSkip } from '../reader/catalog/onboarding-skip';
+import { OnboardingSkip } from '../reader/feeds/catalog/onboarding-skip';
 import { ButtonComponent } from '../shared/button/button.component';
 
 /** How long a smooth scroll is given to settle before observations count again. */

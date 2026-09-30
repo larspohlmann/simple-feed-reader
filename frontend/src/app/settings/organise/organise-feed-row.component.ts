@@ -17,10 +17,10 @@ import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
-import { FeedRefreshTimesComponent } from './feed-refresh-times.component';
+import { FeedRefreshTimesComponent } from './health/feed-refresh-times.component';
 import { ActionSheet } from '../../shared/action-sheet/action-sheet.service';
 import { LayoutService } from '../../reader/layout.service';
-import { selectionQueryParams } from '../../reader/query';
+import { selectionQueryParams } from '../../reader/query/query';
 import { SubscriptionDto } from '../../reader/models';
 
 /**

@@ -1,0 +1,91 @@
+@use '../../../theme/breakpoints' as bp;
+
+/* `width` is load-bearing, not belt-and-braces: the kicker card's parent sets
+   `align-items: flex-start`, so an unstretched nowrap row would take its
+   max-content width and push the list scroller sideways instead of ellipsising. */
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+
+  /* A media query sees the viewport, not the card: the magazine grid caps a
+     card's width well below it, so a wide desktop still has a narrow split
+     card (#769). The kicker's own inline size IS that card's text column. */
+  container-type: inline-size;
+}
+
+/* Never wraps. The source is the row's only elastic item — it shrinks and
+   ellipsises while dot/favicon/separator/time render whole. A five-clause
+   feed title used to push the time onto a third line. */
+.kicker {
+  margin: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* A link to the feed's own list. It keeps the muted kicker colour rather than
+   taking a link accent — it should read as the source name, only revealing its
+   clickability on hover. */
+.source {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: inherit;
+  text-decoration: none;
+}
+
+.source:hover {
+  text-decoration: underline;
+}
+
+/* Both sit after the elastic source, so both must refuse to shrink — a
+   flex item's default `min-width: auto` is what would otherwise let the
+   time itself get clipped instead of the source. */
+.separator,
+.when {
+  flex: none;
+}
+
+/* Below the split card's text-column width (#769), the short form swaps to
+   the narrow one ("15 days ago" -> "15d ago") so `.source` keeps more space.
+   `display: none`, not a visual clip, so it isn't also announced. */
+.when-narrow {
+  display: none;
+}
+
+@container (width < #{bp.$container-kicker-narrow}) {
+  .when-wide {
+    display: none;
+  }
+
+  .when-narrow {
+    display: inline;
+  }
+}
+
+/* The row's `gap` already spaces both sides of the favicon; its own inline
+   margin, meant for text runs that have no gap, would land on the right only
+   and double the space there. */
+.kicker app-favicon {
+  flex: none;
+  margin-inline-end: 0;
+}
+
+.dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  flex: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+}
+
+.dot.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}

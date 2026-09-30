@@ -214,11 +214,11 @@ and the hub both draw from.
   carries a hover/tap "⋮" menu (Edit / Delete, Edit feed / Unsubscribe) that
   opens the same dialogs settings uses, so an action taken from the sidebar
   and one taken from Settings behave identically.
-- **`ManageActions`** (`src/app/reader/manage/manage-actions.service.ts`) is
+- **`ManageActions`** (`src/app/reader/feeds/manage/manage-actions.service.ts`) is
   the one place a management dialog is opened and its result applied — both
   the settings sections and the sidebar call it, so a dialog's own API write
   and the store refresh afterward happen exactly once, in exactly one place.
-- **Users** (`src/app/admin/admin-users.component.ts`) — the user-approval
+- **Users** (`src/app/admin/users/admin-users.component.ts`) — the user-approval
   queue: filter by status, then approve / reject / suspend. Every admin route
   is gated by `adminGuard`, a UX-only check (it fetches the current user if not
   already loaded, then requires `ROLE_ADMIN`); the real enforcement is the
@@ -250,7 +250,7 @@ changes.
 
 The **bearer JWT held in `localStorage` is the whole auth story** — no auth
 cookie, no server-side session. A functional HTTP interceptor
-(`src/app/core/auth.interceptor.ts`) attaches `Authorization: Bearer …` to API
+(`src/app/core/auth/auth.interceptor.ts`) attaches `Authorization: Bearer …` to API
 requests and, on a `401`, clears the token and routes to `/login`. This stateless
 transport is deliberately native-client-friendly.
 

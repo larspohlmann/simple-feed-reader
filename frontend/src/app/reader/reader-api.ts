@@ -2,8 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
-import { PAGE_SIZE } from './paging';
-import { RefreshScope } from './query';
+import { PAGE_SIZE } from './list/paging';
+import { RefreshScope } from './query/query';
 import {
   BulkSubscriptionUpdate,
   CommentsResponse,

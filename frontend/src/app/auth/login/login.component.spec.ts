@@ -4,10 +4,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { API_BASE_URL } from '../../core/api';
-import { PasskeyService } from '../../core/passkey.service';
-import { ReaderLocationService } from '../../core/reader-location.service';
+import { PasskeyService } from '../../core/auth/passkey.service';
+import { ReaderLocationService } from '../../core/auth/reader-location.service';
 import { LoginComponent } from './login.component';
-import { SetupService } from '../../core/setup.service';
+import { SetupService } from '../../core/setup/setup.service';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 describe('LoginComponent', () => {

@@ -1,6 +1,6 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
-import { SubscriptionsStore, untaggedSubscriptions } from '../../reader/subscriptions.store';
-import { TagsStore } from '../../reader/tags.store';
+import { SubscriptionsStore, untaggedSubscriptions } from '../../reader/state/subscriptions.store';
+import { TagsStore } from '../../reader/state/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 
 /** A group is one tag, or the untagged bucket that always sits last. */

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * The deep link that opens one audited article in the SPA, in the shape frontend/src/app/reader/slug.ts writes: a
+ * The deep link that opens one audited article in the SPA, in the shape frontend/src/app/reader/query/slug.ts writes: a
  * second spelling that can only drift in the cosmetic slug, since the id alone opens the entry.
  */
 final readonly class ReaderLinkModel

@@ -23,14 +23,17 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { OrganiseStore, OrganiseGroup, GroupKey } from './organise.store';
 import { OrganiseTagGroupComponent } from './organise-tag-group.component';
 import { OrganiseFeedRowComponent } from './organise-feed-row.component';
-import { UnhealthyFeedRowComponent } from './unhealthy-feed-row.component';
+import { UnhealthyFeedRowComponent } from './health/unhealthy-feed-row.component';
 import { BulkTagDialogComponent, BulkTagDialogData } from './bulk-tag-dialog.component';
-import { HealthErrorDialogComponent, HealthErrorData } from './health-error-dialog.component';
-import { ManageActions } from '../../reader/manage/manage-actions.service';
-import { SubscriptionsStore } from '../../reader/subscriptions.store';
-import { TagsStore } from '../../reader/tags.store';
+import {
+  HealthErrorDialogComponent,
+  HealthErrorData,
+} from './health/health-error-dialog.component';
+import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { TagsStore } from '../../reader/state/tags.store';
 import { Problem, parseProblem } from '../../core/problem';
-import { isGone } from '../../reader/feed-health';
+import { isGone } from '../../reader/feeds/feed-health';
 import { SubscriptionDto, SubscriptionFlags, TagDto } from '../../reader/models';
 
 /** One item of the bulk bar's "Visibility" menu: which flag it sets, to what

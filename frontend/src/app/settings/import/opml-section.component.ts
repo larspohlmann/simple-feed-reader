@@ -1,0 +1,77 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { Problem, parseProblem } from '../../core/problem';
+import { downloadOpmlExport } from './opml-export';
+import { SettingsApi } from '../settings-api';
+import { RefreshService } from '../../reader/state/refresh.service';
+import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
+import { OpmlImportResult } from '../settings.models';
+import { ButtonComponent } from '../../shared/button/button.component';
+import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
+
+@Component({
+  selector: 'app-opml-section',
+  imports: [ButtonComponent, ErrorBannerComponent, SettingsGroupComponent, TranslocoPipe],
+  templateUrl: './opml-section.component.html',
+  styleUrl: './opml-section.component.scss',
+})
+export class OpmlSectionComponent {
+  private readonly api = inject(SettingsApi);
+  private readonly subs = inject(SubscriptionsStore);
+  private readonly refresh = inject(RefreshService);
+
+  readonly text = signal('');
+  readonly reading = signal(false);
+  readonly exporting = signal(false);
+  readonly importing = signal(false);
+  readonly result = signal<OpmlImportResult | null>(null);
+  readonly exportError = signal<Problem | null>(null);
+  readonly importError = signal<Problem | null>(null);
+
+  value(event: Event): string {
+    return (event.target as HTMLTextAreaElement).value;
+  }
+
+  exportOpml(): void {
+    downloadOpmlExport(this.api, this.exporting, this.exportError);
+  }
+
+  onFile(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    // Block Import until the async read resolves, so a quick click cannot send
+    // stale pasted text instead of the chosen file.
+    this.reading.set(true);
+    file.text().then((contents) => {
+      this.text.set(contents);
+      this.reading.set(false);
+    });
+  }
+
+  importText(): void {
+    const body = this.text().trim();
+    if (!body) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.result.set(null);
+    this.api.importOpml(body).subscribe({
+      next: (importResult) => {
+        this.importing.set(false);
+        this.result.set(importResult);
+        this.subs.load();
+        // Freshly imported feeds are due but empty until a fetch runs. Kick a
+        // refresh now so they populate without waiting for a manual one; reload
+        // the list as it progresses so unread counts fill in.
+        if (importResult.imported > 0) {
+          this.refresh.run(() => this.subs.load());
+        }
+      },
+      error: (error: HttpErrorResponse) => {
+        this.importing.set(false);
+        this.importError.set(parseProblem(error));
+      },
+    });
+  }
+}

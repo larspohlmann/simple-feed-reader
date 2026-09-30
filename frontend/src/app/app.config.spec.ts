@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { appConfig } from './app.config';
-import { NavigationFailureReporter } from './core/navigation-failure';
-import { HttpLocaleWriter } from './core/http-locale-writer';
-import { LOCALE_WRITER } from './core/locale-writer';
+import { NavigationFailureReporter } from './core/errors/navigation-failure';
+import { HttpLocaleWriter } from './core/i18n/http-locale-writer';
+import { LOCALE_WRITER } from './core/i18n/locale-writer';
 
 /**
  * LOCALE_WRITER defaults to a no-op, so app.config.ts must override it with

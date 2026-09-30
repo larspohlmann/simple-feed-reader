@@ -2,11 +2,11 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
-import { EntryBodyService } from '../entry-body.service';
-import { EntriesStore } from '../entries.store';
-import { ListPreferences } from '../list-preferences.service';
-import { selectionFromRoute } from '../reader-matcher';
-import { sameSelection } from '../query';
+import { EntryBodyService } from '../article/content/entry-body.service';
+import { EntriesStore } from '../state/entries.store';
+import { ListPreferences } from '../list/list-preferences.service';
+import { selectionFromRoute } from '../query/reader-matcher';
+import { sameSelection } from '../query/query';
 import { EntryDto, EntryStatePatch } from '../models';
 
 @Injectable()

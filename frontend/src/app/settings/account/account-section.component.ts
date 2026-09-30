@@ -1,0 +1,75 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, inject, signal } from '@angular/core';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { Problem, parseProblem } from '../../core/problem';
+import { UserAvatarComponent } from '../../shared/user-avatar/user-avatar.component';
+import { AuthService } from '../../core/auth/auth.service';
+import { LanguageService } from '../../core/i18n/language.service';
+import { UserDeviceStorage } from '../../core/preferences/user-device-storage';
+import { formatLongDate } from '../../reader/format';
+import { ButtonComponent } from '../../shared/button/button.component';
+import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
+import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
+import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
+import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
+import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
+import { PasskeysGroupComponent } from './passkeys-group.component';
+
+@Component({
+  selector: 'app-account-section',
+  imports: [
+    ButtonComponent,
+    ErrorBannerComponent,
+    PasskeysGroupComponent,
+    SettingsGroupComponent,
+    SettingsRowComponent,
+    SettingsStackComponent,
+    TranslocoPipe,
+    UserAvatarComponent,
+  ],
+  templateUrl: './account-section.component.html',
+  styleUrl: './account-section.component.scss',
+})
+export class AccountSectionComponent {
+  readonly auth = inject(AuthService);
+  private readonly confirm = inject(ConfirmService);
+  private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
+  private readonly deviceStorage = inject(UserDeviceStorage);
+
+  readonly deleteError = signal<Problem | null>(null);
+
+  memberSince(iso: string): string {
+    return formatLongDate(iso, this.language.lang());
+  }
+
+  /** The account and everything in it, gone. Same treatment as the admin's
+   *  delete: type your own address to enable the confirm. */
+  confirmThenDelete(): void {
+    const email = this.auth.user()?.email ?? '';
+    const data: ConfirmData = {
+      title: this.i18n.translate('settings.account.deleteTitle'),
+      message: this.i18n.translate('settings.account.deleteMessage'),
+      confirmLabel: this.i18n.translate('settings.account.delete'),
+      danger: true,
+      requireText: email,
+    };
+    this.confirm.confirmThen(data, () => this.deleteAccount());
+  }
+
+  private deleteAccount(): void {
+    this.deleteError.set(null);
+    this.auth.deleteAccount().subscribe({
+      // logout() clears the token, resets per-account state and routes to
+      // /login. The token is stateless and the user row is gone, so it
+      // authenticates nobody either way -- clearing it is what stops the app
+      // from rendering a signed-in shell for an account that no longer exists.
+      next: () => {
+        this.deviceStorage.forgetCurrentUser();
+        this.auth.logout();
+      },
+      error: (failure: HttpErrorResponse) => this.deleteError.set(parseProblem(failure)),
+    });
+  }
+}

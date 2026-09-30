@@ -1,10 +1,10 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../core/auth.service';
-import { SubscriptionsStore } from '../subscriptions.store';
-import { CatalogStore } from '../catalog/catalog.store';
-import { OnboardingSkip } from '../catalog/onboarding-skip';
-import { RefreshService } from '../refresh.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { SubscriptionsStore } from '../state/subscriptions.store';
+import { CatalogStore } from '../feeds/catalog/catalog.store';
+import { OnboardingSkip } from '../feeds/catalog/onboarding-skip';
+import { RefreshService } from '../state/refresh.service';
 
 @Injectable()
 export class ReaderOnboarding {

@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { MIN_LIST_PERCENT } from '../src/app/reader/pane-split';
+import { MIN_LIST_PERCENT } from '../src/app/reader/shell/pane-split';
 import { stubOneFeedReader } from './support/reader';
 
 // The sidebar column plus a split main area: `sfr.paneSplit` sets the list column's share.

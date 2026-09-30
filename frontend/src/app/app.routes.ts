@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth.guard';
-import { DYNAMIC_TITLE } from './core/translated-title.strategy';
-import { readerMatcher } from './reader/reader-matcher';
+import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { DYNAMIC_TITLE } from './core/i18n/translated-title.strategy';
+import { readerMatcher } from './reader/query/reader-matcher';
 import { requireSetupGuard, setupRedirectGuard } from './setup/setup.guard';
 
 export const routes: Routes = [
@@ -81,7 +81,7 @@ export const routes: Routes = [
     title: DYNAMIC_TITLE,
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./reader/reader-shell.component').then((module) => module.ReaderShellComponent),
+      import('./reader/shell/reader-shell.component').then((module) => module.ReaderShellComponent),
   },
   { path: '**', redirectTo: '' },
 ];

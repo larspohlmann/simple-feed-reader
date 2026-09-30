@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { AiAvailability, AiAvailabilityService } from './ai-availability.service';
-import { CurrentUser } from './auth.service';
+import { CurrentUser } from './auth/auth.service';
 
 describe('AiAvailabilityService', () => {
   function service(): AiAvailabilityService {

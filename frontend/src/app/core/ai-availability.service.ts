@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
-import { CurrentUser } from './auth.service';
-import { onIdentityChange } from './session-identity';
+import { CurrentUser } from './auth/auth.service';
+import { onIdentityChange } from './auth/session-identity';
 
 /**
  * The whole of what this service tracks — and so the whole of what any caller

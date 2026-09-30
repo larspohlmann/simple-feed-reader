@@ -4,11 +4,11 @@ import { Observable } from 'rxjs';
 import { TranslocoService } from '@jsverse/transloco';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ReaderApi } from '../reader-api';
-import { EntriesStore } from '../entries.store';
-import { SubscriptionsStore, ZeroTarget } from '../subscriptions.store';
-import { SavedSearchesStore } from '../saved-searches.store';
-import { RecommendationsService } from '../recommendations.service';
-import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query';
+import { EntriesStore } from '../state/entries.store';
+import { SubscriptionsStore, ZeroTarget } from '../state/subscriptions.store';
+import { SavedSearchesStore } from '../state/saved-searches.store';
+import { RecommendationsService } from '../state/recommendations.service';
+import { MarkReadTarget, markReadTarget, queryFromSelection } from '../query/query';
 import { ReaderRouteState } from './reader-route-state.service';
 
 @Injectable()

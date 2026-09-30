@@ -4,12 +4,12 @@ import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angula
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthApi } from '../auth-api';
-import { AuthService } from '../../core/auth.service';
-import { PasskeyService } from '../../core/passkey.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { PasskeyService } from '../../core/auth/passkey.service';
 import { Problem, parseProblem } from '../../core/problem';
-import { isConditionalMediationSupported, isPasskeySupported } from '../../core/webauthn';
+import { isConditionalMediationSupported, isPasskeySupported } from '../../core/auth/webauthn';
 import { adoptAutofilledValues } from '../autofill';
-import { SetupService } from '../../core/setup.service';
+import { SetupService } from '../../core/setup/setup.service';
 import { AuthShellComponent } from '../auth-shell/auth-shell.component';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { FormErrorComponent } from '../../shared/form-error/form-error.component';

@@ -1,0 +1,510 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  DestroyRef,
+  InjectionToken,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
+import { Router } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
+import { Observable } from 'rxjs';
+import { Problem, parseProblem } from '../../core/problem';
+import { ToastService } from '../../shared/toast/toast.service';
+import { ReaderApi } from '../reader-api';
+import { ForYouProgressComponent } from '../list/for-you-progress/for-you-progress.component';
+import { LayoutService } from '../layout.service';
+import { RecommendationRunReport } from '../models';
+import { selectionQueryParams } from '../query/query';
+
+const BACKOFF_MS = 1500;
+/** Matches `RecommendationRun::MAX_TRANSPORT_FAILURES`: the server tolerates
+ *  three provider failures before it fails the run itself, so the poll loop
+ *  must survive three too. One tick past that reads the run's own verdict. */
+const MAX_TRANSPORT_RETRIES = 3;
+/** How long the client waits before its next tick once a background worker owns
+ *  execution. A deferred tick returns instantly rather than blocking for a whole
+ *  batch, so the loop tuned for a minutes-long call would hammer the endpoint
+ *  otherwise: 4s ≈ 15 requests/min against the limiter's 90 per 5 minutes. */
+const BACKGROUND_POLL_MS = 4000;
+/** How long the client waits before retrying a tick that hit the
+ *  `ai_recommendations` limiter (90 req / 5 min per user, sliding window —
+ *  `backend/config/packages/rate_limiter.yaml`). A 429 means the bucket is
+ *  full, not unhealthy: retrying at `BACKOFF_MS` would spend another token
+ *  without draining it. 15s stays under the window's ~3.3s average rate even
+ *  sharing the bucket with ordinary polling and a second tab. */
+const RATE_LIMIT_POLL_MS = 15000;
+/** How many consecutive 429s the loop rides out before giving up. At
+ *  `RATE_LIMIT_POLL_MS` that's 5 minutes -- the limiter's own window -- long
+ *  enough for an honest two-tab session to drain the bucket and recover. */
+const MAX_RATE_LIMIT_RETRIES = 20;
+
+/** Ticker cadence for the anticipatory bar. Fine enough to read as motion,
+ *  coarse enough to be cheap; the shared hairline's own `width` transition
+ *  smooths between ticks. */
+const TICK_MS = 200;
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+
+/** How many times in a row the poll loop has been turned away, per cause.
+ *  Each cause has its own ceiling, and any progress resets both. */
+interface PollAttempts {
+  readonly transport: number;
+  readonly rateLimited: number;
+}
+
+const NO_ATTEMPTS: PollAttempts = { transport: 0, rateLimited: 0 };
+
+/** Monotonic wall-clock in ms. Injectable so tests drive time deterministically
+ *  instead of leaning on a real clock. */
+export const MONOTONIC_NOW = new InjectionToken<() => number>('MONOTONIC_NOW', {
+  providedIn: 'root',
+  factory: () => () => performance.now(),
+});
+
+/** Why a recommendation run ended without producing a fresh for-you list. */
+export type RecommendationFailure =
+  | { kind: 'failed'; error: string | null } // the backend gave up on the run itself
+  | { kind: 'http'; problem: Problem };
+
+/** Drives a for-you recommendation run to completion: starts it, ticks the
+ *  poll loop, and resumes one left in flight by an earlier session. Modeled
+ *  on `RefreshService`, but the source is a batch run not a feed sweep, so
+ *  completion/failure are worth telling the user directly -- this service
+ *  owns the toast and the "go look" navigation. */
+@Injectable({ providedIn: 'root' })
+export class RecommendationsService {
+  private readonly api = inject(ReaderApi);
+  private readonly toast = inject(ToastService);
+  private readonly screen = inject(LayoutService);
+  private readonly i18n = inject(TranslocoService);
+  private readonly router = inject(Router);
+  private readonly now = inject(MONOTONIC_NOW);
+
+  readonly running = signal(false);
+  /** True from the moment the user asks to stop until the run actually ends —
+   *  a tick already inside a provider call keeps going, so the button must be
+   *  able to say "stopping" rather than pretend the run is already over. */
+  readonly stopping = signal(false);
+  readonly report = signal<RecommendationRunReport | null>(null);
+  /** Null while a run is doing its job. Set exactly once per run, on the
+   *  paths that end it without a completed batch set. */
+  readonly failure = signal<RecommendationFailure | null>(null);
+
+  /** The seconds-remaining the server last sent (#638), and the monotonic ms
+   *  when it landed. ETA is phase-weighted server-side; the client only counts
+   *  it down from the freshest value. Both null when no estimate stands. */
+  private readonly serverEtaSeconds = signal<number | null>(null);
+  private readonly serverEtaAt = signal<number | null>(null);
+
+  /** The server's elapsed total and the time its report arrived. Together they
+   * let the client keep the whole-run time model live between polls (#668). */
+  private readonly serverElapsedSeconds = signal<number | null>(null);
+  private readonly serverElapsedAt = signal<number | null>(null);
+
+  /** True while the poll loop waits out the 429 limiter. The ticker pauses
+   *  (`backOffWhileRateLimited`), so the bar holds its last value and the ETA
+   *  number swaps for a wait label rather than ballooning while idle. */
+  readonly rateLimited = signal(false);
+
+  /** Ticker handle; the bar re-reads the clock on every bump. */
+  private tickerId: ReturnType<typeof setInterval> | null = null;
+
+  /** Bumped by the ticker so the interpolated reads recompute between polls. */
+  private readonly frame = signal(0);
+
+  /** Increments once per completed run. Consumers watch this to refetch the
+   *  for-you list rather than polling `report` themselves. */
+  readonly completedStamp = signal(0);
+
+  readonly progress = computed(() => {
+    this.frame();
+    const current = this.report();
+    if (!current) return 0;
+    if (current.status === 'completed') return 1;
+
+    const elapsed = this.elapsedSeconds();
+    const eta = this.etaSeconds();
+    if (elapsed === null || eta === null) return 0;
+
+    // An overrun pins ETA at zero. Keep the active bar short of completion;
+    // only the server's completed status may fill it fully.
+    return Math.min(0.99, clamp01(elapsed / (elapsed + eta)));
+  });
+
+  /** Whole seconds elapsed from the server report, continued on the local
+   * monotonic clock. This stays private because its only consumer is the
+   * shared ETA/progress time model. */
+  private readonly elapsedSeconds = computed<number | null>(() => {
+    this.frame();
+    const base = this.serverElapsedSeconds();
+    const anchoredAt = this.serverElapsedAt();
+    if (base === null || anchoredAt === null) return null;
+
+    return Math.max(0, base + (this.now() - anchoredAt) / 1000);
+  });
+
+  /** Ceil seconds remaining, or `null` when the server sent no estimate — no
+   *  run in flight, or no history to weight one (#638). Server-computed and
+   *  phase-weighted; here just counted down so it falls smoothly between polls. */
+  readonly etaSeconds = computed<number | null>(() => {
+    this.frame();
+    if (this.report()?.firstBatchStarted !== true) return null;
+    const base = this.serverEtaSeconds();
+    const anchoredAt = this.serverEtaAt();
+    if (base === null || anchoredAt === null) return null;
+
+    const secondsSincePoll = (this.now() - anchoredAt) / 1000;
+    return Math.max(0, Math.ceil(base - secondsSincePoll));
+  });
+
+  /** Drives the Task 6 label: hidden outside a run, starting before the first
+   *  average exists, waiting during a 429 backoff, lockHeld while a stalled
+   *  lock blocks the run, eta otherwise. The 429 check stays first — it's the
+   *  more actionable message and must never be displaced by a held lock. */
+  readonly etaState = computed<'hidden' | 'starting' | 'waiting' | 'lockHeld' | 'eta'>(() => {
+    if (!this.running()) return 'hidden';
+    if (this.rateLimited()) return 'waiting';
+    if (this.report()?.waitingForLock) return 'lockHeld';
+    if (this.etaSeconds() === null) return 'starting';
+    return 'eta';
+  });
+
+  /** True while a background worker owns this run's execution, so the client's
+   *  poll loop is a pure status read. Shapes `report()` for the poll loop and
+   *  the template alike, so none reads `report()?.background` directly. */
+  readonly workerOwnsRun = computed(() => this.report()?.background ?? false);
+
+  /** True while a run is going but its progress is nowhere to be seen, because
+   *  the user closed the pill. Drives the header's offer to raise it again.
+   *  Only ever true on a narrow layout — above it the header carries the run's
+   *  progress with no dismiss button, so nothing needs recovering. Reads the
+   *  toast's own visibility (exact today since this service is the only
+   *  `ToastService.show()` caller in the app) rather than tracking a flag. */
+  readonly pillHidden = computed(
+    () => this.running() && this.screen.isNarrow() && !this.toast.visible(),
+  );
+
+  /** The layout the pill was last placed for. Seeded here rather than on the
+   *  effect's first pass, so the effect has no start-up case to special-case
+   *  and a crossing is a crossing whenever it happens. */
+  private lastNarrowLayout = this.screen.isNarrow();
+
+  /**
+   * Moves a live run's progress between its two surfaces when the viewport
+   * crosses the drawer breakpoint (pill below it, reader header above) -- else
+   * a rotated phone or resized window strands the run with no readout. Acts
+   * only on the crossing, never the run starting (`markRunning()`'s job, else
+   * the pill flashes twice); ignoring the toast's visibility keeps a ✕ pressed.
+   */
+  private readonly _pillFollowsLayout = effect(() => {
+    const narrow = this.screen.isNarrow();
+    const crossed = this.lastNarrowLayout !== narrow;
+    this.lastNarrowLayout = narrow;
+    if (!crossed || !this.running()) return;
+    if (narrow) {
+      this.showRunPill();
+      return;
+    }
+    this.toast.dismiss();
+  });
+
+  /** The surviving for-you list's unread count, for the sidebar badge (#724).
+   *  The wire field stays `itemCount` for compatibility. */
+  readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
+  /** The surviving for-you list's total entries, unread or not, for the list
+   *  header's count when the switch reads "All posts" (#1154). */
+  readonly forYouTotal = computed(() => this.report()?.forYou.totalCount ?? 0);
+  /** The surviving for-you list's generation time (ISO), for the list
+   *  header's "Last refreshed" hint. */
+  readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);
+  /** The id of the run that generated the surviving for-you list. The reader
+   *  suppresses this one run's boundary divider — the header already names it —
+   *  by identity, not by timestamp (#348). */
+  readonly newestRunId = computed(() => this.report()?.forYou.newestRunId ?? null);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.stopTicker());
+  }
+
+  /** Starts a new run and polls it to completion. */
+  start(): void {
+    this.beginRun(this.api.startRecommendations());
+  }
+
+  /** Resumes the latest failed run at the batch that failed, then polls to
+   *  completion. Offered only after a failed run, so a 409 here is a stale
+   *  click and surfaces through the same error path as a failed start. */
+  resumeRun(): void {
+    this.beginRun(this.api.resumeRecommendations());
+  }
+
+  /** Shared entry for both start and resume: guard against a double-run, reset
+   *  the per-run signals, then drive the returned run report into the poll
+   *  loop. The two differ only in which endpoint opens the run. */
+  private beginRun(source: Observable<RecommendationRunReport>): void {
+    if (this.running()) return;
+    // Cleared before the run is marked live, not after: `markRunning()` reads
+    // the report to decide whether the bar may move, and the previous run's
+    // last report is no evidence about this one.
+    this.report.set(null);
+    // The previous run's ETA is no evidence about this one either; blank it
+    // until this run's first report carries a fresh estimate.
+    this.serverEtaSeconds.set(null);
+    this.serverEtaAt.set(null);
+    this.serverElapsedSeconds.set(null);
+    this.serverElapsedAt.set(null);
+    this.stopping.set(false);
+    this.markRunning();
+    source.subscribe({
+      next: (report) => this.onReport(report),
+      error: (error: HttpErrorResponse) => this.stopWithHttpError(error),
+    });
+  }
+
+  /** The one place a run becomes live, whether started here or found already
+   *  in flight by `resume()`. The pill goes up here (not per call site), which
+   *  is what makes a resumed run visible too and keeps it up app-wide (#398). */
+  private markRunning(): void {
+    this.running.set(true);
+    this.syncBarWithLockWait();
+    this.failure.set(null);
+    this.showRunPill();
+  }
+
+  /** The bar moves while the run does. A run waiting for its lock isn't
+   *  progressing, so the ticker stops and `progress()` holds its last value
+   *  rather than creeping while the label says stalled. Both halves live here
+   *  so `resume()` can't apply one without the other (#439). */
+  private syncBarWithLockWait(): void {
+    if (this.report()?.waitingForLock) {
+      this.stopTicker();
+      return;
+    }
+    this.startTicker();
+  }
+
+  /** Raises the run's pill. Public because the user can close it from anywhere
+   *  and the list header offers it back. Guarded: called with no run live, it
+   *  would raise a `durationMs: null` toast that only `finish()` ever dismisses. */
+  showRunPill(): void {
+    if (!this.running()) return;
+    // Above the drawer breakpoint the reader header carries the run's progress
+    // in the room the bar already has, so a pill over the list would say the
+    // same thing twice.
+    if (!this.screen.isNarrow()) return;
+    this.toast.show({
+      content: ForYouProgressComponent,
+      durationMs: null,
+      width: 'fixed',
+      // It reports on a run the reader is not waiting for; letting the list
+      // show through says so, where an opaque card would read as an interrupt.
+      tone: 'translucent',
+    });
+  }
+
+  /** Asks the server to stop the run. The poll loop is left alone: it's the
+   *  loop that observes `cancelled` and tears itself down, keeping stopping a
+   *  single source of truth. A failure just clears the flag — the run's still going. */
+  stop(): void {
+    if (!this.running() || this.stopping()) return;
+    this.stopping.set(true);
+    this.api.stopRecommendations().subscribe({
+      next: (report) => this.onReport(report),
+      error: () => this.stopping.set(false),
+    });
+  }
+
+  /** Re-reads the current run/for-you status without starting or advancing
+   *  anything. Best-effort like `resume()`'s lookup: a failed refresh leaves
+   *  the last known report in place rather than surfacing a second error path. */
+  refreshStatus(): void {
+    this.api.currentRecommendations().subscribe({
+      next: (report) => this.applyReport(report),
+      error: () => {
+        // Best-effort; see the docblock above.
+      },
+    });
+  }
+
+  /** Best-effort resume on boot: pick up a run left in flight by an earlier
+   *  session. Anything but pending/running — including a fetch failure — is
+   *  silently ignored; nothing to tell the user about a run they didn't start. */
+  resume(): void {
+    this.api.currentRecommendations().subscribe({
+      next: (report) => {
+        // even a finished run carries the for-you summary the sidebar needs
+        this.applyReport(report);
+        // The reader shell calls this on every mount, so reader -> another route
+        // -> reader runs it again mid-run. Re-raising the pill would undo a ✕
+        // already pressed, and starting a second `step()` would double the poll loop.
+        if (this.running()) return;
+        if (report.status !== 'pending' && report.status !== 'running') return;
+        this.markRunning();
+        this.step(NO_ATTEMPTS);
+      },
+      error: () => {
+        // Boot resume is best-effort; a failed lookup just means no in-app
+        // signal for a run that may or may not still be going server-side.
+      },
+    });
+  }
+
+  /** One turn of the poll loop, against whichever endpoint is honest right
+   *  now. While a background worker owns execution, `tick` does no work at
+   *  all -- it returns the same report `current` does -- so polling it only
+   *  spends the `ai_recommendations` limiter (90/5min per user): one tab at
+   *  `BACKGROUND_POLL_MS` burns 75 of them, a second tab 429s. `current` is a
+   *  plain read with no limiter cost. The moment a report says the worker is
+   *  gone, the loop returns to `tick` — that self-healing fallback is the point. */
+  private step(attempts: PollAttempts): void {
+    const poll = this.workerOwnsRun()
+      ? this.api.currentRecommendations()
+      : this.api.tickRecommendations();
+
+    poll.subscribe({
+      next: (report) => this.onReport(report),
+      error: (error: HttpErrorResponse) => this.retryOrStop(error, attempts),
+    });
+  }
+
+  /** The single place a fresh report lands: it re-anchors the server's ETA
+   * and elapsed time on every report, clears the rate-limited flag on any live
+   * report, then stores the report. */
+  private applyReport(next: RecommendationRunReport): void {
+    // A lock-wait report carries no work by this client. Keep the prior
+    // anchor so the bar remains at its last observed position while the
+    // locked process is unknown or stalled.
+    if (!next.waitingForLock) {
+      // Re-anchored every working report: the server's time model keeps
+      // falling as a phase runs, so each report is fresher than the last one.
+      this.serverEtaSeconds.set(next.etaSeconds ?? null);
+      this.serverEtaAt.set(this.now());
+      this.serverElapsedSeconds.set(next.elapsedSeconds);
+      this.serverElapsedAt.set(this.now());
+    }
+    // Stored before the bar is synced, because the sync reads the report.
+    this.report.set(next);
+    if (next.status === 'running' || next.status === 'pending') {
+      this.rateLimited.set(false);
+      // A lock wait freezes the bar the same way `backOffWhileRateLimited`
+      // does for a 429; anything else resumes it, in case such a backoff had
+      // paused it.
+      this.syncBarWithLockWait();
+    }
+  }
+
+  private onReport(report: RecommendationRunReport): void {
+    this.applyReport(report);
+    switch (report.status) {
+      case 'pending':
+      case 'running':
+        if (this.workerOwnsRun()) this.stepLater(NO_ATTEMPTS, BACKGROUND_POLL_MS);
+        else this.step(NO_ATTEMPTS);
+        break;
+      case 'completed':
+        this.completedStamp.update((stamp) => stamp + 1);
+        this.finish();
+        this.toast.show({
+          message: this.i18n.translate('reader.forYouReady'),
+          actionLabel: this.i18n.translate('reader.forYouView'),
+          action: () => this.navigateToForYou(),
+          width: 'fixed',
+        });
+        break;
+      case 'cancelled':
+        // No toast and no failure: the user asked for this and is looking at
+        // the button they just pressed. Announcing it back to them is noise.
+        this.finish();
+        break;
+      case 'failed':
+        this.failure.set({ kind: 'failed', error: report.error });
+        this.finish();
+        this.toast.show({ message: this.i18n.translate('reader.forYouFailed'), width: 'fixed' });
+        break;
+      case 'none':
+        // Nothing running and nothing to report -- reachable only from an
+        // unexpected server response, since this service never asks about a
+        // run it didn't just start or find already in flight.
+        this.finish();
+        break;
+    }
+  }
+
+  /** A tick that fails outright hasn't ended the run: the server keeps it
+   *  running and counts the failure against its own ceiling, so the loop
+   *  retries rather than throwing away a batch set still being built (a slow
+   *  provider call cut short by the request window is exactly this case). A
+   *  429 is different — the server is healthy, the client just asked too
+   *  often — so it gets its own branch, counter, and longer wait instead of
+   *  spending the transport ceiling meant for an unhealthy server. */
+  private retryOrStop(error: HttpErrorResponse, attempts: PollAttempts): void {
+    if (error.status === 429) {
+      this.backOffWhileRateLimited(error, attempts);
+      return;
+    }
+    if (attempts.transport >= MAX_TRANSPORT_RETRIES) {
+      this.stopWithHttpError(error);
+      return;
+    }
+    this.stepLater({ ...attempts, transport: attempts.transport + 1 });
+  }
+
+  /** Waits out the `ai_recommendations` limiter's sliding window rather than
+   *  declaring the run dead -- but only so long: a server that keeps
+   *  rejecting for good must still end the run rather than poll forever. */
+  private backOffWhileRateLimited(error: HttpErrorResponse, attempts: PollAttempts): void {
+    if (attempts.rateLimited >= MAX_RATE_LIMIT_RETRIES) {
+      this.stopWithHttpError(error);
+      return;
+    }
+    this.stopTicker(); // freeze the bar: with no ticker bump, progress() holds its last value
+    this.rateLimited.set(true);
+    this.stepLater({ ...attempts, rateLimited: attempts.rateLimited + 1 }, RATE_LIMIT_POLL_MS);
+  }
+
+  private stepLater(attempts: PollAttempts, delayMs = BACKOFF_MS): void {
+    setTimeout(() => this.step(attempts), delayMs);
+  }
+
+  private stopWithHttpError(error: HttpErrorResponse): void {
+    this.failure.set({ kind: 'http', problem: parseProblem(error) });
+    this.finish();
+    // The run's only surface is the app-wide pill, and `finish()` has just
+    // taken it down. A request that fails outright (start POST, or the poll
+    // loop's own ceiling) would leave nothing behind without this (#325).
+    this.toast.show({
+      message: this.i18n.translate('reader.forYouUnreachable'),
+      width: 'fixed',
+    });
+  }
+
+  private finish(): void {
+    this.running.set(false);
+    this.stopping.set(false);
+    this.rateLimited.set(false);
+    this.stopTicker();
+    // The single exit from every end state, which is why the pill comes down
+    // here: `cancelled`/`none` raise no toast of their own and would otherwise
+    // leave it up forever; completed/failed call this then set their own message.
+    this.toast.dismiss();
+  }
+
+  private startTicker(): void {
+    if (this.tickerId !== null) return;
+    this.tickerId = setInterval(() => this.frame.update((frame) => frame + 1), TICK_MS);
+  }
+
+  private stopTicker(): void {
+    if (this.tickerId === null) return;
+    clearInterval(this.tickerId);
+    this.tickerId = null;
+  }
+
+  private navigateToForYou(): void {
+    void this.router.navigate(['/'], {
+      queryParams: selectionQueryParams({ view: 'for-you' }),
+    });
+  }
+}

@@ -1,0 +1,202 @@
+@use '../../theme/breakpoints' as bp;
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: var(--space-4);
+}
+
+.acts {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+h3 {
+  font-size: var(--fs-base);
+  margin: 0 0 var(--space-2);
+}
+
+// `.state` (base styling in theme/_utilities.scss) marks panel-level blocks
+// needing their own inset; `.cards`/`.rows` take their inset in their own
+// rules below instead, since each needs a different padding shape.
+.state {
+  margin-bottom: var(--space-4);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+// Layout only: the page sits inside the shared card, which owns the box chrome.
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.card p {
+  margin: 0;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+dt {
+  color: var(--text-muted);
+}
+
+dd {
+  margin: 0;
+}
+
+.flag {
+  color: var(--danger);
+  font-size: var(--fs-sm);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius);
+  background: var(--surface-0);
+  color: var(--text-secondary);
+}
+
+.badge[data-s='active'] {
+  background: var(--bg-success);
+  color: var(--success);
+}
+
+.badge[data-s='suspended'],
+.badge[data-s='rejected'] {
+  background: var(--bg-danger);
+  color: var(--danger);
+}
+
+.age {
+  color: var(--text-muted);
+}
+
+// The panel-level empty states (tags/feeds groups with nothing to list) are
+// plain paragraphs, not rows, so they carry the panel inset directly.
+.muted {
+  display: block;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+// Compact status lines inside a sub-card read as muted text too, but are not
+// panel-level -- the card's flex `gap` sets their rhythm, so this is its own
+// class rather than a `.cards .muted` override that would fight `.muted`.
+.note {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.limits-label {
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.limit-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+// The control row lays its field and buttons out horizontally and supplies
+// its own rhythm through `gap`, so the field's stacking margin would only
+// drop the buttons out of line with the input it belongs to.
+.limit-control app-field {
+  margin-bottom: 0;
+  max-width: 8rem;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) var(--row-pad-comfy-x);
+  border-bottom: 1px solid var(--border);
+}
+
+.ident {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.url,
+.original,
+.subscribed {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+}
+
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+@media (width <= bp.$bp-sm) {
+  .acts {
+    justify-content: flex-end;
+  }
+
+  .rows li.feed {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rows li.feed .count {
+    margin-left: 0;
+  }
+}

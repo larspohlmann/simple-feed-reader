@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { provideTranslocoTesting } from '../testing/transloco-testing';
 import { App } from './app';
-import { NavigationFailureReporter } from './core/navigation-failure';
+import { NavigationFailureReporter } from './core/errors/navigation-failure';
 
 describe('App', () => {
   const failed = signal(false);

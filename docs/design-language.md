@@ -1480,7 +1480,7 @@ styles too" — it fails the whole run with a `CssSyntaxError` per file. The
 
 ## 5. Magazine blocks
 
-The reader's magazine list (`frontend/src/app/reader/magazine/`) plans entries
+The reader's magazine list (`frontend/src/app/reader/list/magazine/`) plans entries
 onto eight block types, introduced by #148 to replace a layout that had
 collapsed to two-thirds compact rows. `magazine-block.ts`'s `BLOCK_HEIGHT`
 holds the measured height each contributes to the planner's per-page budget;

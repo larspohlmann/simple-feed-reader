@@ -1,0 +1,14 @@
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
+import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
+import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
+import { EntryBlockBase } from '../../entry-block-base';
+
+@Component({
+  selector: 'app-entry-kicker',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
+  templateUrl: './entry-kicker.component.html',
+  styleUrl: './entry-kicker.component.scss',
+})
+export class EntryKickerComponent extends EntryBlockBase {}
