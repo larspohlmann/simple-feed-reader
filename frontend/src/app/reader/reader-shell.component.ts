@@ -13,6 +13,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-actions/entry-action-handler';
 import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -93,6 +94,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 @Component({
   selector: 'app-reader-shell',
   imports: [
+    NgTemplateOutlet,
     ReaderHeaderComponent,
     SidebarComponent,
     EntryListComponent,

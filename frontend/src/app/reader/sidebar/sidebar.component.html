@@ -323,10 +323,10 @@
                     </button>
                     @if (menuFor() === tagMenuKey) {
                       <div class="pop" role="menu">
-                        <button role="menuitem" (click)="editTag.emit(node.tag); closeMenu()">
+                        <button role="menuitem" (click)="manage.editTag(node.tag); closeMenu()">
                           {{ 'reader.editTag' | transloco }}
                         </button>
-                        <button role="menuitem" (click)="deleteTag.emit(node.tag); closeMenu()">
+                        <button role="menuitem" (click)="manage.deleteTag(node.tag); closeMenu()">
                           {{ 'reader.deleteTag' | transloco }}
                         </button>
                       </div>
@@ -425,10 +425,18 @@
                         </button>
                         @if (menuFor() === taggedFeedMenuKey) {
                           <div class="pop" role="menu">
-                            <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                            <button
+                              role="menuitem"
+                              (click)="manage.editSubscription(s); closeMenu()"
+                            >
                               {{ 'reader.editFeed' | transloco }}
                             </button>
-                            <button role="menuitem" (click)="toggleAllItems.emit(s); closeMenu()">
+                            <button
+                              role="menuitem"
+                              (click)="
+                                manage.setIncludeInAllItems(s, !s.includeInAllItems); closeMenu()
+                              "
+                            >
                               {{
                                 (s.includeInAllItems
                                   ? 'reader.excludeFromAllItems'
@@ -436,7 +444,12 @@
                                 ) | transloco
                               }}
                             </button>
-                            <button role="menuitem" (click)="toggleForYou.emit(s); closeMenu()">
+                            <button
+                              role="menuitem"
+                              (click)="
+                                manage.setIncludeInForYou(s, !s.includeInForYou); closeMenu()
+                              "
+                            >
                               {{
                                 (s.includeInForYou
                                   ? 'reader.excludeFromForYou'
@@ -444,7 +457,7 @@
                                 ) | transloco
                               }}
                             </button>
-                            <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                            <button role="menuitem" (click)="manage.unsubscribe(s); closeMenu()">
                               {{ 'reader.unsubscribe' | transloco }}
                             </button>
                           </div>
@@ -557,10 +570,13 @@
                 </button>
                 @if (menuFor() === untaggedFeedMenuKey) {
                   <div class="pop" role="menu">
-                    <button role="menuitem" (click)="editFeed.emit(s); closeMenu()">
+                    <button role="menuitem" (click)="manage.editSubscription(s); closeMenu()">
                       {{ 'reader.editFeed' | transloco }}
                     </button>
-                    <button role="menuitem" (click)="toggleAllItems.emit(s); closeMenu()">
+                    <button
+                      role="menuitem"
+                      (click)="manage.setIncludeInAllItems(s, !s.includeInAllItems); closeMenu()"
+                    >
                       {{
                         (s.includeInAllItems
                           ? 'reader.excludeFromAllItems'
@@ -568,13 +584,16 @@
                         ) | transloco
                       }}
                     </button>
-                    <button role="menuitem" (click)="toggleForYou.emit(s); closeMenu()">
+                    <button
+                      role="menuitem"
+                      (click)="manage.setIncludeInForYou(s, !s.includeInForYou); closeMenu()"
+                    >
                       {{
                         (s.includeInForYou ? 'reader.excludeFromForYou' : 'reader.includeInForYou')
                           | transloco
                       }}
                     </button>
-                    <button role="menuitem" (click)="unsubscribe.emit(s); closeMenu()">
+                    <button role="menuitem" (click)="manage.unsubscribe(s); closeMenu()">
                       {{ 'reader.unsubscribe' | transloco }}
                     </button>
                   </div>
