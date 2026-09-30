@@ -30,7 +30,7 @@ final readonly class ConsolidationPhase implements ProviderPhaseInterface
                 $run,
                 $outcome->requireUnusableReply(),
                 fn (): RecommendationRunReportModel
-                    => $this->finalizer->finalize($run, $outcome->requireFallbackPool()),
+                    => $this->finalizer->finalize($run, $outcome->requireFallbackRanking()),
             );
         }
 

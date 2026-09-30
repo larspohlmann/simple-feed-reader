@@ -6,13 +6,13 @@ namespace App\Service\Recommendation\Run\Model;
 
 /**
  * What a consolidation call settled to: the final list, or the unusable reply ConsolidationPhase retries and the
- * batch-score pool it degrades to.
+ * ranking it degrades to once the retries run out.
  */
 final readonly class ConsolidationOutcomeModel
 {
     /**
      * @param list<array{id: int, score: int, reason: string}> $ranked usable: the final
-     *                                                                  list; unusable: the undeduped pool to degrade to
+     *                                                                  list; unusable: the ranking to degrade to
      */
     private function __construct(
         public bool $usable,
@@ -30,11 +30,11 @@ final readonly class ConsolidationOutcomeModel
     }
 
     /**
-     * @param list<array{id: int, score: int, reason: string}> $fallbackPool
+     * @param list<array{id: int, score: int, reason: string}> $fallbackRanking
      */
-    public static function unusable(string $reply, array $fallbackPool): self
+    public static function unusable(string $reply, array $fallbackRanking): self
     {
-        return new self(false, $fallbackPool, $reply);
+        return new self(false, $fallbackRanking, $reply);
     }
 
     public function requireUnusableReply(): string
@@ -44,15 +44,14 @@ final readonly class ConsolidationOutcomeModel
     }
 
     /**
-     * The batch-score pool to degrade to once retries run out. Only an
-     * unusable outcome carries one; a usable outcome's list is already final.
+     * Only an unusable outcome carries one; a usable outcome's list is already final.
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    public function requireFallbackPool(): array
+    public function requireFallbackRanking(): array
     {
         if ($this->usable) {
-            throw new \LogicException('A usable consolidation outcome has no fallback pool to degrade to.');
+            throw new \LogicException('A usable consolidation outcome has no fallback ranking to degrade to.');
         }
 
         return $this->ranked;

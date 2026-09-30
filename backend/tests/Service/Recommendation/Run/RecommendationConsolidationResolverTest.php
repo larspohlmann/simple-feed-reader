@@ -156,12 +156,12 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertFalse($outcome->usable);
         self::assertSame(
             [$firstId, $secondId],
-            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackPool()),
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackRanking()),
         );
         self::assertSame('not json', $outcome->requireUnusableReply());
         self::assertSame(['', ''], array_map(
             static fn (array $pick): string => $pick['reason'],
-            $outcome->requireFallbackPool(),
+            $outcome->requireFallbackRanking(),
         ));
     }
 
@@ -302,10 +302,10 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertFalse($outcome->usable);
         // Keys, not merely values: array_filter() alone would leave (0, 2), a
         // gap only array_values() closes.
-        self::assertSame([0, 1], array_keys($outcome->requireFallbackPool()));
+        self::assertSame([0, 1], array_keys($outcome->requireFallbackRanking()));
         self::assertSame(
             [$firstId, $thirdId],
-            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackPool()),
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackRanking()),
         );
     }
 
