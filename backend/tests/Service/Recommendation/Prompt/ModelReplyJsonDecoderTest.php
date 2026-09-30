@@ -129,6 +129,11 @@ final class ModelReplyJsonDecoderTest extends TestCase
         );
     }
 
+    public function testAnObjectCutRightAfterItsOpeningBraceLeavesTheCompleteOneBeforeIt(): void
+    {
+        self::assertSame(['a' => 1], $this->decoder->decode('{"a": 1} {'));
+    }
+
     public function testTheCompleteItemsOfAnArrayCutInsideAStringAreRecoveredInOrder(): void
     {
         self::assertSame(
