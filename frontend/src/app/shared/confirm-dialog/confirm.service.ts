@@ -9,7 +9,11 @@ export class ConfirmService {
 
   ask(data: ConfirmData): Observable<boolean> {
     return this.dialog
-      .open<boolean>(ConfirmDialogComponent, { data, role: 'alertdialog', panelClass: 'app-dialog' })
+      .open<boolean>(ConfirmDialogComponent, {
+        data,
+        role: 'alertdialog',
+        panelClass: 'app-dialog',
+      })
       .closed.pipe(map((confirmed) => confirmed === true));
   }
 

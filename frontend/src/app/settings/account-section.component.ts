@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { UserAvatarComponent } from '../shared/user-avatar/user-avatar.component';
@@ -9,10 +8,8 @@ import { LanguageService } from '../core/language.service';
 import { UserDeviceStorage } from '../core/user-device-storage';
 import { formatLongDate } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../shared/settings/settings-row/settings-row.component';
@@ -36,7 +33,7 @@ import { PasskeysGroupComponent } from './passkeys-group.component';
 })
 export class AccountSectionComponent {
   readonly auth = inject(AuthService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly deviceStorage = inject(UserDeviceStorage);
@@ -58,14 +55,7 @@ export class AccountSectionComponent {
       danger: true,
       requireText: email,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.deleteAccount();
-    });
+    this.confirm.confirmThen(data, () => this.deleteAccount());
   }
 
   private deleteAccount(): void {

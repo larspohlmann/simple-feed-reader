@@ -2,16 +2,13 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { formatDateOr, formatLongDate, relativeTime, trialDaysRemaining } from '../reader/format';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { ButtonComponent } from '../shared/button/button.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -46,7 +43,7 @@ import { AdminAction, AdminUserDetailDto } from './admin.models';
 export class AdminUserDetailComponent {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -134,14 +131,7 @@ export class AdminUserDetailComponent {
       confirmLabel: this.i18n.translate(`admin.${action}`),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.act(action);
-    });
+    this.confirm.confirmThen(data, () => this.act(action));
   }
 
   /** Deletion is irreversible and takes the account's content with it, so it
@@ -156,14 +146,7 @@ export class AdminUserDetailComponent {
       danger: true,
       requireText: email,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.deleteAccount();
-    });
+    this.confirm.confirmThen(data, () => this.deleteAccount());
   }
 
   private deleteAccount(): void {

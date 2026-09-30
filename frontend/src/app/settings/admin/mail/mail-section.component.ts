@@ -6,17 +6,14 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LanguageService } from '../../../core/language.service';
 import { formatLongDateTime } from '../../../reader/format';
 import { ButtonComponent } from '../../../shared/button/button.component';
-import {
-  ConfirmDialogComponent,
-  ConfirmData,
-} from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -68,7 +65,7 @@ export class MailSectionComponent {
   readonly svc = inject(MailSettingsService);
   readonly health = inject(MailHealthStore);
   private readonly i18n = inject(TranslocoService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly language = inject(LanguageService);
 
   // Instant fields: persisted the moment they change, never held in the draft.
@@ -332,13 +329,7 @@ export class MailSectionComponent {
       confirmLabel: this.i18n.translate('settings.mail.resetToEnv'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (!confirmed) return;
+    this.confirm.confirmThen(data, () => {
       // Fall back to the read-only env view once the override is gone.
       this.overriding.set(false);
       this.svc.reset();

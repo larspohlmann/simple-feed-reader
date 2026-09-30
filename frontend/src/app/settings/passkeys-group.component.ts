@@ -12,10 +12,8 @@ import { isPasskeySupported } from '../core/webauthn';
 import { formatDateOr, formatLongDate } from '../reader/format';
 import { SetupService } from '../core/setup.service';
 import { ButtonComponent } from '../shared/button/button.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { IconButtonDirective } from '../shared/icon-button/icon-button.directive';
 import { IconComponent } from '../shared/icon/icon.component';
@@ -54,6 +52,7 @@ export class PasskeysGroupComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
   private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly setup = inject(SetupService);
 
   /** Read once: a browser does not gain or lose WebAuthn support mid-session,
@@ -126,9 +125,7 @@ export class PasskeysGroupComponent {
   }
 
   /** Removing a passkey is irreversible -- only physically re-enrolling gets
-   *  it back -- so a stray tap on the row's small icon button must not do it.
-   *  Same two-step shape as `AccountSectionComponent.confirmThenDelete()`:
-   *  a `ConfirmDialogComponent` naming the thing, then the call on confirm. */
+   *  it back -- so a stray tap on the row's small icon button must not do it. */
   confirmThenRemove(passkey: PasskeySummary): void {
     const data: ConfirmData = {
       title: this.i18n.translate('settings.passkeys.removeTitle'),
@@ -136,14 +133,7 @@ export class PasskeysGroupComponent {
       confirmLabel: this.i18n.translate('settings.passkeys.removeConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.remove(passkey);
-    });
+    this.confirm.confirmThen(data, () => this.remove(passkey));
   }
 
   private remove(passkey: PasskeySummary): void {
