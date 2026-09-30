@@ -156,7 +156,7 @@ export class EntryListComponent implements OnDestroy {
   readonly searchTitleTerm = input<string>('');
   /** The pill's text (e.g. `"86"` or `"86+"`), or null to render no pill —
    *  null while the search is still in flight, so the count never flashes a
-   *  stale or false number (see `ReaderShellComponent.searchCountLabel`). */
+   *  stale or false number (see `ListHeading.searchCountLabel`). */
   readonly searchCountLabel = input<string | null>(null);
   /** How much this list holds, as a quiet pill beside the name; 0 renders
    *  nothing, matching the sidebar's dropped badge. A search ignores this and

@@ -2,7 +2,6 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
-  forwardRef,
   OnDestroy,
   OnInit,
   afterRenderEffect,
@@ -15,20 +14,20 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { EntryActionHandler } from './entry-actions/entry-action-handler';
-import { ActivatedRoute, Router, RouterLink, convertToParamMap } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { HttpErrorResponse } from '@angular/common/http';
-import { catchError, of } from 'rxjs';
+import { ReaderRouteState } from './shell/reader-route-state.service';
+import { ListHeading } from './shell/list-heading.service';
+import { EntryStateActions } from './shell/entry-state-actions.service';
+import { MarkReadActions } from './shell/mark-read-actions.service';
+import { ReaderOnboarding } from './shell/reader-onboarding.service';
+import { PasskeyFirstBootOffer } from './shell/passkey-first-boot-offer.service';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Dialog } from '@angular/cdk/dialog';
 import { AuthService } from '../core/auth.service';
 import { PageTitleService } from '../core/page-title.service';
-import { isPasskeySupported } from '../core/webauthn';
-import { LanguageService } from '../core/language.service';
-import { ReaderApi } from './reader-api';
 import { EntryBodyService } from './entry-body.service';
 import { SubscriptionsStore } from './subscriptions.store';
 import { TagsStore } from './tags.store';
-import { EntriesStore, localStatePatch } from './entries.store';
+import { EntriesStore } from './entries.store';
 import { RefreshService } from './refresh.service';
 import { RecommendationsService } from './recommendations.service';
 import { SavedSearchesStore } from './saved-searches.store';
@@ -41,34 +40,21 @@ import { LayoutService } from './layout.service';
 import { SidebarVisibilityService } from './sidebar-visibility.service';
 import {
   RefreshScope,
-  Selection,
   isDirectSearch,
   isWholeWordTerm,
   isPhraseTerm,
-  MarkReadTarget,
-  markReadTarget,
   queryFromSelection,
-  sameSelection,
   selectionQueryParams,
   visibleSearchTerm,
 } from './query';
-import { selectionFromRoute } from './reader-matcher';
 import { UnreadFilterService } from './unread-filter.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { ListScrollReset } from './list-scroll-reset';
-import { entryParam } from './slug';
-import {
-  EntryDto,
-  EntryStatePatch,
-  SavedSearchDto,
-  SubscriptionDto,
-  SubscriptionTagDto,
-  TagDto,
-} from './models';
+import { EntryDto, SavedSearchDto, SubscriptionDto, SubscriptionTagDto, TagDto } from './models';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { SidebarComponent } from './sidebar/sidebar.component';
-import { EntryListComponent, TitleCount } from './entry-list/entry-list.component';
+import { EntryListComponent } from './entry-list/entry-list.component';
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
@@ -79,15 +65,11 @@ import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
-import { CatalogStore } from './catalog/catalog.store';
-import { OnboardingSkip } from './catalog/onboarding-skip';
-import { SetupService } from '../core/setup.service';
 import { IconComponent } from '../shared/icon/icon.component';
 import { IconButtonDirective } from '../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../shared/list-action/list-action.directive';
 import { ButtonComponent } from '../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
-import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 
@@ -112,14 +94,19 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
   ],
   templateUrl: './reader-shell.component.html',
   styleUrl: './reader-shell.component.scss',
-  // Provided here, not in the root injector, so the poll cannot outlive the
-  // reader that it keeps up to date (#708).
+  // Per-reader state: provided here so none of it outlives the reader.
   providers: [
     SidebarCountsPoll,
-    { provide: EntryActionHandler, useExisting: forwardRef(() => ReaderShellComponent) },
+    ReaderRouteState,
+    ListHeading,
+    EntryStateActions,
+    MarkReadActions,
+    ReaderOnboarding,
+    PasskeyFirstBootOffer,
+    { provide: EntryActionHandler, useExisting: EntryStateActions },
   ],
 })
-export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, EntryActionHandler {
+export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
@@ -127,8 +114,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
-  private readonly language = inject(LanguageService);
-  private readonly api = inject(ReaderApi);
   private readonly bodyService = inject(EntryBodyService);
   protected readonly auth = inject(AuthService);
   private readonly hostRef = inject(ElementRef<HTMLElement>);
@@ -146,10 +131,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly layout = inject(ReadingLayoutService);
   readonly screen = inject(LayoutService);
   readonly sidebarVisibility = inject(SidebarVisibilityService);
-  private readonly skip = inject(OnboardingSkip);
-  private readonly catalog = inject(CatalogStore);
   private readonly pageTitle = inject(PageTitleService);
-  private readonly setup = inject(SetupService);
   /** Injected for its effect: it watches navigations so that a clicked list
    *  starts at the top while a list returned to keeps its place (#286). The
    *  reader is the only place that imports it, which is what keeps it out of
@@ -160,116 +142,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
    *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
 
-  /** Is the picker worth showing at all? Nothing seeds the catalog — it arrives
-   *  by admin import — so a deployment without one must not redirect anybody
-   *  into a blank page. */
-  private readonly onboardingAvailable = computed(
-    () => this.catalog.resolved() && this.catalog.hasEntries(),
-  );
-
-  /** Admins get the catalog resolved unconditionally — they are the only ones
-   *  who can fix an empty one, and the suppressed onboarding is otherwise
-   *  invisible. One cached request per session. */
-  private readonly loadCatalogForAdmin = effect(() => {
-    if (this.auth.isAdmin()) untracked(() => this.catalog.load());
-  });
-
-  readonly showCatalogEmptyWarning = computed(
-    () => this.auth.isAdmin() && this.catalog.resolved() && !this.catalog.hasEntries(),
-  );
-
-  /** A brand-new subscription set: rows exist, none has ever been fetched. This
-   *  is what a just-completed onboarding looks like from the shell's side. */
-  private readonly awaitingFirstFetch = computed(
-    () =>
-      this.subs.resolved() &&
-      this.subs.subscriptions().length > 0 &&
-      this.subs.subscriptions().every((s) => s.lastFetchedAt === null),
-  );
-
-  private readonly sweptOnce = signal(false);
-  /** True only for the span of the post-onboarding sweep, cleared once it
-   *  lands without error. `sweptOnce` is a permanent latch that would re-show
-   *  the banner on every later refresh; this flag keeps it to the sweep alone. */
-  private readonly sweeping = signal(false);
-
-  /** The counted banner belongs to the post-onboarding sweep only; every other
-   *  refresh has the hairline, which is context enough for a user who already
-   *  knows their reader. A failure takes the strip over, so the two never compete. */
-  readonly showFetchProgress = computed(
-    () => this.sweeping() && this.refreshSvc.failure() === null,
-  );
-
-  /** An empty subscription list, once resolved, not explicitly skipped this
-   *  session — the redirect effect's own guard, and what #624's onboarding
-   *  guard below reuses instead of re-deriving. A failed load also resolves
-   *  empty, which means "couldn't read them", not "zero subscriptions" — so
-   *  `!this.subs.error()` keeps a retry-able failure from reading as onboarding (#691). */
-  private readonly emptySubscriptionsNeedingOnboarding = computed(
-    () =>
-      this.subs.resolved() &&
-      !this.subs.error() &&
-      this.subs.subscriptions().length === 0 &&
-      !this.skip.wasSkipped(),
-  );
-
-  /** #624: true while a new account's subscriptions are being introduced --
-   *  about to redirect to /discover, or just back from there mid-sweep. A
-   *  modal on top of either window steps on onboarding (spec §5.3), so the
-   *  passkey offer waits for both to clear.
-   *
-   *  Real defect this shipped with: an empty list alone doesn't rule the
-   *  redirect out, because the redirect effect only starts the catalog
-   *  request once subscriptions resolve empty -- there's a window where
-   *  `onboardingAvailable()` reads false only because the catalog hasn't
-   *  answered YET. Reading `!catalog.resolved()` as "running" too closes that
-   *  window until the redirect decision is actually made either way. */
-  private readonly subscriptionOnboardingRunning = computed(() => {
-    if (this.awaitingFirstFetch() || this.sweeping()) return true;
-    if (!this.emptySubscriptionsNeedingOnboarding()) return false;
-    if (!this.catalog.resolved()) return true;
-    return this.onboardingAvailable();
-  });
-
-  /** #624: the shell has loaded enough real state to judge the passkey offer
-   *  -- subscriptions resolved, which lets `subscriptionOnboardingRunning`
-   *  give a real answer. Sign-in is checked in `passkeyOfferEligible` below. */
-  private readonly readerSettled = computed(() => this.subs.resolved());
-
-  /** #624 design spec §5.3: all conditions the first-login passkey offer
-   *  needs before it may show. The fourth (on the reader, not an auth route)
-   *  needs no check: this component exists only on the reader route.
-   *  `isPasskeySupported()` runs first since it's cheapest -- false for
-   *  nearly every test here, since jsdom has no `PublicKeyCredential`.
-   *
-   *  #624 follow-up: `SetupService.passkeySignInAvailable()` must be exactly
-   *  `true` -- offering enrolment when the instance can't complete a passkey
-   *  sign-in would hand the account a credential it can never use, the same
-   *  reasoning `PasskeysGroupComponent.visible` fails CLOSED for. */
-  private readonly passkeyOfferEligible = computed(() => {
-    if (!isPasskeySupported()) return false;
-    if (this.setup.passkeySignInAvailable() !== true) return false;
-    const user = this.auth.user();
-    if (!user || user.preferences.passkeyOfferAnswered) return false;
-    return this.readerSettled() && !this.subscriptionOnboardingRunning();
-  });
-
-  /** Latches true the moment the offer opens so a re-render -- the
-   *  eligibility computed going true again before the answer round-trips --
-   *  can't open a second one in the same boot (spec §5.3/§5.4). Never reset. */
-  private readonly passkeyOfferShown = signal(false);
-
-  /** Opens the first-login passkey offer at most once per boot (#624). The
-   *  dialog owns everything about what happens next -- both ceremonies, both
-   *  states, and marking the offer answered on every way out -- so this
-   *  effect's only job is deciding when. */
-  private readonly offerPasskeyOnFirstBoot = effect(() => {
-    if (!this.passkeyOfferEligible() || this.passkeyOfferShown()) return;
-    untracked(() => {
-      this.passkeyOfferShown.set(true);
-      this.dialog.open<void>(PasskeyOfferDialogComponent, { panelClass: 'app-dialog' });
-    });
-  });
+  protected readonly onboarding = inject(ReaderOnboarding);
+  /** Injected for its effect: holding it opens the passkey offer when due. */
+  private readonly passkeyOffer = inject(PasskeyFirstBootOffer);
 
   /** What to tell the user about a refresh that fetched nothing, from ANY
    *  refresh — not just the sweep. Gating this on the sweep window is what left
@@ -283,20 +158,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
   readonly listLoading = computed(() => this.entries.loading() || !this.listPreferences.ready());
-  private readonly params = toSignal(this.route.queryParamMap, {
-    initialValue: convertToParamMap({}),
-  });
-  private readonly pathParams = toSignal(this.route.paramMap, {
-    initialValue: convertToParamMap({}),
-  });
-  private readonly parsed = computed(() => selectionFromRoute(this.pathParams(), this.params()));
-  // Structural equality so an entry-only URL change doesn't produce a new
-  // selection reference -- delegates to `sameSelection` rather than
-  // re-listing fields here, which once fell out of step when `term` was
-  // added, silently freezing the list on every second search (#408 follow-up).
-  readonly selection = computed(() => this.listPreferences.appliedTo(this.parsed().selection), {
-    equal: sameSelection,
-  });
+  private readonly routeState = inject(ReaderRouteState);
+  readonly selection = this.routeState.selection;
+  readonly entryId = this.routeState.entryId;
+  readonly openEntry = this.routeState.openEntry;
+  readonly heading = inject(ListHeading);
+  readonly entryActions = inject(EntryStateActions);
+  readonly markRead = inject(MarkReadActions);
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip
@@ -304,38 +172,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
   readonly canToggleSavedSearch = computed(
     () => isDirectSearch(this.selection()) || this.viewingSavedSearch(),
   );
-  readonly entryId = computed(() => this.parsed().entryId);
 
-  /** The single saved search the list is showing, by id, or null. Read straight
-   *  off the selection now that a saved search is addressed by id in the path,
-   *  not re-matched by term the way `currentSavedSearch` does for a search result. */
-  readonly activeSavedSearchId = computed(() => {
-    const s = this.selection();
-    return s.kind === 'saved-search' ? s.id : null;
-  });
-
-  /** That saved search resolved against the store, for the list title. Null
-   *  until the store has the row, so the title falls back to the combined label. */
-  readonly activeSavedSearch = computed(() => {
-    const id = this.activeSavedSearchId();
-    if (id === null) return null;
-    return this.savedSearchesStore.savedSearches().find((s) => s.id === id) ?? null;
-  });
-
-  // A deep-linked entry the current list page doesn't contain, fetched by id.
-  private readonly fetchedEntry = signal<EntryDto | null>(null);
-  readonly openEntry = computed(() => {
-    const id = this.entryId();
-    if (id == null) return null;
-    const inList = this.entries.entries().find((e) => e.id === id);
-    if (inList) return inList; // the live list copy wins (freshest state)
-    const fetched = this.fetchedEntry();
-    return fetched && fetched.id === id ? fetched : null;
-  });
-  /** The identity of the open entry, isolated from its flags. The auto-open
-   *  effect keys off this so it fires once per opened entry and never re-runs
-   *  when the entry's own state changes — un-ticking it must not re-mark it. */
-  private readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
   readonly feedTags = computed(() => {
@@ -347,33 +184,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     const e = this.openEntry();
     return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
   });
-  readonly hasMore = computed(() => this.entries.nextCursor() !== null);
-  /** A search request is actually in flight -- not merely "some list is
-   *  loading": `entries.loading()` is true for every list load, so gating on
-   *  that alone would show the spinner while an unrelated feed list loads. */
-  readonly searching = computed(() => this.selection().kind === 'search' && this.entries.loading());
-  readonly canMarkAllRead = computed(() => markReadTarget(this.selection()) !== null);
-  /** What the list header's "Last refreshed" hint shows: a feed's fetch time,
-   *  or the for-you list's generation time. Null everywhere else. */
-  readonly listLastRefreshed = computed(() => {
-    const s = this.selection();
-    if (s.kind === 'for-you') return this.recs.generatedAt();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id)?.lastFetchedAt ?? null;
-  });
-  /** When the selected feed is next due to be fetched — the header's "Next
-   *  refresh" hint. Only a single feed has one; null for every other view. */
-  readonly listNextRefresh = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id)?.nextFetchAt ?? null;
-  });
-  /** The id of the run whose picks head the for-you list — the one the header
-   *  already names, so the list suppresses its boundary divider. Null off the
-   *  for-you view, where there are no run dividers. */
-  readonly listNewestRunId = computed(() =>
-    this.selection().kind === 'for-you' ? this.recs.newestRunId() : null,
-  );
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
   readonly splitView = computed(() => this.paneMode() || this.searchPane());
@@ -448,177 +258,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     this.showSidebarButton()?.nativeElement.focus();
   });
 
-  /** The tag the list is scoped to, or null for every other selection. The list
-   *  header renders its glyph beside the name; the name itself comes from here
-   *  too, so the heading and the glyph can never describe different tags. */
-  readonly selectedTag = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'tag') return null;
-    return this.subs.tagTree().find((n) => n.tag.id === s.id)?.tag ?? null;
-  });
-
-  /** The feed the list is scoped to, or null for every other selection. The
-   *  header's edit action needs the whole subscription, not the name alone
-   *  that `title` below takes from it. */
-  readonly selectedSubscription = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'subscription') return null;
-    return this.subs.subscriptions().find((x) => x.id === s.id) ?? null;
-  });
-
-  /** The selected feed, but only where the intro block belongs: the magazine
-   *  layout, and only when the feed has something to introduce itself with.
-   *  Magazine only because the block is a column member -- reads as the card
-   *  above the cards; the list layout is a dense stack where it would be a
-   *  wide slab on top of the rows. A feed with nothing to show renders no
-   *  block at all; the check lives here since a component can't decline to be
-   *  created, so a self-guard inside `FeedIntroComponent` couldn't suppress
-   *  the host element's own padding. */
-  readonly feedIntroSubscription = computed(() => {
-    if (this.layout.mode() !== 'magazine') return null;
-    const sub = this.selectedSubscription();
-    if (sub === null) return null;
-    return sub.description !== null || sub.imageUrl !== null || sub.siteUrl !== null ? sub : null;
-  });
-
-  readonly title = computed(() => {
-    // Read as a dependency, not used directly: TranslocoService.translate() is
-    // one-shot, so the heading keeps the language it was first computed in
-    // unless a language signal pulls this through a re-evaluation (#411).
-    this.language.lang();
-    const s = this.selection();
-    // A switch with no default, like `titleCount` and `queryFromSelection`: a
-    // new selection kind must fail to compile here rather than quietly
-    // rendering as a feed title.
-    switch (s.kind) {
-      case 'favorites':
-        return this.i18n.translate('reader.favorites');
-      case 'kept':
-        return this.i18n.translate('reader.kept');
-      case 'viewed':
-        return this.i18n.translate('reader.viewed');
-      case 'for-you':
-        return this.i18n.translate('reader.forYou');
-      case 'saved-searches':
-        return this.i18n.translate('reader.savedSearches');
-      case 'saved-search':
-        return this.activeSavedSearch()?.term ?? this.i18n.translate('reader.savedSearches');
-      case 'all':
-        return this.i18n.translate('reader.allItems');
-      case 'tag':
-        return this.selectedTag()?.name ?? this.i18n.translate('reader.tagFallback');
-      case 'search':
-        return `${this.searchTitlePrefix()} ${this.searchTitleBody()}`;
-      case 'subscription':
-        return (
-          this.subs.subscriptions().find((x) => x.id === s.id)?.title ??
-          this.i18n.translate('reader.feedFallback')
-        );
-    }
-  });
-
-  /** The sidebar's unread number under "Only unread", the list's total under
-   *  "All posts" (#709, #1154). Zero means "nothing to say": an empty list, a
-   *  search (which has its own count), or a count that hasn't loaded yet. */
-  readonly titleCount = computed<TitleCount>(() => {
-    const s = this.selection();
-    switch (s.kind) {
-      case 'all':
-        return bySwitch(s, this.subs.totalUnread(), this.subs.totalEntries());
-      case 'tag': {
-        const node = this.subs.tagTree().find((n) => n.tag.id === s.id);
-        return bySwitch(s, node?.unreadCount ?? 0, node?.entryCount ?? 0);
-      }
-      case 'subscription': {
-        const sub = this.subs.subscriptions().find((x) => x.id === s.id);
-        return bySwitch(s, sub?.unreadCount ?? 0, sub?.entryCount ?? 0);
-      }
-      case 'favorites':
-        return items(this.subs.favoritesCount());
-      case 'kept':
-        return items(this.subs.keptCount());
-      case 'viewed':
-        return items(this.subs.viewedCount());
-      case 'for-you':
-        return bySwitch(s, this.recs.forYouCount(), this.recs.forYouTotal());
-      case 'saved-searches':
-        return bySwitch(s, this.savedSearchesUnread(), this.savedSearchesTotal());
-      case 'saved-search': {
-        const saved = this.activeSavedSearch();
-        return bySwitch(s, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
-      }
-      case 'search':
-        return items(0);
-    }
-  });
-
-  /** The search title's small, muted lead ("Results for"). Split from the body
-   *  below so the entry list can render it muted while the term/count stay
-   *  prominent (#581 follow-up) — `title()` concatenates the two for the tab. */
-  readonly searchTitlePrefix = computed(() => {
-    this.language.lang();
-    return this.i18n.translate('reader.searchResultsPrefix');
-  });
-
-  /** The search heading's body — the quoted term and, unlike every other
-   *  title, a result count with its own rules about when it may be shown. */
-  readonly searchTitleBody = computed(() => {
-    this.language.lang();
-    const term = visibleSearchTerm(this.selection().term ?? '');
-    // No count while the search is in flight: `load()` clears nextCursor
-    // synchronously but keeps the PREVIOUS list rendered until the response
-    // lands (#254), so `entries()` still holds the old term's rows and
-    // `hasMore()` reads false. Gated on the same condition the spinner uses.
-    if (this.searching()) return this.i18n.translate('reader.searchResults', { term });
-
-    // The loaded count, not a COUNT(*) total — the list pages 50 at a time, so
-    // it lies unless it is labelled: a trailing '+' when another page is still
-    // out there, the exact number once there isn't.
-    const count = this.entries.entries().length;
-    const key = this.hasMore() ? 'reader.searchResultsCountMore' : 'reader.searchResultsCount';
-
-    return this.i18n.translate(key, { term, count });
-  });
-
-  /** The quoted term alone (#581 follow-up round 2) — what the entry list
-   *  renders as `.results-term`, now that the count moves to its own pill
-   *  instead of trailing as "— {{count}}". Reuses `searchTitleBody`'s loading-state key. */
-  readonly searchTitleTerm = computed(() => {
-    this.language.lang();
-    const term = visibleSearchTerm(this.selection().term ?? '');
-    return this.i18n.translate('reader.searchResults', { term });
-  });
-
-  /** The pill's own text — the number, with a trailing '+' when another page
-   *  is out there, or null for no pill: a search in flight (same #254 trap as
-   *  `searchTitleBody`), or a reload that hasn't landed a first count yet. */
-  readonly searchCountLabel = computed<string | null>(() => {
-    if (this.searching()) return null;
-    const count = this.entries.entries().length;
-    return this.hasMore() ? `${count}+` : `${count}`;
-  });
-
-  private readonly viewedOnOpen = new Set<number>();
-
-  /** Ids of entries removed from the saved view on screen. The entry list
-   *  renders these with the leaving class (row fades, slot collapses); the
-   *  data stays so the magazine plan never re-flows around the hole (#478). */
-  readonly leavingIds = signal<ReadonlySet<number>>(new Set());
-
   constructor() {
-    // Loads SetupService.passkeySignInAvailable, gating passkeyOfferEligible
-    // above -- this route is never behind setupRedirectGuard, so nothing else
-    // triggers the fetch. Gated on isPasskeySupported() first since a browser
-    // that can't run the ceremony has no use for the answer regardless.
-    // catchError mirrors setupRedirectGuard's own handling of this observable:
-    // an uncaught failure would otherwise throw on reader boot rather than
-    // just leaving the offer unavailable.
-    if (isPasskeySupported()) {
-      this.setup
-        .ensureLoaded()
-        .pipe(catchError(() => of(false)))
-        .subscribe();
-    }
     // Reload the list and sidebar counts whenever the selection (not the open
     // entry) changes. A new list has no removed rows, so clear the collapsed
     // set with it, else a recycled id would render an incoming row already collapsed.
@@ -626,7 +266,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       if (!this.listPreferences.ready()) return;
       const q = queryFromSelection(this.selection());
       untracked(() => {
-        this.leavingIds.set(new Set());
+        this.entryActions.clearLeaving();
         this.entries.load(q);
         this.subs.loadIfStale();
       });
@@ -636,51 +276,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       this.selection();
       untracked(() => this.sidebarOpen.set(false));
     });
-    // Mark the opened entry viewed exactly once per session, even if the PATCH
-    // fails and rolls back. Opening sends the viewed flag alone; the backend
-    // reads it too (ViewedImpliesHiddenListener), and localStatePatch mirrors that here.
-    effect(() => {
-      if (this.openEntryId() === null) return;
-      untracked(() => {
-        const e = this.openEntry();
-        if (!e || e.isViewed || this.viewedOnOpen.has(e.id)) return;
-        this.viewedOnOpen.add(e.id);
-        this.applyOpenedPatch(e, { isViewed: true });
-      });
-    });
-    // Deep link to an entry the current list page doesn't hold: fetch it by id so
-    // it still opens. Tracks only entryId; the list copy takes over once loaded.
-    effect(() => {
-      const id = this.entryId();
-      untracked(() => {
-        if (id == null) {
-          this.fetchedEntry.set(null); // reader closed — drop the stale fetch
-          return;
-        }
-        if (this.entries.entries().some((e) => e.id === id)) return;
-        if (this.fetchedEntry()?.id === id) return;
-        // Id-guard the async writes: a slow response for a since-abandoned deep
-        // link (e.g. Back/Forward between two cold entries) must not clobber the
-        // entry now open.
-        this.api.entry(id).subscribe({
-          next: (r) => {
-            if (this.entryId() !== id) return;
-            this.fetchedEntry.set(r.entry);
-            // The detail fetch already carries the body — seed the store with
-            // it rather than let the reader view issue a redundant request.
-            this.bodyService.seed(r.entry.id, r.entry.contentHtml);
-          },
-          error: () => {
-            if (this.entryId() === id) this.fetchedEntry.set(null);
-          },
-        });
-      });
-    });
-
     // Warm the body store for the entries beside the one just opened. Keyed on
     // the id alone, so an unrelated list reload doesn't re-issue the prefetch.
     effect(() => {
-      const id = this.openEntryId();
+      const id = this.routeState.openEntryId();
       if (id === null) return;
       untracked(() => {
         const list = this.entries.entries();
@@ -702,41 +301,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
         this.pageTitle.useText(entry.title);
         return;
       }
-      this.pageTitle.useText(this.title(), this.titleCount().value);
-    });
-
-    // Nothing to read and nothing skipped: send the user to the picker. Purely
-    // state-driven -- no guard, no resolver -- gated on `resolved` so it never
-    // fires against an unanswered list. `replaceUrl` avoids a dead Back button.
-    effect(() => {
-      if (!this.emptySubscriptionsNeedingOnboarding()) return;
-
-      // Ask what the catalog holds before deciding. load() is a no-op once
-      // resolved, shared with /discover. Untracked so the effect depends on
-      // catalog resolution (`onboardingAvailable` below), not the loading flag.
-      untracked(() => this.catalog.load());
-      if (!this.onboardingAvailable()) return;
-
-      void this.router.navigate(['/discover'], { replaceUrl: true });
-    });
-
-    // The post-onboarding sweep, owned BY STATE rather than by being called:
-    // RefreshService.run() early-returns while already running, so a call from
-    // the picker could be swallowed. "Feeds never fetched" removes the ordering question.
-    effect(() => {
-      if (!this.awaitingFirstFetch() || this.sweptOnce()) return;
-      this.sweptOnce.set(true);
-      this.sweeping.set(true);
-      this.refreshSvc.run();
-    });
-
-    // Close the sweep window once it lands without error; a failure keeps it
-    // open so the banner's retry stays available. Gated on `sweeping` so no
-    // unrelated refresh reopens it; expressed as state since onDone fires on both outcomes.
-    effect(() => {
-      if (this.sweeping() && !this.refreshSvc.running() && this.refreshSvc.failure() === null) {
-        untracked(() => this.sweeping.set(false));
-      }
+      this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);
     });
 
     // The single authority that reloads the list after a refresh (#502): the
@@ -749,7 +314,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       const running = this.refreshSvc.running();
       untracked(() => {
         if (slice === 0) return; // nothing has reported yet
-        if (!this.sweeping() && running) return; // manual refresh: wait for finish
+        if (!this.onboarding.sweeping() && running) return; // manual refresh: wait for finish
         this.subs.load();
         this.savedSearchesStore.load();
         // A refresh never touches tags, so reload them once when the run
@@ -845,148 +410,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
     this.list()?.scrollToTop();
   }
 
-  // Toggle favourite/kept and keep the sidebar badge in sync optimistically,
-  // reverting the count if the PATCH fails (mirrors the unread-count handling).
-  // In the matching saved view the row also leaves — patchInList owns that.
-  favorite = (e: EntryDto): void => {
-    const delta = e.isFavorite ? -1 : 1;
-    this.subs.bumpFavorites(delta);
-    this.patchInList(e, { isFavorite: !e.isFavorite }, () => this.subs.bumpFavorites(-delta));
-  };
-  keep = (e: EntryDto): void => {
-    const delta = e.isKept ? -1 : 1;
-    this.subs.bumpKept(delta);
-    this.patchInList(e, { isKept: !e.isKept }, () => this.subs.bumpKept(-delta));
-  };
-  toggleRead = (e: EntryDto): void => this.setViewed(e, !e.isViewed);
-
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
   withOpen(fn: (e: EntryDto) => void): void {
     const e = this.openEntry();
     if (e) fn(e);
   }
 
-  /** The tick toggles "viewed" (#482). Activating it also reads the entry (the
-   *  subset invariant), so an unread entry leaves the unread list and its badge
-   *  drops; deactivating only un-ticks. Recently-read follows both ways. */
-  private setViewed(e: EntryDto, viewed: boolean): void {
-    const alsoReads = viewed && !e.isHidden;
-    this.subs.bumpViewed(viewed ? 1 : -1);
-    if (alsoReads) {
-      this.subs.decrementUnread(e.subscriptionId);
-      this.savedSearchesStore.markEntryRead(e.id);
-    }
-    // Let a later reopen re-mark a now-un-ticked entry.
-    if (!viewed) this.viewedOnOpen.delete(e.id);
-    this.patchInList(e, { isViewed: viewed }, () => {
-      this.subs.bumpViewed(viewed ? -1 : 1);
-      if (alsoReads) {
-        this.subs.incrementUnread(e.subscriptionId);
-        this.savedSearchesStore.markEntryUnread(e.id);
-      }
-    });
-  }
-
-  /** patchOpen plus the single saved-view rule shared by Favorites, Kept and
-   *  Recently-read: when the patch removes the entry from the list on screen,
-   *  fade the row out and drop it, restoring it if the PATCH fails. `onError`
-   *  runs the caller's own badge revert first, then the row comes back. */
-  private patchInList(e: EntryDto, patch: EntryStatePatch, onError: () => void): void {
-    // leaveExcludedRow only flags the row as leaving (it stays in the list data),
-    // so patchOpen still finds it whichever runs first; onError fires only async,
-    // long after revertLeave is bound.
-    const revertLeave = this.leaveExcludedRow(e, patch);
-    this.patchOpen(e, patch, () => {
-      onError();
-      revertLeave();
-    });
-  }
-
-  /** If `patch` drops `e` out of the saved view on screen, play the leave
-   *  animation and remove the row; otherwise a no-op. Reads list membership
-   *  through the same coupling the store applies, so the two never disagree. */
-  private leaveExcludedRow(e: EntryDto, patch: EntryStatePatch): () => void {
-    const flag = savedViewMembership(this.selection().kind);
-    if (flag === null) return () => undefined;
-    const after = localStatePatch(patch);
-    const stillMember = (after[flag] ?? e[flag]) === true;
-    if (stillMember) return () => undefined;
-    return this.leaveList(e);
-  }
-
-  /** Collapse a row out of the list (entry-list `.row-slot.leaving`): the row
-   *  fades, then its slot collapses. The entry stays in list data on purpose
-   *  (dropping it would re-flow the magazine plan); a reload finally clears it.
-   *  Returns a revert that un-collapses the row if the PATCH fails. */
-  private leaveList(e: EntryDto): () => void {
-    this.markLeaving(e.id, true);
-    return () => this.markLeaving(e.id, false);
-  }
-
-  private markLeaving(id: number, leaving: boolean): void {
-    this.leavingIds.update((cur) => {
-      const next = new Set(cur);
-      if (leaving) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  /** The on-open patch: viewed in one request, which the backend also reads
-   *  (#482). Both sidebar badges are kept in sync optimistically and reverted
-   *  together on failure — Recently-read up, unread down when reading a still-unread entry. */
-  private applyOpenedPatch(e: EntryDto, patch: EntryStatePatch): void {
-    const alsoReads = patch.isViewed === true && !e.isHidden;
-    if (alsoReads) {
-      this.subs.decrementUnread(e.subscriptionId);
-      this.savedSearchesStore.markEntryRead(e.id);
-    }
-    if (patch.isViewed) this.subs.bumpViewed(1);
-    this.patchOpen(e, patch, () => {
-      if (alsoReads) {
-        this.subs.incrementUnread(e.subscriptionId);
-        this.savedSearchesStore.markEntryUnread(e.id);
-      }
-      if (patch.isViewed) this.subs.bumpViewed(-1);
-    });
-  }
-
-  /** Following the original-article link is an active open even when the
-   *  entry was opened before; the flag is one-way, so an already-viewed
-   *  entry is a no-op (this fires only after an on-open PATCH rolled back). */
-  onOpenOriginal = (e: EntryDto): void => {
-    if (e.isViewed) return;
-    this.subs.bumpViewed(1);
-    this.patchOpen(e, { isViewed: true }, () => this.subs.bumpViewed(-1));
-  };
-
-  /** Apply an entry-state change. Entries in the loaded list go through the
-   *  store's optimistic path; a cold-opened deep-link entry (in no list) is
-   *  patched on its fetched copy and persisted directly, reverting on failure. */
-  private patchOpen(e: EntryDto, patch: EntryStatePatch, onError?: () => void): void {
-    if (this.entries.entries().some((x) => x.id === e.id)) {
-      this.entries.setState(e.id, patch, onError);
-      return;
-    }
-    const before = this.fetchedEntry();
-    this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? { ...cur, ...patch } : cur));
-    this.api.updateState(e.id, patch).subscribe({
-      error: () => {
-        // Only revert if the same cold entry is still open — a Back/Forward to
-        // another cold entry while the PATCH was in flight must not be clobbered.
-        this.fetchedEntry.update((cur) => (cur && cur.id === e.id ? before : cur));
-        onError?.();
-      },
-    });
-  }
-
-  open(e: EntryDto): void {
-    void this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { entry: entryParam(e.id, e.title) },
-      queryParamsHandling: 'merge',
-    });
-  }
   onCloseReader(): void {
     void this.router.navigate([], {
       relativeTo: this.route,
@@ -994,107 +423,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       queryParamsHandling: 'merge',
     });
   }
-  onMarkAllRead(): void {
-    const target = markReadTarget(this.selection());
-    if (!target) return;
-    // A confirm gate, because the action is a bulk, one-click state change over
-    // a whole list (or every list) that a misplaced tap used to fire silently.
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.markAllReadConfirm'),
-      message: this.i18n.translate('reader.markAllReadConfirmMessage'),
-      confirmLabel: this.i18n.translate('reader.markAllRead'),
-    };
-    this.confirm.confirmThen(data, () => this.markReadNow(target));
-  }
 
   onMarkAboveRead(ids: number[]): void {
-    if (ids.length === 0) return;
-    const data: ConfirmData = {
-      title: this.i18n.translate('reader.markAboveReadConfirm'),
-      message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
-      confirmLabel: this.i18n.translate('reader.markAboveRead'),
-    };
-    this.confirm.confirmThen(data, () => this.markAboveReadNow(ids));
-  }
-
-  /** Never a re-fetch: a reload lets the magazine planner re-run and lift
-   *  newer-but-lower posts above the boundary (#1080). The unread view drops the
-   *  marked blocks from its render; the all-items view restyles them in place. */
-  private markAboveReadNow(ids: number[]): void {
-    const hideLocally = this.selection().unread
-      ? () => this.list()?.hideAboveMarked(ids)
-      : () => this.entries.markHiddenLocally(ids);
-    this.api.markEntriesRead(ids).subscribe({
-      next: () => {
-        hideLocally();
-        this.refreshCountsAfterMarkRead();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.entries.reportMutationFailure(error, () => this.markAboveReadNow(ids));
-      },
-    });
-  }
-
-  private refreshCountsAfterMarkRead(): void {
-    this.subs.load();
-    this.savedSearchesStore.load();
-    this.recs.refreshStatus();
-  }
-
-  private markReadNow(target: MarkReadTarget): void {
-    const until = this.entries.loadedAt() || new Date().toISOString();
-    if (target.scope === 'search') {
-      this.entries.runThenReload(this.api.markSearchRead(target.term, until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    // The ranked feed has no scope to name and no watermark to move: the
-    // backend marks picks by their own entry state (#710, #665 for why a
-    // watermark here would be wrong). Both counts beside the list are reloaded.
-    if (target.scope === 'for-you') {
-      this.entries.runThenReload(this.api.markForYouRead(until), () => {
-        this.reloadListAndCounts();
-        // The badge counts unread picks (#724); the marked picks move no
-        // watermark the reload sees, so re-read the for-you summary to zero it.
-        this.recs.refreshStatus();
-      });
-      return;
-    }
-    if (target.scope === 'saved-searches') {
-      this.entries.runThenReload(this.api.markSavedSearchesRead(until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    if (target.scope === 'saved-search') {
-      this.entries.runThenReload(this.api.markSingleSavedSearchRead(target.id, until), () =>
-        this.reloadListAndCounts(),
-      );
-      return;
-    }
-    this.entries.runThenReload(
-      this.api.markRead(target.scope, until, target.scope === 'all' ? undefined : target.id),
-      () => {
-        this.subs.zeroUnread(
-          target.scope === 'all'
-            ? 'all'
-            : target.scope === 'tag'
-              ? { tag: target.id }
-              : { subscription: target.id },
-        );
-        this.entries.load(queryFromSelection(this.selection()));
-        this.savedSearchesStore.load();
-      },
-    );
-  }
-
-  /** Reload the list, the sidebar subscription counts, and the saved-search
-   *  badges — the state a scoped mark-read invalidates in one pass. */
-  private reloadListAndCounts(): void {
-    this.entries.load(queryFromSelection(this.selection()));
-    this.subs.load();
-    this.savedSearchesStore.load();
+    this.markRead.confirmMarkAboveRead(ids, () => this.list()?.hideAboveMarked(ids));
   }
 
   // Preserve the underlying list so clearing a direct search returns to it.
@@ -1125,7 +456,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
    *  identity is its visible term plus its mode — the whole-word and phrase
    *  flags — so all three must match. */
   readonly currentSavedSearch = computed(() => {
-    if (this.selection().kind === 'saved-search') return this.activeSavedSearch();
+    if (this.selection().kind === 'saved-search') return this.heading.activeSavedSearch();
     const current = this.searchedTermAndMode();
     if (current === null) return null;
 
@@ -1140,19 +471,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
         ) ?? null
     );
   });
-
-  /** The badge the sidebar's Saved searches row shows: the sum of the per-search
-   *  counts. A post matching two searches counts twice here and once in the
-   *  list — accepted, so the row and the heading show one number (#769). */
-  readonly savedSearchesUnread = computed(() =>
-    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
-  );
-
-  /** The heading and tab total across every saved search under "All posts" —
-   *  the same double-counting rule as `savedSearchesUnread` (#1154). */
-  readonly savedSearchesTotal = computed(() =>
-    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.memberCount, 0),
-  );
 
   protected readonly savedSearchActionLabel = computed(() =>
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
@@ -1237,7 +555,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       case 'tag':
         return s.id != null ? { tagId: s.id } : null;
       case 'subscription': {
-        const feedId = this.subs.subscriptions().find((x) => x.id === s.id)?.feedId;
+        const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;
       }
       default:
@@ -1317,39 +635,5 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy, E
       // first fetch finishes — this path no longer reloads it itself.
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
-  }
-}
-
-/** A count of unread posts — what the sidebar badge counts, and what the
- *  heading and tab show under "Only unread" (#1154). */
-function unread(value: number): TitleCount {
-  return { value, counts: 'unread' };
-}
-
-/** A count of posts, read or not — what the sidebar counts for the saved views,
- *  where "unread" is not the question the list answers, and every list's total
- *  under "All posts" (#1154). */
-function items(value: number): TitleCount {
-  return { value, counts: 'items' };
-}
-
-/** The unread count under "Only unread", every post under "All posts". */
-function bySwitch(selection: Selection, unreadCount: number, allCount: number): TitleCount {
-  return selection.unread ? unread(unreadCount) : items(allCount);
-}
-
-/** The entry flag a saved view filters on, or null for a list that shows every
- *  entry regardless of state. When a patch sets that flag false, the entry no
- *  longer belongs in the view and the row leaves — one rule for all three views. */
-function savedViewMembership(kind: Selection['kind']): 'isFavorite' | 'isKept' | 'isViewed' | null {
-  switch (kind) {
-    case 'favorites':
-      return 'isFavorite';
-    case 'kept':
-      return 'isKept';
-    case 'viewed':
-      return 'isViewed';
-    default:
-      return null;
   }
 }

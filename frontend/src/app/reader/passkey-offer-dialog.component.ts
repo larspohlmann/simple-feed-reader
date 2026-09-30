@@ -16,8 +16,8 @@ type OfferStage = 'offer' | 'declined';
 
 /**
  * The first-login passkey offer (#624): shown once, on the first reader boot
- * where the account has not answered it yet — see `ReaderShellComponent`'s
- * gating effect for the conditions that decide when.
+ * where the account has not answered it yet — see `PasskeyFirstBootOffer`
+ * for the conditions that decide when.
  *
  * Two stages, not a route of their own:
  *  - "offer" — *Set up a passkey* runs `PasskeysGroupComponent`'s ceremony,

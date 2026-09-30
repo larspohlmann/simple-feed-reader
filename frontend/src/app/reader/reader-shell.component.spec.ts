@@ -853,7 +853,7 @@ describe('ReaderShellComponent', () => {
     });
     f.detectChanges();
 
-    f.componentInstance.toggleRead(f.componentInstance.openEntry()!);
+    f.componentInstance.entryActions.toggleRead(f.componentInstance.openEntry()!);
     f.detectChanges();
 
     const patches = ctrl.match((r) => r.url.endsWith('/entries/1/state'));
@@ -887,12 +887,12 @@ describe('ReaderShellComponent', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
     f.detectChanges();
 
-    f.componentInstance.onOpenOriginal({ ...entry, isHidden: true, isViewed: false });
+    f.componentInstance.entryActions.openOriginal({ ...entry, isHidden: true, isViewed: false });
     const req = ctrl.expectOne('https://api.test/api/entries/1/state');
     expect(req.request.body).toEqual({ isViewed: true });
   });
 
-  // Direct invocation above proves onOpenOriginal's own logic, but not that the
+  // Direct invocation above proves openOriginal's own logic, but not that the
   // template wires the click to it — there are TWO <app-reader-view> sites (wide
   // pane, narrow overlay), and either could silently drop the `(openOriginal)` binding.
   describe('the original-article link, through the real template wiring', () => {
@@ -1422,7 +1422,7 @@ describe('ReaderShellComponent', () => {
     req.flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.title()).toBe('For you');
+    expect(f.componentInstance.heading.title()).toBe('For you');
   });
 
   // The For-You badge counts unread picks (#724), so the heading and the tab
@@ -1516,7 +1516,7 @@ describe('ReaderShellComponent', () => {
     const f = boot();
     f.detectChanges();
 
-    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
     expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
   });
 
@@ -1529,7 +1529,7 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
   });
 
   it('counts every post of a tag when All posts is on', () => {
@@ -1546,7 +1546,7 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
   });
 
   it('switches the count when the unread switch flips', () => {
@@ -1557,7 +1557,7 @@ describe('ReaderShellComponent', () => {
       .expectOne((r) => r.url === 'https://api.test/api/entries')
       .flush({ entries: [], nextCursor: null });
 
-    expect(f.componentInstance.titleCount()).toEqual({ value: 2, counts: 'unread' });
+    expect(f.componentInstance.heading.titleCount()).toEqual({ value: 2, counts: 'unread' });
   });
 
   // A search names itself with its own result count, in the heading and in the
@@ -1572,7 +1572,7 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.titleCount().value).toBe(0);
+    expect(f.componentInstance.heading.titleCount().value).toBe(0);
   });
 
   it('names the browser tab after the open article, cut to what a tab shows', () => {
@@ -1597,7 +1597,7 @@ describe('ReaderShellComponent', () => {
   describe('translated heading (#411)', () => {
     it('titles the default list with the translated all-items label', () => {
       const f = boot();
-      expect(f.componentInstance.title()).toBe('All items');
+      expect(f.componentInstance.heading.title()).toBe('All items');
 
       TestBed.inject(LanguageService).set('de');
       f.detectChanges();
@@ -1605,7 +1605,7 @@ describe('ReaderShellComponent', () => {
       // The crux of #411: TranslocoService.translate() is one-shot, so without a
       // language signal in the computed's dependency graph the heading would
       // freeze on the English string a switch never revisits.
-      expect(f.componentInstance.title()).toBe('Alle Einträge');
+      expect(f.componentInstance.heading.title()).toBe('Alle Einträge');
     });
 
     it('titles the favorites list with the translated label', () => {
@@ -1618,7 +1618,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       f.detectChanges();
 
-      expect(f.componentInstance.title()).toBe('Favoriten');
+      expect(f.componentInstance.heading.title()).toBe('Favoriten');
     });
   });
 
@@ -1629,7 +1629,7 @@ describe('ReaderShellComponent', () => {
     // that lights up for an unrelated feed load.
     it('is false for a non-search selection while its list is not loading', () => {
       const f = boot();
-      expect(f.componentInstance.searching()).toBe(false);
+      expect(f.componentInstance.heading.searching()).toBe(false);
     });
 
     it('is false for a non-search selection while its list IS loading', () => {
@@ -1639,7 +1639,7 @@ describe('ReaderShellComponent', () => {
 
       expect(f.componentInstance.selection().kind).toBe('tag');
       expect(f.componentInstance.entries.loading()).toBe(true);
-      expect(f.componentInstance.searching()).toBe(false);
+      expect(f.componentInstance.heading.searching()).toBe(false);
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries')
@@ -1658,7 +1658,7 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       f.detectChanges();
 
-      expect(f.componentInstance.searching()).toBe(false);
+      expect(f.componentInstance.heading.searching()).toBe(false);
     });
 
     it('is true for a search selection while its list IS loading', () => {
@@ -1668,7 +1668,7 @@ describe('ReaderShellComponent', () => {
 
       expect(f.componentInstance.selection().kind).toBe('search');
       expect(f.componentInstance.entries.loading()).toBe(true);
-      expect(f.componentInstance.searching()).toBe(true);
+      expect(f.componentInstance.heading.searching()).toBe(true);
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -1704,7 +1704,7 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
 
       expect(f.componentInstance.entries.entries().map((e) => e.id)).toEqual([2]);
-      expect(f.componentInstance.title()).toContain('daft punk');
+      expect(f.componentInstance.heading.title()).toContain('daft punk');
     });
 
     it('does not reload the list for an entry-only URL change (original comparator intent)', () => {
@@ -1778,8 +1778,8 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [{ ...entry, id: 1 }], nextCursor: null });
       f.detectChanges();
 
-      expect(f.componentInstance.title()).not.toContain('daft "');
-      expect(f.componentInstance.title()).toContain('"daft"');
+      expect(f.componentInstance.heading.title()).not.toContain('daft "');
+      expect(f.componentInstance.heading.title()).toContain('"daft"');
     });
   });
 
@@ -1792,7 +1792,7 @@ describe('ReaderShellComponent', () => {
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
       const f = boot();
 
-      f.componentInstance.open(entry);
+      f.componentInstance.entryActions.open(entry);
 
       const queryParams = nav.mock.calls[0][1]?.queryParams as Record<string, unknown>;
       expect(queryParams).not.toHaveProperty('q');
@@ -1885,17 +1885,17 @@ describe('ReaderShellComponent', () => {
       // the title: entries() still holds the stale 'all' row and hasMore() reads
       // false (nextCursor already cleared) — a naive read would show "— 1" here.
       expect(f.componentInstance.entries.entries().length).toBe(1);
-      expect(f.componentInstance.hasMore()).toBe(false);
-      expect(f.componentInstance.searching()).toBe(true);
+      expect(f.componentInstance.heading.hasMore()).toBe(false);
+      expect(f.componentInstance.heading.searching()).toBe(true);
 
-      expect(f.componentInstance.title()).toBe('Results for "angular"');
-      expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
-      expect(f.componentInstance.searchTitleBody()).toBe('"angular"');
-      expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
+      expect(f.componentInstance.heading.title()).toBe('Results for "angular"');
+      expect(f.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
+      expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular"');
+      expect(f.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
       // No pill while in flight — the same trap as the dash-form count above:
       // a naive read here would show a stale/false count for a term that has
       // not answered yet.
-      expect(f.componentInstance.searchCountLabel()).toBeNull();
+      expect(f.componentInstance.heading.searchCountLabel()).toBeNull();
 
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/search')
@@ -1912,11 +1912,11 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [entry, { ...entry, id: 2 }], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.title()).toBe('Results for "angular" — 2');
-    expect(f.componentInstance.searchTitlePrefix()).toBe('Results for');
-    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 2');
-    expect(f.componentInstance.searchTitleTerm()).toBe('"angular"');
-    expect(f.componentInstance.searchCountLabel()).toBe('2');
+    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 2');
+    expect(f.componentInstance.heading.searchTitlePrefix()).toBe('Results for');
+    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 2');
+    expect(f.componentInstance.heading.searchTitleTerm()).toBe('"angular"');
+    expect(f.componentInstance.heading.searchCountLabel()).toBe('2');
   });
 
   it('titles a settled search with zero results as the exact count, not the loading form', () => {
@@ -1928,10 +1928,10 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     f.detectChanges();
 
-    expect(f.componentInstance.searching()).toBe(false);
-    expect(f.componentInstance.title()).toBe('Results for "angular" — 0');
-    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 0');
-    expect(f.componentInstance.searchCountLabel()).toBe('0');
+    expect(f.componentInstance.heading.searching()).toBe(false);
+    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 0');
+    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 0');
+    expect(f.componentInstance.heading.searchCountLabel()).toBe('0');
   });
 
   it('titles a search selection with a trailing + when another page exists', () => {
@@ -1943,9 +1943,9 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [entry], nextCursor: 'cursor-2' });
     f.detectChanges();
 
-    expect(f.componentInstance.title()).toBe('Results for "angular" — 1+');
-    expect(f.componentInstance.searchTitleBody()).toBe('"angular" — 1+');
-    expect(f.componentInstance.searchCountLabel()).toBe('1+');
+    expect(f.componentInstance.heading.title()).toBe('Results for "angular" — 1+');
+    expect(f.componentInstance.heading.searchTitleBody()).toBe('"angular" — 1+');
+    expect(f.componentInstance.heading.searchCountLabel()).toBe('1+');
   });
 
   it('reloads the for-you list when a run completes while it is open', () => {
@@ -2232,7 +2232,7 @@ describe('ReaderShellComponent', () => {
     f.detectChanges();
 
     expect(list().titleTag()).toEqual(science);
-    expect(f.componentInstance.title()).toBe('Wissenschaft');
+    expect(f.componentInstance.heading.title()).toBe('Wissenschaft');
   });
 
   it('forwards the header tap to the entry list', () => {
@@ -2885,20 +2885,20 @@ describe('ReaderShellComponent', () => {
 
     it('collapses an un-favourited row but keeps it in the data so the plan holds', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
       // Kept in entries() on purpose: dropping it would re-flow the magazine plan.
       expect(f.componentInstance.entries.entries().some((e) => e.id === 1)).toBe(true);
     });
 
     it('does NOT collapse the row when the flag is toggled outside its saved view', () => {
       const f = bootInto('all', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
     });
 
     it('collapses a Recently-read row on un-tick and drops the viewed badge', () => {
@@ -2906,10 +2906,10 @@ describe('ReaderShellComponent', () => {
       const subs = TestBed.inject(SubscriptionsStore);
       expect(subs.viewedCount()).toBe(3);
 
-      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
       expect(subs.viewedCount()).toBe(2);
     });
 
@@ -2917,20 +2917,20 @@ describe('ReaderShellComponent', () => {
       const f = bootInto('viewed', { isHidden: true, isViewed: true });
       const subs = TestBed.inject(SubscriptionsStore);
 
-      f.componentInstance.toggleRead(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.toggleRead(f.componentInstance.entries.entries()[0]);
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries/1/state')
         .error(new ProgressEvent('fail'));
 
-      expect(f.componentInstance.leavingIds().has(1)).toBe(false);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(false);
       expect(subs.viewedCount()).toBe(3);
     });
 
     it('clears the collapsed set when the selection changes', () => {
       const f = bootInto('favorites', { isFavorite: true });
-      f.componentInstance.favorite(f.componentInstance.entries.entries()[0]);
+      f.componentInstance.entryActions.favorite(f.componentInstance.entries.entries()[0]);
       flushStatePatch();
-      expect(f.componentInstance.leavingIds().has(1)).toBe(true);
+      expect(f.componentInstance.entryActions.leavingIds().has(1)).toBe(true);
 
       qp.next(convertToParamMap({ view: 'kept' }));
       f.detectChanges();
@@ -2938,7 +2938,7 @@ describe('ReaderShellComponent', () => {
         .expectOne((r) => r.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
 
-      expect(f.componentInstance.leavingIds().size).toBe(0);
+      expect(f.componentInstance.entryActions.leavingIds().size).toBe(0);
     });
   });
 
@@ -3049,7 +3049,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3070,7 +3070,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/search/mark-read');
     });
@@ -3091,7 +3091,7 @@ describe('ReaderShellComponent', () => {
     it('offers the action on the ranked feed at all', () => {
       const f = bootWithForYouSelected();
 
-      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
     });
 
     it('calls the for-you endpoint, then reloads the list and the counts beside it', () => {
@@ -3099,7 +3099,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3143,7 +3143,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
       ctrl
@@ -3171,7 +3171,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/mark-read');
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read').flush(null);
@@ -3199,7 +3199,7 @@ describe('ReaderShellComponent', () => {
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
       expect(f.componentInstance.entries.loading()).toBe(false);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectOne('https://api.test/api/entries/for-you/mark-read');
       expect(f.componentInstance.entries.loading()).toBe(true);
@@ -3223,7 +3223,7 @@ describe('ReaderShellComponent', () => {
     it('titles the combined saved-search list with the sidebar label', () => {
       const f = bootWithSavedSearches([]);
 
-      expect(f.componentInstance.title()).toBe('Saved searches');
+      expect(f.componentInstance.heading.title()).toBe('Saved searches');
     });
 
     it('counts the same unread total the sidebar row shows', () => {
@@ -3253,7 +3253,7 @@ describe('ReaderShellComponent', () => {
         },
       ]);
 
-      expect(f.componentInstance.titleCount()).toEqual({ value: 5, counts: 'unread' });
+      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 5, counts: 'unread' });
     });
 
     it('counts the combined member total when All posts is on', () => {
@@ -3282,7 +3282,7 @@ describe('ReaderShellComponent', () => {
         },
       ]);
 
-      expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
     });
   });
 
@@ -3344,15 +3344,15 @@ describe('ReaderShellComponent', () => {
       expect(f.componentInstance.selection()).toEqual(
         expect.objectContaining({ kind: 'saved-search', id: 4, unread: false }),
       );
-      expect(f.componentInstance.activeSavedSearchId()).toBe(4);
+      expect(f.componentInstance.heading.activeSavedSearchId()).toBe(4);
     });
 
     it('titles the list with the saved search term and counts its unread total', () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = bootSingleSavedSearch();
 
-      expect(f.componentInstance.title()).toBe('climate');
-      expect(f.componentInstance.titleCount()).toEqual({ value: 3, counts: 'unread' });
+      expect(f.componentInstance.heading.title()).toBe('climate');
+      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 3, counts: 'unread' });
     });
 
     it('counts the saved search member total when All posts is on', () => {
@@ -3368,13 +3368,13 @@ describe('ReaderShellComponent', () => {
         .flush({ entries: [], nextCursor: null });
       f.detectChanges();
 
-      expect(f.componentInstance.titleCount()).toEqual({ value: 6, counts: 'items' });
+      expect(f.componentInstance.heading.titleCount()).toEqual({ value: 6, counts: 'items' });
     });
 
     it('turns on Mark all read and the unread filter', () => {
       const f = bootSingleSavedSearch();
 
-      expect(f.componentInstance.canMarkAllRead()).toBe(true);
+      expect(f.componentInstance.markRead.canMarkAllRead()).toBe(true);
       const list = f.debugElement.query(By.directive(EntryListComponent))
         .componentInstance as EntryListComponent;
       expect(list.hasUnreadFilter()).toBe(true);
@@ -3384,7 +3384,7 @@ describe('ReaderShellComponent', () => {
       const f = bootSingleSavedSearch();
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue({ closed: of(true) } as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/4/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3512,7 +3512,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(true) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       const req = ctrl.expectOne('https://api.test/api/entries/saved-searches/mark-read');
       expect(req.request.method).toBe('POST');
@@ -3531,7 +3531,7 @@ describe('ReaderShellComponent', () => {
       const ref = { closed: of(false) };
       jest.spyOn(TestBed.inject(Dialog), 'open').mockReturnValue(ref as never);
 
-      f.componentInstance.onMarkAllRead();
+      f.componentInstance.markRead.confirmMarkAllRead();
 
       ctrl.expectNone('https://api.test/api/entries/saved-searches/mark-read');
     });
