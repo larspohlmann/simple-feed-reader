@@ -2,7 +2,7 @@
   type="button"
   [attr.aria-label]="'reader.favorite' | transloco"
   [appFlagToggle]="entry().isFavorite"
-  (click)="$event.stopPropagation(); favorite.emit(entry())"
+  (click)="$event.stopPropagation(); actions.favorite(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
@@ -12,7 +12,7 @@
   type="button"
   [attr.aria-label]="'reader.keep' | transloco"
   [appFlagToggle]="entry().isKept"
-  (click)="$event.stopPropagation(); keep.emit(entry())"
+  (click)="$event.stopPropagation(); actions.keep(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
@@ -22,7 +22,7 @@
   type="button"
   [attr.aria-label]="'reader.toggleRead' | transloco"
   [appFlagToggle]="entry().isViewed"
-  (click)="$event.stopPropagation(); read.emit(entry())"
+  (click)="$event.stopPropagation(); actions.toggleRead(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >

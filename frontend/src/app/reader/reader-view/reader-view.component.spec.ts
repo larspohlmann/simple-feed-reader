@@ -16,6 +16,18 @@ import { AudioPlayerService } from '../audio-player.service';
 import { CommentsService, CommentsState } from '../comments.service';
 import { ImageProxyService, ProxyOutcome } from '../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
  *  covers caching/dedup/eviction; this file only needs to drive what the view renders. */
@@ -182,6 +194,7 @@ describe('ReaderViewComponent', () => {
     TestBed.configureTestingModule({
       imports: [ReaderViewComponent, provideTranslocoTesting()],
       providers: [
+        { provide: EntryActionHandler, useValue: entryActions },
         provideRouter([]),
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
         { provide: EntryBodyService, useValue: fakeBody },
@@ -468,12 +481,10 @@ describe('ReaderViewComponent', () => {
     expect(row!.classList).toContain('glyph-md');
   });
 
-  it('emits favorite/keep/read/close', () => {
+  it('sends favorite/keep/read to the handler and emits close', () => {
     const f = mount(entry());
-    const c = { favorite: 0, keep: 0, read: 0, close: 0 };
-    (Object.keys(c) as (keyof typeof c)[]).forEach((k) =>
-      f.componentInstance[k].subscribe(() => c[k]++),
-    );
+    let closes = 0;
+    f.componentInstance.close.subscribe(() => closes++);
     const el = f.nativeElement as HTMLElement;
     // Scoped to the article's own row: the split pane's toolbar carries a
     // second favourite/keep pair, and it comes first in the DOM.
@@ -481,7 +492,10 @@ describe('ReaderViewComponent', () => {
     (el.querySelector('.actions [aria-label="Keep"]') as HTMLButtonElement).click();
     (el.querySelector('.actions [aria-label="Toggle read"]') as HTMLButtonElement).click();
     (el.querySelector('.close') as HTMLButtonElement).click();
-    expect(c).toEqual({ favorite: 1, keep: 1, read: 1, close: 1 });
+    expect(entryActions.favorite).toHaveBeenCalledTimes(1);
+    expect(entryActions.keep).toHaveBeenCalledTimes(1);
+    expect(entryActions.toggleRead).toHaveBeenCalledTimes(1);
+    expect(closes).toBe(1);
   });
 
   it('emits openOriginal when the original-article link is clicked', () => {
@@ -647,8 +661,8 @@ describe('ReaderViewComponent', () => {
 
       const favouriteEmits = jest.fn();
       const keepEmits = jest.fn();
-      f.componentInstance.favorite.subscribe(favouriteEmits);
-      f.componentInstance.keep.subscribe(keepEmits);
+      entryActions.favorite.mockImplementation(favouriteEmits);
+      entryActions.keep.mockImplementation(keepEmits);
       favourite.click();
       keep.click();
       expect(favouriteEmits).toHaveBeenCalled();

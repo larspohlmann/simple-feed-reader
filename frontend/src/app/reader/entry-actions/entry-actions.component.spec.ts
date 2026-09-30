@@ -1,10 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, forwardRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryActionsComponent } from './entry-actions.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from './entry-action-handler';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -46,22 +47,33 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
     (keydown.enter)="cardOpened = true"
     (keydown.space)="$event.preventDefault(); cardOpened = true"
   >
-    <app-entry-actions
-      [entry]="entry"
-      [size]="size"
-      (favorite)="favoriteCount = favoriteCount + 1"
-      (keep)="kept = $event"
-      (read)="marked = $event"
-    />
+    <app-entry-actions [entry]="entry" [size]="size" />
   </article>`,
+  providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
-class HostComponent {
+class HostComponent implements EntryActionHandler {
   entry: EntryDto = entry();
   size: 'sm' | 'md' = 'sm';
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
   marked: EntryDto | null = null;
+
+  favorite(): void {
+    this.favoriteCount++;
+  }
+
+  keep(entry: EntryDto): void {
+    this.kept = entry;
+  }
+
+  toggleRead(entry: EntryDto): void {
+    this.marked = entry;
+  }
+
+  open(): void {
+    throw new Error('entry-actions never opens its entry');
+  }
 }
 
 /** jsdom does not fire `click` for a focused button's Enter/Space itself, so

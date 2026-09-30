@@ -3,9 +3,9 @@
   role="button"
   tabindex="0"
   [class.read]="entry().isHidden"
-  (click)="open.emit(entry())"
-  (keydown.enter)="open.emit(entry())"
-  (keydown.space)="$event.preventDefault(); open.emit(entry())"
+  (click)="actions.open(entry())"
+  (keydown.enter)="actions.open(entry())"
+  (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   @if (showImage()) {
     <img
@@ -29,19 +29,7 @@
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }
-    <app-entry-meta
-      [entry]="entry()"
-      [tags]="tags()"
-      (favorite)="favorite.emit($event)"
-      (keep)="keep.emit($event)"
-      (read)="read.emit($event)"
-    />
-    <app-entry-duplicates
-      [entry]="entry()"
-      (open)="open.emit($event)"
-      (favorite)="favorite.emit($event)"
-      (keep)="keep.emit($event)"
-      (read)="read.emit($event)"
-    />
+    <app-entry-meta [entry]="entry()" [tags]="tags()" />
+    <app-entry-duplicates [entry]="entry()" />
   </div>
 </article>

@@ -3,6 +3,18 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryMetaComponent } from './entry-meta.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -42,7 +54,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
 function mount(tags: SubscriptionTagDto[]) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryMetaComponent);
   f.componentRef.setInput('entry', entry());
@@ -64,14 +76,14 @@ describe('EntryMetaComponent', () => {
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
-  it('forwards each action to its own output', () => {
+  it('sends each action to the entry action handler', () => {
     const f = mount([]);
     const favorite = jest.fn();
     const keep = jest.fn();
     const read = jest.fn();
-    f.componentInstance.favorite.subscribe(favorite);
-    f.componentInstance.keep.subscribe(keep);
-    f.componentInstance.read.subscribe(read);
+    entryActions.favorite.mockImplementation(favorite);
+    entryActions.keep.mockImplementation(keep);
+    entryActions.toggleRead.mockImplementation(read);
 
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();

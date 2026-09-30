@@ -244,10 +244,6 @@ export class EntryListComponent implements OnDestroy {
    *  background refresh while the confirm dialog is open cannot change the set. */
   readonly markAboveRead = output<number[]>();
   readonly refresh = output<void>();
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
-  readonly open = output<EntryDto>();
 
   /** The refresh button + pull gesture are hidden in the cross-feed saved views. */
   readonly canRefresh = computed(() => canScopedRefresh(this.selection()));

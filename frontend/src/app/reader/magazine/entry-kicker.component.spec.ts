@@ -3,6 +3,18 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryKickerComponent } from './entry-kicker.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -34,7 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryKickerComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryKickerComponent);
   f.componentRef.setInput('entry', e);
@@ -56,7 +68,7 @@ describe('EntryKickerComponent', () => {
     );
 
     const read = jest.fn();
-    f.componentInstance.read.subscribe(read);
+    entryActions.toggleRead.mockImplementation(read);
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[2] as HTMLElement).click();
     expect(read).toHaveBeenCalled();

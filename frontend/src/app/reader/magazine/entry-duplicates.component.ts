@@ -1,7 +1,8 @@
-import { Component, computed, forwardRef, inject, input, output, signal } from '@angular/core';
+import { Component, computed, forwardRef, inject, input, signal } from '@angular/core';
 import { CdkConnectedOverlay, ConnectedPosition } from '@angular/cdk/overlay';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
 import { LanguageService } from '../../core/language.service';
 import { relativeTime } from '../format';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
@@ -24,13 +25,13 @@ const OVERLAY_POSITIONS: ConnectedPosition[] = [
   imports: [TranslocoPipe, IconComponent, CdkConnectedOverlay, forwardRef(() => EntryRowComponent)],
   templateUrl: './entry-duplicates.component.html',
   styleUrl: './entry-duplicates.component.scss',
+  providers: [
+    { provide: EntryActionHandler, useExisting: forwardRef(() => EntryDuplicatesComponent) },
+  ],
 })
-export class EntryDuplicatesComponent {
+export class EntryDuplicatesComponent implements EntryActionHandler {
   readonly entry = input.required<EntryDto>();
-  readonly open = output<EntryDto>();
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
+  private readonly shellActions = inject(EntryActionHandler, { skipSelf: true });
 
   private readonly language = inject(LanguageService);
   readonly copies = computed(() =>
@@ -58,26 +59,32 @@ export class EntryDuplicatesComponent {
     this.displayed.set({ ...copy });
   }
 
-  openCopy(copy: EntryDto): void {
-    this.open.emit(copy);
+  open(copy: EntryDto): void {
+    this.shellActions.open(copy);
     this.close();
   }
 
-  // Emit before flipping the clone: the shell reads the flag's pre-toggle
+  // Call before flipping the clone: the shell reads the flag's pre-toggle
   // value to decide which way to PATCH.
-  favoriteCopy(copy: EntryDto): void {
-    this.favorite.emit(copy);
-    this.displayed.update((c) => (c ? { ...c, isFavorite: !c.isFavorite } : c));
+  favorite(copy: EntryDto): void {
+    this.shellActions.favorite(copy);
+    this.displayed.update((current) =>
+      current ? { ...current, isFavorite: !current.isFavorite } : current,
+    );
   }
 
-  keepCopy(copy: EntryDto): void {
-    this.keep.emit(copy);
-    this.displayed.update((c) => (c ? { ...c, isKept: !c.isKept } : c));
+  keep(copy: EntryDto): void {
+    this.shellActions.keep(copy);
+    this.displayed.update((current) =>
+      current ? { ...current, isKept: !current.isKept } : current,
+    );
   }
 
-  readCopy(copy: EntryDto): void {
-    this.read.emit(copy);
-    this.displayed.update((c) => (c ? { ...c, isViewed: !c.isViewed } : c));
+  toggleRead(copy: EntryDto): void {
+    this.shellActions.toggleRead(copy);
+    this.displayed.update((current) =>
+      current ? { ...current, isViewed: !current.isViewed } : current,
+    );
   }
 
   close(): void {

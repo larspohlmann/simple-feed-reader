@@ -1,7 +1,2 @@
 <app-entry-pills [tags]="tags()" [savedSearches]="entry().savedSearches ?? []" />
-<app-entry-actions
-  [entry]="entry()"
-  (favorite)="favorite.emit($event)"
-  (keep)="keep.emit($event)"
-  (read)="read.emit($event)"
-/>
+<app-entry-actions [entry]="entry()" />

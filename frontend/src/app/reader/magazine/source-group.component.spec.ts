@@ -3,6 +3,18 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { SourceGroupComponent } from './source-group.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
@@ -42,7 +54,7 @@ describe('SourceGroupComponent', () => {
   function mount(entries: EntryDto[], previewCount: number) {
     TestBed.configureTestingModule({
       imports: [SourceGroupComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const f = TestBed.createComponent(SourceGroupComponent);
     f.componentRef.setInput('source', 'heise');
@@ -81,7 +93,7 @@ describe('SourceGroupComponent', () => {
   it('re-emits open from an inner item', () => {
     const f = mount([e(1), e(2), e(3), e(4), e(5)], 4);
     const open = jest.fn();
-    f.componentInstance.open.subscribe(open);
+    entryActions.open.mockImplementation(open);
     (f.nativeElement.querySelector('.compact') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
   });
@@ -108,7 +120,7 @@ describe('SourceGroupComponent', () => {
   it('forwards an action from the row it was pressed on', () => {
     const f = mount([e(1), e(2), e(3)], 3);
     const favorite = jest.fn();
-    f.componentInstance.favorite.subscribe(favorite);
+    entryActions.favorite.mockImplementation(favorite);
 
     const rows = f.nativeElement.querySelectorAll('app-entry-compact');
     const secondRowStar = rows[1].querySelectorAll('app-entry-actions button')[0] as HTMLElement;
@@ -121,8 +133,8 @@ describe('SourceGroupComponent', () => {
     const f = mount([e(1)], 1);
     const keep = jest.fn();
     const read = jest.fn();
-    f.componentInstance.keep.subscribe(keep);
-    f.componentInstance.read.subscribe(read);
+    entryActions.keep.mockImplementation(keep);
+    entryActions.toggleRead.mockImplementation(read);
 
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[1] as HTMLElement).click();

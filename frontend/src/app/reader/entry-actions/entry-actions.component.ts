@@ -1,4 +1,5 @@
-import { Component, input, output } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
+import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../shared/icon/icon.component';
 import { FlagToggleDirective } from '../../shared/flag-toggle/flag-toggle.directive';
@@ -28,7 +29,5 @@ export class EntryActionsComponent {
    *  `md`; magazine blocks keep `sm`. Only these two are offered — the
    *  tap-target math is defined for both (see `glyph-md` in the stylesheet). */
   readonly size = input<Extract<IconSize, 'sm' | 'md'>>('sm');
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
+  protected readonly actions = inject(EntryActionHandler);
 }

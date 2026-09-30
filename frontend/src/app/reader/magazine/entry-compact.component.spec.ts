@@ -3,6 +3,18 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
@@ -42,7 +54,7 @@ describe('EntryCompactComponent', () => {
   function mount() {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
@@ -59,7 +71,7 @@ describe('EntryCompactComponent', () => {
   it('shows a one-line dek when the entry has a summary (#515)', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', { ...entry, excerpt: 'A short description.' });
@@ -77,7 +89,10 @@ describe('EntryCompactComponent', () => {
   });
 
   it('hides the source when showSource is false', () => {
-    TestBed.configureTestingModule({ imports: [EntryCompactComponent, provideTranslocoTesting()] });
+    TestBed.configureTestingModule({
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }],
+      imports: [EntryCompactComponent, provideTranslocoTesting()],
+    });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
     f.componentRef.setInput('showSource', false);
@@ -90,7 +105,7 @@ describe('EntryCompactComponent', () => {
   it('shows tag pills when standalone', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
@@ -102,7 +117,7 @@ describe('EntryCompactComponent', () => {
   it('hides tag pills inside a source group (showSource=false)', () => {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
-      providers: [provideRouter([])],
+      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const f = TestBed.createComponent(EntryCompactComponent);
     f.componentRef.setInput('entry', entry);
@@ -115,7 +130,7 @@ describe('EntryCompactComponent', () => {
   it('emits open on click and on Enter', () => {
     const f = mount();
     const open = jest.fn();
-    f.componentInstance.open.subscribe(open);
+    entryActions.open.mockImplementation(open);
     const row = f.nativeElement.querySelector('.compact') as HTMLElement;
     row.click();
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
@@ -154,8 +169,8 @@ describe('EntryCompactComponent', () => {
     const f = mount();
     const keep = jest.fn();
     const open = jest.fn();
-    f.componentInstance.keep.subscribe(keep);
-    f.componentInstance.open.subscribe(open);
+    entryActions.keep.mockImplementation(keep);
+    entryActions.open.mockImplementation(open);
 
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[1] as HTMLElement).click();

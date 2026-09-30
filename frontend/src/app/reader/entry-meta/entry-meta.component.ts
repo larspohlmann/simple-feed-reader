@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
@@ -18,7 +18,4 @@ import { EntryDto, SubscriptionTagDto } from '../models';
 export class EntryMetaComponent {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
 }

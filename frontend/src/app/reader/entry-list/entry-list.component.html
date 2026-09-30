@@ -291,30 +291,18 @@
                   <app-entry-hero
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('wide') {
                   <app-entry-wide
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('quote') {
                   <app-entry-quote
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('split') {
@@ -322,40 +310,24 @@
                     [entry]="entryOf(b)"
                     [imageSide]="side(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('kicker') {
                   <app-entry-kicker
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('thumb') {
                   <app-entry-thumb
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('compact') {
                   <app-entry-compact
                     [entry]="entryOf(b)"
                     [tags]="tagsFor(entryOf(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
                 @case ('group') {
@@ -365,10 +337,6 @@
                     [entries]="grp(b).entries"
                     [previewCount]="grp(b).previewCount"
                     [tags]="tagsFor(grp(b).subscriptionId)"
-                    (favorite)="favorite.emit($event)"
-                    (keep)="keep.emit($event)"
-                    (read)="read.emit($event)"
-                    (open)="open.emit($event)"
                   />
                 }
               }
@@ -425,10 +393,6 @@
                 [terms]="searchTerms()"
                 [class.in-search]="isSearch()"
                 [class.open]="openEntryId() === e.id"
-                (favorite)="favorite.emit($event)"
-                (keep)="keep.emit($event)"
-                (read)="read.emit($event)"
-                (open)="open.emit($event)"
               />
             </app-recommendation-strip>
           </div>

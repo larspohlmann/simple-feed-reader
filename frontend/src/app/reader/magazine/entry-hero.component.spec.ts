@@ -4,6 +4,18 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryHeroComponent } from './entry-hero.component';
 import { EntryDto } from '../models';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -35,7 +47,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryHeroComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryHeroComponent);
   f.componentRef.setInput('entry', e);
@@ -54,7 +66,7 @@ describe('EntryHeroComponent', () => {
   it('emits open on click', () => {
     const f = mount(entry());
     const open = jest.fn();
-    f.componentInstance.open.subscribe(open);
+    entryActions.open.mockImplementation(open);
     (f.nativeElement.querySelector('.hero') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
   });
@@ -101,9 +113,9 @@ describe('EntryHeroComponent', () => {
     const favorite = jest.fn();
     const keep = jest.fn();
     const read = jest.fn();
-    f.componentInstance.favorite.subscribe(favorite);
-    f.componentInstance.keep.subscribe(keep);
-    f.componentInstance.read.subscribe(read);
+    entryActions.favorite.mockImplementation(favorite);
+    entryActions.keep.mockImplementation(keep);
+    entryActions.toggleRead.mockImplementation(read);
 
     const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
@@ -124,7 +136,7 @@ describe('EntryHeroComponent', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
     const f = mount(entry({ duplicates: [dup] }));
     const opened = jest.fn();
-    f.componentInstance.open.subscribe(opened);
+    entryActions.open.mockImplementation(opened);
     (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
     f.detectChanges();
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();

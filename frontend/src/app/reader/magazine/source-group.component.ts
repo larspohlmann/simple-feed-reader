@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
@@ -32,12 +32,6 @@ export class SourceGroupComponent {
   /** How many rows to show before the tail is expanded. */
   readonly previewCount = input.required<number>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  readonly open = output<EntryDto>();
-  /** Forwarded from the rows. The group is not an `EntryBlockBase`, so unlike
-   *  every block it has to declare these itself. */
-  readonly favorite = output<EntryDto>();
-  readonly keep = output<EntryDto>();
-  readonly read = output<EntryDto>();
 
   /** Ephemeral: the widget starts collapsed on every fresh render. Survives an
    *  article open/close (the list stays mounted), resets on reload/reselect. */

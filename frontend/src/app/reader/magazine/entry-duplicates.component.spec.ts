@@ -4,6 +4,18 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { EntryDto } from '../models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { EntryActionHandler } from '../entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -35,7 +47,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(e: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const f = TestBed.createComponent(EntryDuplicatesComponent);
   f.componentRef.setInput('entry', e);
@@ -60,7 +72,7 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const f = mount(entry({ duplicates: [dup] }));
   const opened = jest.fn();
-  f.componentInstance.open.subscribe(opened);
+  entryActions.open.mockImplementation(opened);
 
   (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   f.detectChanges();
@@ -77,7 +89,7 @@ it('closes the popover once the copy is opened', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const f = mount(entry({ duplicates: [dup] }));
   const opened = jest.fn();
-  f.componentInstance.open.subscribe(opened);
+  entryActions.open.mockImplementation(opened);
 
   (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   f.detectChanges();
@@ -94,7 +106,7 @@ it('flips the favorite icon in the popover and re-emits favorite for the copy', 
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
   const f = mount(entry({ duplicates: [dup] }));
   const favorited = jest.fn();
-  f.componentInstance.favorite.subscribe(favorited);
+  entryActions.favorite.mockImplementation(favorited);
 
   (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
   f.detectChanges();

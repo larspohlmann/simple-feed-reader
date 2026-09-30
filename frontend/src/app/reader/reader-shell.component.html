@@ -137,10 +137,6 @@
           (orderChange)="listOrder.set(selection(), $event)"
           (markAboveRead)="onMarkAboveRead($event)"
           (refresh)="onScopedRefresh()"
-          (favorite)="favorite($event)"
-          (keep)="keep($event)"
-          (read)="toggleRead($event)"
-          (open)="open($event)"
         />
       </section>
       <!-- The draggable seam between the two panes (#810). It writes `--list-width`
@@ -155,9 +151,6 @@
         <app-reader-view
           [entry]="openEntry()"
           [tags]="openEntryTags()"
-          (favorite)="withOpen(favorite)"
-          (keep)="withOpen(keep)"
-          (read)="withOpen(toggleRead)"
           (openOriginal)="withOpen(onOpenOriginal)"
           (close)="onCloseReader()"
         />
@@ -204,10 +197,6 @@
           (orderChange)="listOrder.set(selection(), $event)"
           (markAboveRead)="onMarkAboveRead($event)"
           (refresh)="onScopedRefresh()"
-          (favorite)="favorite($event)"
-          (keep)="keep($event)"
-          (read)="toggleRead($event)"
-          (open)="open($event)"
         />
       </section>
       @if (openEntry()) {
@@ -219,9 +208,6 @@
             [entry]="openEntry()"
             [tags]="openEntryTags()"
             [fullscreen]="!screen.isWide()"
-            (favorite)="withOpen(favorite)"
-            (keep)="withOpen(keep)"
-            (read)="withOpen(toggleRead)"
             (openOriginal)="withOpen(onOpenOriginal)"
             (close)="onCloseReader()"
           />
