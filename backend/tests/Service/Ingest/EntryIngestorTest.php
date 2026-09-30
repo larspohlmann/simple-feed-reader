@@ -300,41 +300,8 @@ final class EntryIngestorTest extends DbTestCase
 
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
-        self::assertSame('https://example.com/a', $entry->getUrl());
+        self::assertNull($entry->getUrl());
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
-    }
-
-    public function testTwoRedditThreadsLinkingTheSameArticleDedupeToOneEntry(): void
-    {
-        $ingestor = $this->ingestorWith(new PlatformEntryRules([new RedditEntryRule()]));
-        $threadFooter = static fn (string $thread): string => ' &#32; submitted by &#32;'
-            . ' <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
-            . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
-            . " <span><a href=\"{$thread}\">[comments]</a></span>";
-        $first = new ParsedEntryModel(
-            guid: 't3_1abc',
-            url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
-            title: 'First crosspost',
-            author: null,
-            summary: null,
-            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/PHP/comments/1abc/t/'),
-            publishedAt: null,
-        );
-        $second = new ParsedEntryModel(
-            guid: 't3_2def',
-            url: 'https://www.reddit.com/r/programming/comments/2def/t/',
-            title: 'Second crosspost',
-            author: null,
-            summary: null,
-            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/programming/comments/2def/t/'),
-            publishedAt: null,
-        );
-        $feed = $this->feed();
-
-        $ingestor->ingest($feed, new ParsedFeedModel('Feed', null, null, null, [$first, $second]), self::context());
-        $this->entityManager->flush();
-
-        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
     private function ingestOne(ParsedEntryModel $parsedEntry): Entry

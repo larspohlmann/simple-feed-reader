@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\CommentsLoad;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
@@ -272,35 +270,6 @@ final class EntryReaderControllerTest extends WebTestCase
             excerpt: null,
         ));
         $entry = $this->seedEntry($user, 'https://example.com/article');
-        $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');
-
-        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
-
-        self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertSame('ok', $body['status']);
-    }
-
-    public function testAnOpeningPostBodyIsNotHeldAgainstTheLinkedArticle(): void
-    {
-        $client = self::createClient();
-        [$headers, $user] = $this->auth('reader-opening-post@example.com');
-        $fake = $this->installFake();
-        $fake->willReturn(ExtractionResultModel::ok(
-            url: 'https://example.com/article',
-            title: 'The Title',
-            byline: null,
-            siteName: null,
-            contentHtml: '<p>+++ dein shop gegen meerweh +++ neu im shop eingetroffen +++</p>',
-            excerpt: null,
-        ));
-        $entry = $this->seedEntry($user, 'https://example.com/article');
-        $entry->setDiscussion(Discussion::withCommentsFeed(
-            'https://www.reddit.com/r/PHP/comments/1/x/',
-            'https://www.reddit.com/r/PHP/comments/1/x/.rss',
-            CommentsLoad::Auto,
-        )->withOpeningPostBody());
         $this->setFeedBody($entry, '<div>' . $this->fullFeedArticle() . '</div>');
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);

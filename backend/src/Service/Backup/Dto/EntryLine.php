@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Support\LineField;
-use App\Service\Backup\Support\LineFieldWithDefault;
 
 /**
  * One entry belonging to a feed the account subscribes to.
@@ -37,7 +36,6 @@ final readonly class EntryLine
         public ?string $discussionUrl = null,
         public ?string $commentsFeedUrl = null,
         public ?string $commentsLoad = null,
-        public bool $bodyIsOpeningPost = false,
     ) {
     }
 
@@ -66,7 +64,6 @@ final readonly class EntryLine
             discussionUrl: LineField::stringOrNull($line, 'discussionUrl'),
             commentsFeedUrl: LineField::stringOrNull($line, 'commentsFeedUrl'),
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
-            bodyIsOpeningPost: LineFieldWithDefault::bool($line, 'bodyIsOpeningPost', false),
         );
     }
 }
