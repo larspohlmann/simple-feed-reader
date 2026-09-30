@@ -24,6 +24,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
@@ -2353,6 +2354,53 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             fn (RecommendationItem $item): int => $this->entryIdOf($item),
             $items,
         ));
+    }
+
+    public function testConsolidationRepliesTheProviderKeepsCuttingCompleteTheRunWithTheFinishedPicks(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+        $firstBatch = $run->getCandidateBatches()[0];
+        $secondBatch = $run->getCandidateBatches()[1];
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $firstBatch[0], 'score' => 70, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user);
+
+        $cutReply = new CompletionStreamProgressModel(
+            sprintf(
+                '{"recommendations": [{"id": %d, "score": 640, "reason": "Finished."}, {"id": %d, "sc',
+                $firstBatch[0],
+                $secondBatch[0],
+            ),
+            100,
+            'error',
+        );
+        for ($attempt = 1; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
+            $this->stubChatClient()->queueStreamedReply($cutReply);
+            self::assertSame('running', $this->advancer()->advance($this->user)->status);
+        }
+
+        $this->stubChatClient()->queueStreamedReply($cutReply);
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame('completed', $report->status);
+        self::assertNull($report->error);
+
+        $this->entityManager->clear();
+        $items = $this->recommendationItems($run);
+        self::assertSame([$firstBatch[0]], array_map(
+            fn (RecommendationItem $item): int => $this->entryIdOf($item),
+            $items,
+        ));
+        self::assertSame('Finished.', $items[0]->getReason());
+        self::assertSame(640, $items[0]->getScore());
     }
 
     /**
