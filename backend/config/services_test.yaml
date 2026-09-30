@@ -32,6 +32,11 @@ services:
         alias: App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat
         public: true
 
+    # Public: ImageProxyControllerTest replaces it, and its one consumer would otherwise inline it away.
+    App\Service\Image\ImageProxy\ImageProxyInterface:
+        alias: App\Service\Image\ImageProxy\ImageProxy
+        public: true
+
     test.cache.passkey_challenge:
         alias: passkey.challenge.cache
 
