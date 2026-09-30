@@ -156,4 +156,39 @@ final class ImageDownloaderTest extends TestCase
         $this->expectException(ImageUnavailableException::class);
         $downloader->download(new ImageRequestModel(self::IMAGE));
     }
+
+    public function testACookieCarryingRequestFollowsNoRedirect(): void
+    {
+        $requests = 0;
+        $downloader = $this->downloader(static function () use (&$requests) {
+            $requests++;
+
+            return new MockResponse('', [
+                'http_code' => 302,
+                'response_headers' => ['Location: https://www.oxmoxhh.de/other.png'],
+            ]);
+        });
+
+        try {
+            $downloader->download(new ImageRequestModel(self::IMAGE, 'conz_bild=1'));
+            self::fail('A redirect with cookies must throw.');
+        } catch (ImageUnavailableException) {
+            self::assertSame(1, $requests);
+        }
+    }
+
+    public function testACookielessRequestFollowsARedirectToTheImage(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse('', [
+                'http_code' => 302,
+                'response_headers' => ['Location: https://www.oxmoxhh.de/moved.png'],
+            ]),
+            self::png('moved-bytes'),
+        ]);
+
+        $image = $downloader->download(new ImageRequestModel(self::IMAGE));
+
+        self::assertSame('moved-bytes', $image->bytes);
+    }
 }

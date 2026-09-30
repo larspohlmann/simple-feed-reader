@@ -41,10 +41,15 @@ final readonly class ImageDownloader
     private function land(ImageRequestModel $request): LandedResponse
     {
         try {
-            return $this->redirects->follow($request->url, $this->options($request), self::MAX_REDIRECTS);
+            return $this->redirects->follow($request->url, $this->options($request), $this->redirectBudget($request));
         } catch (RedirectChainException $exception) {
             throw new ImageUnavailableException($exception->getMessage(), previous: $exception);
         }
+    }
+
+    private function redirectBudget(ImageRequestModel $request): int
+    {
+        return $request->cookies === '' ? self::MAX_REDIRECTS : 0;
     }
 
     private function assertServed(LandedResponse $landed): void
