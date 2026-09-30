@@ -9,6 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { ProxiedImageDirective } from '../../shared/proxied-image/proxied-image.directive';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
@@ -27,6 +28,7 @@ import { relativeTime } from '../format';
   // its popover card, so a plain reference here would resolve
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.
   imports: [
+    ProxiedImageDirective,
     FaviconComponent,
     MarkedTextComponent,
     EntryPillsComponent,
