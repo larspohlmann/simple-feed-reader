@@ -134,6 +134,23 @@ final class RecordedCallTest extends DbTestCase
         self::assertNull($this->reload($this->log)->getFinishReason());
     }
 
+    public function testACallTheProviderEndedWithAnErrorWasCutByTheProvider(): void
+    {
+        $call = $this->call();
+        $call->streamProgressed(new CompletionStreamProgressModel('{"recommendations": [', 100, 'error'));
+        $call->streamProgressed(new CompletionStreamProgressModel('{"recommendations": [', 120));
+
+        self::assertTrue($call->providerCutTheAnswer());
+    }
+
+    public function testACallThatStoppedOnItsOwnWasNotCutByTheProvider(): void
+    {
+        $call = $this->call();
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop'));
+
+        self::assertFalse($call->providerCutTheAnswer());
+    }
+
     public function testBanksTheProvidersUsageOntoTheRunWhenTheCallSettles(): void
     {
         $call = $this->call();

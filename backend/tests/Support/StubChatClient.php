@@ -8,6 +8,7 @@ use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Model\ProviderConnectionModel;
@@ -18,7 +19,7 @@ use App\Service\Ai\Model\ProviderConnectionModel;
  */
 final class StubChatClient implements ChatCompletionClientInterface
 {
-    /** @var list<string|\RuntimeException> */
+    /** @var list<string|\RuntimeException|CompletionStreamProgressModel> */
     private array $queue = [];
 
     private ?\Closure $duringNextCall = null;
@@ -42,6 +43,15 @@ final class StubChatClient implements ChatCompletionClientInterface
     public function queueFailure(\RuntimeException $exception): void
     {
         $this->queue[] = $exception;
+    }
+
+    /**
+     * Reports $lastReport to the call's observer, as the real client does with every chunk, then answers with its
+     * text: how a test hands RecordedCall a finish reason.
+     */
+    public function queueStreamedReply(CompletionStreamProgressModel $lastReport): void
+    {
+        $this->queue[] = $lastReport;
     }
 
     /** Runs inside the next complete(), before it answers: the provider call is where a tick can change underneath. */
@@ -71,6 +81,10 @@ final class StubChatClient implements ChatCompletionClientInterface
     ): string {
         $next = $this->answer($request);
 
+        if ($next instanceof CompletionStreamProgressModel) {
+            return $this->reportAndAnswer($observer, $next);
+        }
+
         // A spoiled reply is content, not an exception: the real client returns it for the caller's parser to judge.
         if ($next instanceof ProviderReplyFailureExceptionInterface) {
             return $next->partialAnswer();
@@ -94,6 +108,8 @@ final class StubChatClient implements ChatCompletionClientInterface
         foreach ($calls as $call) {
             $next = $this->answer($call->request);
             $outcomes[] = match (true) {
+                $next instanceof CompletionStreamProgressModel
+                    => CompletionOutcomeModel::answer($this->reportAndAnswer($call->observer, $next)),
                 $next instanceof ProviderReplyFailureExceptionInterface => CompletionOutcomeModel::unusableReply($next),
                 $next instanceof \RuntimeException => CompletionOutcomeModel::failure($next),
                 default => CompletionOutcomeModel::answer($next),
@@ -105,10 +121,10 @@ final class StubChatClient implements ChatCompletionClientInterface
 
     /**
      * Records the prompt, runs the one-shot hook, and returns the next queued
-     * response — a string answer or the failure to surface. Shared by both
-     * read methods so they record and dequeue identically.
+     * response — a string answer, a streamed reply or the failure to surface.
+     * Shared by both read methods so they record and dequeue identically.
      */
-    private function answer(CompletionRequestModel $request): string|\RuntimeException
+    private function answer(CompletionRequestModel $request): string|\RuntimeException|CompletionStreamProgressModel
     {
         // maxAnswerTokens is recorded alongside the prompt so a test can prove
         // the answer bound was derived from the batch it belongs to, rather
@@ -134,5 +150,14 @@ final class StubChatClient implements ChatCompletionClientInterface
         }
 
         return array_shift($this->queue);
+    }
+
+    private function reportAndAnswer(
+        CompletionStreamObserverInterface $observer,
+        CompletionStreamProgressModel $lastReport,
+    ): string {
+        $observer->streamProgressed($lastReport);
+
+        return $lastReport->answerSoFar;
     }
 }

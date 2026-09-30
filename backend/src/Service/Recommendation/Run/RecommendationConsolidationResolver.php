@@ -22,7 +22,8 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
  * The consolidation phase's one provider call: re-score, reason and dedupe the top of the pool in one pass. A pool
- * pruned to nothing finalizes free; an unusable reply comes back with the batch-score pool to degrade to.
+ * pruned to nothing finalizes free; an unusable reply comes back with the ranking to degrade to: what a reply the
+ * provider cut short finished, else the batch-score pool.
  */
 final readonly class RecommendationConsolidationResolver
 {
@@ -74,7 +75,10 @@ final readonly class RecommendationConsolidationResolver
             $recordedCall->finishUnusable($content);
             $this->checkpoint->guard($run);
 
-            return ConsolidationOutcomeModel::unusable($content, $pool);
+            return ConsolidationOutcomeModel::unusable(
+                $content,
+                $recordedCall->providerCutTheAnswer() ? $this->salvagedRankingOrPool($content, $pool) : $pool,
+            );
         }
 
         $recordedCall->finishUsable($content);
@@ -95,6 +99,18 @@ final readonly class RecommendationConsolidationResolver
             $pool,
             static fn (array $winner): bool => isset($linesById[$winner['id']]),
         ));
+    }
+
+    /**
+     * @param list<array{id: int, score: int, reason: string}> $pool
+     *
+     * @return list<array{id: int, score: int, reason: string}>
+     */
+    private function salvagedRankingOrPool(string $content, array $pool): array
+    {
+        $salvaged = $this->consolidationParser->parseCutReply($content, array_column($pool, 'id'));
+
+        return $salvaged->usable ? self::rankedFromReply($salvaged) : $pool;
     }
 
     /**

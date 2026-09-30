@@ -10,7 +10,7 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 
-/** Finalizes the consolidated list; an unusable reply is retried, then the run completes with the batch-score pool. */
+/** Finalizes the consolidated list; an unusable reply is retried, then the run completes with its fallback ranking. */
 final readonly class ConsolidationPhase implements ProviderPhaseInterface
 {
     public function __construct(
@@ -30,7 +30,7 @@ final readonly class ConsolidationPhase implements ProviderPhaseInterface
                 $run,
                 $outcome->requireUnusableReply(),
                 fn (): RecommendationRunReportModel
-                    => $this->finalizer->finalize($run, $outcome->requireFallbackPool()),
+                    => $this->finalizer->finalize($run, $outcome->requireFallbackRanking()),
             );
         }
 

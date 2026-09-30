@@ -16,7 +16,7 @@ final class ConsolidationOutcomeModelTest extends TestCase
         $outcome = ConsolidationOutcomeModel::unusable('garbage', [['id' => 1, 'score' => 10, 'reason' => 'r']]);
 
         self::assertSame('garbage', $outcome->requireUnusableReply());
-        self::assertSame([['id' => 1, 'score' => 10, 'reason' => 'r']], $outcome->requireFallbackPool());
+        self::assertSame([['id' => 1, 'score' => 10, 'reason' => 'r']], $outcome->requireFallbackRanking());
     }
 
     public function testAUsableOutcomeHasNoInvalidReplyToRetry(): void
@@ -28,12 +28,12 @@ final class ConsolidationOutcomeModelTest extends TestCase
         $outcome->requireUnusableReply();
     }
 
-    public function testAUsableOutcomeHasNoFallbackPoolToDegradeTo(): void
+    public function testAUsableOutcomeHasNoFallbackRankingToDegradeTo(): void
     {
         $outcome = ConsolidationOutcomeModel::finalizeWith([['id' => 1, 'score' => 10, 'reason' => 'r']]);
 
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('A usable consolidation outcome has no fallback pool to degrade to.');
-        $outcome->requireFallbackPool();
+        $this->expectExceptionMessage('A usable consolidation outcome has no fallback ranking to degrade to.');
+        $outcome->requireFallbackRanking();
     }
 }

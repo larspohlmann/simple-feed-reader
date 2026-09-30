@@ -11,6 +11,7 @@ use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\CompletionUsageModel;
+use App\Service\Ai\Completion\Support\CompletionFinishReason;
 use Symfony\Component\Clock\ClockInterface;
 
 /** The stream observer for one recorded provider call: checkpoints its transcript and settles its run-log row. */
@@ -70,6 +71,11 @@ final class RecordedCall implements CompletionStreamObserverInterface
     public function finishUnusable(string $content): void
     {
         $this->finish($content, CallVerdict::Unusable);
+    }
+
+    public function providerCutTheAnswer(): bool
+    {
+        return CompletionFinishReason::cutByProvider($this->finishReason);
     }
 
     /** Settles the row as a transport failure; its checkpoints stay, stamped with the byte count and the error. */

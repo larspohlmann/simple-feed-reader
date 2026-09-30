@@ -128,4 +128,59 @@ final class ModelReplyJsonDecoderTest extends TestCase
             $this->decoder->decode('answer: {"a": "", "b": "}"}'),
         );
     }
+
+    public function testAnObjectCutRightAfterItsOpeningBraceLeavesTheCompleteOneBeforeIt(): void
+    {
+        self::assertSame(['a' => 1], $this->decoder->decode('{"a": 1} {'));
+    }
+
+    public function testTheCompleteItemsOfAnArrayCutInsideAStringAreRecoveredInOrder(): void
+    {
+        self::assertSame(
+            [['id' => 1, 'reason' => 'scored 10} points'], ['id' => 2, 'reason' => 'b']],
+            $this->decoder->completeItemsOf(
+                '{"recommendations": [{"id": 1, "reason": "scored 10} points"}, {"id": 2, "reason": "b"}, '
+                . '{"id": 3, "reason": "cut o',
+                'recommendations',
+            ),
+        );
+    }
+
+    public function testAnItemCutBetweenItsFieldsIsLeftOutOfACompactArray(): void
+    {
+        self::assertSame(
+            [['id' => 1]],
+            $this->decoder->completeItemsOf('{"recommendations":[{"id":1},{"id":2,"sc', 'recommendations'),
+        );
+    }
+
+    public function testAnUndecodableObjectBetweenItemsIsSkipped(): void
+    {
+        self::assertSame(
+            [['id' => 1], ['id' => 2]],
+            $this->decoder->completeItemsOf(
+                '{"recommendations": [{"id": 1}, {id: 7}, {"id": 2}, {"id"',
+                'recommendations',
+            ),
+        );
+    }
+
+    /** Prose around the reply may name the key half-quoted; only the exact key opens the array. */
+    public function testOnlyTheQuotedKeyOpensTheArray(): void
+    {
+        self::assertSame(
+            [['id' => 1]],
+            $this->decoder->completeItemsOf(
+                'Plan: "recommendations first [a], then recommendations" [b].' . "\n"
+                . '{"recommendations": [{"id": 1}, {"id": 2',
+                'recommendations',
+            ),
+        );
+    }
+
+    public function testAReplyThatNeverOpenedTheArrayHasNoItems(): void
+    {
+        self::assertSame([], $this->decoder->completeItemsOf('{"recommendations": ', 'recommendations'));
+        self::assertSame([], $this->decoder->completeItemsOf('{"profile": "x"}', 'recommendations'));
+    }
 }

@@ -10,6 +10,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
@@ -156,13 +157,103 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertFalse($outcome->usable);
         self::assertSame(
             [$firstId, $secondId],
-            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackPool()),
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackRanking()),
         );
         self::assertSame('not json', $outcome->requireUnusableReply());
         self::assertSame(['', ''], array_map(
             static fn (array $pick): string => $pick['reason'],
-            $outcome->requireFallbackPool(),
+            $outcome->requireFallbackRanking(),
         ));
+    }
+
+    public function testAReplyTheProviderCutFallsBackToTheRecommendationsItFinished(): void
+    {
+        [$firstEntry, $secondEntry, $thirdEntry] = $this->fixtures->seedFeedWithEntries($this->user, 3);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+        $thirdId = $this->idOf($thirdEntry);
+
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 500, 'reason' => ''],
+            ['id' => $thirdId, 'score' => 300, 'reason' => ''],
+        ]);
+
+        $cutReply = sprintf(
+            '{"recommendations": [{"id": %d, "score": 410, "reason": "Weaker."}, '
+            . '{"id": %d, "score": 880, "reason": "Stronger."}, {"id": %d, "score": 6',
+            $firstId,
+            $secondId,
+            $thirdId,
+        );
+        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel($cutReply, 100, 'error'));
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertFalse($outcome->usable);
+        self::assertSame($cutReply, $outcome->requireUnusableReply());
+        self::assertSame(
+            [
+                ['id' => $secondId, 'score' => 880, 'reason' => 'Stronger.'],
+                ['id' => $firstId, 'score' => 410, 'reason' => 'Weaker.'],
+            ],
+            $outcome->requireFallbackRanking(),
+        );
+    }
+
+    /** `length` is the call's own ceiling, not the provider's cut: such a reply keeps the batch-score fallback. */
+    public function testAReplyCutByTheTokenCeilingFallsBackToTheBatchScorePool(): void
+    {
+        [$firstEntry, $secondEntry] = $this->fixtures->seedFeedWithEntries($this->user, 2);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 400, 'reason' => ''],
+        ]);
+
+        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel(
+            sprintf(
+                '{"recommendations": [{"id": %d, "score": 910, "reason": "Finished."}, {"id": %d, "sco',
+                $firstId,
+                $secondId,
+            ),
+            100,
+            'length',
+        ));
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertSame(
+            [['id' => $firstId, 'score' => 700, 'reason' => ''], ['id' => $secondId, 'score' => 400, 'reason' => '']],
+            $outcome->requireFallbackRanking(),
+        );
+    }
+
+    public function testAReplyCutBeforeItsFirstRecommendationFallsBackToTheBatchScorePool(): void
+    {
+        [$firstEntry, $secondEntry] = $this->fixtures->seedFeedWithEntries($this->user, 2);
+        $firstId = $this->idOf($firstEntry);
+        $secondId = $this->idOf($secondEntry);
+
+        $run = $this->runWithWinners([
+            ['id' => $firstId, 'score' => 700, 'reason' => ''],
+            ['id' => $secondId, 'score' => 400, 'reason' => ''],
+        ]);
+
+        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel(
+            sprintf('{"recommendations": [{"id": %d, "score": 9', $firstId),
+            100,
+            'error',
+        ));
+
+        $outcome = $this->resolveConsolidation($run);
+
+        self::assertSame(
+            [['id' => $firstId, 'score' => 700, 'reason' => ''], ['id' => $secondId, 'score' => 400, 'reason' => '']],
+            $outcome->requireFallbackRanking(),
+        );
     }
 
     public function testAUsableReplySettlesItsCallAsUsable(): void
@@ -302,10 +393,10 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertFalse($outcome->usable);
         // Keys, not merely values: array_filter() alone would leave (0, 2), a
         // gap only array_values() closes.
-        self::assertSame([0, 1], array_keys($outcome->requireFallbackPool()));
+        self::assertSame([0, 1], array_keys($outcome->requireFallbackRanking()));
         self::assertSame(
             [$firstId, $thirdId],
-            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackPool()),
+            array_map(static fn (array $pick): int => $pick['id'], $outcome->requireFallbackRanking()),
         );
     }
 
