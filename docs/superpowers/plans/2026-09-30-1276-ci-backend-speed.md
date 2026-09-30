@@ -31,7 +31,7 @@
 - phptramp keeps running at the tip of its `develop` branch (`composer tramp:update`), and **after** PHPStan (see D4).
 - Keep the existing workflow comments word for word, except the clauses that the split makes false (Task 1 names them). New comments obey CLAUDE.md: one line, three at most, only when a reader would otherwise get the code wrong.
 - Commit format: `chore(#1276): <lower-case summary>`.
-- Nothing in `backend/src` or `backend/tests` changes.
+- Nothing in `backend/src` or `backend/tests` changes. *(superseded — see the Task 4 amendment)*
 
 ## Decisions
 
@@ -49,14 +49,14 @@
   - If the warm run in Task 5 shows no drop in the PHPStan step, remove the cache step rather than keep dead config, and say so in the PR body.
 - **D5 (PHPCS):** PHP_CodeSniffer 3.13.6 runs files in parallel through `pcntl` when `--parallel` is above 1. Homebrew PHP and setup-php both ship `pcntl`. `<arg name="parallel" value="4"/>` matches the runner's four vCPUs and speeds up the local run as well. The repo is public, so `ubuntu-latest` has 4 vCPUs.
 - **D6 (ParaTest version):** ParaTest's latest release, v7.25.0, requires `phpunit/phpunit ^13.3.5`. The lock has PHPUnit 12.5.31. ParaTest v7.20.0 still accepts `^12.5.14 || ^13.0.5`. Run a plain `composer require --dev brianium/paratest`, **without** `-W`, and Composer picks the newest ParaTest that accepts the locked PHPUnit. PHPUnit must not move in this PR.
-- **D7 (what the parallel workers share, and how the script deals with it):**
+- **D7 (what the parallel workers share, and how the script deals with it):** *(superseded — see the Task 4 amendment)*
   - `tests/bootstrap.php` runs once in **every** worker.
   - With a `TEST_TOKEN` set, each worker rebuilds its own database: `feedreader_test_test<N>` on MySQL through `dbname_suffix`, `var/data_test<N>.db` on SQLite through `WorkerDatabaseUrl`. Each worker also gets its own cache-pool directory, through `WorkerIsolation`, so the rate limiters stay apart.
   - **The compiled test container is shared** (`var/cache/test`). `WorkerIsolation`'s own comment says so. Infection already relies on this with `--threads=max`.
   - **The JWT keypair is shared too** (`config/jwt/*.pem`, gitignored). In CI it is always missing. Four bootstraps would then each run `lexik:jwt:generate-keypair --overwrite` at once, and a worker could read one worker's private key next to another worker's public key.
   - So `composer test:parallel` warms the test container and generates the keypair once (`--skip-if-exists`, a real option of `GenerateKeyPairCommand.php:58`), before ParaTest starts any worker. The bootstraps then find both files and skip generation. Putting this in the script rather than in CI covers a fresh local clone too.
 - **D8 (`composer test` stays the documented default):** CLAUDE.md's advice to run the native and Docker legs side by side stays as it is. `test:parallel` is what CI runs, and it is available locally, but it does not replace `composer test` in the docs. Two parallel legs on one laptop would compete for CPUs.
-- **D9 (OTel):** CI runs without the `opentelemetry` extension, so the auto-instrumentation writes a warning to STDERR at autoload. `composer test:parallel` starts with `@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all`, like `composer test`. That covers ParaTest and every console command in the script.
+- **D9 (OTel):** CI runs without the `opentelemetry` extension, so the auto-instrumentation writes a warning to STDERR at autoload. `composer test:parallel` starts with `@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all`, like `composer test`. That covers ParaTest and every console command in the script. *(superseded — see the Task 4 amendment)*
 
 ## File Structure
 
@@ -67,6 +67,8 @@
 | `backend/phpcs.xml.dist` | `<arg name="parallel" value="4"/>` | 3 |
 | `backend/composer.json`, `backend/composer.lock` | `brianium/paratest` (dev) and the `test:parallel` script | 4 |
 | `CLAUDE.md` | One command line for `composer test:parallel` | 4 |
+| `backend/tests/Support/WorkerIsolation.php` (+ `WorkerIsolationTest.php`) | An isolated variable leaves `SYMFONY_DOTENV_VARS`, so a console child keeps it | 4 |
+| `docker/mysql/init.sql`, `docs/local-docker.md` | The `feedreader` user is granted `feedreader\_test%`; the doc says how to apply it to an existing volume | 4 |
 
 ---
 
@@ -549,7 +551,7 @@ Run: `actionlint .github/workflows/ci.yml`
 Expected: no output, exit 0.
 
 Run, from `backend/`: `composer validate --strict`
-Expected: `./composer.json is valid`.
+Expected: `./composer.json is valid` (the project is not a named package, so `--strict` also prints publish errors; they predate this branch).
 
 - [ ] **Step 9: Commit**
 

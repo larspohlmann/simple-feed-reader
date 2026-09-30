@@ -42,7 +42,7 @@ final readonly class WorkerIsolation
         self::write($name, $value);
 
         $dotenvVariables = explode(',', self::read('SYMFONY_DOTENV_VARS'));
-        self::write('SYMFONY_DOTENV_VARS', implode(',', array_diff($dotenvVariables, [$name, ''])));
+        self::write('SYMFONY_DOTENV_VARS', implode(',', array_diff($dotenvVariables, [$name])));
     }
 
     private static function read(string $name): string

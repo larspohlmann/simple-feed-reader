@@ -57,16 +57,16 @@ final class WorkerIsolationTest extends TestCase
 
     public function testAnIsolatedValueIsNoLongerDotenvsToOverwrite(): void
     {
-        $this->startWorker('3', 'APP_ENV,DATABASE_URL,CACHE_DIRECTORY,OTHER');
+        $this->startWorker('3', 'APP_ENV,DATABASE_URL,CACHE_DIRECTORY,MIGRATION_DATABASE_URL');
 
         WorkerIsolation::applyToEnvironment();
 
-        self::assertSame('APP_ENV,OTHER', $_SERVER['SYMFONY_DOTENV_VARS']);
-        self::assertSame('APP_ENV,OTHER', $_ENV['SYMFONY_DOTENV_VARS']);
-        self::assertSame('APP_ENV,OTHER', getenv('SYMFONY_DOTENV_VARS'));
+        self::assertSame('APP_ENV,MIGRATION_DATABASE_URL', $_SERVER['SYMFONY_DOTENV_VARS']);
+        self::assertSame('APP_ENV,MIGRATION_DATABASE_URL', $_ENV['SYMFONY_DOTENV_VARS']);
+        self::assertSame('APP_ENV,MIGRATION_DATABASE_URL', getenv('SYMFONY_DOTENV_VARS'));
     }
 
-    public function testAChildProcessDotenvKeepsTheIsolatedValues(): void
+    public function testALaterDotenvLoadKeepsTheIsolatedValues(): void
     {
         $this->startWorker('3', 'DATABASE_URL,CACHE_DIRECTORY');
         WorkerIsolation::applyToEnvironment();
@@ -88,7 +88,7 @@ final class WorkerIsolationTest extends TestCase
 
     public function testASerialRunChangesNothing(): void
     {
-        $this->startWorker('', 'APP_ENV,DATABASE_URL,CACHE_DIRECTORY');
+        $this->startSerialRun('APP_ENV,DATABASE_URL,CACHE_DIRECTORY');
 
         WorkerIsolation::applyToEnvironment();
 
@@ -97,15 +97,25 @@ final class WorkerIsolationTest extends TestCase
         self::assertSame('APP_ENV,DATABASE_URL,CACHE_DIRECTORY', $_SERVER['SYMFONY_DOTENV_VARS']);
     }
 
-    private function startWorker(string $token, string $dotenvVariables): void
+    private function startWorker(string $workerToken, string $dotenvVariables): void
     {
-        $this->set('TEST_TOKEN', $token);
-        $this->set('DATABASE_URL', 'sqlite:///var/data_test.db');
-        $this->set('CACHE_DIRECTORY', '/pools/app');
-        $this->set('SYMFONY_DOTENV_VARS', $dotenvVariables);
+        $this->exportRunEnvironment($workerToken, $dotenvVariables);
     }
 
-    private function set(string $name, string $value): void
+    private function startSerialRun(string $dotenvVariables): void
+    {
+        $this->exportRunEnvironment('', $dotenvVariables);
+    }
+
+    private function exportRunEnvironment(string $workerToken, string $dotenvVariables): void
+    {
+        $this->exportEverywhere('TEST_TOKEN', $workerToken);
+        $this->exportEverywhere('DATABASE_URL', 'sqlite:///var/data_test.db');
+        $this->exportEverywhere('CACHE_DIRECTORY', '/pools/app');
+        $this->exportEverywhere('SYMFONY_DOTENV_VARS', $dotenvVariables);
+    }
+
+    private function exportEverywhere(string $name, string $value): void
     {
         $_SERVER[$name] = $value;
         $_ENV[$name] = $value;

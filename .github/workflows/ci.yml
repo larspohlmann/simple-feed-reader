@@ -78,8 +78,7 @@ jobs:
         working-directory: backend
 
     steps:
-      # Awaited only before its first use, so the pull and first boot overlap
-      # checkout and install.
+      # Awaited only before its first use, so its first boot overlaps checkout and install.
       - name: Start MySQL
         if: matrix.database == 'mysql'
         working-directory: ${{ github.workspace }}
@@ -97,8 +96,8 @@ jobs:
       # Both DSNs are chosen here, in one place. MIGRATION_DATABASE_URL is
       # deliberately a different database from the one PHPUnit uses, so the
       # migration check below cannot disturb the suite: it also runs in dev,
-      # whereas doctrine.yaml's when@test dbname_suffix puts each ParaTest
-      # worker on feedreader_test_test<N> (MySQL) or var/data_test<N>.db (SQLite).
+      # whereas when@test gives each ParaTest worker feedreader_test_test<N> (MySQL,
+      # dbname_suffix) or var/data_test<N>.db (SQLite, WorkerDatabaseUrl).
       - name: Select database DSN
         run: |
           if [ "${{ matrix.database }}" = "mysql" ]; then
