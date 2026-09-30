@@ -92,7 +92,7 @@ describe('ManageActions', () => {
     const store = TestBed.inject(SubscriptionsStore);
     store.subscriptions.set([tagged]);
     const spy = jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    service.moveFeedToTag(tagged, 3, 7, 1);
+    service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 1 });
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5/move-to-tag');
     expect(testRequest.request.method).toBe('PATCH');
     expect(testRequest.request.body).toEqual({ fromTagId: 3, toTagId: 7, position: 1 });
@@ -108,7 +108,7 @@ describe('ManageActions', () => {
     const tagged: SubscriptionDto = { ...sub, tags: [tag] };
     store.subscriptions.set([tagged]);
     jest.spyOn(store, 'load').mockImplementation(() => undefined);
-    service.moveFeedToTag(tagged, 3, 7, 0);
+    service.moveFeedToTag(tagged, { fromTagId: 3, toTagId: 7, position: 0 });
     expect(
       store
         .subscriptions()
@@ -121,7 +121,7 @@ describe('ManageActions', () => {
   });
 
   it('moveFeedToTag: does nothing when the source and target lists are the same', () => {
-    service.moveFeedToTag(sub, 3, 3, 0);
+    service.moveFeedToTag(sub, { fromTagId: 3, toTagId: 3, position: 0 });
     ctrl.expectNone('https://api.test/api/subscriptions/5/move-to-tag');
   });
 

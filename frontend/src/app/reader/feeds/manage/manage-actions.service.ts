@@ -8,6 +8,7 @@ import { SubscriptionsStore } from '../../state/subscriptions.store';
 import { TagsStore } from '../../state/tags.store';
 import {
   BulkSubscriptionUpdate,
+  MoveFeedToTag,
   RefreshReport,
   SubscriptionDto,
   SubscriptionFlags,
@@ -66,23 +67,14 @@ export class ManageActions {
    *  id is the untagged "Feeds" list; a null position appends). A move within
    *  one list is a reorder, not this. Optimistic: reflect the new membership
    *  at once, then let the reload reconcile the exact order the server chose. */
-  moveFeedToTag(
-    sub: SubscriptionDto,
-    fromTagId: number | null,
-    toTagId: number | null,
-    position: number | null,
-  ): void {
-    if (fromTagId === toTagId) return;
+  moveFeedToTag(sub: SubscriptionDto, move: MoveFeedToTag): void {
+    if (move.fromTagId === move.toTagId) return;
     this.subs.subscriptions.update((current) =>
       current.map((subscription) =>
-        subscription.id === sub.id
-          ? this.afterMove(subscription, fromTagId, toTagId, position)
-          : subscription,
+        subscription.id === sub.id ? this.afterMove(subscription, move) : subscription,
       ),
     );
-    this.reloadAfter(this.api.moveFeedToTag(sub.id, { fromTagId, toTagId, position }), () =>
-      this.subs.load(),
-    );
+    this.reloadAfter(this.api.moveFeedToTag(sub.id, move), () => this.subs.load());
   }
 
   /** The moved feed's optimistic shape: the source tag dropped, the target tag
@@ -90,9 +82,7 @@ export class ManageActions {
    *  only once it has no tags left. Sibling positions are left to the reload. */
   private afterMove(
     sub: SubscriptionDto,
-    fromTagId: number | null,
-    toTagId: number | null,
-    position: number | null,
+    { fromTagId, toTagId, position }: MoveFeedToTag,
   ): SubscriptionDto {
     const kept = sub.tags.filter((tag) => tag.id !== fromTagId && tag.id !== toTagId);
     if (toTagId === null) {

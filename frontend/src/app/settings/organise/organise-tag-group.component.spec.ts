@@ -229,7 +229,11 @@ describe('OrganiseTagGroupComponent', () => {
       currentIndex: 2,
     } as never);
 
-    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, TECH.id, THIRD_TAG.id, 2);
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, {
+      fromTagId: TECH.id,
+      toTagId: THIRD_TAG.id,
+      position: 2,
+    });
   });
 
   it('moves a feed onto the untagged group at the drop index', async () => {
@@ -243,7 +247,11 @@ describe('OrganiseTagGroupComponent', () => {
       currentIndex: 1,
     } as never);
 
-    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_A, TECH.id, null, 1);
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_A, {
+      fromTagId: TECH.id,
+      toTagId: null,
+      position: 1,
+    });
   });
 
   it('ignores a dropped tag header instead of mistaking it for a feed', async () => {
@@ -326,12 +334,11 @@ describe('OrganiseTagGroupComponent', () => {
       currentIndex: 0,
     } as never);
 
-    expect(manage.moveFeedToTag).toHaveBeenCalledWith(
-      SUB_WITH_TWO_TAGS,
-      TECH.id,
-      THIRD_TAG.id,
-      null,
-    );
+    expect(manage.moveFeedToTag).toHaveBeenCalledWith(SUB_WITH_TWO_TAGS, {
+      fromTagId: TECH.id,
+      toTagId: THIRD_TAG.id,
+      position: null,
+    });
   });
 
   it('turns drag off on a coarse pointer, keeping the arrows', async () => {

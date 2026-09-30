@@ -1,0 +1,61 @@
+@use 'sidebar-row' as row;
+@include row.nav-row;
+@include row.drag-handle;
+@include row.row-menu;
+
+:host {
+  display: contents;
+}
+
+.nav {
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-sub {
+  padding-left: var(--space-6);
+}
+
+/* Inside a tag's recessed band the row hover lifts to the sidebar surface,
+   since the default hover (--surface-0) is barely visible against it (#1114). */
+@media (hover: hover) {
+  .tag-sub:hover:not(.active) {
+    background: var(--surface-1);
+  }
+}
+
+// A feed excluded from All items or For You (#688): a muted glyph that sits
+// immediately left of the unread count without displacing it — both render
+// together when a feed is both excluded and unread.
+.feed-exclusion-marker {
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
+
+/* Organise-mode feed name: inert (navigation is off), but still truncates. */
+.feedname {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--row-pad-y) 0;
+}
+
+.feedname > span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:host-context(.cdk-drag-preview) .rowmenu {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .feedname {
+    min-height: var(--tap-target);
+  }
+}

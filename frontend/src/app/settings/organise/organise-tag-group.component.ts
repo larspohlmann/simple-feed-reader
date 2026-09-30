@@ -178,11 +178,10 @@ export class OrganiseTagGroupComponent {
     source: OrganiseGroup,
     position: number | null,
   ): void {
-    this.manage.moveFeedToTag(
-      subscription,
-      source.tag?.id ?? null,
-      this.group().tag?.id ?? null,
+    this.manage.moveFeedToTag(subscription, {
+      fromTagId: source.tag?.id ?? null,
+      toTagId: this.group().tag?.id ?? null,
       position,
-    );
+    });
   }
 }

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -10,9 +10,10 @@ import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { CdkDrag, CdkDragDrop } from '@angular/cdk/drag-drop';
 import { DropData, SidebarComponent } from './sidebar.component';
+import { SidebarSavedSearchesComponent } from './sidebar-saved-searches.component';
 import { TagNode } from '../../state/subscriptions.store';
 import { Selection } from '../../query/query';
-import { SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
@@ -90,6 +91,11 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   includeInAllItems: true,
   includeInForYou: true,
 });
+
+const savedSearchesOf = (
+  fixture: ComponentFixture<SidebarComponent>,
+): SidebarSavedSearchesComponent =>
+  fixture.debugElement.query(By.directive(SidebarSavedSearchesComponent)).componentInstance;
 
 function inputDefaults() {
   return {
@@ -358,13 +364,8 @@ describe('SidebarComponent', () => {
     function moveOf(event: CdkDragDrop<DropData>) {
       const fixture = mount();
       const spy = jest.fn();
-      manageActions.moveFeedToTag.mockImplementation(
-        (
-          sub: SubscriptionDto,
-          fromTagId: number | null,
-          toTagId: number | null,
-          position: number | null,
-        ) => spy({ sub, fromTagId, toTagId, position }),
+      manageActions.moveFeedToTag.mockImplementation((sub: SubscriptionDto, move: MoveFeedToTag) =>
+        spy({ sub, ...move }),
       );
       fixture.componentInstance.onDrop(event);
       return spy;
@@ -403,13 +404,8 @@ describe('SidebarComponent', () => {
       const subscription = withTags(sub(1), [tag(3)]);
       const fixture = mount();
       const spy = jest.fn();
-      manageActions.moveFeedToTag.mockImplementation(
-        (
-          sub: SubscriptionDto,
-          fromTagId: number | null,
-          toTagId: number | null,
-          position: number | null,
-        ) => spy({ sub, fromTagId, toTagId, position }),
+      manageActions.moveFeedToTag.mockImplementation((sub: SubscriptionDto, move: MoveFeedToTag) =>
+        spy({ sub, ...move }),
       );
       fixture.componentInstance.onTagHeadDrop(drop(subscription, onTag(7), { source: onTag(3) }));
       expect(spy).toHaveBeenCalledWith({
@@ -476,13 +472,8 @@ describe('SidebarComponent', () => {
     it('moves a feed onto the tag when it is dropped on the tag header', () => {
       const fixture = mount({ tagTree: [tagNode(10)] });
       const spy = jest.fn();
-      manageActions.moveFeedToTag.mockImplementation(
-        (
-          sub: SubscriptionDto,
-          fromTagId: number | null,
-          toTagId: number | null,
-          position: number | null,
-        ) => spy({ sub, fromTagId, toTagId, position }),
+      manageActions.moveFeedToTag.mockImplementation((sub: SubscriptionDto, move: MoveFeedToTag) =>
+        spy({ sub, ...move }),
       );
       const subscription = sub(1);
       fixture.componentInstance.onTagHeadDrop({
@@ -946,7 +937,7 @@ describe('SidebarComponent', () => {
 
       expect(chevronIcon()).toBe('chevron_right');
 
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       expect(chevronIcon()).toBe('expand_more');
@@ -979,7 +970,7 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const items = [...fixture.nativeElement.querySelectorAll('.savedsearch-item')];
@@ -1008,7 +999,7 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const row = fixture.nativeElement.querySelector('.savedsearch-item')!;
@@ -1051,7 +1042,7 @@ describe('SidebarComponent', () => {
         ],
         activeSavedSearchId: 1,
       });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const items = [...fixture.nativeElement.querySelectorAll('.savedsearch-item')];
@@ -1076,7 +1067,7 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
@@ -1098,7 +1089,7 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const row: HTMLAnchorElement = fixture.nativeElement.querySelector('.savedsearch-item');
@@ -1323,7 +1314,7 @@ describe('SidebarComponent', () => {
 
     it('renders no mail icon on saved-search rows when mail is disabled', () => {
       const fixture = mount({ savedSearches: [climate], mailEnabled: false });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('.digest-toggle')).toBeNull();
@@ -1331,7 +1322,7 @@ describe('SidebarComponent', () => {
 
     it('renders no mail icon when mail is on but the account digest is off', () => {
       const fixture = mount({ savedSearches: [climate], mailEnabled: true, digestEnabled: false });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       expect(fixture.nativeElement.querySelector('.digest-toggle')).toBeNull();
@@ -1339,7 +1330,7 @@ describe('SidebarComponent', () => {
 
     it('renders a mail icon button per row when mail is enabled, muted only when not included', () => {
       const fixture = mount({ savedSearches: [climate, space], mailEnabled: true });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const buttons: HTMLButtonElement[] = [
@@ -1363,7 +1354,7 @@ describe('SidebarComponent', () => {
 
     it('emits toggleDigest with the row on click, without navigating the row link', () => {
       const fixture = mount({ savedSearches: [climate], mailEnabled: true });
-      fixture.componentInstance.toggleSavedSearches();
+      savedSearchesOf(fixture).toggleSavedSearches();
       fixture.detectChanges();
 
       const emitted: SavedSearchDto[] = [];
