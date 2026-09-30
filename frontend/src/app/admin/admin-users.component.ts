@@ -1,7 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../core/problem';
 import { AuthService } from '../core/auth.service';
@@ -13,10 +12,8 @@ import { IconComponent } from '../shared/icon/icon.component';
 import { SettingsGroupComponent } from '../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.component';
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { AdminApi } from './admin-api';
 import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 
@@ -38,7 +35,7 @@ import { AdminAction, AdminUserDto, AdminUserStatus } from './admin.models';
 export class AdminUsersComponent implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly auth = inject(AuthService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
 
@@ -147,15 +144,6 @@ export class AdminUsersComponent implements OnInit {
       confirmLabel: this.i18n.translate(`admin.${action}`),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      // A destructive confirmation is an alert, not a plain dialog; the role
-      // belongs on the CDK's modal container.
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.act(user, action);
-    });
+    this.confirm.confirmThen(data, () => this.act(user, action));
   }
 }

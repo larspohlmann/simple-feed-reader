@@ -90,10 +90,7 @@ export class ProxySectionComponent {
   readonly passwordSaved = computed(() => this.svc.state()?.hasPassword ?? false);
   readonly probe = this.svc.probe;
 
-  readonly failureMessage = computed(() => {
-    const failure = this.svc.failure();
-    return failure ? (failure.detail ?? failure.title) : null;
-  });
+  readonly failureMessage = this.svc.failureMessage;
 
   readonly typeOptions: readonly ProxyType[] = ['SOCKS5', 'HTTP'];
 

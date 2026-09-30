@@ -10,10 +10,8 @@ import { SettingsStackComponent } from '../shared/settings/stack/settings-stack.
 import { SkeletonComponent } from '../shared/skeleton/skeleton.component';
 import { FieldComponent } from '../shared/field/field.component';
 import { ButtonComponent } from '../shared/button/button.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { AdminApi } from './admin-api';
 import { CategoryFormDialogComponent } from './category-form-dialog.component';
 import { FeedFormDialogComponent, FeedFormData } from './feed-form-dialog.component';
@@ -44,6 +42,7 @@ import {
 export class AdminCatalogComponent implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
 
   readonly categories = signal<AdminCatalogCategoryDto[]>([]);
@@ -144,7 +143,7 @@ export class AdminCatalogComponent implements OnInit {
       confirmLabel: this.i18n.translate('common.delete'),
       danger: true,
     };
-    this.openConfirm(data, () => this.deleteCategory(category));
+    this.confirm.confirmThen(data, () => this.deleteCategory(category));
   }
 
   confirmDeleteFeed(feed: AdminCatalogFeedDto): void {
@@ -154,19 +153,7 @@ export class AdminCatalogComponent implements OnInit {
       confirmLabel: this.i18n.translate('common.delete'),
       danger: true,
     };
-    this.openConfirm(data, () => this.deleteFeed(feed));
-  }
-
-  private openConfirm(data: ConfirmData, onConfirm: () => void): void {
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      // A destructive confirmation is an alert, not a plain dialog.
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) onConfirm();
-    });
+    this.confirm.confirmThen(data, () => this.deleteFeed(feed));
   }
 
   deleteCategory(category: AdminCatalogCategoryDto): void {

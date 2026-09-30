@@ -7,13 +7,10 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../shared/button/button.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -69,7 +66,7 @@ import {
 })
 export class RecommendationSettingsCardComponent {
   readonly svc = inject(RecommendationSettingsService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
 
@@ -172,8 +169,6 @@ export class RecommendationSettingsCardComponent {
     return messages.length > 0 ? messages.join(' ') : (failure.detail ?? failure.title);
   });
 
-  /** Same fallback as `failureMessage`; the 409 while a run is active
-   *  arrives with a `detail` already written for the account to read. */
   readonly purgeFailureMessage = computed(() => {
     const failure = this.svc.purgeFailure();
     return failure ? (failure.detail ?? failure.title) : null;
@@ -369,13 +364,6 @@ export class RecommendationSettingsCardComponent {
       confirmLabel: this.i18n.translate('settings.ai.recommendations.purge'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.svc.purge();
-    });
+    this.confirm.confirmThen(data, () => this.svc.purge());
   }
 }

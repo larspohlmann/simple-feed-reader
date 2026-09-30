@@ -14,10 +14,8 @@ import {
   SubscriptionTagDto,
   TagDto,
 } from '../models';
-import {
-  ConfirmDialogComponent,
-  ConfirmData,
-} from '../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
 import { ToastService, CONFIRMATION_DURATION_MS } from '../../shared/toast/toast.service';
 import { EditSubscriptionDialogComponent } from './edit-subscription-dialog.component';
 import { TagFormDialogComponent } from './tag-form-dialog.component';
@@ -39,6 +37,7 @@ const TYPED_CONFIRM_THRESHOLD = 5;
 @Injectable({ providedIn: 'root' })
 export class ManageActions {
   private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly api = inject(ReaderApi);
   private readonly subs = inject(SubscriptionsStore);
   private readonly tags = inject(TagsStore);
@@ -194,16 +193,7 @@ export class ManageActions {
       confirmLabel: this.i18n.translate('manage.unsubscribeConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      // A destructive confirmation is an alert, not a plain dialog; the role
-      // belongs on the CDK's modal container, which is the outermost element
-      // assistive tech sees.
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((ok) => {
-      if (!ok) return;
+    this.confirm.confirmThen(data, () => {
       this.api.deleteSubscription(sub.id).subscribe({ next: () => this.subs.load() });
     });
   }
@@ -237,16 +227,7 @@ export class ManageActions {
       confirmLabel: this.i18n.translate('manage.deleteConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      // A destructive confirmation is an alert, not a plain dialog; the role
-      // belongs on the CDK's modal container, which is the outermost element
-      // assistive tech sees.
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((ok) => {
-      if (!ok) return;
+    this.confirm.confirmThen(data, () => {
       this.api.deleteTag(tag.id).subscribe({
         next: () => {
           this.tags.load();
@@ -293,13 +274,7 @@ export class ManageActions {
   /** Confirm, then unsubscribe from many feeds. Emits false when the user
    *  dismissed the confirmation, so the caller can leave the selection alone. */
   bulkUnsubscribe(subscriptions: SubscriptionDto[]): Observable<boolean> {
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data: this.bulkUnsubscribeConfirm(subscriptions),
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-
-    return ref.closed.pipe(
+    return this.confirm.ask(this.bulkUnsubscribeConfirm(subscriptions)).pipe(
       switchMap((confirmed) => {
         if (!confirmed) return of(false);
         return this.api.bulkUnsubscribe(subscriptions.map((s) => s.id)).pipe(

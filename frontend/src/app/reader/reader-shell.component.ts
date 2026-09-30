@@ -69,10 +69,8 @@ import { EntryListComponent, TitleCount } from './entry-list/entry-list.componen
 import { ReaderViewComponent } from './reader-view/reader-view.component';
 import { AudioPlayerBarComponent } from './audio-player-bar/audio-player-bar.component';
 import { AddFeedDialogComponent } from './add-feed/add-feed-dialog.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { ActionSheet } from '../shared/action-sheet/action-sheet.service';
 import { ManageActions } from './manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
@@ -118,6 +116,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly toast = inject(ToastService);
   private readonly actionSheet = inject(ActionSheet);
   private readonly i18n = inject(TranslocoService);
@@ -998,14 +997,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       message: this.i18n.translate('reader.markAllReadConfirmMessage'),
       confirmLabel: this.i18n.translate('reader.markAllRead'),
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.markReadNow(target);
-    });
+    this.confirm.confirmThen(data, () => this.markReadNow(target));
   }
 
   onMarkAboveRead(ids: number[]): void {
@@ -1015,14 +1007,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       message: this.i18n.translate('reader.markAboveReadConfirmMessage', { count: ids.length }),
       confirmLabel: this.i18n.translate('reader.markAboveRead'),
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.markAboveReadNow(ids);
-    });
+    this.confirm.confirmThen(data, () => this.markAboveReadNow(ids));
   }
 
   /** Never a re-fetch: a reload lets the magazine planner re-run and lift
@@ -1193,13 +1178,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       message: this.i18n.translate('reader.removeSavedSearchConfirmMessage'),
       confirmLabel: this.i18n.translate('reader.removeSavedSearch'),
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (!confirmed) return;
+    this.confirm.confirmThen(data, () => {
       // Removing the search you are viewing by its slug path leaves that path
       // pointing at nothing, so fall back to the combined list; an unsaved
       // `?q=` search stays put and simply flips its button back to Save.
@@ -1229,14 +1208,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
           }),
           confirmLabel: this.i18n.translate('reader.digest.disableConfirmAction'),
         };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.savedSearchesStore.setIncludeInDigest(row.id, enabling);
-    });
+    this.confirm.confirmThen(data, () =>
+      this.savedSearchesStore.setIncludeInDigest(row.id, enabling),
+    );
   }
 
   /** The global refresh: sweep every due feed. The single reload authority
@@ -1292,14 +1266,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       message: this.i18n.translate('reader.forYouRunConfirmMessage'),
       confirmLabel: this.i18n.translate('reader.forYouRun'),
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.recs.start();
-    });
+    this.confirm.confirmThen(data, () => this.recs.start());
   }
 
   /** An unfinished (failed) run is waiting: offer to resume it or start over,

@@ -7,13 +7,10 @@ import {
   linkedSignal,
   signal,
 } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { ButtonComponent } from '../shared/button/button.component';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../shared/confirm-dialog/confirm.service';
 import { DisclosureComponent } from '../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../shared/field/field.component';
@@ -64,7 +61,7 @@ import { RecommendationSettingsCardComponent } from './recommendation-settings-c
 })
 export class AiSectionComponent {
   readonly ai = inject(AiSettingsService);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
 
   readonly newName = signal('');
@@ -251,13 +248,6 @@ export class AiSectionComponent {
       confirmLabel: this.i18n.translate('settings.ai.configs.delete'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.ai.remove(config.id);
-    });
+    this.confirm.confirmThen(data, () => this.ai.remove(config.id));
   }
 }

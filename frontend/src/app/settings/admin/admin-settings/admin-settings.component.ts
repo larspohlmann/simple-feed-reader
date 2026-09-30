@@ -1,12 +1,9 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, linkedSignal, signal } from '@angular/core';
-import { Dialog } from '@angular/cdk/dialog';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { Problem, parseProblem } from '../../../core/problem';
-import {
-  ConfirmData,
-  ConfirmDialogComponent,
-} from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmData } from '../../../shared/confirm-dialog/confirm-dialog.component';
+import { ConfirmService } from '../../../shared/confirm-dialog/confirm.service';
 import { DisclosureComponent } from '../../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { SettingsGroupComponent } from '../../../shared/settings/settings-group/settings-group.component';
@@ -40,7 +37,7 @@ import { AdminSettingsApi, InstanceSettings, InstanceSettingsUpdate } from './ad
 })
 export class AdminSettingsComponent implements OnInit {
   private readonly api = inject(AdminSettingsApi);
-  private readonly dialog = inject(Dialog);
+  private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
 
   readonly requireEmailConfirmation = signal(false);
@@ -201,14 +198,9 @@ export class AdminSettingsComponent implements OnInit {
       confirmLabel: this.i18n.translate('settings.instance.passkeyInvalidateConfirm'),
       danger: true,
     };
-    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
-      data,
-      role: 'alertdialog',
-      panelClass: 'app-dialog',
-    });
-    ref.closed.subscribe((confirmed) => {
-      if (confirmed) this.save({ ...update, invalidateExistingPasskeys: true });
-    });
+    this.confirm.confirmThen(data, () =>
+      this.save({ ...update, invalidateExistingPasskeys: true }),
+    );
   }
 
   private applySettings(settings: InstanceSettings): void {
