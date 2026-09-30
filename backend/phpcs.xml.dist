@@ -4,6 +4,7 @@
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
     <arg value="p"/>
+    <arg name="parallel" value="4"/>
     <rule ref="PSR12">
         <!-- The PHPStan rule fixtures break PSR-12 on purpose (several classes per file, controllers with helpers). -->
         <exclude-pattern>*/tests/PhpStan/data/*</exclude-pattern>

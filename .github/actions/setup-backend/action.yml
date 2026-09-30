@@ -16,6 +16,19 @@ runs:
         extensions: intl, pdo_sqlite, pdo_mysql, zip
         coverage: ${{ inputs.coverage }}
 
+    - name: Locate Composer's download cache
+      id: composer-cache
+      shell: bash
+      working-directory: backend
+      run: echo "directory=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Composer's download cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ steps.composer-cache.outputs.directory }}
+        key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+        restore-keys: composer-${{ runner.os }}-
+
     - name: Install dependencies
       shell: bash
       working-directory: backend

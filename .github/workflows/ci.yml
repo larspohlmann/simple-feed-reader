@@ -26,6 +26,15 @@ jobs:
       - name: Warm cache for PHPStan
         run: php bin/console cache:warmup
 
+      # PHPStan drops whatever a change invalidated, so any earlier run's cache
+      # is a safe start. It must stay before tramp:update, which rewrites vendor.
+      - name: Restore PHPStan's result cache
+        uses: actions/cache@v6
+        with:
+          path: /tmp/phpstan
+          key: phpstan-${{ github.sha }}
+          restore-keys: phpstan-
+
       - name: PHPStan
         run: composer stan
 
