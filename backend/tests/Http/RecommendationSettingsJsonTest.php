@@ -126,6 +126,7 @@ final class RecommendationSettingsJsonTest extends TestCase
                 maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,
+            autoGenerateIntervalHours: null,
             profileText: $profileText,
             showReasons: $showReasons,
         );

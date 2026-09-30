@@ -115,15 +115,15 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * The given ids as list rows, ordered like the entry list and never in the order asked for; $limit keeps the
-     * newest. The subscription join is the access gate: an id from a feed the caller does not follow is dropped,
-     * even when a search index returned it.
+     * The given ids as list rows, ordered like the entry list and never in the order asked for. The subscription
+     * join is the access gate: an id from a feed the caller does not follow is dropped, even when a search index
+     * returned it.
      *
      * @param list<int> $entryIds
      *
      * @return list<EntryListRow>
      */
-    public function rowsByIdsForUser(int $userId, array $entryIds, ?int $limit = null): array
+    public function rowsByIdsForUser(int $userId, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
@@ -135,9 +135,6 @@ final class EntryListRepository extends ServiceEntityRepository
         $rowQuery = $this->projection->newestFirst($this->projection->rowQueryBuilder($userId));
         $applyScope($rowQuery, EntryAliases::primary());
         $this->collapse->apply($rowQuery, $applyScope, $userId);
-        if ($limit !== null) {
-            $rowQuery->setMaxResults($limit);
-        }
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $rowQuery->getQuery()->getResult();

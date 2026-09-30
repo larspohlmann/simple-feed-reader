@@ -241,6 +241,9 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
                 maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,
+            autoGenerateIntervalHours: null,
+            profileText: null,
+            showReasons: false,
         );
     }
 

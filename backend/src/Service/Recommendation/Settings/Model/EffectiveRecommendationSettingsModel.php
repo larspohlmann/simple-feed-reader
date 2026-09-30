@@ -21,9 +21,9 @@ final readonly class EffectiveRecommendationSettingsModel
         public RecommendationPoolLimits $poolLimits,
         public RecommendationPackingSettingsModel $packing,
         public bool $debugEnabled,
-        public ?int $autoGenerateIntervalHours = null,
-        public ?string $profileText = null,
-        public bool $showReasons = false,
+        public ?int $autoGenerateIntervalHours,
+        public ?string $profileText,
+        public bool $showReasons,
     ) {
     }
 }

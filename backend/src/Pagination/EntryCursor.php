@@ -34,15 +34,6 @@ final readonly class EntryCursor
         }
     }
 
-    /**
-     * An upper bound that admits every row AT $until, not only those before it: the keyset predicate is strict, so
-     * the max int id stands in for the id. Never encoded for a client.
-     */
-    public static function inclusiveUpperBound(\DateTimeImmutable $until): self
-    {
-        return new self($until, PHP_INT_MAX);
-    }
-
     public static function encode(\DateTimeImmutable $sortInstant, int $id): string
     {
         $raw = $sortInstant->format(\DateTimeInterface::ATOM) . '|' . $id;

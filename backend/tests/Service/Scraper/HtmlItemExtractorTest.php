@@ -7,7 +7,6 @@ namespace App\Tests\Service\Scraper;
 use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ClusterLayer;
 use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
 use App\Service\Scraper\ScrapeLayer\SemanticLayer;
@@ -92,7 +91,7 @@ final class HtmlItemExtractorTest extends TestCase
                 '@type' => 'NewsArticle',
                 'url' => "/story-{$index}",
                 'headline' => "Synthetic story number {$index}",
-                'description' => str_repeat('x', 5000),
+                'description' => 'é' . str_repeat('x', 4999),
             ];
         }
         $json = json_encode(['@context' => 'https://schema.org', '@graph' => $articles], \JSON_THROW_ON_ERROR);
@@ -101,7 +100,7 @@ final class HtmlItemExtractorTest extends TestCase
         $parsed = $this->extractor()->extract($html, 'https://long.test/');
 
         self::assertCount(3, $parsed->entries);
-        self::assertSame(CardFields::MAX_TEASER_LENGTH, mb_strlen((string) $parsed->entries[0]->summary));
+        self::assertSame('é' . str_repeat('x', 999), $parsed->entries[0]->summary);
     }
 
     public function testHostilePagesThrow(): void

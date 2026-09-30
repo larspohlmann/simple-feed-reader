@@ -52,6 +52,9 @@ final class TickContextTest extends TestCase
                     maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
                 ),
                 debugEnabled: false,
+                autoGenerateIntervalHours: null,
+                profileText: null,
+                showReasons: false,
             ),
             $driver,
         );

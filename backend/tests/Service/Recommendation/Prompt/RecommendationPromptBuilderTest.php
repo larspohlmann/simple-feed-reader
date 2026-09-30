@@ -965,6 +965,9 @@ final class RecommendationPromptBuilderTest extends TestCase
                 maximumBatchSize: $maximumBatchSize,
             ),
             debugEnabled: false,
+            autoGenerateIntervalHours: null,
+            profileText: null,
+            showReasons: false,
         );
     }
 }
