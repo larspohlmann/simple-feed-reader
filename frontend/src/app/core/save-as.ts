@@ -1,5 +1,3 @@
-// src/app/core/save-as.ts
-
 const CONTENT_DISPOSITION_FILENAME = /filename="?([^";]+)"?/i;
 
 /** Pulls the filename the server chose out of a Content-Disposition header
@@ -17,12 +15,12 @@ export function filenameFromContentDisposition(header: string | null, fallback: 
  *  file. */
 export function saveAs(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }

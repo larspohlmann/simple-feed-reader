@@ -56,9 +56,9 @@ describe('GrafanaSettingsService', () => {
   it('load() GETs the grafana endpoint and sets state', () => {
     service.load();
 
-    const req = http.expectOne(ENDPOINT);
-    expect(req.request.method).toBe('GET');
-    req.flush(state());
+    const testRequest = http.expectOne(ENDPOINT);
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush(state());
 
     expect(service.state()).toEqual(state());
   });

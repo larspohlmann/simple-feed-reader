@@ -93,7 +93,7 @@ describe('MailSectionComponent', () => {
   const testButton = (fixture: ComponentFixture<MailSectionComponent>): HTMLButtonElement =>
     fixture.nativeElement.querySelector('[data-testid="mail-test-button"] button');
 
-  const resetToEnvButton = (
+  const resetToEnvironmentButton = (
     fixture: ComponentFixture<MailSectionComponent>,
   ): HTMLButtonElement | null =>
     fixture.nativeElement.querySelector('[data-testid="mail-reset-to-env"] button');
@@ -339,9 +339,9 @@ describe('MailSectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    expect(req.request.method).toBe('POST');
-    req.flush({ ok: true, reason: null });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush({ ok: true, reason: null });
     http.expectOne(ERRORS_ENDPOINT).flush({ count: 0, failures: [] });
   });
 
@@ -512,7 +512,7 @@ describe('MailSectionComponent', () => {
       state({ host: 'smtp.example.com', hasSavedConfig: false, envFallbackConfigured: true }),
     );
 
-    expect(resetToEnvButton(fixture)).toBeNull();
+    expect(resetToEnvironmentButton(fixture)).toBeNull();
   });
 
   it('hides the reset-to-environment control when no env fallback is configured', () => {
@@ -520,7 +520,7 @@ describe('MailSectionComponent', () => {
       state({ host: 'smtp.example.com', hasSavedConfig: true, envFallbackConfigured: false }),
     );
 
-    expect(resetToEnvButton(fixture)).toBeNull();
+    expect(resetToEnvironmentButton(fixture)).toBeNull();
   });
 
   it('shows the reset-to-environment control once both conditions hold', () => {
@@ -528,7 +528,7 @@ describe('MailSectionComponent', () => {
       state({ host: 'smtp.example.com', hasSavedConfig: true, envFallbackConfigured: true }),
     );
 
-    expect(resetToEnvButton(fixture)).not.toBeNull();
+    expect(resetToEnvironmentButton(fixture)).not.toBeNull();
   });
 
   it('calls svc.reset() once the confirm dialog is accepted', () => {
@@ -537,7 +537,7 @@ describe('MailSectionComponent', () => {
     );
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
-    resetToEnvButton(fixture)?.click();
+    resetToEnvironmentButton(fixture)?.click();
     fixture.detectChanges();
 
     http.expectOne(RESET_ENDPOINT).flush(state({ host: '', hasSavedConfig: false }));
@@ -550,7 +550,7 @@ describe('MailSectionComponent', () => {
     dialogStub.open.mockReturnValue({ closed: of(false) });
     const resetSpy = jest.spyOn(fixture.componentInstance.svc, 'reset');
 
-    resetToEnvButton(fixture)?.click();
+    resetToEnvironmentButton(fixture)?.click();
     fixture.detectChanges();
 
     expect(resetSpy).not.toHaveBeenCalled();

@@ -33,8 +33,8 @@ describe('SearchableSelectComponent', () => {
   }
 
   function optionLabels(fixture: ReturnType<typeof mount>): string[] {
-    return Array.from(fixture.nativeElement.querySelectorAll('[role="option"]')).map((el) =>
-      (el as HTMLElement).textContent!.trim(),
+    return Array.from(fixture.nativeElement.querySelectorAll('[role="option"]')).map((element) =>
+      (element as HTMLElement).textContent!.trim(),
     );
   }
 

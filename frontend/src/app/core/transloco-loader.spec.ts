@@ -24,9 +24,9 @@ describe('HttpTranslocoLoader', () => {
   it('requests the dictionary relative to the base href', () => {
     loader.getTranslation('de').subscribe();
 
-    const req = ctrl.expectOne((request) => request.url === 'i18n/de.json');
-    expect(req.request.url.startsWith('/')).toBe(false);
-    req.flush({});
+    const testRequest = ctrl.expectOne((request) => request.url === 'i18n/de.json');
+    expect(testRequest.request.url.startsWith('/')).toBe(false);
+    testRequest.flush({});
   });
 
   // The dictionary path never changes, so a browser caching the previous
@@ -35,9 +35,9 @@ describe('HttpTranslocoLoader', () => {
   it('carries the build version, so a new release cannot hit a cached copy', () => {
     loader.getTranslation('de').subscribe();
 
-    const req = ctrl.expectOne(`i18n/de.json?v=${buildVersion.version}`);
-    expect(req.request.params.get('v')).toBe(buildVersion.version);
-    req.flush({});
+    const testRequest = ctrl.expectOne(`i18n/de.json?v=${buildVersion.version}`);
+    expect(testRequest.request.params.get('v')).toBe(buildVersion.version);
+    testRequest.flush({});
   });
 
   // The English dictionary ships in the bundle; serving it from the loader

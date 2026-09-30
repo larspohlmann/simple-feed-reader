@@ -39,12 +39,12 @@ describe('OrganiseStore', () => {
     sub(13, 'Untagged feed', [], 0),
   ];
 
-  function make(subs: SubscriptionDto[] = SUBS, tags: TagDto[] = TAGS): OrganiseStore {
+  function make(subscriptions: SubscriptionDto[] = SUBS, tags: TagDto[] = TAGS): OrganiseStore {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         OrganiseStore,
-        { provide: SubscriptionsStore, useValue: { subscriptions: signal(subs) } },
+        { provide: SubscriptionsStore, useValue: { subscriptions: signal(subscriptions) } },
         { provide: TagsStore, useValue: { tags: signal(tags) } },
       ],
     });
@@ -55,37 +55,39 @@ describe('OrganiseStore', () => {
   /** Like `make()`, but also hands back the mock's writable subscriptions
    *  signal so a test can simulate `SubscriptionsStore.load()` dropping a row
    *  out from under an existing selection. */
-  function makeWithMutableSubs(
-    subs: SubscriptionDto[] = SUBS,
+  function makeWithMutableSubscriptions(
+    subscriptions: SubscriptionDto[] = SUBS,
     tags: TagDto[] = TAGS,
   ): { store: OrganiseStore; subsSignal: WritableSignal<SubscriptionDto[]> } {
     localStorage.clear();
-    const subsSignal = signal(subs);
+    const subscriptionsSignal = signal(subscriptions);
     TestBed.configureTestingModule({
       providers: [
         OrganiseStore,
-        { provide: SubscriptionsStore, useValue: { subscriptions: subsSignal } },
+        { provide: SubscriptionsStore, useValue: { subscriptions: subscriptionsSignal } },
         { provide: TagsStore, useValue: { tags: signal(tags) } },
       ],
     });
 
-    return { store: TestBed.inject(OrganiseStore), subsSignal };
+    return { store: TestBed.inject(OrganiseStore), subsSignal: subscriptionsSignal };
   }
 
   it('groups feeds under every tag and puts untagged last', () => {
     const store = make();
 
-    const keys = store.groups().map((g) => g.key);
+    const keys = store.groups().map((group) => group.key);
     expect(keys).toEqual([1, 2, 'untagged']);
-    expect(store.groups()[0].subscriptions.map((s) => s.id)).toEqual([10, 12]);
-    expect(store.groups()[2].subscriptions.map((s) => s.id)).toEqual([13]);
+    expect(store.groups()[0].subscriptions.map((subscription) => subscription.id)).toEqual([
+      10, 12,
+    ]);
+    expect(store.groups()[2].subscriptions.map((subscription) => subscription.id)).toEqual([13]);
   });
 
   it('shows a feed with two tags in both groups', () => {
     const store = make();
 
-    expect(store.groups()[0].subscriptions.map((s) => s.id)).toContain(12);
-    expect(store.groups()[1].subscriptions.map((s) => s.id)).toContain(12);
+    expect(store.groups()[0].subscriptions.map((subscription) => subscription.id)).toContain(12);
+    expect(store.groups()[1].subscriptions.map((subscription) => subscription.id)).toContain(12);
   });
 
   it('selects a feed everywhere it appears, and counts it once', () => {
@@ -147,9 +149,8 @@ describe('OrganiseStore', () => {
   });
 
   /**
-   * expandAll() used to derive its set from groups(), the FILTERED list, so
-   * a search filter silently dropped other groups' expanded state once it
-   * cleared. "Expand all" must mean every group (#659 review).
+   * #659: "Expand all" means every group, not only the FILTERED groups(), so
+   * clearing a search filter keeps the other groups expanded.
    */
   it('expandAll opens every group, not only the ones a filter is currently showing', () => {
     const store = make();
@@ -229,8 +230,8 @@ describe('OrganiseStore', () => {
 
     store.titleFilter.set('heise');
 
-    expect(store.groups().map((g) => g.key)).toEqual([2]);
-    expect(store.groups()[0].subscriptions.map((s) => s.id)).toEqual([11]);
+    expect(store.groups().map((group) => group.key)).toEqual([2]);
+    expect(store.groups()[0].subscriptions.map((subscription) => subscription.id)).toEqual([11]);
   });
 
   it('expands every matching group while a filter is active', () => {
@@ -247,7 +248,7 @@ describe('OrganiseStore', () => {
 
     store.tagFilter.set(new Set(['untagged']));
 
-    expect(store.groups().map((g) => g.key)).toEqual(['untagged']);
+    expect(store.groups().map((group) => group.key)).toEqual(['untagged']);
   });
 
   it('select all takes only what the filter shows', () => {
@@ -298,7 +299,7 @@ describe('OrganiseStore', () => {
     expect(
       store
         .selectedSubscriptions()
-        .map((s) => s.title)
+        .map((subscription) => subscription.title)
         .sort(),
     ).toEqual(['netzpolitik', 'taz']);
   });
@@ -317,7 +318,7 @@ describe('OrganiseStore', () => {
 
     store.view.set('list');
 
-    expect(store.listRows().map((s) => s.title)).toEqual([
+    expect(store.listRows().map((subscription) => subscription.title)).toEqual([
       'heise',
       'netzpolitik',
       'taz',
@@ -335,7 +336,7 @@ describe('OrganiseStore', () => {
     store.sortField.set('checked');
     store.sortDirection.set('desc');
 
-    expect(store.listRows().map((s) => s.id)).toEqual([2, 1, 3]);
+    expect(store.listRows().map((subscription) => subscription.id)).toEqual([2, 1, 3]);
   });
 
   it('sorts the list view by next refresh, ascending puts the soonest first', () => {
@@ -348,7 +349,7 @@ describe('OrganiseStore', () => {
     store.sortField.set('due');
     store.sortDirection.set('asc');
 
-    expect(store.listRows().map((s) => s.id)).toEqual([3, 1, 2]);
+    expect(store.listRows().map((subscription) => subscription.id)).toEqual([3, 1, 2]);
   });
 
   it('reverses the title order when the direction flips to descending', () => {
@@ -360,23 +361,27 @@ describe('OrganiseStore', () => {
     store.view.set('list');
     store.sortDirection.set('desc');
 
-    expect(store.listRows().map((s) => s.title)).toEqual(['cherry', 'banana', 'apple']);
+    expect(store.listRows().map((subscription) => subscription.title)).toEqual([
+      'cherry',
+      'banana',
+      'apple',
+    ]);
   });
 
   it('keeps a null timing value last whichever way the direction runs', () => {
-    const subs = [
+    const subscriptions = [
       makeSubscription({ id: 1, title: 'a', lastFetchedAt: '2026-01-01T00:00:00Z' }),
       makeSubscription({ id: 2, title: 'b', lastFetchedAt: null }),
     ];
-    const store = make(subs);
+    const store = make(subscriptions);
     store.view.set('list');
     store.sortField.set('checked');
 
     store.sortDirection.set('asc');
-    expect(store.listRows().map((s) => s.id)).toEqual([1, 2]);
+    expect(store.listRows().map((subscription) => subscription.id)).toEqual([1, 2]);
 
     store.sortDirection.set('desc');
-    expect(store.listRows().map((s) => s.id)).toEqual([1, 2]);
+    expect(store.listRows().map((subscription) => subscription.id)).toEqual([1, 2]);
   });
 
   it('persists the collapsed groups under its own key, not the sidebar key', () => {
@@ -394,7 +399,7 @@ describe('OrganiseStore', () => {
    * so a dropped subscription's id must be pruned from selection too (#659).
    */
   it('prunes a selected id once it disappears from the loaded subscriptions', () => {
-    const { store, subsSignal } = makeWithMutableSubs();
+    const { store, subsSignal } = makeWithMutableSubscriptions();
     store.toggleFeed(10);
     store.toggleFeed(11);
     store.toggleFeed(12);
@@ -402,7 +407,7 @@ describe('OrganiseStore', () => {
 
     // Simulate unsubscribing 11 (heise) from its own row menu: subs.load()
     // reloads without it.
-    subsSignal.set(SUBS.filter((s) => s.id !== 11));
+    subsSignal.set(SUBS.filter((subscription) => subscription.id !== 11));
     TestBed.tick();
 
     expect(store.selectedIds().has(11)).toBe(false);

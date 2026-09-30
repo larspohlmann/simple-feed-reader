@@ -15,7 +15,7 @@ describe('ToastService', () => {
   });
 
   const tick = () => TestBed.inject(ApplicationRef).tick();
-  const el = () => container.querySelector<HTMLElement>('.toast');
+  const element = () => container.querySelector<HTMLElement>('.toast');
 
   @Component({
     selector: 'app-toast-test-content',
@@ -40,13 +40,13 @@ describe('ToastService', () => {
   it('renders the message into the document', () => {
     toast.show({ message: 'Refresh finished' });
     tick();
-    expect(el()!.textContent).toContain('Refresh finished');
+    expect(element()!.textContent).toContain('Refresh finished');
   });
 
   it('renders no action button without an actionLabel', () => {
     toast.show({ message: 'Refresh finished' });
     tick();
-    expect(el()!.querySelector('.act')).toBeNull();
+    expect(element()!.querySelector('.act')).toBeNull();
   });
 
   it('renders the action button, and clicking it runs the callback and closes the toast', () => {
@@ -54,7 +54,7 @@ describe('ToastService', () => {
     toast.show({ message: 'Undo the mark-read?', actionLabel: 'Undo', action });
     tick();
 
-    const button = el()!.querySelector<HTMLButtonElement>('.act')!;
+    const button = element()!.querySelector<HTMLButtonElement>('.act')!;
     expect(button.textContent).toContain('Undo');
     button.click();
     tick();
@@ -81,12 +81,12 @@ describe('ToastService', () => {
     jest.useFakeTimers();
     toast.show({ message: 'Auto-dismiss me' });
     tick();
-    expect(el()).not.toBeNull();
+    expect(element()).not.toBeNull();
 
     jest.advanceTimersByTime(6000);
     tick();
 
-    expect(el()).toBeNull();
+    expect(element()).toBeNull();
   });
 
   it('clears a confirmation sooner than a toast on the default duration', () => {
@@ -96,14 +96,14 @@ describe('ToastService', () => {
 
     jest.advanceTimersByTime(CONFIRMATION_DURATION_MS);
     tick();
-    expect(el()).toBeNull();
+    expect(element()).toBeNull();
 
     toast.show({ message: 'Undo the mark-read?' });
     tick();
 
     jest.advanceTimersByTime(CONFIRMATION_DURATION_MS);
     tick();
-    expect(el()).not.toBeNull();
+    expect(element()).not.toBeNull();
   });
 
   it('clears the previous timer when replaced, so it cannot dismiss the new toast early', () => {
@@ -117,11 +117,11 @@ describe('ToastService', () => {
 
     jest.advanceTimersByTime(3000);
     tick();
-    expect(el()!.textContent).toContain('Second');
+    expect(element()!.textContent).toContain('Second');
 
     jest.advanceTimersByTime(3000);
     tick();
-    expect(el()).toBeNull();
+    expect(element()).toBeNull();
   });
 
   it('dismiss() closes an open toast and clears its timer', () => {
@@ -131,7 +131,7 @@ describe('ToastService', () => {
 
     toast.dismiss();
     tick();
-    expect(el()).toBeNull();
+    expect(element()).toBeNull();
 
     // A no-op second dismiss must not throw.
     expect(() => toast.dismiss()).not.toThrow();
@@ -140,8 +140,8 @@ describe('ToastService', () => {
   it('marks the toast region as role=status with aria-live=polite', () => {
     toast.show({ message: 'Announce me' });
     tick();
-    expect(el()!.getAttribute('role')).toBe('status');
-    expect(el()!.getAttribute('aria-live')).toBe('polite');
+    expect(element()!.getAttribute('role')).toBe('status');
+    expect(element()!.getAttribute('aria-live')).toBe('polite');
   });
 
   it('positions the toast from the --space-5 token, not a hardcoded literal', () => {
@@ -163,7 +163,7 @@ describe('ToastService', () => {
     jest.advanceTimersByTime(600_000);
     tick();
 
-    expect(el()).not.toBeNull();
+    expect(element()).not.toBeNull();
   });
 
   it('lets the close button dismiss a persistent toast', () => {
@@ -171,17 +171,17 @@ describe('ToastService', () => {
     toast.show({ message: 'Ranking your feeds', durationMs: null });
     tick();
 
-    el()!.querySelector<HTMLButtonElement>('.close')!.click();
+    element()!.querySelector<HTMLButtonElement>('.close')!.click();
     tick();
 
-    expect(el()).toBeNull();
+    expect(element()).toBeNull();
   });
 
   it('renders a content toast through the component outlet instead of a message', () => {
     toast.show({ content: HostedContentComponent });
     tick();
 
-    expect(el()!.querySelector('.hosted')!.textContent).toBe('hosted content');
+    expect(element()!.querySelector('.hosted')!.textContent).toBe('hosted content');
   });
 
   it('tracks whether a toast is on screen, and stays visible across a replacement', () => {

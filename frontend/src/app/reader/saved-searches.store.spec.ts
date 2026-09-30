@@ -58,7 +58,7 @@ describe('SavedSearchesStore', () => {
     const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
     store.load();
     expect(store.savedSearches()).toEqual([view(rows[0]), view(rows[1])]);
-    expect(store.savedSearches().map((s) => s.unreadCount)).toEqual([4, 0]);
+    expect(store.savedSearches().map((savedSearch) => savedSearch.unreadCount)).toEqual([4, 0]);
   });
 
   it('memberCount passes through from the wire', () => {
@@ -105,7 +105,7 @@ describe('SavedSearchesStore', () => {
     // Saving a saved term is idempotent server-side (200, the existing row).
     store.createSavedSearch('climate', false, false);
 
-    expect(store.savedSearches().map((s) => s.id)).toEqual([1, 2]);
+    expect(store.savedSearches().map((savedSearch) => savedSearch.id)).toEqual([1, 2]);
     expect(store.savedSearches()[0].unreadCount).toBe(9);
   });
 
@@ -121,7 +121,7 @@ describe('SavedSearchesStore', () => {
     expect(deleteSavedSearch).toHaveBeenCalledWith(2);
     // Deleting one saved search cannot change another one's count.
     expect(savedSearches).not.toHaveBeenCalled();
-    expect(store.savedSearches().map((s) => s.id)).toEqual([1]);
+    expect(store.savedSearches().map((savedSearch) => savedSearch.id)).toEqual([1]);
   });
 
   it('removeSavedSearch() runs the success callback once the delete resolves', () => {
@@ -144,7 +144,7 @@ describe('SavedSearchesStore', () => {
     expect(store.savedSearches()[0].unreadCount).toBe(3);
 
     store.markEntryRead(999); // matches nothing
-    expect(store.savedSearches().map((s) => s.unreadCount)).toEqual([3, 0]);
+    expect(store.savedSearches().map((savedSearch) => savedSearch.unreadCount)).toEqual([3, 0]);
   });
 
   it('markEntryRead() is idempotent for the same entry', () => {
@@ -188,7 +188,9 @@ describe('SavedSearchesStore', () => {
 
     store.setIncludeInDigest(1, true);
 
-    expect(store.savedSearches().find((s) => s.id === 1)?.includeInDigest).toBe(true);
+    expect(store.savedSearches().find((savedSearch) => savedSearch.id === 1)?.includeInDigest).toBe(
+      true,
+    );
     expect(updateSavedSearch).toHaveBeenCalledWith(1, { includeInDigest: true });
   });
 
@@ -199,7 +201,9 @@ describe('SavedSearchesStore', () => {
 
     store.setIncludeInDigest(1, true);
 
-    expect(store.savedSearches().find((s) => s.id === 1)?.includeInDigest).toBe(false);
+    expect(store.savedSearches().find((savedSearch) => savedSearch.id === 1)?.includeInDigest).toBe(
+      false,
+    );
   });
 
   describe('the counts poll (#708)', () => {

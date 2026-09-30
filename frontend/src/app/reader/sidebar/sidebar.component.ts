@@ -58,7 +58,9 @@ const SIDEBAR_SAVED_SEARCH_LIMIT = 6;
 /** Ids of a saved-search list, ranked unread-first (count desc) then newest
  *  first (id desc). Id is the creation-order proxy — there is no date field. */
 const rankedSavedSearchIds = (searches: readonly SavedSearchDto[]): number[] =>
-  [...searches].sort((a, b) => b.unreadCount - a.unreadCount || b.id - a.id).map((s) => s.id);
+  [...searches]
+    .sort((left, right) => right.unreadCount - left.unreadCount || right.id - left.id)
+    .map((search) => search.id);
 
 const sameIds = (current: readonly number[], frozen: readonly number[]): boolean => {
   if (current.length !== frozen.length) return false;
@@ -194,7 +196,7 @@ export class SidebarComponent {
   /** Re-rank on a structural change: the initial load, a create, or a delete.
    *  Keyed on the id set only, so a count-only change leaves the order frozen. */
   private readonly refreezeOnStructuralChange = effect(() => {
-    const ids = this.savedSearches().map((s) => s.id);
+    const ids = this.savedSearches().map((search) => search.id);
     if (!sameIds(ids, untracked(this.frozenSavedSearchOrder))) {
       this.refreezeSavedSearchOrder();
     }
@@ -398,7 +400,7 @@ export class SidebarComponent {
     if (target.kind !== 'tag') return;
 
     const dragged = event.item.data as TagDto;
-    const ids = this.tagTree().map((n) => n.tag.id);
+    const ids = this.tagTree().map((node) => node.tag.id);
     const from = ids.indexOf(dragged.id);
     const to = ids.indexOf(target.tag.id);
     if (from < 0 || to < 0 || from === to) return;
@@ -416,12 +418,12 @@ export class SidebarComponent {
       if (event.previousIndex === event.currentIndex) return;
       if (target.kind === 'tag') {
         const ids = (
-          this.tagTree().find((n) => n.tag.id === target.tag.id)?.subscriptions ?? []
-        ).map((s) => s.id);
+          this.tagTree().find((node) => node.tag.id === target.tag.id)?.subscriptions ?? []
+        ).map((subscription) => subscription.id);
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
         this.manage.reorderTagFeeds(target.tag.id, ids);
       } else {
-        const ids = this.untagged().map((s) => s.id);
+        const ids = this.untagged().map((subscription) => subscription.id);
         moveItemInArray(ids, event.previousIndex, event.currentIndex);
         this.manage.reorderUntagged(ids);
       }
@@ -457,10 +459,10 @@ export class SidebarComponent {
     });
   }
 
-  toggleMenu(key: string, ev: Event): void {
-    ev.preventDefault();
-    ev.stopPropagation();
-    this.menuFor.update((k) => (k === key ? null : key));
+  toggleMenu(key: string, event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.menuFor.update((openKey) => (openKey === key ? null : key));
   }
 
   closeMenu(): void {

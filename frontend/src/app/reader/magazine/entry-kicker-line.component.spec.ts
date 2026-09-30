@@ -31,7 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto, inputs: Record<string, unknown> = {}) {
+function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}) {
   // Several cases mount twice to compare two states, and a configured TestBed
   // cannot be reconfigured once instantiated.
   TestBed.resetTestingModule();
@@ -40,7 +40,7 @@ function mount(e: EntryDto, inputs: Record<string, unknown> = {}) {
     providers: [provideRouter([])],
   });
   const fixture = TestBed.createComponent(EntryKickerLineComponent);
-  fixture.componentRef.setInput('entry', e);
+  fixture.componentRef.setInput('entry', testEntry);
   for (const [name, value] of Object.entries(inputs)) {
     fixture.componentRef.setInput(name, value);
   }
@@ -50,12 +50,12 @@ function mount(e: EntryDto, inputs: Record<string, unknown> = {}) {
 
 describe('EntryKickerLineComponent', () => {
   it('renders the source in full and the relative time beside it', () => {
-    const el = mount(entry());
+    const element = mount(entry());
 
-    expect(el.querySelector('.source')!.textContent).toBe(
+    expect(element.querySelector('.source')!.textContent).toBe(
       'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten',
     );
-    expect(el.querySelector('.when')!.textContent).toContain('5');
+    expect(element.querySelector('.when')!.textContent).toContain('5');
   });
 
   it('fills the dot while the entry is unread, empties it once read', () => {
@@ -64,24 +64,24 @@ describe('EntryKickerLineComponent', () => {
   });
 
   it('times an entry by its published date, falling back to when we ingested it', () => {
-    const el = mount(entry({ publishedAt: null, createdAt: new Date().toISOString() }));
+    const element = mount(entry({ publishedAt: null, createdAt: new Date().toISOString() }));
 
-    expect(el.querySelector('.when')!.textContent).not.toBe('');
+    expect(element.querySelector('.when')!.textContent).not.toBe('');
   });
 
   it('drops the source, its favicon and the separator when the caller suppresses it', () => {
-    const el = mount(entry(), { showSource: false });
+    const element = mount(entry(), { showSource: false });
 
-    expect(el.querySelector('.source')).toBeNull();
-    expect(el.querySelector('app-favicon')).toBeNull();
-    expect(el.querySelector('.separator')).toBeNull();
-    expect(el.querySelector('.when')!.textContent).not.toBe('');
+    expect(element.querySelector('.source')).toBeNull();
+    expect(element.querySelector('app-favicon')).toBeNull();
+    expect(element.querySelector('.separator')).toBeNull();
+    expect(element.querySelector('.when')!.textContent).not.toBe('');
   });
 
   it('renders the read-indicator dot after the time (#486)', () => {
-    const el = mount(entry());
-    const when = el.querySelector('.when')!;
-    const dot = el.querySelector('.dot');
+    const element = mount(entry());
+    const when = element.querySelector('.when')!;
+    const dot = element.querySelector('.dot');
     expect(dot).not.toBeNull();
     expect(when.compareDocumentPosition(dot!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -97,9 +97,9 @@ describe('EntryKickerLineComponent', () => {
   // #769: a container query, not JSDOM-visible here, picks between these two
   // at render time — both are always in the DOM so the swap never refetches.
   it('renders both the wide and the narrow relative-time forms', () => {
-    const el = mount(entry());
-    const wide = el.querySelector('.when-wide')!;
-    const narrow = el.querySelector('.when-narrow')!;
+    const element = mount(entry());
+    const wide = element.querySelector('.when-wide')!;
+    const narrow = element.querySelector('.when-narrow')!;
     expect(wide.textContent).toContain('5');
     expect(narrow.textContent).toContain('5');
     expect(narrow.textContent!.length).toBeLessThan(wide.textContent!.length);

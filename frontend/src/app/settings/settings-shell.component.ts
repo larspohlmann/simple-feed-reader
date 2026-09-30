@@ -35,7 +35,9 @@ export class SettingsShellComponent implements OnInit {
   );
 
   private readonly section = computed<SettingsSection | null>(
-    () => SETTINGS_SECTIONS.find((s) => this.url().startsWith(`/settings/${s.path}`)) ?? null,
+    () =>
+      SETTINGS_SECTIONS.find((section) => this.url().startsWith(`/settings/${section.path}`)) ??
+      null,
   );
 
   readonly wideSection = computed(() => this.section()?.wide === true);

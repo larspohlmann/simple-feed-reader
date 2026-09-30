@@ -1,4 +1,3 @@
-// e2e/reading-focus-blocks.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { readerFailedJson } from './support/reader';
 

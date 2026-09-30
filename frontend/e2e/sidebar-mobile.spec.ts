@@ -1,4 +1,3 @@
-// e2e/sidebar-mobile.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).

@@ -13,7 +13,7 @@ describe('SETTINGS_ROUTES', () => {
   });
 
   it('leaves the hub to the title of the settings area itself', () => {
-    expect(sections.find((r) => r.path === '')?.title).toBeUndefined();
+    expect(sections.find((route) => route.path === '')?.title).toBeUndefined();
   });
 
   it('titles sections by a key the dictionary holds', () => {
@@ -23,7 +23,7 @@ describe('SETTINGS_ROUTES', () => {
   });
 
   it('loads the import page, not one of the two sections it composes', async () => {
-    const route = sections.find((r) => r.path === 'import')!;
+    const route = sections.find((candidate) => candidate.path === 'import')!;
     const loaded = await (route.loadComponent as () => Promise<unknown>)();
 
     expect((loaded as { name: string }).name).toBe('ImportSectionComponent');

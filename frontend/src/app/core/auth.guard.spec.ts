@@ -19,7 +19,8 @@ describe('guards', () => {
           provide: Router,
           useValue: {
             events,
-            createUrlTree: (c: unknown[]) => ({ toString: () => c.join('/') }) as UrlTree,
+            createUrlTree: (segments: unknown[]) =>
+              ({ toString: () => segments.join('/') }) as UrlTree,
           },
         },
       ],
@@ -27,8 +28,8 @@ describe('guards', () => {
     tokens = TestBed.inject(TokenStore);
   });
 
-  const run = (g: typeof authGuard, url = '/') =>
-    TestBed.runInInjectionContext(() => g({} as never, { url } as never));
+  const run = (guard: typeof authGuard, url = '/') =>
+    TestBed.runInInjectionContext(() => guard({} as never, { url } as never));
 
   it('authGuard allows when authenticated, redirects otherwise', () => {
     expect(run(authGuard)).not.toBe(true);

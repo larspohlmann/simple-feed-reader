@@ -11,7 +11,7 @@ export const HEADER_SCROLL_DELTA = 6;
  * Only hides on a narrow (mobile) layout; on desktop the header always shows.
  */
 export function nextHeaderHidden(
-  prevHidden: boolean,
+  previousHidden: boolean,
   lastTop: number,
   top: number,
   isWide: boolean,
@@ -21,5 +21,5 @@ export function nextHeaderHidden(
   const delta = top - lastTop;
   if (delta > HEADER_SCROLL_DELTA) return true;
   if (delta < -HEADER_SCROLL_DELTA) return false;
-  return prevHidden;
+  return previousHidden;
 }

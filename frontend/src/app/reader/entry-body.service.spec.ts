@@ -138,11 +138,11 @@ describe('EntryBodyService', () => {
     it('drops a response that was still on the wire before the account changed', async () => {
       const state = store.body(1);
       await settle();
-      const req = ctrl.expectOne('https://api.test/api/entries/1');
+      const testRequest = ctrl.expectOne('https://api.test/api/entries/1');
 
       tokens.clear();
       TestBed.tick();
-      req.flush({ entry: { contentHtml: '<p>from the previous account</p>' } });
+      testRequest.flush({ entry: { contentHtml: '<p>from the previous account</p>' } });
 
       // Cleared, and the stale response must not have written back into it.
       expect(state()).toEqual({ status: 'loading' });

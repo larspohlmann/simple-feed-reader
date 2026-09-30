@@ -94,11 +94,12 @@ function paletteAt(theme: Theme, step: number): Palette {
 function rgb(value: string): Rgb {
   const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
   if (hex) {
-    const digits = hex[1].length === 3 ? [...hex[1]].map((d) => d + d).join('') : hex[1];
+    const digits =
+      hex[1].length === 3 ? [...hex[1]].map((digit) => digit + digit).join('') : hex[1];
     return [0, 2, 4].map((offset) => parseInt(digits.slice(offset, offset + 2), 16)) as Rgb;
   }
-  const fn = /^rgb\(([\d.]+),\s*([\d.]+),\s*([\d.]+)\)$/.exec(value);
-  if (fn) return [Number(fn[1]), Number(fn[2]), Number(fn[3])];
+  const rgbMatch = /^rgb\(([\d.]+),\s*([\d.]+),\s*([\d.]+)\)$/.exec(value);
+  if (rgbMatch) return [Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3])];
   throw new Error(`Not a colour: ${value}`);
 }
 
@@ -136,13 +137,15 @@ const MEDIA: Partial<Record<number, string>> = {
 const TOLERANCE = 0.02;
 
 const linear = (channel: number): number => {
-  const c = channel / 255;
-  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  const normalized = channel / 255;
+  return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
 };
-const luminance = ([r, g, b]: Rgb): number =>
-  0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
-const contrast = (a: string, b: string): number => {
-  const [high, low] = [luminance(rgb(a)), luminance(rgb(b))].sort((x, y) => y - x);
+const luminance = ([red, green, blue]: Rgb): number =>
+  0.2126 * linear(red) + 0.7152 * linear(green) + 0.0722 * linear(blue);
+const contrast = (foreground: string, background: string): number => {
+  const [high, low] = [luminance(rgb(foreground)), luminance(rgb(background))].sort(
+    (x, y) => y - x,
+  );
   return (high + 0.05) / (low + 0.05);
 };
 const weakest = (token: string, palette: Palette): number =>
@@ -154,7 +157,7 @@ function emittedSteps(theme: Theme): number[] {
       block.selector,
     );
     return match ? [Number(match[1])] : [];
-  }).sort((a, b) => a - b);
+  }).sort((left, right) => left - right);
 }
 
 describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {

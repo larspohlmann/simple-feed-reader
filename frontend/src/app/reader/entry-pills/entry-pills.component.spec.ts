@@ -23,20 +23,20 @@ function mount(tags: SubscriptionTagDto[], savedSearches: SavedSearchMembershipD
     imports: [EntryPillsComponent, provideTranslocoTesting()],
     providers: [provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryPillsComponent);
-  f.componentRef.setInput('tags', tags);
-  f.componentRef.setInput('savedSearches', savedSearches);
-  f.detectChanges();
-  return f.nativeElement as HTMLElement;
+  const fixture = TestBed.createComponent(EntryPillsComponent);
+  fixture.componentRef.setInput('tags', tags);
+  fixture.componentRef.setInput('savedSearches', savedSearches);
+  fixture.detectChanges();
+  return fixture.nativeElement as HTMLElement;
 }
 
-const pillNames = (el: HTMLElement) =>
-  [...el.querySelectorAll('.pill .name')].map((name) => name.textContent);
+const pillNames = (element: HTMLElement) =>
+  [...element.querySelectorAll('.pill .name')].map((name) => name.textContent);
 
 describe('EntryPillsComponent', () => {
   it('lists the tag pills first, then the saved-search pills', () => {
-    const el = mount([tag(1, 'Tech'), tag(2, 'News')], [savedSearch(5, 'climate')]);
-    expect(pillNames(el)).toEqual(['Tech', 'News', 'climate']);
+    const element = mount([tag(1, 'Tech'), tag(2, 'News')], [savedSearch(5, 'climate')]);
+    expect(pillNames(element)).toEqual(['Tech', 'News', 'climate']);
   });
 
   it('renders no pill when there are neither tags nor saved searches', () => {
@@ -56,10 +56,10 @@ describe('EntryPillsComponent', () => {
   });
 
   it('stops a pill click from bubbling so the parent entry does not open', () => {
-    const el = mount([tag(1, 'News')], [savedSearch(2, 'climate')]);
+    const element = mount([tag(1, 'News')], [savedSearch(2, 'climate')]);
     const parentClick = jest.fn();
-    el.addEventListener('click', parentClick);
-    for (const pill of el.querySelectorAll('a.pill')) {
+    element.addEventListener('click', parentClick);
+    for (const pill of element.querySelectorAll('a.pill')) {
       pill.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     }
     expect(parentClick).not.toHaveBeenCalled();

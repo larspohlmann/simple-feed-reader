@@ -559,10 +559,10 @@ describe('AiSectionComponent', () => {
     // below.
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
-    // `tz` is a query param now, so an exact-string match no longer finds the
-    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    // `tz` is a query param, so match the URL alone: `url` excludes the query
+    // string, unlike `urlWithParams`.
     http
-      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .expectOne((request) => request.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
 
     (row(fixture, 0).querySelector('summary') as HTMLElement).click();
@@ -835,10 +835,10 @@ describe('AiSectionComponent', () => {
 
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
-    // `tz` is a query param now, so an exact-string match no longer finds the
-    // request -- `req.url` excludes the query string, unlike `urlWithParams`.
+    // `tz` is a query param, so match the URL alone: `url` excludes the query
+    // string, unlike `urlWithParams`.
     http
-      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .expectOne((request) => request.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
     fixture.detectChanges();
 
@@ -852,7 +852,7 @@ describe('AiSectionComponent', () => {
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
     http
-      .expectOne((req) => req.url === '/api/recommendations/runs/history')
+      .expectOne((request) => request.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
   };
 
@@ -908,14 +908,14 @@ describe('AiSectionComponent', () => {
     const triggers = Array.from(
       addGroup.querySelectorAll('app-info-tip button.trigger'),
     ) as HTMLButtonElement[];
-    expect(triggers.map((el) => el.getAttribute('aria-label'))).toEqual([
+    expect(triggers.map((element) => element.getAttribute('aria-label'))).toEqual([
       'Optional name',
       'Endpoint',
       'API key',
     ]);
 
-    const hints = Array.from(addGroup.querySelectorAll('app-field .hint')).map((el) =>
-      el.textContent?.trim(),
+    const hints = Array.from(addGroup.querySelectorAll('app-field .hint')).map((element) =>
+      element.textContent?.trim(),
     );
     expect(hints).toEqual([
       'The full API root, including any version path — for example https://api.openai.com/v1',

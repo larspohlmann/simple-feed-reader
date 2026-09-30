@@ -44,7 +44,7 @@ describe('AccountSectionComponent', () => {
   const dialogStub = { open: jest.fn() };
   const navigate = jest.fn();
 
-  function mount(u: CurrentUser | null) {
+  function mount(signedInUser: CurrentUser | null) {
     TestBed.resetTestingModule();
     const events = new Subject<unknown>();
     TestBed.configureTestingModule({
@@ -62,15 +62,15 @@ describe('AccountSectionComponent', () => {
     // DELETE that HttpTestingController can intercept, exactly like
     // AdminApi.deleteUser does in admin-user-detail.component.spec.ts.
     auth = TestBed.inject(AuthService);
-    auth.user.set(u);
+    auth.user.set(signedInUser);
     // Spied rather than left real: logout() also clears the token, resets
     // preferences and navigates -- none of that is this component's concern,
     // only whether it gets called once the delete succeeds.
     logoutSpy = jest.spyOn(auth, 'logout').mockReturnValue(undefined);
     httpMock = TestBed.inject(HttpTestingController);
-    const f = TestBed.createComponent(AccountSectionComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(AccountSectionComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   beforeEach(() => {
@@ -81,30 +81,30 @@ describe('AccountSectionComponent', () => {
   afterEach(() => httpMock.verify());
 
   it('shows the email and a sign-out button', () => {
-    const f = mount(user);
-    const el = f.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('me@x');
+    const fixture = mount(user);
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('me@x');
     // The sign-out button carries no class hook of its own, so it is found by
     // its own label rather than by DOM position among the two `.actions`
     // blocks (account and danger zone both have one).
-    const buttons = Array.from(el.querySelectorAll('button'));
+    const buttons = Array.from(element.querySelectorAll('button'));
     const signOut = buttons.find((button) => button.textContent?.includes('Sign out'));
     (signOut as HTMLButtonElement).click();
     expect(logoutSpy).toHaveBeenCalled();
   });
 
   it('renders the account and the danger zone as separate settings groups', () => {
-    const f = mount(user);
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount(user);
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelectorAll('app-settings-group').length).toBe(2);
+    expect(element.querySelectorAll('app-settings-group').length).toBe(2);
   });
 
   it('deletes the account and logs out once confirmed', () => {
-    const f = mount(user);
+    const fixture = mount(user);
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
 
     const request = httpMock.expectOne(`${base}/api/me`);
     expect(request.request.method).toBe('DELETE');
@@ -114,31 +114,31 @@ describe('AccountSectionComponent', () => {
   });
 
   it("forgets this account's device settings once the delete succeeds", () => {
-    const f = mount(user);
+    const fixture = mount(user);
     localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
     httpMock.expectOne(`${base}/api/me`).flush(null, { status: 204, statusText: 'No Content' });
 
     expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBeNull();
   });
 
   it('does nothing when the dialog is dismissed', () => {
-    const f = mount(user);
+    const fixture = mount(user);
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
 
     httpMock.expectNone(`${base}/api/me`);
     expect(logoutSpy).not.toHaveBeenCalled();
   });
 
   it('passes the account email as the required confirmation text', () => {
-    const f = mount(user);
+    const fixture = mount(user);
     dialogStub.open.mockReturnValue({ closed: of(false) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
     httpMock.expectNone(`${base}/api/me`);
 
     const [, config] = dialogStub.open.mock.calls.at(-1) as [
@@ -149,11 +149,11 @@ describe('AccountSectionComponent', () => {
   });
 
   it('shows the problem detail in an error banner when the delete request fails', () => {
-    const f = mount(user);
+    const fixture = mount(user);
     localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
 
     // Mirrors the real AccountDeleter guard's shape (LastAdminException /
     // ApiProblem::toArray()): `type` is a bare slug, and `detail` is present
@@ -167,20 +167,20 @@ describe('AccountSectionComponent', () => {
       },
       { status: 409, statusText: 'Conflict' },
     );
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(logoutSpy).not.toHaveBeenCalled();
-    expect((f.nativeElement as HTMLElement).textContent).toContain(
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'This is the only administrator account. Promote another account first.',
     );
     expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBe('1');
   });
 
   it('falls back to the problem title when the response has no detail', () => {
-    const f = mount(user);
+    const fixture = mount(user);
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
-    f.componentInstance.confirmThenDelete();
+    fixture.componentInstance.confirmThenDelete();
 
     // No `detail` field at all -- exercises the `|| error.title` half of the
     // template expression, which the fixture above never touches.
@@ -190,9 +190,9 @@ describe('AccountSectionComponent', () => {
         { type: 'about:blank', title: 'Something went wrong', status: 500 },
         { status: 500, statusText: 'Internal Server Error' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(logoutSpy).not.toHaveBeenCalled();
-    expect((f.nativeElement as HTMLElement).textContent).toContain('Something went wrong');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Something went wrong');
   });
 });

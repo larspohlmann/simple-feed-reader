@@ -1,4 +1,3 @@
-// src/app/core/magazine-style-writer.ts
 import { InjectionToken } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { MagazineStyle } from './magazine-style';

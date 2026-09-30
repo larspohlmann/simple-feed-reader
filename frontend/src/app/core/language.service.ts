@@ -1,4 +1,3 @@
-// src/app/core/language.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { LOCALE_WRITER } from './locale-writer';

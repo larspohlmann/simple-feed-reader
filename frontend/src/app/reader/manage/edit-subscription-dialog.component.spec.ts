@@ -49,8 +49,8 @@ describe('EditSubscriptionDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: sub },
       ],
     });
-    const f = TestBed.createComponent(EditSubscriptionDialogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
     ctrl.expectOne('https://api.test/api/tags').flush({
       tags: [
@@ -58,8 +58,8 @@ describe('EditSubscriptionDialogComponent', () => {
         { id: 2, name: 'News', color: 'rgb(34, 197, 94)', icon: 'public' },
       ],
     });
-    f.detectChanges(); // render the tag pills now the store has loaded
-    return f;
+    fixture.detectChanges(); // render the tag pills now the store has loaded
+    return fixture;
   }
 
   beforeEach(() => close.mockReset());
@@ -70,42 +70,42 @@ describe('EditSubscriptionDialogComponent', () => {
   });
 
   it('clears the field on reset, which is what drops the override', () => {
-    const c = mount().componentInstance;
-    c.resetTitle();
-    expect(c.form.getRawValue().customTitle).toBe('');
+    const component = mount().componentInstance;
+    component.resetTitle();
+    expect(component.form.getRawValue().customTitle).toBe('');
   });
 
   it('shows the feed URL, and the site as an external link', () => {
-    const el: HTMLElement = mount().nativeElement;
-    expect(el.querySelector('.url')!.textContent).toContain('https://heise.de/rss');
-    const link = el.querySelector<HTMLAnchorElement>('.site a')!;
+    const element: HTMLElement = mount().nativeElement;
+    expect(element.querySelector('.url')!.textContent).toContain('https://heise.de/rss');
+    const link = element.querySelector<HTMLAnchorElement>('.site a')!;
     expect(link.getAttribute('href')).toBe('https://heise.de');
     expect(link.target).toBe('_blank');
     expect(link.rel).toBe('noopener noreferrer');
   });
 
   it('prefills the current tags as checked', () => {
-    const c = mount().componentInstance;
-    expect(c.checked().has(1)).toBe(true);
-    expect(c.checked().has(2)).toBe(false);
+    const component = mount().componentInstance;
+    expect(component.checked().has(1)).toBe(true);
+    expect(component.checked().has(2)).toBe(false);
   });
 
   it('renders each tag as a toggle pill with aria-pressed reflecting selection', () => {
-    const el = mount().nativeElement as HTMLElement;
-    const pills = el.querySelectorAll('button.tag-pill');
+    const element = mount().nativeElement as HTMLElement;
+    const pills = element.querySelectorAll('button.tag-pill');
     expect(pills.length).toBe(2);
     // Tech (id 1) is a current tag → pressed; News (id 2) → not pressed.
-    const tech = [...pills].find((p) => p.textContent!.includes('Tech'))!;
-    const news = [...pills].find((p) => p.textContent!.includes('News'))!;
+    const tech = [...pills].find((pill) => pill.textContent!.includes('Tech'))!;
+    const news = [...pills].find((pill) => pill.textContent!.includes('News'))!;
     expect(tech.getAttribute('aria-pressed')).toBe('true');
     expect(news.getAttribute('aria-pressed')).toBe('false');
   });
 
   it("shows a tag's icon when it has one, and a colour dot otherwise", () => {
-    const el = mount().nativeElement as HTMLElement;
-    const pills = [...el.querySelectorAll('button.tag-pill')];
-    const tech = pills.find((p) => p.textContent!.includes('Tech'))!;
-    const news = pills.find((p) => p.textContent!.includes('News'))!;
+    const element = mount().nativeElement as HTMLElement;
+    const pills = [...element.querySelectorAll('button.tag-pill')];
+    const tech = pills.find((pill) => pill.textContent!.includes('Tech'))!;
+    const news = pills.find((pill) => pill.textContent!.includes('News'))!;
     // News carries an icon → renders app-icon, no dot; Tech has none → dot.
     expect(news.querySelector('app-icon')).not.toBeNull();
     expect(news.querySelector('.dot')).toBeNull();
@@ -114,57 +114,57 @@ describe('EditSubscriptionDialogComponent', () => {
   });
 
   it('colours an inactive tag icon with the tag colour', () => {
-    const el = mount().nativeElement as HTMLElement;
+    const element = mount().nativeElement as HTMLElement;
     // News (id 2) is not one of the feed's tags → inactive → shows its own colour.
-    const news = [...el.querySelectorAll('button.tag-pill')].find((p) =>
-      p.textContent!.includes('News'),
+    const news = [...element.querySelectorAll('button.tag-pill')].find((pill) =>
+      pill.textContent!.includes('News'),
     )!;
     const icon = news.querySelector('app-icon') as HTMLElement;
     expect(icon.style.color).toBe('rgb(34, 197, 94)');
   });
 
   it('toggles a tag when its pill is clicked', () => {
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
-    const news = [...el.querySelectorAll('button.tag-pill')].find((p) =>
-      p.textContent!.includes('News'),
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
+    const news = [...element.querySelectorAll('button.tag-pill')].find((pill) =>
+      pill.textContent!.includes('News'),
     ) as HTMLButtonElement;
     news.click();
-    f.detectChanges();
-    expect(f.componentInstance.checked().has(2)).toBe(true);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.checked().has(2)).toBe(true);
     expect(news.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('PATCHes customTitle (empty → null) and the toggled tag set', () => {
-    const c = mount().componentInstance;
-    c.form.controls.customTitle.setValue('  My Heise ');
-    c.toggle(2); // add News
-    c.toggle(1); // remove Tech
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({
+    const component = mount().componentInstance;
+    component.form.controls.customTitle.setValue('  My Heise ');
+    component.toggle(2); // add News
+    component.toggle(1); // remove Tech
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({
       customTitle: 'My Heise',
       tagIds: [2],
       includeInAllItems: true,
       includeInForYou: true,
     });
-    req.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
+    testRequest.flush({ subscription: { ...sub, customTitle: 'My Heise' } });
     expect(close).toHaveBeenCalled();
   });
 
   it('sends customTitle null when cleared', () => {
-    const c = mount().componentInstance;
-    c.form.controls.customTitle.setValue('');
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.body).toEqual({
+    const component = mount().componentInstance;
+    component.form.controls.customTitle.setValue('');
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body).toEqual({
       customTitle: null,
       tagIds: [1],
       includeInAllItems: true,
       includeInForYou: true,
     });
-    req.flush({ subscription: sub });
+    testRequest.flush({ subscription: sub });
   });
 
   it('reflects stored exclusion state and sends the toggled values', () => {
@@ -179,29 +179,29 @@ describe('EditSubscriptionDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: excludedFromAllItems },
       ],
     });
-    const f = TestBed.createComponent(EditSubscriptionDialogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(EditSubscriptionDialogComponent);
+    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
     ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const el = f.nativeElement as HTMLElement;
-    const allItemsSwitch = el.querySelector<HTMLInputElement>('#edit-feed-all-items');
-    const forYouSwitch = el.querySelector<HTMLInputElement>('#edit-feed-for-you');
+    const element = fixture.nativeElement as HTMLElement;
+    const allItemsSwitch = element.querySelector<HTMLInputElement>('#edit-feed-all-items');
+    const forYouSwitch = element.querySelector<HTMLInputElement>('#edit-feed-for-you');
     expect(allItemsSwitch!.checked).toBe(false);
     expect(forYouSwitch!.checked).toBe(true);
 
     forYouSwitch!.click();
-    f.detectChanges();
-    f.componentInstance.submit();
+    fixture.detectChanges();
+    fixture.componentInstance.submit();
 
-    const req = ctrl.expectOne('https://api.test/api/subscriptions/5');
-    expect(req.request.body).toEqual({
+    const testRequest = ctrl.expectOne('https://api.test/api/subscriptions/5');
+    expect(testRequest.request.body).toEqual({
       customTitle: 'Heise',
       tagIds: [1],
       includeInAllItems: false,
       includeInForYou: false,
     });
-    req.flush({ subscription: excludedFromAllItems });
+    testRequest.flush({ subscription: excludedFromAllItems });
   });
 });

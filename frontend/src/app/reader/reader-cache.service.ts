@@ -24,53 +24,54 @@ export class ReaderCacheService {
   private lastCachedAt = 0;
 
   async get(entryId: number): Promise<ReaderArticle | null> {
-    const db = await this.open();
-    if (!db) return null;
+    const database = await this.open();
+    if (!database) return null;
     return new Promise((resolve) => {
-      const tx = db.transaction(ReaderCacheService.STORE, 'readonly');
-      const req = tx.objectStore(ReaderCacheService.STORE).get(entryId);
-      req.onsuccess = () => resolve((req.result as CacheRecord | undefined)?.article ?? null);
-      req.onerror = () => resolve(null);
+      const tx = database.transaction(ReaderCacheService.STORE, 'readonly');
+      const request = tx.objectStore(ReaderCacheService.STORE).get(entryId);
+      request.onsuccess = () =>
+        resolve((request.result as CacheRecord | undefined)?.article ?? null);
+      request.onerror = () => resolve(null);
     });
   }
 
   async put(entryId: number, article: ReaderArticle): Promise<void> {
-    const db = await this.open();
-    if (!db) return;
+    const database = await this.open();
+    if (!database) return;
     this.lastCachedAt = Math.max(Date.now(), this.lastCachedAt + 1);
     const record: CacheRecord = { entryId, article, cachedAt: this.lastCachedAt };
     await new Promise<void>((resolve) => {
-      const tx = db.transaction(ReaderCacheService.STORE, 'readwrite');
+      const tx = database.transaction(ReaderCacheService.STORE, 'readwrite');
       tx.objectStore(ReaderCacheService.STORE).put(record);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
-    await this.evict(db);
+    await this.evict(database);
   }
 
   async delete(entryId: number): Promise<void> {
-    const db = await this.open();
-    if (!db) return;
+    const database = await this.open();
+    if (!database) return;
     await new Promise<void>((resolve) => {
-      const tx = db.transaction(ReaderCacheService.STORE, 'readwrite');
+      const tx = database.transaction(ReaderCacheService.STORE, 'readwrite');
       tx.objectStore(ReaderCacheService.STORE).delete(entryId);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
   }
 
-  private async evict(db: IDBDatabase): Promise<void> {
+  private async evict(database: IDBDatabase): Promise<void> {
     await new Promise<void>((resolve) => {
-      const tx = db.transaction(ReaderCacheService.STORE, 'readwrite');
+      const tx = database.transaction(ReaderCacheService.STORE, 'readwrite');
       const store = tx.objectStore(ReaderCacheService.STORE);
-      const countReq = store.count();
-      countReq.onsuccess = () => {
-        const over = countReq.result - ReaderCacheService.MAX_ENTRIES;
+      const countRequest = store.count();
+      countRequest.onsuccess = () => {
+        const over = countRequest.result - ReaderCacheService.MAX_ENTRIES;
         if (over <= 0) return;
         // Oldest-first via the cachedAt index; delete the surplus.
         let removed = 0;
-        store.index('cachedAt').openCursor().onsuccess = (e) => {
-          const cursor = (e.target as IDBRequest<IDBCursorWithValue | null>).result;
+        store.index('cachedAt').openCursor().onsuccess = (event) => {
+          const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
           if (!cursor || removed >= over) return;
           cursor.delete();
           removed++;
@@ -86,31 +87,31 @@ export class ReaderCacheService {
     if (this.db) return this.db;
     this.db = new Promise((resolve) => {
       if (typeof indexedDB === 'undefined') return resolve(null);
-      const req = indexedDB.open(ReaderCacheService.DB, ReaderCacheService.VERSION);
-      req.onupgradeneeded = () => {
-        const db = req.result;
+      const request = indexedDB.open(ReaderCacheService.DB, ReaderCacheService.VERSION);
+      request.onupgradeneeded = () => {
+        const database = request.result;
         // Bumping VERSION drops the old store — the schema-version cache-bust.
-        if (db.objectStoreNames.contains(ReaderCacheService.STORE)) {
-          db.deleteObjectStore(ReaderCacheService.STORE);
+        if (database.objectStoreNames.contains(ReaderCacheService.STORE)) {
+          database.deleteObjectStore(ReaderCacheService.STORE);
         }
-        const store = db.createObjectStore(ReaderCacheService.STORE, { keyPath: 'entryId' });
+        const store = database.createObjectStore(ReaderCacheService.STORE, { keyPath: 'entryId' });
         store.createIndex('cachedAt', 'cachedAt');
       };
       // A tab from before the bump holds the old schema and never closes: read
       // without the cache rather than hang every article on it (#814). If it
       // closes later, onsuccess still fires and restores the cache below.
-      req.onblocked = () => resolve(null);
-      req.onsuccess = () => {
-        const db = req.result;
+      request.onblocked = () => resolve(null);
+      request.onsuccess = () => {
+        const database = request.result;
         // A newer tab wants to upgrade: let go, or that tab hangs on us (#814).
-        db.onversionchange = () => {
-          db.close();
+        database.onversionchange = () => {
+          database.close();
           this.db = null;
         };
-        this.db = Promise.resolve(db);
-        resolve(db);
+        this.db = Promise.resolve(database);
+        resolve(database);
       };
-      req.onerror = () => resolve(null);
+      request.onerror = () => resolve(null);
     });
     return this.db;
   }

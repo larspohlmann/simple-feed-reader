@@ -1,4 +1,3 @@
-// src/app/shared/progress-hairline/progress-hairline.component.ts
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**

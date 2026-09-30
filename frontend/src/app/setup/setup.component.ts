@@ -59,16 +59,16 @@ export class SetupComponent {
     this.error.set(null);
     const { email, password, secret } = this.form.getRawValue();
     this.api.createAdmin(email, password, secret).subscribe({
-      next: (res) => {
-        this.tokens.set(res.token);
+      next: (response) => {
+        this.tokens.set(response.token);
         this.setup.markComplete();
         this.auth.loadMe().subscribe({
           next: () => void this.router.navigate(['/']),
           error: () => void this.router.navigate(['/']),
         });
       },
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e).detail ?? this.i18n.translate('setup.failed'));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error).detail ?? this.i18n.translate('setup.failed'));
         this.loading.set(false);
       },
     });

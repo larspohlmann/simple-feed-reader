@@ -9,7 +9,7 @@
 // candidate, re-verified server-side. Checked against crypto.subtle in
 // sha256.spec.ts.
 
-const K = new Uint32Array([
+const ROUND_CONSTANTS = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
   0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -20,26 +20,26 @@ const K = new Uint32Array([
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
 ]);
 
-const HEX = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
+const HEX = Array.from({ length: 256 }, (_, index) => index.toString(16).padStart(2, '0'));
 
 // Reused across calls: the grind runs this hundreds of thousands of times, and
 // allocating a fresh message schedule each time is the one avoidable cost.
-const W = new Uint32Array(64);
+const MESSAGE_SCHEDULE = new Uint32Array(64);
 
 /** SHA-256 of a UTF-8 string, lowercase hex. */
 export function sha256Hex(input: string): string {
   const bytes = utf8Bytes(input);
-  const bitLen = bytes.length * 8;
+  const bitLength = bytes.length * 8;
 
   // Pad: 0x80, then zeroes, then the 64-bit big-endian bit length.
   const padded = new Uint8Array(((bytes.length + 9 + 63) >> 6) << 6);
   padded.set(bytes);
   padded[bytes.length] = 0x80;
   // Lengths here are far below 2^32 bits, so the high word is always zero.
-  padded[padded.length - 4] = (bitLen >>> 24) & 0xff;
-  padded[padded.length - 3] = (bitLen >>> 16) & 0xff;
-  padded[padded.length - 2] = (bitLen >>> 8) & 0xff;
-  padded[padded.length - 1] = bitLen & 0xff;
+  padded[padded.length - 4] = (bitLength >>> 24) & 0xff;
+  padded[padded.length - 3] = (bitLength >>> 16) & 0xff;
+  padded[padded.length - 2] = (bitLength >>> 8) & 0xff;
+  padded[padded.length - 1] = bitLength & 0xff;
 
   let h0 = 0x6a09e667,
     h1 = 0xbb67ae85,
@@ -50,53 +50,64 @@ export function sha256Hex(input: string): string {
     h6 = 0x1f83d9ab,
     h7 = 0x5be0cd19;
 
-  for (let off = 0; off < padded.length; off += 64) {
-    for (let i = 0; i < 16; i++) {
-      const j = off + i * 4;
-      W[i] = (padded[j] << 24) | (padded[j + 1] << 16) | (padded[j + 2] << 8) | padded[j + 3];
+  for (let blockOffset = 0; blockOffset < padded.length; blockOffset += 64) {
+    for (let index = 0; index < 16; index++) {
+      const byteOffset = blockOffset + index * 4;
+      MESSAGE_SCHEDULE[index] =
+        (padded[byteOffset] << 24) |
+        (padded[byteOffset + 1] << 16) |
+        (padded[byteOffset + 2] << 8) |
+        padded[byteOffset + 3];
     }
-    for (let i = 16; i < 64; i++) {
-      const w15 = W[i - 15];
-      const w2 = W[i - 2];
+    for (let index = 16; index < 64; index++) {
+      const w15 = MESSAGE_SCHEDULE[index - 15];
+      const w2 = MESSAGE_SCHEDULE[index - 2];
       const s0 = ((w15 >>> 7) | (w15 << 25)) ^ ((w15 >>> 18) | (w15 << 14)) ^ (w15 >>> 3);
       const s1 = ((w2 >>> 17) | (w2 << 15)) ^ ((w2 >>> 19) | (w2 << 13)) ^ (w2 >>> 10);
-      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) | 0;
+      MESSAGE_SCHEDULE[index] =
+        (MESSAGE_SCHEDULE[index - 16] + s0 + MESSAGE_SCHEDULE[index - 7] + s1) | 0;
     }
 
-    let a = h0,
-      b = h1,
-      c = h2,
-      d = h3,
-      e = h4,
-      f = h5,
-      g = h6,
-      h = h7;
+    let workingA = h0,
+      workingB = h1,
+      workingC = h2,
+      workingD = h3,
+      workingE = h4,
+      workingF = h5,
+      workingG = h6,
+      workingH = h7;
 
-    for (let i = 0; i < 64; i++) {
-      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
-      const ch = (e & f) ^ (~e & g);
-      const t1 = (h + S1 + ch + K[i] + W[i]) | 0;
-      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
-      const maj = (a & b) ^ (a & c) ^ (b & c);
+    for (let index = 0; index < 64; index++) {
+      const S1 =
+        ((workingE >>> 6) | (workingE << 26)) ^
+        ((workingE >>> 11) | (workingE << 21)) ^
+        ((workingE >>> 25) | (workingE << 7));
+      const ch = (workingE & workingF) ^ (~workingE & workingG);
+      const t1 = (workingH + S1 + ch + ROUND_CONSTANTS[index] + MESSAGE_SCHEDULE[index]) | 0;
+      const S0 =
+        ((workingA >>> 2) | (workingA << 30)) ^
+        ((workingA >>> 13) | (workingA << 19)) ^
+        ((workingA >>> 22) | (workingA << 10));
+      const maj = (workingA & workingB) ^ (workingA & workingC) ^ (workingB & workingC);
       const t2 = (S0 + maj) | 0;
-      h = g;
-      g = f;
-      f = e;
-      e = (d + t1) | 0;
-      d = c;
-      c = b;
-      b = a;
-      a = (t1 + t2) | 0;
+      workingH = workingG;
+      workingG = workingF;
+      workingF = workingE;
+      workingE = (workingD + t1) | 0;
+      workingD = workingC;
+      workingC = workingB;
+      workingB = workingA;
+      workingA = (t1 + t2) | 0;
     }
 
-    h0 = (h0 + a) | 0;
-    h1 = (h1 + b) | 0;
-    h2 = (h2 + c) | 0;
-    h3 = (h3 + d) | 0;
-    h4 = (h4 + e) | 0;
-    h5 = (h5 + f) | 0;
-    h6 = (h6 + g) | 0;
-    h7 = (h7 + h) | 0;
+    h0 = (h0 + workingA) | 0;
+    h1 = (h1 + workingB) | 0;
+    h2 = (h2 + workingC) | 0;
+    h3 = (h3 + workingD) | 0;
+    h4 = (h4 + workingE) | 0;
+    h5 = (h5 + workingF) | 0;
+    h6 = (h6 + workingG) | 0;
+    h7 = (h7 + workingH) | 0;
   }
 
   return word(h0) + word(h1) + word(h2) + word(h3) + word(h4) + word(h5) + word(h6) + word(h7);
@@ -108,6 +119,6 @@ function word(x: number): string {
 
 /** UTF-8 encode. TextEncoder allocates a fresh Uint8Array per call, which is
  *  fine here -- the salts and numbers involved are a few dozen bytes. */
-function utf8Bytes(s: string): Uint8Array {
-  return new TextEncoder().encode(s);
+function utf8Bytes(text: string): Uint8Array {
+  return new TextEncoder().encode(text);
 }

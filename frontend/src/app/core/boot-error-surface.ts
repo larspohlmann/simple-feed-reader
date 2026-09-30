@@ -1,4 +1,3 @@
-// src/app/core/boot-error-surface.ts
 import { reportBootError } from './client-error-beacon';
 
 /**

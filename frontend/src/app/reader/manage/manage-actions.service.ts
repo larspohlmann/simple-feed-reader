@@ -74,7 +74,11 @@ export class ManageActions {
   ): void {
     if (fromTagId === toTagId) return;
     this.subs.subscriptions.update((current) =>
-      current.map((s) => (s.id === sub.id ? this.afterMove(s, fromTagId, toTagId, position) : s)),
+      current.map((subscription) =>
+        subscription.id === sub.id
+          ? this.afterMove(subscription, fromTagId, toTagId, position)
+          : subscription,
+      ),
     );
     this.reloadAfter(this.api.moveFeedToTag(sub.id, { fromTagId, toTagId, position }), () =>
       this.subs.load(),
@@ -90,17 +94,17 @@ export class ManageActions {
     toTagId: number | null,
     position: number | null,
   ): SubscriptionDto {
-    const kept = sub.tags.filter((t) => t.id !== fromTagId && t.id !== toTagId);
+    const kept = sub.tags.filter((tag) => tag.id !== fromTagId && tag.id !== toTagId);
     if (toTagId === null) {
       const untaggedPosition = kept.length === 0 ? (position ?? sub.position) : sub.position;
       return { ...sub, tags: kept, position: untaggedPosition };
     }
-    const target = sub.tags.find((t) => t.id === toTagId) ?? this.tagShape(toTagId);
+    const target = sub.tags.find((tag) => tag.id === toTagId) ?? this.tagShape(toTagId);
     return { ...sub, tags: [...kept, { ...target, position: position ?? kept.length }] };
   }
 
   private tagShape(tagId: number): SubscriptionTagDto {
-    const tag = this.tags.tags().find((t) => t.id === tagId);
+    const tag = this.tags.tags().find((candidate) => candidate.id === tagId);
     return {
       id: tagId,
       name: tag?.name ?? '',
@@ -133,7 +137,7 @@ export class ManageActions {
     this.reloadAfter(
       this.api.updateSubscription(sub.id, {
         customTitle: sub.customTitle,
-        tagIds: sub.tags.map((t) => t.id),
+        tagIds: sub.tags.map((tag) => tag.id),
         ...flags,
       }),
       () => this.subs.load(),
@@ -144,12 +148,12 @@ export class ManageActions {
    *  TagsStore. Optimistic: reorder immediately, reconcile on response. */
   reorderTags(tagIds: number[]): void {
     this.tags.tags.update((current) => {
-      const byId = new Map(current.map((t) => [t.id, t]));
-      return tagIds.map((id, i) => {
+      const byId = new Map(current.map((tag) => [tag.id, tag]));
+      return tagIds.map((id, index) => {
         const tag = byId.get(id);
         return tag
-          ? { ...tag, position: i }
-          : { id, name: '', color: null, icon: null, position: i };
+          ? { ...tag, position: index }
+          : { id, name: '', color: null, icon: null, position: index };
       });
     });
     this.reloadAfter(this.api.reorderTags(tagIds), () => this.tags.load());
@@ -159,10 +163,10 @@ export class ManageActions {
    *  positions immediately, reconcile on response. */
   reorderUntagged(subscriptionIds: number[]): void {
     this.subs.subscriptions.update((current) =>
-      current.map((s) => {
-        const idx = subscriptionIds.indexOf(s.id);
-        if (idx >= 0) return { ...s, position: idx };
-        return s;
+      current.map((subscription) => {
+        const index = subscriptionIds.indexOf(subscription.id);
+        if (index >= 0) return { ...subscription, position: index };
+        return subscription;
       }),
     );
     this.reloadAfter(this.api.reorderSubscriptions(subscriptionIds), () => this.subs.load());
@@ -172,14 +176,16 @@ export class ManageActions {
    *  per-tag positions immediately, reconcile on response. */
   reorderTagFeeds(tagId: number, subscriptionIds: number[]): void {
     this.subs.subscriptions.update((current) =>
-      current.map((s) => {
-        const tagEntry = s.tags.find((t) => t.id === tagId);
-        if (!tagEntry) return s;
-        const idx = subscriptionIds.indexOf(s.id);
-        if (idx < 0) return s;
+      current.map((subscription) => {
+        const tagEntry = subscription.tags.find((tag) => tag.id === tagId);
+        if (!tagEntry) return subscription;
+        const index = subscriptionIds.indexOf(subscription.id);
+        if (index < 0) return subscription;
         return {
-          ...s,
-          tags: s.tags.map((t) => (t.id === tagId ? { ...t, position: idx } : t)),
+          ...subscription,
+          tags: subscription.tags.map((tag) =>
+            tag.id === tagId ? { ...tag, position: index } : tag,
+          ),
         };
       }),
     );
@@ -277,7 +283,7 @@ export class ManageActions {
     return this.confirm.ask(this.bulkUnsubscribeConfirm(subscriptions)).pipe(
       switchMap((confirmed) => {
         if (!confirmed) return of(false);
-        return this.api.bulkUnsubscribe(subscriptions.map((s) => s.id)).pipe(
+        return this.api.bulkUnsubscribe(subscriptions.map((subscription) => subscription.id)).pipe(
           tap((result) => {
             this.subs.load();
             this.toast.show({
@@ -345,7 +351,7 @@ export class ManageActions {
     const count = subscriptions.length;
     const named = subscriptions
       .slice(0, CONFIRM_TITLE_LIMIT)
-      .map((s) => s.title)
+      .map((subscription) => subscription.title)
       .join(', ');
     const rest = count - Math.min(count, CONFIRM_TITLE_LIMIT);
 

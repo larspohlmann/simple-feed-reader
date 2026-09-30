@@ -41,7 +41,7 @@ export class HealthErrorDialogComponent {
   private readonly language = inject(LanguageService);
 
   protected readonly feed = computed(() =>
-    this.store.subscriptions().find((s) => s.feedId === this.data.feedId),
+    this.store.subscriptions().find((subscription) => subscription.feedId === this.data.feedId),
   );
   protected readonly heading = computed(() => this.feed()?.title ?? this.data.title);
   protected readonly isGone = computed(() => {

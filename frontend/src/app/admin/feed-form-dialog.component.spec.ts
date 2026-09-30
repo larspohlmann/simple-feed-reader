@@ -60,54 +60,54 @@ describe('FeedFormDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: data },
       ],
     });
-    const f = TestBed.createComponent(FeedFormDialogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(FeedFormDialogComponent);
+    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
-    return f;
+    return fixture;
   }
 
   beforeEach(() => close.mockClear());
   afterEach(() => ctrl.verify());
 
   it('prefills from the edited feed and PUTs on submit', () => {
-    const f = mount({ feed, categories, categoryId: 1 });
-    const c = f.componentInstance;
-    expect(c.form.getRawValue().title).toBe('Ars');
+    const fixture = mount({ feed, categories, categoryId: 1 });
+    const component = fixture.componentInstance;
+    expect(component.form.getRawValue().title).toBe('Ars');
 
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/5');
-    expect(req.request.body).toMatchObject({
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/feeds/5');
+    expect(testRequest.request.body).toMatchObject({
       title: 'Ars',
       url: 'https://example.test/feed',
       categoryId: 1,
       sourceFormat: 'xml',
     });
-    req.flush({ feed });
+    testRequest.flush({ feed });
     expect(close).toHaveBeenCalledWith(feed);
   });
 
   it('creates a new feed preselecting the opening category, empty strings as null', () => {
-    const f = mount({ feed: null, categories, categoryId: 2 });
-    const c = f.componentInstance;
-    expect(c.form.getRawValue().categoryId).toBe(2);
-    c.form.patchValue({ title: 'New', url: 'https://example.test/new' });
+    const fixture = mount({ feed: null, categories, categoryId: 2 });
+    const component = fixture.componentInstance;
+    expect(component.form.getRawValue().categoryId).toBe(2);
+    component.form.patchValue({ title: 'New', url: 'https://example.test/new' });
 
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/feeds');
-    expect(req.request.body).toMatchObject({
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/feeds');
+    expect(testRequest.request.body).toMatchObject({
       title: 'New',
       categoryId: 2,
       siteUrl: null,
       description: null,
       sourceFormat: 'xml',
     });
-    req.flush({ feed });
+    testRequest.flush({ feed });
     expect(close).toHaveBeenCalled();
   });
 
   it('does not submit without title and url', () => {
-    const f = mount({ feed: null, categories, categoryId: 1 });
-    f.componentInstance.submit();
+    const fixture = mount({ feed: null, categories, categoryId: 1 });
+    fixture.componentInstance.submit();
     ctrl.expectNone('https://api.test/api/admin/catalog/feeds');
   });
 });

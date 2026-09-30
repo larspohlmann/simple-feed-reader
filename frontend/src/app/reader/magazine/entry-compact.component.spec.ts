@@ -56,16 +56,16 @@ describe('EntryCompactComponent', () => {
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', entry);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(EntryCompactComponent);
+    fixture.componentRef.setInput('entry', entry);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('renders the source and title', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.textContent).toContain('One-liner headline');
-    expect(el.textContent).toContain('Golem');
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.textContent).toContain('One-liner headline');
+    expect(element.textContent).toContain('Golem');
   });
 
   it('shows a one-line dek when the entry has a summary (#515)', () => {
@@ -73,10 +73,10 @@ describe('EntryCompactComponent', () => {
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', { ...entry, excerpt: 'A short description.' });
-    f.detectChanges();
-    const dek = (f.nativeElement as HTMLElement).querySelector('.dek');
+    const fixture = TestBed.createComponent(EntryCompactComponent);
+    fixture.componentRef.setInput('entry', { ...entry, excerpt: 'A short description.' });
+    fixture.detectChanges();
+    const dek = (fixture.nativeElement as HTMLElement).querySelector('.dek');
     expect(dek).not.toBeNull();
     expect(dek!.textContent).toContain('A short description.');
   });
@@ -84,8 +84,8 @@ describe('EntryCompactComponent', () => {
   it('stays title-only for a headline-only entry — no empty dek (#515)', () => {
     // The fixture carries excerpt: '', so snippet() is empty and the @if must
     // render no dek element at all.
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('.dek')).toBeNull();
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('.dek')).toBeNull();
   });
 
   it('hides the source when showSource is false', () => {
@@ -93,13 +93,13 @@ describe('EntryCompactComponent', () => {
       providers: [{ provide: EntryActionHandler, useValue: entryActions }],
       imports: [EntryCompactComponent, provideTranslocoTesting()],
     });
-    const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', entry);
-    f.componentRef.setInput('showSource', false);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('.kicker')!.textContent).not.toContain(
-      'Golem',
-    );
+    const fixture = TestBed.createComponent(EntryCompactComponent);
+    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.kicker')!.textContent,
+    ).not.toContain('Golem');
   });
 
   it('shows tag pills when standalone', () => {
@@ -107,11 +107,13 @@ describe('EntryCompactComponent', () => {
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', entry);
-    f.componentRef.setInput('tags', [tag(2, 'Tech')]);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('a.pill')!.textContent).toContain('Tech');
+    const fixture = TestBed.createComponent(EntryCompactComponent);
+    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('tags', [tag(2, 'Tech')]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('a.pill')!.textContent).toContain(
+      'Tech',
+    );
   });
 
   it('hides tag pills inside a source group (showSource=false)', () => {
@@ -119,37 +121,37 @@ describe('EntryCompactComponent', () => {
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    const f = TestBed.createComponent(EntryCompactComponent);
-    f.componentRef.setInput('entry', entry);
-    f.componentRef.setInput('tags', [tag(2, 'Tech')]);
-    f.componentRef.setInput('showSource', false);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('a.pill')).toBeNull();
+    const fixture = TestBed.createComponent(EntryCompactComponent);
+    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('tags', [tag(2, 'Tech')]);
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('a.pill')).toBeNull();
   });
 
   it('emits open on click and on Enter', () => {
-    const f = mount();
+    const fixture = mount();
     const open = jest.fn();
     entryActions.open.mockImplementation(open);
-    const row = f.nativeElement.querySelector('.compact') as HTMLElement;
+    const row = fixture.nativeElement.querySelector('.compact') as HTMLElement;
     row.click();
     row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(open).toHaveBeenCalledTimes(2);
   });
 
   it('keeps standalone actions on the bottom meta row', () => {
-    const el = mount().nativeElement as HTMLElement;
-    const actions = el.querySelector('app-entry-actions');
+    const element = mount().nativeElement as HTMLElement;
+    const actions = element.querySelector('app-entry-actions');
     expect(actions).not.toBeNull();
     expect(actions!.closest('p.kicker')).toBeNull();
     expect(actions!.closest('app-entry-meta')).not.toBeNull();
   });
 
   it('moves grouped actions onto the kicker line', () => {
-    const f = mount();
-    f.componentRef.setInput('showSource', false);
-    f.detectChanges();
-    const actions = (f.nativeElement as HTMLElement).querySelector('app-entry-actions');
+    const fixture = mount();
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    const actions = (fixture.nativeElement as HTMLElement).querySelector('app-entry-actions');
 
     expect(actions).not.toBeNull();
     expect(actions!.closest('p.kicker')).not.toBeNull();
@@ -157,22 +159,22 @@ describe('EntryCompactComponent', () => {
   });
 
   it('renders the three actions with showSource false and no tag pills to sit beside', () => {
-    const f = mount();
-    f.componentRef.setInput('showSource', false);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-entry-pills .pill')).toBeNull();
-    expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
+    const fixture = mount();
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-entry-pills .pill')).toBeNull();
+    expect(element.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
   it('emits keep without opening the entry', () => {
-    const f = mount();
+    const fixture = mount();
     const keep = jest.fn();
     const open = jest.fn();
     entryActions.keep.mockImplementation(keep);
     entryActions.open.mockImplementation(open);
 
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[1] as HTMLElement).click();
 
     expect(keep).toHaveBeenCalled();

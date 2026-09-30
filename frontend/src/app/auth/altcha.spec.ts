@@ -2,7 +2,7 @@ import { AltchaChallenge, solveAltcha } from './altcha';
 
 async function sha256hex(input: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 describe('solveAltcha', () => {
@@ -10,7 +10,7 @@ describe('solveAltcha', () => {
     const salt = 'abc?expires=999';
     const number = 7;
     const challenge = await sha256hex(salt + number);
-    const c: AltchaChallenge = {
+    const altchaChallenge: AltchaChallenge = {
       algorithm: 'SHA-256',
       challenge,
       salt,
@@ -18,7 +18,7 @@ describe('solveAltcha', () => {
       maxnumber: 50,
     };
 
-    const payload = await solveAltcha(c);
+    const payload = await solveAltcha(altchaChallenge);
     const decoded = JSON.parse(atob(payload));
     expect(decoded).toEqual({
       algorithm: 'SHA-256',
@@ -30,14 +30,14 @@ describe('solveAltcha', () => {
   });
 
   it('throws when the challenge is unsolvable within maxnumber', async () => {
-    const c: AltchaChallenge = {
+    const altchaChallenge: AltchaChallenge = {
       algorithm: 'SHA-256',
       challenge: 'deadbeef',
       salt: 's',
       signature: 'x',
       maxnumber: 3,
     };
-    await expect(solveAltcha(c)).rejects.toThrow();
+    await expect(solveAltcha(altchaChallenge)).rejects.toThrow();
   });
 
   // The solver works in batches; a solution beyond the first batch, or exactly
@@ -57,9 +57,8 @@ describe('solveAltcha', () => {
     expect(JSON.parse(atob(payload)).number).toBe(number);
   });
 
-  // A per-candidate `await` used to flood the microtask queue, which drains
-  // before the browser paints -- froze the page (0.7s desktop, worse on
-  // iPhone). This pins the fix: batching candidates and yielding between them.
+  // A per-candidate `await` floods the microtask queue, which drains before the
+  // browser paints and freezes the page; candidates are batched with yields between.
   it('checks in periodically rather than once per candidate', async () => {
     const salt = 'slicing?expires=999';
     const number = 9000;
@@ -91,7 +90,7 @@ describe('solveAltcha', () => {
 
     expect(seen.length).toBeGreaterThan(0);
     // Monotonic, and never claims to have tried more than it did.
-    expect(seen).toEqual([...seen].sort((a, b) => a - b));
+    expect(seen).toEqual([...seen].sort((left, right) => left - right));
     expect(seen[seen.length - 1]).toBeLessThanOrEqual(number + 1);
   });
 });

@@ -1,4 +1,3 @@
-// src/app/core/ai-availability.service.ts
 import { Injectable, signal } from '@angular/core';
 import { CurrentUser } from './auth.service';
 import { onIdentityChange } from './session-identity';

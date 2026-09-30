@@ -1,4 +1,3 @@
-// src/app/core/auth.service.ts
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -61,7 +60,7 @@ export class AuthService {
   login(email: string, password: string): Observable<{ token: string }> {
     return this.http
       .post<{ token: string }>(`${this.base}/api/auth/login`, { email, password })
-      .pipe(tap((res) => this.tokens.set(res.token)));
+      .pipe(tap((response) => this.tokens.set(response.token)));
   }
 
   /** The single place the account's locale is adopted into the UI -- every
@@ -71,14 +70,14 @@ export class AuthService {
   loadMe(): Observable<CurrentUser> {
     return this.http.get<CurrentUser>(`${this.base}/api/me`).pipe(
       tap({
-        next: (u) => {
+        next: (user) => {
           this.accountLoadFailed.set(false);
-          this.user.set(u);
-          this.language.adopt(u.locale);
-          this.preferences.adopt(u);
-          this.magazineStyle.adopt(u);
-          this.digest.adopt(u);
-          this.ai.adopt(u);
+          this.user.set(user);
+          this.language.adopt(user.locale);
+          this.preferences.adopt(user);
+          this.magazineStyle.adopt(user);
+          this.digest.adopt(user);
+          this.ai.adopt(user);
         },
         error: () => this.accountLoadFailed.set(true),
       }),

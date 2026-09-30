@@ -5,8 +5,8 @@ import { Selection, listOrderOf } from './query';
  * Storage key for a selection's scroll offset. Distinguishes feed / tag / view,
  * unread-vs-all and the list order so every list remembers its own place independently.
  */
-export function scrollKey(s: Selection): string {
-  return `feed-reader:list-scroll:${s.kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}:${s.term ?? ''}:${listOrderOf(s)}`;
+export function scrollKey(selection: Selection): string {
+  return `feed-reader:list-scroll:${selection.kind}:${selection.id ?? ''}:${selection.unread ? 'u' : 'a'}:${selection.term ?? ''}:${listOrderOf(selection)}`;
 }
 
 /** Storage key for an open article's own scroll offset, keyed by entry id. */
@@ -22,17 +22,17 @@ export function entryScrollKey(entryId: number): string {
  */
 @Injectable({ providedIn: 'root' })
 export class ListScrollMemory {
-  save(s: Selection, top: number): void {
-    this.write(scrollKey(s), top);
+  save(selection: Selection, top: number): void {
+    this.write(scrollKey(selection), top);
   }
 
-  read(s: Selection): number {
-    return this.readNum(scrollKey(s));
+  read(selection: Selection): number {
+    return this.readNum(scrollKey(selection));
   }
 
   /** Drop a list's remembered offset, so its next load starts at the top. */
-  forget(s: Selection): void {
-    this.mutate((store) => store.removeItem(scrollKey(s)));
+  forget(selection: Selection): void {
+    this.mutate((store) => store.removeItem(scrollKey(selection)));
   }
 
   /** Remember the scroll offset within an open article (keyed by entry id). */
@@ -64,8 +64,8 @@ export class ListScrollMemory {
     if (!store) return 0;
     try {
       const raw = store.getItem(key);
-      const n = raw == null ? 0 : Number(raw);
-      return Number.isFinite(n) && n > 0 ? n : 0;
+      const offset = raw == null ? 0 : Number(raw);
+      return Number.isFinite(offset) && offset > 0 ? offset : 0;
     } catch {
       return 0;
     }

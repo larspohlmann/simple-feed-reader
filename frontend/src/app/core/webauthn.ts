@@ -1,5 +1,3 @@
-// src/app/core/webauthn.ts
-
 /**
  * Pure WebAuthn helpers (#624): base64url<->bytes conversion and capability
  * detection. No Angular imports, so this is testable without a TestBed.
@@ -22,8 +20,8 @@ export function base64UrlToBytes(value: string): ArrayBuffer {
   const binary = atob(base64.padEnd(base64.length + paddingNeeded, '='));
 
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
   }
   return bytes.buffer;
 }

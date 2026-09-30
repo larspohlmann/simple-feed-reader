@@ -34,19 +34,19 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 @Component({
   standalone: true,
   imports: [RecommendationStripComponent],
-  template: `<app-recommendation-strip [entry]="e"
+  template: `<app-recommendation-strip [entry]="entry"
     ><p class="card">card</p></app-recommendation-strip
   >`,
 })
 class Host {
-  e: EntryDto | null = null;
+  entry: EntryDto | null = null;
 }
 
-function mount(e: EntryDto | null) {
-  const f = TestBed.createComponent(Host);
-  f.componentInstance.e = e;
-  f.detectChanges();
-  return f.nativeElement as HTMLElement;
+function mount(testEntry: EntryDto | null) {
+  const fixture = TestBed.createComponent(Host);
+  fixture.componentInstance.entry = testEntry;
+  fixture.detectChanges();
+  return fixture.nativeElement as HTMLElement;
 }
 
 describe('RecommendationStripComponent', () => {
@@ -63,18 +63,18 @@ describe('RecommendationStripComponent', () => {
   });
 
   it('renders the reason below the card when present', () => {
-    const el = mount(entry({ recommendationReason: 'because you read heise' }));
-    expect(el.querySelector('.reason')!.textContent).toContain('because you read heise');
+    const element = mount(entry({ recommendationReason: 'because you read heise' }));
+    expect(element.querySelector('.reason')!.textContent).toContain('because you read heise');
   });
 
   // Not a wire state any more (#576 sends the pair together) but a real data
   // state: the salvager stores '' for a pick whose reason came back blank, so
   // the strip must still appear and carry the score on its own.
   it('renders the score alone when the reason is blank', () => {
-    const el = mount(entry({ recommendationScore: 823 }));
-    expect(el.querySelector('.reason')).not.toBeNull();
-    expect(el.querySelector('.reason .score')!.textContent).toContain('82');
-    expect(el.querySelector('.reason')!.textContent).not.toContain('undefined');
+    const element = mount(entry({ recommendationScore: 823 }));
+    expect(element.querySelector('.reason')).not.toBeNull();
+    expect(element.querySelector('.reason .score')!.textContent).toContain('82');
+    expect(element.querySelector('.reason')!.textContent).not.toContain('undefined');
   });
 
   it('renders the score pill only when the score is a number', () => {

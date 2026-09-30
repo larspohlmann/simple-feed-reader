@@ -130,66 +130,69 @@ function mount(
       { provide: ActionSheet, useValue: { open: jest.fn(() => of(over.sheetChoice)) } },
     ],
   });
-  const f = TestBed.createComponent(SidebarComponent);
-  f.componentRef.setInput('tagTree', over.tagTree ?? []);
-  f.componentRef.setInput('untagged', over.untagged ?? []);
-  f.componentRef.setInput('totalUnread', over.totalUnread ?? 0);
-  f.componentRef.setInput('favoritesCount', over.favoritesCount ?? 0);
-  f.componentRef.setInput('keptCount', over.keptCount ?? 0);
-  f.componentRef.setInput('selection', over.selection ?? { kind: 'all', id: null, unread: true });
-  f.componentRef.setInput('loading', false);
-  f.componentRef.setInput('searchLoading', over.searchLoading ?? false);
-  f.componentRef.setInput('organising', over.organising ?? false);
-  f.componentRef.setInput('savedSearches', over.savedSearches ?? []);
-  f.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
-  f.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
-  f.componentRef.setInput('digestEnabled', over.digestEnabled ?? true);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(SidebarComponent);
+  fixture.componentRef.setInput('tagTree', over.tagTree ?? []);
+  fixture.componentRef.setInput('untagged', over.untagged ?? []);
+  fixture.componentRef.setInput('totalUnread', over.totalUnread ?? 0);
+  fixture.componentRef.setInput('favoritesCount', over.favoritesCount ?? 0);
+  fixture.componentRef.setInput('keptCount', over.keptCount ?? 0);
+  fixture.componentRef.setInput(
+    'selection',
+    over.selection ?? { kind: 'all', id: null, unread: true },
+  );
+  fixture.componentRef.setInput('loading', false);
+  fixture.componentRef.setInput('searchLoading', over.searchLoading ?? false);
+  fixture.componentRef.setInput('organising', over.organising ?? false);
+  fixture.componentRef.setInput('savedSearches', over.savedSearches ?? []);
+  fixture.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
+  fixture.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
+  fixture.componentRef.setInput('digestEnabled', over.digestEnabled ?? true);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('SidebarComponent', () => {
   it('shows the all-items total and marks it active', () => {
-    const el = mount({ totalUnread: 24 }).nativeElement as HTMLElement;
-    const all = el.querySelector('.nav.all')!;
+    const element = mount({ totalUnread: 24 }).nativeElement as HTMLElement;
+    const all = element.querySelector('.nav.all')!;
     expect(all.textContent).toContain('24');
     expect(all.classList).toContain('active');
   });
 
   it('shows favourite and kept totals on their nav items, omitting a zero', () => {
-    const el = mount({ favoritesCount: 5, keptCount: 0 }).nativeElement as HTMLElement;
-    const navs = [...el.querySelectorAll('.nav')];
-    const fav = navs.find((n) => n.textContent?.includes('Favorites'))!;
-    const kept = navs.find((n) => n.textContent?.includes('Kept'))!;
+    const element = mount({ favoritesCount: 5, keptCount: 0 }).nativeElement as HTMLElement;
+    const navs = [...element.querySelectorAll('.nav')];
+    const fav = navs.find((nav) => nav.textContent?.includes('Favorites'))!;
+    const kept = navs.find((nav) => nav.textContent?.includes('Kept'))!;
     expect(fav.querySelector('.count')?.textContent).toContain('5');
     expect(kept.querySelector('.count')).toBeNull();
   });
 
   it('emits refresh and addFeed from the action buttons', () => {
-    const f = mount();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount();
+    const element = fixture.nativeElement as HTMLElement;
     const refresh = jest.fn();
     const addFeed = jest.fn();
-    f.componentInstance.refresh.subscribe(refresh);
-    f.componentInstance.addFeed.subscribe(addFeed);
-    (el.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).click();
-    (el.querySelector('.act[aria-label="Add feed"]') as HTMLButtonElement).click();
+    fixture.componentInstance.refresh.subscribe(refresh);
+    fixture.componentInstance.addFeed.subscribe(addFeed);
+    (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).click();
+    (element.querySelector('.act[aria-label="Add feed"]') as HTMLButtonElement).click();
     expect(refresh).toHaveBeenCalledTimes(1);
     expect(addFeed).toHaveBeenCalledTimes(1);
   });
 
   it('disables Refresh while refreshing and shows no progress bar of its own', () => {
-    const f = mount();
+    const fixture = mount();
     TestBed.inject(RefreshService).running.set(true);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect((el.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(
+      (element.querySelector('.act[aria-label="Refresh"]') as HTMLButtonElement).disabled,
+    ).toBe(true);
     // The refresh has exactly one bar and it belongs to the app bar. A second one
     // here was narrower than the first, sat directly under it on desktop, and drew
     // the same number twice (#721).
-    expect(el.querySelector('.prog')).toBeNull();
+    expect(element.querySelector('.prog')).toBeNull();
   });
 
   it('renders tags with summed counts and reveals subs when expanded', () => {
@@ -199,14 +202,14 @@ describe('SidebarComponent', () => {
       unreadCount: 9,
       entryCount: 0,
     };
-    const f = mount({ tagTree: [node] });
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.tag')!.textContent).toContain('Tech');
-    expect(el.querySelector('.tag')!.textContent).toContain('9');
-    expect(el.querySelectorAll('.tag-sub').length).toBe(0);
-    (el.querySelector('.tag .chevzone') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(el.querySelectorAll('.tag-sub').length).toBe(2);
+    const fixture = mount({ tagTree: [node] });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.tag')!.textContent).toContain('Tech');
+    expect(element.querySelector('.tag')!.textContent).toContain('9');
+    expect(element.querySelectorAll('.tag-sub').length).toBe(0);
+    (element.querySelector('.tag .chevzone') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelectorAll('.tag-sub').length).toBe(2);
   });
 
   it('renders the tag icon (tinted with its colour) when set, else the colour dot', () => {
@@ -222,8 +225,8 @@ describe('SidebarComponent', () => {
       unreadCount: 0,
       entryCount: 0,
     };
-    const f = mount({ tagTree: [withIcon, withoutIcon] });
-    const leads = (f.nativeElement as HTMLElement).querySelectorAll('.tag .lead');
+    const fixture = mount({ tagTree: [withIcon, withoutIcon] });
+    const leads = (fixture.nativeElement as HTMLElement).querySelectorAll('.tag .lead');
 
     const icon = leads[0].querySelector('.material-symbols-outlined') as HTMLElement;
     expect(icon.textContent).toBe('public');
@@ -242,30 +245,30 @@ describe('SidebarComponent', () => {
       unreadCount: 0,
       entryCount: 0,
     };
-    const f = mount({ tagTree: [node] });
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount({ tagTree: [node] });
+    const element = fixture.nativeElement as HTMLElement;
     const editTag = jest.fn();
     const deleteTag = jest.fn();
     manageActions.editTag.mockImplementation(editTag);
     manageActions.deleteTag.mockImplementation(deleteTag);
 
-    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const buttons = el.querySelectorAll('.tag .pop [role="menuitem"]');
+    (element.querySelector('.tag .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const buttons = element.querySelectorAll('.tag .pop [role="menuitem"]');
     (buttons[0] as HTMLButtonElement).click();
-    f.detectChanges();
+    fixture.detectChanges();
     expect(editTag).toHaveBeenCalledWith(node.tag);
-    expect(el.querySelector('.tag .pop')).toBeNull();
+    expect(element.querySelector('.tag .pop')).toBeNull();
 
-    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const buttons2 = el.querySelectorAll('.tag .pop [role="menuitem"]');
+    (element.querySelector('.tag .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const buttons2 = element.querySelectorAll('.tag .pop [role="menuitem"]');
     (buttons2[1] as HTMLButtonElement).click();
     expect(deleteTag).toHaveBeenCalledWith(node.tag);
   });
 
   it('closes an open row menu when the pointer goes down elsewhere', () => {
-    const f = mount({
+    const fixture = mount({
       tagTree: [
         {
           tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
@@ -275,20 +278,20 @@ describe('SidebarComponent', () => {
         },
       ],
     });
-    const el = f.nativeElement as HTMLElement;
-    (el.querySelector('.tag .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(el.querySelector('.tag .pop')).not.toBeNull();
+    const element = fixture.nativeElement as HTMLElement;
+    (element.querySelector('.tag .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.tag .pop')).not.toBeNull();
 
     document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(el.querySelector('.tag .pop')).toBeNull();
+    expect(element.querySelector('.tag .pop')).toBeNull();
   });
 
   it('opens only one menu when the same feed appears under two expanded tags', () => {
     const shared = sub(1, 0);
-    const f = mount({
+    const fixture = mount({
       tagTree: [
         {
           tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
@@ -304,17 +307,19 @@ describe('SidebarComponent', () => {
         },
       ],
     });
-    const el = f.nativeElement as HTMLElement;
-    el.querySelectorAll<HTMLButtonElement>('.tag .chevzone').forEach((b) => b.click());
-    f.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    element
+      .querySelectorAll<HTMLButtonElement>('.tag .chevzone')
+      .forEach((chevron) => chevron.click());
+    fixture.detectChanges();
 
-    const dots = el.querySelectorAll<HTMLButtonElement>('.feedrow .dots');
+    const dots = element.querySelectorAll<HTMLButtonElement>('.feedrow .dots');
     expect(dots.length).toBe(2); // the feed is rendered under both tags
     dots[0].click();
-    f.detectChanges();
+    fixture.detectChanges();
 
     // Distinct per-(tag,feed) keys mean only the clicked row's menu opens.
-    expect(el.querySelectorAll('.pop').length).toBe(1);
+    expect(element.querySelectorAll('.pop').length).toBe(1);
   });
 
   describe('drag-and-drop moving', () => {
@@ -325,7 +330,10 @@ describe('SidebarComponent', () => {
       icon: null,
       position: 0,
     });
-    const withTags = (s: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({ ...s, tags });
+    const withTags = (subscription: SubscriptionDto, tags: TagDto[]): SubscriptionDto => ({
+      ...subscription,
+      tags,
+    });
 
     function drop(
       item: SubscriptionDto,
@@ -343,8 +351,8 @@ describe('SidebarComponent', () => {
 
     const onTag = (id: number): DropData => ({ kind: 'tag', tag: tag(id) });
 
-    function moveOf(ev: CdkDragDrop<DropData>) {
-      const f = mount();
+    function moveOf(event: CdkDragDrop<DropData>) {
+      const fixture = mount();
       const spy = jest.fn();
       manageActions.moveFeedToTag.mockImplementation(
         (
@@ -354,7 +362,7 @@ describe('SidebarComponent', () => {
           position: number | null,
         ) => spy({ sub, fromTagId, toTagId, position }),
       );
-      f.componentInstance.onDrop(ev);
+      fixture.componentInstance.onDrop(event);
       return spy;
     }
 
@@ -364,20 +372,30 @@ describe('SidebarComponent', () => {
     });
 
     it('moves a feed from its source tag to the target tag at the drop index', () => {
-      const s = withTags(sub(1), [tag(3)]);
-      const spy = moveOf(drop(s, onTag(7), onTag(3), 1));
-      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: 7, position: 1 });
+      const subscription = withTags(sub(1), [tag(3)]);
+      const spy = moveOf(drop(subscription, onTag(7), onTag(3), 1));
+      expect(spy).toHaveBeenCalledWith({
+        sub: subscription,
+        fromTagId: 3,
+        toTagId: 7,
+        position: 1,
+      });
     });
 
     it('moves a feed onto the untagged list at the drop index', () => {
-      const s = withTags(sub(1), [tag(3)]);
-      const spy = moveOf(drop(s, { kind: 'untagged' }, onTag(3), 0));
-      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: null, position: 0 });
+      const subscription = withTags(sub(1), [tag(3)]);
+      const spy = moveOf(drop(subscription, { kind: 'untagged' }, onTag(3), 0));
+      expect(spy).toHaveBeenCalledWith({
+        sub: subscription,
+        fromTagId: 3,
+        toTagId: null,
+        position: 0,
+      });
     });
 
     it('appends when a feed is dropped on a tag header', () => {
-      const s = withTags(sub(1), [tag(3)]);
-      const f = mount();
+      const subscription = withTags(sub(1), [tag(3)]);
+      const fixture = mount();
       const spy = jest.fn();
       manageActions.moveFeedToTag.mockImplementation(
         (
@@ -387,15 +405,20 @@ describe('SidebarComponent', () => {
           position: number | null,
         ) => spy({ sub, fromTagId, toTagId, position }),
       );
-      f.componentInstance.onTagHeadDrop(drop(s, onTag(7), onTag(3)));
-      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: 3, toTagId: 7, position: null });
+      fixture.componentInstance.onTagHeadDrop(drop(subscription, onTag(7), onTag(3)));
+      expect(spy).toHaveBeenCalledWith({
+        sub: subscription,
+        fromTagId: 3,
+        toTagId: 7,
+        position: null,
+      });
     });
   });
 
   describe('drag-and-drop reordering', () => {
-    const tagNode = (id: number, subs: SubscriptionDto[] = []): TagNode => ({
+    const tagNode = (id: number, subscriptions: SubscriptionDto[] = []): TagNode => ({
       tag: { id, name: `t${id}`, color: null, icon: null, position: 0 },
-      subscriptions: subs,
+      subscriptions: subscriptions,
       unreadCount: 0,
       entryCount: 0,
     });
@@ -424,28 +447,28 @@ describe('SidebarComponent', () => {
     }
 
     it('calls reorderTags when a tag is dropped on another tag header', () => {
-      const f = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
+      const fixture = mount({ tagTree: [tagNode(10), tagNode(20), tagNode(30)] });
       const spy = jest.fn();
       manageActions.reorderTags.mockImplementation(spy);
       // Drop the last tag (30) onto the first tag's header → 30 moves to front.
-      f.componentInstance.onTagHeadDrop(
+      fixture.componentInstance.onTagHeadDrop(
         tagHeadDrop(tagNode(30).tag, { kind: 'tag', tag: tagNode(10).tag }),
       );
       expect(spy).toHaveBeenCalledWith([30, 10, 20]);
     });
 
     it('does not emit when a tag is dropped back on its own header', () => {
-      const f = mount({ tagTree: [tagNode(10), tagNode(20)] });
+      const fixture = mount({ tagTree: [tagNode(10), tagNode(20)] });
       const spy = jest.fn();
       manageActions.reorderTags.mockImplementation(spy);
-      f.componentInstance.onTagHeadDrop(
+      fixture.componentInstance.onTagHeadDrop(
         tagHeadDrop(tagNode(10).tag, { kind: 'tag', tag: tagNode(10).tag }),
       );
       expect(spy).not.toHaveBeenCalled();
     });
 
     it('moves a feed onto the tag when it is dropped on the tag header', () => {
-      const f = mount({ tagTree: [tagNode(10)] });
+      const fixture = mount({ tagTree: [tagNode(10)] });
       const spy = jest.fn();
       manageActions.moveFeedToTag.mockImplementation(
         (
@@ -455,70 +478,75 @@ describe('SidebarComponent', () => {
           position: number | null,
         ) => spy({ sub, fromTagId, toTagId, position }),
       );
-      const s = sub(1);
-      f.componentInstance.onTagHeadDrop({
+      const subscription = sub(1);
+      fixture.componentInstance.onTagHeadDrop({
         previousContainer: { data: { kind: 'untagged' } },
         container: { data: { kind: 'tag', tag: tagNode(10).tag } },
-        item: { data: s },
+        item: { data: subscription },
       } as unknown as CdkDragDrop<DropData>);
-      expect(spy).toHaveBeenCalledWith({ sub: s, fromTagId: null, toTagId: 10, position: null });
+      expect(spy).toHaveBeenCalledWith({
+        sub: subscription,
+        fromTagId: null,
+        toTagId: 10,
+        position: null,
+      });
     });
 
     it('calls reorderTagFeeds when a feed is reordered within its tag', () => {
       const feeds = [sub(1), sub(2), sub(3)];
-      const f = mount({ tagTree: [tagNode(10, feeds)] });
+      const fixture = mount({ tagTree: [tagNode(10, feeds)] });
       const spy = jest.fn();
       manageActions.reorderTagFeeds.mockImplementation((tagId: number, subscriptionIds: number[]) =>
         spy({ tagId, subscriptionIds }),
       );
       // Within tag 10, move feed at index 0 to index 2.
-      f.componentInstance.onDrop(reorder({ kind: 'tag', tag: tagNode(10).tag }, 0, 2));
+      fixture.componentInstance.onDrop(reorder({ kind: 'tag', tag: tagNode(10).tag }, 0, 2));
       expect(spy).toHaveBeenCalledWith({ tagId: 10, subscriptionIds: [2, 3, 1] });
     });
 
     it('calls reorderUntagged when an untagged feed is reordered', () => {
-      const f = mount({ untagged: [sub(1), sub(2), sub(3)] });
+      const fixture = mount({ untagged: [sub(1), sub(2), sub(3)] });
       const spy = jest.fn();
       manageActions.reorderUntagged.mockImplementation(spy);
-      f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 2, 0));
+      fixture.componentInstance.onDrop(reorder({ kind: 'untagged' }, 2, 0));
       expect(spy).toHaveBeenCalledWith([3, 1, 2]);
     });
 
     it('does not emit when an item is dropped back at its own index', () => {
-      const f = mount({ untagged: [sub(1), sub(2)] });
+      const fixture = mount({ untagged: [sub(1), sub(2)] });
       const spy = jest.fn();
       manageActions.reorderUntagged.mockImplementation(spy);
-      f.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
+      fixture.componentInstance.onDrop(reorder({ kind: 'untagged' }, 1, 1));
       expect(spy).not.toHaveBeenCalled();
     });
   });
 
   it('calls editFeed / unsubscribe for an untagged feed row', () => {
-    const s = sub(1, 0);
-    const f = mount({ untagged: [s] });
-    const el = f.nativeElement as HTMLElement;
+    const subscription = sub(1, 0);
+    const fixture = mount({ untagged: [subscription] });
+    const element = fixture.nativeElement as HTMLElement;
     const editFeed = jest.fn();
     const unsub = jest.fn();
     manageActions.editSubscription.mockImplementation(editFeed);
     manageActions.unsubscribe.mockImplementation(unsub);
 
-    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const buttons = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
+    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const buttons = element.querySelectorAll('.feedrow .pop [role="menuitem"]');
     (buttons[0] as HTMLButtonElement).click();
-    expect(editFeed).toHaveBeenCalledWith(s);
+    expect(editFeed).toHaveBeenCalledWith(subscription);
 
-    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const buttons2 = el.querySelectorAll('.feedrow .pop [role="menuitem"]');
+    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const buttons2 = element.querySelectorAll('.feedrow .pop [role="menuitem"]');
     (buttons2[buttons2.length - 1] as HTMLButtonElement).click();
-    expect(unsub).toHaveBeenCalledWith(s);
+    expect(unsub).toHaveBeenCalledWith(subscription);
   });
 
   it('shows both exclusion toggles in the untagged feed row menu and emits', () => {
-    const s = sub(1, 0);
-    const f = mount({ untagged: [s] });
-    const el = f.nativeElement as HTMLElement;
+    const subscription = sub(1, 0);
+    const fixture = mount({ untagged: [subscription] });
+    const element = fixture.nativeElement as HTMLElement;
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
     manageActions.setIncludeInAllItems.mockImplementation((sub: SubscriptionDto) =>
@@ -528,10 +556,10 @@ describe('SidebarComponent', () => {
       toggleForYou(sub),
     );
 
-    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const labels = [...el.querySelectorAll('.feedrow .pop [role="menuitem"]')].map((b) =>
-      b.textContent?.trim(),
+    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const labels = [...element.querySelectorAll('.feedrow .pop [role="menuitem"]')].map((item) =>
+      item.textContent?.trim(),
     );
     expect(labels).toEqual([
       'Edit feed',
@@ -540,29 +568,33 @@ describe('SidebarComponent', () => {
       'Unsubscribe',
     ]);
 
-    (el.querySelector('.feedrow .pop [role="menuitem"]:nth-child(2)') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(toggleAllItems).toHaveBeenCalledWith(s);
-    expect(el.querySelector('.feedrow .pop')).toBeNull();
+    (
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(2)') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    expect(toggleAllItems).toHaveBeenCalledWith(subscription);
+    expect(element.querySelector('.feedrow .pop')).toBeNull();
 
-    (el.querySelector('.feedrow .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    (el.querySelector('.feedrow .pop [role="menuitem"]:nth-child(3)') as HTMLButtonElement).click();
-    expect(toggleForYou).toHaveBeenCalledWith(s);
+    (element.querySelector('.feedrow .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (
+      element.querySelector('.feedrow .pop [role="menuitem"]:nth-child(3)') as HTMLButtonElement
+    ).click();
+    expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
 
   it('shows both exclusion toggles in the tagged feed row menu', () => {
-    const s = sub(1, 0);
+    const subscription = sub(1, 0);
     const node: TagNode = {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
-      subscriptions: [s],
+      subscriptions: [subscription],
       unreadCount: 0,
       entryCount: 0,
     };
-    const f = mount({ tagTree: [node] });
-    const el = f.nativeElement as HTMLElement;
-    (el.querySelector('.tag .chevzone') as HTMLButtonElement).click();
-    f.detectChanges();
+    const fixture = mount({ tagTree: [node] });
+    const element = fixture.nativeElement as HTMLElement;
+    (element.querySelector('.tag .chevzone') as HTMLButtonElement).click();
+    fixture.detectChanges();
 
     const toggleAllItems = jest.fn();
     const toggleForYou = jest.fn();
@@ -573,10 +605,10 @@ describe('SidebarComponent', () => {
       toggleForYou(sub),
     );
 
-    (el.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
-    f.detectChanges();
-    const labels = [...el.querySelectorAll('.tag-sub + .rowmenu .pop [role="menuitem"]')].map((b) =>
-      b.textContent?.trim(),
+    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    const labels = [...element.querySelectorAll('.tag-sub + .rowmenu .pop [role="menuitem"]')].map(
+      (item) => item.textContent?.trim(),
     );
     expect(labels).toEqual([
       'Edit feed',
@@ -586,63 +618,63 @@ describe('SidebarComponent', () => {
     ]);
 
     (
-      el.querySelector(
+      element.querySelector(
         '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(2)',
       ) as HTMLButtonElement
     ).click();
-    expect(toggleAllItems).toHaveBeenCalledWith(s);
+    expect(toggleAllItems).toHaveBeenCalledWith(subscription);
 
-    (el.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
-    f.detectChanges();
+    (element.querySelector('.tag-sub + .rowmenu .dots') as HTMLButtonElement).click();
+    fixture.detectChanges();
     (
-      el.querySelector(
+      element.querySelector(
         '.tag-sub + .rowmenu .pop [role="menuitem"]:nth-child(3)',
       ) as HTMLButtonElement
     ).click();
-    expect(toggleForYou).toHaveBeenCalledWith(s);
+    expect(toggleForYou).toHaveBeenCalledWith(subscription);
   });
 
   it('renders the exclusion marker without displacing the unread count', () => {
     const excludedForYou = { ...sub(2, 4), includeInForYou: false };
-    const f = mount({ untagged: [excludedForYou] });
-    const el = f.nativeElement as HTMLElement;
-    const row = el.querySelector('.feedrow')!;
+    const fixture = mount({ untagged: [excludedForYou] });
+    const element = fixture.nativeElement as HTMLElement;
+    const row = element.querySelector('.feedrow')!;
     expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
     expect(row.querySelector('.count')?.textContent).toContain('4');
   });
 
   it('renders the exclusion marker when only includeInAllItems is false', () => {
     const excludedAllItems = { ...sub(2, 4), includeInAllItems: false };
-    const f = mount({ untagged: [excludedAllItems] });
-    const el = f.nativeElement as HTMLElement;
-    const row = el.querySelector('.feedrow')!;
+    const fixture = mount({ untagged: [excludedAllItems] });
+    const element = fixture.nativeElement as HTMLElement;
+    const row = element.querySelector('.feedrow')!;
     expect(row.querySelector('.feed-exclusion-marker')).not.toBeNull();
     expect(row.querySelector('.count')?.textContent).toContain('4');
   });
 
   it('renders no exclusion marker when both flags are true', () => {
-    const f = mount({ untagged: [sub(2, 4)] });
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
+    const fixture = mount({ untagged: [sub(2, 4)] });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.feedrow .feed-exclusion-marker')).toBeNull();
   });
 
   describe('search field', () => {
     it('renders on a wide screen', () => {
-      const f = mount({ narrow: false });
-      expect(f.nativeElement.querySelector('app-search-field')).toBeTruthy();
+      const fixture = mount({ narrow: false });
+      expect(fixture.nativeElement.querySelector('app-search-field')).toBeTruthy();
     });
 
     it('is absent on a narrow screen, where the mobile header owns search', () => {
-      const f = mount({ narrow: true });
-      expect(f.nativeElement.querySelector('app-search-field')).toBeNull();
+      const fixture = mount({ narrow: true });
+      expect(fixture.nativeElement.querySelector('app-search-field')).toBeNull();
     });
 
     it('forwards the settled term as the search output', () => {
-      const f = mount({ narrow: false });
+      const fixture = mount({ narrow: false });
       const search = jest.fn();
-      f.componentInstance.search.subscribe(search);
+      fixture.componentInstance.search.subscribe(search);
 
-      const searchField = f.debugElement.query(
+      const searchField = fixture.debugElement.query(
         (de) => de.name === 'app-search-field',
       )?.componentInstance;
       searchField.search.emit('cats');
@@ -651,9 +683,9 @@ describe('SidebarComponent', () => {
     });
 
     it('forwards searchLoading to the field, distinct from the subscriptions loading input', () => {
-      const f = mount({ narrow: false, searchLoading: true });
+      const fixture = mount({ narrow: false, searchLoading: true });
 
-      const searchField = f.debugElement.query(
+      const searchField = fixture.debugElement.query(
         (de) => de.name === 'app-search-field',
       )?.componentInstance;
 
@@ -666,12 +698,12 @@ describe('SidebarComponent', () => {
 
   describe('saved searches', () => {
     it('renders no saved-searches section when the list is empty', () => {
-      const f = mount({ savedSearches: [] });
-      expect(f.nativeElement.textContent).not.toContain('Saved searches');
+      const fixture = mount({ savedSearches: [] });
+      expect(fixture.nativeElement.textContent).not.toContain('Saved searches');
     });
 
     it('renders collapsed by default, showing the header with the summed unread count', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -697,16 +729,16 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const text = f.nativeElement.textContent;
+      const text = fixture.nativeElement.textContent;
       expect(text).toContain('Saved searches');
       expect(text).not.toContain('climate');
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
-      const head = f.nativeElement.querySelector('.savedsearch-head')!;
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+      const head = fixture.nativeElement.querySelector('.savedsearch-head')!;
       expect(head.querySelector('.count')?.textContent).toContain('7');
     });
 
     it('expands on a chevron click, revealing the term rows while keeping the summed count', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -732,25 +764,25 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const head: HTMLElement = f.nativeElement.querySelector('.savedsearch-head');
+      const head: HTMLElement = fixture.nativeElement.querySelector('.savedsearch-head');
       const chevron: HTMLButtonElement = head.querySelector('.chevzone')!;
       expect(chevron.getAttribute('aria-expanded')).toBe('false');
       chevron.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      const text = f.nativeElement.textContent;
+      const text = fixture.nativeElement.textContent;
       expect(text).toContain('climate');
       expect(text).toContain('space');
       // The header keeps its summed unread count when expanded, the same way
       // a tag row keeps its own count — it does not disappear like the old
       // Task-12 behaviour.
       expect(head.querySelector('.count')?.textContent).toContain('7');
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(2);
       expect(chevron.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('navigates to the combined view instead of expanding', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -765,17 +797,17 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const label: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-toggle')!;
+      const label: HTMLAnchorElement = fixture.nativeElement.querySelector('.savedsearch-toggle')!;
       expect(label.tagName).toBe('A');
 
       label.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
     });
 
     it('expands and collapses from the chevron', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -790,22 +822,22 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const chevron: HTMLButtonElement = f.nativeElement.querySelector(
+      const chevron: HTMLButtonElement = fixture.nativeElement.querySelector(
         '.savedsearch-head .chevzone',
       );
       chevron.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(1);
 
       chevron.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
     });
 
     it('marks the row active while the combined view is on screen', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -822,11 +854,13 @@ describe('SidebarComponent', () => {
         selection: { kind: 'saved-searches', id: null, unread: false },
       });
 
-      expect(f.nativeElement.querySelector('.savedsearch-toggle')!.classList).toContain('active');
+      expect(fixture.nativeElement.querySelector('.savedsearch-toggle')!.classList).toContain(
+        'active',
+      );
     });
 
     it('also expands on a click of its trailing chevron button', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -841,13 +875,13 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const chevron: HTMLButtonElement = f.nativeElement.querySelector(
+      const chevron: HTMLButtonElement = fixture.nativeElement.querySelector(
         '.savedsearch-head .chevzone',
       );
       chevron.click();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.textContent).toContain('climate');
+      expect(fixture.nativeElement.textContent).toContain('climate');
     });
 
     it('places the chevron in the same right-edge column as a tag chevron', () => {
@@ -857,7 +891,7 @@ describe('SidebarComponent', () => {
         unreadCount: 0,
         entryCount: 0,
       };
-      const f = mount({
+      const fixture = mount({
         tagTree: [node],
         savedSearches: [
           {
@@ -873,8 +907,10 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const savedChev: HTMLElement = f.nativeElement.querySelector('.savedsearch-head .chevzone');
-      const tagChev: HTMLElement = f.nativeElement.querySelector('.taghead .chevzone');
+      const savedChev: HTMLElement = fixture.nativeElement.querySelector(
+        '.savedsearch-head .chevzone',
+      );
+      const tagChev: HTMLElement = fixture.nativeElement.querySelector('.taghead .chevzone');
       expect(savedChev.className).toBe(tagChev.className);
     });
 
@@ -882,7 +918,7 @@ describe('SidebarComponent', () => {
     // section chevrons: it points down (`expand_more`) when the list is open
     // and right (`chevron_right`) when it is collapsed — never up.
     it('points the header chevron down when expanded and right when collapsed', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -898,19 +934,20 @@ describe('SidebarComponent', () => {
         ],
       });
       const chevronIcon = (): string | null =>
-        f.nativeElement.querySelector('.savedsearch-head .chevzone .material-symbols-outlined')
-          ?.textContent ?? null;
+        fixture.nativeElement.querySelector(
+          '.savedsearch-head .chevzone .material-symbols-outlined',
+        )?.textContent ?? null;
 
       expect(chevronIcon()).toBe('chevron_right');
 
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
       expect(chevronIcon()).toBe('expand_more');
     });
 
     it('shows a compact "W" pill on a whole-word row and none on a plain row', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -936,10 +973,10 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const items = [...fixture.nativeElement.querySelectorAll('.savedsearch-item')];
       const wholeWordRow = items.find((item) => item.textContent?.includes('climate'))!;
       const plainRow = items.find((item) => item.textContent?.includes('space'))!;
 
@@ -950,7 +987,7 @@ describe('SidebarComponent', () => {
     });
 
     it('shows a compact "P" pill on a phrase row, with no quotes on the term', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -965,10 +1002,10 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      const row = f.nativeElement.querySelector('.savedsearch-item')!;
+      const row = fixture.nativeElement.querySelector('.savedsearch-item')!;
       expect(row.querySelector('.phrase-badge')?.textContent?.trim()).toBe('P');
       expect(row.querySelector('.sr-only')?.textContent).toContain('Phrase');
       // The mode rides in the pill, so the stored bare term shows without quotes.
@@ -981,7 +1018,7 @@ describe('SidebarComponent', () => {
     // was a second, subtly different identity rule, and it disagreed with the
     // shell's whenever the whole-word signal was a tab or a no-break space.
     it('marks the row the shell names active, and only that one', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -1008,17 +1045,17 @@ describe('SidebarComponent', () => {
         ],
         activeSavedSearchId: 1,
       });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      const items = [...f.nativeElement.querySelectorAll('.savedsearch-item')];
+      const items = [...fixture.nativeElement.querySelectorAll('.savedsearch-item')];
       const active = items.filter((item) => item.classList.contains('active'));
       expect(active).toHaveLength(1);
       expect(active[0].textContent).toContain('climate');
     });
 
     it('marks no row active when the shell names none', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -1033,14 +1070,14 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
     });
 
     it('links a saved search row to its slug path', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 42,
@@ -1055,15 +1092,15 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      const row: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-item');
+      const row: HTMLAnchorElement = fixture.nativeElement.querySelector('.savedsearch-item');
       expect(row.getAttribute('href')).toContain('/searches/saved/42-climate');
     });
 
     it('links the saved-searches header to the combined path', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           {
             id: 1,
@@ -1078,17 +1115,19 @@ describe('SidebarComponent', () => {
           },
         ],
       });
-      const head: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-toggle');
+      const head: HTMLAnchorElement = fixture.nativeElement.querySelector('.savedsearch-toggle');
       expect(head.getAttribute('href')).toContain('/searches/saved/all');
     });
 
-    const openSaved = (f: ReturnType<typeof mount>) => {
-      (f.nativeElement.querySelector('.savedsearch-head .chevzone') as HTMLButtonElement).click();
-      f.detectChanges();
+    const openSaved = (fixture: ReturnType<typeof mount>) => {
+      (
+        fixture.nativeElement.querySelector('.savedsearch-head .chevzone') as HTMLButtonElement
+      ).click();
+      fixture.detectChanges();
     };
-    const terms = (f: ReturnType<typeof mount>) =>
-      Array.from(f.nativeElement.querySelectorAll('.savedsearch-item .saved-term')).map((n) =>
-        (n as HTMLElement).textContent?.trim(),
+    const terms = (fixture: ReturnType<typeof mount>) =>
+      Array.from(fixture.nativeElement.querySelectorAll('.savedsearch-item .saved-term')).map(
+        (term) => (term as HTMLElement).textContent?.trim(),
       );
     const saved = (id: number, term: string, unreadCount: number): SavedSearchDto => ({
       id,
@@ -1103,7 +1142,7 @@ describe('SidebarComponent', () => {
     });
 
     it('orders saved searches unread-first, then by id descending', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [
           saved(1, 'oldest', 0),
           saved(2, 'busy', 5),
@@ -1111,89 +1150,91 @@ describe('SidebarComponent', () => {
           saved(4, 'busier', 5),
         ],
       });
-      openSaved(f);
+      openSaved(fixture);
       // unread>0 first, by count desc then id desc: busier(4,5), busy(2,5) -> id desc; then quiet(3,0), oldest(1,0)
-      expect(terms(f)).toEqual(['busier', 'busy', 'quiet', 'oldest']);
+      expect(terms(fixture)).toEqual(['busier', 'busy', 'quiet', 'oldest']);
     });
 
     it('keeps the frozen order when a count drops (no reshuffle on read)', () => {
-      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
-      openSaved(f);
-      expect(terms(f)).toEqual(['b', 'a']); // 5 before 3
+      const fixture = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(fixture);
+      expect(terms(fixture)).toEqual(['b', 'a']); // 5 before 3
       // A read drops b's count below a's; the order must stay frozen while open.
-      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
-      f.detectChanges();
-      expect(terms(f)).toEqual(['b', 'a']);
+      fixture.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      fixture.detectChanges();
+      expect(terms(fixture)).toEqual(['b', 'a']);
     });
 
     it('re-ranks on the next section open', () => {
-      const f = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
-      openSaved(f); // b, a
-      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
-      f.detectChanges();
-      openSaved(f); // close
-      openSaved(f); // open again -> re-rank: a(3) before b(1)
-      expect(terms(f)).toEqual(['a', 'b']);
+      const fixture = mount({ savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5)] });
+      openSaved(fixture); // b, a
+      fixture.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(2, 'b', 1)]);
+      fixture.detectChanges();
+      openSaved(fixture); // close
+      openSaved(fixture); // open again -> re-rank: a(3) before b(1)
+      expect(terms(fixture)).toEqual(['a', 'b']);
     });
 
     it('re-ranks immediately when a saved search is deleted (structural change)', () => {
-      const f = mount({
+      const fixture = mount({
         savedSearches: [saved(1, 'a', 3), saved(2, 'b', 5), saved(3, 'c', 4)],
       });
-      openSaved(f); // b(5), c(4), a(3)
-      f.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(3, 'c', 4)]);
-      f.detectChanges();
-      expect(terms(f)).toEqual(['c', 'a']); // c(4) before a(3), no stale b
+      openSaved(fixture); // b(5), c(4), a(3)
+      fixture.componentRef.setInput('savedSearches', [saved(1, 'a', 3), saved(3, 'c', 4)]);
+      fixture.detectChanges();
+      expect(terms(fixture)).toEqual(['c', 'a']); // c(4) before a(3), no stale b
     });
 
-    const many = Array.from({ length: 8 }, (_, i) => saved(i + 1, `s${i + 1}`, 8 - i));
+    const many = Array.from({ length: 8 }, (_, index) =>
+      saved(index + 1, `s${index + 1}`, 8 - index),
+    );
     // counts 8..1, so id 1 (count 8) ... id 8 (count 1): already ranked by both keys.
 
     it('shows only six rows and a "Show more" link when there are more than six', () => {
-      const f = mount({ savedSearches: many });
-      openSaved(f);
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
-      const more = f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement;
+      const fixture = mount({ savedSearches: many });
+      openSaved(fixture);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const more = fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement;
       expect(more).not.toBeNull();
       expect(more.textContent).toContain('Show 2 more');
     });
 
     it('reveals the full list on "Show more" and collapses again on "Show less"', () => {
-      const f = mount({ savedSearches: many });
-      openSaved(f);
-      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
-      f.detectChanges();
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      const fixture = mount({ savedSearches: many });
+      openSaved(fixture);
+      (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
       expect(
-        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+        (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
       ).toContain('Show less');
-      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
-      f.detectChanges();
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
 
     it('shows no "Show more" link at exactly six saved searches', () => {
-      const f = mount({ savedSearches: many.slice(0, 6) });
-      openSaved(f);
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
-      expect(f.nativeElement.querySelector('.savedsearch-more')).toBeNull();
+      const fixture = mount({ savedSearches: many.slice(0, 6) });
+      openSaved(fixture);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      expect(fixture.nativeElement.querySelector('.savedsearch-more')).toBeNull();
     });
 
     it('resets to the top six when the section is re-opened after expanding', () => {
-      const f = mount({ savedSearches: many });
-      openSaved(f);
-      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
-      f.detectChanges();
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
-      openSaved(f); // close
-      openSaved(f); // open again
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const fixture = mount({ savedSearches: many });
+      openSaved(fixture);
+      (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(8);
+      openSaved(fixture); // close
+      openSaved(fixture); // open again
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
 
     it('pins the active saved search as an extra row when it is outside the top six', () => {
-      const f = mount({ savedSearches: many, activeSavedSearchId: 8 }); // id 8 has the lowest count -> last
-      openSaved(f);
-      const rows = f.nativeElement.querySelectorAll('.savedsearch-item');
+      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 }); // id 8 has the lowest count -> last
+      openSaved(fixture);
+      const rows = fixture.nativeElement.querySelectorAll('.savedsearch-item');
       expect(rows.length).toBe(7); // top 6 + the pinned active
       const last = rows[rows.length - 1] as HTMLElement;
       expect(last.querySelector('.saved-term')?.textContent?.trim()).toBe('s8');
@@ -1201,52 +1242,52 @@ describe('SidebarComponent', () => {
     });
 
     it('does not pin when the active search is already in the top six', () => {
-      const f = mount({ savedSearches: many, activeSavedSearchId: 1 }); // id 1 has the highest count -> first
-      openSaved(f);
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const fixture = mount({ savedSearches: many, activeSavedSearchId: 1 }); // id 1 has the highest count -> first
+      openSaved(fixture);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
 
     it('shows no duplicate pinned row once the list is expanded', () => {
-      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
-      openSaved(f);
-      (f.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
-      f.detectChanges();
+      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(fixture);
+      (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLButtonElement).click();
+      fixture.detectChanges();
       const rows = Array.from(
-        f.nativeElement.querySelectorAll('.savedsearch-item .saved-term'),
-      ).map((n) => (n as HTMLElement).textContent?.trim());
+        fixture.nativeElement.querySelectorAll('.savedsearch-item .saved-term'),
+      ).map((term) => (term as HTMLElement).textContent?.trim());
       expect(rows.length).toBe(8);
-      expect(rows.filter((t) => t === 's8').length).toBe(1);
+      expect(rows.filter((term) => term === 's8').length).toBe(1);
     });
 
     it('excludes the pinned active row from the hidden count', () => {
-      const f = mount({ savedSearches: many, activeSavedSearchId: 8 });
-      openSaved(f);
+      const fixture = mount({ savedSearches: many, activeSavedSearchId: 8 });
+      openSaved(fixture);
       // 8 total, 6 in the top + 1 pinned active on screen -> 1 hidden.
       expect(
-        (f.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
+        (fixture.nativeElement.querySelector('.savedsearch-more') as HTMLElement).textContent,
       ).toContain('Show 1 more');
     });
 
     it('shows a downward chevron on the "Show more" link and an upward one on "Show less"', () => {
-      const f = mount({ savedSearches: many });
-      openSaved(f);
-      const moreBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
-      const moreIcon = moreBtn.querySelector('app-icon') as HTMLElement;
+      const fixture = mount({ savedSearches: many });
+      openSaved(fixture);
+      const moreButton = fixture.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const moreIcon = moreButton.querySelector('app-icon') as HTMLElement;
       expect(moreIcon).not.toBeNull();
       expect(moreIcon.textContent).toContain('expand_more');
 
-      moreBtn.click();
-      f.detectChanges();
-      const lessBtn = f.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
-      const lessIcon = lessBtn.querySelector('app-icon') as HTMLElement;
+      moreButton.click();
+      fixture.detectChanges();
+      const lessButton = fixture.nativeElement.querySelector('.savedsearch-more') as HTMLElement;
+      const lessIcon = lessButton.querySelector('app-icon') as HTMLElement;
       expect(lessIcon).not.toBeNull();
       expect(lessIcon.textContent).toContain('expand_less');
     });
 
     it('does not pin when the active id is absent from the saved-search list', () => {
-      const f = mount({ savedSearches: many, activeSavedSearchId: 999 });
-      openSaved(f);
-      expect(f.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
+      const fixture = mount({ savedSearches: many, activeSavedSearchId: 999 });
+      openSaved(fixture);
+      expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(6);
     });
   });
 
@@ -1275,31 +1316,37 @@ describe('SidebarComponent', () => {
     };
 
     it('renders no mail icon on saved-search rows when mail is disabled', () => {
-      const f = mount({ savedSearches: [climate], mailEnabled: false });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      const fixture = mount({ savedSearches: [climate], mailEnabled: false });
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.digest-toggle')).toBeNull();
     });
 
     it('renders no mail icon when mail is on but the account digest is off', () => {
-      const f = mount({ savedSearches: [climate], mailEnabled: true, digestEnabled: false });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      const fixture = mount({ savedSearches: [climate], mailEnabled: true, digestEnabled: false });
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelector('.digest-toggle')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.digest-toggle')).toBeNull();
     });
 
     it('renders a mail icon button per row when mail is enabled, muted only when not included', () => {
-      const f = mount({ savedSearches: [climate, space], mailEnabled: true });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      const fixture = mount({ savedSearches: [climate, space], mailEnabled: true });
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
-      const buttons: HTMLButtonElement[] = [...f.nativeElement.querySelectorAll('.digest-toggle')];
+      const buttons: HTMLButtonElement[] = [
+        ...fixture.nativeElement.querySelectorAll('.digest-toggle'),
+      ];
       expect(buttons).toHaveLength(2);
 
-      const climateRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('climate'))!;
-      const spaceRow = buttons.find((b) => b.getAttribute('aria-label')?.includes('space'))!;
+      const climateRow = buttons.find((button) =>
+        button.getAttribute('aria-label')?.includes('climate'),
+      )!;
+      const spaceRow = buttons.find((button) =>
+        button.getAttribute('aria-label')?.includes('space'),
+      )!;
 
       expect(climateRow.getAttribute('aria-pressed')).toBe('false');
       expect(climateRow.querySelector('app-icon')?.classList.contains('muted')).toBe(true);
@@ -1309,19 +1356,19 @@ describe('SidebarComponent', () => {
     });
 
     it('emits toggleDigest with the row on click, without navigating the row link', () => {
-      const f = mount({ savedSearches: [climate], mailEnabled: true });
-      f.componentInstance.toggleSavedSearches();
-      f.detectChanges();
+      const fixture = mount({ savedSearches: [climate], mailEnabled: true });
+      fixture.componentInstance.toggleSavedSearches();
+      fixture.detectChanges();
 
       const emitted: SavedSearchDto[] = [];
-      f.componentInstance.toggleDigest.subscribe((row) => emitted.push(row));
+      fixture.componentInstance.toggleDigest.subscribe((row) => emitted.push(row));
 
-      const button: HTMLButtonElement = f.nativeElement.querySelector('.digest-toggle');
+      const button: HTMLButtonElement = fixture.nativeElement.querySelector('.digest-toggle');
       const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
       const stopSpy = jest.spyOn(clickEvent, 'stopPropagation');
       const preventSpy = jest.spyOn(clickEvent, 'preventDefault');
       button.dispatchEvent(clickEvent);
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(emitted).toHaveLength(1);
       expect(emitted[0]).toEqual(climate);
@@ -1345,41 +1392,41 @@ describe('SidebarComponent', () => {
 
     // The borderless header chevron is its own `.section-chevron`, never the
     // bordered `.chevzone` box the tag rows carry.
-    const headChevronIcon = (el: HTMLElement) =>
-      el.querySelector('.tags-head .section-chevron .material-symbols-outlined')!.textContent;
+    const headChevronIcon = (element: HTMLElement) =>
+      element.querySelector('.tags-head .section-chevron .material-symbols-outlined')!.textContent;
 
     it('shows the tags expanded by default, with a downward chevron on the header', () => {
-      const el = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
-      const head = el.querySelector('.tags-head')!;
+      const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      const head = element.querySelector('.tags-head')!;
       expect(head.textContent).toContain('Tags');
       expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
-      expect(headChevronIcon(el)).toBe('expand_more');
+      expect(headChevronIcon(element)).toBe('expand_more');
       expect(head.querySelector('.chevzone')).toBeNull();
-      expect(el.querySelector('.tags .taghead')).not.toBeNull();
+      expect(element.querySelector('.tags .taghead')).not.toBeNull();
     });
 
     it('collapses the list and points the chevron right when the title is clicked', () => {
-      const f = mount({ tagTree: [tagNode] });
-      const el = f.nativeElement as HTMLElement;
-      (el.querySelector('.tags-head .section-toggle') as HTMLButtonElement).click();
-      f.detectChanges();
+      const fixture = mount({ tagTree: [tagNode] });
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.tags-head .section-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
-        'false',
-      );
-      expect(headChevronIcon(el)).toBe('chevron_right');
-      expect(el.querySelector('.tags .taghead')).toBeNull();
+      expect(
+        element.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded'),
+      ).toBe('false');
+      expect(headChevronIcon(element)).toBe('chevron_right');
+      expect(element.querySelector('.tags .taghead')).toBeNull();
       // The header itself stays put so the section can be reopened.
-      expect(el.querySelector('.tags-head')).not.toBeNull();
+      expect(element.querySelector('.tags-head')).not.toBeNull();
     });
 
     it('also collapses via the trailing chevron button', () => {
-      const f = mount({ tagTree: [tagNode] });
-      const el = f.nativeElement as HTMLElement;
-      (el.querySelector('.tags-head .section-chevron') as HTMLButtonElement).click();
-      f.detectChanges();
+      const fixture = mount({ tagTree: [tagNode] });
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.tags-head .section-chevron') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.tags .taghead')).toBeNull();
+      expect(element.querySelector('.tags .taghead')).toBeNull();
     });
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {
@@ -1387,11 +1434,11 @@ describe('SidebarComponent', () => {
       first.componentInstance.toggleTags();
 
       TestBed.resetTestingModule();
-      const el = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
-      expect(el.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
-        'false',
-      );
-      expect(el.querySelector('.tags .taghead')).toBeNull();
+      const element = mount({ tagTree: [tagNode] }).nativeElement as HTMLElement;
+      expect(
+        element.querySelector('.tags-head .section-toggle')!.getAttribute('aria-expanded'),
+      ).toBe('false');
+      expect(element.querySelector('.tags .taghead')).toBeNull();
     });
   });
 
@@ -1399,49 +1446,49 @@ describe('SidebarComponent', () => {
     beforeEach(() => localStorage.clear());
     afterEach(() => localStorage.clear());
 
-    const headChevronIcon = (el: HTMLElement) =>
-      el.querySelector('.feeds-head .section-chevron .material-symbols-outlined')!.textContent;
+    const headChevronIcon = (element: HTMLElement) =>
+      element.querySelector('.feeds-head .section-chevron .material-symbols-outlined')!.textContent;
 
     it('shows the feeds expanded by default, with a downward chevron on the header', () => {
-      const el = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
-      const head = el.querySelector('.feeds-head')!;
+      const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
+      const head = element.querySelector('.feeds-head')!;
       expect(head.textContent).toContain('Feeds');
       expect(head.querySelector('.section-toggle')!.getAttribute('aria-expanded')).toBe('true');
-      expect(headChevronIcon(el)).toBe('expand_more');
-      expect(el.querySelector('.feedlist .feedrow')).not.toBeNull();
+      expect(headChevronIcon(element)).toBe('expand_more');
+      expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
     });
 
     it('collapses the untagged feeds and points the chevron right when clicked', () => {
-      const f = mount({ untagged: [sub(1, 2)] });
-      const el = f.nativeElement as HTMLElement;
-      (el.querySelector('.feeds-head .section-toggle') as HTMLButtonElement).click();
-      f.detectChanges();
+      const fixture = mount({ untagged: [sub(1, 2)] });
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.feeds-head .section-toggle') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
-      expect(headChevronIcon(el)).toBe('chevron_right');
-      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+      expect(headChevronIcon(element)).toBe('chevron_right');
+      expect(element.querySelector('.feedlist .feedrow')).toBeNull();
       // The drop list itself stays mounted so an untag drag still has a target.
-      expect(el.querySelector('.feedlist')).not.toBeNull();
+      expect(element.querySelector('.feedlist')).not.toBeNull();
     });
 
     it('also collapses via the trailing chevron button', () => {
-      const f = mount({ untagged: [sub(1, 2)] });
-      const el = f.nativeElement as HTMLElement;
-      (el.querySelector('.feeds-head .section-chevron') as HTMLButtonElement).click();
-      f.detectChanges();
+      const fixture = mount({ untagged: [sub(1, 2)] });
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.feeds-head .section-chevron') as HTMLButtonElement).click();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+      expect(element.querySelector('.feedlist .feedrow')).toBeNull();
     });
 
     it('reveals the feeds while a drag is in progress, even when collapsed', () => {
-      const f = mount({ untagged: [sub(1, 2)] });
-      const el = f.nativeElement as HTMLElement;
-      f.componentInstance.toggleFeeds();
-      f.detectChanges();
-      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+      const fixture = mount({ untagged: [sub(1, 2)] });
+      const element = fixture.nativeElement as HTMLElement;
+      fixture.componentInstance.toggleFeeds();
+      fixture.detectChanges();
+      expect(element.querySelector('.feedlist .feedrow')).toBeNull();
 
-      f.componentInstance.dragging.set(true);
-      f.detectChanges();
-      expect(el.querySelector('.feedlist .feedrow')).not.toBeNull();
+      fixture.componentInstance.dragging.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('.feedlist .feedrow')).not.toBeNull();
     });
 
     it('restores the collapsed state on a fresh mount (persisted)', () => {
@@ -1449,11 +1496,11 @@ describe('SidebarComponent', () => {
       first.componentInstance.toggleFeeds();
 
       TestBed.resetTestingModule();
-      const el = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
-      expect(el.querySelector('.feeds-head .section-toggle')!.getAttribute('aria-expanded')).toBe(
-        'false',
-      );
-      expect(el.querySelector('.feedlist .feedrow')).toBeNull();
+      const element = mount({ untagged: [sub(1, 2)] }).nativeElement as HTMLElement;
+      expect(
+        element.querySelector('.feeds-head .section-toggle')!.getAttribute('aria-expanded'),
+      ).toBe('false');
+      expect(element.querySelector('.feedlist .feedrow')).toBeNull();
     });
   });
 });
@@ -1481,40 +1528,40 @@ describe('for-you row', () => {
         },
       ],
     });
-    const f = TestBed.createComponent(SidebarComponent);
-    f.componentRef.setInput('tagTree', []);
-    f.componentRef.setInput('untagged', []);
-    f.componentRef.setInput('totalUnread', 0);
-    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
-    f.componentRef.setInput('loading', false);
-    f.componentRef.setInput('organising', false);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(SidebarComponent);
+    fixture.componentRef.setInput('tagTree', []);
+    fixture.componentRef.setInput('untagged', []);
+    fixture.componentRef.setInput('totalUnread', 0);
+    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('loading', false);
+    fixture.componentRef.setInput('organising', false);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('is absent when AI is not ready', () => {
-    const el = mountWithAi(false).nativeElement as HTMLElement;
-    expect(el.querySelector('.nav.for-you')).toBeNull();
+    const element = mountWithAi(false).nativeElement as HTMLElement;
+    expect(element.querySelector('.nav.for-you')).toBeNull();
   });
 
   it('is present when AI is ready', () => {
-    const el = mountWithAi(true).nativeElement as HTMLElement;
-    expect(el.querySelector('.nav.for-you')).not.toBeNull();
+    const element = mountWithAi(true).nativeElement as HTMLElement;
+    expect(element.querySelector('.nav.for-you')).not.toBeNull();
   });
 
   it('pulses the icon while a recommendation run is in progress', () => {
-    const el = mountWithAi(true, true).nativeElement as HTMLElement;
-    expect(el.querySelector('.nav.for-you app-icon.pulse')).not.toBeNull();
+    const element = mountWithAi(true, true).nativeElement as HTMLElement;
+    expect(element.querySelector('.nav.for-you app-icon.pulse')).not.toBeNull();
   });
 
   it('shows the for-you item count as a badge', () => {
-    const el = mountWithAi(true, false, 12).nativeElement as HTMLElement;
-    expect(el.querySelector('.nav.for-you .count')!.textContent).toContain('12');
+    const element = mountWithAi(true, false, 12).nativeElement as HTMLElement;
+    expect(element.querySelector('.nav.for-you .count')!.textContent).toContain('12');
   });
 
   it('hides the badge when the for-you list is empty', () => {
-    const el = mountWithAi(true, false, 0).nativeElement as HTMLElement;
-    expect(el.querySelector('.nav.for-you .count')).toBeNull();
+    const element = mountWithAi(true, false, 0).nativeElement as HTMLElement;
+    expect(element.querySelector('.nav.for-you .count')).toBeNull();
   });
 });
 
@@ -1536,105 +1583,108 @@ describe('organise mode', () => {
         { provide: LayoutService, useValue: { isCoarse, isNarrow: signal(false) } },
       ],
     });
-    const f = TestBed.createComponent(SidebarComponent);
-    f.componentRef.setInput('tagTree', []);
-    f.componentRef.setInput('untagged', []);
-    f.componentRef.setInput('totalUnread', 0);
-    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
-    f.componentRef.setInput('loading', false);
-    f.componentRef.setInput('organising', false);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.organise')).toBeNull();
+    const fixture = TestBed.createComponent(SidebarComponent);
+    fixture.componentRef.setInput('tagTree', []);
+    fixture.componentRef.setInput('untagged', []);
+    fixture.componentRef.setInput('totalUnread', 0);
+    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('loading', false);
+    fixture.componentRef.setInput('organising', false);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.organise')).toBeNull();
 
     isCoarse.set(true);
-    f.detectChanges();
-    const organiseSwitch = el.querySelector('.organise')!;
+    fixture.detectChanges();
+    const organiseSwitch = element.querySelector('.organise')!;
     expect(organiseSwitch.getAttribute('role')).toBe('switch');
     expect(organiseSwitch.getAttribute('aria-checked')).toBe('false');
     expect(organiseSwitch.textContent).toContain('Organise');
   });
 
   it('clicking the switch flips the organising model', () => {
-    const f = mount({ coarse: true });
-    (f.nativeElement as HTMLElement).querySelector<HTMLElement>('.organise')!.click();
-    f.detectChanges();
-    expect(f.componentInstance.organising()).toBe(true);
+    const fixture = mount({ coarse: true });
+    (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>('.organise')!.click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.organising()).toBe(true);
     expect(
-      (f.nativeElement as HTMLElement).querySelector('.organise')!.getAttribute('aria-checked'),
+      (fixture.nativeElement as HTMLElement)
+        .querySelector('.organise')!
+        .getAttribute('aria-checked'),
     ).toBe('true');
   });
 
   it('organising hides the actions, global views, view controls and trial line', () => {
-    const el = mount({
+    const element = mount({
       coarse: true,
       organising: true,
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('.actions')).toBeNull();
-    expect(el.querySelector('.nav.all')).toBeNull();
-    expect(el.querySelector('app-view-controls')).toBeNull();
-    expect(el.querySelector('.trial')).toBeNull();
-    expect(el.querySelector('.version')).not.toBeNull();
-    expect(el.querySelector('.tags')).not.toBeNull();
+    expect(element.querySelector('.actions')).toBeNull();
+    expect(element.querySelector('.nav.all')).toBeNull();
+    expect(element.querySelector('app-view-controls')).toBeNull();
+    expect(element.querySelector('.trial')).toBeNull();
+    expect(element.querySelector('.version')).not.toBeNull();
+    expect(element.querySelector('.tags')).not.toBeNull();
   });
 
   it('navigation mode keeps all of them', () => {
-    const el = mount({
+    const element = mount({
       coarse: true,
       tagTree: tree,
       user: account(inDays(5)),
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('.actions')).not.toBeNull();
-    expect(el.querySelector('.nav.all')).not.toBeNull();
-    expect(el.querySelector('app-view-controls')).not.toBeNull();
-    expect(el.querySelector('.trial')).not.toBeNull();
+    expect(element.querySelector('.actions')).not.toBeNull();
+    expect(element.querySelector('.nav.all')).not.toBeNull();
+    expect(element.querySelector('app-view-controls')).not.toBeNull();
+    expect(element.querySelector('.trial')).not.toBeNull();
   });
 
   it('organising always shows the Feeds label as the untag drop target', () => {
-    const el = mount({ coarse: true, organising: true, untagged: [] }).nativeElement as HTMLElement;
-    expect(el.textContent).toContain('Feeds');
+    const element = mount({ coarse: true, organising: true, untagged: [] })
+      .nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Feeds');
   });
 
   it('coarse navigation shows the trailing chevron and no inline menu', () => {
-    const el = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
-    const zone = el.querySelector('.tag .chevzone')!;
+    const element = mount({ coarse: true, tagTree: tree }).nativeElement as HTMLElement;
+    const zone = element.querySelector('.tag .chevzone')!;
     expect(zone).not.toBeNull();
     expect(zone.getAttribute('aria-expanded')).toBe('false');
-    expect(el.querySelector('.tag .nav.grow')).not.toBeNull();
-    expect(el.querySelector('.dots')).toBeNull();
+    expect(element.querySelector('.tag .nav.grow')).not.toBeNull();
+    expect(element.querySelector('.dots')).toBeNull();
   });
 
   it('the chevron zone expands the tag without navigating', () => {
-    const f = mount({ coarse: true, tagTree: tree });
-    const el = f.nativeElement as HTMLElement;
-    el.querySelector<HTMLElement>('.tag .chevzone')!.click();
-    f.detectChanges();
-    expect(el.querySelector('.tagfeeds')).not.toBeNull();
-    expect(el.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
+    const fixture = mount({ coarse: true, tagTree: tree });
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLElement>('.tag .chevzone')!.click();
+    fixture.detectChanges();
+    expect(element.querySelector('.tagfeeds')).not.toBeNull();
+    expect(element.querySelector('.tag .chevzone')!.getAttribute('aria-expanded')).toBe('true');
     expect(TestBed.inject(Router).url).toBe('/'); // expand must not select the tag
   });
 
   it('organise rows carry a drag handle and expand via the row body', () => {
-    const f = mount({ coarse: true, organising: true, tagTree: tree });
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.tag .handle')).not.toBeNull();
-    expect(el.querySelector('.tag .nav.grow')).toBeNull();
-    expect(el.querySelector('.tag .chevzone')).toBeNull();
-    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
-    el.querySelector<HTMLElement>('.tag .rowbody')!.click();
-    f.detectChanges();
-    expect(el.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
-    expect(el.querySelector('.tagfeeds')).not.toBeNull();
-    expect(el.querySelector('.tagfeeds .handle')).not.toBeNull();
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.tag .handle')).not.toBeNull();
+    expect(element.querySelector('.tag .nav.grow')).toBeNull();
+    expect(element.querySelector('.tag .chevzone')).toBeNull();
+    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('false');
+    element.querySelector<HTMLElement>('.tag .rowbody')!.click();
+    fixture.detectChanges();
+    expect(element.querySelector('.tag .rowbody')!.getAttribute('aria-expanded')).toBe('true');
+    expect(element.querySelector('.tagfeeds')).not.toBeNull();
+    expect(element.querySelector('.tagfeeds .handle')).not.toBeNull();
   });
 
   it('the tag dots open the action sheet and route the choice', () => {
-    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'delete' });
     const deleted = jest.fn();
     manageActions.deleteTag.mockImplementation(deleted);
-    f.nativeElement.querySelector('.tag .dots').click();
+    fixture.nativeElement.querySelector('.tag .dots').click();
     const sheet = TestBed.inject(ActionSheet);
     expect(sheet.open).toHaveBeenCalledWith({
       title: 'News',
@@ -1647,10 +1697,15 @@ describe('organise mode', () => {
   });
 
   it('the feed dots offer edit, the two exclusion toggles, and unsubscribe', () => {
-    const f = mount({ coarse: true, organising: true, untagged: [sub(9)], sheetChoice: 'edit' });
+    const fixture = mount({
+      coarse: true,
+      organising: true,
+      untagged: [sub(9)],
+      sheetChoice: 'edit',
+    });
     const edited = jest.fn();
     manageActions.editSubscription.mockImplementation(edited);
-    f.nativeElement.querySelector('.feedrow .dots').click();
+    fixture.nativeElement.querySelector('.feedrow .dots').click();
     const sheet = TestBed.inject(ActionSheet);
     expect(sheet.open).toHaveBeenCalledWith({
       title: 's9',
@@ -1665,7 +1720,7 @@ describe('organise mode', () => {
   });
 
   it('routes the feed sheet toggle choices to toggleAllItems / toggleForYou and only those', () => {
-    const f = mount({
+    const fixture = mount({
       coarse: true,
       organising: true,
       untagged: [sub(9)],
@@ -1681,25 +1736,25 @@ describe('organise mode', () => {
       toggleForYou(sub),
     );
     manageActions.unsubscribe.mockImplementation(unsubscribed);
-    f.nativeElement.querySelector('.feedrow .dots').click();
+    fixture.nativeElement.querySelector('.feedrow .dots').click();
     expect(toggleAllItems).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
     expect(toggleForYou).not.toHaveBeenCalled();
     expect(unsubscribed).not.toHaveBeenCalled();
   });
 
   it('routes the tag edit choice to editTag and only that', () => {
-    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
+    const fixture = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: 'edit' });
     const edited = jest.fn();
     const deleted = jest.fn();
     manageActions.editTag.mockImplementation(edited);
     manageActions.deleteTag.mockImplementation(deleted);
-    f.nativeElement.querySelector('.tag .dots').click();
+    fixture.nativeElement.querySelector('.tag .dots').click();
     expect(edited).toHaveBeenCalledWith(tag);
     expect(deleted).not.toHaveBeenCalled();
   });
 
   it('routes the feed unsubscribe choice to unsubscribe and only that', () => {
-    const f = mount({
+    const fixture = mount({
       coarse: true,
       organising: true,
       untagged: [sub(9)],
@@ -1709,17 +1764,22 @@ describe('organise mode', () => {
     const edited = jest.fn();
     manageActions.unsubscribe.mockImplementation(unsubscribed);
     manageActions.editSubscription.mockImplementation(edited);
-    f.nativeElement.querySelector('.feedrow .dots').click();
+    fixture.nativeElement.querySelector('.feedrow .dots').click();
     expect(unsubscribed).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
     expect(edited).not.toHaveBeenCalled();
   });
 
   it('a dismissed sheet emits nothing', () => {
-    const f = mount({ coarse: true, organising: true, tagTree: tree, sheetChoice: undefined });
+    const fixture = mount({
+      coarse: true,
+      organising: true,
+      tagTree: tree,
+      sheetChoice: undefined,
+    });
     const emitted = jest.fn();
     manageActions.editTag.mockImplementation(emitted);
     manageActions.deleteTag.mockImplementation(emitted);
-    f.nativeElement.querySelector('.tag .dots').click();
+    fixture.nativeElement.querySelector('.tag .dots').click();
     expect(TestBed.inject(ActionSheet).open).toHaveBeenCalled();
     expect(emitted).not.toHaveBeenCalled();
   });
@@ -1739,23 +1799,23 @@ describe('organise mode', () => {
         { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
       ],
     });
-    const f = TestBed.createComponent(SidebarComponent);
-    f.componentRef.setInput('tagTree', tree);
-    f.componentRef.setInput('untagged', []);
-    f.componentRef.setInput('totalUnread', 0);
-    f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
-    f.componentRef.setInput('loading', false);
-    f.componentRef.setInput('organising', true);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).not.toBeNull();
+    const fixture = TestBed.createComponent(SidebarComponent);
+    fixture.componentRef.setInput('tagTree', tree);
+    fixture.componentRef.setInput('untagged', []);
+    fixture.componentRef.setInput('totalUnread', 0);
+    fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+    fixture.componentRef.setInput('loading', false);
+    fixture.componentRef.setInput('organising', true);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.tag .handle')).not.toBeNull();
 
     isCoarse.set(false);
-    f.detectChanges();
+    fixture.detectChanges();
     // The exit switch only renders on coarse pointers, so a stuck true would
     // leave the organise DOM with no way out — the component resets instead.
-    expect(f.componentInstance.organising()).toBe(false);
-    expect((f.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
-    expect((f.nativeElement as HTMLElement).querySelector('.tag .chevzone')).not.toBeNull();
+    expect(fixture.componentInstance.organising()).toBe(false);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.tag .handle')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.tag .chevzone')).not.toBeNull();
   });
 
   it('locks dragging in coarse navigation mode and frees it while organising', () => {
@@ -1777,15 +1837,15 @@ describe('organise mode', () => {
           { provide: ActionSheet, useValue: { open: jest.fn(() => of(undefined)) } },
         ],
       });
-      const f = TestBed.createComponent(SidebarComponent);
-      f.componentRef.setInput('tagTree', tree);
-      f.componentRef.setInput('untagged', []);
-      f.componentRef.setInput('totalUnread', 0);
-      f.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
-      f.componentRef.setInput('loading', false);
-      f.componentRef.setInput('organising', organising);
-      f.detectChanges();
-      return f;
+      const fixture = TestBed.createComponent(SidebarComponent);
+      fixture.componentRef.setInput('tagTree', tree);
+      fixture.componentRef.setInput('untagged', []);
+      fixture.componentRef.setInput('totalUnread', 0);
+      fixture.componentRef.setInput('selection', { kind: 'all', id: null, unread: true });
+      fixture.componentRef.setInput('loading', false);
+      fixture.componentRef.setInput('organising', organising);
+      fixture.detectChanges();
+      return fixture;
     }
 
     const nav = mountWithLayout(true, false);
@@ -1803,35 +1863,35 @@ describe('organise mode', () => {
   });
 
   it('desktop shows the trailing chevron, inline menu and popover', () => {
-    const el = mount({ tagTree: tree }).nativeElement as HTMLElement;
-    expect(el.querySelector('.tag .chevzone')).not.toBeNull();
-    expect(el.querySelector('.handle')).toBeNull();
-    expect(el.querySelector('.rowmenu .dots')).not.toBeNull();
+    const element = mount({ tagTree: tree }).nativeElement as HTMLElement;
+    expect(element.querySelector('.tag .chevzone')).not.toBeNull();
+    expect(element.querySelector('.handle')).toBeNull();
+    expect(element.querySelector('.rowmenu .dots')).not.toBeNull();
   });
 
   describe('collapse button', () => {
     beforeEach(() => localStorage.clear());
 
     it('shows a collapse button on a wide layout', () => {
-      const el = mount().nativeElement as HTMLElement;
-      expect(el.querySelector('.collapse[aria-label="Hide sidebar"]')).not.toBeNull();
+      const element = mount().nativeElement as HTMLElement;
+      expect(element.querySelector('.collapse[aria-label="Hide sidebar"]')).not.toBeNull();
     });
 
     it('omits the collapse button on a narrow layout', () => {
-      const el = mount({ narrow: true }).nativeElement as HTMLElement;
-      expect(el.querySelector('.collapse')).toBeNull();
+      const element = mount({ narrow: true }).nativeElement as HTMLElement;
+      expect(element.querySelector('.collapse')).toBeNull();
     });
 
     it('omits the collapse button while organising', () => {
       // Organise mode only holds on a coarse pointer; a fine pointer resets it.
-      const el = mount({ organising: true, coarse: true }).nativeElement as HTMLElement;
-      expect(el.querySelector('.collapse')).toBeNull();
+      const element = mount({ organising: true, coarse: true }).nativeElement as HTMLElement;
+      expect(element.querySelector('.collapse')).toBeNull();
     });
 
     it('hides the sidebar when the collapse button is clicked', () => {
-      const f = mount();
-      const el = f.nativeElement as HTMLElement;
-      (el.querySelector('.collapse') as HTMLButtonElement).click();
+      const fixture = mount();
+      const element = fixture.nativeElement as HTMLElement;
+      (element.querySelector('.collapse') as HTMLButtonElement).click();
       expect(TestBed.inject(SidebarVisibilityService).hidden()).toBe(true);
     });
   });

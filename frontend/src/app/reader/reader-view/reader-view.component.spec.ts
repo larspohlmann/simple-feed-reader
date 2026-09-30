@@ -83,11 +83,11 @@ class MockResizeObserver {
   constructor(readonly callback: ResizeObserverCallback) {
     MockResizeObserver.instances.push(this);
   }
-  observe(t: Element): void {
-    this.targets.add(t);
+  observe(target: Element): void {
+    this.targets.add(target);
   }
-  unobserve(t: Element): void {
-    this.targets.delete(t);
+  unobserve(target: Element): void {
+    this.targets.delete(target);
   }
   disconnect(): void {
     this.targets.clear();
@@ -97,9 +97,8 @@ class MockResizeObserver {
   }
 }
 
-/** The feed body previously carried as `entry.contentHtml`; now what the body
- *  store answers for entry 1 by default (see `beforeEach` below), so the bulk
- *  of these presentational tests need no body-store setup of their own. */
+/** What the body store answers for entry 1 by default (see `beforeEach` below),
+ *  so most of these presentational tests need no body-store setup of their own. */
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -132,20 +131,20 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 /** An entry whose feed body is `html`, for tests that care what the original
  *  view renders — the feed-mode analogue of passing `contentHtml` directly. */
 function entryWithBody(html: string | null, over: Partial<EntryDto> = {}): EntryDto {
-  const e = entry(over);
-  fakeBody.setDefault(e.id, html);
-  return e;
+  const built = entry(over);
+  fakeBody.setDefault(built.id, html);
+  return built;
 }
 
 let loadMock: jest.Mock;
 let reloadMock: jest.Mock;
 let fakeBody: FakeEntryBodyService;
 
-function mount(e: EntryDto | null) {
-  const f = TestBed.createComponent(ReaderViewComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+function mount(testEntry: EntryDto | null) {
+  const fixture = TestBed.createComponent(ReaderViewComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 const okContent = (over: Partial<ReaderArticle> = {}): ReaderArticle => ({
@@ -205,16 +204,16 @@ describe('ReaderViewComponent', () => {
 
   describe('reading focus setting', () => {
     it('clears dimming from the open article when disabled', async () => {
-      const f = mount(entryWithBody('<p>First</p><p>Second</p>'));
+      const fixture = mount(entryWithBody('<p>First</p><p>Second</p>'));
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
       const blocks = Array.from(
-        (f.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
       );
       for (const block of blocks) block.style.opacity = '0.28';
 
       TestBed.inject(ReadingFocusService).setEnabled(false);
-      f.detectChanges();
+      fixture.detectChanges();
 
       expect(blocks.map((block) => block.style.opacity)).toEqual(['', '']);
     });
@@ -222,16 +221,16 @@ describe('ReaderViewComponent', () => {
     it('restores dimming in the open article when enabled again', async () => {
       const readingFocus = TestBed.inject(ReadingFocusService);
       readingFocus.setEnabled(false);
-      const f = mount(entryWithBody('<p>First</p><p>Second</p>'));
+      const fixture = mount(entryWithBody('<p>First</p><p>Second</p>'));
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
       const blocks = Array.from(
-        (f.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.content > *'),
       );
       expect(blocks.map((block) => block.style.opacity)).toEqual(['', '']);
 
       readingFocus.setEnabled(true);
-      f.detectChanges();
+      fixture.detectChanges();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       expect(blocks.map((block) => block.style.opacity)).not.toContain('');
@@ -239,39 +238,39 @@ describe('ReaderViewComponent', () => {
   });
 
   it('renders title, meta, content and decorates external links', async () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.title')!.textContent).toContain('Deep dive');
-    expect(el.querySelector('.meta')!.textContent).toContain('Ars');
-    expect(el.querySelector('.content')!.textContent).toContain('Body');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.title')!.textContent).toContain('Deep dive');
+    expect(element.querySelector('.meta')!.textContent).toContain('Ars');
+    expect(element.querySelector('.content')!.textContent).toContain('Body');
     await Promise.resolve(); // link decoration runs in a microtask
-    const a = el.querySelector('.content a') as HTMLAnchorElement;
-    expect(a.target).toBe('_blank');
-    expect(a.rel).toContain('noopener');
+    const link = element.querySelector('.content a') as HTMLAnchorElement;
+    expect(link.target).toBe('_blank');
+    expect(link.rel).toContain('noopener');
   });
 
   it('leaves in-page fragment anchors undecorated', async () => {
-    const el = mount(
+    const element = mount(
       entryWithBody('<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>'),
     ).nativeElement as HTMLElement;
     await Promise.resolve(); // link decoration runs in a microtask
-    const anchors = el.querySelectorAll('.content a');
+    const anchors = element.querySelectorAll('.content a');
     expect((anchors[0] as HTMLAnchorElement).target).toBe(''); // fragment link untouched
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
   });
 
   describe('reading time', () => {
-    const longBody = `<p>${Array.from({ length: 660 }, (_, i) => `w${i}`).join(' ')}</p>`;
+    const longBody = `<p>${Array.from({ length: 660 }, (_, index) => `w${index}`).join(' ')}</p>`;
 
     it('shows the estimate for a long article', () => {
-      const f = mount(entryWithBody(longBody));
+      const fixture = mount(entryWithBody(longBody));
 
-      expect(f.nativeElement.querySelector('.meta')?.textContent).toContain('≈ 3 min');
+      expect(fixture.nativeElement.querySelector('.meta')?.textContent).toContain('≈ 3 min');
     });
 
     it('hides the estimate for a short article', () => {
-      const f = mount(entryWithBody('<p>Tiny.</p>'));
+      const fixture = mount(entryWithBody('<p>Tiny.</p>'));
 
-      expect(f.nativeElement.querySelector('.meta')?.textContent).not.toContain('≈');
+      expect(fixture.nativeElement.querySelector('.meta')?.textContent).not.toContain('≈');
     });
   });
 
@@ -279,38 +278,40 @@ describe('ReaderViewComponent', () => {
     const threeHeadings = '<h2>Alpha</h2><p>a</p><h2>Beta</h2><p>b</p><h3>Gamma</h3>';
 
     it('shows a table of contents, collapsed by default, for articles with several headings', async () => {
-      const f = mount(entryWithBody(threeHeadings));
+      const fixture = mount(entryWithBody(threeHeadings));
       await Promise.resolve(); // content-processing microtask builds the TOC
-      f.detectChanges();
-      const el = f.nativeElement as HTMLElement;
-      const toggle = el.querySelector('.toc-toggle') as HTMLButtonElement;
+      fixture.detectChanges();
+      const element = fixture.nativeElement as HTMLElement;
+      const toggle = element.querySelector('.toc-toggle') as HTMLButtonElement;
       expect(toggle).not.toBeNull();
       expect(toggle.getAttribute('aria-expanded')).toBe('false');
-      expect(el.querySelectorAll('.toc-list li').length).toBe(0); // collapsed
+      expect(element.querySelectorAll('.toc-list li').length).toBe(0); // collapsed
 
       toggle.click();
-      f.detectChanges();
+      fixture.detectChanges();
       expect(toggle.getAttribute('aria-expanded')).toBe('true');
-      const items = [...el.querySelectorAll('.toc-list button')].map((b) => b.textContent?.trim());
+      const items = [...element.querySelectorAll('.toc-list button')].map((button) =>
+        button.textContent?.trim(),
+      );
       expect(items).toEqual(['Alpha', 'Beta', 'Gamma']);
     });
 
     it('gives the headings unique ids so the TOC can jump to them', async () => {
-      const f = mount(entryWithBody('<h2>Same</h2><h2>Same</h2><h2>Same</h2>'));
+      const fixture = mount(entryWithBody('<h2>Same</h2><h2>Same</h2><h2>Same</h2>'));
       await Promise.resolve();
-      f.detectChanges();
-      const ids = [...(f.nativeElement as HTMLElement).querySelectorAll('.content h2')].map(
-        (h) => (h as HTMLElement).id,
+      fixture.detectChanges();
+      const ids = [...(fixture.nativeElement as HTMLElement).querySelectorAll('.content h2')].map(
+        (heading) => (heading as HTMLElement).id,
       );
       expect(ids.every((id) => id.length > 0)).toBe(true);
       expect(new Set(ids).size).toBe(3); // deduped
     });
 
     it('omits the TOC for short articles', async () => {
-      const f = mount(entryWithBody('<h2>Only one</h2><p>x</p>'));
+      const fixture = mount(entryWithBody('<h2>Only one</h2><p>x</p>'));
       await Promise.resolve();
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.toc')).toBeNull();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.toc')).toBeNull();
     });
   });
 
@@ -323,40 +324,40 @@ describe('ReaderViewComponent', () => {
     }
 
     it('appears only after scrolling down and jumps back to the top on click', () => {
-      const f = mount(entry());
-      const host = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const host = fixture.nativeElement as HTMLElement;
       expect(host.querySelector('app-to-top-button')).toBeNull(); // hidden at the top
 
       scrollHostTo(host, 900);
-      f.detectChanges();
-      const btn = host.querySelector('app-to-top-button button') as HTMLButtonElement;
-      expect(btn).not.toBeNull();
+      fixture.detectChanges();
+      const button = host.querySelector('app-to-top-button button') as HTMLButtonElement;
+      expect(button).not.toBeNull();
 
       const scrollTo = jest.fn();
       host.scrollTo = scrollTo as unknown as typeof host.scrollTo;
-      btn.click();
+      button.click();
       expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     });
 
     it('hides again when scrolled back near the top', () => {
-      const f = mount(entry());
-      const host = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const host = fixture.nativeElement as HTMLElement;
       scrollHostTo(host, 900);
-      f.detectChanges();
+      fixture.detectChanges();
       expect(host.querySelector('app-to-top-button')).not.toBeNull();
 
       scrollHostTo(host, 20);
-      f.detectChanges();
+      fixture.detectChanges();
       expect(host.querySelector('app-to-top-button')).toBeNull();
     });
 
     // #98: the button unmounts once showToTop flips false, which would otherwise
     // drop keyboard focus to <body> and strand a keyboard/screen-reader user.
     it('moves focus to the article title instead of dropping it to the body', () => {
-      const f = mount(entry());
-      const host = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const host = fixture.nativeElement as HTMLElement;
       scrollHostTo(host, 900);
-      f.detectChanges();
+      fixture.detectChanges();
       host.scrollTo = jest.fn() as unknown as typeof host.scrollTo;
 
       (host.querySelector('app-to-top-button button') as HTMLButtonElement).click();
@@ -377,8 +378,8 @@ describe('ReaderViewComponent', () => {
       Object.defineProperty(host, 'scrollTop', {
         configurable: true,
         get: () => state.top,
-        set: (v: number) => {
-          state.top = v;
+        set: (value: number) => {
+          state.top = value;
         },
       });
       return state;
@@ -389,85 +390,88 @@ describe('ReaderViewComponent', () => {
       const load = new Subject<ReaderContent>();
       loadMock.mockReturnValue(load);
       sessionStorage.setItem(entryScrollKey(1), String(top));
-      const f = TestBed.createComponent(ReaderViewComponent);
-      const scroll = trackScrollTop(f.nativeElement as HTMLElement);
-      f.componentRef.setInput('entry', entry({ id: 1 }));
-      f.detectChanges();
-      return { f, scroll, load };
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      const scroll = trackScrollTop(fixture.nativeElement as HTMLElement);
+      fixture.componentRef.setInput('entry', entry({ id: 1 }));
+      fixture.detectChanges();
+      return { fixture, scroll, load };
     }
 
     /** Let the content-processing microtask and any follow-up effect settle. */
-    async function settle(f: { detectChanges(): void }) {
+    async function settle(fixture: { detectChanges(): void }) {
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
       await Promise.resolve();
     }
 
     afterEach(() => sessionStorage.clear());
 
     it('restores the remembered offset when extraction fails', async () => {
-      const { f, scroll, load } = mountRemembering(900);
+      const { fixture, scroll, load } = mountRemembering(900);
       load.next(failedContent());
-      await settle(f);
+      await settle(fixture);
       expect(scroll.top).toBe(900);
-      f.destroy();
+      fixture.destroy();
     });
 
     it('restores the remembered offset when extraction succeeds', async () => {
-      const { f, scroll, load } = mountRemembering(900);
+      const { fixture, scroll, load } = mountRemembering(900);
       load.next(okContent());
-      await settle(f);
+      await settle(fixture);
       expect(scroll.top).toBe(900);
-      f.destroy();
+      fixture.destroy();
     });
 
     it('leaves an article with no remembered offset at the top', async () => {
-      const { f, scroll, load } = mountRemembering(0);
+      const { fixture, scroll, load } = mountRemembering(0);
       load.next(failedContent());
-      await settle(f);
+      await settle(fixture);
       expect(scroll.top).toBe(0);
-      f.destroy();
+      fixture.destroy();
     });
   });
 
-  // #107: the reading focus only ever fully highlights the block at the viewport
-  // centre, and the article used to stop scrolling with its last paragraph at the
-  // bottom edge — the one block that could never be brought into focus.
+  // #107: the reading focus only fully highlights the block at the viewport
+  // centre, so the article needs tail space for its last paragraph to get there.
   describe('tail space below a long article', () => {
     /** Pin the pane's height and where the article's own content box ends. */
-    function stubGeometry(f: ReturnType<typeof mount>, contentBottom: number, viewport: number) {
-      const host = f.nativeElement as HTMLElement;
+    function stubGeometry(
+      fixture: ReturnType<typeof mount>,
+      contentBottom: number,
+      viewport: number,
+    ) {
+      const host = fixture.nativeElement as HTMLElement;
       Object.defineProperty(host, 'clientHeight', { configurable: true, value: viewport });
       host.getBoundingClientRect = () => ({ top: 0, bottom: viewport }) as DOMRect;
       const content = host.querySelector('.content') as HTMLElement;
       content.getBoundingClientRect = () => ({ top: 0, bottom: contentBottom }) as DOMRect;
       // A resize is one of the moments the pane re-measures itself.
       window.dispatchEvent(new Event('resize'));
-      f.detectChanges();
+      fixture.detectChanges();
       return host;
     }
 
     it('adds it when the article is taller than the pane', () => {
-      const f = mount(entry());
-      const host = stubGeometry(f, 2400, 800);
+      const fixture = mount(entry());
+      const host = stubGeometry(fixture, 2400, 800);
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
     it('withholds it from an article that fits, which would be dead scroll', () => {
-      const f = mount(entry());
-      const host = stubGeometry(f, 400, 800);
+      const fixture = mount(entry());
+      const host = stubGeometry(fixture, 400, 800);
       expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
     });
 
     it('adds it when the comments carry a short post past the pane (#1150)', () => {
       stubComments(signal<CommentsState>({ status: 'idle' }));
-      const f = mount(entry({ comments: 'manual' }));
-      const comments = (f.nativeElement as HTMLElement).querySelector(
+      const fixture = mount(entry({ comments: 'manual' }));
+      const comments = (fixture.nativeElement as HTMLElement).querySelector(
         'app-entry-comments',
       ) as HTMLElement;
       comments.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
 
-      const host = stubGeometry(f, 400, 800);
+      const host = stubGeometry(fixture, 400, 800);
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
       expect(host.querySelector('.progress-rail, .progress')).toBeNull();
@@ -475,23 +479,23 @@ describe('ReaderViewComponent', () => {
   });
 
   it('renders the article’s action row through the shared entry actions', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    const row = el.querySelector('app-entry-actions.actions');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    const row = element.querySelector('app-entry-actions.actions');
     expect(row).not.toBeNull();
     expect(row!.classList).toContain('glyph-md');
   });
 
   it('sends favorite/keep/read to the handler and emits close', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     let closes = 0;
-    f.componentInstance.close.subscribe(() => closes++);
-    const el = f.nativeElement as HTMLElement;
+    fixture.componentInstance.close.subscribe(() => closes++);
+    const element = fixture.nativeElement as HTMLElement;
     // Scoped to the article's own row: the split pane's toolbar carries a
     // second favourite/keep pair, and it comes first in the DOM.
-    (el.querySelector('.actions [aria-label="Favorite"]') as HTMLButtonElement).click();
-    (el.querySelector('.actions [aria-label="Keep"]') as HTMLButtonElement).click();
-    (el.querySelector('.actions [aria-label="Toggle read"]') as HTMLButtonElement).click();
-    (el.querySelector('.close') as HTMLButtonElement).click();
+    (element.querySelector('.actions [aria-label="Favorite"]') as HTMLButtonElement).click();
+    (element.querySelector('.actions [aria-label="Keep"]') as HTMLButtonElement).click();
+    (element.querySelector('.actions [aria-label="Toggle read"]') as HTMLButtonElement).click();
+    (element.querySelector('.close') as HTMLButtonElement).click();
     expect(entryActions.favorite).toHaveBeenCalledTimes(1);
     expect(entryActions.keep).toHaveBeenCalledTimes(1);
     expect(entryActions.toggleRead).toHaveBeenCalledTimes(1);
@@ -499,11 +503,11 @@ describe('ReaderViewComponent', () => {
   });
 
   it('emits openOriginal when the original-article link is clicked', () => {
-    const f = mount(entry({ url: 'https://example.com/full-story' }));
+    const fixture = mount(entry({ url: 'https://example.com/full-story' }));
     const emitted = jest.fn();
-    f.componentInstance.openOriginal.subscribe(emitted);
+    fixture.componentInstance.openOriginal.subscribe(emitted);
 
-    const link = f.debugElement.query(By.css('a[target="_blank"]'));
+    const link = fixture.debugElement.query(By.css('a[target="_blank"]'));
     link.triggerEventHandler('click', null);
 
     expect(emitted).toHaveBeenCalled();
@@ -514,19 +518,19 @@ describe('ReaderViewComponent', () => {
     // the toolbar rides the overlay, so the list's header underneath never has
     // to change — and the back button plays the slide-out (like a back-swipe)
     // rather than cutting straight to the list, so close waits for it.
-    const f = TestBed.createComponent(ReaderViewComponent);
-    f.componentRef.setInput('entry', entry());
-    f.componentRef.setInput('fullscreen', true);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
+    const fixture = TestBed.createComponent(ReaderViewComponent);
+    fixture.componentRef.setInput('entry', entry());
+    fixture.componentRef.setInput('fullscreen', true);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
     const close = jest.fn();
-    f.componentInstance.close.subscribe(close);
-    const back = el.querySelector('.bar .close') as HTMLButtonElement;
+    fixture.componentInstance.close.subscribe(close);
+    const back = element.querySelector('.bar .close') as HTMLButtonElement;
     expect(back).not.toBeNull();
     back.click();
     expect(close).not.toHaveBeenCalled();
-    expect(f.componentInstance.leaving()).toBe(true);
-    f.destroy();
+    expect(fixture.componentInstance.leaving()).toBe(true);
+    fixture.destroy();
   });
 
   // The panel reserves the floating app bar's height only in the split pane,
@@ -538,122 +542,124 @@ describe('ReaderViewComponent', () => {
     const withBar = mount(entry()).nativeElement as HTMLElement;
     expect(withBar.querySelector('.reader')!.classList).toContain('with-bar');
 
-    const f = TestBed.createComponent(ReaderViewComponent);
-    f.componentRef.setInput('entry', entry());
-    f.componentRef.setInput('fullscreen', true);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.reader')!.classList).not.toContain('with-bar');
-    f.destroy();
+    const fixture = TestBed.createComponent(ReaderViewComponent);
+    fixture.componentRef.setInput('entry', entry());
+    fixture.componentRef.setInput('fullscreen', true);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.reader')!.classList).not.toContain('with-bar');
+    fixture.destroy();
   });
 
   describe('full-screen toolbar hide-on-scroll', () => {
     function fullscreenMount() {
-      const f = TestBed.createComponent(ReaderViewComponent);
-      f.componentRef.setInput('entry', entry());
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
-      return f;
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      fixture.componentRef.setInput('entry', entry());
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
+      return fixture;
     }
 
-    function scrollHostTo(f: ReturnType<typeof mount>, top: number): void {
-      const host = f.nativeElement as HTMLElement;
+    function scrollHostTo(fixture: ReturnType<typeof mount>, top: number): void {
+      const host = fixture.nativeElement as HTMLElement;
       host.scrollTop = top;
       host.dispatchEvent(new Event('scroll'));
-      f.detectChanges();
+      fixture.detectChanges();
     }
 
     it('opens presented, retracts scrolling down, returns scrolling up', () => {
-      const f = fullscreenMount();
-      const bar = (f.nativeElement as HTMLElement).querySelector('.bar')!;
+      const fixture = fullscreenMount();
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('.bar')!;
       expect(bar.classList).not.toContain('hidden');
 
-      scrollHostTo(f, 400); // down
+      scrollHostTo(fixture, 400); // down
       expect(bar.classList).toContain('hidden');
 
-      scrollHostTo(f, 300); // up
+      scrollHostTo(fixture, 300); // up
       expect(bar.classList).not.toContain('hidden');
-      f.destroy();
+      fixture.destroy();
     });
 
     it('presents the toolbar anew for the next entry', () => {
       // prev/next reuse this component instance; a toolbar the previous
       // article's reading had retracted must not open the next one headless.
-      const f = fullscreenMount();
-      scrollHostTo(f, 400);
-      expect((f.nativeElement as HTMLElement).querySelector('.bar')!.classList).toContain('hidden');
-
-      f.componentRef.setInput('entry', entry({ id: 2 }));
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.bar')!.classList).not.toContain(
+      const fixture = fullscreenMount();
+      scrollHostTo(fixture, 400);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.bar')!.classList).toContain(
         'hidden',
       );
-      f.destroy();
+
+      fixture.componentRef.setInput('entry', entry({ id: 2 }));
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.bar')!.classList).not.toContain(
+        'hidden',
+      );
+      fixture.destroy();
     });
 
     it('never retracts the split-pane toolbar', () => {
-      const f = mount(entry());
-      const bar = (f.nativeElement as HTMLElement).querySelector('.bar')!;
-      scrollHostTo(f, 100);
-      scrollHostTo(f, 500);
+      const fixture = mount(entry());
+      const bar = (fixture.nativeElement as HTMLElement).querySelector('.bar')!;
+      scrollHostTo(fixture, 100);
+      scrollHostTo(fixture, 500);
       expect(bar.classList).not.toContain('hidden');
     });
 
     it('keeps the mini header while the toolbar below it retracts', () => {
       // The mini header is the only thing naming the article once the toolbar
       // is gone, so it must survive the very scroll that retracts the toolbar.
-      const f = fullscreenMount();
-      const el = f.nativeElement as HTMLElement;
-      scrollHostTo(f, 400);
+      const fixture = fullscreenMount();
+      const element = fixture.nativeElement as HTMLElement;
+      scrollHostTo(fixture, 400);
 
-      expect(el.querySelector('.bar')!.classList).toContain('hidden');
-      expect(el.querySelector('.mini')!.classList).not.toContain('hidden');
-      expect(el.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
-      f.destroy();
+      expect(element.querySelector('.bar')!.classList).toContain('hidden');
+      expect(element.querySelector('.mini')!.classList).not.toContain('hidden');
+      expect(element.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
+      fixture.destroy();
     });
   });
 
   describe('mini header', () => {
     it('names the article with its favicon and title', () => {
-      const f = TestBed.createComponent(ReaderViewComponent);
-      f.componentRef.setInput('entry', entry({ faviconUrl: 'https://x/f.png' }));
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      fixture.componentRef.setInput('entry', entry({ faviconUrl: 'https://x/f.png' }));
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
-      expect(el.querySelector<HTMLImageElement>('.mini app-favicon img')!.src).toBe(
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.mini .mini-title')!.textContent).toContain('Deep dive');
+      expect(element.querySelector<HTMLImageElement>('.mini app-favicon img')!.src).toBe(
         'https://x/f.png',
       );
-      f.destroy();
+      fixture.destroy();
     });
 
     it('hides itself from assistive technology, which reads the h1 instead', () => {
-      const f = TestBed.createComponent(ReaderViewComponent);
-      f.componentRef.setInput('entry', entry());
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      fixture.componentRef.setInput('entry', entry());
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
 
       expect(
-        (f.nativeElement as HTMLElement).querySelector('.mini')!.getAttribute('aria-hidden'),
+        (fixture.nativeElement as HTMLElement).querySelector('.mini')!.getAttribute('aria-hidden'),
       ).toBe('true');
-      f.destroy();
+      fixture.destroy();
     });
 
     it('rides inside the split pane’s toolbar instead of taking a strip of its own', () => {
-      const el = mount(entry({ faviconUrl: 'https://x/f.png' })).nativeElement as HTMLElement;
-      expect(el.querySelector('.mini')).toBeNull();
-      expect(el.querySelector('.bar .bar-title')!.textContent).toContain('Deep dive');
-      expect(el.querySelector<HTMLImageElement>('.bar app-favicon img')!.src).toBe(
+      const element = mount(entry({ faviconUrl: 'https://x/f.png' })).nativeElement as HTMLElement;
+      expect(element.querySelector('.mini')).toBeNull();
+      expect(element.querySelector('.bar .bar-title')!.textContent).toContain('Deep dive');
+      expect(element.querySelector<HTMLImageElement>('.bar app-favicon img')!.src).toBe(
         'https://x/f.png',
       );
     });
 
     it('offers favourite and keep in the split pane’s toolbar', () => {
-      const f = mount(entry({ isFavorite: true }));
-      const el = f.nativeElement as HTMLElement;
-      const favourite = el.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
-      const keep = el.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
+      const fixture = mount(entry({ isFavorite: true }));
+      const element = fixture.nativeElement as HTMLElement;
+      const favourite = element.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
+      const keep = element.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
 
       // The toolbar reports the entry's state, the way the article's action row does.
       expect(favourite.classList).toContain('on');
@@ -670,14 +676,14 @@ describe('ReaderViewComponent', () => {
     });
 
     it('draws the toolbar pair in the shared toggle look, filled only while on', () => {
-      const f = mount(entry({ isFavorite: true, isKept: false }));
-      const el = f.nativeElement as HTMLElement;
-      const favourite = el.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
-      const keep = el.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
+      const fixture = mount(entry({ isFavorite: true, isKept: false }));
+      const element = fixture.nativeElement as HTMLElement;
+      const favourite = element.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
+      const keep = element.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
       const fillOf = (button: HTMLButtonElement) =>
-        f.debugElement
+        fixture.debugElement
           .queryAll(By.directive(IconComponent))
-          .find((d) => button.contains(d.nativeElement))!
+          .find((icon) => button.contains(icon.nativeElement))!
           .componentInstance.fill();
 
       expect(favourite.classList).toContain('flag-toggle');
@@ -689,17 +695,17 @@ describe('ReaderViewComponent', () => {
     });
 
     it('offers favourite and keep in the full-screen toolbar too', () => {
-      const f = TestBed.createComponent(ReaderViewComponent);
-      f.componentRef.setInput('entry', entry());
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      fixture.componentRef.setInput('entry', entry());
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
 
-      const el = f.nativeElement as HTMLElement;
+      const element = fixture.nativeElement as HTMLElement;
       // The nameplate still rides the .mini strip in full screen, not the bar.
-      expect(el.querySelector('.bar .bar-title')).toBeNull();
-      expect(el.querySelector('.bar [aria-label="Favorite"]')).not.toBeNull();
-      expect(el.querySelector('.bar [aria-label="Keep"]')).not.toBeNull();
-      f.destroy();
+      expect(element.querySelector('.bar .bar-title')).toBeNull();
+      expect(element.querySelector('.bar [aria-label="Favorite"]')).not.toBeNull();
+      expect(element.querySelector('.bar [aria-label="Keep"]')).not.toBeNull();
+      fixture.destroy();
     });
   });
 
@@ -709,50 +715,50 @@ describe('ReaderViewComponent', () => {
       const pane = mount(entry()).nativeElement as HTMLElement;
       expect(pane.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
 
-      const f = TestBed.createComponent(ReaderViewComponent);
-      f.componentRef.setInput('entry', entry());
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
+      const fixture = TestBed.createComponent(ReaderViewComponent);
+      fixture.componentRef.setInput('entry', entry());
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
       expect(
-        (f.nativeElement as HTMLElement).querySelector('.bar [aria-label="Reload article"]'),
+        (fixture.nativeElement as HTMLElement).querySelector('.bar [aria-label="Reload article"]'),
       ).not.toBeNull();
-      f.destroy();
+      fixture.destroy();
     });
 
     it('hides the refresh button once the reader switches to original', () => {
       loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-      const f = mount(entry());
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.bar [aria-label="Reload article"]')).not.toBeNull();
 
-      f.componentInstance.toggleMode(); // reader -> original
-      f.detectChanges();
-      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
+      fixture.componentInstance.toggleMode(); // reader -> original
+      fixture.detectChanges();
+      expect(element.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
     });
 
     it('hides the refresh button when extraction failed (original fallback)', () => {
       // Default loadMock resolves failed, so the view falls back to original.
-      const el = mount(entry()).nativeElement as HTMLElement;
-      expect(el.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
+      const element = mount(entry()).nativeElement as HTMLElement;
+      expect(element.querySelector('.bar [aria-label="Reload article"]')).toBeNull();
     });
 
     it('refetches past the cache and shows the loading state', () => {
       loadMock.mockReturnValue(of<ReaderContent>(okContent()));
       const subject = new Subject<ReaderContent>();
       reloadMock.mockReturnValue(subject.asObservable());
-      const f = mount(entry());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
 
-      (el.querySelector('.bar [aria-label="Reload article"]') as HTMLButtonElement).click();
-      f.detectChanges();
+      (element.querySelector('.bar [aria-label="Reload article"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
       expect(reloadMock).toHaveBeenCalledWith(1);
-      expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
+      expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
 
       subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
       subject.complete();
-      f.detectChanges();
-      expect(el.querySelector('app-loading-overlay.shown')).toBeNull();
-      expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
+      fixture.detectChanges();
+      expect(element.querySelector('app-loading-overlay.shown')).toBeNull();
+      expect(element.querySelector('.content')!.innerHTML).toContain('FRESH');
     });
 
     it('refreshArticle does not reset the reader/original mode', () => {
@@ -760,27 +766,27 @@ describe('ReaderViewComponent', () => {
       // only a genuine entry change resets it.
       loadMock.mockReturnValue(of<ReaderContent>(okContent()));
       reloadMock.mockReturnValue(of<ReaderContent>(okContent()));
-      const f = mount(entry());
-      f.componentInstance.toggleMode(); // reader -> original
-      expect(f.componentInstance.mode()).toBe('original');
+      const fixture = mount(entry());
+      fixture.componentInstance.toggleMode(); // reader -> original
+      expect(fixture.componentInstance.mode()).toBe('original');
 
-      f.componentInstance.refreshArticle();
-      f.detectChanges();
-      expect(f.componentInstance.mode()).toBe('original');
+      fixture.componentInstance.refreshArticle();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.mode()).toBe('original');
     });
   });
 
   it('renders extracted reader content when extraction succeeds', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.content')!.innerHTML).toContain('READER');
   });
 
   it('falls back to feed content and shows a note when extraction fails', () => {
     loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.content')!.innerHTML).toContain('Body');
-    expect(el.querySelector('.reader-note')).not.toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.content')!.innerHTML).toContain('Body');
+    expect(element.querySelector('.reader-note')).not.toBeNull();
   });
 
   describe('reader fallback: retry and error detail', () => {
@@ -788,27 +794,27 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
       const subject = new Subject<ReaderContent>();
       reloadMock.mockReturnValue(subject.asObservable());
-      const f = mount(entry());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
 
-      (el.querySelector('.note-link') as HTMLButtonElement).click();
-      f.detectChanges();
+      (element.querySelector('.note-link') as HTMLButtonElement).click();
+      fixture.detectChanges();
       expect(reloadMock).toHaveBeenCalledWith(1);
-      expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
+      expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
 
       subject.next(okContent({ contentHtml: '<p>FRESH</p>' }));
       subject.complete();
-      f.detectChanges();
-      expect(el.querySelector('.content')!.innerHTML).toContain('FRESH');
+      fixture.detectChanges();
+      expect(element.querySelector('.content')!.innerHTML).toContain('FRESH');
     });
 
     it('reveals the server-supplied cause behind a collapsed "show error" disclosure', () => {
       loadMock.mockReturnValue(
         of<ReaderContent>(failedContent({ reason: 'fetch', detail: 'HTTP 403 Forbidden' })),
       );
-      const el = mount(entry()).nativeElement as HTMLElement;
+      const element = mount(entry()).nativeElement as HTMLElement;
 
-      const details = el.querySelector('.reader-error') as HTMLDetailsElement;
+      const details = element.querySelector('.reader-error') as HTMLDetailsElement;
       expect(details).not.toBeNull();
       expect(details.open).toBe(false);
       expect(details.querySelector('pre')!.textContent).toContain('HTTP 403 Forbidden');
@@ -818,9 +824,9 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(
         of<ReaderContent>(failedContent({ reason: 'unextractable', detail: null })),
       );
-      const el = mount(entry()).nativeElement as HTMLElement;
+      const element = mount(entry()).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.reader-error pre')!.textContent).toContain('unextractable');
+      expect(element.querySelector('.reader-error pre')!.textContent).toContain('unextractable');
     });
 
     it('reveals the complete HTTP message when the load fails at the transport', () => {
@@ -834,9 +840,9 @@ describe('ReaderViewComponent', () => {
             }),
         ),
       );
-      const el = mount(entry()).nativeElement as HTMLElement;
+      const element = mount(entry()).nativeElement as HTMLElement;
 
-      const detail = el.querySelector('.reader-error pre')!.textContent!;
+      const detail = element.querySelector('.reader-error pre')!.textContent!;
       expect(detail).toContain('502');
       expect(detail).toContain('Bad Gateway');
       expect(detail).toContain('https://host.test/api/entries/1/reader');
@@ -847,9 +853,9 @@ describe('ReaderViewComponent', () => {
     loadMock.mockReturnValue(
       of<ReaderContent>(okContent({ paywalled: true, url: 'https://pub.test/a' })),
     );
-    const el = mount(entry()).nativeElement as HTMLElement;
-    const note = el.querySelector('.paywall-note');
-    const content = el.querySelector('.content')!;
+    const element = mount(entry()).nativeElement as HTMLElement;
+    const note = element.querySelector('.paywall-note');
+    const content = element.querySelector('.content')!;
     expect(note).not.toBeNull();
     expect(note!.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(note!.querySelector('a')!.getAttribute('href')).toBe('https://pub.test/a');
@@ -857,76 +863,76 @@ describe('ReaderViewComponent', () => {
 
   it('shows no paywall note for a freely readable article', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: false })));
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.paywall-note')).toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.paywall-note')).toBeNull();
   });
 
   it('drops the paywall note in the original view, which shows the feed body', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent({ paywalled: true })));
-    const f = mount(entry());
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.paywall-note')).not.toBeNull();
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.paywall-note')).not.toBeNull();
 
-    (el.querySelector('.mode') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(el.querySelector('.paywall-note')).toBeNull();
+    (element.querySelector('.mode') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.paywall-note')).toBeNull();
   });
 
   it('toggles between reader and original', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-    const f = mount(entry());
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.content')!.innerHTML).toContain('READER');
 
-    (el.querySelector('.mode') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(el.querySelector('.content')!.innerHTML).toContain('Body');
+    (element.querySelector('.mode') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.content')!.innerHTML).toContain('Body');
 
-    (el.querySelector('.mode') as HTMLButtonElement).click();
-    f.detectChanges();
-    expect(el.querySelector('.content')!.innerHTML).toContain('READER');
+    (element.querySelector('.mode') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.content')!.innerHTML).toContain('READER');
   });
 
   it('shows a loading indicator while extraction is pending', () => {
     loadMock.mockReturnValue(new Subject<ReaderContent>());
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
-    expect(el.querySelector('.content')).toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('app-loading-overlay.shown')).not.toBeNull();
+    expect(element.querySelector('.content')).toBeNull();
     // The overlay is decorative, so the article carries the busy state instead.
-    expect(el.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
+    expect(element.querySelector('article')!.getAttribute('aria-busy')).toBe('true');
   });
 
   it('does not reload or reset the toggle when the same entry changes by reference', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-    const f = mount(entry());
-    const el = f.nativeElement as HTMLElement;
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
     expect(loadMock).toHaveBeenCalledTimes(1);
 
     // Switch to Original, then simulate an optimistic flag update: a NEW entry
     // object with the SAME id (what entries.store produces on favorite/keep/read).
-    (el.querySelector('.mode') as HTMLButtonElement).click();
-    f.detectChanges();
-    f.componentRef.setInput('entry', entry({ isFavorite: true }));
-    f.detectChanges();
+    (element.querySelector('.mode') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    fixture.componentRef.setInput('entry', entry({ isFavorite: true }));
+    fixture.detectChanges();
 
     expect(loadMock).toHaveBeenCalledTimes(1); // no redundant re-fetch
-    expect(el.querySelector('.content')!.innerHTML).toContain('Body'); // still Original
+    expect(element.querySelector('.content')!.innerHTML).toContain('Body'); // still Original
   });
 
   it('reloads when a different entry (new id) is shown', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
-    const f = mount(entry({ id: 1 }));
+    const fixture = mount(entry({ id: 1 }));
     expect(loadMock).toHaveBeenCalledTimes(1);
 
-    f.componentRef.setInput('entry', entry({ id: 2 }));
-    f.detectChanges();
+    fixture.componentRef.setInput('entry', entry({ id: 2 }));
+    fixture.detectChanges();
 
     expect(loadMock).toHaveBeenCalledTimes(2);
     expect(loadMock).toHaveBeenLastCalledWith(2);
   });
 
-  const hero = (f: { nativeElement: unknown }) =>
-    (f.nativeElement as HTMLElement).querySelector('.lead-image') as HTMLImageElement | null;
+  const hero = (fixture: { nativeElement: unknown }) =>
+    (fixture.nativeElement as HTMLElement).querySelector('.lead-image') as HTMLImageElement | null;
 
   it('renders no separate hero in reader mode; the lead rides in contentHtml', () => {
     // The backend now restores the lead picture into the extracted body itself
@@ -938,10 +944,10 @@ describe('ReaderViewComponent', () => {
         }),
       ),
     );
-    const f = mount(entry());
+    const fixture = mount(entry());
 
-    expect(hero(f)).toBeNull();
-    const content = (f.nativeElement as HTMLElement).querySelector('.content');
+    expect(hero(fixture)).toBeNull();
+    const content = (fixture.nativeElement as HTMLElement).querySelector('.content');
     expect(content!.innerHTML).toContain('https://img.test/hero.jpg');
   });
 
@@ -951,15 +957,15 @@ describe('ReaderViewComponent', () => {
         okContent({ originalHero: { url: 'https://img.test/feed.jpg', width: 800, height: 450 } }),
       ),
     );
-    const f = mount(entry());
-    expect(hero(f)).toBeNull();
+    const fixture = mount(entry());
+    expect(hero(fixture)).toBeNull();
 
     TestBed.inject(ReaderModeService).toggle();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(hero(f)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
-    expect(hero(f)!.getAttribute('width')).toBe('800');
-    expect(hero(f)!.getAttribute('height')).toBe('450');
+    expect(hero(fixture)!.getAttribute('src')).toBe('https://img.test/feed.jpg');
+    expect(hero(fixture)!.getAttribute('width')).toBe('800');
+    expect(hero(fixture)!.getAttribute('height')).toBe('450');
     expect(loadMock).toHaveBeenCalledTimes(1);
   });
 
@@ -983,13 +989,13 @@ describe('ReaderViewComponent', () => {
         }),
       ),
     );
-    const f = mount(entry());
+    const fixture = mount(entry());
 
-    hero(f)!.dispatchEvent(new Event('error'));
-    await f.whenStable();
-    f.detectChanges();
+    hero(fixture)!.dispatchEvent(new Event('error'));
+    await fixture.whenStable();
+    fixture.detectChanges();
 
-    expect(hero(f)).toBeNull();
+    expect(hero(fixture)).toBeNull();
   });
 
   it('hands a failed article-body image to the proxy', async () => {
@@ -1000,9 +1006,9 @@ describe('ReaderViewComponent', () => {
         }),
       ),
     );
-    const f = mount(entry());
-    await f.whenStable();
-    const img = f.nativeElement.querySelector('.content img') as HTMLImageElement;
+    const fixture = mount(entry());
+    await fixture.whenStable();
+    const img = fixture.nativeElement.querySelector('.content img') as HTMLImageElement;
 
     img.dispatchEvent(new Event('error'));
 
@@ -1017,36 +1023,36 @@ describe('ReaderViewComponent', () => {
 
   describe('entry with no article URL (#1140)', () => {
     it('does not ask for an extraction when the entry has no article URL', () => {
-      const el = mount(
+      const element = mount(
         entry({ url: null, discussionUrl: 'https://www.reddit.com/r/x/comments/1/t/' }),
       ).nativeElement as HTMLElement;
 
       expect(loadMock).not.toHaveBeenCalled();
-      expect(el.querySelector('.reader-fallback')).toBeNull();
-      expect(el.querySelector('.mode')).toBeNull();
+      expect(element.querySelector('.reader-fallback')).toBeNull();
+      expect(element.querySelector('.mode')).toBeNull();
     });
 
     it('treats an empty article URL as no article URL', () => {
-      const el = mount(entry({ url: '' })).nativeElement as HTMLElement;
+      const element = mount(entry({ url: '' })).nativeElement as HTMLElement;
 
       expect(loadMock).not.toHaveBeenCalled();
-      expect(el.querySelector('.mode')).toBeNull();
+      expect(element.querySelector('.mode')).toBeNull();
     });
   });
 
   describe('discussion link (#1140)', () => {
     it('links the discussion page when there is one', () => {
-      const el = mount(entry({ discussionUrl: 'https://news.ycombinator.com/item?id=1' }))
+      const element = mount(entry({ discussionUrl: 'https://news.ycombinator.com/item?id=1' }))
         .nativeElement as HTMLElement;
 
-      const link = el.querySelector('a.discussion-link');
+      const link = element.querySelector('a.discussion-link');
       expect(link?.getAttribute('href')).toBe('https://news.ycombinator.com/item?id=1');
     });
 
     it('shows no discussion link when the entry has none', () => {
-      const el = mount(entry({ discussionUrl: null })).nativeElement as HTMLElement;
+      const element = mount(entry({ discussionUrl: null })).nativeElement as HTMLElement;
 
-      expect(el.querySelector('a.discussion-link')).toBeNull();
+      expect(element.querySelector('a.discussion-link')).toBeNull();
     });
   });
 
@@ -1058,8 +1064,8 @@ describe('ReaderViewComponent', () => {
       stubComments(commentsState);
     });
 
-    function commentsSection(f: { nativeElement: HTMLElement }): Element | null {
-      return f.nativeElement.querySelector('article app-entry-comments');
+    function commentsSection(fixture: { nativeElement: HTMLElement }): Element | null {
+      return fixture.nativeElement.querySelector('article app-entry-comments');
     }
 
     const loadedComments: CommentsState = {
@@ -1093,25 +1099,25 @@ describe('ReaderViewComponent', () => {
 
     it('falls under the reading focus with the article body (#1150)', async () => {
       commentsState.set(loadedComments);
-      const f = mount(entry({ comments: 'manual' }));
+      const fixture = mount(entry({ comments: 'manual' }));
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-      const list = commentsSection(f)!.querySelector<HTMLElement>('.list')!;
+      const list = commentsSection(fixture)!.querySelector<HTMLElement>('.list')!;
       expect(list.style.opacity).not.toBe('');
     });
 
     it('re-seats the reading focus when the comments arrive late (#1150)', async () => {
       commentsState.set({ status: 'loading' });
-      const f = mount(entry({ comments: 'manual' }));
+      const fixture = mount(entry({ comments: 'manual' }));
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       commentsState.set(loadedComments);
-      f.detectChanges();
-      const host = commentsSection(f)!;
+      fixture.detectChanges();
+      const host = commentsSection(fixture)!;
       MockResizeObserver.instances.find((observer) => observer.targets.has(host))!.fire();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -1121,9 +1127,9 @@ describe('ReaderViewComponent', () => {
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {
     loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
-    const el = mount(entryWithBody(null, { summary: 'Just a summary' }))
+    const element = mount(entryWithBody(null, { summary: 'Just a summary' }))
       .nativeElement as HTMLElement;
-    expect(el.querySelector('.content')!.innerHTML).toContain('Just a summary');
+    expect(element.querySelector('.content')!.innerHTML).toContain('Just a summary');
   });
 
   describe('return-to-list gestures (full-screen)', () => {
@@ -1146,95 +1152,95 @@ describe('ReaderViewComponent', () => {
       }) as unknown as TouchEvent;
 
     function fullscreen() {
-      const f = mount(entry());
-      f.componentRef.setInput('fullscreen', true);
-      f.detectChanges();
-      return f;
+      const fixture = mount(entry());
+      fixture.componentRef.setInput('fullscreen', true);
+      fixture.detectChanges();
+      return fixture;
     }
 
     it('returns to the list on a decisive rightward swipe', () => {
-      const f = fullscreen();
-      const c = f.componentInstance;
-      c.onTouchStart(touch(0, 0));
-      c.onTouchMove(touch(130, 6));
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(true);
-      f.destroy();
+      const fixture = fullscreen();
+      const component = fixture.componentInstance;
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(130, 6));
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(true);
+      fixture.destroy();
     });
 
     it('slides the article out to the right, then returns, on a back-button click', fakeAsync(() => {
-      const f = fullscreen();
-      const el = f.nativeElement as HTMLElement;
+      const fixture = fullscreen();
+      const element = fixture.nativeElement as HTMLElement;
       const close = jest.fn();
-      f.componentInstance.close.subscribe(close);
-      (el.querySelector('.bar .close') as HTMLButtonElement).click();
-      f.detectChanges();
+      fixture.componentInstance.close.subscribe(close);
+      (element.querySelector('.bar .close') as HTMLButtonElement).click();
+      fixture.detectChanges();
       // Committed to leaving and slid fully off to the right (same as a swipe).
-      expect(f.componentInstance.leaving()).toBe(true);
-      expect((el.querySelector('.reader') as HTMLElement).style.transform).toContain(
+      expect(fixture.componentInstance.leaving()).toBe(true);
+      expect((element.querySelector('.reader') as HTMLElement).style.transform).toContain(
         `${window.innerWidth}px`,
       );
       // close only fires once the slide-out animation has played.
       expect(close).not.toHaveBeenCalled();
       tick(220);
       expect(close).toHaveBeenCalledTimes(1);
-      f.destroy();
+      fixture.destroy();
     }));
 
     it('snaps back (does not return) on a short swipe', () => {
-      const c = fullscreen().componentInstance;
-      c.onTouchStart(touch(0, 0));
-      c.onTouchMove(touch(30, 4));
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(false);
+      const component = fullscreen().componentInstance;
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(30, 4));
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(false);
     });
 
     it('yields to a media control: a drag from the audio scrubber does not return to the list', () => {
-      const f = fullscreen();
-      const c = f.componentInstance;
-      c.onTouchStart(touchOnControl(0, 0));
-      c.onTouchMove(touchOnControl(130, 6)); // a decisive rightward drag on the scrubber
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(false);
-      f.destroy();
+      const fixture = fullscreen();
+      const component = fixture.componentInstance;
+      component.onTouchStart(touchOnControl(0, 0));
+      component.onTouchMove(touchOnControl(130, 6)); // a decisive rightward drag on the scrubber
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(false);
+      fixture.destroy();
     });
 
     it('still returns to the list on a real swipe right after a suppressed one', () => {
-      const f = fullscreen();
-      const c = f.componentInstance;
-      c.onTouchStart(touchOnControl(0, 0)); // suppressed: began on the scrubber
-      c.onTouchMove(touchOnControl(130, 6));
-      c.onTouchEnd();
-      c.onTouchStart(touch(0, 0)); // a real back-swipe on the article surface
-      c.onTouchMove(touch(130, 6));
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(true);
-      f.destroy();
+      const fixture = fullscreen();
+      const component = fixture.componentInstance;
+      component.onTouchStart(touchOnControl(0, 0)); // suppressed: began on the scrubber
+      component.onTouchMove(touchOnControl(130, 6));
+      component.onTouchEnd();
+      component.onTouchStart(touch(0, 0)); // a real back-swipe on the article surface
+      component.onTouchMove(touch(130, 6));
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(true);
+      fixture.destroy();
     });
 
     it('returns to the list on a pull past the article end', () => {
-      const f = fullscreen();
-      const c = f.componentInstance;
+      const fixture = fullscreen();
+      const component = fixture.componentInstance;
       // jsdom has no layout, so the scroller reads as already at the bottom.
-      c.onTouchStart(touch(5, 300));
-      c.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(true);
-      f.destroy();
+      component.onTouchStart(touch(5, 300));
+      component.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(true);
+      fixture.destroy();
     });
 
     it('ignores swipes while the in-pane toolbar is shown (split-pane)', () => {
-      const c = mount(entry()).componentInstance; // showToolbar defaults to true
-      c.onTouchStart(touch(0, 0));
-      c.onTouchMove(touch(200, 0));
-      c.onTouchEnd();
-      expect(c.leaving()).toBe(false);
+      const component = mount(entry()).componentInstance; // showToolbar defaults to true
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(200, 0));
+      component.onTouchEnd();
+      expect(component.leaving()).toBe(false);
     });
   });
 
   describe('audio attachment', () => {
     it('offers a listen control for an audio enclosure and plays it', () => {
-      const f = mount(
+      const fixture = mount(
         entry({
           attachments: [
             {
@@ -1250,7 +1256,7 @@ describe('ReaderViewComponent', () => {
         /* Do not touch the real audio element in the render test. */
       });
 
-      const button = f.debugElement.query(By.css('.listen'));
+      const button = fixture.debugElement.query(By.css('.listen'));
       button.nativeElement.click();
 
       expect(play).toHaveBeenCalledWith(
@@ -1259,64 +1265,65 @@ describe('ReaderViewComponent', () => {
     });
 
     it('shows no listen control when the entry has no audio enclosure', () => {
-      const f = mount(
+      const fixture = mount(
         entry({ attachments: [{ url: 'https://x.test/clip.mp4', mimeType: 'video/mp4' }] }),
       );
 
-      expect(f.debugElement.query(By.css('.listen'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.listen'))).toBeNull();
     });
   });
 
   describe('feed-declared categories', () => {
     it('renders the joined categories as a comma-separated footer row', () => {
-      const el = mount(entry({ categories: ['Politics', 'World'] })).nativeElement as HTMLElement;
+      const element = mount(entry({ categories: ['Politics', 'World'] }))
+        .nativeElement as HTMLElement;
 
-      expect(el.querySelector('.categories')?.textContent?.trim()).toBe('Politics, World');
+      expect(element.querySelector('.categories')?.textContent?.trim()).toBe('Politics, World');
     });
 
     it('omits the categories row when there are none', () => {
-      const el = mount(entry({ categories: [] })).nativeElement as HTMLElement;
+      const element = mount(entry({ categories: [] })).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.categories')).toBeNull();
+      expect(element.querySelector('.categories')).toBeNull();
     });
   });
 
   describe('feed body from the store (#1100)', () => {
     it('shows the summary at once, before the body arrives, with no spinner over it', () => {
       fakeBody.setLoading(1);
-      const el = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
+      const element = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
-      expect(el.querySelector('app-loading-overlay.shown')).toBeNull();
+      expect(element.querySelector('.content')!.textContent).toContain('The summary text');
+      expect(element.querySelector('app-loading-overlay.shown')).toBeNull();
     });
 
     it('replaces the summary with the body once it arrives', () => {
       fakeBody.setLoading(1);
-      const f = mount(entry({ summary: 'The summary text' }));
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
+      const fixture = mount(entry({ summary: 'The summary text' }));
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.content')!.textContent).toContain('The summary text');
 
       fakeBody.seed(1, '<p>The full body</p>');
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(el.querySelector('.content')!.innerHTML).toContain('The full body');
-      expect(el.querySelector('.content')!.textContent).not.toContain('The summary text');
+      expect(element.querySelector('.content')!.innerHTML).toContain('The full body');
+      expect(element.querySelector('.content')!.textContent).not.toContain('The summary text');
     });
 
     it('keeps the summary and shows an inline error when the body fails to load', () => {
       fakeBody.setError(1);
-      const el = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
+      const element = mount(entry({ summary: 'The summary text' })).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.content')!.textContent).toContain('The summary text');
-      expect(el.querySelector('.body-error')).not.toBeNull();
+      expect(element.querySelector('.content')!.textContent).toContain('The summary text');
+      expect(element.querySelector('.body-error')).not.toBeNull();
     });
 
     it('retries the failed body fetch from the inline error action', () => {
       fakeBody.setError(1);
-      const f = mount(entry());
-      const el = f.nativeElement as HTMLElement;
+      const fixture = mount(entry());
+      const element = fixture.nativeElement as HTMLElement;
 
-      (el.querySelector('.body-error .action') as HTMLButtonElement).click();
+      (element.querySelector('.body-error .action') as HTMLButtonElement).click();
 
       expect(fakeBody.retriedIds).toEqual([1]);
     });
@@ -1325,9 +1332,9 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(of<ReaderContent>(okContent()));
       fakeBody.setError(1);
 
-      const el = mount(entry()).nativeElement as HTMLElement;
+      const element = mount(entry()).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.body-error')).toBeNull();
+      expect(element.querySelector('.body-error')).toBeNull();
     });
   });
 });

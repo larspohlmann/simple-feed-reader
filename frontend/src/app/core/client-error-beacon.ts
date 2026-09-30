@@ -1,4 +1,3 @@
-// src/app/core/client-error-beacon.ts
 //
 // No Angular imports: boot-error-surface.ts and the pre-injector boot path
 // call into this module before any injector exists (#984). `buildVersion` is

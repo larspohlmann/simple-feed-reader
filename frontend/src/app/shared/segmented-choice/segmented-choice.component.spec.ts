@@ -21,17 +21,20 @@ class HostComponent {
 describe('SegmentedChoiceComponent', () => {
   function create() {
     TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
-    const f = TestBed.createComponent(HostComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function buttons(f: ReturnType<typeof create>): HTMLButtonElement[] {
-    return Array.from(f.nativeElement.querySelectorAll('button'));
+  function buttons(fixture: ReturnType<typeof create>): HTMLButtonElement[] {
+    return Array.from(fixture.nativeElement.querySelectorAll('button'));
   }
 
   it('renders one translated button per option', () => {
-    expect(buttons(create()).map((b) => b.textContent?.trim())).toEqual(['English', 'German']);
+    expect(buttons(create()).map((button) => button.textContent?.trim())).toEqual([
+      'English',
+      'German',
+    ]);
   });
 
   it('names the group for assistive tech', () => {
@@ -40,17 +43,23 @@ describe('SegmentedChoiceComponent', () => {
   });
 
   it('marks only the selected option', () => {
-    const f = create();
-    expect(buttons(f).map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    const fixture = create();
+    expect(buttons(fixture).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'true',
+      'false',
+    ]);
 
-    f.componentInstance.selected.set('de');
-    f.detectChanges();
-    expect(buttons(f).map((b) => b.getAttribute('aria-pressed'))).toEqual(['false', 'true']);
+    fixture.componentInstance.selected.set('de');
+    fixture.detectChanges();
+    expect(buttons(fixture).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
   });
 
   it('emits the option that was clicked', () => {
-    const f = create();
-    buttons(f)[1].click();
-    expect(f.componentInstance.picked).toBe('de');
+    const fixture = create();
+    buttons(fixture)[1].click();
+    expect(fixture.componentInstance.picked).toBe('de');
   });
 });

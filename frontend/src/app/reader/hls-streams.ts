@@ -21,21 +21,21 @@ const armed = new WeakSet<HTMLVideoElement>();
 export function attachHlsStreams(host: HTMLElement): void {
   destroyDetached();
   for (const video of Array.from(host.querySelectorAll('video'))) {
-    const src = video.getAttribute('src') ?? '';
-    if (!PLAYLIST.test(src) || armed.has(video)) continue;
+    const source = video.getAttribute('src') ?? '';
+    if (!PLAYLIST.test(source) || armed.has(video)) continue;
     armed.add(video);
-    video.addEventListener('play', () => void play(video, src).catch(() => undefined), {
+    video.addEventListener('play', () => void play(video, source).catch(() => undefined), {
       once: true,
     });
   }
 }
 
-async function play(video: HTMLVideoElement, src: string): Promise<void> {
+async function play(video: HTMLVideoElement, source: string): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
   if (!HlsPlayer.isSupported() || !video.isConnected) return;
   const hls = new HlsPlayer();
   instances.set(video, hls);
-  hls.loadSource(src);
+  hls.loadSource(source);
   hls.attachMedia(video);
   void video.play();
 }

@@ -9,9 +9,9 @@ import {
 } from './reading-sections';
 
 function paragraph(html: string): HTMLElement {
-  const p = document.createElement('p');
-  p.innerHTML = html;
-  return p;
+  const element = document.createElement('p');
+  element.innerHTML = html;
+  return element;
 }
 
 const FOUR_SENTENCES =
@@ -20,8 +20,8 @@ const FOUR_SENTENCES =
 
 /** A height oracle for jsdom, which has no layout: measures by tag, and by a
  *  per-element override set through a data attribute. */
-function measureBy(defaults: Record<string, number>): (el: HTMLElement) => number {
-  return (el) => Number(el.dataset['h'] ?? defaults[el.tagName] ?? 0);
+function measureBy(defaults: Record<string, number>): (element: HTMLElement) => number {
+  return (element) => Number(element.dataset['h'] ?? defaults[element.tagName] ?? 0);
 }
 
 describe('sentenceSegments', () => {
@@ -187,7 +187,9 @@ describe('focusUnits', () => {
     const units = focusUnits([block], SCROLLER, measureBy({ P: 400, SPAN: 100 }), 'en');
     expect(units).toHaveLength(3); // ceil(400/150) sections over four spans
     expect(units[0]).toHaveLength(2);
-    expect(units.flat().every((el) => el.classList.contains('reading-sentence'))).toBe(true);
+    expect(units.flat().every((element) => element.classList.contains('reading-sentence'))).toBe(
+      true,
+    );
     expect(units.flat()).toHaveLength(4);
   });
 
@@ -196,7 +198,7 @@ describe('focusUnits', () => {
     list.innerHTML = '<li>One</li><li>Two</li><li>Three</li><li>Four</li>';
     const units = focusUnits([list], SCROLLER, measureBy({ UL: 400, LI: 100 }), 'en');
     expect(units).toHaveLength(3);
-    expect(units.flat().every((el) => el.tagName === 'LI')).toBe(true);
+    expect(units.flat().every((element) => element.tagName === 'LI')).toBe(true);
   });
 
   it('keeps a tall figure as one block — a half-dimmed image looks broken', () => {
@@ -230,7 +232,9 @@ describe('focusUnits', () => {
     // Atoms: the short paragraph plus the long paragraph's four sentence spans.
     const atoms = units.flat();
     expect(atoms[0]).toBe(short);
-    expect(atoms.slice(1).every((el) => el.classList.contains('reading-sentence'))).toBe(true);
+    expect(atoms.slice(1).every((element) => element.classList.contains('reading-sentence'))).toBe(
+      true,
+    );
     expect(atoms).toHaveLength(5);
   });
 
@@ -238,7 +242,7 @@ describe('focusUnits', () => {
     const quote = document.createElement('blockquote');
     quote.innerHTML = '<div><p>First quoted line.</p><p>Second quoted line.</p></div>';
     const units = focusUnits([quote], SCROLLER, measureBy({ BLOCKQUOTE: 400, P: 200 }), 'en');
-    expect(units.flat().map((el) => el.tagName)).toEqual(['P', 'P']);
+    expect(units.flat().map((element) => element.tagName)).toEqual(['P', 'P']);
   });
 
   it('never wraps block children of a tall list item into a sentence span', () => {

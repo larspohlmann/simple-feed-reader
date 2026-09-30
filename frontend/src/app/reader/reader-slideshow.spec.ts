@@ -3,17 +3,17 @@ import { hydrateSlideshows, type SlideshowLabels } from './reader-slideshow';
 const labels: SlideshowLabels = {
   previous: 'Previous',
   next: 'Next',
-  position: (c, t) => `${c} / ${t}`,
+  position: (current, total) => `${current} / ${total}`,
 };
 
 function host(): HTMLElement {
-  const el = document.createElement('div');
-  el.innerHTML =
+  const element = document.createElement('div');
+  element.innerHTML =
     '<figure class="reader-slideshow"><ol>' +
     '<li><img src="https://img/1.jpg" alt="one"></li>' +
     '<li><img src="https://img/2.jpg" alt="two"></li>' +
     '<li><img src="https://img/3.jpg" alt="three"></li></ol></figure>';
-  return el;
+  return element;
 }
 
 function touch(x: number, y: number, type: string): TouchEvent {
@@ -24,101 +24,101 @@ function touch(x: number, y: number, type: string): TouchEvent {
 
 describe('hydrateSlideshows', () => {
   it('shows the first slide and marks the figure ready', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    const slides = el.querySelectorAll('.reader-slideshow li');
+    const element = host();
+    hydrateSlideshows(element, labels);
+    const slides = element.querySelectorAll('.reader-slideshow li');
     expect(
-      el.querySelector('.reader-slideshow')!.classList.contains('reader-slideshow--ready'),
+      element.querySelector('.reader-slideshow')!.classList.contains('reader-slideshow--ready'),
     ).toBe(true);
-    expect((el.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
+    expect((element.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
       'translateX(0%)',
     );
     expect(slides[0].getAttribute('aria-hidden')).toBe('false');
     expect(slides[1].getAttribute('aria-hidden')).toBe('true');
-    expect(el.textContent).toContain('1 / 3');
-    expect(el.querySelector('.reader-slideshow__prev')!.textContent).toBe('‹');
-    expect(el.querySelector('.reader-slideshow__next')!.textContent).toBe('›');
-    expect(el.querySelector('.reader-slideshow__prev')!.getAttribute('aria-label')).toBe(
+    expect(element.textContent).toContain('1 / 3');
+    expect(element.querySelector('.reader-slideshow__prev')!.textContent).toBe('‹');
+    expect(element.querySelector('.reader-slideshow__next')!.textContent).toBe('›');
+    expect(element.querySelector('.reader-slideshow__prev')!.getAttribute('aria-label')).toBe(
       'Previous',
     );
   });
 
   it('advances on the next control by translating the track', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    el.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
-    const slides = el.querySelectorAll('.reader-slideshow li');
-    expect((el.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
+    const element = host();
+    hydrateSlideshows(element, labels);
+    element.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
+    const slides = element.querySelectorAll('.reader-slideshow li');
+    expect((element.querySelector('.reader-slideshow ol') as HTMLElement).style.transform).toBe(
       'translateX(-100%)',
     );
     expect(slides[0].getAttribute('aria-hidden')).toBe('true');
     expect(slides[1].getAttribute('aria-hidden')).toBe('false');
-    expect(el.textContent).toContain('2 / 3');
+    expect(element.textContent).toContain('2 / 3');
   });
 
   it('advances on ArrowRight', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    el.querySelector<HTMLElement>('.reader-slideshow')!.dispatchEvent(
-      new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }),
-    );
-    expect(el.textContent).toContain('2 / 3');
+    const element = host();
+    hydrateSlideshows(element, labels);
+    element
+      .querySelector<HTMLElement>('.reader-slideshow')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(element.textContent).toContain('2 / 3');
   });
 
   it('keeps every slide but the current one inert so hidden links leave the tab order', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    const slides = el.querySelectorAll('.reader-slideshow li');
+    const element = host();
+    hydrateSlideshows(element, labels);
+    const slides = element.querySelectorAll('.reader-slideshow li');
     expect(slides[0].hasAttribute('inert')).toBe(false);
     expect(slides[1].hasAttribute('inert')).toBe(true);
 
-    el.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
+    element.querySelector<HTMLButtonElement>('.reader-slideshow__next')!.click();
     expect(slides[0].hasAttribute('inert')).toBe(true);
     expect(slides[1].hasAttribute('inert')).toBe(false);
   });
 
   it('preserves a caption link inside a slide', () => {
-    const el = document.createElement('div');
-    el.innerHTML =
+    const element = document.createElement('div');
+    element.innerHTML =
       '<figure class="reader-slideshow"><ol>' +
       '<li><img src="https://img/1.jpg" alt="one"><a href="https://example.com/a">One</a></li>' +
       '<li><img src="https://img/2.jpg" alt="two"><a href="https://example.com/b">Two</a></li></ol></figure>';
-    hydrateSlideshows(el, labels);
-    const link = el.querySelector<HTMLAnchorElement>('.reader-slideshow li a');
+    hydrateSlideshows(element, labels);
+    const link = element.querySelector<HTMLAnchorElement>('.reader-slideshow li a');
     expect(link!.getAttribute('href')).toBe('https://example.com/a');
   });
 
   it('is idempotent', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    hydrateSlideshows(el, labels);
-    expect(el.querySelectorAll('.reader-slideshow__next').length).toBe(1);
+    const element = host();
+    hydrateSlideshows(element, labels);
+    hydrateSlideshows(element, labels);
+    expect(element.querySelectorAll('.reader-slideshow__next').length).toBe(1);
   });
 
   it('advances on a leftward swipe', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const element = host();
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
     figure.dispatchEvent(touch(200, 0, 'touchstart'));
     figure.dispatchEvent(touch(120, 0, 'touchend'));
-    expect(el.textContent).toContain('2 / 3');
+    expect(element.textContent).toContain('2 / 3');
   });
 
   it('ignores a mostly-vertical swipe', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const element = host();
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
     figure.dispatchEvent(touch(200, 0, 'touchstart'));
     figure.dispatchEvent(touch(190, 200, 'touchend'));
-    expect(el.textContent).toContain('1 / 3');
+    expect(element.textContent).toContain('1 / 3');
   });
 
   it('claims a horizontal swipe so the page gesture never sees it', () => {
     const parent = document.createElement('div');
-    const el = host();
-    parent.append(el);
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const element = host();
+    parent.append(element);
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
 
     const pageMove = jest.fn();
     const pageEnd = jest.fn();
@@ -137,10 +137,10 @@ describe('hydrateSlideshows', () => {
 
   it('lets a vertical drag bubble to the page so the article can scroll', () => {
     const parent = document.createElement('div');
-    const el = host();
-    parent.append(el);
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const element = host();
+    parent.append(element);
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
 
     const pageMove = jest.fn();
     parent.addEventListener('touchmove', pageMove);
@@ -152,22 +152,22 @@ describe('hydrateSlideshows', () => {
   });
 
   it('ignores a non-arrow key', () => {
-    const el = host();
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    const element = host();
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
     const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
     figure.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
-    expect(el.textContent).toContain('1 / 3');
+    expect(element.textContent).toContain('1 / 3');
   });
 
   it('leaves a single-slide figure un-hydrated', () => {
-    const el = document.createElement('div');
-    el.innerHTML =
+    const element = document.createElement('div');
+    element.innerHTML =
       '<figure class="reader-slideshow"><ol>' +
       '<li><img src="https://img/1.jpg" alt="one"></li></ol></figure>';
-    hydrateSlideshows(el, labels);
-    const figure = el.querySelector<HTMLElement>('.reader-slideshow')!;
+    hydrateSlideshows(element, labels);
+    const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
     expect(figure.classList.contains('reader-slideshow--ready')).toBe(false);
     expect(figure.querySelector('.reader-slideshow__controls')).toBeNull();
   });

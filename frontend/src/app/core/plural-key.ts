@@ -1,5 +1,3 @@
-// src/app/core/plural-key.ts
-
 /**
  * Picks between `${base}One` and `${base}Other`, the key-pair convention this
  * app uses in place of a Transloco pluralization plugin (see

@@ -31,10 +31,10 @@ describe('TagGlyphComponent', () => {
     fixture.componentInstance.color.set('#c08a3e');
     fixture.detectChanges();
 
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('public');
-    expect(el.querySelector('.dot')).toBeNull();
-    expect((el.querySelector('app-icon') as HTMLElement).style.color).toBeTruthy();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('.material-symbols-outlined')?.textContent?.trim()).toBe('public');
+    expect(element.querySelector('.dot')).toBeNull();
+    expect((element.querySelector('app-icon') as HTMLElement).style.color).toBeTruthy();
   });
 
   it('falls back to the colour dot when no name is given', async () => {
@@ -42,9 +42,9 @@ describe('TagGlyphComponent', () => {
     fixture.componentInstance.color.set('#c08a3e');
     fixture.detectChanges();
 
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('.material-symbols-outlined')).toBeNull();
-    expect((el.querySelector('.dot') as HTMLElement).style.background).toBeTruthy();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('.material-symbols-outlined')).toBeNull();
+    expect((element.querySelector('.dot') as HTMLElement).style.background).toBeTruthy();
   });
 
   it('falls back to the muted colour when no colour is given', async () => {

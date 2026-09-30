@@ -49,9 +49,9 @@ describe('ProxySettingsService', () => {
   it('load() GETs the proxy endpoint and sets state', () => {
     service.load();
 
-    const req = http.expectOne(ENDPOINT);
-    expect(req.request.method).toBe('GET');
-    req.flush(state());
+    const testRequest = http.expectOne(ENDPOINT);
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush(state());
 
     expect(service.state()).toEqual(state());
   });
@@ -100,9 +100,9 @@ describe('ProxySettingsService', () => {
   it('testConnection() sets probe to ok on { ok: true, egressIp }', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    expect(req.request.method).toBe('POST');
-    req.flush({ ok: true, egressIp: '1.2.3.4', reason: null });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush({ ok: true, egressIp: '1.2.3.4', reason: null });
 
     expect(service.probe()).toEqual({ status: 'ok', egressIp: '1.2.3.4' });
   });
@@ -110,8 +110,8 @@ describe('ProxySettingsService', () => {
   it('testConnection() sets probe to error on { ok: false, reason }', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    req.flush({ ok: false, egressIp: null, reason: 'connection refused' });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    testRequest.flush({ ok: false, egressIp: null, reason: 'connection refused' });
 
     expect(service.probe()).toEqual({ status: 'error', message: 'connection refused' });
   });
@@ -119,8 +119,8 @@ describe('ProxySettingsService', () => {
   it('testConnection() sets probe to error via parseProblem on an HTTP error', () => {
     service.testConnection();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    req.flush(
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    testRequest.flush(
       { type: 'about:blank', title: 'Request failed', status: 500, detail: 'boom' },
       { status: 500, statusText: 'Server Error' },
     );

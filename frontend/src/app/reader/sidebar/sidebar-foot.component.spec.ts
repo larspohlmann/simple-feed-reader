@@ -56,10 +56,10 @@ function mount(
       },
     ],
   });
-  const f = TestBed.createComponent(SidebarFootComponent);
-  f.componentRef.setInput('organising', over.organising ?? false);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(SidebarFootComponent);
+  fixture.componentRef.setInput('organising', over.organising ?? false);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('SidebarFootComponent', () => {
@@ -71,13 +71,13 @@ describe('SidebarFootComponent', () => {
   });
 
   it('shows an update badge linking to the release notes when an update is available', () => {
-    const f = mount();
+    const fixture = mount();
     const versions = TestBed.inject(VersionService);
     versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
     versions.updateAvailable.set(true);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const badge = (f.nativeElement as HTMLElement).querySelector('.update-badge');
+    const badge = (fixture.nativeElement as HTMLElement).querySelector('.update-badge');
     expect(badge).not.toBeNull();
     expect(badge?.textContent).toContain('v9.9.9');
     expect(badge?.getAttribute('href')).toBe('https://github.test/releases/tag/v9.9.9');
@@ -86,13 +86,13 @@ describe('SidebarFootComponent', () => {
   });
 
   it('keeps the update badge out of the version and feedback row', () => {
-    const f = mount();
+    const fixture = mount();
     const versions = TestBed.inject(VersionService);
     versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
     versions.updateAvailable.set(true);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const host = f.nativeElement as HTMLElement;
+    const host = fixture.nativeElement as HTMLElement;
     const badge = host.querySelector('.update-badge');
     const meta = host.querySelector('.meta');
     expect(badge?.parentElement).toBe(host);
@@ -104,25 +104,25 @@ describe('SidebarFootComponent', () => {
   });
 
   it('shows no update badge when the running build is current', () => {
-    const f = mount();
+    const fixture = mount();
     const versions = TestBed.inject(VersionService);
     versions.updateAvailable.set(false);
     versions.latest.set(null);
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect((f.nativeElement as HTMLElement).querySelector('.update-badge')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.update-badge')).toBeNull();
   });
 
   it('shows the trial countdown when a trial is active', () => {
-    const el = mount({ user: account(inDays(5)) }).nativeElement.querySelector('.trial');
-    expect(el?.textContent).toContain('5');
+    const element = mount({ user: account(inDays(5)) }).nativeElement.querySelector('.trial');
+    expect(element?.textContent).toContain('5');
     // Five days is outside the "ending soon" window, so it is not emphasised.
-    expect(el?.classList.contains('soon')).toBe(false);
+    expect(element?.classList.contains('soon')).toBe(false);
   });
 
   it('emphasises the countdown in the last three days of the trial', () => {
-    const el = mount({ user: account(inDays(2)) }).nativeElement.querySelector('.trial');
-    expect(el?.classList.contains('soon')).toBe(true);
+    const element = mount({ user: account(inDays(2)) }).nativeElement.querySelector('.trial');
+    expect(element?.classList.contains('soon')).toBe(true);
   });
 
   it('hides the trial countdown when there is no trial', () => {
@@ -138,39 +138,39 @@ describe('SidebarFootComponent', () => {
   });
 
   it('shows the Organise switch on coarse pointers and flips the model on click', () => {
-    const f = mount({ coarse: true });
-    const organiseSwitch = (f.nativeElement as HTMLElement).querySelector<HTMLElement>(
+    const fixture = mount({ coarse: true });
+    const organiseSwitch = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
       '.organise',
     )!;
     expect(organiseSwitch.getAttribute('role')).toBe('switch');
     expect(organiseSwitch.getAttribute('aria-checked')).toBe('false');
 
     organiseSwitch.click();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.componentInstance.organising()).toBe(true);
+    expect(fixture.componentInstance.organising()).toBe(true);
     expect(organiseSwitch.getAttribute('aria-checked')).toBe('true');
   });
 
   it('hides the brightness control, view controls and trial line while organising', () => {
-    const el = mount({ coarse: true, organising: true, user: account(inDays(5)) })
+    const element = mount({ coarse: true, organising: true, user: account(inDays(5)) })
       .nativeElement as HTMLElement;
-    expect(el.querySelector('app-brightness-control')).toBeNull();
-    expect(el.querySelector('app-view-controls')).toBeNull();
-    expect(el.querySelector('.trial')).toBeNull();
+    expect(element.querySelector('app-brightness-control')).toBeNull();
+    expect(element.querySelector('app-view-controls')).toBeNull();
+    expect(element.querySelector('.trial')).toBeNull();
     // The version link stays visible even while organising.
-    expect(el.querySelector('.version')).not.toBeNull();
+    expect(element.querySelector('.version')).not.toBeNull();
   });
 
   it('keeps the foot order: organise, brightness, view controls, trial, meta', () => {
-    const el = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
-    const order = Array.from(el.children).map((child) => child.classList[0]);
+    const element = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
+    const order = Array.from(element.children).map((child) => child.classList[0]);
     expect(order).toEqual(['organise', 'brightness', 'controls', 'trial', 'meta']);
   });
 
   it('shows the brightness control on fine pointers too', () => {
-    const el = mount({ coarse: false }).nativeElement as HTMLElement;
-    expect(el.querySelector('app-brightness-control')).not.toBeNull();
+    const element = mount({ coarse: false }).nativeElement as HTMLElement;
+    expect(element.querySelector('app-brightness-control')).not.toBeNull();
   });
 
   it('links Feedback to the public issue tracker in a new tab', () => {

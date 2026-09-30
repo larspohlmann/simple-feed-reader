@@ -54,7 +54,7 @@ export type SettingsSectionPath = (typeof SETTINGS_SECTIONS)[number]['path'];
 /** The label of one section, by route path. The route table titles each page
  *  through this, so a section's tab title and its nav entry cannot drift. */
 export function sectionLabelKey(path: SettingsSectionPath): string {
-  const section = SETTINGS_SECTIONS.find((s) => s.path === path);
+  const section = SETTINGS_SECTIONS.find((candidate) => candidate.path === path);
   if (section === undefined) throw new Error(`No settings section for path "${path}"`);
   return section.labelKey;
 }

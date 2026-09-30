@@ -1,6 +1,7 @@
 import { estimateReadingMinutes } from './reading-time';
 
-const words = (n: number): string => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
+const words = (count: number): string =>
+  Array.from({ length: count }, (_, index) => `word${index}`).join(' ');
 
 describe('estimateReadingMinutes', () => {
   it('returns null for empty input', () => {

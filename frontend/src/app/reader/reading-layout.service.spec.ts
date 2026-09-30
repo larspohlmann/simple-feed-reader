@@ -9,8 +9,8 @@ describe('ReadingLayoutService', () => {
 
   it('defaults to magazine when nothing is saved', () => {
     localStorage.removeItem('sfr.layout');
-    const svc = new ReadingLayoutService();
-    expect(svc.mode()).toBe('magazine');
+    const service = new ReadingLayoutService();
+    expect(service.mode()).toBe('magazine');
   });
 
   it('honours a saved list or pane choice', () => {
@@ -21,10 +21,10 @@ describe('ReadingLayoutService', () => {
   });
 
   it('persists and applies each mode', () => {
-    const svc = new ReadingLayoutService();
-    svc.set('magazine');
+    const service = new ReadingLayoutService();
+    service.set('magazine');
     expect(localStorage.getItem('sfr.layout')).toBe('magazine');
-    expect(svc.mode()).toBe('magazine');
+    expect(service.mode()).toBe('magazine');
   });
 
   it('ignores a garbage saved value', () => {

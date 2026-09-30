@@ -76,8 +76,8 @@ describe('RecommendationRunHistoryComponent', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  function months(el: HTMLElement): NodeListOf<Element> {
-    return el.querySelectorAll('.run-history__month');
+  function months(element: HTMLElement): NodeListOf<Element> {
+    return element.querySelectorAll('.run-history__month');
   }
 
   /** Scoped to `&__list`: the header strip shares the rows' `&__row` class
@@ -134,21 +134,23 @@ describe('RecommendationRunHistoryComponent', () => {
   });
 
   it('renders nothing until the account has run at least once', () => {
-    const el = mount(EMPTY_OVERVIEW);
+    const element = mount(EMPTY_OVERVIEW);
 
-    expect(el.querySelector('.run-history')).toBeNull();
+    expect(element.querySelector('.run-history')).toBeNull();
   });
 
   it('shows the all-time total, not the sum of the rows on screen', () => {
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.9182');
+    expect(element.querySelector('.run-history__total-value')?.textContent?.trim()).toBe(
+      '$ 0.9182',
+    );
   });
 
   it('shows an em dash for a total no run ever priced', () => {
-    const el = mount({ ...OVERVIEW, totalCostNanoCredits: null });
+    const element = mount({ ...OVERVIEW, totalCostNanoCredits: null });
 
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('—');
+    expect(element.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('—');
   });
 
   it('sends the browser timezone on the overview fetch', () => {
@@ -158,9 +160,9 @@ describe('RecommendationRunHistoryComponent', () => {
   });
 
   it('renders the newest month expanded with its rows, and older months collapsed with none', () => {
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    const sections = months(el);
+    const sections = months(element);
     expect(sections).toHaveLength(2);
     // Every month keeps its collapse control -- only the initial open state
     // and row presence differ between the newest and older months.
@@ -171,8 +173,8 @@ describe('RecommendationRunHistoryComponent', () => {
   });
 
   it('lets the reader collapse the newest month, and a later re-render does not force it back open', () => {
-    const el = mount(OVERVIEW);
-    const newest = detailsOf(months(el)[0]);
+    const element = mount(OVERVIEW);
+    const newest = detailsOf(months(element)[0]);
     expect(newest.open).toBe(true);
 
     newest.open = false;
@@ -186,12 +188,12 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
     );
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    openMonth(months(el)[1]);
+    openMonth(months(element)[1]);
 
     expect(runHistoryMonth).toHaveBeenCalledWith('2026-07', BROWSER_TZ);
-    expect(rows(months(el)[1])).toHaveLength(1);
+    expect(rows(months(element)[1])).toHaveLength(1);
   });
 
   it('fetches an already-opened month only once', () => {
@@ -214,9 +216,9 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-08', runs: [UNPRICED_RUN], nextCursor: null }),
     );
-    const el = mount(overviewWithMore);
+    const element = mount(overviewWithMore);
 
-    const newest = months(el)[0];
+    const newest = months(element)[0];
     (newest.querySelector('.run-history-month__more') as HTMLButtonElement).click();
     fixture.detectChanges();
 
@@ -238,10 +240,10 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
     );
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    openMonth(months(el)[1]);
-    expect(rows(months(el)[1])).toHaveLength(1);
+    openMonth(months(element)[1]);
+    expect(rows(months(element)[1])).toHaveLength(1);
 
     runHistory.mockReturnValue(
       of({
@@ -255,7 +257,7 @@ describe('RecommendationRunHistoryComponent', () => {
     completedStamp.set(1);
     fixture.detectChanges();
 
-    const sections = months(el);
+    const sections = months(element);
     expect(rows(sections[0])).toHaveLength(2);
     // The older month keeps the rows it already fetched and stays expanded --
     // a completed run can only land in the current month, so it has nothing
@@ -275,11 +277,11 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistoryMonth
       .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(42)], nextCursor: 41 }))
       .mockReturnValueOnce(of({ month: '2026-08', runs: [runWithId(41)], nextCursor: 40 }));
-    const el = mount(overviewWithMore);
+    const element = mount(overviewWithMore);
 
-    showMore(months(el)[0]);
-    showMore(months(el)[0]);
-    expect(rows(months(el)[0])).toHaveLength(3);
+    showMore(months(element)[0]);
+    showMore(months(element)[0]);
+    expect(rows(months(element)[0])).toHaveLength(3);
 
     runHistory.mockReturnValue(
       of({
@@ -292,7 +294,7 @@ describe('RecommendationRunHistoryComponent', () => {
 
     // The new run on top, then the three rows the reader had paged into --
     // ordered and without the duplicate 43 the fresh page also carries.
-    const newest = months(el)[0];
+    const newest = months(element)[0];
     expect(rows(newest)).toHaveLength(4);
     // And the cursor still points past the oldest row on screen, not back at
     // the end of the first page.
@@ -309,10 +311,10 @@ describe('RecommendationRunHistoryComponent', () => {
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-08', runs: [runWithId(42)], nextCursor: null }),
     );
-    const el = mount(overviewWithMore);
+    const element = mount(overviewWithMore);
 
-    showMore(months(el)[0]);
-    expect(months(el)[0].querySelector('.run-history-month__more')).toBeNull();
+    showMore(months(element)[0]);
+    expect(months(element)[0].querySelector('.run-history-month__more')).toBeNull();
 
     runHistory.mockReturnValue(
       of({
@@ -324,8 +326,8 @@ describe('RecommendationRunHistoryComponent', () => {
     fixture.detectChanges();
 
     // The fresh page's own cursor would re-offer rows already on screen.
-    expect(months(el)[0].querySelector('.run-history-month__more')).toBeNull();
-    expect(rows(months(el)[0])).toHaveLength(3);
+    expect(months(element)[0].querySelector('.run-history-month__more')).toBeNull();
+    expect(rows(months(element)[0])).toHaveLength(3);
   });
 
   /** An older month's first page can still be in flight when an overview
@@ -334,18 +336,18 @@ describe('RecommendationRunHistoryComponent', () => {
   it('an overview refetch leaves an older month that is still loading alone', () => {
     const inFlight = new Subject<RunHistoryMonthPage>();
     runHistoryMonth.mockReturnValue(inFlight);
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    openMonth(months(el)[1]);
-    expect(months(el)[1].querySelector('.run-history-month__loading')).not.toBeNull();
+    openMonth(months(element)[1]);
+    expect(months(element)[1].querySelector('.run-history-month__loading')).not.toBeNull();
 
     completedStamp.set(1);
     fixture.detectChanges();
 
-    expect(months(el)[1].querySelector('.run-history-month__loading')).not.toBeNull();
+    expect(months(element)[1].querySelector('.run-history-month__loading')).not.toBeNull();
 
-    closeMonth(months(el)[1]);
-    openMonth(months(el)[1]);
+    closeMonth(months(element)[1]);
+    openMonth(months(element)[1]);
 
     expect(runHistoryMonth).toHaveBeenCalledTimes(1);
   });
@@ -356,13 +358,13 @@ describe('RecommendationRunHistoryComponent', () => {
   it('a failed first page renders a failure line rather than an empty open section', () => {
     jest.useFakeTimers();
     runHistoryMonth.mockReturnValue(throwError(() => new Error('the endpoint is down')));
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    openMonth(months(el)[1]);
+    openMonth(months(element)[1]);
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
     fixture.detectChanges();
 
-    const older = months(el)[1];
+    const older = months(element)[1];
     expect(older.querySelector('.run-history-month__failed')).not.toBeNull();
     expect(older.querySelector('.run-history-month__loading')).toBeNull();
     expect(detailsOf(older).open).toBe(true);
@@ -372,22 +374,22 @@ describe('RecommendationRunHistoryComponent', () => {
   it('re-opening a failed month retries and clears the failure line', () => {
     jest.useFakeTimers();
     runHistoryMonth.mockReturnValueOnce(throwError(() => new Error('the endpoint is down')));
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    openMonth(months(el)[1]);
+    openMonth(months(element)[1]);
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
     fixture.detectChanges();
-    expect(months(el)[1].querySelector('.run-history-month__failed')).not.toBeNull();
+    expect(months(element)[1].querySelector('.run-history-month__failed')).not.toBeNull();
 
     runHistoryMonth.mockReturnValue(
       of({ month: '2026-07', runs: [UNPRICED_RUN], nextCursor: null }),
     );
-    closeMonth(months(el)[1]);
-    openMonth(months(el)[1]);
+    closeMonth(months(element)[1]);
+    openMonth(months(element)[1]);
 
     expect(runHistoryMonth).toHaveBeenCalledTimes(2);
-    expect(months(el)[1].querySelector('.run-history-month__failed')).toBeNull();
-    expect(rows(months(el)[1])).toHaveLength(1);
+    expect(months(element)[1].querySelector('.run-history-month__failed')).toBeNull();
+    expect(rows(months(element)[1])).toHaveLength(1);
     jest.useRealTimers();
   });
 
@@ -398,14 +400,14 @@ describe('RecommendationRunHistoryComponent', () => {
       latest: { month: '2026-08', runs: [PRICED_RUN], nextCursor: 41 },
     };
     runHistoryMonth.mockReturnValue(throwError(() => new Error('the endpoint is down')));
-    const el = mount(overviewWithMore);
+    const element = mount(overviewWithMore);
 
     fixture.componentInstance.onShowMore('2026-08');
     fixture.detectChanges();
 
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
     fixture.detectChanges();
-    const newest = months(el)[0];
+    const newest = months(element)[0];
     expect(rows(newest)).toHaveLength(1);
     // `loading` must come back down on the error path too, or "show more"
     // stays disabled forever after one failed page fetch.
@@ -419,10 +421,10 @@ describe('RecommendationRunHistoryComponent', () => {
    *  broken would throw once per run for as long as the settings page is open.
    *  The sections already on screen stay. */
   it('renders the status legend once in the card, covering all five statuses', () => {
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
-    expect(el.querySelectorAll('.run-history__legend')).toHaveLength(1);
-    const items = el.querySelectorAll('.run-history__legend-item');
+    expect(element.querySelectorAll('.run-history__legend')).toHaveLength(1);
+    const items = element.querySelectorAll('.run-history__legend-item');
     expect(items).toHaveLength(5);
     // Scoped to the item's own direct-child span, not the whole <li> (which
     // also holds the icon glyph) or app-icon's internal span, which
@@ -437,12 +439,12 @@ describe('RecommendationRunHistoryComponent', () => {
    *  the exact same glyph -- both read `run-history-status-icon.ts`'s one
    *  map, so a change there cannot leave the two disagreeing (#409). */
   it('agrees with the row on the icon for a shared status', () => {
-    const el = mount(OVERVIEW); // OVERVIEW's newest month has one completed run
+    const element = mount(OVERVIEW); // OVERVIEW's newest month has one completed run
 
-    const rowIcon = el.querySelector(
+    const rowIcon = element.querySelector(
       '.run-history-month__list .run-history-month__status-icon .material-symbols-outlined',
     );
-    const legendIcon = el.querySelector(
+    const legendIcon = element.querySelector(
       '.run-history__legend-item--completed .material-symbols-outlined',
     );
 
@@ -452,15 +454,17 @@ describe('RecommendationRunHistoryComponent', () => {
 
   it('leaves the sections standing when a re-fetch fails, and does not throw', () => {
     jest.useFakeTimers();
-    const el = mount(OVERVIEW);
+    const element = mount(OVERVIEW);
 
     runHistory.mockReturnValue(throwError(() => new Error('the endpoint is down')));
     completedStamp.set(1);
     fixture.detectChanges();
 
     expect(() => jest.runOnlyPendingTimers()).not.toThrow();
-    expect(months(el)).toHaveLength(2);
-    expect(el.querySelector('.run-history__total-value')?.textContent?.trim()).toBe('$ 0.9182');
+    expect(months(element)).toHaveLength(2);
+    expect(element.querySelector('.run-history__total-value')?.textContent?.trim()).toBe(
+      '$ 0.9182',
+    );
     jest.useRealTimers();
   });
 });

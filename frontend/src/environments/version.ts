@@ -1,5 +1,3 @@
-// src/environments/version.ts
-//
 // Rewritten at build time by scripts/stamp-version.sh — on the release runner
 // for the Strato deploy, and inside the web image build for a Docker install
 // (issue #500) — so the deployed bundle carries the tag it was cut from. The

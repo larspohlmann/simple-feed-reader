@@ -84,13 +84,13 @@ export class EntriesStore {
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
       },
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         if (seq !== this.loadSeq) return;
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
         this.matchedWords.set([]);
-        this.error.set(parseProblem(e));
+        this.error.set(parseProblem(error));
         this.failedOperation.set(() => this.load(query));
         this.loading.set(false);
       },
@@ -115,7 +115,10 @@ export class EntriesStore {
     this.api.entries(query, cursor).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
-        this.rawEntries.update((cur) => [...cur, ...this.withInFlightPatches(page.entries)]);
+        this.rawEntries.update((current) => [
+          ...current,
+          ...this.withInFlightPatches(page.entries),
+        ]);
         this.nextCursor.set(page.nextCursor);
         // Unioned, not replaced: the previous page's rows are still on
         // screen and are still marked by the words they matched — see the
@@ -125,9 +128,9 @@ export class EntriesStore {
         );
         this.loadingMore.set(false);
       },
-      error: (e: HttpErrorResponse) => {
+      error: (error: HttpErrorResponse) => {
         if (seq !== this.loadSeq) return;
-        this.error.set(parseProblem(e));
+        this.error.set(parseProblem(error));
         this.failedOperation.set(() => this.loadMore());
         this.loadingMore.set(false);
       },
@@ -150,22 +153,24 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const before = this.rawEntries().find((e) => e.id === entryId);
+    const before = this.rawEntries().find((entry) => entry.id === entryId);
     if (!before) return;
     this.error.set(null);
     this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
     this.inFlightPatches.add(inFlight);
-    this.rawEntries.update((cur) =>
-      cur.map((e) => (e.id === entryId ? { ...e, ...inFlight.patch } : e)),
+    this.rawEntries.update((current) =>
+      current.map((entry) => (entry.id === entryId ? { ...entry, ...inFlight.patch } : entry)),
     );
     this.api
       .updateState(entryId, patch)
       .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
       .subscribe({
-        error: (err: HttpErrorResponse) => {
-          this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
-          this.error.set(parseProblem(err));
+        error: (error: HttpErrorResponse) => {
+          this.rawEntries.update((current) =>
+            current.map((entry) => (entry.id === entryId ? before : entry)),
+          );
+          this.error.set(parseProblem(error));
           this.failedOperation.set(() => this.setState(entryId, patch, onError));
           onError?.();
         },
@@ -177,8 +182,8 @@ export class EntriesStore {
    *  all-items list, where the rows stay visible. */
   markHiddenLocally(ids: number[]): void {
     const marked = new Set(ids);
-    this.rawEntries.update((cur) =>
-      cur.map((e) => (marked.has(e.id) ? { ...e, isHidden: true } : e)),
+    this.rawEntries.update((current) =>
+      current.map((entry) => (marked.has(entry.id) ? { ...entry, isHidden: true } : entry)),
     );
   }
 

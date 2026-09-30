@@ -166,9 +166,9 @@ describe('ProxySectionComponent', () => {
     testButton(fixture).click();
     fixture.detectChanges();
 
-    const req = http.expectOne(TEST_ENDPOINT);
-    expect(req.request.method).toBe('POST');
-    req.flush({ ok: true, egressIp: '203.0.113.9', reason: null });
+    const testRequest = http.expectOne(TEST_ENDPOINT);
+    expect(testRequest.request.method).toBe('POST');
+    testRequest.flush({ ok: true, egressIp: '203.0.113.9', reason: null });
   });
 
   it('renders the egress IP on a successful probe', () => {
@@ -182,8 +182,6 @@ describe('ProxySectionComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('203.0.113.9');
   });
 
-  // The outcome used to sit beside the button inside the control slot, so the
-  // button jumped left the moment a result arrived.
   it('reports the outcome in the row description, leaving the button in place', () => {
     const fixture = mount(state({ host: 'proxy.example.com' }));
 
@@ -317,7 +315,9 @@ describe('ProxySectionComponent', () => {
     remoteDnsToggle(fixture).click();
     fixture.detectChanges();
 
-    const request = http.expectOne((r) => r.url === ENDPOINT && r.method === 'PUT');
+    const request = http.expectOne(
+      (candidate) => candidate.url === ENDPOINT && candidate.method === 'PUT',
+    );
     expect(request.request.body.remoteDns).toBe(true);
     request.flush(state({ host: 'proxy.example', remoteDns: true }));
   });
@@ -352,7 +352,7 @@ describe('ProxySectionComponent', () => {
     toggle.click();
     fixture.detectChanges();
     http
-      .expectOne((r) => r.url === ENDPOINT && r.method === 'PUT')
+      .expectOne((candidate) => candidate.url === ENDPOINT && candidate.method === 'PUT')
       .flush(state({ host: 'old.example.com', directFallback: false }));
     fixture.detectChanges();
 

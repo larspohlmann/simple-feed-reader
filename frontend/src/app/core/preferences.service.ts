@@ -1,4 +1,3 @@
-// src/app/core/preferences.service.ts
 import { Injectable, inject, signal } from '@angular/core';
 import { CurrentUser } from './auth.service';
 import { PREFERENCES_WRITER } from './preferences-writer';

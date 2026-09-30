@@ -303,13 +303,15 @@ export class ReaderViewComponent {
    *  transport message), falling back to the bare reason code when it sent none;
    *  a transport failure in the browser carries the complete HTTP message. */
   readonly errorDetail = computed<string | null>(() => {
-    const s = this.state();
-    if (s.status !== 'failed') return null;
-    return s.failure ? (s.failure.detail ?? s.failure.reason) : describeLoadError(s.error);
+    const state = this.state();
+    if (state.status !== 'failed') return null;
+    return state.failure
+      ? (state.failure.detail ?? state.failure.reason)
+      : describeLoadError(state.error);
   });
   private readonly article = computed(() => {
-    const s = this.state();
-    return s.status === 'ok' ? s.article : null;
+    const state = this.state();
+    return state.status === 'ok' ? state.article : null;
   });
   /** The reader body is the free preview of a paywalled article (#785). The
    *  original view shows the feed's own teaser, which needs no such note. */
@@ -324,9 +326,9 @@ export class ReaderViewComponent {
   /** The payload the heroes come from. Null while loading, and after a
    *  transport error, where no payload arrived at all. */
   private readonly heroSource = computed<ReaderContent | null>(() => {
-    const s = this.state();
-    if (s.status === 'ok') return s.article;
-    if (s.status === 'failed') return s.failure;
+    const state = this.state();
+    if (state.status === 'ok') return state.article;
+    if (state.status === 'failed') return state.failure;
     return null;
   });
 
@@ -349,8 +351,8 @@ export class ReaderViewComponent {
    *  unconditionally (not just in original mode) so the request starts the
    *  moment the entry opens, not only once the reader toggle falls back to it. */
   private readonly feedBody = computed(() => {
-    const e = this.entry();
-    return e ? this.bodyService.body(e.id)() : null;
+    const entry = this.entry();
+    return entry ? this.bodyService.body(entry.id)() : null;
   });
 
   /** Whether the feed body failed to load and reader mode has no extracted
@@ -362,26 +364,26 @@ export class ReaderViewComponent {
   });
 
   readonly displayHtml = computed(() => {
-    const e = this.entry();
-    if (!e) return '';
-    const a = this.article();
-    if (this.mode() === 'reader' && a) return a.contentHtml;
+    const entry = this.entry();
+    if (!entry) return '';
+    const article = this.article();
+    if (this.mode() === 'reader' && article) return article.contentHtml;
     // The summary renders at once; the body (once the store fetches it)
     // replaces it in place, and a failed fetch leaves the summary standing.
     const body = this.feedBody();
-    return body?.status === 'ok' && body.html !== null ? body.html : (e.summary ?? '');
+    return body?.status === 'ok' && body.html !== null ? body.html : (entry.summary ?? '');
   });
 
   /** The inline error's retry action — refetches the open entry's body. */
   retryBody(): void {
-    const e = this.entry();
-    if (e) this.bodyService.retry(e.id);
+    const entry = this.entry();
+    if (entry) this.bodyService.retry(entry.id);
   }
 
   constructor() {
     effect(() => {
-      const e = this.entry();
-      const id = e?.id ?? null;
+      const entry = this.entry();
+      const id = entry?.id ?? null;
       // Only react to a genuine entry change — not to a same-entry reference
       // churn from an optimistic flag update (which must not cancel an in-flight
       // load, re-fetch, or reset the mode toggle).
@@ -399,22 +401,22 @@ export class ReaderViewComponent {
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
       this.scrollTop.set(0);
-      if (!e) {
+      if (!entry) {
         this.loadSub?.unsubscribe();
         this.pendingRestore = null;
         this.state.set({ status: 'idle' });
         return;
       }
       // Arm a scroll restore for this entry if we remember a position for it.
-      const savedTop = this.scroll.readEntry(e.id);
-      this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
-      if (!e.url) {
+      const savedTop = this.scroll.readEntry(entry.id);
+      this.pendingRestore = savedTop > 0 ? { id: entry.id, top: savedTop } : null;
+      if (!entry.url) {
         this.loadSub?.unsubscribe();
         this.state.set({ status: 'idle' });
         this.readerMode.setOriginalOnly();
         return;
       }
-      this.runLoad(this.reader.load(e.id));
+      this.runLoad(this.reader.load(entry.id));
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());
 
@@ -465,12 +467,12 @@ export class ReaderViewComponent {
       queueMicrotask(() => {
         const host = this.content()?.nativeElement;
         if (!host) return;
-        for (const a of Array.from(host.querySelectorAll('a'))) {
+        for (const link of Array.from(host.querySelectorAll('a'))) {
           // Leave in-page fragment anchors alone; only external links open in a new tab.
-          if ((a.getAttribute('href') ?? '').startsWith('#')) continue;
-          if (a.target !== '_blank') {
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
+          if ((link.getAttribute('href') ?? '').startsWith('#')) continue;
+          if (link.target !== '_blank') {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
           }
         }
         markLeadParagraph(host);
@@ -526,26 +528,26 @@ export class ReaderViewComponent {
 
     // Touch listeners live on the scroll host. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
-    const el = this.host.nativeElement;
-    const start = (e: TouchEvent) => this.onTouchStart(e);
-    const move = (e: TouchEvent) => this.onTouchMove(e);
+    const element = this.host.nativeElement;
+    const start = (touchEvent: TouchEvent) => this.onTouchStart(touchEvent);
+    const move = (touchEvent: TouchEvent) => this.onTouchMove(touchEvent);
     const end = () => this.onTouchEnd();
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: false });
-    el.addEventListener('touchend', end);
-    el.addEventListener('touchcancel', end);
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchmove', move, { passive: false });
+    element.addEventListener('touchend', end);
+    element.addEventListener('touchcancel', end);
     // A real wheel/touch gesture hands scrolling back to the user, cancelling any
     // in-flight restore so it never fights them.
     const abortRestore = (): void => {
       this.pendingRestore = null;
     };
-    el.addEventListener('wheel', abortRestore, { passive: true });
+    element.addEventListener('wheel', abortRestore, { passive: true });
     this.destroyRef.onDestroy(() => {
-      el.removeEventListener('touchstart', start);
-      el.removeEventListener('touchmove', move);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', end);
-      el.removeEventListener('wheel', abortRestore);
+      element.removeEventListener('touchstart', start);
+      element.removeEventListener('touchmove', move);
+      element.removeEventListener('touchend', end);
+      element.removeEventListener('touchcancel', end);
+      element.removeEventListener('wheel', abortRestore);
       this.cancelRestore();
       if (this.leaveTimer) clearTimeout(this.leaveTimer);
     });
@@ -558,12 +560,12 @@ export class ReaderViewComponent {
     this.loadSub?.unsubscribe();
     this.state.set({ status: 'loading' });
     this.loadSub = source.pipe(timeout({ first: READER_LOAD_TIMEOUT_MS })).subscribe({
-      next: (c) => {
-        if (c.status === 'ok') {
-          this.state.set({ status: 'ok', article: c });
+      next: (content) => {
+        if (content.status === 'ok') {
+          this.state.set({ status: 'ok', article: content });
           this.readerMode.enableToggle();
         } else {
-          this.state.set({ status: 'failed', failure: c, error: null });
+          this.state.set({ status: 'failed', failure: content, error: null });
           this.readerMode.setOriginalOnly();
         }
       },
@@ -577,28 +579,28 @@ export class ReaderViewComponent {
     });
   }
 
-  onTouchStart(e: TouchEvent): void {
+  onTouchStart(touchEvent: TouchEvent): void {
     this.pendingRestore = null; // the user is taking over; stop restoring
-    if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
-    this.gestureSuppressed = startsOnMediaControl(e.target);
+    if (!this.fullscreen() || this.leaving() || touchEvent.touches.length !== 1) return;
+    this.gestureSuppressed = startsOnMediaControl(touchEvent.target);
     if (this.gestureSuppressed) return;
-    const t = e.touches[0];
-    this.touchStartX = t.clientX;
-    this.touchStartY = t.clientY;
+    const touch = touchEvent.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
     this.touchDx = 0;
     this.touchDy = 0;
     this.axis = 'none';
-    const el = this.host.nativeElement;
-    this.atBottomOnStart = atBottom(el.scrollTop, el.clientHeight, el.scrollHeight);
+    const element = this.host.nativeElement;
+    this.atBottomOnStart = atBottom(element.scrollTop, element.clientHeight, element.scrollHeight);
     this.snapping.set(false);
   }
 
-  onTouchMove(e: TouchEvent): void {
+  onTouchMove(touchEvent: TouchEvent): void {
     if (this.gestureSuppressed) return;
-    if (!this.fullscreen() || this.leaving() || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - this.touchStartX;
-    const dy = t.clientY - this.touchStartY;
+    if (!this.fullscreen() || this.leaving() || touchEvent.touches.length !== 1) return;
+    const touch = touchEvent.touches[0];
+    const dx = touch.clientX - this.touchStartX;
+    const dy = touch.clientY - this.touchStartY;
     this.touchDx = dx;
     this.touchDy = dy;
     if (this.axis === 'none') {
@@ -608,11 +610,11 @@ export class ReaderViewComponent {
     if (this.axis === 'h') {
       const x = Math.max(0, dx); // rightward-only "back" swipe
       this.dragX.set(x);
-      if (x > 0) e.preventDefault();
+      if (x > 0) touchEvent.preventDefault();
     } else if (this.atBottomOnStart && dy < 0) {
       // Pulling up past the article's end.
       this.pull.set(rubberBand(-dy, MAX_PULL));
-      e.preventDefault();
+      touchEvent.preventDefault();
     }
   }
 
@@ -701,21 +703,21 @@ export class ReaderViewComponent {
    */
   private startRestore(): void {
     this.cancelRestore();
-    const p = this.pendingRestore;
-    if (!p) return;
+    const pending = this.pendingRestore;
+    if (!pending) return;
     // Rough landing right away so the restore holds even where rAF is throttled
     // (e.g. a backgrounded tab); the loop below then refines it as height settles.
-    this.host.nativeElement.scrollTop = p.top;
+    this.host.nativeElement.scrollTop = pending.top;
     if (typeof requestAnimationFrame === 'undefined') return;
     let frames = 0;
     let stable = 0;
     let lastHeight = -1;
     const step = (): void => {
-      const p = this.pendingRestore;
-      const el = this.host.nativeElement;
-      if (!p || p.id !== this.entry()?.id) return; // aborted or entry changed
-      el.scrollTop = p.top;
-      const height = el.scrollHeight;
+      const pending = this.pendingRestore;
+      const element = this.host.nativeElement;
+      if (!pending || pending.id !== this.entry()?.id) return; // aborted or entry changed
+      element.scrollTop = pending.top;
+      const height = element.scrollHeight;
       stable = height === lastHeight ? stable + 1 : 0;
       lastHeight = height;
       if (++frames < ARTICLE_SETTLE_FRAMES && stable < ARTICLE_SETTLE_STABLE) {
@@ -766,26 +768,27 @@ export class ReaderViewComponent {
   private buildToc(host: HTMLElement): void {
     const used = new Set<string>();
     const entries: TocEntry[] = [];
-    for (const h of Array.from(host.querySelectorAll<HTMLElement>('h2, h3, h4'))) {
-      const text = (h.textContent ?? '').trim();
+    for (const heading of Array.from(host.querySelectorAll<HTMLElement>('h2, h3, h4'))) {
+      const text = (heading.textContent ?? '').trim();
       if (text === '') continue;
-      let id = h.id || slugify(text);
-      for (let n = 2; used.has(id); n++) id = `${slugify(text)}-${n}`;
+      let id = heading.id || slugify(text);
+      for (let suffix = 2; used.has(id); suffix++) id = `${slugify(text)}-${suffix}`;
       used.add(id);
-      h.id = id;
-      entries.push({ id, text, level: Number(h.tagName[1]) });
+      heading.id = id;
+      entries.push({ id, text, level: Number(heading.tagName[1]) });
     }
     this.toc.set(entries);
   }
 
   /** Scroll the reading pane to a heading, clearing the sticky bar (split-pane). */
   scrollToHeading(id: string): void {
-    const el = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-    if (!el) return;
+    const element = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!element) return;
     this.pendingRestore = null; // a jump takes over from any in-flight restore
     const host = this.host.nativeElement;
     const offset = this.fullscreen() ? 8 : 52;
-    const top = el.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+    const top =
+      element.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
     host.scrollTo({
       top: Math.max(0, top - offset),
       behavior: this.reduceMotion ? 'auto' : 'smooth',
@@ -798,12 +801,12 @@ export class ReaderViewComponent {
 
   /** Drop the open article from the browser cache and refetch it. */
   refreshArticle(): void {
-    const e = this.entry();
-    if (!e) return;
-    this.runLoad(this.reader.reload(e.id));
+    const entry = this.entry();
+    if (!entry) return;
+    this.runLoad(this.reader.reload(entry.id));
   }
 
-  when(e: EntryDto): string {
-    return relativeTime(e.publishedAt ?? e.createdAt, this.language.lang());
+  when(entry: EntryDto): string {
+    return relativeTime(entry.publishedAt ?? entry.createdAt, this.language.lang());
   }
 }

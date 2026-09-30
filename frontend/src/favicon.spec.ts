@@ -7,8 +7,8 @@ import { join } from 'node:path';
  * stale .ico won. Asserts on the shipped assets -- a tab icon isn't jsdom-visible.
  */
 describe('favicon', () => {
-  const publicDir = join(__dirname, '..', 'public');
-  const ico = readFileSync(join(publicDir, 'favicon.ico'));
+  const publicDirectory = join(__dirname, '..', 'public');
+  const ico = readFileSync(join(publicDirectory, 'favicon.ico'));
 
   /** Parse the ICONDIR into one entry per frame. The header is 6 bytes, then 16 per entry. */
   const frames = (): { width: number; height: number; payload: Buffer }[] => {
@@ -29,7 +29,7 @@ describe('favicon', () => {
   };
 
   it('carries the brand mark, not the scaffold logo, in its 32px frame', () => {
-    const brandMark = readFileSync(join(publicDir, 'favicon-32.png'));
+    const brandMark = readFileSync(join(publicDirectory, 'favicon-32.png'));
     const frame = frames().find((candidate) => candidate.width === 32);
 
     expect(frame?.payload).toEqual(brandMark);

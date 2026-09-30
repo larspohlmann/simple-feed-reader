@@ -37,13 +37,13 @@ describe('PasskeyOfferDialogComponent', () => {
         { provide: ToastService, useValue: toast },
       ],
     });
-    const f = TestBed.createComponent(PasskeyOfferDialogComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(PasskeyOfferDialogComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function findButton(f: ReturnType<typeof mount>, text: string): HTMLButtonElement {
-    return Array.from(f.nativeElement.querySelectorAll('button')).find((button) =>
+  function findButton(fixture: ReturnType<typeof mount>, text: string): HTMLButtonElement {
+    return Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
       (button as HTMLButtonElement).textContent?.includes(text),
     ) as HTMLButtonElement;
   }
@@ -61,19 +61,19 @@ describe('PasskeyOfferDialogComponent', () => {
   afterEach(() => userAgent.mockRestore());
 
   it('offers both actions in state one', () => {
-    const f = mount();
+    const fixture = mount();
 
-    expect(findButton(f, 'Set up a passkey')).toBeTruthy();
-    expect(findButton(f, 'Not now')).toBeTruthy();
+    expect(findButton(fixture, 'Set up a passkey')).toBeTruthy();
+    expect(findButton(fixture, 'Not now')).toBeTruthy();
   });
 
   it('calls enrol and closes on success, marking the offer answered without a second POST', async () => {
     passkeyService.enrol.mockResolvedValue(undefined);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(passkeyService.enrol).toHaveBeenCalledWith(expect.any(String));
     // The enrol endpoint has already stamped the flag server-side (design
@@ -92,39 +92,38 @@ describe('PasskeyOfferDialogComponent', () => {
       ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(cancelled);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(close).not.toHaveBeenCalled();
-    expect(f.nativeElement.textContent).not.toContain('timed out');
+    expect(fixture.nativeElement.textContent).not.toContain('timed out');
     // A cancelled sheet does not count as an answer.
     expect(authService.answerPasskeyOffer).not.toHaveBeenCalled();
     expect(authService.markPasskeyOfferAnswered).not.toHaveBeenCalled();
     // "Not now" must still be there to take.
-    expect(findButton(f, 'Not now')).toBeTruthy();
+    expect(findButton(fixture, 'Not now')).toBeTruthy();
   });
 
   it('shows the failure and keeps Not now available on a real failure', async () => {
     const failure: Problem = { type: 'about:blank', title: 'Something went wrong', status: 500 };
     passkeyService.enrol.mockRejectedValue(failure);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(close).not.toHaveBeenCalled();
-    expect(f.nativeElement.textContent).toContain('Something went wrong');
-    expect(findButton(f, 'Not now')).toBeTruthy();
+    expect(fixture.nativeElement.textContent).toContain('Something went wrong');
+    expect(findButton(fixture, 'Not now')).toBeTruthy();
   });
 
   it('shows a translated message, not the raw DOMException text, when the authenticator is already enrolled', async () => {
-    // Mirrors PasskeysGroupComponent's equivalent spec. Near-unreachable here in
-    // practice, but review flagged this branch drifting out of step with
-    // Settings' handling — proving it stays in step is cheap.
+    // Mirrors PasskeysGroupComponent's equivalent spec, so the two handlings
+    // stay in step.
     const alreadyEnrolled: Problem = {
       type: 'InvalidStateError',
       title:
@@ -133,16 +132,16 @@ describe('PasskeyOfferDialogComponent', () => {
       ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(alreadyEnrolled);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.textContent).toContain(
+    expect(fixture.nativeElement.textContent).toContain(
       'This device is already registered as a passkey for this account.',
     );
-    expect(f.nativeElement.textContent).not.toContain('relying party');
+    expect(fixture.nativeElement.textContent).not.toContain('relying party');
     expect(close).not.toHaveBeenCalled();
   });
 
@@ -157,14 +156,14 @@ describe('PasskeyOfferDialogComponent', () => {
       ceremonyRejected: true,
     };
     passkeyService.enrol.mockRejectedValue(authenticatorError);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.textContent).toContain('The passkey could not be added.');
-    expect(f.nativeElement.textContent).not.toContain('requested criteria');
+    expect(fixture.nativeElement.textContent).toContain('The passkey could not be added.');
+    expect(fixture.nativeElement.textContent).not.toContain('requested criteria');
     expect(close).not.toHaveBeenCalled();
   });
 
@@ -178,37 +177,37 @@ describe('PasskeyOfferDialogComponent', () => {
       status: 0,
     };
     passkeyService.enrol.mockRejectedValue(networkFailure);
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Set up a passkey').click();
+    findButton(fixture, 'Set up a passkey').click();
     await flushMicrotasks();
-    f.detectChanges();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.textContent).toContain('Could not reach the server');
-    expect(f.nativeElement.textContent).not.toContain('The passkey could not be added.');
+    expect(fixture.nativeElement.textContent).toContain('Could not reach the server');
+    expect(fixture.nativeElement.textContent).not.toContain('The passkey could not be added.');
     expect(close).not.toHaveBeenCalled();
   });
 
   it('swaps to state two when Not now is chosen', () => {
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Not now').click();
-    f.detectChanges();
+    findButton(fixture, 'Not now').click();
+    fixture.detectChanges();
 
-    expect(findButton(f, 'Set up a passkey')).toBeFalsy();
-    expect(f.nativeElement.querySelector('[data-test="passkey-offer-ok"]')).toBeTruthy();
+    expect(findButton(fixture, 'Set up a passkey')).toBeFalsy();
+    expect(fixture.nativeElement.querySelector('[data-test="passkey-offer-ok"]')).toBeTruthy();
   });
 
   it('marks the offer answered the moment state two opens, not when OK is pressed', () => {
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Not now').click();
-    f.detectChanges();
+    findButton(fixture, 'Not now').click();
+    fixture.detectChanges();
 
     expect(authService.answerPasskeyOffer).toHaveBeenCalledTimes(1);
 
     // Pressing OK must not send a second, redundant answer.
-    const ok = (f.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+    const ok = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
       '[data-test="passkey-offer-ok"]',
     )!;
     ok.click();
@@ -216,13 +215,13 @@ describe('PasskeyOfferDialogComponent', () => {
   });
 
   it('names the Settings path in state two', () => {
-    const f = mount();
+    const fixture = mount();
 
-    findButton(f, 'Not now').click();
-    f.detectChanges();
+    findButton(fixture, 'Not now').click();
+    fixture.detectChanges();
 
-    expect(f.nativeElement.textContent).toContain('Settings');
-    expect(f.nativeElement.textContent).toContain('Passkeys');
+    expect(fixture.nativeElement.textContent).toContain('Settings');
+    expect(fixture.nativeElement.textContent).toContain('Passkeys');
   });
 
   it('marks the offer answered on close even when the dialog is dismissed without a choice (Escape/backdrop)', () => {

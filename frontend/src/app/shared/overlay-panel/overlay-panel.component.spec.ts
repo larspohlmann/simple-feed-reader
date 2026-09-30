@@ -25,25 +25,25 @@ describe('OverlayPanelComponent', () => {
   };
 
   it('renders the heading as the panel title', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.querySelector('h2')?.textContent?.trim()).toBe('Edit tag');
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.querySelector('h2')?.textContent?.trim()).toBe('Edit tag');
   });
 
   it('projects body content into the scrolling region', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.querySelector('.body .body-probe')).not.toBeNull();
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.querySelector('.body .body-probe')).not.toBeNull();
   });
 
   it('projects footer content into the footer, not the body', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.querySelector('.footer .footer-probe')).not.toBeNull();
-    expect(el.querySelector('.body .footer-probe')).toBeNull();
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.querySelector('.footer .footer-probe')).not.toBeNull();
+    expect(element.querySelector('.body .footer-probe')).toBeNull();
   });
 
   it('labels the panel with its heading for assistive tech', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    const panel = el.querySelector('.panel') as HTMLElement;
-    const heading = el.querySelector('h2') as HTMLElement;
+    const element: HTMLElement = (await mount()).nativeElement;
+    const panel = element.querySelector('.panel') as HTMLElement;
+    const heading = element.querySelector('h2') as HTMLElement;
     expect(panel.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.id).toBeTruthy();
   });
@@ -63,16 +63,16 @@ describe('OverlayPanelComponent', () => {
 
   it('renders the heading at the requested level, still labelling the panel', async () => {
     const fixture = await mount();
-    const el: HTMLElement = fixture.nativeElement;
-    expect(el.querySelector('h1')).toBeNull();
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('h1')).toBeNull();
 
     fixture.componentInstance.level.set(1);
     fixture.detectChanges();
 
-    const heading = el.querySelector('h1') as HTMLElement;
+    const heading = element.querySelector('h1') as HTMLElement;
     expect(heading.textContent?.trim()).toBe('Edit tag');
-    expect(el.querySelector('h2')).toBeNull();
-    expect((el.querySelector('.panel') as HTMLElement).getAttribute('aria-labelledby')).toBe(
+    expect(element.querySelector('h2')).toBeNull();
+    expect((element.querySelector('.panel') as HTMLElement).getAttribute('aria-labelledby')).toBe(
       heading.id,
     );
   });

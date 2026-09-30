@@ -11,7 +11,7 @@ const report = (over: Partial<RefreshReport>) =>
   refreshReport({ status: 'partial', progress: { done: 5, total: 10 }, remaining: 5, ...over });
 
 describe('RefreshService', () => {
-  let svc: RefreshService;
+  let service: RefreshService;
   let ctrl: HttpTestingController;
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -21,17 +21,17 @@ describe('RefreshService', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
-    svc = TestBed.inject(RefreshService);
+    service = TestBed.inject(RefreshService);
     ctrl = TestBed.inject(HttpTestingController);
   });
 
   it('loops partial then completes and calls onDone', () => {
     const done = jest.fn();
-    svc.run(done);
+    service.run(done);
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'partial', remaining: 5 }));
-    expect(svc.running()).toBe(true);
+    expect(service.running()).toBe(true);
     ctrl.expectOne('https://api.test/api/refresh').flush(
       report({
         status: 'completed',
@@ -40,8 +40,8 @@ describe('RefreshService', () => {
         progress: { done: 10, total: 10 },
       }),
     );
-    expect(svc.running()).toBe(false);
-    expect(svc.fraction()).toBe(1);
+    expect(service.running()).toBe(false);
+    expect(service.fraction()).toBe(1);
     expect(done).toHaveBeenCalledTimes(1);
   });
 
@@ -51,7 +51,7 @@ describe('RefreshService', () => {
   // left the due set (#302). The loop must stop rather than hammer.
   it('stops when remaining does not decrease', () => {
     const done = jest.fn();
-    svc.run(done);
+    service.run(done);
 
     ctrl
       .expectOne('https://api.test/api/refresh')
@@ -61,13 +61,13 @@ describe('RefreshService', () => {
       .flush(report({ status: 'partial', remaining: 1 }));
 
     ctrl.verify();
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toEqual({ kind: 'stalled' });
+    expect(service.running()).toBe(false);
+    expect(service.failure()).toEqual({ kind: 'stalled' });
     expect(done).toHaveBeenCalledTimes(1);
   });
 
   it('keeps looping while remaining actually falls', () => {
-    svc.run();
+    service.run();
 
     ctrl
       .expectOne('https://api.test/api/refresh')
@@ -79,18 +79,18 @@ describe('RefreshService', () => {
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'completed', remaining: 0 }));
 
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toBeNull();
+    expect(service.running()).toBe(false);
+    expect(service.failure()).toBeNull();
   });
 
   it('emits a slice tick for every partial report, not just at the end', () => {
     const ticks: number[] = [];
     TestBed.runInInjectionContext(() => {
-      effect(() => ticks.push(svc.slice()));
+      effect(() => ticks.push(service.slice()));
     });
     TestBed.tick(); // flush the effect's initial run — captures the starting 0
 
-    svc.run();
+    service.run();
 
     ctrl
       .expectOne('https://api.test/api/refresh')
@@ -106,14 +106,10 @@ describe('RefreshService', () => {
     expect(ticks).toEqual([0, 1, 2]);
   });
 
-  // The client used to divide a slice's server-capped batch size by a run-wide
-  // count of what was still due. On a 200-feed sweep that is (50 - 180) / 50 —
-  // negative, clamped to 0 — so the bar sat still for minutes, then snapped to
-  // full on the last slice (#721). The server now owns the figure and the client
-  // renders it.
+  // #721: the server owns the progress figure; the client only renders it.
   describe('progress comes from the server, not from arithmetic here', () => {
     it('reports the run the server describes, not the slice', () => {
-      svc.run();
+      service.run();
       ctrl.expectOne('https://api.test/api/refresh').flush(
         report({
           status: 'partial',
@@ -123,19 +119,19 @@ describe('RefreshService', () => {
         }),
       );
 
-      expect(svc.progress()).toEqual({ done: 20, total: 200 });
-      expect(svc.fraction()).toBeCloseTo(0.1);
+      expect(service.progress()).toEqual({ done: 20, total: 200 });
+      expect(service.fraction()).toBeCloseTo(0.1);
     });
 
     it('is empty before the first slice lands', () => {
-      svc.run();
+      service.run();
 
-      expect(svc.progress()).toEqual({ done: 0, total: 0 });
-      expect(svc.fraction()).toBe(0);
+      expect(service.progress()).toEqual({ done: 0, total: 0 });
+      expect(service.fraction()).toBe(0);
     });
 
     it('starts the next run from zero rather than from the last one', () => {
-      svc.run();
+      service.run();
       ctrl.expectOne('https://api.test/api/refresh').flush(
         report({
           status: 'completed',
@@ -144,12 +140,12 @@ describe('RefreshService', () => {
           progress: { done: 4, total: 4 },
         }),
       );
-      expect(svc.fraction()).toBe(1);
+      expect(service.fraction()).toBe(1);
 
-      svc.run();
+      service.run();
 
-      expect(svc.progress()).toEqual({ done: 0, total: 0 });
-      expect(svc.fraction()).toBe(0);
+      expect(service.progress()).toEqual({ done: 0, total: 0 });
+      expect(service.fraction()).toBe(0);
       ctrl.expectOne('https://api.test/api/refresh').flush(
         report({
           status: 'completed',
@@ -163,7 +159,7 @@ describe('RefreshService', () => {
     // A server that reports more done than total would be a bug, but the bar must
     // not render past its own track if one ever does.
     it('never renders past full', () => {
-      svc.run();
+      service.run();
       ctrl.expectOne('https://api.test/api/refresh').flush(
         report({
           status: 'completed',
@@ -173,53 +169,53 @@ describe('RefreshService', () => {
         }),
       );
 
-      expect(svc.fraction()).toBe(1);
+      expect(service.fraction()).toBe(1);
     });
   });
 
   it('scopes every request to the given feed id across the poll loop', () => {
-    svc.run(undefined, { feedId: 42 });
-    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    service.run(undefined, { feedId: 42 });
+    const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(first.request.params.get('feedId')).toBe('42');
     first.flush(report({ status: 'partial', remaining: 1 }));
     // The scope must survive the re-poll, not just the first call.
-    const second = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    const second = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(second.request.params.get('feedId')).toBe('42');
     second.flush(report({ status: 'completed', remaining: 0 }));
-    expect(svc.running()).toBe(false);
+    expect(service.running()).toBe(false);
   });
 
   it('scopes every request to the given tag id across the poll loop', () => {
-    svc.run(undefined, { tagId: 3 });
-    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    service.run(undefined, { tagId: 3 });
+    const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(first.request.params.get('tag')).toBe('3');
     expect(first.request.params.get('feedId')).toBeNull();
     first.flush(report({ status: 'partial', remaining: 1 }));
-    const second = ctrl.expectOne((r) => r.url === 'https://api.test/api/refresh');
+    const second = ctrl.expectOne((request) => request.url === 'https://api.test/api/refresh');
     expect(second.request.params.get('tag')).toBe('3');
     second.flush(report({ status: 'completed', remaining: 0 }));
-    expect(svc.running()).toBe(false);
+    expect(service.running()).toBe(false);
   });
 
   it('backs off on busy then retries', fakeAsync(() => {
-    svc.run();
+    service.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'busy', progress: { done: 0, total: 0 }, remaining: 0 }));
-    expect(svc.running()).toBe(true);
+    expect(service.running()).toBe(true);
     tick(1500);
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'completed', remaining: 0 }));
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toBeNull();
+    expect(service.running()).toBe(false);
+    expect(service.failure()).toBeNull();
   }));
 
   // Retrying longer is not the fix: a CLI sweep holds the lock for its whole
   // budget. The user has to be told, or the spinner just stops (#119).
   it('records a busy failure once the retry budget is spent', fakeAsync(() => {
     const done = jest.fn();
-    svc.run(done);
+    service.run(done);
     const busy = report({ status: 'busy', progress: { done: 0, total: 0 }, remaining: 0 });
 
     // The first call plus MAX_BUSY_RETRIES more, all answered busy.
@@ -229,55 +225,55 @@ describe('RefreshService', () => {
     }
 
     ctrl.verify(); // the loop gave up rather than polling on
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toEqual({ kind: 'busy' });
+    expect(service.running()).toBe(false);
+    expect(service.failure()).toEqual({ kind: 'busy' });
     expect(done).toHaveBeenCalledTimes(1);
   }));
 
   // An aborted sweep left feeds unfetched and still due. Sharing the
   // `completed` branch made it present as a clean run (#119).
   it('records an aborted sweep rather than reporting it as finished', () => {
-    svc.run();
+    service.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(
         report({ status: 'aborted', progress: { done: 3, total: 10 }, remaining: 7, fetched: 3 }),
       );
-    expect(svc.running()).toBe(false);
-    expect(svc.failure()).toEqual({ kind: 'aborted' });
+    expect(service.running()).toBe(false);
+    expect(service.failure()).toEqual({ kind: 'aborted' });
   });
 
   it('reports a completed sweep as no failure at all', () => {
-    svc.run();
+    service.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'completed', remaining: 0, fetched: 10 }));
-    expect(svc.failure()).toBeNull();
+    expect(service.failure()).toBeNull();
   });
 
   it('stops and records the problem on error (e.g. 429)', () => {
-    svc.run();
+    service.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(
         { type: 'rate_limited', title: 't', status: 429 },
         { status: 429, statusText: 'Too Many Requests' },
       );
-    expect(svc.running()).toBe(false);
-    const failure = svc.failure();
+    expect(service.running()).toBe(false);
+    const failure = service.failure();
     expect(failure?.kind).toBe('http');
     expect(failure).toMatchObject({ problem: { status: 429, type: 'rate_limited' } });
   });
 
   it('clears a previous failure when a new run starts', () => {
-    svc.run();
+    service.run();
     ctrl
       .expectOne('https://api.test/api/refresh')
       .flush(report({ status: 'aborted', remaining: 4 }));
-    expect(svc.failure()).not.toBeNull();
+    expect(service.failure()).not.toBeNull();
 
-    svc.run();
-    expect(svc.failure()).toBeNull();
+    service.run();
+    expect(service.failure()).toBeNull();
     ctrl.expectOne('https://api.test/api/refresh').flush(report({ status: 'completed' }));
   });
 });

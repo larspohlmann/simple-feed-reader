@@ -1,4 +1,3 @@
-// e2e/header-scroll-mobile.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { readerFailedJson, savedSearchWire, savedSearchesJson } from './support/reader';
 

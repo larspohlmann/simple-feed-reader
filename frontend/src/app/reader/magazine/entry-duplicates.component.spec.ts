@@ -44,38 +44,38 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
+function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryDuplicatesComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryDuplicatesComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryDuplicatesComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 it('renders nothing without duplicates', () => {
-  const el = mount(entry()).nativeElement as HTMLElement;
-  expect(el.querySelector('.also-foot')).toBeNull();
+  const element = mount(entry()).nativeElement as HTMLElement;
+  expect(element.querySelector('.also-foot')).toBeNull();
 });
 
 it('renders one chip per duplicate with its source', () => {
   const dup = entry({ id: 2, source: 'NDR Schleswig-Holstein' });
-  const el = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
-  const chips = el.querySelectorAll('.also-entry');
+  const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chips = element.querySelectorAll('.also-entry');
   expect(chips.length).toBe(1);
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
 });
 
 it('opens a popover with the copy card and re-emits open for that copy', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
-  const f = mount(entry({ duplicates: [dup] }));
+  const fixture = mount(entry({ duplicates: [dup] }));
   const opened = jest.fn();
   entryActions.open.mockImplementation(opened);
 
-  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
-  f.detectChanges();
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
   const overlay = TestBed.inject(OverlayContainer).getContainerElement();
   const panel = overlay.querySelector('.dup-popover');
   expect(panel).not.toBeNull();
@@ -87,16 +87,16 @@ it('opens a popover with the copy card and re-emits open for that copy', () => {
 
 it('closes the popover once the copy is opened', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
-  const f = mount(entry({ duplicates: [dup] }));
+  const fixture = mount(entry({ duplicates: [dup] }));
   const opened = jest.fn();
   entryActions.open.mockImplementation(opened);
 
-  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
-  f.detectChanges();
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
   const overlay = TestBed.inject(OverlayContainer).getContainerElement();
 
   (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
-  f.detectChanges();
+  fixture.detectChanges();
 
   expect(opened).toHaveBeenCalledWith(dup);
   expect(overlay.querySelector('.dup-popover')).toBeNull();
@@ -104,19 +104,19 @@ it('closes the popover once the copy is opened', () => {
 
 it('flips the favorite icon in the popover and re-emits favorite for the copy', () => {
   const dup = entry({ id: 2, title: 'NDR wording', source: 'NDR SH' });
-  const f = mount(entry({ duplicates: [dup] }));
+  const fixture = mount(entry({ duplicates: [dup] }));
   const favorited = jest.fn();
   entryActions.favorite.mockImplementation(favorited);
 
-  (f.nativeElement.querySelector('.also-entry') as HTMLElement).click();
-  f.detectChanges();
+  (fixture.nativeElement.querySelector('.also-entry') as HTMLElement).click();
+  fixture.detectChanges();
   const overlay = TestBed.inject(OverlayContainer).getContainerElement();
   const favoriteButton = overlay.querySelector(
     '.dup-popover button[aria-label="Favorite"]',
   ) as HTMLElement;
 
   favoriteButton.click();
-  f.detectChanges();
+  fixture.detectChanges();
 
   expect(favorited).toHaveBeenCalledWith(dup);
   expect(favoriteButton.classList.contains('on')).toBe(true);

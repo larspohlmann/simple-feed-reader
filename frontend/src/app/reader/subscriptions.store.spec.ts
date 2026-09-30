@@ -12,7 +12,7 @@ import {
   buildTagTree,
   sumEntries,
   sumUnread,
-  untaggedSubs,
+  untaggedSubscriptions,
 } from './subscriptions.store';
 import { SubscriptionDto } from './models';
 
@@ -50,32 +50,40 @@ const sub = (
 });
 
 describe('subscription derivations', () => {
-  const subs = [
+  const subscriptions = [
     sub(1, 3, [tag(10, 'News'), tag(20, 'Tech')]),
     sub(2, 6, [tag(20, 'Tech')]),
     sub(3, 0, []),
   ];
   it('sums per-tag unread with overlap', () => {
-    const tree = buildTagTree(subs);
-    expect(tree.map((n) => [n.tag.name, n.unreadCount])).toEqual([
+    const tree = buildTagTree(subscriptions);
+    expect(tree.map((node) => [node.tag.name, node.unreadCount])).toEqual([
       ['News', 3],
       ['Tech', 9],
     ]);
-    expect(tree.find((n) => n.tag.name === 'Tech')!.subscriptions.map((s) => s.id)).toEqual([1, 2]);
+    expect(
+      tree
+        .find((node) => node.tag.name === 'Tech')!
+        .subscriptions.map((subscription) => subscription.id),
+    ).toEqual([1, 2]);
   });
   it('lists untagged subs and totals each sub once', () => {
-    expect(untaggedSubs(subs).map((s) => s.id)).toEqual([3]);
-    expect(sumUnread(subs)).toBe(9);
+    expect(untaggedSubscriptions(subscriptions).map((subscription) => subscription.id)).toEqual([
+      3,
+    ]);
+    expect(sumUnread(subscriptions)).toBe(9);
   });
 
   it('orders untagged feeds by their position', () => {
     const at = (id: number, position: number): SubscriptionDto => ({ ...sub(id, 0), position });
-    expect(untaggedSubs([at(1, 2), at(2, 0), at(3, 1)]).map((s) => s.id)).toEqual([2, 3, 1]);
+    expect(
+      untaggedSubscriptions([at(1, 2), at(2, 0), at(3, 1)]).map((subscription) => subscription.id),
+    ).toEqual([2, 3, 1]);
   });
 
   it('excludes includeInAllItems=false feeds from the All items badge', () => {
-    const excludedSubs = [sub(1, 5), { ...sub(2, 8), includeInAllItems: false }];
-    expect(sumUnread(excludedSubs)).toBe(5);
+    const excludedSubscriptions = [sub(1, 5), { ...sub(2, 8), includeInAllItems: false }];
+    expect(sumUnread(excludedSubscriptions)).toBe(5);
   });
 
   it('still counts an excluded feed under its tag', () => {
@@ -107,12 +115,12 @@ describe('buildTagTree with an explicit tag order', () => {
     sub(id, 1, [{ id: tagId, name: 'x', color: null, icon: null, position: feedPos }]);
 
   it('orders nodes by tag.position, includes empty tags, and orders feeds per-tag', () => {
-    const subs = [inTag(1, 20, 1), inTag(2, 20, 0), inTag(3, 10, 0)];
-    const tree = buildTagTree(subs, orderedTags);
+    const subscriptions = [inTag(1, 20, 1), inTag(2, 20, 0), inTag(3, 10, 0)];
+    const tree = buildTagTree(subscriptions, orderedTags);
     // Nodes follow the tag order, and the empty tag still appears.
-    expect(tree.map((n) => n.tag.name)).toEqual(['Tech', 'News', 'Empty']);
+    expect(tree.map((node) => node.tag.name)).toEqual(['Tech', 'News', 'Empty']);
     // Feeds within Tech follow their per-tag position: sub 2 (0) before sub 1 (1).
-    expect(tree[0].subscriptions.map((s) => s.id)).toEqual([2, 1]);
+    expect(tree[0].subscriptions.map((subscription) => subscription.id)).toEqual([2, 1]);
     expect(tree[2].subscriptions).toEqual([]);
   });
 });
@@ -304,11 +312,17 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
     });
     store.decrementUnread(1);
-    expect(store.subscriptions().find((s) => s.id === 1)!.unreadCount).toBe(2);
+    expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
+      2,
+    );
     store.decrementUnread(1, 99);
-    expect(store.subscriptions().find((s) => s.id === 1)!.unreadCount).toBe(0);
+    expect(store.subscriptions().find((subscription) => subscription.id === 1)!.unreadCount).toBe(
+      0,
+    );
     store.zeroUnread({ subscription: 2 });
-    expect(store.subscriptions().find((s) => s.id === 2)!.unreadCount).toBe(0);
+    expect(store.subscriptions().find((subscription) => subscription.id === 2)!.unreadCount).toBe(
+      0,
+    );
   });
 
   it('optimistically patches the exclusion flags in place', () => {
@@ -319,11 +333,19 @@ describe('SubscriptionsStore', () => {
       keptCount: 0,
     });
     store.patchLocal(1, { includeInAllItems: false });
-    expect(store.subscriptions().find((s) => s.id === 1)!.includeInAllItems).toBe(false);
-    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(true);
-    expect(store.subscriptions().find((s) => s.id === 2)!.includeInAllItems).toBe(true);
+    expect(
+      store.subscriptions().find((subscription) => subscription.id === 1)!.includeInAllItems,
+    ).toBe(false);
+    expect(
+      store.subscriptions().find((subscription) => subscription.id === 1)!.includeInForYou,
+    ).toBe(true);
+    expect(
+      store.subscriptions().find((subscription) => subscription.id === 2)!.includeInAllItems,
+    ).toBe(true);
     store.patchLocal(1, { includeInForYou: false });
-    expect(store.subscriptions().find((s) => s.id === 1)!.includeInForYou).toBe(false);
+    expect(
+      store.subscriptions().find((subscription) => subscription.id === 1)!.includeInForYou,
+    ).toBe(false);
   });
 
   it('exposes unhealthy feeds and their count', () => {
@@ -337,7 +359,7 @@ describe('SubscriptionsStore', () => {
       { ...sub(2, 0), title: 'Alpha', status: 'gone' },
       { ...sub(3, 0), status: 'active' },
     ]);
-    expect(store.unhealthy().map((s) => s.id)).toEqual([2, 1]);
+    expect(store.unhealthy().map((subscription) => subscription.id)).toEqual([2, 1]);
     expect(store.unhealthyCount()).toBe(2);
   });
 
@@ -568,7 +590,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     kept = 0,
     viewed = 0,
   ) => ({
-    subscriptions: subscriptions.map((s) => ({ entryCount: 0, ...s })),
+    subscriptions: subscriptions.map((subscription) => ({ entryCount: 0, ...subscription })),
     favoritesCount: favorites,
     keptCount: kept,
     viewedCount: viewed,
@@ -622,8 +644,12 @@ describe('SubscriptionsStore counts-only reload', () => {
     ctrl.expectOne(countsUrl).flush(countsBody([{ id: 2, unreadCount: 3 }]));
 
     // Feed 1 is absent from the payload, so it has no unread entries.
-    expect(store.subscriptions().find((s) => s.id === 1)?.unreadCount).toBe(0);
-    expect(store.subscriptions().find((s) => s.id === 2)?.unreadCount).toBe(3);
+    expect(store.subscriptions().find((subscription) => subscription.id === 1)?.unreadCount).toBe(
+      0,
+    );
+    expect(store.subscriptions().find((subscription) => subscription.id === 2)?.unreadCount).toBe(
+      3,
+    );
   });
 
   it('patches entry counts from the counts-only tick', () => {

@@ -52,7 +52,9 @@ export function buildReadingChart(days: ReadingDay[], width: number, height: num
   return {
     width,
     height,
-    line: points.map((p, index) => `${index === 0 ? 'M' : 'L'}${p.x} ${round(p.y)}`).join(' '),
+    line: points
+      .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${round(point.y)}`)
+      .join(' '),
     area: areaPath(points, baseline, width),
     peak: peakOf(points, total),
     columns: columnsFor(points, width),

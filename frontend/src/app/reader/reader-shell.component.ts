@@ -176,13 +176,14 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Feed tags keyed by subscription id — feeds the tag pills on entries and the
    *  article view without threading tags through each entry DTO. */
   readonly feedTags = computed(() => {
-    const m = new Map<number, SubscriptionTagDto[]>();
-    for (const s of this.subs.subscriptions()) m.set(s.id, s.tags);
-    return m;
+    const tagsBySubscription = new Map<number, SubscriptionTagDto[]>();
+    for (const subscription of this.subs.subscriptions())
+      tagsBySubscription.set(subscription.id, subscription.tags);
+    return tagsBySubscription;
   });
   readonly openEntryTags = computed(() => {
-    const e = this.openEntry();
-    return e ? (this.feedTags().get(e.subscriptionId) ?? []) : [];
+    const entry = this.openEntry();
+    return entry ? (this.feedTags().get(entry.subscriptionId) ?? []) : [];
   });
   readonly paneMode = computed(() => this.layout.mode() === 'pane' && this.screen.isWide());
   readonly searchPane = computed(() => this.screen.isWide() && isDirectSearch(this.selection()));
@@ -192,10 +193,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly articleFullscreen = computed(() => this.openEntry() !== null && !this.splitView());
 
   /** The user's tags for the mobile swipe row (the sidebar covers wider screens). */
-  readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((n) => n.tag));
+  readonly headerTags = computed<TagDto[]>(() => this.subs.tagTree().map((node) => node.tag));
   readonly activeTagId = computed(() => {
-    const s = this.selection();
-    return s.kind === 'tag' ? (s.id ?? null) : null;
+    const selection = this.selection();
+    return selection.kind === 'tag' ? (selection.id ?? null) : null;
   });
   readonly allItemsActive = computed(() => this.selection().kind === 'all');
 
@@ -264,10 +265,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // set with it, else a recycled id would render an incoming row already collapsed.
     effect(() => {
       if (!this.listPreferences.ready()) return;
-      const q = queryFromSelection(this.selection());
+      const query = queryFromSelection(this.selection());
       untracked(() => {
         this.entryActions.clearLeaving();
-        this.entries.load(q);
+        this.entries.load(query);
         this.subs.loadIfStale();
       });
     });
@@ -283,11 +284,11 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       if (id === null) return;
       untracked(() => {
         const list = this.entries.entries();
-        const index = list.findIndex((e) => e.id === id);
+        const index = list.findIndex((entry) => entry.id === id);
         if (index === -1) return;
-        const prev = list[index - 1];
+        const previous = list[index - 1];
         const next = list[index + 1];
-        if (prev) this.bodyService.prefetch(prev.id);
+        if (previous) this.bodyService.prefetch(previous.id);
         if (next) this.bodyService.prefetch(next.id);
       });
     });
@@ -307,8 +308,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     // The single authority that reloads the list after a refresh (#502): the
     // onboarding sweep reloads on each landing slice, so a new user isn't
     // staring at an empty list (#127); a user-initiated refresh reloads once,
-    // on finish, so it never flickers mid-sweep. Used to also live in each
-    // run()'s onDone (#61), doubling the reload on a scoped refresh -- now lives here alone.
+    // on finish, so it never flickers mid-sweep.
     effect(() => {
       const slice = this.refreshSvc.slice();
       const running = this.refreshSvc.running();
@@ -348,16 +348,16 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    const hdrEl = this.hdr()?.nativeElement as HTMLElement | undefined;
-    if (hdrEl && typeof ResizeObserver !== 'undefined') {
+    const headerElement = this.hdr()?.nativeElement as HTMLElement | undefined;
+    if (headerElement && typeof ResizeObserver !== 'undefined') {
       // Floor the *fractional* rendered height, not `offsetHeight`: with the
       // mobile tag row present the bar's real height is fractional, and
       // rounding up drops elements anchored at `--app-bar-h` a sub-pixel
       // below the bar's true edge, opening a hairline on iOS Safari (#122).
       this.resizeObs = new ResizeObserver(() =>
-        this.headerHeight.set(Math.floor(hdrEl.getBoundingClientRect().height)),
+        this.headerHeight.set(Math.floor(headerElement.getBoundingClientRect().height)),
       );
-      this.resizeObs.observe(hdrEl);
+      this.resizeObs.observe(headerElement);
     }
     // This height drives the content area's top padding and the mobile
     // drawer's offset too, not just the header's slide. Until the observer's
@@ -384,9 +384,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    */
   private readonly _publishBarVars = effect(() => {
     const style = this.hostRef.nativeElement.style;
-    const h = this.headerHeight();
-    if (h > 0) style.setProperty('--app-bar-h', `${h}px`);
-    style.setProperty('--app-bar-shift', this.headerHidden() ? `-${h}px` : '0px');
+    const height = this.headerHeight();
+    if (height > 0) style.setProperty('--app-bar-h', `${height}px`);
+    style.setProperty('--app-bar-shift', this.headerHidden() ? `-${height}px` : '0px');
   });
 
   /**
@@ -411,9 +411,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   /** Reader-view outputs are payload-less; apply them to the currently open entry. */
-  withOpen(fn: (e: EntryDto) => void): void {
-    const e = this.openEntry();
-    if (e) fn(e);
+  withOpen(action: (entry: EntryDto) => void): void {
+    const entry = this.openEntry();
+    if (entry) action(entry);
   }
 
   onCloseReader(): void {
@@ -440,9 +440,9 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  visible term and the whole-word flag. Null outside a search — the one
    *  place that reads the trailing-space signal, so downstream never re-decodes it (#408). */
   private readonly searchedTermAndMode = computed(() => {
-    const s = this.selection();
-    if (s.kind !== 'search') return null;
-    const raw = s.term ?? '';
+    const selection = this.selection();
+    if (selection.kind !== 'search') return null;
+    const raw = selection.term ?? '';
 
     // A phrase (wrapping quotes) overrides whole-word (a trailing space) when a
     // query carries both, exactly as the server decides it (#702), so the
@@ -548,12 +548,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  refresh doesn't apply (the cross-feed favorites/kept views). A subscription
    *  resolves to its underlying feed id — the API keys refresh by feed, and a
    *  subscription id is a different id space. */
-  private refreshScope(s = this.selection()): RefreshScope | null {
-    switch (s.kind) {
+  private refreshScope(selection = this.selection()): RefreshScope | null {
+    switch (selection.kind) {
       case 'all':
         return {};
       case 'tag':
-        return s.id != null ? { tagId: s.id } : null;
+        return selection.id != null ? { tagId: selection.id } : null;
       case 'subscription': {
         const feedId = this.heading.selectedSubscription()?.feedId;
         return feedId != null ? { feedId } : null;
@@ -565,7 +565,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** The list-scoped refresh (header button + mobile pull): sweep only the feeds
    *  behind the current selection. The single reload authority (#502) reloads the
-   *  list once the run finishes — this path no longer reloads it itself. */
+   *  list once the run finishes, so this path does not. */
   onScopedRefresh(): void {
     const scope = this.refreshScope();
     if (!scope) return;
@@ -632,7 +632,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
         return;
       }
       // The single reload authority (#502) reloads the list once the feed's
-      // first fetch finishes — this path no longer reloads it itself.
+      // first fetch finishes, so this path does not.
       this.refreshSvc.run(undefined, { feedId: sub.feedId });
     });
   }

@@ -178,14 +178,18 @@ describe('DiscoverComponent', () => {
 
     fixture.nativeElement.querySelector('[data-testid="subscribe"]').click();
 
-    const req = http.expectOne('https://api.test/api/onboarding/subscribe');
-    expect(req.request.body).toEqual({ catalogFeedIds: [10] });
-    req.flush({ subscribed: 1, skipped: 0, skippedOverLimit: 0, tagsCreated: [] });
+    const testRequest = http.expectOne('https://api.test/api/onboarding/subscribe');
+    expect(testRequest.request.body).toEqual({ catalogFeedIds: [10] });
+    testRequest.flush({ subscribed: 1, skipped: 0, skippedOverLimit: 0, tagsCreated: [] });
 
     // The success handler reloads subscriptions and tags; drain those follow-on
     // GETs so afterEach's http.verify() sees no outstanding requests.
-    http.match('https://api.test/api/subscriptions').forEach((r) => r.flush({ subscriptions: [] }));
-    http.match('https://api.test/api/tags').forEach((r) => r.flush({ tags: [] }));
+    http
+      .match('https://api.test/api/subscriptions')
+      .forEach((followUpRequest) => followUpRequest.flush({ subscriptions: [] }));
+    http
+      .match('https://api.test/api/tags')
+      .forEach((followUpRequest) => followUpRequest.flush({ tags: [] }));
   });
 
   it('navigates into the reader after a successful subscribe', async () => {
@@ -205,8 +209,12 @@ describe('DiscoverComponent', () => {
 
     // The success handler reloads subscriptions and tags; drain those follow-on
     // GETs so afterEach's http.verify() sees no outstanding requests.
-    http.match('https://api.test/api/subscriptions').forEach((r) => r.flush({ subscriptions: [] }));
-    http.match('https://api.test/api/tags').forEach((r) => r.flush({ tags: [] }));
+    http
+      .match('https://api.test/api/subscriptions')
+      .forEach((followUpRequest) => followUpRequest.flush({ subscriptions: [] }));
+    http
+      .match('https://api.test/api/tags')
+      .forEach((followUpRequest) => followUpRequest.flush({ tags: [] }));
 
     await fixture.whenStable();
 

@@ -71,10 +71,12 @@ export class RegisterComponent {
         }),
       );
       this.resultStatus.set(status);
-    } catch (e) {
-      const p = parseProblem(e as HttpErrorResponse);
-      const firstFieldError = p.errors ? Object.values(p.errors)[0]?.[0] : undefined;
-      this.error.set(firstFieldError ?? p.detail ?? this.i18n.translate('auth.register.failed'));
+    } catch (error) {
+      const problem = parseProblem(error as HttpErrorResponse);
+      const firstFieldError = problem.errors ? Object.values(problem.errors)[0]?.[0] : undefined;
+      this.error.set(
+        firstFieldError ?? problem.detail ?? this.i18n.translate('auth.register.failed'),
+      );
     } finally {
       this.loading.set(false);
     }

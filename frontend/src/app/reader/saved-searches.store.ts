@@ -48,9 +48,9 @@ export class SavedSearchesStore {
     this.inFlight?.unsubscribe();
     const readsWhenSent = this.readSinceLoad();
     const request = this.api.savedSearches().subscribe({
-      next: (r) => {
+      next: (response) => {
         this.inFlight = null;
-        this.loaded.set(r.savedSearches);
+        this.loaded.set(response.savedSearches);
         // The server re-counted, so reads it already saw are spent. Ones that
         // arrived while this request was in flight are NOT in its tally, and
         // dropping them would put a knocked-down badge right back up (#708).
@@ -103,10 +103,10 @@ export class SavedSearchesStore {
     this.api.createSavedSearch({ term, wholeWord, phrase }).subscribe({
       // Saving a term already saved answers 200 with the existing row, so
       // replace by id rather than prepending a duplicate.
-      next: (r) => {
+      next: (response) => {
         this.loaded.update((rows) => [
-          r.savedSearch,
-          ...rows.filter((row) => row.id !== r.savedSearch.id),
+          response.savedSearch,
+          ...rows.filter((row) => row.id !== response.savedSearch.id),
         ]);
         onSuccess?.();
       },

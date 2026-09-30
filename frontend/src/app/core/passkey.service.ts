@@ -1,4 +1,3 @@
-// src/app/core/passkey.service.ts
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, firstValueFrom, map, tap } from 'rxjs';

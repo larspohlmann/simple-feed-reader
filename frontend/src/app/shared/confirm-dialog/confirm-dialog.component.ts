@@ -1,4 +1,3 @@
-// src/app/shared/confirm-dialog/confirm-dialog.component.ts
 import { Component, computed, inject, signal } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { DialogRef, DIALOG_DATA } from '@angular/cdk/dialog';

@@ -144,7 +144,7 @@ export class DiscoverComponent implements OnDestroy {
   onJump(categoryId: number): void {
     this.active.jumpTo(categoryId);
     const target = this.sections().find(
-      (s) => Number(s.nativeElement.dataset['categoryId']) === categoryId,
+      (section) => Number(section.nativeElement.dataset['categoryId']) === categoryId,
     );
     target?.nativeElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -184,8 +184,8 @@ export class DiscoverComponent implements OnDestroy {
         this.submitting.set(false);
         void this.router.navigate(['/']);
       },
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error));
         this.submitting.set(false);
       },
     });

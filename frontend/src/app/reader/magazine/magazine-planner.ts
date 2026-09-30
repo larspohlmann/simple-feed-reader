@@ -310,8 +310,8 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
 
   while (height > PAGE_HEIGHT_CAP) {
     let tallest = 0;
-    for (let i = 1; i < result.length; i++) {
-      if (BLOCK_HEIGHT[result[i]] > BLOCK_HEIGHT[result[tallest]]) tallest = i;
+    for (let index = 1; index < result.length; index++) {
+      if (BLOCK_HEIGHT[result[index]] > BLOCK_HEIGHT[result[tallest]]) tallest = index;
     }
     const demoted = DEMOTION[result[tallest]];
     if (demoted === result[tallest]) break;
@@ -331,15 +331,15 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
 function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
   const order = [...slice];
   let tallest = 0;
-  for (let i = 1; i < kinds.length; i++) {
-    if (BLOCK_HEIGHT[kinds[i]] > BLOCK_HEIGHT[kinds[tallest]]) tallest = i;
+  for (let index = 1; index < kinds.length; index++) {
+    if (BLOCK_HEIGHT[kinds[index]] > BLOCK_HEIGHT[kinds[tallest]]) tallest = index;
   }
 
   if (!fits(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
-    for (let j = tallest + 1; j < limit; j++) {
-      if (fits(kinds[tallest], order[j])) {
-        const [picked] = order.splice(j, 1);
+    for (let index = tallest + 1; index < limit; index++) {
+      if (fits(kinds[tallest], order[index])) {
+        const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);
         break;
       }

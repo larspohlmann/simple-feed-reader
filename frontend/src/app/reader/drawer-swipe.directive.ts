@@ -31,42 +31,42 @@ export class DrawerSwipeDirective {
   private tracking = false;
 
   constructor() {
-    const el = this.host.nativeElement;
-    const start = (e: TouchEvent): void => this.onTouchStart(e);
-    const move = (e: TouchEvent): void => this.onTouchMove(e);
+    const element = this.host.nativeElement;
+    const start = (event: TouchEvent): void => this.onTouchStart(event);
+    const move = (event: TouchEvent): void => this.onTouchMove(event);
     const end = (): void => this.onTouchEnd();
     // All passive: a threshold toggle never needs to preventDefault, so vertical
     // scrolling of the list stays smooth and only the final delta is inspected.
-    el.addEventListener('touchstart', start, { passive: true });
-    el.addEventListener('touchmove', move, { passive: true });
-    el.addEventListener('touchend', end);
-    el.addEventListener('touchcancel', end);
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchmove', move, { passive: true });
+    element.addEventListener('touchend', end);
+    element.addEventListener('touchcancel', end);
     inject(DestroyRef).onDestroy(() => {
-      el.removeEventListener('touchstart', start);
-      el.removeEventListener('touchmove', move);
-      el.removeEventListener('touchend', end);
-      el.removeEventListener('touchcancel', end);
+      element.removeEventListener('touchstart', start);
+      element.removeEventListener('touchmove', move);
+      element.removeEventListener('touchend', end);
+      element.removeEventListener('touchcancel', end);
     });
   }
 
-  onTouchStart(e: TouchEvent): void {
+  onTouchStart(event: TouchEvent): void {
     this.tracking = false;
-    if (this.disabled() || e.touches.length !== 1) return;
-    const target = e.target as Element | null;
+    if (this.disabled() || event.touches.length !== 1) return;
+    const target = event.target as Element | null;
     if (this.open() && target?.closest('[data-drawer-panel]')) return;
-    const t = e.touches[0];
-    this.startX = t.clientX;
-    this.startY = t.clientY;
+    const touch = event.touches[0];
+    this.startX = touch.clientX;
+    this.startY = touch.clientY;
     this.dx = 0;
     this.dy = 0;
     this.tracking = true;
   }
 
-  onTouchMove(e: TouchEvent): void {
-    if (!this.tracking || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    this.dx = t.clientX - this.startX;
-    this.dy = t.clientY - this.startY;
+  onTouchMove(event: TouchEvent): void {
+    if (!this.tracking || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    this.dx = touch.clientX - this.startX;
+    this.dy = touch.clientY - this.startY;
   }
 
   onTouchEnd(): void {

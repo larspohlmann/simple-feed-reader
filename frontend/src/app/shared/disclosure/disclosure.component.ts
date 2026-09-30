@@ -1,4 +1,3 @@
-// src/app/shared/disclosure/disclosure.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**

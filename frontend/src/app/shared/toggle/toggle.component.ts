@@ -1,4 +1,3 @@
-// src/app/shared/toggle/toggle.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**

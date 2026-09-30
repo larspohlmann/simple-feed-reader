@@ -15,32 +15,32 @@ describe('BrightnessControlComponent', () => {
   });
 
   function create(): Fixture {
-    const f = TestBed.createComponent(BrightnessControlComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(BrightnessControlComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  const element = <T extends HTMLElement>(f: Fixture, selector: string): T =>
-    (f.nativeElement as HTMLElement).querySelector<T>(selector)!;
-  const fill = (f: Fixture): number =>
-    parseFloat(element(f, '.fill').style.getPropertyValue('inline-size'));
+  const element = <T extends HTMLElement>(fixture: Fixture, selector: string): T =>
+    (fixture.nativeElement as HTMLElement).querySelector<T>(selector)!;
+  const fill = (fixture: Fixture): number =>
+    parseFloat(element(fixture, '.fill').style.getPropertyValue('inline-size'));
 
-  function setStep(f: Fixture, step: number): void {
+  function setStep(fixture: Fixture, step: number): void {
     TestBed.inject(BrightnessService).set(step);
-    f.detectChanges();
+    fixture.detectChanges();
   }
 
   it('labels the group and both buttons', () => {
-    const f = create();
-    expect(element(f, '[role=group]').getAttribute('aria-label')).toBe('Brightness');
-    expect(element(f, '.darker').getAttribute('title')).toBe('Darker');
-    expect(element(f, '.brighter').getAttribute('title')).toBe('Brighter');
+    const fixture = create();
+    expect(element(fixture, '[role=group]').getAttribute('aria-label')).toBe('Brightness');
+    expect(element(fixture, '.darker').getAttribute('title')).toBe('Darker');
+    expect(element(fixture, '.brighter').getAttribute('title')).toBe('Brighter');
   });
 
   it('shows a moon for darker and a sun for brighter', () => {
-    const f = create();
-    expect(element(f, '.darker').textContent).toContain('dark_mode');
-    expect(element(f, '.brighter').textContent).toContain('light_mode');
+    const fixture = create();
+    expect(element(fixture, '.darker').textContent).toContain('dark_mode');
+    expect(element(fixture, '.brighter').textContent).toContain('light_mode');
   });
 
   it('half-fills the bar at the dark default', () => {
@@ -52,52 +52,52 @@ describe('BrightnessControlComponent', () => {
   });
 
   it('steps up on the sun and announces the signed value', () => {
-    const f = create();
-    element(f, '.brighter').click();
-    f.detectChanges();
-    expect(fill(f)).toBeCloseTo(200 / 3);
-    expect(element(f, 'output').textContent?.trim()).toBe('Brightness +1');
+    const fixture = create();
+    element(fixture, '.brighter').click();
+    fixture.detectChanges();
+    expect(fill(fixture)).toBeCloseTo(200 / 3);
+    expect(element(fixture, 'output').textContent?.trim()).toBe('Brightness +1');
   });
 
   it('steps down on the moon and announces the negative value', () => {
-    const f = create();
-    element(f, '.darker').click();
-    f.detectChanges();
-    expect(fill(f)).toBeCloseTo(100 / 3);
-    expect(element(f, 'output').textContent?.trim()).toBe('Brightness -1');
+    const fixture = create();
+    element(fixture, '.darker').click();
+    fixture.detectChanges();
+    expect(fill(fixture)).toBeCloseTo(100 / 3);
+    expect(element(fixture, 'output').textContent?.trim()).toBe('Brightness -1');
   });
 
   it('empties the bar and disables the moon at the bottom of the range', () => {
-    const f = create();
-    setStep(f, -3);
-    expect(element<HTMLButtonElement>(f, '.darker').disabled).toBe(true);
-    expect(element<HTMLButtonElement>(f, '.brighter').disabled).toBe(false);
-    expect(fill(f)).toBeCloseTo(0);
+    const fixture = create();
+    setStep(fixture, -3);
+    expect(element<HTMLButtonElement>(fixture, '.darker').disabled).toBe(true);
+    expect(element<HTMLButtonElement>(fixture, '.brighter').disabled).toBe(false);
+    expect(fill(fixture)).toBeCloseTo(0);
   });
 
   it('fills the bar and disables the sun at the top of the dark range', () => {
-    const f = create();
-    setStep(f, 3);
-    expect(element<HTMLButtonElement>(f, '.brighter').disabled).toBe(true);
-    expect(fill(f)).toBeCloseTo(100);
+    const fixture = create();
+    setStep(fixture, 3);
+    expect(element<HTMLButtonElement>(fixture, '.brighter').disabled).toBe(true);
+    expect(fill(fixture)).toBeCloseTo(100);
   });
 
   it('resets to the default when the bar is clicked', () => {
-    const f = create();
-    setStep(f, 2);
-    element(f, '.bar').click();
-    f.detectChanges();
-    expect(fill(f)).toBeCloseTo(50);
-    expect(element(f, '.bar').getAttribute('title')).toBe('Reset to default');
+    const fixture = create();
+    setStep(fixture, 2);
+    element(fixture, '.bar').click();
+    fixture.detectChanges();
+    expect(fill(fixture)).toBeCloseTo(50);
+    expect(element(fixture, '.bar').getAttribute('title')).toBe('Reset to default');
   });
 
   it('fills the whole bar at the light default and only dims from there', () => {
     localStorage.setItem('sfr.theme', 'light');
-    const f = create();
-    expect(fill(f)).toBeCloseTo(100);
-    expect(element<HTMLButtonElement>(f, '.brighter').disabled).toBe(true);
-    setStep(f, -6);
-    expect(fill(f)).toBeCloseTo(0);
-    expect(element<HTMLButtonElement>(f, '.darker').disabled).toBe(true);
+    const fixture = create();
+    expect(fill(fixture)).toBeCloseTo(100);
+    expect(element<HTMLButtonElement>(fixture, '.brighter').disabled).toBe(true);
+    setStep(fixture, -6);
+    expect(fill(fixture)).toBeCloseTo(0);
+    expect(element<HTMLButtonElement>(fixture, '.darker').disabled).toBe(true);
   });
 });

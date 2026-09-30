@@ -1,4 +1,3 @@
-// src/app/shared/icon-choices.ts
 // The one curated palette shared by every icon/colour picker (reader tags and
 // the admin feed catalog), so both offer the same glyphs.
 //

@@ -1,4 +1,3 @@
-// e2e/pull-to-refresh-mobile.spec.ts
 import { test, expect, Locator, Page } from '@playwright/test';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).

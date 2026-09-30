@@ -1,4 +1,3 @@
-// src/app/shared/error-banner/error-banner.component.ts
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**

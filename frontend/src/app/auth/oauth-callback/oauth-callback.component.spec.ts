@@ -24,25 +24,25 @@ function setup(params: Record<string, string | null>) {
       { provide: API_BASE_URL, useValue: 'https://api.test' },
       {
         provide: ActivatedRoute,
-        useValue: { queryParamMap: of({ get: (k: string) => params[k] ?? null }) },
+        useValue: { queryParamMap: of({ get: (key: string) => params[key] ?? null }) },
       },
     ],
   });
   localStorage.clear();
   sessionStorage.clear();
   const navigateByUrl = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-  const f = TestBed.createComponent(OAuthCallbackComponent);
+  const fixture = TestBed.createComponent(OAuthCallbackComponent);
   // detectChanges runs ngOnInit and renders, so the specs below assert the
   // strings on screen rather than only the signals behind them.
-  f.detectChanges();
-  const text = (): string => (f.nativeElement as HTMLElement).textContent ?? '';
-  return { f, text, ctrl: TestBed.inject(HttpTestingController), navigateByUrl };
+  fixture.detectChanges();
+  const text = (): string => (fixture.nativeElement as HTMLElement).textContent ?? '';
+  return { fixture, text, controller: TestBed.inject(HttpTestingController), navigateByUrl };
 }
 
 /** Blocks the exchange the way the API does for an account that may not sign in. */
 function blockWith(accountStatus: string) {
-  const { f, text, ctrl } = setup({ code: 'one-time' });
-  ctrl.expectOne(EXCHANGE).flush(
+  const { fixture, text, controller } = setup({ code: 'one-time' });
+  controller.expectOne(EXCHANGE).flush(
     {
       type: 'account_not_active',
       title: 'Account not active',
@@ -52,20 +52,20 @@ function blockWith(accountStatus: string) {
     },
     { status: 403, statusText: 'Forbidden' },
   );
-  f.detectChanges();
+  fixture.detectChanges();
   return text();
 }
 
 describe('OAuthCallbackComponent', () => {
   it('restores the pending reader destination after OAuth sign-in', () => {
-    const { ctrl, navigateByUrl } = setup({ code: 'one-time' });
+    const { controller, navigateByUrl } = setup({ code: 'one-time' });
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
-    const req = ctrl.expectOne(EXCHANGE);
-    expect(req.request.withCredentials).toBe(true);
-    expect(req.request.body).toEqual({ code: 'one-time' });
-    req.flush({ token: 'jwt-oauth' });
+    const testRequest = controller.expectOne(EXCHANGE);
+    expect(testRequest.request.withCredentials).toBe(true);
+    expect(testRequest.request.body).toEqual({ code: 'one-time' });
+    testRequest.flush({ token: 'jwt-oauth' });
     expect(TestBed.inject(TokenStore).token()).toBe('jwt-oauth');
-    ctrl.expectOne('https://api.test/api/me').flush({
+    controller.expectOne('https://api.test/api/me').flush({
       id: 1,
       email: 'a@b.c',
       roles: [],
@@ -81,10 +81,10 @@ describe('OAuthCallbackComponent', () => {
   });
 
   it('restores the pending reader destination when OAuth loadMe fails', () => {
-    const { ctrl, navigateByUrl } = setup({ code: 'one-time' });
+    const { controller, navigateByUrl } = setup({ code: 'one-time' });
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=17&entry=42-example');
-    ctrl.expectOne(EXCHANGE).flush({ token: 'jwt-oauth' });
-    ctrl
+    controller.expectOne(EXCHANGE).flush({ token: 'jwt-oauth' });
+    controller
       .expectOne('https://api.test/api/me')
       .flush(
         { type: 'unavailable', title: 'Unavailable', status: 503 },
@@ -95,15 +95,14 @@ describe('OAuthCallbackComponent', () => {
   });
 
   it('shows the error and does not call exchange when the provider returned ?error', () => {
-    const { text, ctrl } = setup({ error: 'access_denied' });
-    ctrl.expectNone(EXCHANGE);
+    const { text, controller } = setup({ error: 'access_denied' });
+    controller.expectNone(EXCHANGE);
     expect(text()).toContain('Sign-in did not complete');
   });
 
   /**
-   * #247: a 403 account_not_active/pending_approval used to render "Sign-in
-   * did not complete. Please try again." -- wrong twice, since nothing is
-   * retryable and the account was in fact created.
+   * #247: a 403 account_not_active/pending_approval is no retryable failure —
+   * the account was created and awaits approval.
    */
   it('tells a new user their account awaits approval instead of showing a retry error', () => {
     const rendered = blockWith('pending_approval');
@@ -126,15 +125,15 @@ describe('OAuthCallbackComponent', () => {
   });
 
   it('offers the way back to sign in from a blocked account', () => {
-    const { f, ctrl } = setup({ code: 'one-time' });
-    ctrl
+    const { fixture, controller } = setup({ code: 'one-time' });
+    controller
       .expectOne(EXCHANGE)
       .flush(
         { type: 'account_not_active', title: 'x', status: 403, accountStatus: 'pending_approval' },
         { status: 403, statusText: 'Forbidden' },
       );
-    f.detectChanges();
-    const link = (f.nativeElement as HTMLElement).querySelector('a');
+    fixture.detectChanges();
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a');
     expect(link?.getAttribute('href')).toBe('/login');
   });
 
@@ -144,14 +143,14 @@ describe('OAuthCallbackComponent', () => {
    * retrying. The status-aware branch must not swallow them.
    */
   it('keeps the generic retry message for a failure that carries no account status', () => {
-    const { f, text, ctrl } = setup({ code: 'one-time' });
-    ctrl
+    const { fixture, text, controller } = setup({ code: 'one-time' });
+    controller
       .expectOne(EXCHANGE)
       .flush(
         { type: 'invalid_token', title: 'Invalid token', status: 400 },
         { status: 400, statusText: 'Bad Request' },
       );
-    f.detectChanges();
+    fixture.detectChanges();
     expect(text()).toContain('Sign-in did not complete');
   });
 });

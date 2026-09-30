@@ -10,7 +10,7 @@ const at = (hoursAgo: number): string =>
 
 const DEFAULT_SUMMARY = 'A snippet long enough to fill a quote slot when one is asked for.';
 
-const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
+const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
   title: 'A headline of reasonable length',
   url: null,
@@ -39,12 +39,12 @@ const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 const big = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
-  e(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 600, ...over });
+  entryAt(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 600, ...over });
 const portrait = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
-  e(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 1600, ...over });
+  entryAt(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 1600, ...over });
 // A wire-service entry: the feed ships only a tiny thumbnail but long copy.
 const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
-  e(id, {
+  entryAt(id, {
     imageUrl: `https://i/${id}.jpg`,
     imageWidth: 90,
     imageHeight: 90,
@@ -55,47 +55,50 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-const many = (n: number, make: (i: number) => EntryDto): EntryDto[] =>
-  Array.from({ length: n }, (_, i) => make(i + 1));
-const kinds = (bs: MagazineBlock[]) => bs.map((b) => b.kind);
+const many = (count: number, make: (index: number) => EntryDto): EntryDto[] =>
+  Array.from({ length: count }, (_, index) => make(index + 1));
+const kinds = (bs: MagazineBlock[]) => bs.map((block) => block.kind);
 
 const entryCount = (bs: MagazineBlock[]): number =>
-  bs.reduce((n, b) => n + (b.kind === 'group' ? b.entries.length : 1), 0);
+  bs.reduce((count, block) => count + (block.kind === 'group' ? block.entries.length : 1), 0);
 
 const trigramEntropy = (ks: string[]): number => {
   const counts = new Map<string, number>();
-  for (let i = 0; i + 2 < ks.length; i++) {
-    const g = ks.slice(i, i + 3).join('>');
-    counts.set(g, (counts.get(g) ?? 0) + 1);
+  for (let index = 0; index + 2 < ks.length; index++) {
+    const trigram = ks.slice(index, index + 3).join('>');
+    counts.set(trigram, (counts.get(trigram) ?? 0) + 1);
   }
-  const total = [...counts.values()].reduce((a, b) => a + b, 0);
-  return -[...counts.values()].reduce((a, v) => a + (v / total) * Math.log2(v / total), 0);
+  const total = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  return -[...counts.values()].reduce(
+    (entropy, count) => entropy + (count / total) * Math.log2(count / total),
+    0,
+  );
 };
 
 describe('planMagazine', () => {
   it('emits every entry exactly once — nothing is ever hidden', () => {
-    const entries = many(120, (i) => big(i, { subscriptionId: (i % 7) + 1 }));
+    const entries = many(120, (index) => big(index, { subscriptionId: (index % 7) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(entryCount(blocks)).toBe(120);
   });
 
   it('is prefix-stable when more entries arrive', () => {
-    const entries = many(120, (i) => big(i, { subscriptionId: (i % 7) + 1 }));
+    const entries = many(120, (index) => big(index, { subscriptionId: (index % 7) + 1 }));
     const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
     const second = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(second).slice(0, first.length)).toEqual(kinds(first));
   });
 
   it('preserves reverse-chronological order', () => {
-    const entries = many(60, (i) => big(i, { subscriptionId: (i % 5) + 1 }));
-    const ids = planMagazine({ entries, grouping: false, complete: true }).flatMap((b) =>
-      b.kind === 'group' ? b.entries.map((x) => x.id) : [b.entry.id],
+    const entries = many(60, (index) => big(index, { subscriptionId: (index % 5) + 1 }));
+    const ids = planMagazine({ entries, grouping: false, complete: true }).flatMap((block) =>
+      block.kind === 'group' ? block.entries.map((x) => x.id) : [block.entry.id],
     );
-    expect(ids).toEqual([...ids].sort((a, b) => a - b));
+    expect(ids).toEqual([...ids].sort((left, right) => left - right));
   });
 
   it('keeps 3-gram entropy above the boredom floor', () => {
-    const entries = many(200, (i) => big(i, { subscriptionId: (i % 9) + 1 }));
+    const entries = many(200, (index) => big(index, { subscriptionId: (index % 9) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(trigramEntropy(kinds(blocks))).toBeGreaterThan(4);
   });
@@ -104,8 +107,8 @@ describe('planMagazine', () => {
     // A leading minority-source run would otherwise be grouped into the first
     // block; a wall of headlines is a weak start.
     const entries = [
-      ...many(8, (i) => big(i, { subscriptionId: 1, source: 'Burst' })),
-      ...many(40, (i) => big(100 + i, { subscriptionId: (i % 6) + 2 })),
+      ...many(8, (index) => big(index, { subscriptionId: 1, source: 'Burst' })),
+      ...many(40, (index) => big(100 + index, { subscriptionId: (index % 6) + 2 })),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(blocks[0].kind).not.toBe('group');
@@ -114,7 +117,7 @@ describe('planMagazine', () => {
   it('never stacks a portrait image above the text — no hero or wide', () => {
     // A portrait image belongs beside the text (split), not above it: a tall
     // image in a hero slot would own most of the screen.
-    const entries = many(80, (i) => portrait(i, { subscriptionId: (i % 6) + 1 }));
+    const entries = many(80, (index) => portrait(index, { subscriptionId: (index % 6) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
     expect(kinds(blocks)).not.toContain('wide');
@@ -128,14 +131,14 @@ describe('planMagazine', () => {
     // would collapse every large slot to one `thumb` — a uniform wall — so the
     // planner switches to the text family: pull-quotes and headline bands, with
     // the small thumbnail as an accent, never the whole page.
-    const entries = many(80, (i) => wire(i, { subscriptionId: (i % 6) + 1 }));
+    const entries = many(80, (index) => wire(index, { subscriptionId: (index % 6) + 1 }));
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks).not.toContain('hero');
     expect(ks).not.toContain('wide');
     expect(ks).not.toContain('split');
     expect(ks).toContain('quote');
     expect(ks).toContain('kicker');
-    const thumbShare = ks.filter((k) => k === 'thumb').length / ks.length;
+    const thumbShare = ks.filter((kind) => kind === 'thumb').length / ks.length;
     expect(thumbShare).toBeLessThan(0.6);
     expect(trigramEntropy(ks)).toBeGreaterThan(4);
   });
@@ -146,19 +149,21 @@ describe('planMagazine', () => {
     // text family too — its pull-quotes would demote to headlines and its
     // headline slots would HIDE the images that do exist. The image family's
     // adaptive fillers surface them instead.
-    const entries = many(80, (i) =>
-      i % 4 === 0 ? big(i, { subscriptionId: (i % 6) + 1 }) : e(i, { subscriptionId: (i % 6) + 1 }),
+    const entries = many(80, (index) =>
+      index % 4 === 0
+        ? big(index, { subscriptionId: (index % 6) + 1 })
+        : entryAt(index, { subscriptionId: (index % 6) + 1 }),
     );
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
-    expect(ks.some((k) => k === 'hero' || k === 'wide' || k === 'split' || k === 'thumb')).toBe(
-      true,
-    );
+    expect(
+      ks.some((kind) => kind === 'hero' || kind === 'wide' || kind === 'split' || kind === 'thumb'),
+    ).toBe(true);
   });
 
   it('leads with a nearby image when the newest entries have none', () => {
     // The three newest posts are image-less; the fourth carries a photo. The
     // reader should land on that photo, and nothing is lost.
-    const entries = [e(1), e(2), e(3), big(4), big(5), big(6), big(7), big(8)];
+    const entries = [entryAt(1), entryAt(2), entryAt(3), big(4), big(5), big(6), big(7), big(8)];
     const blocks = planMagazine({ entries, grouping: false, complete: true });
     const first = blocks[0];
     expect(first.kind).not.toBe('group');
@@ -170,7 +175,7 @@ describe('planMagazine', () => {
   it('is prefix-stable when the opener leads with a pulled-up image', () => {
     // The lead-image reorder reads only the fixed head, so a partial first
     // render and the full one pull the same entry up and share a prefix.
-    const entries = [e(1), e(2), ...many(118, (i) => big(200 + i))];
+    const entries = [entryAt(1), entryAt(2), ...many(118, (index) => big(200 + index))];
     const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
     const full = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
@@ -179,14 +184,17 @@ describe('planMagazine', () => {
   it('keeps the chronological head when no image is within reach of the start', () => {
     // Seven image-less posts, then images — the first image is past the reach,
     // so the list opens in order rather than yanking a distant photo up.
-    const entries = [...many(7, (i) => e(i)), ...many(20, (i) => big(100 + i))];
+    const entries = [
+      ...many(7, (index) => entryAt(index)),
+      ...many(20, (index) => big(100 + index)),
+    ];
     const blocks = planMagazine({ entries, grouping: false, complete: true });
     const first = blocks[0];
     expect(first.kind === 'group' ? null : first.entry.id).toBe(1);
   });
 
   it('emits no image block when no entry has an image', () => {
-    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1 }));
+    const entries = many(80, (index) => entryAt(index, { subscriptionId: (index % 6) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
     expect(kinds(blocks)).not.toContain('wide');
@@ -197,7 +205,7 @@ describe('planMagazine', () => {
   it('does not collapse when the leading window is effectively single-source', () => {
     // Fewer than MIN_VIEW_SOURCES distinct sources in the leading window ->
     // collapse is disabled entirely, so a mono view renders flat and smooth.
-    const entries = many(40, (i) => big(i, { subscriptionId: 1 }));
+    const entries = many(40, (index) => big(index, { subscriptionId: 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
     expect(entryCount(blocks)).toBe(40);
@@ -205,12 +213,12 @@ describe('planMagazine', () => {
 
   it('collapses a qualifying run into a featured lead plus a tail-owning widget', () => {
     const entries = [
-      ...many(30, (i) => big(i, { subscriptionId: (i % 6) + 2 })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Burst' })),
-      ...many(30, (i) => big(200 + i, { subscriptionId: (i % 6) + 2 })),
+      ...many(30, (index) => big(index, { subscriptionId: (index % 6) + 2 })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Burst' })),
+      ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    const group = blocks.find((b) => b.kind === 'group');
+    const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Widget owns the whole tail: run of 8, minus 3 featured, = 5 entries.
     expect(group!.kind === 'group' && group!.entries.length).toBe(5);
@@ -219,13 +227,13 @@ describe('planMagazine', () => {
     const groupIndex = blocks.indexOf(group!);
     const featured = blocks
       .slice(0, groupIndex)
-      .filter((b) => b.kind !== 'group' && b.entry.source === 'Burst');
+      .filter((block) => block.kind !== 'group' && block.entry.source === 'Burst');
     expect(featured.length).toBe(3);
     expect(entryCount(blocks)).toBe(68);
   });
 
   it('holds back a partial trailing page while more can load', () => {
-    const entries = many(20, (i) => big(i, { subscriptionId: (i % 5) + 1 }));
+    const entries = many(20, (index) => big(index, { subscriptionId: (index % 5) + 1 }));
     const held = planMagazine({ entries, grouping: true, complete: false });
     const done = planMagazine({ entries, grouping: true, complete: true });
     expect(held.length).toBeLessThanOrEqual(done.length);
@@ -236,8 +244,8 @@ describe('planMagazine', () => {
     // 30 of source 1 up front (a collapsing run), then 90 mixed. The collapse
     // resolves identically in the partial prefix and the full render.
     const entries = [
-      ...many(30, (i) => big(i, { subscriptionId: 1, source: 'Burst' })),
-      ...many(90, (i) => big(100 + i, { subscriptionId: (i % 6) + 2 })),
+      ...many(30, (index) => big(index, { subscriptionId: 1, source: 'Burst' })),
+      ...many(90, (index) => big(100 + index, { subscriptionId: (index % 6) + 2 })),
     ];
     const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
     const full = planMagazine({ entries, grouping: true, complete: true });
@@ -245,7 +253,7 @@ describe('planMagazine', () => {
   });
 
   it('never fills a wide or split block for image-less entries', () => {
-    const entries = many(40, (i) => e(i, { subscriptionId: (i % 6) + 1 }));
+    const entries = many(40, (index) => entryAt(index, { subscriptionId: (index % 6) + 1 }));
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('wide');
     expect(kinds(blocks)).not.toContain('split');
@@ -256,12 +264,12 @@ describe('planMagazine', () => {
     // within LOOK_AHEAD (2), so the reorder should pull it forward while
     // everything else stays in place — and no entry is lost or duplicated.
     const lookAhead = 2;
-    const entries = [e(1), big(2), big(3), big(4), big(5)];
+    const entries = [entryAt(1), big(2), big(3), big(4), big(5)];
     const blocks = planMagazine({ entries, grouping: false, complete: true });
-    const ids = blocks.flatMap((b) =>
-      b.kind === 'group' ? b.entries.map((x) => x.id) : [b.entry.id],
+    const ids = blocks.flatMap((block) =>
+      block.kind === 'group' ? block.entries.map((x) => x.id) : [block.entry.id],
     );
-    expect([...ids].sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    expect([...ids].sort((left, right) => left - right)).toEqual([1, 2, 3, 4, 5]);
     ids.forEach((id, position) => {
       expect(Math.abs(id - 1 - position)).toBeLessThanOrEqual(lookAhead);
     });
@@ -269,12 +277,14 @@ describe('planMagazine', () => {
 
   it('collapses a dominant source while the view stays mixed', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(12, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(6, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(12, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) =>
+        big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
+      ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    const group = blocks.find((b) => b.kind === 'group');
+    const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     expect(group!.kind === 'group' && group!.entries.length).toBe(9); // 12 - 3 featured
     expect(group!.kind === 'group' && group!.previewCount).toBe(4);
@@ -285,8 +295,8 @@ describe('planMagazine', () => {
     // Only two sources active -> collapsing one surfaces just the other, which
     // isn't enough to be worth it. The gate needs >= MIN_VIEW_SOURCES.
     const entries = [
-      ...many(10, (i) => big(i, { subscriptionId: 1, source: 'A' })),
-      ...many(10, (i) => big(100 + i, { subscriptionId: 2, source: 'B' })),
+      ...many(10, (index) => big(index, { subscriptionId: 1, source: 'A' })),
+      ...many(10, (index) => big(100 + index, { subscriptionId: 2, source: 'B' })),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('group');
@@ -295,14 +305,16 @@ describe('planMagazine', () => {
 
   it('merges two same-source segments across a single foreign post', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(6, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(6, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       big(150, { subscriptionId: 9, source: 'Interloper' }),
-      ...many(6, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(8, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(6, (index) => big(160 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(8, (index) =>
+        big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
+      ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    const group = blocks.find((b) => b.kind === 'group');
+    const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Both 6-entry segments merge into one run of 12, minus 3 featured = 9.
     expect(group!.kind === 'group' && group!.entries.length).toBe(9);
@@ -310,21 +322,23 @@ describe('planMagazine', () => {
     const groupIndex = blocks.indexOf(group!);
     const surfaced = blocks
       .slice(groupIndex + 1)
-      .find((b) => b.kind !== 'group' && b.entry.id === 150);
+      .find((block) => block.kind !== 'group' && block.entry.id === 150);
     expect(surfaced).toBeDefined();
     expect(entryCount(blocks)).toBe(27);
   });
 
   it('does not merge across a gap of two foreign posts', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       big(150, { subscriptionId: 9, source: 'A' }),
       big(151, { subscriptionId: 10, source: 'B' }),
-      ...many(8, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(8, (index) =>
+        big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
+      ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    const group = blocks.find((b) => b.kind === 'group');
+    const group = blocks.find((block) => block.kind === 'group');
     expect(group).toBeDefined();
     // Run stops at the 2-post gap: 8 - 3 featured = 5, NOT merged past it.
     expect(group!.kind === 'group' && group!.entries.length).toBe(5);
@@ -333,16 +347,18 @@ describe('planMagazine', () => {
 
   it('re-features each separate run of the same source', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       big(150, { subscriptionId: 9, source: 'A' }),
       big(151, { subscriptionId: 10, source: 'B' }),
       big(152, { subscriptionId: 11, source: 'C' }),
-      ...many(8, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(6, (i) => big(200 + i, { subscriptionId: i + 2, source: `s${i + 2}` })),
+      ...many(8, (index) => big(160 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) =>
+        big(200 + index, { subscriptionId: index + 2, source: `s${index + 2}` }),
+      ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    const groups = blocks.filter((b) => b.kind === 'group');
+    const groups = blocks.filter((block) => block.kind === 'group');
     expect(groups.length).toBe(2);
     // 6 + 8 + 3 (A/B/C) + 8 + 6 = 31 entries, all surfaced exactly once.
     expect(entryCount(blocks)).toBe(31);
@@ -352,33 +368,33 @@ describe('planMagazine', () => {
     // The run reaches the loaded boundary, so its membership might still grow ->
     // defer. Once complete, it collapses.
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
     ];
     const held = planMagazine({ entries, grouping: true, complete: false });
     const done = planMagazine({ entries, grouping: true, complete: true });
-    expect(held.some((b) => b.kind === 'group')).toBe(false);
-    expect(done.some((b) => b.kind === 'group')).toBe(true);
+    expect(held.some((block) => block.kind === 'group')).toBe(false);
+    expect(done.some((block) => block.kind === 'group')).toBe(true);
   });
 
   it('collapses a terminated run even before the feed is complete', () => {
     // A foreign entry after the run proves it terminated, so it can collapse in a
     // partial render — no need to wait for completion.
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       big(200, { subscriptionId: 3, source: 's3' }),
       big(201, { subscriptionId: 4, source: 's4' }),
     ];
     const held = planMagazine({ entries, grouping: true, complete: false });
-    expect(held.some((b) => b.kind === 'group')).toBe(true);
+    expect(held.some((block) => block.kind === 'group')).toBe(true);
   });
 
   it('is prefix-stable when a collapsing run’s page grows', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(12, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(102, (i) => big(200 + i, { subscriptionId: (i % 6) + 2 })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(12, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(102, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
     const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
     const full = planMagazine({ entries, grouping: true, complete: true });
@@ -387,11 +403,11 @@ describe('planMagazine', () => {
 
   it('emits every entry exactly once even when runs collapse and bridge', () => {
     const entries = [
-      ...many(6, (i) => big(i, { subscriptionId: i + 2, source: `s${i + 2}` })),
-      ...many(5, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
+      ...many(6, (index) => big(index, { subscriptionId: index + 2, source: `s${index + 2}` })),
+      ...many(5, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
       big(150, { subscriptionId: 9, source: 'X' }),
-      ...many(5, (i) => big(160 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(8, (i) => big(200 + i, { subscriptionId: (i % 6) + 2 })),
+      ...many(5, (index) => big(160 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(8, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     // 6 + 5 + 1 (bridged X) + 5 + 8 = 25 entries, all surfaced exactly once.
@@ -403,9 +419,9 @@ describe('planMagazine', () => {
     // grow -> the partial render defers it while the full render collapses it. The
     // page ending at the run head must be identical in both.
     const entries = [
-      ...many(12, (i) => big(i, { subscriptionId: (i % 6) + 2 })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Dom' })),
-      ...many(12, (i) => big(200 + i, { subscriptionId: 2, source: 'Solo' })),
+      ...many(12, (index) => big(index, { subscriptionId: (index % 6) + 2 })),
+      ...many(8, (index) => big(100 + index, { subscriptionId: 1, source: 'Dom' })),
+      ...many(12, (index) => big(200 + index, { subscriptionId: 2, source: 'Solo' })),
     ];
     const partial = planMagazine({
       entries: entries.slice(0, 20),
@@ -421,25 +437,37 @@ describe('planMagazine', () => {
     // entries, but three more sources posted within the last day. Time-based
     // diversity sees them; the old leading-count gate did not.
     const entries = [
-      ...many(14, (i) => big(i, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
-      ...many(12, (i) => big(100 + i, { subscriptionId: 2, source: 'B', publishedAt: at(2) })),
-      ...many(3, (i) =>
-        big(200 + i, { subscriptionId: i + 2, source: `c${i + 2}`, publishedAt: at(10) }),
+      ...many(14, (index) => big(index, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
+      ...many(12, (index) =>
+        big(100 + index, { subscriptionId: 2, source: 'B', publishedAt: at(2) }),
+      ),
+      ...many(3, (index) =>
+        big(200 + index, {
+          subscriptionId: index + 2,
+          source: `c${index + 2}`,
+          publishedAt: at(10),
+        }),
       ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     // Both bursts collapse into their own widgets.
-    expect(blocks.filter((b) => b.kind === 'group').length).toBe(2);
+    expect(blocks.filter((block) => block.kind === 'group').length).toBe(2);
   });
 
   it('stays flat when the only other sources fall outside the 24h window', () => {
     // Two sources burst recently; every other source last posted days ago. Stale
     // sources aren't "recent other content", so the view isn't diverse enough.
     const entries = [
-      ...many(14, (i) => big(i, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
-      ...many(12, (i) => big(100 + i, { subscriptionId: 2, source: 'B', publishedAt: at(3) })),
-      ...many(5, (i) =>
-        big(200 + i, { subscriptionId: i + 2, source: `c${i + 2}`, publishedAt: at(50) }),
+      ...many(14, (index) => big(index, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
+      ...many(12, (index) =>
+        big(100 + index, { subscriptionId: 2, source: 'B', publishedAt: at(3) }),
+      ),
+      ...many(5, (index) =>
+        big(200 + index, {
+          subscriptionId: index + 2,
+          source: `c${index + 2}`,
+          publishedAt: at(50),
+        }),
       ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
@@ -450,28 +478,35 @@ describe('planMagazine', () => {
     // The whole tag is days old, but its most recent 24h of activity decides
     // diversity: three sources active within a day of the newest entry -> group.
     const entries = [
-      ...many(10, (i) => big(i, { subscriptionId: 1, source: 'A', publishedAt: at(72) })),
+      ...many(10, (index) => big(index, { subscriptionId: 1, source: 'A', publishedAt: at(72) })),
       big(100, { subscriptionId: 2, source: 'B', publishedAt: at(80) }),
       big(101, { subscriptionId: 3, source: 'C', publishedAt: at(90) }),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    expect(blocks.some((b) => b.kind === 'group')).toBe(true);
+    expect(blocks.some((block) => block.kind === 'group')).toBe(true);
   });
 
   it('judges the collapse gate from the first entry, so a newer page appended oldest first keeps it', () => {
     const firstPage = [
-      ...many(12, (i) => big(i, { subscriptionId: (i % 3) + 2, publishedAt: at(100 - i) })),
-      ...many(8, (i) =>
-        big(100 + i, { subscriptionId: 1, source: 'Burst', publishedAt: at(88 - i) }),
+      ...many(12, (index) =>
+        big(index, { subscriptionId: (index % 3) + 2, publishedAt: at(100 - index) }),
       ),
-      ...many(12, (i) => big(200 + i, { subscriptionId: (i % 3) + 2, publishedAt: at(80 - i) })),
+      ...many(8, (index) =>
+        big(100 + index, { subscriptionId: 1, source: 'Burst', publishedAt: at(88 - index) }),
+      ),
+      ...many(12, (index) =>
+        big(200 + index, { subscriptionId: (index % 3) + 2, publishedAt: at(80 - index) }),
+      ),
     ];
-    const newerPage = many(30, (i) =>
-      big(300 + i, { subscriptionId: 9, source: 'Late', publishedAt: at(30 - i) }),
+    const newerPage = many(30, (index) =>
+      big(300 + index, { subscriptionId: 9, source: 'Late', publishedAt: at(30 - index) }),
     );
 
     const burstGroup = (blocks: MagazineBlock[]) =>
-      blocks.find((b) => b.kind === 'group' && b.entries.some((entry) => entry.source === 'Burst'));
+      blocks.find(
+        (block) =>
+          block.kind === 'group' && block.entries.some((entry) => entry.source === 'Burst'),
+      );
 
     const before = planMagazine({ entries: firstPage, grouping: true, complete: true });
     const after = planMagazine({
@@ -488,25 +523,29 @@ describe('planMagazine', () => {
   it('skips an unparseable-date first entry when anchoring the collapse window', () => {
     const entries = [
       big(0, { subscriptionId: 5, source: 'Undated', publishedAt: 'not-a-date' }),
-      ...many(12, (i) => big(i, { subscriptionId: (i % 3) + 2, publishedAt: at(10) })),
-      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Burst', publishedAt: at(8) })),
+      ...many(12, (index) => big(index, { subscriptionId: (index % 3) + 2, publishedAt: at(10) })),
+      ...many(8, (index) =>
+        big(100 + index, { subscriptionId: 1, source: 'Burst', publishedAt: at(8) }),
+      ),
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
-    expect(blocks.some((b) => b.kind === 'group')).toBe(true);
+    expect(blocks.some((block) => block.kind === 'group')).toBe(true);
   });
 
   it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {
     // A dev/link blog: a quarter of posts carry a large image (which holds the
     // IMAGE family), the rest are image-less but have a summary. The image-less
-    // ones used to ride the image ladder down to a title-only `compact`, dropping
-    // their dek. They must settle on `kicker`, which renders the summary.
-    const entries = many(80, (i) =>
-      i % 4 === 0 ? big(i, { subscriptionId: (i % 6) + 1 }) : e(i, { subscriptionId: (i % 6) + 1 }),
+    // ones must not ride the image ladder down to a title-only `compact`, dropping
+    // their dek; they settle on `kicker`, which renders the summary.
+    const entries = many(80, (index) =>
+      index % 4 === 0
+        ? big(index, { subscriptionId: (index % 6) + 1 })
+        : entryAt(index, { subscriptionId: (index % 6) + 1 }),
     );
     const blocks = planMagazine({ entries, grouping: false, complete: true });
     const imagelessKinds = blocks
-      .filter((b) => b.kind !== 'group' && entryImage(b.entry) === null)
-      .map((b) => b.kind);
+      .filter((block) => block.kind !== 'group' && entryImage(block.entry) === null)
+      .map((block) => block.kind);
     expect(imagelessKinds.length).toBeGreaterThan(0);
     expect(imagelessKinds).not.toContain('compact');
   });
@@ -519,7 +558,9 @@ describe('planMagazine', () => {
     // family and show its deks.
     const summary =
       'A short plain-text feed description, the kind a wire RSS item ships in its body.';
-    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary }));
+    const entries = many(80, (index) =>
+      entryAt(index, { subscriptionId: (index % 6) + 1, summary }),
+    );
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks).not.toContain('hero');
     expect(ks).not.toContain('wide');
@@ -533,7 +574,9 @@ describe('planMagazine', () => {
     // The floor lift is gated on HAVING a summary: an entry with neither an image
     // nor any copy has nothing to put in a dek, so it stays a title-only compact
     // rather than an empty kicker.
-    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary: null }));
+    const entries = many(80, (index) =>
+      entryAt(index, { subscriptionId: (index % 6) + 1, summary: null }),
+    );
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks).toContain('compact');
   });
@@ -542,15 +585,19 @@ describe('planMagazine', () => {
     // A `kicker` shows a title AND a dek; with no summary the dek is empty, so a
     // bare entry has no business in one. Every block collapses to `compact`, even
     // from a quote/kicker slot that would otherwise demote to a dek-less kicker.
-    const entries = many(80, (i) => e(i, { subscriptionId: (i % 6) + 1, summary: null }));
+    const entries = many(80, (index) =>
+      entryAt(index, { subscriptionId: (index % 6) + 1, summary: null }),
+    );
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
-    expect(ks.every((k) => k === 'compact')).toBe(true);
+    expect(ks.every((kind) => kind === 'compact')).toBe(true);
   });
 
   it('is prefix-stable for a short-summary, image-less feed', () => {
     const summary =
       'A short plain-text feed description, the kind a wire RSS item ships in its body.';
-    const entries = many(120, (i) => e(i, { subscriptionId: (i % 6) + 1, summary }));
+    const entries = many(120, (index) =>
+      entryAt(index, { subscriptionId: (index % 6) + 1, summary }),
+    );
     const first = planMagazine({ entries: entries.slice(0, 60), grouping: true, complete: false });
     const full = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(full).slice(0, first.length)).toEqual(kinds(first));
@@ -561,16 +608,22 @@ describe('planMagazine', () => {
     // other source. The old >=2-others-in-the-next-8 guard blocked A; the 24h
     // gate collapses both.
     const entries = [
-      ...many(14, (i) => big(i, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
-      ...many(12, (i) => big(100 + i, { subscriptionId: 2, source: 'B', publishedAt: at(2) })),
-      ...many(3, (i) =>
-        big(200 + i, { subscriptionId: i + 2, source: `c${i + 2}`, publishedAt: at(4) }),
+      ...many(14, (index) => big(index, { subscriptionId: 1, source: 'A', publishedAt: at(1) })),
+      ...many(12, (index) =>
+        big(100 + index, { subscriptionId: 2, source: 'B', publishedAt: at(2) }),
+      ),
+      ...many(3, (index) =>
+        big(200 + index, {
+          subscriptionId: index + 2,
+          source: `c${index + 2}`,
+          publishedAt: at(4),
+        }),
       ),
     ];
     const groups = planMagazine({ entries, grouping: true, complete: true }).filter(
-      (b) => b.kind === 'group',
+      (block) => block.kind === 'group',
     );
     expect(groups.length).toBe(2);
-    expect(groups.every((b) => b.kind === 'group' && b.entries.length >= 1)).toBe(true);
+    expect(groups.every((block) => block.kind === 'group' && block.entries.length >= 1)).toBe(true);
   });
 });

@@ -35,9 +35,9 @@ describe('ImageProxyService', () => {
     urls.revokeObjectURL = original.revoke;
   });
 
-  function image(src: string): HTMLImageElement {
+  function image(source: string): HTMLImageElement {
     const img = document.createElement('img');
-    img.src = src;
+    img.src = source;
     return img;
   }
 
@@ -46,7 +46,8 @@ describe('ImageProxyService', () => {
     const recovered = service.recover(img);
 
     const request = http.expectOne(
-      (req) => req.url === 'https://api.test/api/image-proxy' && req.params.get('url') === IMAGE,
+      (request) =>
+        request.url === 'https://api.test/api/image-proxy' && request.params.get('url') === IMAGE,
     );
     expect(request.request.responseType).toBe('blob');
     request.flush(new Blob(['png']));

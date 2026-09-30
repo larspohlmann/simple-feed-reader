@@ -27,12 +27,12 @@ describe('SettingsApi', () => {
     let received: Blob | null | undefined;
     api.downloadAccountBackup().subscribe((response) => (received = response.body));
 
-    const req = ctrl.expectOne('https://api.test/api/account/backup');
-    expect(req.request.method).toBe('GET');
-    expect(req.request.responseType).toBe('blob');
+    const testRequest = ctrl.expectOne('https://api.test/api/account/backup');
+    expect(testRequest.request.method).toBe('GET');
+    expect(testRequest.request.responseType).toBe('blob');
 
     const blob = new Blob(['gzipped'], { type: 'application/gzip' });
-    req.flush(blob);
+    testRequest.flush(blob);
 
     expect(received).toBe(blob);
   });
@@ -40,12 +40,12 @@ describe('SettingsApi', () => {
   it('POSTs a gzip body to preview a restore', () => {
     const backup = new Blob(['gzipped'], { type: 'application/gzip' });
     let received: RestorePreview | undefined;
-    api.previewAccountRestore(backup).subscribe((p) => (received = p));
+    api.previewAccountRestore(backup).subscribe((preview) => (received = preview));
 
-    const req = ctrl.expectOne('https://api.test/api/account/restore/preview');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe(backup);
-    expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
+    const testRequest = ctrl.expectOne('https://api.test/api/account/restore/preview');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toBe(backup);
+    expect(testRequest.request.headers.get('Content-Type')).toBe('application/gzip');
 
     const preview: RestorePreview = {
       backup: {
@@ -65,7 +65,7 @@ describe('SettingsApi', () => {
       },
       toDelete: { tags: 0, subscriptions: 0, entryStates: 0, recommendationRuns: 0 },
     };
-    req.flush(preview);
+    testRequest.flush(preview);
 
     expect(received).toEqual(preview);
   });
@@ -73,12 +73,14 @@ describe('SettingsApi', () => {
   it('POSTs a gzip body to start a restore', () => {
     const foundation = new Blob(['gzipped'], { type: 'application/gzip' });
     let received: RestoreResult | undefined;
-    api.startAccountRestore(foundation).subscribe((r) => (received = r));
+    api.startAccountRestore(foundation).subscribe((result) => (received = result));
 
-    const req = ctrl.expectOne('https://api.test/api/account/restore/start?confirm=REPLACE');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe(foundation);
-    expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
+    const testRequest = ctrl.expectOne(
+      'https://api.test/api/account/restore/start?confirm=REPLACE',
+    );
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toBe(foundation);
+    expect(testRequest.request.headers.get('Content-Type')).toBe('application/gzip');
 
     const result: RestoreResult = {
       loaded: {
@@ -90,7 +92,7 @@ describe('SettingsApi', () => {
         entryStates: 0,
       },
     };
-    req.flush(result);
+    testRequest.flush(result);
 
     expect(received).toEqual(result);
   });
@@ -98,12 +100,12 @@ describe('SettingsApi', () => {
   it('POSTs a gzip body to restore one entry part', () => {
     const part = new Blob(['gzipped'], { type: 'application/gzip' });
     let received: RestoreResult | undefined;
-    api.restoreEntryPart(part).subscribe((r) => (received = r));
+    api.restoreEntryPart(part).subscribe((result) => (received = result));
 
-    const req = ctrl.expectOne('https://api.test/api/account/restore/entries');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe(part);
-    expect(req.request.headers.get('Content-Type')).toBe('application/gzip');
+    const testRequest = ctrl.expectOne('https://api.test/api/account/restore/entries');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toBe(part);
+    expect(testRequest.request.headers.get('Content-Type')).toBe('application/gzip');
 
     const result: RestoreResult = {
       loaded: {
@@ -115,25 +117,25 @@ describe('SettingsApi', () => {
         entryStates: 10,
       },
     };
-    req.flush(result);
+    testRequest.flush(result);
 
     expect(received).toEqual(result);
   });
 
   it('GETs OPML export as text', () => {
     api.exportOpml().subscribe();
-    const req = ctrl.expectOne('https://api.test/api/opml/export');
-    expect(req.request.method).toBe('GET');
-    expect(req.request.responseType).toBe('text');
-    req.flush('<opml/>');
+    const testRequest = ctrl.expectOne('https://api.test/api/opml/export');
+    expect(testRequest.request.method).toBe('GET');
+    expect(testRequest.request.responseType).toBe('text');
+    testRequest.flush('<opml/>');
   });
 
   it('POSTs OPML import as a raw body', () => {
     api.importOpml('<opml/>').subscribe();
-    const req = ctrl.expectOne('https://api.test/api/opml/import');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBe('<opml/>');
-    req.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
+    const testRequest = ctrl.expectOne('https://api.test/api/opml/import');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toBe('<opml/>');
+    testRequest.flush({ imported: 1, alreadySubscribed: 0, invalid: 0, skippedOverLimit: 0 });
   });
 
   it('GETs the account backup as a blob, observing the full response for its headers', () => {
@@ -141,10 +143,10 @@ describe('SettingsApi', () => {
     api.downloadAccountBackup().subscribe((response) => {
       filename = response.headers.get('Content-Disposition');
     });
-    const req = ctrl.expectOne('https://api.test/api/account/backup');
-    expect(req.request.method).toBe('GET');
-    expect(req.request.responseType).toBe('blob');
-    req.flush(new Blob(['gzipped']), {
+    const testRequest = ctrl.expectOne('https://api.test/api/account/backup');
+    expect(testRequest.request.method).toBe('GET');
+    expect(testRequest.request.responseType).toBe('blob');
+    testRequest.flush(new Blob(['gzipped']), {
       headers: { 'Content-Disposition': 'attachment; filename="account.json.gz"' },
     });
     expect(filename).toBe('attachment; filename="account.json.gz"');
@@ -152,16 +154,16 @@ describe('SettingsApi', () => {
 
   it('GETs the debug log', () => {
     api.debugLog().subscribe();
-    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
-    expect(req.request.method).toBe('GET');
-    req.flush({ run: null, entries: [] });
+    const testRequest = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({ run: null, entries: [] });
   });
 
   it('GETs one debug log entry', () => {
     api.debugLogEntry(7).subscribe();
-    const req = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');
-    expect(req.request.method).toBe('GET');
-    req.flush({
+    const testRequest = ctrl.expectOne('https://api.test/api/recommendations/runs/debug-log/7');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({
       id: 7,
       phase: 'batch',
       batchNumber: 1,

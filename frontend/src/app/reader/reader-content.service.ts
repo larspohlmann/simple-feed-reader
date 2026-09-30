@@ -31,8 +31,8 @@ export class ReaderContentService {
 
   private fetchAndCache(entryId: number): Observable<ReaderContent> {
     return this.api.readerContent(entryId).pipe(
-      tap((c) => {
-        if (c.status === 'ok') void this.cache.put(entryId, c);
+      tap((content) => {
+        if (content.status === 'ok') void this.cache.put(entryId, content);
       }),
     );
   }

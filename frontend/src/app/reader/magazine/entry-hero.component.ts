@@ -29,8 +29,8 @@ export class EntryHeroComponent extends EntryBlockBase {
     const img = this.image();
     return img?.width && img?.height ? `${img.width} / ${img.height}` : '16 / 9';
   });
-  onLoad(ev: Event): void {
-    const img = ev.target as HTMLImageElement;
+  onLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
     if (img.naturalWidth && img.naturalWidth < 200) this.tooSmall.set(true);
   }
 

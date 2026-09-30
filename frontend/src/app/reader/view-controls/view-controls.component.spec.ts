@@ -20,18 +20,20 @@ describe('ViewControlsComponent', () => {
   });
 
   function create() {
-    const f = TestBed.createComponent(ViewControlsComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(ViewControlsComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function layoutGroup(f: ReturnType<typeof create>): HTMLElement {
-    return f.nativeElement.querySelector('[aria-label="Reading layout"]') as HTMLElement;
+  function layoutGroup(fixture: ReturnType<typeof create>): HTMLElement {
+    return fixture.nativeElement.querySelector('[aria-label="Reading layout"]') as HTMLElement;
   }
 
   it('offers the two magazine designs, then list and pane, in one group', () => {
     const group = layoutGroup(create());
-    const titles = Array.from(group.querySelectorAll('button')).map((b) => b.getAttribute('title'));
+    const titles = Array.from(group.querySelectorAll('button')).map((button) =>
+      button.getAttribute('title'),
+    );
 
     expect(titles).toEqual([
       'Magazine layout, boxed',
@@ -42,49 +44,49 @@ describe('ViewControlsComponent', () => {
   });
 
   it('picks the layout and the design together', () => {
-    const f = create();
+    const fixture = create();
     const layout = TestBed.inject(ReadingLayoutService);
     const magazineStyle = TestBed.inject(MagazineStyleService);
     layout.set('list');
-    f.detectChanges();
+    fixture.detectChanges();
 
-    (layoutGroup(f).querySelector(AIRY) as HTMLButtonElement).click();
+    (layoutGroup(fixture).querySelector(AIRY) as HTMLButtonElement).click();
 
     expect(layout.mode()).toBe('magazine');
     expect(magazineStyle.style()).toBe('airy');
   });
 
   it('marks only the design the reader is actually looking at', () => {
-    const f = create();
-    const group = layoutGroup(f);
+    const fixture = create();
+    const group = layoutGroup(fixture);
     expect(group.querySelector(BOXED)!.getAttribute('aria-pressed')).toBe('true');
 
     (group.querySelector(AIRY) as HTMLButtonElement).click();
-    f.detectChanges();
+    fixture.detectChanges();
     expect(group.querySelector(AIRY)!.getAttribute('aria-pressed')).toBe('true');
     expect(group.querySelector(BOXED)!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('leaves both magazine buttons unpressed outside the magazine layout', () => {
-    const f = create();
+    const fixture = create();
     TestBed.inject(ReadingLayoutService).set('list');
-    f.detectChanges();
+    fixture.detectChanges();
 
-    const group = layoutGroup(f);
+    const group = layoutGroup(fixture);
     expect(group.querySelector(BOXED)!.getAttribute('aria-pressed')).toBe('false');
     expect(group.querySelector(AIRY)!.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('keeps the chosen design when the reader leaves and returns to the magazine', () => {
-    const f = create();
+    const fixture = create();
     const layout = TestBed.inject(ReadingLayoutService);
-    const group = layoutGroup(f);
+    const group = layoutGroup(fixture);
     (group.querySelector(AIRY) as HTMLButtonElement).click();
 
     layout.set('list');
-    f.detectChanges();
+    fixture.detectChanges();
     layout.set('magazine');
-    f.detectChanges();
+    fixture.detectChanges();
 
     expect(TestBed.inject(MagazineStyleService).style()).toBe('airy');
     expect(group.querySelector(AIRY)!.getAttribute('aria-pressed')).toBe('true');
@@ -92,20 +94,20 @@ describe('ViewControlsComponent', () => {
   });
 
   it('toggles the reading layout to pane', () => {
-    const f = create();
+    const fixture = create();
     const layout = TestBed.inject(ReadingLayoutService);
-    (f.nativeElement.querySelector('[title="Pane layout"]') as HTMLButtonElement).click();
+    (fixture.nativeElement.querySelector('[title="Pane layout"]') as HTMLButtonElement).click();
     expect(layout.mode()).toBe('pane');
   });
 
   it('switches the theme mode', () => {
-    const f = create();
+    const fixture = create();
     const theme = TestBed.inject(ThemeService);
-    const group = f.nativeElement.querySelector('[aria-label="Theme"]') as HTMLElement;
+    const group = fixture.nativeElement.querySelector('[aria-label="Theme"]') as HTMLElement;
     const dark = group.querySelector('[title="Dark"]') as HTMLButtonElement;
     dark.click();
     expect(theme.mode()).toBe('dark');
-    f.detectChanges();
+    fixture.detectChanges();
     expect(dark.getAttribute('aria-pressed')).toBe('true');
   });
 });

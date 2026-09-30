@@ -24,7 +24,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-const e = (id: number): EntryDto => ({
+const entryAt = (id: number): EntryDto => ({
   id,
   title: `t${id}`,
   url: null,
@@ -56,73 +56,79 @@ describe('SourceGroupComponent', () => {
       imports: [SourceGroupComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    const f = TestBed.createComponent(SourceGroupComponent);
-    f.componentRef.setInput('source', 'heise');
-    f.componentRef.setInput('subscriptionId', 7);
-    f.componentRef.setInput('entries', entries);
-    f.componentRef.setInput('previewCount', previewCount);
-    f.componentRef.setInput('tags', []);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(SourceGroupComponent);
+    fixture.componentRef.setInput('source', 'heise');
+    fixture.componentRef.setInput('subscriptionId', 7);
+    fixture.componentRef.setInput('entries', entries);
+    fixture.componentRef.setInput('previewCount', previewCount);
+    fixture.componentRef.setInput('tags', []);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('previews previewCount rows and counts the hidden tail', () => {
-    const el = mount([e(1), e(2), e(3), e(4), e(5), e(6), e(7)], 4).nativeElement as HTMLElement;
-    expect(el.textContent).toContain('heise');
-    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
-    expect(el.querySelector('.more')!.textContent).toContain('3 more from heise');
+    const element = mount(
+      [entryAt(1), entryAt(2), entryAt(3), entryAt(4), entryAt(5), entryAt(6), entryAt(7)],
+      4,
+    ).nativeElement as HTMLElement;
+    expect(element.textContent).toContain('heise');
+    expect(element.querySelectorAll('app-entry-compact').length).toBe(4);
+    expect(element.querySelector('.more')!.textContent).toContain('3 more from heise');
   });
 
   it('renders no more indicator when the tail fits the preview', () => {
-    const el = mount([e(1), e(2), e(3)], 3).nativeElement as HTMLElement;
-    expect(el.querySelector('.more')).toBeNull();
+    const element = mount([entryAt(1), entryAt(2), entryAt(3)], 3).nativeElement as HTMLElement;
+    expect(element.querySelector('.more')).toBeNull();
   });
 
   it('shows the feed tags as pills once, on the group header', () => {
-    const f = mount([e(1), e(2), e(3), e(4), e(5)], 4);
-    f.componentRef.setInput('tags', [tag(2, 'Tech')]);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    const pills = el.querySelectorAll('a.pill');
+    const fixture = mount([entryAt(1), entryAt(2), entryAt(3), entryAt(4), entryAt(5)], 4);
+    fixture.componentRef.setInput('tags', [tag(2, 'Tech')]);
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const pills = element.querySelectorAll('a.pill');
     expect(pills.length).toBe(1);
     expect(pills[0].textContent).toContain('Tech');
     // The header carries the pills; the inner compacts do not repeat them.
-    expect(el.querySelector('.ghead a.pill')).not.toBeNull();
+    expect(element.querySelector('.ghead a.pill')).not.toBeNull();
   });
 
   it('re-emits open from an inner item', () => {
-    const f = mount([e(1), e(2), e(3), e(4), e(5)], 4);
+    const fixture = mount([entryAt(1), entryAt(2), entryAt(3), entryAt(4), entryAt(5)], 4);
     const open = jest.fn();
     entryActions.open.mockImplementation(open);
-    (f.nativeElement.querySelector('.compact') as HTMLElement).click();
+    (fixture.nativeElement.querySelector('.compact') as HTMLElement).click();
     expect(open).toHaveBeenCalled();
   });
 
   it('expands to reveal the whole tail and collapses again', () => {
-    const f = mount([e(1), e(2), e(3), e(4), e(5), e(6), e(7)], 4);
-    const el = f.nativeElement as HTMLElement;
-    const button = el.querySelector('button.more') as HTMLButtonElement;
+    const fixture = mount(
+      [entryAt(1), entryAt(2), entryAt(3), entryAt(4), entryAt(5), entryAt(6), entryAt(7)],
+      4,
+    );
+    const element = fixture.nativeElement as HTMLElement;
+    const button = element.querySelector('button.more') as HTMLButtonElement;
     expect(button.getAttribute('aria-expanded')).toBe('false');
-    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+    expect(element.querySelectorAll('app-entry-compact').length).toBe(4);
 
     button.click();
-    f.detectChanges();
-    expect(el.querySelectorAll('app-entry-compact').length).toBe(7);
+    fixture.detectChanges();
+    expect(element.querySelectorAll('app-entry-compact').length).toBe(7);
     expect(button.getAttribute('aria-expanded')).toBe('true');
     expect(button.textContent).toContain('Show less');
 
     button.click();
-    f.detectChanges();
-    expect(el.querySelectorAll('app-entry-compact').length).toBe(4);
+    fixture.detectChanges();
+    expect(element.querySelectorAll('app-entry-compact').length).toBe(4);
     expect(button.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('forwards an action from the row it was pressed on', () => {
-    const f = mount([e(1), e(2), e(3)], 3);
+    const fixture = mount([entryAt(1), entryAt(2), entryAt(3)], 3);
     const favorite = jest.fn();
     entryActions.favorite.mockImplementation(favorite);
 
-    const rows = f.nativeElement.querySelectorAll('app-entry-compact');
+    const rows = fixture.nativeElement.querySelectorAll('app-entry-compact');
     const secondRowStar = rows[1].querySelectorAll('app-entry-actions button')[0] as HTMLElement;
     secondRowStar.click();
 
@@ -130,13 +136,13 @@ describe('SourceGroupComponent', () => {
   });
 
   it('forwards keep and read as well', () => {
-    const f = mount([e(1)], 1);
+    const fixture = mount([entryAt(1)], 1);
     const keep = jest.fn();
     const read = jest.fn();
     entryActions.keep.mockImplementation(keep);
     entryActions.toggleRead.mockImplementation(read);
 
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[1] as HTMLElement).click();
     (buttons[2] as HTMLElement).click();
 

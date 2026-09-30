@@ -11,8 +11,8 @@ export class ThemeService {
 
   /** The theme on screen: the mode, or what the OS resolved `system` to. */
   readonly resolved = computed<ResolvedTheme>(() => {
-    const m = this.mode();
-    return m === 'system' ? (this.osDark() ? 'dark' : 'light') : m;
+    const mode = this.mode();
+    return mode === 'system' ? (this.osDark() ? 'dark' : 'light') : mode;
   });
 
   constructor() {
@@ -32,8 +32,8 @@ export class ThemeService {
   }
 
   private readSaved(): ThemeMode {
-    const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' || v === 'system' ? v : 'system';
+    const saved = localStorage.getItem(KEY);
+    return saved === 'light' || saved === 'dark' || saved === 'system' ? saved : 'system';
   }
 
   private applyResolved(): void {

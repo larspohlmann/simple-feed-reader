@@ -25,11 +25,13 @@ describe('CatalogApi', () => {
 
   it('loads the catalog', () => {
     let categories: unknown;
-    api.load().subscribe((r) => (categories = r.categories));
+    api.load().subscribe((response) => (categories = response.categories));
 
-    const req = http.expectOne('https://api.test/api/catalog');
-    expect(req.request.method).toBe('GET');
-    req.flush({ categories: [{ id: 1, key: 'technology', name: 'Technology', feeds: [] }] });
+    const testRequest = http.expectOne('https://api.test/api/catalog');
+    expect(testRequest.request.method).toBe('GET');
+    testRequest.flush({
+      categories: [{ id: 1, key: 'technology', name: 'Technology', feeds: [] }],
+    });
 
     expect(categories).toHaveLength(1);
   });
@@ -38,7 +40,7 @@ describe('CatalogApi', () => {
   // resolve that against the apex domain and every icon would 404 (#144).
   it('resolves favicon paths against the API base', () => {
     let categories: CatalogCategoryDto[] = [];
-    api.load().subscribe((r) => (categories = r.categories));
+    api.load().subscribe((response) => (categories = response.categories));
 
     http.expectOne('https://api.test/api/catalog').flush({
       categories: [
@@ -66,9 +68,9 @@ describe('CatalogApi', () => {
   it('posts the selected ids to the onboarding endpoint', () => {
     api.subscribe([3, 1, 2]).subscribe();
 
-    const req = http.expectOne('https://api.test/api/onboarding/subscribe');
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ catalogFeedIds: [3, 1, 2] });
-    req.flush({ subscribed: 3, skipped: 0, skippedOverLimit: 0, tagsCreated: [] });
+    const testRequest = http.expectOne('https://api.test/api/onboarding/subscribe');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({ catalogFeedIds: [3, 1, 2] });
+    testRequest.flush({ subscribed: 3, skipped: 0, skippedOverLimit: 0, tagsCreated: [] });
   });
 });

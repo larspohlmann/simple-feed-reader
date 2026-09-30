@@ -35,9 +35,9 @@ describe('SettingsShellComponent', () => {
     }).overrideComponent(SettingsShellComponent, {
       set: { imports: [], template: '<h1>Settings</h1>', schemas: [] },
     });
-    const f = TestBed.createComponent(SettingsShellComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(SettingsShellComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
   beforeEach(() => {
@@ -63,49 +63,49 @@ describe('SettingsShellComponent', () => {
   });
 
   it('leads back to the saved list from a section on desktop', async () => {
-    const f = mount();
+    const fixture = mount();
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?tag=5');
     await goTo('/settings/preferences');
-    expect(f.componentInstance.backTarget()).toBe('/?tag=5');
+    expect(fixture.componentInstance.backTarget()).toBe('/?tag=5');
   });
 
   it('leads back to the saved article from a section on desktop', async () => {
-    const f = mount();
+    const fixture = mount();
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl(
       '/?tag=5&entry=12-saved-article',
     );
     await goTo('/settings/preferences');
-    expect(f.componentInstance.backTarget()).toBe('/?tag=5&entry=12-saved-article');
+    expect(fixture.componentInstance.backTarget()).toBe('/?tag=5&entry=12-saved-article');
   });
 
   it('falls back to the reader root when no reader location is saved', async () => {
-    const f = mount();
+    const fixture = mount();
     await goTo('/settings/preferences');
-    expect(f.componentInstance.backTarget()).toBe('/');
+    expect(fixture.componentInstance.backTarget()).toBe('/');
   });
 
   it('leads back to the hub from a section on mobile', async () => {
     isWide.set(false);
-    const f = mount();
+    const fixture = mount();
     await goTo('/settings/preferences');
-    expect(f.componentInstance.backTarget()).toBe('/settings');
-    expect(f.componentInstance.backLabelKey()).toBe('settings.title');
+    expect(fixture.componentInstance.backTarget()).toBe('/settings');
+    expect(fixture.componentInstance.backLabelKey()).toBe('settings.title');
   });
 
   it('leads back to the reader from the hub on mobile', async () => {
     isWide.set(false);
-    const f = mount();
+    const fixture = mount();
     TestBed.inject(ReaderLocationService).rememberAttemptedReaderUrl('/?view=unread');
     await goTo('/settings');
-    expect(f.componentInstance.backTarget()).toBe('/?view=unread');
+    expect(fixture.componentInstance.backTarget()).toBe('/?view=unread');
   });
 
   it('flags the wide sections', async () => {
-    const f = mount();
+    const fixture = mount();
     await goTo('/settings/admin/catalog');
-    expect(f.componentInstance.wideSection()).toBe(true);
+    expect(fixture.componentInstance.wideSection()).toBe(true);
     await goTo('/settings/preferences');
-    expect(f.componentInstance.wideSection()).toBe(false);
+    expect(fixture.componentInstance.wideSection()).toBe(false);
   });
 });
 

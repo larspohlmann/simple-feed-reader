@@ -1,4 +1,3 @@
-// src/app/shared/icon-picker/icon-picker.component.ts
 import {
   booleanAttribute,
   ChangeDetectionStrategy,

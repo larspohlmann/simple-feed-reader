@@ -1,4 +1,3 @@
-// src/app/shared/skeleton/skeleton.component.ts
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**

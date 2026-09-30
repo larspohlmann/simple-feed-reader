@@ -64,13 +64,13 @@ describe('feed health', () => {
   });
 
   it('lists gone before erroring, then by title', () => {
-    const subs = [
+    const subscriptions = [
       make({ id: 1, title: 'Bravo', status: 'erroring' }),
       make({ id: 2, title: 'Alpha', status: 'gone' }),
       make({ id: 3, title: 'Charlie', status: 'active' }),
       make({ id: 4, title: 'Alpha', status: 'erroring' }),
     ];
-    expect(unhealthyFeeds(subs).map((s) => s.id)).toEqual([2, 4, 1]);
+    expect(unhealthyFeeds(subscriptions).map((subscription) => subscription.id)).toEqual([2, 4, 1]);
   });
 
   it('describes a gone feed as no longer available', () => {

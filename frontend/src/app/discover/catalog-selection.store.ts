@@ -89,7 +89,7 @@ export class CatalogSelection {
   }
 
   selectAll(categoryId: number): void {
-    const category = this.categories().find((c) => c.id === categoryId);
+    const category = this.categories().find((candidate) => candidate.id === categoryId);
     if (!category) {
       return;
     }
@@ -103,7 +103,7 @@ export class CatalogSelection {
   }
 
   clearCategory(categoryId: number): void {
-    const category = this.categories().find((c) => c.id === categoryId);
+    const category = this.categories().find((candidate) => candidate.id === categoryId);
     if (!category) {
       return;
     }

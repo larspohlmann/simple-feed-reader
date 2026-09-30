@@ -1,4 +1,3 @@
-// e2e/list-header-count-one-line.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
 

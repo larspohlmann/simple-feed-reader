@@ -1,5 +1,5 @@
 import { Injectable, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
-import { SubscriptionsStore, untaggedSubs } from '../../reader/subscriptions.store';
+import { SubscriptionsStore, untaggedSubscriptions } from '../../reader/subscriptions.store';
 import { TagsStore } from '../../reader/tags.store';
 import { SubscriptionDto, TagDto } from '../../reader/models';
 
@@ -46,12 +46,12 @@ function readExpanded(): ReadonlySet<GroupKey> {
  *  full tag list; `buildTagTree` drops a tag only in its no-`orderedTags`
  *  fallback, which this page's `tags()` signal never hits. */
 function feedsInTag(subscriptions: SubscriptionDto[], tagId: number): SubscriptionDto[] {
-  const position = (s: SubscriptionDto): number =>
-    s.tags.find((t) => t.id === tagId)?.position ?? 0;
+  const position = (subscription: SubscriptionDto): number =>
+    subscription.tags.find((tag) => tag.id === tagId)?.position ?? 0;
 
   return subscriptions
-    .filter((s) => s.tags.some((t) => t.id === tagId))
-    .sort((a, b) => position(a) - position(b));
+    .filter((subscription) => subscription.tags.some((tag) => tag.id === tagId))
+    .sort((left, right) => position(left) - position(right));
 }
 
 /** The page's own state: what is selected, what is open, what is filtered.
@@ -76,7 +76,7 @@ export class OrganiseStore {
    *  exists, so a stale id would silently fail every later bulk action for
    *  the rest of the selection as well. */
   private readonly pruneSelectionOfRemovedFeeds = effect(() => {
-    const known = new Set(this.subs.subscriptions().map((s) => s.id));
+    const known = new Set(this.subs.subscriptions().map((subscription) => subscription.id));
     untracked(() => {
       this.selectedIds.update((current) => {
         const next = new Set([...current].filter((id) => known.has(id)));
@@ -103,11 +103,11 @@ export class OrganiseStore {
     const term = this.titleFilter().trim().toLocaleLowerCase();
     const tagKeys = this.tagFilter();
 
-    return this.subs.subscriptions().filter((s) => {
-      if (term !== '' && !s.title.toLocaleLowerCase().includes(term)) return false;
+    return this.subs.subscriptions().filter((subscription) => {
+      if (term !== '' && !subscription.title.toLocaleLowerCase().includes(term)) return false;
       if (tagKeys.size === 0) return true;
-      if (tagKeys.has('untagged') && s.tags.length === 0) return true;
-      return s.tags.some((t) => tagKeys.has(t.id));
+      if (tagKeys.has('untagged') && subscription.tags.length === 0) return true;
+      return subscription.tags.some((tag) => tagKeys.has(tag.id));
     });
   });
 
@@ -121,7 +121,7 @@ export class OrganiseStore {
     for (const tag of this.tags()) {
       counts.set(tag.id, feedsInTag(all, tag.id).length);
     }
-    counts.set('untagged', untaggedSubs(all).length);
+    counts.set('untagged', untaggedSubscriptions(all).length);
 
     return counts;
   });
@@ -142,14 +142,14 @@ export class OrganiseStore {
       {
         key: 'untagged',
         tag: null,
-        subscriptions: untaggedSubs(visible),
+        subscriptions: untaggedSubscriptions(visible),
         totalCount: totalCounts.get('untagged') ?? 0,
       },
     ];
 
     // With no filter every tag shows, empty ones included — that IS the
     // arrangement. With a filter, a group that matches nothing is noise.
-    return this.filterActive() ? groups.filter((g) => g.subscriptions.length > 0) : groups;
+    return this.filterActive() ? groups.filter((group) => group.subscriptions.length > 0) : groups;
   });
 
   /** The flat view's rows: every filtered feed once, in the chosen sort. */
@@ -161,7 +161,7 @@ export class OrganiseStore {
 
   /** Every feed the filter currently shows, counted once. */
   readonly visibleIds = computed<ReadonlySet<number>>(
-    () => new Set(this.filteredSubscriptions().map((s) => s.id)),
+    () => new Set(this.filteredSubscriptions().map((subscription) => subscription.id)),
   );
 
   readonly selectedCount = computed(() => this.selectedIds().size);
@@ -173,7 +173,7 @@ export class OrganiseStore {
 
   readonly selectedSubscriptions = computed<SubscriptionDto[]>(() => {
     const selected = this.selectedIds();
-    return this.subs.subscriptions().filter((s) => selected.has(s.id));
+    return this.subs.subscriptions().filter((subscription) => selected.has(subscription.id));
   });
 
   readonly allVisibleSelected = computed(() => {
@@ -197,9 +197,9 @@ export class OrganiseStore {
   setGroupSelected(group: OrganiseGroup, selected: boolean): void {
     this.selectedIds.update((current) => {
       const next = new Set(current);
-      for (const s of group.subscriptions) {
-        if (selected) next.add(s.id);
-        else next.delete(s.id);
+      for (const subscription of group.subscriptions) {
+        if (selected) next.add(subscription.id);
+        else next.delete(subscription.id);
       }
 
       return next;
@@ -209,7 +209,7 @@ export class OrganiseStore {
   groupState(group: OrganiseGroup): GroupState {
     if (group.subscriptions.length === 0) return 'none';
     const selected = this.selectedIds();
-    const hits = group.subscriptions.filter((s) => selected.has(s.id)).length;
+    const hits = group.subscriptions.filter((subscription) => selected.has(subscription.id)).length;
     if (hits === 0) return 'none';
 
     return hits === group.subscriptions.length ? 'all' : 'some';
@@ -316,12 +316,12 @@ function sortKey(field: OrganiseSortField, subscription: SubscriptionDto): strin
 function compareBy(
   field: OrganiseSortField,
   direction: SortDirection,
-): (a: SubscriptionDto, b: SubscriptionDto) => number {
+): (left: SubscriptionDto, right: SubscriptionDto) => number {
   const sign = direction === 'asc' ? 1 : -1;
 
-  return (a, b) => {
-    const first = sortKey(field, a);
-    const second = sortKey(field, b);
+  return (left, right) => {
+    const first = sortKey(field, left);
+    const second = sortKey(field, right);
     if (first === null) return second === null ? 0 : 1;
     if (second === null) return -1;
 

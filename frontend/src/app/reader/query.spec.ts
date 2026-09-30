@@ -24,7 +24,7 @@ import {
 } from './query';
 import { selectionFromRoute } from './reader-matcher';
 
-const pm = (o: Record<string, string>) => convertToParamMap(o);
+const pm = (params: Record<string, string>) => convertToParamMap(params);
 
 describe('selectionFromParams', () => {
   it('defaults to all-items, showing everything', () => {
@@ -440,7 +440,7 @@ describe('list order', () => {
   });
 
   it('keys each feed, tag, saved search and view apart, and every search term together', () => {
-    const key = (s: Selection) => listOrderKey(s);
+    const key = (selection: Selection) => listOrderKey(selection);
     expect(key({ kind: 'all', id: null, unread: true })).toBe('all');
     expect(key({ kind: 'viewed', id: null, unread: false })).toBe('viewed');
     expect(key({ kind: 'saved-searches', id: null, unread: false })).toBe('saved-searches');

@@ -83,9 +83,9 @@ export class EntryBodyService {
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
     const generation = this.generation;
     this.api.entry(id).subscribe({
-      next: (r) => {
+      next: (response) => {
         if (generation !== this.generation) return;
-        state.set({ status: 'ok', html: r.entry.contentHtml });
+        state.set({ status: 'ok', html: response.entry.contentHtml });
       },
       error: () => {
         if (generation !== this.generation) return;

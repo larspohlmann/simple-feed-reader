@@ -118,14 +118,14 @@ describe('EntryCommentsComponent', () => {
 
   it('shows a skeleton while loading', () => {
     show('auto');
-    const el = settle({ status: 'loading' });
-    expect(el.querySelector('app-skeleton')).not.toBeNull();
-    expect(el.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
+    const element = settle({ status: 'loading' });
+    expect(element.querySelector('app-skeleton')).not.toBeNull();
+    expect(element.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
   });
 
   it('renders comments with the OP pill and no count', () => {
     show('auto');
-    const el = settle({
+    const element = settle({
       status: 'ok',
       loadedAt: Date.now(),
       comments: [
@@ -147,10 +147,10 @@ describe('EntryCommentsComponent', () => {
         },
       ],
     });
-    const rows = el.querySelectorAll('.comment');
+    const rows = element.querySelectorAll('.comment');
     expect(rows.length).toBe(2);
-    expect(el.querySelectorAll('.op').length).toBe(1);
-    expect(el.querySelector('.count')).toBeNull();
+    expect(element.querySelectorAll('.op').length).toBe(1);
+    expect(element.querySelector('.count')).toBeNull();
     expect(rows[0].querySelector('a.author')?.getAttribute('href')).toBe(
       'https://www.reddit.com/user/op',
     );
@@ -159,25 +159,25 @@ describe('EntryCommentsComponent', () => {
     expect(rows[0].querySelector('.body')?.innerHTML).toBe('<p>Hi</p>');
     expect(rows[1].querySelector('a.author')).toBeNull();
     expect(rows[1].querySelector('.when')).toBeNull();
-    expect(el.querySelector('a.all')?.getAttribute('href')).toBe(DISCUSSION);
+    expect(element.querySelector('a.all')?.getAttribute('href')).toBe(DISCUSSION);
   });
 
   it('shows the empty line for zero comments', () => {
     show('auto');
-    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
-    expect(el.querySelector('.empty')?.textContent?.trim()).toBe('No comments yet.');
+    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    expect(element.querySelector('.empty')?.textContent?.trim()).toBe('No comments yet.');
   });
 
   it('drops the closing link without a discussion URL', () => {
     show('manual', 5, null);
-    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
-    expect(el.querySelector('a.all')).toBeNull();
+    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    expect(element.querySelector('a.all')).toBeNull();
   });
 
   it('reload calls the service', () => {
     show('auto');
-    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
-    const reload = el.querySelector<HTMLButtonElement>('button.reload')!;
+    const element = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
+    const reload = element.querySelector<HTMLButtonElement>('button.reload')!;
     expect(reload.getAttribute('aria-label')).toBe('Reload comments');
     reload.click();
     expect(service.reload).toHaveBeenCalledWith(5);
@@ -189,8 +189,8 @@ describe('EntryCommentsComponent', () => {
 
     it('counts down to the retry and retries through reload', () => {
       show('auto');
-      const el = settle({ status: 'throttled', retryAt: Date.now() + 30_000 });
-      const box = el.querySelector('app-warning-box')!;
+      const element = settle({ status: 'throttled', retryAt: Date.now() + 30_000 });
+      const box = element.querySelector('app-warning-box')!;
       expect(box.textContent).toContain('Try again in 30 s.');
 
       jest.advanceTimersByTime(29_000);
@@ -226,11 +226,11 @@ describe('EntryCommentsComponent', () => {
 
   it('shows a quiet failure with a retry', () => {
     show('auto');
-    const el = settle({ status: 'failed', failedAt: Date.now() });
-    const failed = el.querySelector('.failed')!;
+    const element = settle({ status: 'failed', failedAt: Date.now() });
+    const failed = element.querySelector('.failed')!;
     expect(failed.textContent).toContain('Comments could not be loaded.');
     expect(failed.querySelector('a')?.getAttribute('href')).toBe(DISCUSSION);
-    expect(el.querySelector('app-warning-box')).toBeNull();
+    expect(element.querySelector('app-warning-box')).toBeNull();
     failed.querySelector<HTMLButtonElement>('button.retry')!.click();
     expect(service.reload).toHaveBeenCalledWith(5);
   });

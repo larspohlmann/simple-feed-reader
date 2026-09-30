@@ -60,9 +60,9 @@ describe('EntriesStore', () => {
   it('loads a first page and records a next cursor', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
-    expect(store.entries().map((e) => e.id)).toEqual([1]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1]);
     expect(store.nextCursor()).toBe('C1');
     expect(store.loadedAt()).not.toBe('');
   });
@@ -70,31 +70,31 @@ describe('EntriesStore', () => {
   it('keeps the previous entries visible while a reload is on the wire', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
 
     store.load({ view: 'all' });
     expect(store.loading()).toBe(true);
     // The stale list stays on screen instead of a blank pane (#254); the next
     // cursor is dropped so no pagination can extend the outgoing list.
-    expect(store.entries().map((e) => e.id)).toEqual([1]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1]);
     expect(store.nextCursor()).toBeNull();
 
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(2)], nextCursor: null });
-    expect(store.entries().map((e) => e.id)).toEqual([2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([2]);
   });
 
   it('drops the retained entries when the reload fails', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
 
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ title: 'nope' }, { status: 500, statusText: 'Server Error' });
 
     // Loading is over, so the rows would un-dim and become interactive again —
@@ -106,15 +106,16 @@ describe('EntriesStore', () => {
   it('appends on loadMore and terminates on a null cursor', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
     store.loadMore();
     ctrl
-      .expectOne((r) => r.params.get('cursor') === 'C1')
+      .expectOne((request) => request.params.get('cursor') === 'C1')
       .flush({ entries: [entry(2)], nextCursor: null });
-    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
     store.loadMore();
-    ctrl.expectNone((r) => r.url === 'https://api.test/api/entries'); // no cursor -> no request
+    // no cursor -> no request
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
   });
 
   // #91: a viewport-scaled prefetch margin fires the sentinel much earlier and
@@ -122,33 +123,33 @@ describe('EntriesStore', () => {
   // flight, or a slow backend gets a burst and the same page is appended twice.
   it('ignores loadMore while a page is already in flight', () => {
     store.load({ view: 'unread' });
-    const first = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+    const first = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
 
     store.loadMore(); // still on the first page -> no cursor yet
-    ctrl.expectNone((r) => r.params.get('cursor') === 'C1');
+    ctrl.expectNone((request) => request.params.get('cursor') === 'C1');
     first.flush({ entries: [entry(1)], nextCursor: 'C1' });
 
     store.loadMore();
-    const more = ctrl.expectOne((r) => r.params.get('cursor') === 'C1');
+    const more = ctrl.expectOne((request) => request.params.get('cursor') === 'C1');
     store.loadMore();
     store.loadMore();
-    ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+    ctrl.expectNone((request) => request.url === 'https://api.test/api/entries');
 
     more.flush({ entries: [entry(2)], nextCursor: 'C2' });
-    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
     expect(store.loadingMore()).toBe(false);
   });
 
   it('sends the changed query and replaces the list with its response', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.params.get('view') === 'all')
+      .expectOne((request) => request.params.get('view') === 'all')
       .flush({ entries: [entry(9)], nextCursor: null });
-    expect(store.entries().map((e) => e.id)).toEqual([9]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([9]);
   });
 
   // #158: a refresh fires several overlapping load()s — the shell reloads on
@@ -159,7 +160,7 @@ describe('EntriesStore', () => {
   it('ignores a superseded load whose response arrives after a newer load', () => {
     store.load({ view: 'unread' }); // an earlier reload (e.g. a partial slice)
     store.load({ view: 'unread' }); // a newer reload supersedes it
-    const reqs = ctrl.match((r) => r.url === 'https://api.test/api/entries');
+    const reqs = ctrl.match((request) => request.url === 'https://api.test/api/entries');
     expect(reqs.length).toBe(2);
 
     // The newer request returns first, with the full, fresh set...
@@ -167,7 +168,7 @@ describe('EntriesStore', () => {
     // ...then the older request lands LATE with a stale, partial set.
     reqs[0].flush({ entries: [entry(1)], nextCursor: 'C1' });
 
-    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
     expect(store.nextCursor()).toBeNull();
     expect(store.loading()).toBe(false);
   });
@@ -178,22 +179,22 @@ describe('EntriesStore', () => {
   it('drops an in-flight loadMore page once a fresh load has superseded it', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
 
     store.loadMore(); // page 2 goes on the wire
-    const more = ctrl.expectOne((r) => r.params.get('cursor') === 'C1');
+    const more = ctrl.expectOne((request) => request.params.get('cursor') === 'C1');
 
     // A refresh reloads the list from the top before page 2 comes back.
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => !r.params.get('cursor'))
+      .expectOne((request) => !request.params.get('cursor'))
       .flush({ entries: [entry(3), entry(4)], nextCursor: null });
 
     // The stale page 2 lands late — it must be ignored, not appended.
     more.flush({ entries: [entry(2)], nextCursor: 'C2' });
 
-    expect(store.entries().map((e) => e.id)).toEqual([3, 4]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([3, 4]);
     expect(store.nextCursor()).toBeNull();
     expect(store.loadingMore()).toBe(false);
   });
@@ -204,7 +205,7 @@ describe('EntriesStore', () => {
   it('keeps an in-flight optimistic state across a list reload that lands first', () => {
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
     store.setState(1, { isFavorite: true });
@@ -214,7 +215,7 @@ describe('EntriesStore', () => {
     // A refresh reloads the list before the server has applied the PATCH.
     store.load({ view: 'unread' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null }); // isFavorite still false server-side
 
     expect(store.entries()[0].isFavorite).toBe(true); // must survive the reload
@@ -226,7 +227,7 @@ describe('EntriesStore', () => {
   it('optimistically sets state and rolls back on error', () => {
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
     store.setState(1, { isFavorite: true });
@@ -240,7 +241,7 @@ describe('EntriesStore', () => {
   it('mirrors the unread-clears-viewed coupling locally without sending isViewed (#478)', () => {
     store.load({ view: 'viewed' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [{ ...entry(1), isHidden: true, isViewed: true }], nextCursor: null });
 
     store.setState(1, { isHidden: false });
@@ -249,21 +250,21 @@ describe('EntriesStore', () => {
     expect(store.entries()[0].isHidden).toBe(false);
     expect(store.entries()[0].isViewed).toBe(false);
     // On the wire: only isHidden — the API rejects isViewed=false (it is one-way in).
-    const req = ctrl.expectOne('https://api.test/api/entries/1/state');
-    expect(req.request.body).toEqual({ isHidden: false });
-    req.flush({ state: {} });
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/1/state');
+    expect(testRequest.request.body).toEqual({ isHidden: false });
+    testRequest.flush({ state: {} });
   });
 
   it('reverts only the target entry on error, preserving an appended page', () => {
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: 'C1' });
     store.loadMore();
     ctrl
-      .expectOne((r) => r.params.get('cursor') === 'C1')
+      .expectOne((request) => request.params.get('cursor') === 'C1')
       .flush({ entries: [entry(2)], nextCursor: null });
-    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
 
     store.setState(2, { isFavorite: true });
     expect(store.entries()[1].isFavorite).toBe(true);
@@ -272,14 +273,14 @@ describe('EntriesStore', () => {
       .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
 
     // The appended page survived the rollback; only entry 2 reverted.
-    expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+    expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
     expect(store.entries()[1].isFavorite).toBe(false);
   });
 
   it('sets the error signal when a state PATCH fails', () => {
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
     store.setState(1, { isFavorite: true });
@@ -298,7 +299,7 @@ describe('EntriesStore', () => {
     it('exposes the words a search response carries', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
       expect(store.matchedWords()).toEqual(['receive']);
     });
@@ -306,7 +307,7 @@ describe('EntriesStore', () => {
     it('exposes none for a response carrying no matchedWords key', () => {
       store.load({ view: 'all' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1)], nextCursor: null });
       expect(store.matchedWords()).toEqual([]);
     });
@@ -318,13 +319,13 @@ describe('EntriesStore', () => {
     it('unions matched words on loadMore instead of replacing them', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive'] });
       expect(store.matchedWords()).toEqual(['receive']);
 
       store.loadMore();
       ctrl
-        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .expectOne((request) => request.params.get('cursor') === 'C1')
         .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['received'] });
       // Both words survive: page 1's row is still on screen and still
       // matched "receive"; page 2's row matched "received".
@@ -334,12 +335,12 @@ describe('EntriesStore', () => {
     it('unions without duplicating a word both pages carried, keeping the casing first seen', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(1)], nextCursor: 'C1', matchedWords: ['receive', 'Received'] });
 
       store.loadMore();
       ctrl
-        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .expectOne((request) => request.params.get('cursor') === 'C1')
         // 'RECEIVE' duplicates 'receive' case-insensitively; 'recieve' is new.
         .flush({ entries: [entry(2)], nextCursor: null, matchedWords: ['RECEIVE', 'recieve'] });
 
@@ -355,7 +356,7 @@ describe('EntriesStore', () => {
     it('keeps marking a first-page row’s own match after loadMore brings different words', () => {
       store.load({ view: 'all', q: 'recieve received' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({
           entries: [entry(1, { title: 'Please receive this parcel' })],
           nextCursor: 'C1',
@@ -364,7 +365,7 @@ describe('EntriesStore', () => {
 
       store.loadMore();
       ctrl
-        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .expectOne((request) => request.params.get('cursor') === 'C1')
         .flush({
           entries: [entry(2, { title: 'We received it yesterday' })],
           nextCursor: null,
@@ -372,7 +373,9 @@ describe('EntriesStore', () => {
         });
 
       const page1Segments = markTerms('Please receive this parcel', store.matchedWords());
-      expect(page1Segments.some((s) => s.marked && s.text.toLowerCase() === 'receive')).toBe(true);
+      expect(
+        page1Segments.some((segment) => segment.marked && segment.text.toLowerCase() === 'receive'),
+      ).toBe(true);
     });
 
     // The test that actually catches leakage: words from one query must never
@@ -382,14 +385,14 @@ describe('EntriesStore', () => {
     it('clears matched words once a later query carries none of its own', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
       expect(store.matchedWords()).toEqual(['receive']);
 
       // Leaving search for the plain list — a response with no matchedWords key.
       store.load({ view: 'all' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(2)], nextCursor: null });
       expect(store.matchedWords()).toEqual([]);
     });
@@ -397,14 +400,14 @@ describe('EntriesStore', () => {
     it('clears matched words once a different search carries none of its own', () => {
       store.load({ view: 'all', q: 'recieve' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(1)], nextCursor: null, matchedWords: ['receive'] });
 
       // A second search whose engine (or fallback) matched nothing beyond the
       // literal term — an empty array is a valid, non-error answer.
       store.load({ view: 'all', q: 'punk' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries/search')
+        .expectOne((request) => request.url === 'https://api.test/api/entries/search')
         .flush({ entries: [entry(3)], nextCursor: null, matchedWords: [] });
       expect(store.matchedWords()).toEqual([]);
     });
@@ -413,12 +416,14 @@ describe('EntriesStore', () => {
   it('marks the given entries hidden in place without an HTTP call', () => {
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1), entry(2), entry(3)], nextCursor: null });
 
     store.markHiddenLocally([1, 3]);
 
-    const byId = new Map(store.entries().map((e) => [e.id, e.isHidden]));
+    const byId = new Map(
+      store.entries().map((listedEntry) => [listedEntry.id, listedEntry.isHidden]),
+    );
     expect(byId.get(1)).toBe(true);
     expect(byId.get(2)).toBe(false);
     expect(byId.get(3)).toBe(true);
@@ -428,7 +433,7 @@ describe('EntriesStore', () => {
   it('invokes the onError callback on a failed state PATCH', () => {
     store.load({ view: 'all' });
     ctrl
-      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
       .flush({ entries: [entry(1)], nextCursor: null });
 
     let called = 0;
@@ -444,44 +449,44 @@ describe('EntriesStore', () => {
   // that failed — not a blanket reload — so a failed pagination or row action
   // resumes where it broke, and a dismiss clears the banner without a request.
   describe('retry and dismiss (#996)', () => {
-    const flushError = (req: TestRequest): void =>
-      req.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    const flushError = (testRequest: TestRequest): void =>
+      testRequest.flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
 
     it('retries a failed first-page load by re-issuing the same query', () => {
       store.load({ view: 'unread' });
-      flushError(ctrl.expectOne((r) => r.params.get('view') === 'unread'));
+      flushError(ctrl.expectOne((request) => request.params.get('view') === 'unread'));
       expect(store.error()).not.toBeNull();
 
       store.retry();
       expect(store.error()).toBeNull();
       ctrl
-        .expectOne((r) => r.params.get('view') === 'unread')
+        .expectOne((request) => request.params.get('view') === 'unread')
         .flush({ entries: [entry(1)], nextCursor: null });
-      expect(store.entries().map((e) => e.id)).toEqual([1]);
+      expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1]);
     });
 
     it('retries a failed loadMore by re-requesting the same cursor', () => {
       store.load({ view: 'all' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1)], nextCursor: 'C1' });
 
       store.loadMore();
-      flushError(ctrl.expectOne((r) => r.params.get('cursor') === 'C1'));
+      flushError(ctrl.expectOne((request) => request.params.get('cursor') === 'C1'));
       expect(store.error()).not.toBeNull();
 
       store.retry();
       ctrl
-        .expectOne((r) => r.params.get('cursor') === 'C1')
+        .expectOne((request) => request.params.get('cursor') === 'C1')
         .flush({ entries: [entry(2)], nextCursor: null });
-      expect(store.entries().map((e) => e.id)).toEqual([1, 2]);
+      expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
       expect(store.error()).toBeNull();
     });
 
     it('retries a failed state PATCH by re-sending it', () => {
       store.load({ view: 'all' });
       ctrl
-        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
         .flush({ entries: [entry(1)], nextCursor: null });
 
       store.setState(1, { isFavorite: true });
@@ -503,11 +508,11 @@ describe('EntriesStore', () => {
 
     it('forgets the failed operation once a fresh load supersedes it', () => {
       store.load({ view: 'unread' });
-      flushError(ctrl.expectOne((r) => r.url === 'https://api.test/api/entries'));
+      flushError(ctrl.expectOne((request) => request.url === 'https://api.test/api/entries'));
 
       store.load({ view: 'all' });
       ctrl
-        .expectOne((r) => r.params.get('view') === 'all')
+        .expectOne((request) => request.params.get('view') === 'all')
         .flush({ entries: [entry(1)], nextCursor: null });
 
       store.retry();
@@ -516,7 +521,7 @@ describe('EntriesStore', () => {
 
     it('dismisses the error and forgets the pending retry', () => {
       store.load({ view: 'unread' });
-      flushError(ctrl.expectOne((r) => r.url === 'https://api.test/api/entries'));
+      flushError(ctrl.expectOne((request) => request.url === 'https://api.test/api/entries'));
       expect(store.error()).not.toBeNull();
 
       store.dismissError();
@@ -528,8 +533,8 @@ describe('EntriesStore', () => {
   });
 
   describe('when the signed-in identity changes (#1135)', () => {
-    const entriesRequest = (r: { url: string }): boolean =>
-      r.url === 'https://api.test/api/entries';
+    const entriesRequest = (request: { url: string }): boolean =>
+      request.url === 'https://api.test/api/entries';
 
     const loadAsAccountA = (): void => {
       store.load({ view: 'all' });
@@ -554,7 +559,7 @@ describe('EntriesStore', () => {
       expect(store.entries()).toEqual([]);
       expect(store.loading()).toBe(true);
       ctrl.expectOne(entriesRequest).flush({ entries: [entry(9)], nextCursor: null });
-      expect(store.entries().map((e) => e.id)).toEqual([9]);
+      expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([9]);
     });
 
     it('drops the cursor, the matched words and a pending retry', () => {

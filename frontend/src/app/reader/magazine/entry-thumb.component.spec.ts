@@ -43,39 +43,39 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
+function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryThumbComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
-  const f = TestBed.createComponent(EntryThumbComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+  const fixture = TestBed.createComponent(EntryThumbComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 describe('EntryThumbComponent', () => {
   it('renders a small image and the title', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('img.img')).not.toBeNull();
-    expect(el.textContent).toContain('A medium headline');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('img.img')).not.toBeNull();
+    expect(element.textContent).toContain('A medium headline');
   });
 
   it('renders without an image when the entry has none', () => {
-    const el = mount(entry({ imageUrl: null })).nativeElement as HTMLElement;
-    expect(el.querySelector('img.img')).toBeNull();
-    expect(el.textContent).toContain('A medium headline');
+    const element = mount(entry({ imageUrl: null })).nativeElement as HTMLElement;
+    expect(element.querySelector('img.img')).toBeNull();
+    expect(element.textContent).toContain('A medium headline');
   });
 
   it('carries the three actions on its meta row', () => {
-    const f = mount(entry());
-    expect(f.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(
-      3,
-    );
+    const fixture = mount(entry());
+    expect(
+      fixture.nativeElement.querySelectorAll('app-entry-meta app-entry-actions button').length,
+    ).toBe(3);
 
     const favorite = jest.fn();
     entryActions.favorite.mockImplementation(favorite);
-    const buttons = f.nativeElement.querySelectorAll('app-entry-actions button');
+    const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();
   });

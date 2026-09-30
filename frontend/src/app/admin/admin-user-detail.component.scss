@@ -34,9 +34,7 @@ h3 {
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
-// Layout only, not the box chrome — the border/radius/padding this used to
-// carry duplicated the shared card's own treatment now that the whole page
-// sits inside one, so only the internal column layout stays.
+// Layout only: the page sits inside the shared card, which owns the box chrome.
 .card {
   display: flex;
   flex-direction: column;

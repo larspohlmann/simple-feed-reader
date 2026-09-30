@@ -30,29 +30,29 @@ describe('PreferencesService', () => {
   });
 
   it('applies the value locally and writes it through', () => {
-    const s = service();
+    const preferencesService = service();
 
-    s.setScrapeFallbackEnabled(true);
+    preferencesService.setScrapeFallbackEnabled(true);
 
-    expect(s.scrapeFallbackEnabled()).toBe(true);
+    expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
     expect(writer.written).toEqual([true]);
-    expect(s.saveFailed()).toBe(false);
+    expect(preferencesService.saveFailed()).toBe(false);
   });
 
   it('flags a failed write without reverting the local value', () => {
     writer.result = false;
-    const s = service();
+    const preferencesService = service();
 
-    s.setScrapeFallbackEnabled(true);
+    preferencesService.setScrapeFallbackEnabled(true);
 
-    expect(s.scrapeFallbackEnabled()).toBe(true);
-    expect(s.saveFailed()).toBe(true);
+    expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
+    expect(preferencesService.saveFailed()).toBe(true);
   });
 
   it('adopts the account value without writing it back', () => {
-    const s = service();
+    const preferencesService = service();
 
-    s.adopt({
+    preferencesService.adopt({
       id: 1,
       email: 'a@example.com',
       roles: [],
@@ -78,7 +78,7 @@ describe('PreferencesService', () => {
       emailVerified: true,
     });
 
-    expect(s.scrapeFallbackEnabled()).toBe(true);
+    expect(preferencesService.scrapeFallbackEnabled()).toBe(true);
     expect(writer.written).toEqual([]);
   });
 });

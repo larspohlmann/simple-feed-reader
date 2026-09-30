@@ -75,35 +75,35 @@ export class AdminUsersComponent implements OnInit {
     this.error.set(null);
     this.actionError.set(null);
     this.api.listUsers(this.filter()).subscribe({
-      next: (r) => {
-        this.users.set(r.users);
+      next: (response) => {
+        this.users.set(response.users);
         this.loading.set(false);
       },
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error));
         this.loading.set(false);
       },
     });
   }
 
-  act(u: AdminUserDto, action: AdminAction): void {
+  act(user: AdminUserDto, action: AdminAction): void {
     this.actionError.set(null);
-    this.api.act(u.id, action).subscribe({
+    this.api.act(user.id, action).subscribe({
       next: () => this.load(),
-      error: (e: HttpErrorResponse) => this.actionError.set(parseProblem(e)),
+      error: (error: HttpErrorResponse) => this.actionError.set(parseProblem(error)),
     });
   }
 
-  private isSelf(u: AdminUserDto): boolean {
-    return u.id === this.selfId();
+  private isSelf(user: AdminUserDto): boolean {
+    return user.id === this.selfId();
   }
 
   /** The active UI language drives the date format (via Intl), not `LOCALE_ID` —
    *  Transloco switches language at runtime, and a static `LOCALE_ID` can't follow
    *  that. Falls back to the "never" translation when the account has no login. */
-  lastLoginLabel(u: AdminUserDto): string {
+  lastLoginLabel(user: AdminUserDto): string {
     return formatDateOr(
-      u.lastLoginAt,
+      user.lastLoginAt,
       this.language.lang(),
       this.i18n.translate('admin.neverLoggedIn'),
     );
@@ -112,8 +112,8 @@ export class AdminUsersComponent implements OnInit {
   /** The link's visible text stays the email address; the accessible name adds
    *  what activating it does, since the persistent chevron affordance is
    *  decorative-only (icons render `aria-hidden`). */
-  emailLinkLabel(u: AdminUserDto): string {
-    return `${u.email} — ${this.i18n.translate('admin.openDetail')}`;
+  emailLinkLabel(user: AdminUserDto): string {
+    return `${user.email} — ${this.i18n.translate('admin.openDetail')}`;
   }
 
   /** True when the account's trial end date is in the past — the account is
@@ -122,16 +122,17 @@ export class AdminUsersComponent implements OnInit {
     return trialExpired(user.trialEndsAt);
   }
 
-  canApprove(u: AdminUserDto): boolean {
-    return u.status !== 'active';
+  canApprove(user: AdminUserDto): boolean {
+    return user.status !== 'active';
   }
-  canReject(u: AdminUserDto): boolean {
+  canReject(user: AdminUserDto): boolean {
     return (
-      !this.isSelf(u) && (u.status === 'pending_approval' || u.status === 'pending_verification')
+      !this.isSelf(user) &&
+      (user.status === 'pending_approval' || user.status === 'pending_verification')
     );
   }
-  canSuspend(u: AdminUserDto): boolean {
-    return !this.isSelf(u) && u.status === 'active';
+  canSuspend(user: AdminUserDto): boolean {
+    return !this.isSelf(user) && user.status === 'active';
   }
 
   /** Rejecting or suspending cuts off a person's access — that is a

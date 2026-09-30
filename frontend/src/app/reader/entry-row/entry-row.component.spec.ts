@@ -46,11 +46,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-function mount(e: EntryDto) {
-  const f = TestBed.createComponent(EntryRowComponent);
-  f.componentRef.setInput('entry', e);
-  f.detectChanges();
-  return f;
+function mount(testEntry: EntryDto) {
+  const fixture = TestBed.createComponent(EntryRowComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
 }
 
 /** jsdom does not fire `click` for a focused button's Enter/Space itself, so
@@ -83,43 +83,46 @@ describe('EntryRowComponent', () => {
   );
 
   it('renders title, source, snippet and the https thumbnail', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('.title')!.textContent).toContain('Hello');
-    expect(el.querySelector('.meta')!.textContent).toContain('heise');
-    expect(el.querySelector('.snippet')!.textContent).toContain('Summary text');
-    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/a.jpg');
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.title')!.textContent).toContain('Hello');
+    expect(element.querySelector('.meta')!.textContent).toContain('heise');
+    expect(element.querySelector('.snippet')!.textContent).toContain('Summary text');
+    expect(element.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/a.jpg');
   });
 
   it('omits the thumbnail when the entry has no persisted image', () => {
-    const el = mount(entry({ imageUrl: null })).nativeElement as HTMLElement;
-    expect(el.querySelector('img.thumb')).toBeNull();
+    const element = mount(entry({ imageUrl: null })).nativeElement as HTMLElement;
+    expect(element.querySelector('img.thumb')).toBeNull();
   });
 
   it('shows the persisted imageUrl', () => {
-    const el = mount(entry({ imageUrl: 'https://cdn.test/hero.jpg' })).nativeElement as HTMLElement;
-    expect(el.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/hero.jpg');
+    const element = mount(entry({ imageUrl: 'https://cdn.test/hero.jpg' }))
+      .nativeElement as HTMLElement;
+    expect(element.querySelector('img.thumb')!.getAttribute('src')).toBe(
+      'https://cdn.test/hero.jpg',
+    );
   });
 
   it('moves the thumbnail to the left when imageSide is left', () => {
-    const f = mount(entry());
-    f.componentRef.setInput('imageSide', 'left');
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('.row')!.classList).toContain('img-left');
+    const fixture = mount(entry());
+    fixture.componentRef.setInput('imageSide', 'left');
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.row')!.classList).toContain('img-left');
   });
 
   it('emits actions and open', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     const out = { favorite: 0, keep: 0, read: 0, open: 0 };
     entryActions.favorite.mockImplementation(() => out.favorite++);
     entryActions.keep.mockImplementation(() => out.keep++);
     entryActions.toggleRead.mockImplementation(() => out.read++);
     entryActions.open.mockImplementation(() => out.open++);
-    const el = f.nativeElement as HTMLElement;
-    (el.querySelector('[aria-label="Favorite"]') as HTMLButtonElement).click();
-    (el.querySelector('[aria-label="Keep"]') as HTMLButtonElement).click();
-    (el.querySelector('[aria-label="Toggle read"]') as HTMLButtonElement).click();
-    (el.querySelector('.row') as HTMLElement).click();
+    const element = fixture.nativeElement as HTMLElement;
+    (element.querySelector('[aria-label="Favorite"]') as HTMLButtonElement).click();
+    (element.querySelector('[aria-label="Keep"]') as HTMLButtonElement).click();
+    (element.querySelector('[aria-label="Toggle read"]') as HTMLButtonElement).click();
+    (element.querySelector('.row') as HTMLElement).click();
     expect(out).toEqual({ favorite: 1, keep: 1, read: 1, open: 1 });
   });
 
@@ -129,55 +132,57 @@ describe('EntryRowComponent', () => {
   });
 
   it('favorites exactly once on Enter over an action, and does not open the entry', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     const out = { favorite: 0, open: 0 };
     entryActions.favorite.mockImplementation(() => out.favorite++);
     entryActions.open.mockImplementation(() => out.open++);
 
-    pressEnter(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
-    f.detectChanges();
+    pressEnter(fixture.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
+    fixture.detectChanges();
 
     expect(out).toEqual({ favorite: 1, open: 0 });
   });
 
   it('favorites exactly once on Space over an action, and does not open the entry', () => {
-    const f = mount(entry());
+    const fixture = mount(entry());
     const out = { favorite: 0, open: 0 };
     entryActions.favorite.mockImplementation(() => out.favorite++);
     entryActions.open.mockImplementation(() => out.open++);
 
-    pressSpace(f.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
-    f.detectChanges();
+    pressSpace(fixture.nativeElement.querySelector('[aria-label="Favorite"]') as HTMLElement);
+    fixture.detectChanges();
 
     expect(out).toEqual({ favorite: 1, open: 0 });
   });
 
   it('renders a pill for each saved search the entry belongs to (#1118)', () => {
-    const el = mount(entry({ savedSearches: [{ id: 1, slug: '1-climate', term: 'climate' }] }))
+    const element = mount(entry({ savedSearches: [{ id: 1, slug: '1-climate', term: 'climate' }] }))
       .nativeElement as HTMLElement;
-    const pill = el.querySelector('a.pill.saved-search')!;
+    const pill = element.querySelector('a.pill.saved-search')!;
     expect(pill.textContent).toContain('climate');
     expect(pill.getAttribute('href')).toContain('/searches/saved/1-climate');
   });
 
   it('renders no saved-search pill when the entry matches none (#1118)', () => {
-    const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('a.pill.saved-search')).toBeNull();
-    expect(el.querySelector('.saved-search-pill')).toBeNull();
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('a.pill.saved-search')).toBeNull();
+    expect(element.querySelector('.saved-search-pill')).toBeNull();
   });
 
   it('exposes its entry id on the host element', () => {
-    const f = mount(entry({ id: 4242 }));
-    expect(f.nativeElement.getAttribute('data-entry-id')).toBe('4242');
+    const fixture = mount(entry({ id: 4242 }));
+    expect(fixture.nativeElement.getAttribute('data-entry-id')).toBe('4242');
   });
 
   it('bubbles open for a duplicate copy through the footer', () => {
     const dup = entry({ id: 9, source: 'NDR SH' });
-    const f = mount(entry({ duplicates: [dup] }));
+    const fixture = mount(entry({ duplicates: [dup] }));
     const opened = jest.fn();
     entryActions.open.mockImplementation(opened);
-    (f.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement).click();
-    f.detectChanges();
+    (
+      fixture.nativeElement.querySelector('app-entry-duplicates .also-entry') as HTMLElement
+    ).click();
+    fixture.detectChanges();
     const overlay = TestBed.inject(OverlayContainer).getContainerElement();
     (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
     expect(opened).toHaveBeenCalledWith(dup);

@@ -1,4 +1,3 @@
-// src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/auth.guard';
 import { DYNAMIC_TITLE } from './core/translated-title.strategy';
@@ -10,40 +9,45 @@ export const routes: Routes = [
     path: 'login',
     title: 'auth.login.title',
     canActivate: [setupRedirectGuard, guestGuard],
-    loadComponent: () => import('./auth/login/login.component').then((m) => m.LoginComponent),
+    loadComponent: () =>
+      import('./auth/login/login.component').then((module) => module.LoginComponent),
   },
   {
     path: 'register',
     title: 'auth.register.title',
     canActivate: [setupRedirectGuard, guestGuard],
     loadComponent: () =>
-      import('./auth/register/register.component').then((m) => m.RegisterComponent),
+      import('./auth/register/register.component').then((module) => module.RegisterComponent),
   },
   {
     path: 'setup',
     title: 'setup.title',
     canActivate: [requireSetupGuard],
-    loadComponent: () => import('./setup/setup.component').then((m) => m.SetupComponent),
+    loadComponent: () => import('./setup/setup.component').then((module) => module.SetupComponent),
   },
   {
     path: 'verify-email',
     title: 'auth.verify.title',
     loadComponent: () =>
-      import('./auth/verify-email/verify-email.component').then((m) => m.VerifyEmailComponent),
+      import('./auth/verify-email/verify-email.component').then(
+        (module) => module.VerifyEmailComponent,
+      ),
   },
   {
     path: 'reset-password-request',
     title: 'auth.reset.requestTitle',
     canActivate: [setupRedirectGuard, guestGuard],
     loadComponent: () =>
-      import('./auth/reset-request/reset-request.component').then((m) => m.ResetRequestComponent),
+      import('./auth/reset-request/reset-request.component').then(
+        (module) => module.ResetRequestComponent,
+      ),
   },
   {
     path: 'reset-password',
     title: 'auth.reset.newTitle',
     loadComponent: () =>
       import('./auth/reset-password/reset-password.component').then(
-        (m) => m.ResetPasswordComponent,
+        (module) => module.ResetPasswordComponent,
       ),
   },
   {
@@ -51,14 +55,15 @@ export const routes: Routes = [
     title: 'auth.oauth.title',
     loadComponent: () =>
       import('./auth/oauth-callback/oauth-callback.component').then(
-        (m) => m.OAuthCallbackComponent,
+        (module) => module.OAuthCallbackComponent,
       ),
   },
   {
     path: 'settings',
     title: 'settings.title',
     canActivate: [authGuard],
-    loadChildren: () => import('./settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
+    loadChildren: () =>
+      import('./settings/settings.routes').then((module) => module.SETTINGS_ROUTES),
   },
   { path: 'admin/users', redirectTo: 'settings/admin/users' },
   { path: 'admin/catalog', redirectTo: 'settings/admin/catalog' },
@@ -66,7 +71,8 @@ export const routes: Routes = [
     path: 'discover',
     title: 'discover.title',
     canActivate: [authGuard],
-    loadComponent: () => import('./discover/discover.component').then((m) => m.DiscoverComponent),
+    loadComponent: () =>
+      import('./discover/discover.component').then((module) => module.DiscoverComponent),
   },
   {
     // The reader owns the root URL and the saved-search paths through one config,
@@ -75,7 +81,7 @@ export const routes: Routes = [
     title: DYNAMIC_TITLE,
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./reader/reader-shell.component').then((m) => m.ReaderShellComponent),
+      import('./reader/reader-shell.component').then((module) => module.ReaderShellComponent),
   },
   { path: '**', redirectTo: '' },
 ];

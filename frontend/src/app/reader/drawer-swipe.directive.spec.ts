@@ -29,7 +29,7 @@ class HostComponent {
 describe('DrawerSwipeDirective', () => {
   let fixture: ComponentFixture<HostComponent>;
   let host: HostComponent;
-  let dir: DrawerSwipeDirective;
+  let directive: DrawerSwipeDirective;
 
   const touch = (x: number, y: number, target?: Element) =>
     ({
@@ -38,16 +38,16 @@ describe('DrawerSwipeDirective', () => {
     }) as unknown as TouchEvent;
 
   function swipe(fromX: number, toX: number, y = 0, target?: Element) {
-    dir.onTouchStart(touch(fromX, y, target));
-    dir.onTouchMove(touch(toX, y, target));
-    dir.onTouchEnd();
+    directive.onTouchStart(touch(fromX, y, target));
+    directive.onTouchMove(touch(toX, y, target));
+    directive.onTouchEnd();
   }
 
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [HostComponent] });
     fixture = TestBed.createComponent(HostComponent);
     host = fixture.componentInstance;
-    dir = fixture.debugElement
+    directive = fixture.debugElement
       .query(By.directive(DrawerSwipeDirective))
       .injector.get(DrawerSwipeDirective);
     fixture.detectChanges();
@@ -80,9 +80,9 @@ describe('DrawerSwipeDirective', () => {
   });
 
   it('ignores a mostly-vertical drag (a scroll)', () => {
-    dir.onTouchStart(touch(20, 0));
-    dir.onTouchMove(touch(40, 200));
-    dir.onTouchEnd();
+    directive.onTouchStart(touch(20, 0));
+    directive.onTouchMove(touch(40, 200));
+    directive.onTouchEnd();
     expect(host.opened).toBe(0);
   });
 

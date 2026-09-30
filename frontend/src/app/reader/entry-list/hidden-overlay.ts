@@ -23,7 +23,7 @@ export function blocksWithout(blocks: ListBlock[], hidden: ReadonlySet<number>):
 function blockWithout(block: ListBlock, hidden: ReadonlySet<number>): ListBlock[] {
   if (block.kind === 'run-header') return [block];
   if (block.kind !== 'group') return hidden.has(block.entry.id) ? [] : [block];
-  const entries = block.entries.filter((e) => !hidden.has(e.id));
+  const entries = block.entries.filter((entry) => !hidden.has(entry.id));
   if (entries.length === 0) return [];
   return entries.length === block.entries.length ? [block] : [{ ...block, entries }];
 }
@@ -41,7 +41,7 @@ export function runGroupsWithout(groups: RunGroup[], hidden: ReadonlySet<number>
   if (hidden.size === 0) return groups;
   return groups
     .map((group) => {
-      const entries = group.entries.filter((e) => !hidden.has(e.id));
+      const entries = group.entries.filter((entry) => !hidden.has(entry.id));
       return entries.length === group.entries.length ? group : { ...group, entries };
     })
     .filter((group) => group.entries.length > 0);

@@ -30,61 +30,65 @@ describe('SettingsNavComponent', () => {
         },
       ],
     });
-    const f = TestBed.createComponent(SettingsNavComponent);
-    f.componentRef.setInput('variant', variant);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(SettingsNavComponent);
+    fixture.componentRef.setInput('variant', variant);
+    fixture.detectChanges();
+    return fixture;
   }
 
   it('renders a link per general section for a plain user, and no admin group', () => {
-    const f = mount(['ROLE_USER']);
-    const links = f.nativeElement.querySelectorAll('a');
-    const generalCount = SETTINGS_SECTIONS.filter((s) => s.group === 'general').length;
+    const fixture = mount(['ROLE_USER']);
+    const links = fixture.nativeElement.querySelectorAll('a');
+    const generalCount = SETTINGS_SECTIONS.filter((section) => section.group === 'general').length;
     expect(links.length).toBe(generalCount);
   });
 
   it('renders the admin group for an admin', () => {
-    const f = mount(['ROLE_USER', 'ROLE_ADMIN']);
-    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN']);
+    const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
     expect(links.length).toBe(SETTINGS_SECTIONS.length);
-    expect(links.some((a) => a.getAttribute('href') === '/settings/admin/catalog')).toBe(true);
+    expect(links.some((anchor) => anchor.getAttribute('href') === '/settings/admin/catalog')).toBe(
+      true,
+    );
   });
 
   it('carries the variant as a host-level class', () => {
-    const f = mount(['ROLE_USER'], 'hub');
-    expect(f.nativeElement.querySelector('nav').classList).toContain('hub');
+    const fixture = mount(['ROLE_USER'], 'hub');
+    expect(fixture.nativeElement.querySelector('nav').classList).toContain('hub');
   });
 
   it('badges the Organise entry with the unhealthy-feed count, and no other entry', () => {
-    const f = mount(['ROLE_USER'], 'rail', 2);
-    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
-    const organise = links.find((a) => a.getAttribute('href') === '/settings/organise');
-    const preferences = links.find((a) => a.getAttribute('href') === '/settings/preferences');
+    const fixture = mount(['ROLE_USER'], 'rail', 2);
+    const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const organise = links.find((anchor) => anchor.getAttribute('href') === '/settings/organise');
+    const preferences = links.find(
+      (anchor) => anchor.getAttribute('href') === '/settings/preferences',
+    );
     expect(organise?.querySelector('.badge')?.textContent?.trim()).toBe('2');
     expect(preferences?.querySelector('.badge')).toBeNull();
   });
 
   it('renders no badge anywhere when there are no unhealthy feeds', () => {
-    const f = mount(['ROLE_USER'], 'rail', 0);
-    expect(f.nativeElement.querySelector('.badge')).toBeNull();
+    const fixture = mount(['ROLE_USER'], 'rail', 0);
+    expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
   it('badges the admin Outgoing mail entry with the mail-failure count for an admin', () => {
-    const f = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 3);
-    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
-    const mail = links.find((a) => a.getAttribute('href') === '/settings/admin/mail');
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 3);
+    const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')?.textContent?.trim()).toBe('3');
   });
 
   it('shows no mail badge for a non-admin, even with a nonzero failure count', () => {
-    const f = mount(['ROLE_USER'], 'rail', 0, 3);
-    expect(f.nativeElement.querySelector('.badge')).toBeNull();
+    const fixture = mount(['ROLE_USER'], 'rail', 0, 3);
+    expect(fixture.nativeElement.querySelector('.badge')).toBeNull();
   });
 
   it('shows no mail badge for an admin with a zero failure count', () => {
-    const f = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 0);
-    const links = [...f.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
-    const mail = links.find((a) => a.getAttribute('href') === '/settings/admin/mail');
+    const fixture = mount(['ROLE_USER', 'ROLE_ADMIN'], 'rail', 0, 0);
+    const links = [...fixture.nativeElement.querySelectorAll('a')] as HTMLAnchorElement[];
+    const mail = links.find((anchor) => anchor.getAttribute('href') === '/settings/admin/mail');
     expect(mail?.querySelector('.badge')).toBeNull();
   });
 });

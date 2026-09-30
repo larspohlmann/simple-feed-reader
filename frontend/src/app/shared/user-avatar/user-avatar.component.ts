@@ -1,4 +1,3 @@
-// src/app/shared/user-avatar/user-avatar.component.ts
 import { ChangeDetectionStrategy, Component, computed, effect, input, signal } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 import { gravatarUrl, normalizeEmail, sha256Hex } from '../../core/gravatar';

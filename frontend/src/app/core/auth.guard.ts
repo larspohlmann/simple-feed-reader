@@ -1,4 +1,3 @@
-// src/app/core/auth.guard.ts
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { ReaderLocationService } from './reader-location.service';

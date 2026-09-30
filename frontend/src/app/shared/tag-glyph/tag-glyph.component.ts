@@ -8,8 +8,7 @@ import { ICON_SIZE_TOKEN, IconComponent, IconSize } from '../icon/icon.component
  * glyph it renders tinted; without one it falls back to a colour dot, so an
  * icon-less tag is still identifiable at a glance. Callers that highlight a
  * selected row pass the highlight colour in `color` ('currentColor', say) —
- * both branches honour it, which is why the ternary no longer has to be
- * duplicated across the glyph and the dot.
+ * both branches honour it.
  *
  * The host is a square of the named size whichever branch renders, because a
  * dot is far smaller than a glyph and lists mix the two freely. Owning the

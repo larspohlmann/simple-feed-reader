@@ -27,9 +27,9 @@ function article(url: string): ReaderArticle {
 /** A reader tab from before a schema bump, holding the database at an older version. */
 function staleTabConnection(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('sfr-reader', 1);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    const testRequest = indexedDB.open('sfr-reader', 1);
+    testRequest.onsuccess = () => resolve(testRequest.result);
+    testRequest.onerror = () => reject(testRequest.error);
   });
 }
 
@@ -60,13 +60,13 @@ describe('ReaderCacheService', () => {
   it('closes its own connection when a newer schema asks, so the newer tab can upgrade', async () => {
     await cache.get(1);
     const newerTabUpgrade = new Promise<number>((resolve, reject) => {
-      const req = indexedDB.open('sfr-reader', 1_000);
-      req.onblocked = () => reject(new Error('blocked by the cache connection'));
-      req.onsuccess = () => {
-        resolve(req.result.version);
-        req.result.close();
+      const testRequest = indexedDB.open('sfr-reader', 1_000);
+      testRequest.onblocked = () => reject(new Error('blocked by the cache connection'));
+      testRequest.onsuccess = () => {
+        resolve(testRequest.result.version);
+        testRequest.result.close();
       };
-      req.onerror = () => reject(req.error);
+      testRequest.onerror = () => reject(testRequest.error);
     });
     await expect(within(500, newerTabUpgrade)).resolves.toBe(1_000);
   });
@@ -78,8 +78,8 @@ describe('ReaderCacheService', () => {
   });
 
   it('evicts the oldest entry past the LRU cap', async () => {
-    for (let i = 1; i <= ReaderCacheService.MAX_ENTRIES + 1; i++) {
-      await cache.put(i, article('https://x/' + i));
+    for (let index = 1; index <= ReaderCacheService.MAX_ENTRIES + 1; index++) {
+      await cache.put(index, article('https://x/' + index));
     }
     // The very first inserted entry was evicted; the newest remains.
     expect(await cache.get(1)).toBeNull();

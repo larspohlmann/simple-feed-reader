@@ -43,7 +43,7 @@ export class ResetPasswordComponent implements OnInit {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    this.route.queryParamMap.subscribe((p) => this.token.set(p.get('token')));
+    this.route.queryParamMap.subscribe((params) => this.token.set(params.get('token')));
   }
 
   submit(): void {
@@ -60,8 +60,8 @@ export class ResetPasswordComponent implements OnInit {
     this.error.set(null);
     this.authApi.resetPassword(token, this.form.getRawValue().password).subscribe({
       next: () => void this.router.navigate(['/login'], { queryParams: { reset: '1' } }),
-      error: (e: HttpErrorResponse) => {
-        this.error.set(parseProblem(e).detail ?? this.i18n.translate('auth.reset.failed'));
+      error: (error: HttpErrorResponse) => {
+        this.error.set(parseProblem(error).detail ?? this.i18n.translate('auth.reset.failed'));
         this.loading.set(false);
       },
     });

@@ -78,18 +78,18 @@ describe('SettingsGroupComponent', () => {
     await TestBed.configureTestingModule({ imports: [ActionsHostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ActionsHostComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.g-head [data-action]')).not.toBeNull();
-    expect(el.querySelector('.panel [data-action]')).toBeNull();
+    expect(element.querySelector('.g-head [data-action]')).not.toBeNull();
+    expect(element.querySelector('.panel [data-action]')).toBeNull();
   });
 
   it('still projects the body into the panel when actions are present', async () => {
     await TestBed.configureTestingModule({ imports: [ActionsHostComponent] }).compileComponents();
     const fixture = TestBed.createComponent(ActionsHostComponent);
     fixture.detectChanges();
-    const el = fixture.nativeElement as HTMLElement;
+    const element = fixture.nativeElement as HTMLElement;
 
-    expect(el.querySelector('.panel [data-projected]')?.textContent).toBe('row');
+    expect(element.querySelector('.panel [data-projected]')?.textContent).toBe('row');
   });
 });

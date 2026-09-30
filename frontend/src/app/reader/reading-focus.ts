@@ -58,13 +58,13 @@ const BLOCK_TAGS = new Set([
 /** Depth of generic nesting we will walk down before taking what we have. */
 const MAX_WRAPPER_DEPTH = 12;
 
-export function hasBlockChildren(el: Element): boolean {
-  return Array.from(el.children).some((child) => BLOCK_TAGS.has(child.tagName));
+export function hasBlockChildren(element: Element): boolean {
+  return Array.from(element.children).some((child) => BLOCK_TAGS.has(child.tagName));
 }
 
 /** Whether an element groups blocks (so we descend) or is one (so we don't). */
-function groupsBlocks(el: Element): boolean {
-  return WRAPPER_TAGS.has(el.tagName) && hasBlockChildren(el);
+function groupsBlocks(element: Element): boolean {
+  return WRAPPER_TAGS.has(element.tagName) && hasBlockChildren(element);
 }
 
 /**

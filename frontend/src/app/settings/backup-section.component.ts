@@ -123,8 +123,8 @@ export class BackupSectionComponent {
         );
         saveAs(response.body, filename);
       },
-      error: async (e: HttpErrorResponse) => {
-        const problem = await parseProblemAsync(e);
+      error: async (error: HttpErrorResponse) => {
+        const problem = await parseProblemAsync(error);
         this.exporting.set(false);
         this.exportError.set(problem);
       },
@@ -135,8 +135,8 @@ export class BackupSectionComponent {
     downloadOpmlExport(this.api, this.safetyNetExporting, this.safetyNetError);
   }
 
-  onFileSelected(e: Event): void {
-    const file = (e.target as HTMLInputElement).files?.[0];
+  onFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     this.onFile(file);
   }

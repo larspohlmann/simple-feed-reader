@@ -231,10 +231,10 @@ export class RecommendationDebugLogComponent implements OnInit {
       .debugLog(this.selectedRunId() ?? undefined)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (r) => {
-          this.run.set(r.run);
-          this.runs.set(r.runs);
-          this.applyEntries(r.entries);
+        next: (response) => {
+          this.run.set(response.run);
+          this.runs.set(response.runs);
+          this.applyEntries(response.entries);
         },
         error: () => {
           // The panel is best-effort diagnostics; a failed poll shows stale

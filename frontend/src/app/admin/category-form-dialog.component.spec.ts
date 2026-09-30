@@ -33,42 +33,42 @@ describe('CategoryFormDialogComponent', () => {
         { provide: DIALOG_DATA, useValue: data },
       ],
     });
-    const f = TestBed.createComponent(CategoryFormDialogComponent);
-    f.detectChanges();
+    const fixture = TestBed.createComponent(CategoryFormDialogComponent);
+    fixture.detectChanges();
     ctrl = TestBed.inject(HttpTestingController);
-    return f;
+    return fixture;
   }
 
   beforeEach(() => close.mockClear());
   afterEach(() => ctrl.verify());
 
   it('prefills from the edited category and PUTs on submit, closing with the result', () => {
-    const f = mount(category);
-    const c = f.componentInstance;
-    expect(c.form.getRawValue().name).toBe('Tech');
+    const fixture = mount(category);
+    const component = fixture.componentInstance;
+    expect(component.form.getRawValue().name).toBe('Tech');
 
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/categories/7');
-    expect(req.request.body).toMatchObject({ name: 'Tech', color: '#112233', key: 'tech' });
-    req.flush({ category });
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/categories/7');
+    expect(testRequest.request.body).toMatchObject({ name: 'Tech', color: '#112233', key: 'tech' });
+    testRequest.flush({ category });
     expect(close).toHaveBeenCalledWith(category);
   });
 
   it('POSTs a new category with the default colour and an empty key', () => {
-    const f = mount(null);
-    const c = f.componentInstance;
-    c.form.patchValue({ name: 'News' });
+    const fixture = mount(null);
+    const component = fixture.componentInstance;
+    component.form.patchValue({ name: 'News' });
 
-    c.submit();
-    const req = ctrl.expectOne('https://api.test/api/admin/catalog/categories');
-    expect(req.request.body).toMatchObject({ name: 'News', key: '' });
-    req.flush({ category });
+    component.submit();
+    const testRequest = ctrl.expectOne('https://api.test/api/admin/catalog/categories');
+    expect(testRequest.request.body).toMatchObject({ name: 'News', key: '' });
+    testRequest.flush({ category });
     expect(close).toHaveBeenCalled();
   });
 
   it('does not submit an empty name', () => {
-    const f = mount(null);
-    f.componentInstance.submit();
+    const fixture = mount(null);
+    fixture.componentInstance.submit();
     ctrl.expectNone('https://api.test/api/admin/catalog/categories');
   });
 });

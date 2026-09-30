@@ -1,4 +1,3 @@
-// e2e/reading-focus-long-paragraph.spec.ts
 import { test, expect, Page } from '@playwright/test';
 import { readerFailedJson } from './support/reader';
 

@@ -75,30 +75,30 @@ describe('focusOpacityForSpan', () => {
 
 describe('readingBlocks', () => {
   function root(html: string): Element {
-    const el = document.createElement('div');
-    el.innerHTML = html;
-    return el;
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    return element;
   }
 
   it('returns direct children when the content is a flat block list', () => {
     const blocks = readingBlocks(root('<p>a</p><h2>b</h2><p>c</p>'));
-    expect(blocks.map((b) => b.tagName)).toEqual(['P', 'H2', 'P']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['P', 'H2', 'P']);
   });
 
   it('descends through a single wrapper chain to the real block level', () => {
     // Mirrors the extracted-article shape: div > article > p, h2, p …
     const blocks = readingBlocks(root('<div><article><p>a</p><h2>b</h2><p>c</p></article></div>'));
-    expect(blocks.map((b) => b.tagName)).toEqual(['P', 'H2', 'P']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['P', 'H2', 'P']);
   });
 
   it('does not descend into a leaf paragraph that only wraps inline content', () => {
     const blocks = readingBlocks(root('<p>hello <a href="#">link</a></p>'));
-    expect(blocks.map((b) => b.tagName)).toEqual(['P']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['P']);
   });
 
   it('stops at the first level holding multiple blocks', () => {
     const blocks = readingBlocks(root('<div><p>only</p></div>'));
-    expect(blocks.map((b) => b.tagName)).toEqual(['P']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['P']);
   });
 
   // #109: the real shape readability produced for the reported wired.com
@@ -112,7 +112,16 @@ describe('readingBlocks', () => {
               <div><p>e</p><h2>f</h2><p>g</p></div>
             </div></div>`),
     );
-    expect(blocks.map((b) => b.tagName)).toEqual(['FIGURE', 'P', 'P', 'H2', 'P', 'P', 'H2', 'P']);
+    expect(blocks.map((block) => block.tagName)).toEqual([
+      'FIGURE',
+      'P',
+      'P',
+      'H2',
+      'P',
+      'P',
+      'H2',
+      'P',
+    ]);
   });
 
   it('keeps a list, a quote and a figure as one block each', () => {
@@ -122,12 +131,12 @@ describe('readingBlocks', () => {
           '<figure><img><figcaption>cap</figcaption></figure></div>',
       ),
     );
-    expect(blocks.map((b) => b.tagName)).toEqual(['UL', 'BLOCKQUOTE', 'FIGURE']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['UL', 'BLOCKQUOTE', 'FIGURE']);
   });
 
   it('treats a wrapper holding only inline content as the paragraph itself', () => {
     const blocks = readingBlocks(root('<div><div>text with <a href="#">a link</a></div></div>'));
-    expect(blocks.map((b) => b.tagName)).toEqual(['DIV']);
+    expect(blocks.map((block) => block.tagName)).toEqual(['DIV']);
     expect(blocks[0].textContent).toContain('text with');
   });
 

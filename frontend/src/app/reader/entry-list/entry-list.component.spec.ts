@@ -21,11 +21,11 @@ class MockResizeObserver {
   constructor(readonly callback: ResizeObserverCallback) {
     MockResizeObserver.instances.push(this);
   }
-  observe(t: Element): void {
-    this.targets.add(t);
+  observe(target: Element): void {
+    this.targets.add(target);
   }
-  unobserve(t: Element): void {
-    this.targets.delete(t);
+  unobserve(target: Element): void {
+    this.targets.delete(target);
   }
   disconnect(): void {
     this.targets.clear();
@@ -43,7 +43,7 @@ const subscriptionsStore = { resolved: signal(true), subscriptions: signal<Subsc
 
 function subscribedTo(count: number): void {
   subscriptionsStore.subscriptions.set(
-    Array.from({ length: count }, (_, i) => ({ id: i + 1 }) as SubscriptionDto),
+    Array.from({ length: count }, (_, index) => ({ id: index + 1 }) as SubscriptionDto),
   );
 }
 
@@ -78,8 +78,8 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
  *  only once the view has at least 3 distinct active sources. */
 const MIXED_SOURCE_RUN_AT = '2026-07-22T11:00:00Z';
 const MIXED_SOURCE_RUN: EntryDto[] = [
-  ...Array.from({ length: 8 }, (_, i) =>
-    entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: MIXED_SOURCE_RUN_AT }),
+  ...Array.from({ length: 8 }, (_, index) =>
+    entry(index + 1, { subscriptionId: 1, source: 'a', publishedAt: MIXED_SOURCE_RUN_AT }),
   ),
   entry(9, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
   entry(10, { subscriptionId: 2, source: 'b', publishedAt: MIXED_SOURCE_RUN_AT }),
@@ -101,7 +101,7 @@ function mount(over: Record<string, unknown> = {}) {
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
     ],
   });
-  const f = TestBed.createComponent(EntryListComponent);
+  const fixture = TestBed.createComponent(EntryListComponent);
   const inputs = {
     title: 'All items',
     entries: [entry(1), entry(2)],
@@ -114,9 +114,9 @@ function mount(over: Record<string, unknown> = {}) {
     openEntryId: null,
     ...over,
   };
-  for (const [k, v] of Object.entries(inputs)) f.componentRef.setInput(k, v);
-  f.detectChanges();
-  return f;
+  for (const [key, value] of Object.entries(inputs)) fixture.componentRef.setInput(key, value);
+  fixture.detectChanges();
+  return fixture;
 }
 
 // A standalone host purely to mint a real TemplateRef — NgTemplateOutlet
@@ -133,9 +133,9 @@ class TemplateHost {
 function topBlockTemplate(): TemplateRef<unknown> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [TemplateHost] });
-  const f = TestBed.createComponent(TemplateHost);
-  f.detectChanges();
-  return f.componentInstance.tb;
+  const fixture = TestBed.createComponent(TemplateHost);
+  fixture.detectChanges();
+  return fixture.componentInstance.tb;
 }
 
 /** Drain the animation frames the component schedules, the way the browser does
@@ -147,8 +147,8 @@ const frames = (): Promise<void> =>
 /** The inline opacity the reading-focus pass writes on each row. jsdom measures
  *  no layout, so every visible row scores 1 — an EMPTY string is the signal
  *  under test: it means the pass never touched that row (#462). */
-function rowOpacities(f: ComponentFixture<EntryListComponent>): string[] {
-  const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
+function rowOpacities(fixture: ComponentFixture<EntryListComponent>): string[] {
+  const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows')!;
   return (Array.from(rows.children) as HTMLElement[])
     .filter((child) => !child.classList.contains('foot'))
     .map((child) => child.style.opacity);
@@ -156,14 +156,14 @@ function rowOpacities(f: ComponentFixture<EntryListComponent>): string[] {
 
 /** jsdom has no layout, so its scrollTop is permanently 0. Give the scroller a
  *  real one, starting at `top`. */
-function fakeScroller(f: ComponentFixture<EntryListComponent>, top: number): HTMLElement {
-  const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+function fakeScroller(fixture: ComponentFixture<EntryListComponent>, top: number): HTMLElement {
+  const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
   let offset = top;
   Object.defineProperty(rows, 'scrollTop', {
     configurable: true,
     get: () => offset,
-    set: (v: number) => {
-      offset = v;
+    set: (value: number) => {
+      offset = value;
     },
   });
   return rows;
@@ -172,9 +172,9 @@ function fakeScroller(f: ComponentFixture<EntryListComponent>, top: number): HTM
 /** Fires the reading-focus applier's own observer on the `.rows` scroller — the
  *  last mock instance watching it, since the applier is rebuilt whenever the
  *  scroller element swaps. */
-function fireRowsResize(f: ComponentFixture<EntryListComponent>): void {
-  const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
-  const obs = MockResizeObserver.instances.find((o) => o.targets.has(rows));
+function fireRowsResize(fixture: ComponentFixture<EntryListComponent>): void {
+  const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows')!;
+  const obs = MockResizeObserver.instances.find((observer) => observer.targets.has(rows));
   obs?.fire();
 }
 
@@ -193,8 +193,8 @@ describe('EntryListComponent', () => {
   describe('topBlock', () => {
     it('renders above the list rows', () => {
       const tb = topBlockTemplate();
-      const el = mount({ topBlock: tb, layout: 'list' }).nativeElement as HTMLElement;
-      const rows = el.querySelector('.rows')!;
+      const element = mount({ topBlock: tb, layout: 'list' }).nativeElement as HTMLElement;
+      const rows = element.querySelector('.rows')!;
       expect(rows.querySelector('.top-marker')).not.toBeNull();
       // It scrolls with the rows: it lives inside the scroller, not before it.
       // The projected node sits in the wrapper this component puts around the
@@ -205,8 +205,8 @@ describe('EntryListComponent', () => {
 
     it('renders above the magazine rows', () => {
       const tb = topBlockTemplate();
-      const el = mount({ topBlock: tb, layout: 'magazine' }).nativeElement as HTMLElement;
-      const rows = el.querySelector('.rows.magazine')!;
+      const element = mount({ topBlock: tb, layout: 'magazine' }).nativeElement as HTMLElement;
+      const rows = element.querySelector('.rows.magazine')!;
       expect(rows.querySelector('.top-marker')).not.toBeNull();
       expect(rows.firstElementChild!.classList).toContain('top-block');
       expect(rows.firstElementChild!.firstElementChild!.classList).toContain('top-marker');
@@ -214,14 +214,14 @@ describe('EntryListComponent', () => {
 
     it('renders above the empty state, so the run button still shows there', () => {
       const tb = topBlockTemplate();
-      const el = mount({ topBlock: tb, entries: [] }).nativeElement as HTMLElement;
-      expect(el.querySelector('.top-marker')).not.toBeNull();
-      expect(el.querySelector('.empty')).not.toBeNull();
+      const element = mount({ topBlock: tb, entries: [] }).nativeElement as HTMLElement;
+      expect(element.querySelector('.top-marker')).not.toBeNull();
+      expect(element.querySelector('.empty')).not.toBeNull();
     });
 
     it('renders nothing extra when no topBlock is provided', () => {
-      const el = mount().nativeElement as HTMLElement;
-      expect(el.querySelector('.top-marker')).toBeNull();
+      const element = mount().nativeElement as HTMLElement;
+      expect(element.querySelector('.top-marker')).toBeNull();
     });
   });
 
@@ -233,30 +233,30 @@ describe('EntryListComponent', () => {
     const forYou = { kind: 'for-you', id: null, unread: false };
 
     it('shows the reason on each for-you entry in the list layout', () => {
-      const el = mount({ entries: recommended, selection: forYou, layout: 'list' })
+      const element = mount({ entries: recommended, selection: forYou, layout: 'list' })
         .nativeElement as HTMLElement;
-      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      const reasons = element.querySelectorAll('app-recommendation-strip .reason');
       expect(reasons.length).toBe(2);
       expect(reasons[0].textContent).toContain('because you read src');
-      expect(el.querySelector('app-recommendation-strip .reason .score')!.textContent).toContain(
-        '91',
-      );
+      expect(
+        element.querySelector('app-recommendation-strip .reason .score')!.textContent,
+      ).toContain('91');
     });
 
     it('shows the reason on each for-you entry in the magazine layout', () => {
-      const el = mount({ entries: recommended, selection: forYou, layout: 'magazine' })
+      const element = mount({ entries: recommended, selection: forYou, layout: 'magazine' })
         .nativeElement as HTMLElement;
-      const reasons = el.querySelectorAll('app-recommendation-strip .reason');
+      const reasons = element.querySelectorAll('app-recommendation-strip .reason');
       expect(reasons.length).toBe(2);
       expect(reasons[0].textContent).toContain('because you read src');
     });
 
     it('stays inert on a non-for-you view', () => {
-      const el = mount({
+      const element = mount({
         entries: [entry(1), entry(2)],
         selection: { kind: 'all', id: null, unread: true },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.reason')).toBeNull();
+      expect(element.querySelector('.reason')).toBeNull();
     });
   });
 
@@ -272,7 +272,7 @@ describe('EntryListComponent', () => {
     ];
 
     it('shows a divider at the older run and none above the newest', () => {
-      const el = mount({
+      const element = mount({
         entries: twoRuns,
         selection: forYou,
         newestRunId: 9,
@@ -280,44 +280,44 @@ describe('EntryListComponent', () => {
       }).nativeElement as HTMLElement;
 
       // One divider only — for the older run.
-      expect(el.querySelectorAll('app-run-header').length).toBe(1);
+      expect(element.querySelectorAll('app-run-header').length).toBe(1);
       // It is not the first child of the scroller (the newest run's rows are).
-      const rows = el.querySelector('.rows')!;
+      const rows = element.querySelector('.rows')!;
       expect(rows.firstElementChild!.tagName.toLowerCase()).not.toBe('app-run-header');
     });
 
     it('shows a divider on the top block when it is not the newest run', () => {
       // Header names run 9, but run 9 left nothing visible: the first visible
       // entry is run 7, so it gets its own divider.
-      const el = mount({
+      const element = mount({
         entries: [entry(3, { runId: 7, runGeneratedAt: OLDER })],
         selection: forYou,
         newestRunId: 9,
         layout: 'list',
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelectorAll('app-run-header').length).toBe(1);
+      expect(element.querySelectorAll('app-run-header').length).toBe(1);
     });
 
     it('shows no divider on a non-for-you view', () => {
-      const el = mount({
+      const element = mount({
         entries: [entry(1), entry(2)],
         selection: { kind: 'all', id: null, unread: true },
         layout: 'list',
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('app-run-header')).toBeNull();
+      expect(element.querySelector('app-run-header')).toBeNull();
     });
 
     it('shows a divider at the older run in the magazine layout', () => {
-      const el = mount({
+      const element = mount({
         entries: twoRuns,
         selection: forYou,
         newestRunId: 9,
         layout: 'magazine',
       }).nativeElement as HTMLElement;
 
-      const rows = el.querySelector('.rows.magazine')!;
+      const rows = element.querySelector('.rows.magazine')!;
       expect(rows.querySelectorAll('app-run-header').length).toBe(1);
       // No magazine block is emitted before the newest run's first block.
       expect(rows.firstElementChild!.tagName.toLowerCase()).not.toBe('app-run-header');
@@ -329,49 +329,47 @@ describe('EntryListComponent', () => {
   describe('headerActions', () => {
     it('renders the projected action inside the list header tools', () => {
       const actions = topBlockTemplate();
-      const el = mount({ headerActions: actions }).nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header .tools .top-marker')).not.toBeNull();
+      const element = mount({ headerActions: actions }).nativeElement as HTMLElement;
+      expect(element.querySelector('.list-header .tools .top-marker')).not.toBeNull();
     });
 
     it('renders nothing in the header when no headerActions is provided', () => {
-      const el = mount().nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header .top-marker')).toBeNull();
+      const element = mount().nativeElement as HTMLElement;
+      expect(element.querySelector('.list-header .top-marker')).toBeNull();
     });
   });
 
   describe('titleLeading', () => {
     it('renders the projected content before the title', () => {
-      const el = mount({ titleLeading: topBlockTemplate() }).nativeElement as HTMLElement;
-      expect(el.querySelector('.title-row .top-marker')).not.toBeNull();
+      const element = mount({ titleLeading: topBlockTemplate() }).nativeElement as HTMLElement;
+      expect(element.querySelector('.title-row .top-marker')).not.toBeNull();
     });
 
     it('renders nothing before the title when no titleLeading is provided', () => {
-      const el = mount().nativeElement as HTMLElement;
-      expect(el.querySelector('.title-row .top-marker')).toBeNull();
+      const element = mount().nativeElement as HTMLElement;
+      expect(element.querySelector('.title-row .top-marker')).toBeNull();
     });
   });
 
   it('renders a row per entry and the header title', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('.list-header')!.textContent).toContain('All items');
-    expect(el.querySelectorAll('app-entry-row').length).toBe(2);
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('.list-header')!.textContent).toContain('All items');
+    expect(element.querySelectorAll('app-entry-row').length).toBe(2);
   });
 
-  // The search title alone is split into a small muted lead, a prominent
-  // quoted term, and a count pill (#581 follow-up, round 2) — the shell
-  // assembles all three from the same i18n keys and count logic that used to
-  // fold into one `title` string, so this list only renders the split; every
-  // other selection keeps the plain title.
+  // #581: the shell assembles the search title's muted lead, quoted term and
+  // count pill, so this list only renders the split; every other selection
+  // keeps the plain title.
   describe('the split search title (#581 follow-up)', () => {
     it('renders the muted prefix, the prominent term, and the count pill for a search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '2',
       }).nativeElement as HTMLElement;
 
-      const heading = el.querySelector('.list-header h2')!;
+      const heading = element.querySelector('.list-header h2')!;
       const prefix = heading.querySelector('.results-prefix');
       const term = heading.querySelector('.results-term');
       const count = heading.querySelector('.results-count');
@@ -389,42 +387,42 @@ describe('EntryListComponent', () => {
     });
 
     it('places a mobile-only line break after the search title prefix', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '2',
       }).nativeElement as HTMLElement;
 
-      const heading = el.querySelector('.list-header h2')!;
+      const heading = element.querySelector('.list-header h2')!;
       expect(heading.querySelector('.results-prefix + .compact-search-title-break')).not.toBeNull();
     });
 
     it('renders a trailing + on the count pill when another page is still out there', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: '50+',
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header h2 .results-count')?.textContent).toBe('50+');
+      expect(element.querySelector('.list-header h2 .results-count')?.textContent).toBe('50+');
     });
 
     it('renders no count pill while the search is still loading', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
         searchCountLabel: null,
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header h2 .results-count')).toBeNull();
+      expect(element.querySelector('.list-header h2 .results-count')).toBeNull();
     });
 
     it('renders the plain title, with no split spans, for a non-search selection', () => {
-      const el = mount().nativeElement as HTMLElement;
-      const heading = el.querySelector('.list-header h2')!;
+      const element = mount().nativeElement as HTMLElement;
+      const heading = element.querySelector('.list-header h2')!;
       expect(heading.querySelector('.results-prefix')).toBeNull();
       expect(heading.querySelector('.results-term')).toBeNull();
       expect(heading.querySelector('.results-count')).toBeNull();
@@ -437,51 +435,52 @@ describe('EntryListComponent', () => {
   // list only renders it.
   describe('the list count (#709)', () => {
     it('shows how much the list holds beside its name', () => {
-      const el = mount({ titleCount: { value: 12, counts: 'unread' } })
+      const element = mount({ titleCount: { value: 12, counts: 'unread' } })
         .nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header .title-count')?.textContent?.trim()).toBe('12');
+      expect(element.querySelector('.list-header .title-count')?.textContent?.trim()).toBe('12');
     });
 
     it('shows no count for a list with nothing in it', () => {
-      const el = mount({ titleCount: { value: 0, counts: 'unread' } }).nativeElement as HTMLElement;
+      const element = mount({ titleCount: { value: 0, counts: 'unread' } })
+        .nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header .title-count')).toBeNull();
+      expect(element.querySelector('.list-header .title-count')).toBeNull();
     });
 
     // Outside the h2, beside it: the h2 ellipsises, so a long feed name would
     // clip the count away — the same arrangement the whole-word badge uses.
     it('keeps the count out of the ellipsised title so a long name cannot clip it', () => {
-      const el = mount({
+      const element = mount({
         title: 'A feed name far longer than this header has ever been able to show',
         titleCount: { value: 12, counts: 'unread' },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header h2 .title-count')).toBeNull();
-      expect(el.querySelector('.list-header .title-row > .title-count')).not.toBeNull();
+      expect(element.querySelector('.list-header h2 .title-count')).toBeNull();
+      expect(element.querySelector('.list-header .title-row > .title-count')).not.toBeNull();
     });
 
     // The visible pill is a bare number; on its own it would announce as one.
     // The heading carries the phrase instead, so heading navigation hears what
     // the number counts.
     it('names an unread count in the heading for a screen reader', () => {
-      const el = mount({ titleCount: { value: 12, counts: 'unread' } })
+      const element = mount({ titleCount: { value: 12, counts: 'unread' } })
         .nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header h2 .sr-only')?.textContent).toContain('12 unread');
+      expect(element.querySelector('.list-header h2 .sr-only')?.textContent).toContain('12 unread');
     });
 
     it('names an item count where the list counts items rather than unread', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'kept', id: null, unread: false },
         titleCount: { value: 3, counts: 'items' },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header h2 .sr-only')?.textContent).toContain('3 items');
+      expect(element.querySelector('.list-header h2 .sr-only')?.textContent).toContain('3 items');
     });
 
     it('leaves a search the result count it already carries, and adds no second one', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
         searchTitlePrefix: 'Results for',
         searchTitleTerm: '"punk"',
@@ -489,8 +488,8 @@ describe('EntryListComponent', () => {
         titleCount: { value: 12, counts: 'unread' },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.list-header .title-count')).toBeNull();
-      expect(el.querySelector('.list-header .results-count')?.textContent).toBe('2');
+      expect(element.querySelector('.list-header .title-count')).toBeNull();
+      expect(element.querySelector('.list-header .results-count')?.textContent).toBe('2');
     });
   });
 
@@ -502,8 +501,8 @@ describe('EntryListComponent', () => {
     const TAG_RGB = 'rgb(194, 65, 12)';
 
     it('shows the tag glyph in the tag colour beside the name', () => {
-      const el = mount({ title: tag.name, titleTag: tag }).nativeElement as HTMLElement;
-      const heading = el.querySelector('.list-header h2')!;
+      const element = mount({ title: tag.name, titleTag: tag }).nativeElement as HTMLElement;
+      const heading = element.querySelector('.list-header h2')!;
       expect(heading.textContent).toContain('Wissenschaft');
 
       const icon = heading.querySelector<HTMLElement>('app-tag-glyph app-icon')!;
@@ -512,9 +511,9 @@ describe('EntryListComponent', () => {
     });
 
     it('falls back to the colour dot for a tag with no glyph of its own', () => {
-      const el = mount({ title: tag.name, titleTag: { ...tag, icon: null } })
+      const element = mount({ title: tag.name, titleTag: { ...tag, icon: null } })
         .nativeElement as HTMLElement;
-      const heading = el.querySelector('.list-header h2')!;
+      const heading = element.querySelector('.list-header h2')!;
       expect(heading.querySelector('app-tag-glyph app-icon')).toBeNull();
       expect(heading.querySelector<HTMLElement>('app-tag-glyph .dot')!.style.background).toBe(
         TAG_RGB,
@@ -522,8 +521,8 @@ describe('EntryListComponent', () => {
     });
 
     it('shows no glyph for a heading that names no tag', () => {
-      const el = mount().nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header h2 app-tag-glyph')).toBeNull();
+      const element = mount().nativeElement as HTMLElement;
+      expect(element.querySelector('.list-header h2 app-tag-glyph')).toBeNull();
     });
   });
 
@@ -541,11 +540,11 @@ describe('EntryListComponent', () => {
 
     for (const [kind, iconName] of iconByKind) {
       it(`shows the ${kind} heading with the ${iconName} icon`, () => {
-        const el = mount({ selection: { kind, id: null, unread: true, term: 'daft' } })
+        const element = mount({ selection: { kind, id: null, unread: true, term: 'daft' } })
           .nativeElement as HTMLElement;
         // A direct child of the h2, so it is never confused with the icon a tag
         // glyph nests, nor with the header's tool buttons further down.
-        const icon = el.querySelector<HTMLElement>('.list-header h2 > app-icon');
+        const icon = element.querySelector<HTMLElement>('.list-header h2 > app-icon');
         expect(icon).not.toBeNull();
         expect(icon!.textContent!.trim()).toBe(iconName);
       });
@@ -553,42 +552,40 @@ describe('EntryListComponent', () => {
 
     it('shows no fixed-view icon for a tag heading — its glyph stands in', () => {
       const tag = { id: 4, name: 'Wissenschaft', color: '#c2410c', icon: 'science', position: 0 };
-      const el = mount({ selection: { kind: 'tag', id: 4, unread: true }, titleTag: tag })
+      const element = mount({ selection: { kind: 'tag', id: 4, unread: true }, titleTag: tag })
         .nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header h2 > app-icon')).toBeNull();
+      expect(element.querySelector('.list-header h2 > app-icon')).toBeNull();
     });
 
     it('shows no fixed-view icon for a subscription heading — its favicon stands in', () => {
-      const el = mount({ selection: { kind: 'subscription', id: 5, unread: true } })
+      const element = mount({ selection: { kind: 'subscription', id: 5, unread: true } })
         .nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header h2 > app-icon')).toBeNull();
+      expect(element.querySelector('.list-header h2 > app-icon')).toBeNull();
     });
   });
 
-  // #87: the collapsing list header is a second bar with the same defect as the
-  // app header — it used to shrink the list's own box, resizing the scroller
-  // mid-gesture. It floats over reserved padding now.
+  // #87: the collapsing list header floats over reserved padding; it must never
+  // shrink the list's own box and resize the scroller mid-gesture.
   describe('collapsing list header', () => {
     it('publishes the expanded bar height and keeps it while collapsed', () => {
-      const f = mount({ layout: 'list' });
-      const host = f.nativeElement as HTMLElement;
+      const fixture = mount({ layout: 'list' });
+      const host = fixture.nativeElement as HTMLElement;
       // jsdom has no ResizeObserver, so stand in for the measurement.
-      f.componentInstance.headerHeight.set(53);
-      f.detectChanges();
+      fixture.componentInstance.headerHeight.set(53);
+      fixture.detectChanges();
       expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
 
       // The reservation must not follow the bar down: the scroller's padding is
       // computed from this value, and shrinking it would move every row.
-      f.componentInstance.collapsed.set(true);
-      f.detectChanges();
+      fixture.componentInstance.collapsed.set(true);
+      fixture.detectChanges();
       expect(host.style.getPropertyValue('--list-bar-h')).toBe('53px');
       expect(host.querySelector('.list-header')!.classList).toContain('collapsed');
     });
 
     it('keeps the scroller reservation constant whether or not an error shows (#996)', () => {
-      // The decouple: the scroller always reserves header clearance itself, so an
-      // error appearing no longer hands the reservation to the banner and reflows
-      // the pane. The `.after-banner` toggle is gone.
+      // The scroller always reserves header clearance itself, so an error
+      // appearing never hands the reservation to the banner or reflows the pane.
       const withError = mount({
         layout: 'list',
         error: { type: 'about:blank', title: 'Request failed', status: 502 },
@@ -604,8 +601,8 @@ describe('EntryListComponent', () => {
     const failure = { type: 'about:blank', title: 'Request failed', status: 502 };
 
     it('routes the error through the shared banner with a friendly message and status', () => {
-      const el = mount({ layout: 'list', error: failure }).nativeElement as HTMLElement;
-      const banner = el.querySelector('app-error-banner');
+      const element = mount({ layout: 'list', error: failure }).nativeElement as HTMLElement;
+      const banner = element.querySelector('app-error-banner');
       expect(banner).not.toBeNull();
       const text = banner!.querySelector('.text')!.textContent!;
       expect(text).toContain('502');
@@ -613,43 +610,47 @@ describe('EntryListComponent', () => {
     });
 
     it('shows an offline message when the server was unreachable', () => {
-      const el = mount({
+      const element = mount({
         layout: 'list',
         error: { type: 'about:blank', title: 'Could not reach the server', status: 0 },
       }).nativeElement as HTMLElement;
-      const text = el.querySelector('app-error-banner .text')!.textContent!;
+      const text = element.querySelector('app-error-banner .text')!.textContent!;
       expect(text).toContain('Could not reach the server');
     });
 
     it('emits retry when the banner action is used', () => {
-      const f = mount({ layout: 'list', error: failure });
+      const fixture = mount({ layout: 'list', error: failure });
       const retried = jest.fn();
-      f.componentInstance.retry.subscribe(retried);
+      fixture.componentInstance.retry.subscribe(retried);
 
-      (f.nativeElement.querySelector('app-error-banner .action') as HTMLButtonElement).click();
+      (
+        fixture.nativeElement.querySelector('app-error-banner .action') as HTMLButtonElement
+      ).click();
       expect(retried).toHaveBeenCalledTimes(1);
     });
 
     it('emits dismiss when the banner dismiss control is used', () => {
-      const f = mount({ layout: 'list', error: failure });
+      const fixture = mount({ layout: 'list', error: failure });
       const dismissed = jest.fn();
-      f.componentInstance.dismiss.subscribe(dismissed);
+      fixture.componentInstance.dismiss.subscribe(dismissed);
 
-      (f.nativeElement.querySelector('app-error-banner .dismiss') as HTMLButtonElement).click();
+      (
+        fixture.nativeElement.querySelector('app-error-banner .dismiss') as HTMLButtonElement
+      ).click();
       expect(dismissed).toHaveBeenCalledTimes(1);
     });
 
     it('shows no banner when there is no error', () => {
-      const el = mount({ layout: 'list', error: null }).nativeElement as HTMLElement;
-      expect(el.querySelector('app-error-banner')).toBeNull();
+      const element = mount({ layout: 'list', error: null }).nativeElement as HTMLElement;
+      expect(element.querySelector('app-error-banner')).toBeNull();
     });
   });
 
   it('keeps the current rows rendered and marks them reloading while a reload is on the wire', () => {
-    const el = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+    const element = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
       .nativeElement as HTMLElement;
-    expect(el.querySelector('.skeleton')).toBeNull();
-    const rows = el.querySelector('.rows')!;
+    expect(element.querySelector('.skeleton')).toBeNull();
+    const rows = element.querySelector('.rows')!;
     expect(rows.classList).toContain('reloading');
     expect(rows.querySelectorAll('app-entry-row').length).toBe(2);
   });
@@ -657,17 +658,17 @@ describe('EntryListComponent', () => {
   it('makes the retained rows inert while a reload is on the wire', () => {
     // Without this the stale rows stay clickable: a row click during a view
     // switch opens the PREVIOUS view's entry and marks it read (#254).
-    const el = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
+    const element = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' })
       .nativeElement as HTMLElement;
-    const rows = el.querySelector('.rows')!;
+    const rows = element.querySelector('.rows')!;
     expect(rows.hasAttribute('inert')).toBe(true);
     expect(rows.getAttribute('aria-busy')).toBe('true');
   });
 
   it('drops the inert guard once the rows are current', () => {
-    const el = mount({ loading: false, entries: [entry(1)], layout: 'list' })
+    const element = mount({ loading: false, entries: [entry(1)], layout: 'list' })
       .nativeElement as HTMLElement;
-    const rows = el.querySelector('.rows')!;
+    const rows = element.querySelector('.rows')!;
     expect(rows.hasAttribute('inert')).toBe(false);
   });
 
@@ -680,25 +681,25 @@ describe('EntryListComponent', () => {
     };
 
     it('leaves the retained rows undimmed and clickable', () => {
-      const el = mount(typing).nativeElement as HTMLElement;
-      const rows = el.querySelector('.rows')!;
+      const element = mount(typing).nativeElement as HTMLElement;
+      const rows = element.querySelector('.rows')!;
       expect(rows.classList).not.toContain('reloading');
       expect(rows.hasAttribute('inert')).toBe(false);
     });
 
     it('still reports the rows as busy to assistive technology', () => {
-      const el = mount(typing).nativeElement as HTMLElement;
-      expect(el.querySelector('.rows')!.getAttribute('aria-busy')).toBe('true');
+      const element = mount(typing).nativeElement as HTMLElement;
+      expect(element.querySelector('.rows')!.getAttribute('aria-busy')).toBe('true');
     });
 
     it('never raises the loading overlay, however long the search runs', () => {
       jest.useFakeTimers();
       try {
-        const f = mount(typing);
+        const fixture = mount(typing);
         jest.advanceTimersByTime(5000);
-        f.detectChanges();
+        fixture.detectChanges();
         expect(
-          (f.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
+          (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
         ).toBeNull();
       } finally {
         jest.useRealTimers();
@@ -708,11 +709,11 @@ describe('EntryListComponent', () => {
     it('still raises the loading overlay for a reload outside a search', () => {
       jest.useFakeTimers();
       try {
-        const f = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
+        const fixture = mount({ loading: true, entries: [entry(1), entry(2)], layout: 'list' });
         jest.advanceTimersByTime(5000);
-        f.detectChanges();
+        fixture.detectChanges();
         expect(
-          (f.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
+          (fixture.nativeElement as HTMLElement).querySelector('app-loading-overlay.shown'),
         ).not.toBeNull();
       } finally {
         jest.useRealTimers();
@@ -732,12 +733,12 @@ describe('EntryListComponent', () => {
   });
 
   it('shows the search empty state with the term, and no catalog link', () => {
-    const el = mount({
+    const element = mount({
       loading: false,
       entries: [],
       selection: { kind: 'search', id: null, unread: false, term: 'angular' },
     }).nativeElement as HTMLElement;
-    const empty = el.querySelector('.empty')!;
+    const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing matches "angular".');
     expect(empty.textContent).not.toContain('Nothing here yet.');
     expect(empty.querySelector('a')).toBeNull();
@@ -745,25 +746,25 @@ describe('EntryListComponent', () => {
 
   describe('the combined saved-search list empty state (#769)', () => {
     it('says there are no saved searches yet when the account keeps none', () => {
-      const el = mount({
+      const element = mount({
         loading: false,
         entries: [],
         selection: { kind: 'saved-searches', id: null, unread: false },
         savedSearchCount: 0,
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.empty')!.textContent).toContain('No saved searches yet');
+      expect(element.querySelector('.empty')!.textContent).toContain('No saved searches yet');
     });
 
     it('says the list is empty when saved searches exist but match nothing', () => {
-      const el = mount({
+      const element = mount({
         loading: false,
         entries: [],
         selection: { kind: 'saved-searches', id: null, unread: false },
         savedSearchCount: 2,
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.empty')!.textContent).not.toContain('No saved searches yet');
+      expect(element.querySelector('.empty')!.textContent).not.toContain('No saved searches yet');
     });
   });
 
@@ -772,10 +773,10 @@ describe('EntryListComponent', () => {
       "entry (#408 follow-up: the trailing space is the server's whole-word signal, " +
       'not a word of its own)',
     () => {
-      const f = mount({
+      const fixture = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
       });
-      expect(f.componentInstance.searchTerms()).toEqual(['punk']);
+      expect(fixture.componentInstance.searchTerms()).toEqual(['punk']);
     },
   );
 
@@ -784,129 +785,129 @@ describe('EntryListComponent', () => {
   // engine matched, not only what was typed.
   describe('searchTerms prefers matchedWords (#432)', () => {
     it('marks the words the engine matched when the page carries them', () => {
-      const f = mount({
+      const fixture = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'recieve' },
         matchedWords: ['receive'],
       });
-      expect(f.componentInstance.searchTerms()).toEqual(['receive']);
+      expect(fixture.componentInstance.searchTerms()).toEqual(['receive']);
     });
 
     it(
       'falls back to the terms split from the selection when the page carries none — ' +
         "exactly as before this feature, which is the database LIKE fallback's normal answer",
       () => {
-        const f = mount({
+        const fixture = mount({
           selection: { kind: 'search', id: null, unread: false, term: 'punk rock' },
           matchedWords: [],
         });
-        expect(f.componentInstance.searchTerms()).toEqual(['punk', 'rock']);
+        expect(fixture.componentInstance.searchTerms()).toEqual(['punk', 'rock']);
       },
     );
 
     it('defaults to the selection terms when matchedWords is not bound at all', () => {
-      const f = mount({
+      const fixture = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
       });
-      expect(f.componentInstance.searchTerms()).toEqual(['punk']);
+      expect(fixture.componentInstance.searchTerms()).toEqual(['punk']);
     });
   });
 
   describe('whole-word search badge (#408 follow-up)', () => {
     it('renders the badge for a whole-word (trailing-space) search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
-      const badge = el.querySelector('.whole-word-badge');
+      const badge = element.querySelector('.whole-word-badge');
       expect(badge).not.toBeNull();
       expect(badge!.textContent).toContain('Whole words');
     });
 
     it('does not render the badge for a substring search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.whole-word-badge')).toBeNull();
+      expect(element.querySelector('.whole-word-badge')).toBeNull();
     });
 
     it('does not render the badge for a non-search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'all', id: null, unread: true },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.whole-word-badge')).toBeNull();
+      expect(element.querySelector('.whole-word-badge')).toBeNull();
     });
 
     // Round 2: aria-describedby only speaks on focus, so a screen-reader
     // user navigating by headings never heard it. The mode is now part of
     // the heading's own accessible name via a visually-hidden phrase.
     it('announces the mode as part of the heading, not only via focus', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
-      const heading = el.querySelector('.list-header h2')!;
+      const heading = element.querySelector('.list-header h2')!;
       expect(heading.querySelector('.sr-only')!.textContent).toContain('Whole words');
     });
 
     it('marks the visible badge aria-hidden so it is not announced a second time', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.whole-word-badge')!.getAttribute('aria-hidden')).toBe('true');
+      expect(element.querySelector('.whole-word-badge')!.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('puts no whole-word phrase in the heading for a substring search', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'punk' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.list-header h2 .sr-only')).toBeNull();
+      expect(element.querySelector('.list-header h2 .sr-only')).toBeNull();
     });
   });
 
   describe('phrase search badge (#702)', () => {
     it('renders the phrase badge for a quoted search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: '"climate change"' },
       }).nativeElement as HTMLElement;
-      const badge = el.querySelector('.phrase-badge');
+      const badge = element.querySelector('.phrase-badge');
       expect(badge).not.toBeNull();
       expect(badge!.textContent).toContain('Phrase');
       expect(badge!.getAttribute('aria-hidden')).toBe('true');
-      expect(el.querySelector('.list-header h2 .sr-only')!.textContent).toContain('Phrase');
+      expect(element.querySelector('.list-header h2 .sr-only')!.textContent).toContain('Phrase');
     });
 
     it('renders no phrase badge for an unquoted search', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: 'climate change' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.phrase-badge')).toBeNull();
+      expect(element.querySelector('.phrase-badge')).toBeNull();
     });
 
     it('shows only the phrase badge when a phrase also carries a trailing space', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'search', id: null, unread: false, term: '"climate change" ' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.phrase-badge')).not.toBeNull();
-      expect(el.querySelector('.whole-word-badge')).toBeNull();
+      expect(element.querySelector('.phrase-badge')).not.toBeNull();
+      expect(element.querySelector('.whole-word-badge')).toBeNull();
     });
   });
 
   it('hides the whole-word-mode trailing space from the empty-state message (#408 follow-up)', () => {
-    const el = mount({
+    const element = mount({
       loading: false,
       entries: [],
       selection: { kind: 'search', id: null, unread: false, term: 'punk ' },
     }).nativeElement as HTMLElement;
-    const empty = el.querySelector('.empty')!;
+    const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing matches "punk".');
     expect(empty.textContent).not.toContain('punk "');
   });
 
   it('keeps the existing empty state and its catalog link for a non-search selection', () => {
-    const el = mount({
+    const element = mount({
       loading: false,
       entries: [],
       selection: { kind: 'all', id: null, unread: false },
     }).nativeElement as HTMLElement;
-    const empty = el.querySelector('.empty')!;
+    const empty = element.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing here yet.');
     expect(empty.querySelector('a')).not.toBeNull();
   });
@@ -920,77 +921,77 @@ describe('EntryListComponent', () => {
 
     it('offers the catalog to an account with only a few subscriptions', () => {
       subscribedTo(4);
-      const el = mount(emptyAll).nativeElement as HTMLElement;
+      const element = mount(emptyAll).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.empty a')).not.toBeNull();
+      expect(element.querySelector('.empty a')).not.toBeNull();
     });
 
     it('leaves it out once the account follows five or more feeds', () => {
       subscribedTo(5);
-      const el = mount(emptyAll).nativeElement as HTMLElement;
+      const element = mount(emptyAll).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.empty a')).toBeNull();
+      expect(element.querySelector('.empty a')).toBeNull();
     });
 
     it('leaves it out until the subscriptions have loaded', () => {
       subscriptionsStore.resolved.set(false);
       subscribedTo(0);
-      const el = mount(emptyAll).nativeElement as HTMLElement;
+      const element = mount(emptyAll).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.empty a')).toBeNull();
+      expect(element.querySelector('.empty a')).toBeNull();
     });
   });
 
   describe('the caught-up illustration (#1198)', () => {
     it('sits in the empty state of an unread selection', () => {
-      const el = mount({
+      const element = mount({
         loading: false,
         entries: [],
         selection: { kind: 'all', id: null, unread: true },
       }).nativeElement as HTMLElement;
-      const empty = el.querySelector('.empty')!;
+      const empty = element.querySelector('.empty')!;
 
       expect(empty.textContent).toContain("You're all caught up.");
       expect(empty.querySelector('app-caught-up-illustration')).not.toBeNull();
     });
 
     it('stays out of the "Nothing here yet." state', () => {
-      const el = mount({
+      const element = mount({
         loading: false,
         entries: [],
         selection: { kind: 'all', id: null, unread: false },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+      expect(element.querySelector('app-caught-up-illustration')).toBeNull();
     });
 
     it('stays out of an unread search that matches nothing', () => {
-      const el = mount({
+      const element = mount({
         loading: false,
         entries: [],
         selection: { kind: 'search', id: null, unread: true, term: 'angular' },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+      expect(element.querySelector('app-caught-up-illustration')).toBeNull();
     });
   });
 
   it('emits loadMore from the fallback button and markAllRead', () => {
-    const f = mount({ hasMore: true });
+    const fixture = mount({ hasMore: true });
     let more = 0,
       mar = 0;
-    f.componentInstance.loadMore.subscribe(() => more++);
-    f.componentInstance.markAllRead.subscribe(() => mar++);
-    const el = f.nativeElement as HTMLElement;
-    (el.querySelector('.load-more') as HTMLButtonElement).click();
-    (el.querySelector('.mark-all') as HTMLButtonElement).click();
+    fixture.componentInstance.loadMore.subscribe(() => more++);
+    fixture.componentInstance.markAllRead.subscribe(() => mar++);
+    const element = fixture.nativeElement as HTMLElement;
+    (element.querySelector('.load-more') as HTMLButtonElement).click();
+    (element.querySelector('.mark-all') as HTMLButtonElement).click();
     expect([more, mar]).toEqual([1, 1]);
   });
 
   it('keeps the sentinel foot inside the scroll container', () => {
-    const el = mount({ hasMore: true }).nativeElement as HTMLElement;
+    const element = mount({ hasMore: true }).nativeElement as HTMLElement;
     // The observer root is .rows, so the sentinel must be a descendant of it.
-    expect(el.querySelector('.rows .load-more')).not.toBeNull();
+    expect(element.querySelector('.rows .load-more')).not.toBeNull();
   });
 
   // #91: on a slow backend a fixed 300px lead means scrolling into the spinner.
@@ -1000,7 +1001,7 @@ describe('EntryListComponent', () => {
     const seen: IntersectionObserverInit[] = [];
     const real = globalThis.IntersectionObserver;
     globalThis.IntersectionObserver = class {
-      constructor(_cb: IntersectionObserverCallback, init?: IntersectionObserverInit) {
+      constructor(_callback: IntersectionObserverCallback, init?: IntersectionObserverInit) {
         seen.push(init ?? {});
       }
       readonly observe = jest.fn();
@@ -1014,12 +1015,12 @@ describe('EntryListComponent', () => {
     try {
       // No sentinel yet, so no observer — this lets us fake the scroller's
       // height (jsdom lays nothing out) before the one we care about is made.
-      const f = mount({ hasMore: false });
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows')!;
+      const fixture = mount({ hasMore: false });
+      const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows')!;
       Object.defineProperty(rows, 'clientHeight', { value: 900, configurable: true });
 
-      f.componentRef.setInput('hasMore', true);
-      f.detectChanges();
+      fixture.componentRef.setInput('hasMore', true);
+      fixture.detectChanges();
 
       expect(seen.at(-1)).toMatchObject({ root: rows, rootMargin: prefetchMargin(900) });
       expect(seen.at(-1)!.rootMargin).not.toBe('300px');
@@ -1029,15 +1030,15 @@ describe('EntryListComponent', () => {
   });
 
   it('hides mark-all-read when not applicable', () => {
-    const el = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
-    expect(el.querySelector('.mark-all')).toBeNull();
+    const element = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
+    expect(element.querySelector('.mark-all')).toBeNull();
   });
 
   describe('unread filter switch', () => {
     it('fills the circle and marks the switch on while filtered to unread', () => {
-      const el = mount({ selection: { kind: 'all', id: null, unread: true } })
+      const element = mount({ selection: { kind: 'all', id: null, unread: true } })
         .nativeElement as HTMLElement;
-      const sw = el.querySelector('.unread-switch')!;
+      const sw = element.querySelector('.unread-switch')!;
       expect(sw.getAttribute('aria-checked')).toBe('true');
       const icon = sw.querySelector('app-icon')!;
       expect(icon.textContent?.trim()).toBe('circle');
@@ -1046,9 +1047,9 @@ describe('EntryListComponent', () => {
     });
 
     it('empties the circle and marks the switch off while showing all', () => {
-      const el = mount({ selection: { kind: 'all', id: null, unread: false } })
+      const element = mount({ selection: { kind: 'all', id: null, unread: false } })
         .nativeElement as HTMLElement;
-      const sw = el.querySelector('.unread-switch')!;
+      const sw = element.querySelector('.unread-switch')!;
       expect(sw.getAttribute('aria-checked')).toBe('false');
       const icon = sw.querySelector('app-icon')!;
       expect(icon.textContent?.trim()).toBe('circle');
@@ -1058,34 +1059,34 @@ describe('EntryListComponent', () => {
 
     it('shows the switch for every browsable list and a search, not the state views', () => {
       for (const kind of ['all', 'tag', 'subscription', 'for-you', 'search'] as const) {
-        const el = mount({ selection: { kind, id: null, unread: true, term: 'x' } })
+        const element = mount({ selection: { kind, id: null, unread: true, term: 'x' } })
           .nativeElement as HTMLElement;
-        expect(el.querySelector('.unread-switch')).not.toBeNull();
+        expect(element.querySelector('.unread-switch')).not.toBeNull();
       }
       for (const kind of ['favorites', 'kept', 'viewed'] as const) {
-        const el = mount({
+        const element = mount({
           selection: { kind, id: null, unread: false },
           canMarkAllRead: false,
         }).nativeElement as HTMLElement;
-        expect(el.querySelector('.unread-switch')).toBeNull();
+        expect(element.querySelector('.unread-switch')).toBeNull();
       }
     });
 
     it('shows the switch for an individual saved-search result', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'saved-search', id: 7, unread: false },
       }).nativeElement as HTMLElement;
 
-      expect(el.querySelector('.unread-switch')).not.toBeNull();
+      expect(element.querySelector('.unread-switch')).not.toBeNull();
     });
 
     it('asks for the opposite state when clicked', () => {
       for (const unread of [true, false]) {
-        const f = mount({ selection: { kind: 'all', id: null, unread } });
+        const fixture = mount({ selection: { kind: 'all', id: null, unread } });
         const asked: boolean[] = [];
-        f.componentInstance.unreadOnlyChange.subscribe((value) => asked.push(value));
+        fixture.componentInstance.unreadOnlyChange.subscribe((value) => asked.push(value));
 
-        (f.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
+        (fixture.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
 
         expect(asked).toEqual([!unread]);
       }
@@ -1093,30 +1094,32 @@ describe('EntryListComponent', () => {
   });
 
   describe('list order toggle', () => {
-    const toggle = (f: ComponentFixture<EntryListComponent>) =>
-      f.nativeElement.querySelector('.list-order') as HTMLButtonElement;
+    const toggle = (fixture: ComponentFixture<EntryListComponent>) =>
+      fixture.nativeElement.querySelector('.list-order') as HTMLButtonElement;
 
     it('shows newest first and asks for oldest first', () => {
-      const f = mount({ selection: { kind: 'tag', id: 3, unread: false } });
+      const fixture = mount({ selection: { kind: 'tag', id: 3, unread: false } });
       const asked: ListOrder[] = [];
-      f.componentInstance.orderChange.subscribe((order) => asked.push(order));
+      fixture.componentInstance.orderChange.subscribe((order) => asked.push(order));
 
-      expect(toggle(f).querySelector('.txt')?.textContent?.trim()).toBe('Newest first');
-      expect(toggle(f).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_downward');
-      toggle(f).click();
+      expect(toggle(fixture).querySelector('.txt')?.textContent?.trim()).toBe('Newest first');
+      expect(toggle(fixture).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_downward');
+      toggle(fixture).click();
 
       expect(asked).toEqual(['oldest']);
     });
 
     it('shows oldest first and asks for newest first', () => {
-      const f = mount({ selection: { kind: 'tag', id: 3, unread: false, order: 'oldest' } });
+      const fixture = mount({ selection: { kind: 'tag', id: 3, unread: false, order: 'oldest' } });
       const asked: ListOrder[] = [];
-      f.componentInstance.orderChange.subscribe((order) => asked.push(order));
+      fixture.componentInstance.orderChange.subscribe((order) => asked.push(order));
 
-      expect(toggle(f).querySelector('.txt')?.textContent?.trim()).toBe('Oldest first');
-      expect(toggle(f).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_upward');
-      expect(toggle(f).getAttribute('aria-label')).toBe('Oldest first, switch to newest first');
-      toggle(f).click();
+      expect(toggle(fixture).querySelector('.txt')?.textContent?.trim()).toBe('Oldest first');
+      expect(toggle(fixture).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_upward');
+      expect(toggle(fixture).getAttribute('aria-label')).toBe(
+        'Oldest first, switch to newest first',
+      );
+      toggle(fixture).click();
 
       expect(asked).toEqual(['newest']);
     });
@@ -1124,50 +1127,52 @@ describe('EntryListComponent', () => {
     it('offers the toggle on every list but for you', () => {
       const kinds = ['all', 'tag', 'subscription', 'favorites', 'kept', 'viewed'] as const;
       for (const kind of [...kinds, 'saved-searches', 'saved-search', 'search'] as const) {
-        const f = mount({
+        const fixture = mount({
           selection: { kind, id: 1, unread: false, term: 'x' },
           canMarkAllRead: false,
         });
-        expect(toggle(f)).not.toBeNull();
+        expect(toggle(fixture)).not.toBeNull();
       }
       const forYou = mount({ selection: { kind: 'for-you', id: null, unread: false } });
       expect(toggle(forYou)).toBeNull();
     });
 
     it('sits directly before the unread switch', () => {
-      const f = mount({ selection: { kind: 'all', id: null, unread: false } });
-      expect(toggle(f).nextElementSibling?.classList.contains('unread-switch')).toBe(true);
+      const fixture = mount({ selection: { kind: 'all', id: null, unread: false } });
+      expect(toggle(fixture).nextElementSibling?.classList.contains('unread-switch')).toBe(true);
     });
   });
 
   it('emits refresh when the scoped refresh button is clicked', () => {
-    const f = mount();
+    const fixture = mount();
     let hits = 0;
-    f.componentInstance.refresh.subscribe(() => hits++);
-    (f.nativeElement.querySelector('.refresh') as HTMLButtonElement).click();
+    fixture.componentInstance.refresh.subscribe(() => hits++);
+    (fixture.nativeElement.querySelector('.refresh') as HTMLButtonElement).click();
     expect(hits).toBe(1);
   });
 
   it('disables the refresh button while a run is in progress', () => {
-    const f = mount({ refreshing: true });
-    expect((f.nativeElement.querySelector('.refresh') as HTMLButtonElement).disabled).toBe(true);
+    const fixture = mount({ refreshing: true });
+    expect((fixture.nativeElement.querySelector('.refresh') as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it('hides the scoped refresh button in the cross-feed saved views', () => {
     for (const kind of ['favorites', 'kept'] as const) {
-      const el = mount({
+      const element = mount({
         selection: { kind, id: null, unread: false },
         canMarkAllRead: false,
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.refresh')).toBeNull();
+      expect(element.querySelector('.refresh')).toBeNull();
     }
   });
 
   it('renders no saved-search button of its own — it is a shell headerActions command', () => {
-    const el = mount({
+    const element = mount({
       selection: { kind: 'search', id: null, unread: false, term: 'climate' },
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('button.save-search')).toBeNull();
+    expect(element.querySelector('button.save-search')).toBeNull();
   });
 
   // #105: the gesture had no coverage at all, which is how a threshold that
@@ -1177,88 +1182,88 @@ describe('EntryListComponent', () => {
     // jsdom has no TouchEvent constructor; a plain Event with a touches list is
     // what the handlers actually read.
     function touch(type: string, y: number): Event {
-      const e = new Event(type, { bubbles: true, cancelable: true });
-      Object.defineProperty(e, 'touches', { value: [{ clientX: 0, clientY: y }] });
-      return e;
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'touches', { value: [{ clientX: 0, clientY: y }] });
+      return event;
     }
 
     /** Drag `distance` px down from the top of the list and let go. */
-    function pullBy(f: ReturnType<typeof mount>, distance: number, release = true) {
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+    function pullBy(fixture: ReturnType<typeof mount>, distance: number, release = true) {
+      const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       rows.dispatchEvent(touch('touchstart', 100));
       rows.dispatchEvent(touch('touchmove', 100 + distance));
-      f.detectChanges();
+      fixture.detectChanges();
       if (release) rows.dispatchEvent(touch('touchend', 100 + distance));
       return rows;
     }
 
     it('refreshes on a pull a thumb can actually make', () => {
-      const f = mount();
+      const fixture = mount();
       let hits = 0;
-      f.componentInstance.refresh.subscribe(() => hits++);
-      pullBy(f, 140);
+      fixture.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(fixture, 140);
       expect(hits).toBe(1);
     });
 
     it('does not refresh on a short pull', () => {
-      const f = mount();
+      const fixture = mount();
       let hits = 0;
-      f.componentInstance.refresh.subscribe(() => hits++);
-      pullBy(f, 40);
+      fixture.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(fixture, 40);
       expect(hits).toBe(0);
     });
 
     it('shows the indicator, armed only once the pull is far enough', () => {
-      const f = mount();
-      pullBy(f, 40, false);
-      const chip = (f.nativeElement as HTMLElement).querySelector('.pull-indicator');
+      const fixture = mount();
+      pullBy(fixture, 40, false);
+      const chip = (fixture.nativeElement as HTMLElement).querySelector('.pull-indicator');
       expect(chip).not.toBeNull(); // visible feedback from the first pixels
       expect(chip!.classList).not.toContain('armed');
 
-      pullBy(f, 140, false);
+      pullBy(fixture, 140, false);
       expect(
-        (f.nativeElement as HTMLElement).querySelector('.pull-indicator')!.classList,
+        (fixture.nativeElement as HTMLElement).querySelector('.pull-indicator')!.classList,
       ).toContain('armed');
     });
 
     it('ignores the gesture in the cross-feed saved views', () => {
-      const f = mount({ selection: { kind: 'favorites', id: null, unread: false } });
+      const fixture = mount({ selection: { kind: 'favorites', id: null, unread: false } });
       let hits = 0;
-      f.componentInstance.refresh.subscribe(() => hits++);
-      pullBy(f, 140);
+      fixture.componentInstance.refresh.subscribe(() => hits++);
+      pullBy(fixture, 140);
       expect(hits).toBe(0);
     });
 
     it('shows the spinner but no label during the pull (the label is for the running refresh)', () => {
-      const f = mount();
-      pullBy(f, 140, false);
-      const chip = (f.nativeElement as HTMLElement).querySelector('.pull-indicator')!;
+      const fixture = mount();
+      pullBy(fixture, 140, false);
+      const chip = (fixture.nativeElement as HTMLElement).querySelector('.pull-indicator')!;
       expect(chip).not.toBeNull();
       expect(chip.querySelector('.label')).toBeNull();
     });
   });
 
   it('labels the refresh button with a refresh icon and text', () => {
-    const el = mount().nativeElement as HTMLElement;
-    const btn = el.querySelector('.refresh') as HTMLButtonElement;
-    expect(btn.querySelector('app-icon[name="refresh"]')).not.toBeNull();
-    expect(btn.querySelector('.txt')).not.toBeNull();
+    const element = mount().nativeElement as HTMLElement;
+    const button = element.querySelector('.refresh') as HTMLButtonElement;
+    expect(button.querySelector('app-icon[name="refresh"]')).not.toBeNull();
+    expect(button.querySelector('.txt')).not.toBeNull();
   });
 
   it('shows a last-refreshed hint for a single-feed selection', () => {
-    const el = mount({
+    const element = mount({
       selection: { kind: 'subscription', id: 7, unread: true },
       lastRefreshed: '2026-07-25T08:00:00Z',
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+    expect(element.querySelector('.last-refreshed')).not.toBeNull();
   });
 
   it('shows a last-refreshed hint for the for-you list', () => {
-    const el = mount({
+    const element = mount({
       selection: { kind: 'for-you', id: null, unread: false },
       lastRefreshed: '2026-08-08T09:00:00Z',
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('.last-refreshed')).not.toBeNull();
+    expect(element.querySelector('.last-refreshed')).not.toBeNull();
   });
 
   it('shows no last-refreshed hint for all/tag or a never-fetched feed', () => {
@@ -1279,12 +1284,12 @@ describe('EntryListComponent', () => {
   });
 
   it('shows a next-refresh hint beside the last-refreshed one for a single feed', () => {
-    const el = mount({
+    const element = mount({
       selection: { kind: 'subscription', id: 7, unread: true },
       lastRefreshed: '2026-07-25T08:00:00Z',
       nextRefresh: '2099-07-25T09:00:00Z',
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('.next-refresh')).not.toBeNull();
+    expect(element.querySelector('.next-refresh')).not.toBeNull();
   });
 
   it('shows no next-refresh hint for the for-you list or a gone feed', () => {
@@ -1322,18 +1327,18 @@ describe('EntryListComponent', () => {
     const tail = [21, 22, 23, 24, 25, 26, 27].map((id) =>
       entry(id, { subscriptionId: id, source: `tail${id}` }),
     );
-    const el = mount({
+    const element = mount({
       layout: 'magazine',
       entries: [...lead, ...run, ...tail],
     }).nativeElement as HTMLElement;
-    expect(el.querySelector('app-source-group')).not.toBeNull();
-    expect(el.querySelector('.rows.magazine')).not.toBeNull();
+    expect(element.querySelector('app-source-group')).not.toBeNull();
+    expect(element.querySelector('.rows.magazine')).not.toBeNull();
   });
 
   it('renders flat rows when layout is list', () => {
-    const el = mount({ layout: 'list' }).nativeElement as HTMLElement;
-    expect(el.querySelectorAll('app-entry-row').length).toBe(2);
-    expect(el.querySelector('app-source-group')).toBeNull();
+    const element = mount({ layout: 'list' }).nativeElement as HTMLElement;
+    expect(element.querySelectorAll('app-entry-row').length).toBe(2);
+    expect(element.querySelector('app-source-group')).toBeNull();
   });
 
   describe('airy style (#723)', () => {
@@ -1356,89 +1361,89 @@ describe('EntryListComponent', () => {
 
   describe('search forces the list layout (#408)', () => {
     it('renders rows, not magazine blocks, for a search selection even when layout is magazine', () => {
-      const el = mount({
+      const element = mount({
         layout: 'magazine',
         selection: { kind: 'search', id: null, unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
-      expect(el.querySelectorAll('app-entry-row').length).toBe(2);
-      expect(el.querySelector('.rows.magazine')).toBeNull();
+      expect(element.querySelectorAll('app-entry-row').length).toBe(2);
+      expect(element.querySelector('.rows.magazine')).toBeNull();
     });
 
     it('still renders magazine blocks for a non-search selection under the magazine layout', () => {
-      const el = mount({
+      const element = mount({
         layout: 'magazine',
         selection: { kind: 'all', id: null, unread: true },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('.rows.magazine')).not.toBeNull();
+      expect(element.querySelector('.rows.magazine')).not.toBeNull();
     });
   });
 
   describe('search result live region (#408)', () => {
     it('announces the loaded count for a search selection', () => {
-      const el = mount({
+      const element = mount({
         entries: [entry(1), entry(2), entry(3)],
         selection: { kind: 'search', id: null, unread: false, term: 'fox' },
       }).nativeElement as HTMLElement;
-      const region = el.querySelector('[aria-live="polite"]');
+      const region = element.querySelector('[aria-live="polite"]');
       expect(region).not.toBeNull();
       expect(region!.textContent).toContain('3 results');
     });
 
     it('renders no live region for a non-search selection', () => {
-      const el = mount({
+      const element = mount({
         selection: { kind: 'all', id: null, unread: true },
       }).nativeElement as HTMLElement;
-      expect(el.querySelector('[aria-live="polite"]')).toBeNull();
+      expect(element.querySelector('[aria-live="polite"]')).toBeNull();
     });
   });
 
   it('does not collapse the list header by default', () => {
-    const el = mount().nativeElement as HTMLElement;
-    expect(el.querySelector('.list-header')!.classList).not.toContain('collapsed');
+    const element = mount().nativeElement as HTMLElement;
+    expect(element.querySelector('.list-header')!.classList).not.toContain('collapsed');
   });
 
   it('collapses the list header when the collapsed state is set (scrolled down on mobile)', () => {
-    const f = mount();
-    f.componentInstance.collapsed.set(true);
-    f.detectChanges();
-    expect((f.nativeElement as HTMLElement).querySelector('.list-header')!.classList).toContain(
-      'collapsed',
-    );
+    const fixture = mount();
+    fixture.componentInstance.collapsed.set(true);
+    fixture.detectChanges();
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.list-header')!.classList,
+    ).toContain('collapsed');
   });
 
   it('re-expands the list header when the selection changes', () => {
-    const f = mount();
-    f.componentInstance.collapsed.set(true);
-    f.detectChanges();
-    f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
-    f.detectChanges();
-    expect(f.componentInstance.collapsed()).toBe(false);
+    const fixture = mount();
+    fixture.componentInstance.collapsed.set(true);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.collapsed()).toBe(false);
   });
 
   it('remembers the scroll offset per selection as the list is scrolled', () => {
-    const f = mount();
-    f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+    const fixture = mount();
+    fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
     expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
   });
 
   // #501: driven through the real element, not the handler — the wiring is the fix.
   describe('scroll events from the rows element', () => {
     it('reach the handler outside the Angular zone', () => {
-      const f = mount();
+      const fixture = mount();
       const zones: boolean[] = [];
       memory.save.mockImplementationOnce(() => zones.push(NgZone.isInAngularZone()));
 
-      fakeScroller(f, 480).dispatchEvent(new Event('scroll'));
+      fakeScroller(fixture, 480).dispatchEvent(new Event('scroll'));
 
       expect(zones).toEqual([false]);
     });
 
     it('still drive the back-to-top state the template reads', () => {
-      const f = mount();
+      const fixture = mount();
 
-      fakeScroller(f, 900).dispatchEvent(new Event('scroll'));
+      fakeScroller(fixture, 900).dispatchEvent(new Event('scroll'));
 
-      expect(f.componentInstance.showToTop()).toBe(true);
+      expect(fixture.componentInstance.showToTop()).toBe(true);
     });
 
     it('request the reading-focus frame outside the Angular zone', () => {
@@ -1460,17 +1465,17 @@ describe('EntryListComponent', () => {
 
   it('restores the saved offset once a fresh load completes (return after a resume-reload)', () => {
     // Mount mid-load (skeletons, no scroll container yet) as on a fresh page boot.
-    const f = mount({ loading: true, entries: [] });
+    const fixture = mount({ loading: true, entries: [] });
     memory.read.mockReturnValue(420);
     const apply = jest.spyOn(
-      f.componentInstance as unknown as { applyScroll: () => void },
+      fixture.componentInstance as unknown as { applyScroll: () => void },
       'applyScroll',
     );
 
     // The first page lands: loading clears and the rows render.
-    f.componentRef.setInput('loading', false);
-    f.componentRef.setInput('entries', [entry(1), entry(2)]);
-    f.detectChanges();
+    fixture.componentRef.setInput('loading', false);
+    fixture.componentRef.setInput('entries', [entry(1), entry(2)]);
+    fixture.detectChanges();
 
     expect(memory.read).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true });
     expect(apply).toHaveBeenCalledWith(expect.anything(), 420);
@@ -1478,12 +1483,12 @@ describe('EntryListComponent', () => {
 
   it('does not restore scroll while the list is still loading', () => {
     memory.read.mockReturnValue(420);
-    const f = mount({ loading: true, entries: [] });
+    const fixture = mount({ loading: true, entries: [] });
     const apply = jest.spyOn(
-      f.componentInstance as unknown as { applyScroll: () => void },
+      fixture.componentInstance as unknown as { applyScroll: () => void },
       'applyScroll',
     );
-    f.detectChanges();
+    fixture.detectChanges();
     expect(apply).not.toHaveBeenCalled();
   });
 
@@ -1494,54 +1499,54 @@ describe('EntryListComponent', () => {
   describe('scroll position across a view switch', () => {
     /** Play a load through to completion, which is what marks the rendered rows
      *  as belonging to the current selection. */
-    function completeLoad(f: ReturnType<typeof mount>): void {
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
-      f.componentRef.setInput('loading', false);
-      f.detectChanges();
+    function completeLoad(fixture: ReturnType<typeof mount>): void {
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
     }
 
     it('returns to the top when the incoming view has no remembered offset', () => {
-      const f = mount();
-      const rows = fakeScroller(f, 900);
+      const fixture = mount();
+      const rows = fakeScroller(fixture, 900);
       memory.read.mockReturnValue(0);
 
-      completeLoad(f);
+      completeLoad(fixture);
 
       expect(rows.scrollTop).toBe(0);
     });
 
     it('lands on the incoming view’s remembered offset', () => {
-      const f = mount();
-      const rows = fakeScroller(f, 900);
+      const fixture = mount();
+      const rows = fakeScroller(fixture, 900);
       memory.read.mockReturnValue(420);
 
-      completeLoad(f);
+      completeLoad(fixture);
 
       expect(rows.scrollTop).toBe(420);
     });
 
     it('moves the retained list at once, without waiting for its page', () => {
-      const f = mount();
-      const rows = fakeScroller(f, 900);
+      const fixture = mount();
+      const rows = fakeScroller(fixture, 900);
       memory.read.mockReturnValue(0);
 
-      f.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
 
       expect(rows.scrollTop).toBe(0);
     });
 
     it('does not write the outgoing list’s scroll into the incoming view’s key', () => {
-      const f = mount();
-      completeLoad(f);
-      f.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
+      const fixture = mount();
+      completeLoad(fixture);
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 4, unread: true });
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
       memory.save.mockClear();
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
 
       expect(memory.save).not.toHaveBeenCalled();
     });
@@ -1550,13 +1555,13 @@ describe('EntryListComponent', () => {
     // same view: those rows are the user's own, and dropping the save would
     // yank them back to the pre-refresh offset when the response lands.
     it('keeps remembering the offset while the same view refreshes', () => {
-      const f = mount();
-      completeLoad(f);
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
+      const fixture = mount();
+      completeLoad(fixture);
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
       memory.save.mockClear();
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 480 } } as unknown as Event);
 
       expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 480);
     });
@@ -1564,48 +1569,48 @@ describe('EntryListComponent', () => {
 
   describe('back to top', () => {
     /** Stub the scroller: jsdom implements neither scrollTo nor real scrolling. */
-    function stubScroller(f: ReturnType<typeof mount>) {
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+    function stubScroller(fixture: ReturnType<typeof mount>) {
+      const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       const scrollTo = jest.fn();
       rows.scrollTo = scrollTo as unknown as typeof rows.scrollTo;
       return { scrollTo };
     }
 
     it('shows the button only once the list is scrolled well down', () => {
-      const f = mount();
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('app-to-top-button')).toBeNull();
+      const fixture = mount();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('app-to-top-button')).toBeNull();
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
-      f.detectChanges();
-      expect(el.querySelector('app-to-top-button')).not.toBeNull();
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.detectChanges();
+      expect(element.querySelector('app-to-top-button')).not.toBeNull();
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
-      f.detectChanges();
-      expect(el.querySelector('app-to-top-button')).toBeNull();
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+      fixture.detectChanges();
+      expect(element.querySelector('app-to-top-button')).toBeNull();
     });
 
     it('scrolls the container to the top, expands the bar and forgets the offset', () => {
-      const f = mount();
-      const { scrollTo } = stubScroller(f);
-      f.componentInstance.collapsed.set(true);
+      const fixture = mount();
+      const { scrollTo } = stubScroller(fixture);
+      fixture.componentInstance.collapsed.set(true);
       memory.save.mockClear();
 
-      f.componentInstance.scrollToTop();
+      fixture.componentInstance.scrollToTop();
 
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
-      expect(f.componentInstance.collapsed()).toBe(false);
+      expect(fixture.componentInstance.collapsed()).toBe(false);
       expect(memory.save).toHaveBeenCalledWith({ kind: 'all', id: null, unread: true }, 0);
     });
 
     it('clicking the button scrolls to the top', () => {
-      const f = mount();
-      const { scrollTo } = stubScroller(f);
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
-      f.detectChanges();
+      const fixture = mount();
+      const { scrollTo } = stubScroller(fixture);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.detectChanges();
 
       (
-        (f.nativeElement as HTMLElement).querySelector(
+        (fixture.nativeElement as HTMLElement).querySelector(
           'app-to-top-button button',
         ) as HTMLButtonElement
       ).click();
@@ -1615,58 +1620,60 @@ describe('EntryListComponent', () => {
     // #98: the button unmounts once showToTop flips false, which would otherwise
     // drop keyboard focus to <body> and strand a keyboard/screen-reader user.
     it('moves focus to the list title instead of dropping it to the body', () => {
-      const f = mount();
-      stubScroller(f);
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
-      f.detectChanges();
+      const fixture = mount();
+      stubScroller(fixture);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.detectChanges();
 
       (
-        (f.nativeElement as HTMLElement).querySelector(
+        (fixture.nativeElement as HTMLElement).querySelector(
           'app-to-top-button button',
         ) as HTMLButtonElement
       ).click();
 
       expect(document.activeElement).toBe(
-        (f.nativeElement as HTMLElement).querySelector('.list-header .heading h2'),
+        (fixture.nativeElement as HTMLElement).querySelector('.list-header .heading h2'),
       );
     });
 
     it('scrolls the magazine layout’s own container too', () => {
       // The magazine branch renders a different #rows element; scrollToTop has to
       // resolve the live one at call time rather than caching it.
-      const f = mount({ layout: 'magazine' });
-      const { scrollTo } = stubScroller(f);
+      const fixture = mount({ layout: 'magazine' });
+      const { scrollTo } = stubScroller(fixture);
 
-      f.componentInstance.scrollToTop();
+      fixture.componentInstance.scrollToTop();
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
     });
 
     it('hides the button again when the selection changes', () => {
-      const f = mount();
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('app-to-top-button')).not.toBeNull();
+      const fixture = mount();
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('app-to-top-button'),
+      ).not.toBeNull();
 
-      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
-      f.detectChanges();
-      expect(f.componentInstance.showToTop()).toBe(false);
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.showToTop()).toBe(false);
     });
 
     it('keeps the bar expanded as the smooth scroll travels back up', () => {
-      const f = mount();
-      stubScroller(f);
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 3000 } } as unknown as Event);
-      f.componentInstance.scrollToTop();
+      const fixture = mount();
+      stubScroller(fixture);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 3000 } } as unknown as Event);
+      fixture.componentInstance.scrollToTop();
       // The animation's own first event, still deep in the list. Against a zeroed
       // baseline this would read as a 2900px scroll *down* and re-collapse the bar.
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 2900 } } as unknown as Event);
-      expect(f.componentInstance.collapsed()).toBe(false);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 2900 } } as unknown as Event);
+      expect(fixture.componentInstance.collapsed()).toBe(false);
     });
 
     it('does nothing when there is no scroll container yet', () => {
-      const f = mount({ entries: [] });
+      const fixture = mount({ entries: [] });
       memory.save.mockClear();
-      expect(() => f.componentInstance.scrollToTop()).not.toThrow();
+      expect(() => fixture.componentInstance.scrollToTop()).not.toThrow();
       expect(memory.save).not.toHaveBeenCalled();
     });
   });
@@ -1686,7 +1693,7 @@ describe('EntryListComponent', () => {
      *  geometry is scripted: `scrollerTop`/`headerBottom` place the fold line,
      *  `entries` become the tagged rows `querySelector(All)` finds. */
     function stubGeometry(
-      f: ReturnType<typeof mount>,
+      fixture: ReturnType<typeof mount>,
       scrollerTop: number,
       headerBottom: number,
       entries: HTMLElement[],
@@ -1701,84 +1708,84 @@ describe('EntryListComponent', () => {
       } as unknown as HTMLElement;
 
       jest
-        .spyOn(f.componentInstance as unknown as { rows: () => unknown }, 'rows')
+        .spyOn(fixture.componentInstance as unknown as { rows: () => unknown }, 'rows')
         .mockReturnValue({ nativeElement: scroller });
       jest
-        .spyOn(f.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
+        .spyOn(fixture.componentInstance as unknown as { listHdr: () => unknown }, 'listHdr')
         .mockReturnValue({ nativeElement: header });
     }
 
     it('collects ids of entries fully above the fold at click', () => {
-      const f = mount();
+      const fixture = mount();
       // fold line = max(scroller.top=0, listHdr.bottom=100) = 100
-      stubGeometry(f, 0, 100, [
+      stubGeometry(fixture, 0, 100, [
         measuredEntry('1', 40),
         measuredEntry('2', 90),
         measuredEntry('3', 150),
       ]);
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      f.componentInstance.onMarkAboveRead();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      fixture.componentInstance.onMarkAboveRead();
 
       expect(emitted).toEqual([[1, 2]]);
     });
 
     it('expands an above-fold entry with its hidden duplicate copies (#1080)', () => {
-      const f = mount({
+      const fixture = mount({
         entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
       });
-      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      f.componentInstance.onMarkAboveRead();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      fixture.componentInstance.onMarkAboveRead();
 
       expect(emitted).toEqual([[1, 101, 102]]);
     });
 
     it('emits nothing when no entry has cleared the fold', () => {
-      const f = mount();
-      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
+      const fixture = mount();
+      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      f.componentInstance.onMarkAboveRead();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      fixture.componentInstance.onMarkAboveRead();
 
       expect(emitted).toEqual([]);
     });
 
     it('shows the button only once scrolled down and an entry sits above the fold', () => {
-      const f = mount();
-      const el = f.nativeElement as HTMLElement;
-      expect(el.querySelector('.mark-above')).toBeNull();
+      const fixture = mount();
+      const element = fixture.nativeElement as HTMLElement;
+      expect(element.querySelector('.mark-above')).toBeNull();
 
-      f.componentInstance.showToTop.set(true);
-      f.detectChanges();
-      expect(el.querySelector('.mark-above')).toBeNull();
+      fixture.componentInstance.showToTop.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('.mark-above')).toBeNull();
 
-      f.componentInstance.hasAboveFold.set(true);
-      f.detectChanges();
-      expect(el.querySelector('.mark-above')).not.toBeNull();
+      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.detectChanges();
+      expect(element.querySelector('.mark-above')).not.toBeNull();
     });
 
     it('hides the button once scrolled back up, even with entries above the fold', () => {
-      const f = mount();
-      f.componentInstance.hasAboveFold.set(true);
-      f.detectChanges();
-      expect((f.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
+      const fixture = mount();
+      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).querySelector('.mark-above')).toBeNull();
     });
 
     it('emits the collected ids when the rendered button is clicked', () => {
-      const f = mount();
-      stubGeometry(f, 0, 100, [measuredEntry('7', 40)]);
-      f.componentInstance.showToTop.set(true);
-      f.componentInstance.hasAboveFold.set(true);
-      f.detectChanges();
+      const fixture = mount();
+      stubGeometry(fixture, 0, 100, [measuredEntry('7', 40)]);
+      fixture.componentInstance.showToTop.set(true);
+      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.detectChanges();
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      (f.nativeElement.querySelector('.mark-above') as HTMLButtonElement).click();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      (fixture.nativeElement.querySelector('.mark-above') as HTMLButtonElement).click();
 
       expect(emitted).toEqual([[7]]);
     });
@@ -1788,62 +1795,60 @@ describe('EntryListComponent', () => {
     // the widget was scrolled past as a unit, so its tail goes with it —
     // otherwise hiding the preview surfaces the tail above the boundary.
     it('marks the folded tail of a group whose whole preview sits above the fold', () => {
-      const f = mount({
+      const fixture = mount({
         entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
-      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
-        MagazineBlock,
-        { kind: 'group' }
-      >;
-      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
-      const tail = group.entries.slice(group.previewCount).map((e) => e.id);
+      const group = fixture.componentInstance
+        .visibleBlocks()
+        .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
+      const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
+      const tail = group.entries.slice(group.previewCount).map((groupEntry) => groupEntry.id);
       expect(tail.length).toBeGreaterThan(0);
-      stubGeometry(f, 0, 100, [
+      stubGeometry(fixture, 0, 100, [
         ...preview.map((id) => measuredEntry(String(id), 40)),
         measuredEntry('9', 150),
       ]);
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      f.componentInstance.onMarkAboveRead();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      fixture.componentInstance.onMarkAboveRead();
 
       expect(emitted).toEqual([[...preview, ...tail]]);
     });
 
     it('keeps the folded tail of a group while one of its preview rows straddles the fold', () => {
-      const f = mount({
+      const fixture = mount({
         entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: true },
         layout: 'magazine',
       });
-      const group = f.componentInstance.visibleBlocks().find((b) => b.kind === 'group') as Extract<
-        MagazineBlock,
-        { kind: 'group' }
-      >;
-      const preview = group.entries.slice(0, group.previewCount).map((e) => e.id);
+      const group = fixture.componentInstance
+        .visibleBlocks()
+        .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
+      const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
       const [last, ...above] = [...preview].reverse();
-      stubGeometry(f, 0, 100, [
+      stubGeometry(fixture, 0, 100, [
         ...above.reverse().map((id) => measuredEntry(String(id), 40)),
         measuredEntry(String(last), 150),
       ]);
 
       const emitted: number[][] = [];
-      f.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
-      f.componentInstance.onMarkAboveRead();
+      fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
+      fixture.componentInstance.onMarkAboveRead();
 
       expect(emitted).toEqual([above]);
     });
 
     it('labels the button with the done_all icon', () => {
-      const f = mount();
-      f.componentInstance.showToTop.set(true);
-      f.componentInstance.hasAboveFold.set(true);
-      f.detectChanges();
+      const fixture = mount();
+      fixture.componentInstance.showToTop.set(true);
+      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.detectChanges();
 
-      const btn = (f.nativeElement as HTMLElement).querySelector('.mark-above')!;
-      expect(btn.querySelector('app-icon[name="done_all"]')).not.toBeNull();
+      const button = (fixture.nativeElement as HTMLElement).querySelector('.mark-above')!;
+      expect(button.querySelector('app-icon[name="done_all"]')).not.toBeNull();
     });
 
     // The scroll path resolves the scroller from the `#rows` viewChild — the
@@ -1851,48 +1856,48 @@ describe('EntryListComponent', () => {
     // from the scroll event's own target, so the probe is driven the same way
     // `stubGeometry` drives the click-time collection above.
     it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
-      const f = mount();
-      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+      const fixture = mount();
+      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
-      expect(f.componentInstance.hasAboveFold()).toBe(true);
+      expect(fixture.componentInstance.hasAboveFold()).toBe(true);
     });
 
     it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
-      const f = mount();
-      stubGeometry(f, 0, 100, [measuredEntry('1', 40)]);
+      const fixture = mount();
+      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
 
-      expect(f.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
     });
 
     it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
-      const f = mount();
-      stubGeometry(f, 0, 100, [measuredEntry('1', 150)]);
+      const fixture = mount();
+      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
 
-      f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
+      fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
-      expect(f.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
     });
 
     it('does not throw for a scroll event carrying only scrollTop', () => {
       // Several pre-existing scroll tests drive onRowsScroll with a bare
       // {scrollTop} object as the event target; resolving the scroller from
       // the viewChild instead of that target must tolerate it.
-      const f = mount();
+      const fixture = mount();
       expect(() =>
-        f.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
+        fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event),
       ).not.toThrow();
     });
 
     it('resets hasAboveFold when the selection changes', () => {
-      const f = mount();
-      f.componentInstance.hasAboveFold.set(true);
-      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
-      f.detectChanges();
-      expect(f.componentInstance.hasAboveFold()).toBe(false);
+      const fixture = mount();
+      fixture.componentInstance.hasAboveFold.set(true);
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      fixture.detectChanges();
+      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
     });
   });
 
@@ -1923,53 +1928,53 @@ describe('EntryListComponent', () => {
         }),
       });
 
-      const f = mount();
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+      const fixture = mount();
+      const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       const scrollTo = jest.fn();
       rows.scrollTo = scrollTo as unknown as typeof rows.scrollTo;
 
-      f.componentInstance.scrollToTop();
+      fixture.componentInstance.scrollToTop();
       expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
     });
   });
 
   describe('refresh reveal', () => {
     it('holds the reveal open while a refresh runs and closes it after', () => {
-      const f = mount({ refreshing: true });
-      expect(f.componentInstance.revealOffset()).toBe(REFRESH_REVEAL);
+      const fixture = mount({ refreshing: true });
+      expect(fixture.componentInstance.revealOffset()).toBe(REFRESH_REVEAL);
 
-      f.componentRef.setInput('refreshing', false);
-      f.detectChanges();
-      expect(f.componentInstance.revealOffset()).toBe(0);
+      fixture.componentRef.setInput('refreshing', false);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.revealOffset()).toBe(0);
     });
 
     it('carries no transform at rest, so a long list is not promoted to its own layer', () => {
-      const f = mount();
-      expect(f.componentInstance.revealTransform()).toBe('none');
+      const fixture = mount();
+      expect(fixture.componentInstance.revealTransform()).toBe('none');
 
-      f.componentRef.setInput('refreshing', true);
-      f.detectChanges();
-      expect(f.componentInstance.revealTransform()).toBe(`translateY(${REFRESH_REVEAL}px)`);
+      fixture.componentRef.setInput('refreshing', true);
+      fixture.detectChanges();
+      expect(fixture.componentInstance.revealTransform()).toBe(`translateY(${REFRESH_REVEAL}px)`);
     });
 
     it('opens the reveal from a button refresh with no pull, and labels it', () => {
       // The list-header button and the sidebar button both just flip refreshing();
       // the reveal reads that, not the gesture, so no pull is involved here.
-      const el = mount({ refreshing: true }).nativeElement as HTMLElement;
-      expect(el.querySelector('.pull-indicator')).not.toBeNull();
-      expect(el.querySelector('.pull-indicator .label')).not.toBeNull();
+      const element = mount({ refreshing: true }).nativeElement as HTMLElement;
+      expect(element.querySelector('.pull-indicator')).not.toBeNull();
+      expect(element.querySelector('.pull-indicator .label')).not.toBeNull();
     });
 
     it('does not paint the tray over the skeleton while a refresh runs during the initial load', () => {
-      const el = mount({ loading: true, entries: [], refreshing: true })
+      const element = mount({ loading: true, entries: [], refreshing: true })
         .nativeElement as HTMLElement;
-      expect(el.querySelector('.pull-indicator')).toBeNull();
+      expect(element.querySelector('.pull-indicator')).toBeNull();
     });
 
     it('does not paint the tray over the empty state while a refresh runs', () => {
-      const el = mount({ loading: false, entries: [], refreshing: true })
+      const element = mount({ loading: false, entries: [], refreshing: true })
         .nativeElement as HTMLElement;
-      expect(el.querySelector('.pull-indicator')).toBeNull();
+      expect(element.querySelector('.pull-indicator')).toBeNull();
     });
   });
 
@@ -1997,17 +2002,17 @@ describe('EntryListComponent', () => {
     });
 
     it('does not reveal, even while refreshing', () => {
-      const f = mount({ refreshing: true });
-      expect(f.componentInstance.revealOffset()).toBe(0);
-      expect((f.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
+      const fixture = mount({ refreshing: true });
+      expect(fixture.componentInstance.revealOffset()).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).querySelector('.pull-indicator')).toBeNull();
     });
   });
 
   describe('for-you grouping', () => {
     const now = '2026-07-22T11:00:00Z';
     const run = [
-      ...Array.from({ length: 8 }, (_, i) =>
-        entry(i + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
+      ...Array.from({ length: 8 }, (_, index) =>
+        entry(index + 1, { subscriptionId: 1, source: 'a', publishedAt: now }),
       ),
       entry(9, { subscriptionId: 2, source: 'b', publishedAt: now }),
       entry(10, { subscriptionId: 2, source: 'b', publishedAt: now }),
@@ -2016,186 +2021,187 @@ describe('EntryListComponent', () => {
     ];
 
     it('collapses a same-source run in an aggregated view', () => {
-      const f = mount({
+      const fixture = mount({
         entries: run,
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(true);
+      expect(fixture.componentInstance.blocks().some((block) => block.kind === 'group')).toBe(true);
     });
 
     it('never collapses the for-you list', () => {
-      const f = mount({
+      const fixture = mount({
         entries: run,
         selection: { kind: 'for-you', id: null, unread: false },
         layout: 'magazine',
       });
-      expect(f.componentInstance.blocks().some((b) => b.kind === 'group')).toBe(false);
+      expect(fixture.componentInstance.blocks().some((block) => block.kind === 'group')).toBe(
+        false,
+      );
     });
   });
 
-  // The focus pass used to run only off a scroll event, a resize, and one frame
-  // scheduled at mount. Rows that appeared after that frame therefore stayed
-  // undimmed until the user scrolled — rarely, because a remembered offset makes
-  // the restore write scrollTop, and that write sends the scroll event that
-  // covered the gap (#462).
+  // #462: rows that appear after mount get the focus pass too, not only a
+  // scroll, a resize or the first frame; they must not stay undimmed.
   describe('reading focus', () => {
     const loaded = [entry(1), entry(2), entry(3)];
 
     it('clears dimming from the open list when disabled', async () => {
-      const f = mount({ entries: loaded });
+      const fixture = mount({ entries: loaded });
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
 
       TestBed.inject(ReadingFocusService).setEnabled(false);
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(rowOpacities(f)).toEqual(['', '', '']);
+      expect(rowOpacities(fixture)).toEqual(['', '', '']);
     });
 
     it('restores dimming in the open list when enabled again', async () => {
-      const f = mount({ entries: loaded });
+      const fixture = mount({ entries: loaded });
       await frames();
       const readingFocus = TestBed.inject(ReadingFocusService);
       readingFocus.setEnabled(false);
-      f.detectChanges();
-      expect(rowOpacities(f)).toEqual(['', '', '']);
+      fixture.detectChanges();
+      expect(rowOpacities(fixture)).toEqual(['', '', '']);
 
       readingFocus.setEnabled(true);
-      f.detectChanges();
+      fixture.detectChanges();
       await frames();
 
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('fades the rows that arrive after the load finishes', async () => {
-      const f = mount({ loading: true, entries: [] });
+      const fixture = mount({ loading: true, entries: [] });
       // Let the frame scheduled at mount drain while the request is still in
       // flight, which is where the skeleton has no rows to fade.
       await frames();
-      f.componentRef.setInput('loading', false);
-      f.componentRef.setInput('entries', loaded);
-      f.detectChanges();
+      fixture.componentRef.setInput('loading', false);
+      fixture.componentRef.setInput('entries', loaded);
+      fixture.detectChanges();
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('fades the incoming rows when both lists sit at the top', async () => {
-      const f = mount({ entries: loaded });
+      const fixture = mount({ entries: loaded });
       await frames();
       // A view switch keeps the outgoing rows on screen until the new page lands
       // (#254). Neither list has a remembered offset, so no scroll event fires.
-      f.componentRef.setInput('selection', { kind: 'tag', id: 7, unread: true });
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 7, unread: true });
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
       await frames();
-      f.componentRef.setInput('loading', false);
-      f.componentRef.setInput('entries', [entry(11), entry(12), entry(13)]);
-      f.detectChanges();
+      fixture.componentRef.setInput('loading', false);
+      fixture.componentRef.setInput('entries', [entry(11), entry(12), entry(13)]);
+      fixture.detectChanges();
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('fades the rows appended by load-more', async () => {
-      const f = mount({ entries: loaded, hasMore: true });
+      const fixture = mount({ entries: loaded, hasMore: true });
       await frames();
-      f.componentRef.setInput('entries', [...loaded, entry(4), entry(5)]);
-      f.detectChanges();
+      fixture.componentRef.setInput('entries', [...loaded, entry(4), entry(5)]);
+      fixture.detectChanges();
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     // The central subscriber (#478): a saved-view row collapses in place, moving
     // the rows below it without firing a scroll. Blank the marks the first pass
     // wrote, then prove the resize pass re-touches every row.
-    function blankOpacities(f: ComponentFixture<EntryListComponent>): HTMLElement {
-      const rows = (f.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
+    function blankOpacities(fixture: ComponentFixture<EntryListComponent>): HTMLElement {
+      const rows = (fixture.nativeElement as HTMLElement).querySelector('.rows') as HTMLElement;
       for (const child of Array.from(rows.children) as HTMLElement[]) child.style.opacity = '';
       return rows;
     }
 
     it('recomputes focus when a row-collapse animation settles', async () => {
-      const f = mount({ entries: loaded });
+      const fixture = mount({ entries: loaded });
       await frames();
-      blankOpacities(f);
-      fireRowsResize(f);
-      f.detectChanges();
+      blankOpacities(fixture);
+      fireRowsResize(fixture);
+      fixture.detectChanges();
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     it('recomputes focus on a view change, before the new page lands (#462)', async () => {
-      const f = mount({ entries: loaded });
+      const fixture = mount({ entries: loaded });
       await frames();
-      blankOpacities(f);
-      f.componentRef.setInput('selection', { kind: 'favorites', id: null, unread: false });
-      f.detectChanges();
+      blankOpacities(fixture);
+      fixture.componentRef.setInput('selection', { kind: 'favorites', id: null, unread: false });
+      fixture.detectChanges();
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
 
     // A density switch (boxed <-> airy) keeps the same #rows element and only
     // toggles a class on it, resizing every row; the applier's own ResizeObserver
     // is what catches it, not a signal this component tracks.
     it('recomputes focus when the magazine density switches boxed <-> airy', async () => {
-      const f = mount({ entries: loaded, layout: 'magazine' });
+      const fixture = mount({ entries: loaded, layout: 'magazine' });
       await frames();
-      blankOpacities(f);
+      blankOpacities(fixture);
       TestBed.inject(MagazineStyleService).set('airy');
-      f.detectChanges();
-      fireRowsResize(f);
+      fixture.detectChanges();
+      fireRowsResize(fixture);
       await frames();
-      expect(rowOpacities(f)).not.toContain('');
+      expect(rowOpacities(fixture)).not.toContain('');
     });
   });
 
   // #501: rendering a whole load-more page in one tick stalls the main thread
   // for hundreds of ms on a long list; iOS keeps scrolling into unpainted rows.
   describe('load-more reveal', () => {
-    const rowCount = (f: ComponentFixture<EntryListComponent>): number =>
-      (f.nativeElement as HTMLElement).querySelectorAll('.rows app-entry-row').length;
+    const rowCount = (fixture: ComponentFixture<EntryListComponent>): number =>
+      (fixture.nativeElement as HTMLElement).querySelectorAll('.rows app-entry-row').length;
     const page = (from: number, count: number): EntryDto[] =>
-      Array.from({ length: count }, (_, i) => entry(from + i));
+      Array.from({ length: count }, (_, index) => entry(from + index));
 
-    async function settle(f: ComponentFixture<EntryListComponent>): Promise<void> {
-      for (let i = 0; i < 12; i++) {
+    async function settle(fixture: ComponentFixture<EntryListComponent>): Promise<void> {
+      for (let index = 0; index < 12; index++) {
         await frames();
-        f.detectChanges();
+        fixture.detectChanges();
       }
     }
 
     it('reveals an appended page over several frames instead of one tick', async () => {
       const first = page(1, 3);
-      const f = mount({ entries: first, hasMore: true });
-      f.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 3)]);
-      f.detectChanges();
-      expect(rowCount(f)).toBe(3);
+      const fixture = mount({ entries: first, hasMore: true });
+      fixture.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 3)]);
+      fixture.detectChanges();
+      expect(rowCount(fixture)).toBe(3);
 
       await frames();
-      f.detectChanges();
-      const afterOneFrame = rowCount(f);
+      fixture.detectChanges();
+      const afterOneFrame = rowCount(fixture);
       expect(afterOneFrame).toBeGreaterThan(3);
       expect(afterOneFrame).toBeLessThan(3 + REVEAL_STEP * 3);
 
-      await settle(f);
-      expect(rowCount(f)).toBe(3 + REVEAL_STEP * 3);
+      await settle(fixture);
+      expect(rowCount(fixture)).toBe(3 + REVEAL_STEP * 3);
     });
 
     it('renders a replaced list at once', () => {
-      const f = mount({ entries: page(1, 3) });
-      f.componentRef.setInput('entries', page(100, REVEAL_STEP * 3));
-      f.detectChanges();
-      expect(rowCount(f)).toBe(REVEAL_STEP * 3);
+      const fixture = mount({ entries: page(1, 3) });
+      fixture.componentRef.setInput('entries', page(100, REVEAL_STEP * 3));
+      fixture.detectChanges();
+      expect(rowCount(fixture)).toBe(REVEAL_STEP * 3);
     });
 
     it('converges on the same magazine plan a one-shot render produces', async () => {
       const all = page(1, 6 + REVEAL_STEP * 2);
-      const f = mount({ entries: all.slice(0, 6), hasMore: true, layout: 'magazine' });
-      f.componentRef.setInput('entries', all);
-      f.componentRef.setInput('hasMore', false);
-      f.detectChanges();
-      await settle(f);
-      const revealed = (f.nativeElement as HTMLElement).querySelectorAll('.magazine-slot').length;
+      const fixture = mount({ entries: all.slice(0, 6), hasMore: true, layout: 'magazine' });
+      fixture.componentRef.setInput('entries', all);
+      fixture.componentRef.setInput('hasMore', false);
+      fixture.detectChanges();
+      await settle(fixture);
+      const revealed = (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.magazine-slot',
+      ).length;
 
       const oneShot = mount({ entries: all, hasMore: false, layout: 'magazine' });
       expect(revealed).toBe(
@@ -2205,103 +2211,110 @@ describe('EntryListComponent', () => {
 
     it('fades the rows of an appended page once they are all revealed', async () => {
       const first = page(1, 3);
-      const f = mount({ entries: first, hasMore: true });
+      const fixture = mount({ entries: first, hasMore: true });
       await frames();
-      f.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 2)]);
-      f.detectChanges();
-      await settle(f);
-      expect(rowOpacities(f)).toHaveLength(3 + REVEAL_STEP * 2);
-      expect(rowOpacities(f)).not.toContain('');
+      fixture.componentRef.setInput('entries', [...first, ...page(4, REVEAL_STEP * 2)]);
+      fixture.detectChanges();
+      await settle(fixture);
+      expect(rowOpacities(fixture)).toHaveLength(3 + REVEAL_STEP * 2);
+      expect(rowOpacities(fixture)).not.toContain('');
     });
   });
 
   describe('freeze & remove after mark-above-read (#1080)', () => {
     it('drops a hidden id from visibleRunGroups while keeping the rest, in order', () => {
-      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
 
-      f.componentInstance.hiddenAboveIds.set(new Set([2]));
+      fixture.componentInstance.hiddenAboveIds.set(new Set([2]));
 
-      expect(f.componentInstance.visibleRunGroups()[0].entries.map((e) => e.id)).toEqual([1, 3]);
+      expect(
+        fixture.componentInstance.visibleRunGroups()[0].entries.map((groupEntry) => groupEntry.id),
+      ).toEqual([1, 3]);
     });
 
     it('drops a hidden single-entry magazine block entirely', () => {
-      const f = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
-      const before = f.componentInstance.blocks();
+      const fixture = mount({ entries: [entry(1), entry(2), entry(3)], layout: 'magazine' });
+      const before = fixture.componentInstance.blocks();
       const targetId = (before[0] as Extract<MagazineBlock, { entry: EntryDto }>).entry.id;
 
-      f.componentInstance.hiddenAboveIds.set(new Set([targetId]));
-      const after = f.componentInstance.visibleBlocks();
+      fixture.componentInstance.hiddenAboveIds.set(new Set([targetId]));
+      const after = fixture.componentInstance.visibleBlocks();
 
       expect(after.length).toBe(before.length - 1);
       expect(
-        after.some((b) => b.kind !== 'group' && b.kind !== 'run-header' && b.entry.id === targetId),
+        after.some(
+          (block) =>
+            block.kind !== 'group' && block.kind !== 'run-header' && block.entry.id === targetId,
+        ),
       ).toBe(false);
     });
 
     it('shrinks a group block to its remaining entries instead of dropping it', () => {
-      const f = mount({
+      const fixture = mount({
         entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
-        MagazineBlock,
-        { kind: 'group' }
-      >;
+      const groupBefore = fixture.componentInstance
+        .blocks()
+        .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
       expect(groupBefore).toBeDefined();
       const hiddenId = groupBefore.entries[0].id;
 
-      f.componentInstance.hiddenAboveIds.set(new Set([hiddenId]));
-      const groupAfter = f.componentInstance
+      fixture.componentInstance.hiddenAboveIds.set(new Set([hiddenId]));
+      const groupAfter = fixture.componentInstance
         .visibleBlocks()
-        .find((b) => b.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
+        .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
 
       expect(groupAfter).toBeDefined();
-      expect(groupAfter.entries.map((e) => e.id)).not.toContain(hiddenId);
+      expect(groupAfter.entries.map((groupEntry) => groupEntry.id)).not.toContain(hiddenId);
       expect(groupAfter.entries.length).toBe(groupBefore.entries.length - 1);
     });
 
     it('drops a group block entirely once every one of its entries is hidden', () => {
-      const f = mount({
+      const fixture = mount({
         entries: MIXED_SOURCE_RUN,
         selection: { kind: 'all', id: null, unread: false },
         layout: 'magazine',
       });
-      const groupBefore = f.componentInstance.blocks().find((b) => b.kind === 'group') as Extract<
-        MagazineBlock,
-        { kind: 'group' }
-      >;
+      const groupBefore = fixture.componentInstance
+        .blocks()
+        .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
 
-      f.componentInstance.hiddenAboveIds.set(new Set(groupBefore.entries.map((e) => e.id)));
+      fixture.componentInstance.hiddenAboveIds.set(
+        new Set(groupBefore.entries.map((groupEntry) => groupEntry.id)),
+      );
 
-      expect(f.componentInstance.visibleBlocks().some((b) => b.kind === 'group')).toBe(false);
+      expect(
+        fixture.componentInstance.visibleBlocks().some((block) => block.kind === 'group'),
+      ).toBe(false);
     });
 
     it('adds the given ids to hiddenAboveIds and scrolls the boundary to the top', async () => {
-      const f = mount({ entries: [entry(1), entry(2), entry(3)] });
-      const scroller = fakeScroller(f, 400);
+      const fixture = mount({ entries: [entry(1), entry(2), entry(3)] });
+      const scroller = fakeScroller(fixture, 400);
 
-      f.componentInstance.hideAboveMarked([1, 2]);
+      fixture.componentInstance.hideAboveMarked([1, 2]);
 
-      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
-      expect(memory.save).toHaveBeenCalledWith(f.componentInstance.selection(), 0);
+      expect(fixture.componentInstance.hiddenAboveIds()).toEqual(new Set([1, 2]));
+      expect(memory.save).toHaveBeenCalledWith(fixture.componentInstance.selection(), 0);
       await frames();
       expect(scroller.scrollTop).toBe(0);
     });
 
     it('lowers both corner buttons: nothing is above the fold once the boundary is at the top', () => {
-      const f = mount({ entries: [entry(1), entry(2)] });
-      f.componentInstance.showToTop.set(true);
-      f.componentInstance.hasAboveFold.set(true);
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentInstance.showToTop.set(true);
+      fixture.componentInstance.hasAboveFold.set(true);
 
-      f.componentInstance.hideAboveMarked([1]);
+      fixture.componentInstance.hideAboveMarked([1]);
 
-      expect(f.componentInstance.showToTop()).toBe(false);
-      expect(f.componentInstance.hasAboveFold()).toBe(false);
+      expect(fixture.componentInstance.showToTop()).toBe(false);
+      expect(fixture.componentInstance.hasAboveFold()).toBe(false);
     });
 
     it('drops the divider of a run whose blocks are all hidden (magazine)', () => {
-      const f = mount({
+      const fixture = mount({
         entries: [
           entry(1, { runId: 9, runGeneratedAt: '2026-08-09T10:00:00+00:00' }),
           entry(2, { runId: 7, runGeneratedAt: '2026-08-07T09:05:00+00:00' }),
@@ -2310,54 +2323,56 @@ describe('EntryListComponent', () => {
         newestRunId: 9,
         layout: 'magazine',
       });
-      expect((f.nativeElement as HTMLElement).querySelectorAll('app-run-header').length).toBe(1);
+      expect((fixture.nativeElement as HTMLElement).querySelectorAll('app-run-header').length).toBe(
+        1,
+      );
 
-      f.componentInstance.hideAboveMarked([2]);
-      f.detectChanges();
+      fixture.componentInstance.hideAboveMarked([2]);
+      fixture.detectChanges();
 
-      expect((f.nativeElement as HTMLElement).querySelector('app-run-header')).toBeNull();
+      expect((fixture.nativeElement as HTMLElement).querySelector('app-run-header')).toBeNull();
     });
 
     it('keeps hiddenAboveIds across a layout toggle — the overlay is keyed by id', () => {
-      const f = mount({ entries: [entry(1), entry(2)] });
-      f.componentInstance.hideAboveMarked([1]);
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentInstance.hideAboveMarked([1]);
 
-      f.componentRef.setInput('layout', 'magazine');
-      f.detectChanges();
+      fixture.componentRef.setInput('layout', 'magazine');
+      fixture.detectChanges();
 
-      expect(f.componentInstance.hiddenAboveIds()).toEqual(new Set([1]));
+      expect(fixture.componentInstance.hiddenAboveIds()).toEqual(new Set([1]));
     });
 
     it('counts the hidden rows out of visibleEntryCount', () => {
-      const f = mount({ entries: [entry(1), entry(2)] });
-      f.componentInstance.hideAboveMarked([1, 2]);
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentInstance.hideAboveMarked([1, 2]);
 
-      expect(f.componentInstance.visibleEntryCount()).toBe(0);
+      expect(fixture.componentInstance.visibleEntryCount()).toBe(0);
     });
 
     it('resets hiddenAboveIds when the selection changes', () => {
-      const f = mount({ entries: [entry(1), entry(2)] });
-      f.componentInstance.hideAboveMarked([1]);
-      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentInstance.hideAboveMarked([1]);
+      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(1);
 
-      f.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
-      f.detectChanges();
+      fixture.componentRef.setInput('selection', { kind: 'tag', id: 3, unread: true });
+      fixture.detectChanges();
 
-      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
+      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(0);
     });
 
     it('resets hiddenAboveIds on a genuine reload', () => {
-      const f = mount({ entries: [entry(1), entry(2)] });
-      f.componentInstance.hideAboveMarked([1]);
-      expect(f.componentInstance.hiddenAboveIds().size).toBe(1);
+      const fixture = mount({ entries: [entry(1), entry(2)] });
+      fixture.componentInstance.hideAboveMarked([1]);
+      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(1);
 
-      f.componentRef.setInput('loading', true);
-      f.detectChanges();
-      f.componentRef.setInput('entries', [entry(3), entry(4)]);
-      f.componentRef.setInput('loading', false);
-      f.detectChanges();
+      fixture.componentRef.setInput('loading', true);
+      fixture.detectChanges();
+      fixture.componentRef.setInput('entries', [entry(3), entry(4)]);
+      fixture.componentRef.setInput('loading', false);
+      fixture.detectChanges();
 
-      expect(f.componentInstance.hiddenAboveIds().size).toBe(0);
+      expect(fixture.componentInstance.hiddenAboveIds().size).toBe(0);
     });
   });
 });

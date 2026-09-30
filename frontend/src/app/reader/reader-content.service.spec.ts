@@ -43,8 +43,8 @@ describe('ReaderContentService', () => {
 
   it('serves a cache hit without calling the API', async () => {
     cacheGet.mockResolvedValue(ARTICLE);
-    const svc = TestBed.inject(ReaderContentService);
-    const result = await firstValueFrom(svc.load(1));
+    const service = TestBed.inject(ReaderContentService);
+    const result = await firstValueFrom(service.load(1));
     expect(result).toEqual(ARTICLE);
     expect(apiGet).not.toHaveBeenCalled();
   });
@@ -53,8 +53,8 @@ describe('ReaderContentService', () => {
     jest.useFakeTimers();
     cacheGet.mockReturnValue(new Promise(() => undefined)); // stuck behind a blocked upgrade
     apiGet.mockReturnValue(of(ARTICLE));
-    const svc = TestBed.inject(ReaderContentService);
-    const loaded = firstValueFrom(svc.load(1));
+    const service = TestBed.inject(ReaderContentService);
+    const loaded = firstValueFrom(service.load(1));
     // Well under the 30 s the view allows before it gives up on the article.
     await jest.advanceTimersByTimeAsync(5_000);
     await expect(loaded).resolves.toEqual(ARTICLE);
@@ -64,8 +64,8 @@ describe('ReaderContentService', () => {
   it('fetches and caches on a miss', async () => {
     cacheGet.mockResolvedValue(null);
     apiGet.mockReturnValue(of(ARTICLE));
-    const svc = TestBed.inject(ReaderContentService);
-    const result = await firstValueFrom(svc.load(1));
+    const service = TestBed.inject(ReaderContentService);
+    const result = await firstValueFrom(service.load(1));
     expect(result).toEqual(ARTICLE);
     expect(cachePut).toHaveBeenCalledWith(1, ARTICLE);
   });
@@ -80,15 +80,15 @@ describe('ReaderContentService', () => {
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));
-    const svc = TestBed.inject(ReaderContentService);
-    await firstValueFrom(svc.load(1));
+    const service = TestBed.inject(ReaderContentService);
+    await firstValueFrom(service.load(1));
     expect(cachePut).not.toHaveBeenCalled();
   });
 
   it('reload deletes the cache then fetches from the API even on a prior hit', async () => {
     apiGet.mockReturnValue(of(ARTICLE));
-    const svc = TestBed.inject(ReaderContentService);
-    const result = await firstValueFrom(svc.reload(1));
+    const service = TestBed.inject(ReaderContentService);
+    const result = await firstValueFrom(service.reload(1));
     expect(cacheDelete).toHaveBeenCalledWith(1);
     expect(apiGet).toHaveBeenCalledWith(1);
     expect(result).toEqual(ARTICLE);
@@ -104,8 +104,8 @@ describe('ReaderContentService', () => {
       originalHero: null,
     };
     apiGet.mockReturnValue(of(failure));
-    const svc = TestBed.inject(ReaderContentService);
-    await firstValueFrom(svc.reload(1));
+    const service = TestBed.inject(ReaderContentService);
+    await firstValueFrom(service.reload(1));
     expect(cacheDelete).toHaveBeenCalledWith(1);
     expect(cachePut).not.toHaveBeenCalled();
   });

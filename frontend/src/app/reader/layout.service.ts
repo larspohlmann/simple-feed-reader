@@ -16,13 +16,13 @@ export const COARSE_QUERY = '(pointer: coarse)';
 @Injectable({ providedIn: 'root' })
 export class LayoutService {
   private readonly bp = inject(BreakpointObserver);
-  readonly isWide = toSignal(this.bp.observe(WIDE_QUERY).pipe(map((s) => s.matches)), {
+  readonly isWide = toSignal(this.bp.observe(WIDE_QUERY).pipe(map((state) => state.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(WIDE_QUERY).matches : true,
   });
-  readonly isNarrow = toSignal(this.bp.observe(NARROW_QUERY).pipe(map((s) => s.matches)), {
+  readonly isNarrow = toSignal(this.bp.observe(NARROW_QUERY).pipe(map((state) => state.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(NARROW_QUERY).matches : false,
   });
-  readonly isCoarse = toSignal(this.bp.observe(COARSE_QUERY).pipe(map((s) => s.matches)), {
+  readonly isCoarse = toSignal(this.bp.observe(COARSE_QUERY).pipe(map((state) => state.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(COARSE_QUERY).matches : false,
   });
 }

@@ -1,5 +1,3 @@
-// src/app/core/passkey-device-name.ts
-
 /**
  * A sensible default name for a passkey being enrolled right now, e.g.
  * "Chrome on macOS" -- a fixed label for every enrolment would defeat the

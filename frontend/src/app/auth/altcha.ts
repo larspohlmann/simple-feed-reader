@@ -41,27 +41,27 @@ function yieldToEventLoop(): Promise<void> {
  *  `onProgress` reports candidates tried, so a caller can show real progress.
  */
 export async function solveAltcha(
-  c: AltchaChallenge,
+  challenge: AltchaChallenge,
   onProgress?: (tried: number, total: number) => void,
 ): Promise<string> {
-  const total = c.maxnumber + 1;
+  const total = challenge.maxnumber + 1;
   let lastYield = Date.now();
 
-  for (let n = 0; n <= c.maxnumber; n++) {
-    if (sha256Hex(c.salt + n) === c.challenge) {
+  for (let candidate = 0; candidate <= challenge.maxnumber; candidate++) {
+    if (sha256Hex(challenge.salt + candidate) === challenge.challenge) {
       return btoa(
         JSON.stringify({
-          algorithm: c.algorithm,
-          challenge: c.challenge,
-          number: n,
-          salt: c.salt,
-          signature: c.signature,
+          algorithm: challenge.algorithm,
+          challenge: challenge.challenge,
+          number: candidate,
+          salt: challenge.salt,
+          signature: challenge.signature,
         }),
       );
     }
 
-    if ((n + 1) % CHECK_EVERY === 0) {
-      onProgress?.(n + 1, total);
+    if ((candidate + 1) % CHECK_EVERY === 0) {
+      onProgress?.(candidate + 1, total);
       if (Date.now() - lastYield >= SLICE_MS) {
         await yieldToEventLoop();
         lastYield = Date.now();

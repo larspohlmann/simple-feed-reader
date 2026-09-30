@@ -1,4 +1,3 @@
-// e2e/auth-smoke.spec.ts
 import { test, expect } from '@playwright/test';
 
 test('login page loads and offers registration', async ({ page }) => {

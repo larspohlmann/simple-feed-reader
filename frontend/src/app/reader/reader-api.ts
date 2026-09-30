@@ -103,8 +103,8 @@ export class ReaderApi {
     return this.http.post<void>(`${this.base}/api/entries/mark-read`, body);
   }
 
-  markSearchRead(q: string, until: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/api/entries/search/mark-read`, { q, until });
+  markSearchRead(term: string, until: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/entries/search/mark-read`, { q: term, until });
   }
 
   /** For you names no scope: the list is the caller's own ranked feed, and the

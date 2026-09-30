@@ -15,11 +15,11 @@ function bucketGap(
   sign: -1 | 1,
 ): { value: number; unit: Intl.RelativeTimeFormatUnit } {
   if (seconds < 60) return { value: 0, unit: 'second' }; // numeric:auto → "now" / "jetzt"
-  const m = Math.floor(seconds / 60);
-  if (m < 60) return { value: sign * m, unit: 'minute' };
-  const h = Math.floor(m / 60);
-  if (h < 24) return { value: sign * h, unit: 'hour' };
-  return { value: sign * Math.floor(h / 24), unit: 'day' };
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return { value: sign * minutes, unit: 'minute' };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { value: sign * hours, unit: 'hour' };
+  return { value: sign * Math.floor(hours / 24), unit: 'day' };
 }
 
 /** The signed magnitude and unit `relativeTime`/`relativeTimeNarrow` share.
@@ -84,9 +84,9 @@ export function relativeTimeUntil(iso: string, locale = 'en', now: Date = new Da
 
 /** A localised long date (e.g. "July 22, 2026" / "22. Juli 2026"). */
 export function formatLongDate(iso: string, locale = 'en'): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(d);
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(date);
 }
 
 /** One formatter per locale, not one per call: an `Intl.DateTimeFormat`
@@ -97,14 +97,14 @@ const longDateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
 /** A localised long date with a HH:MM clock time, browser timezone — for a
  *  diagnostic timestamp where the exact minute of a fetch attempt matters. */
 export function formatLongDateTime(iso: string, locale = 'en'): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
   let formatter = longDateTimeFormatters.get(locale);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'short' });
     longDateTimeFormatters.set(locale, formatter);
   }
-  return formatter.format(d);
+  return formatter.format(date);
 }
 
 /**
@@ -122,9 +122,9 @@ export function formatDateOr(iso: string | null, locale: string, fallback: strin
  * The month stays (short, not dropped) so a screenshotted row still reads as a date.
  */
 export function formatDayInMonth(iso: string, locale = 'en'): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(d);
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(date);
 }
 
 /**
@@ -133,13 +133,13 @@ export function formatDayInMonth(iso: string, locale = 'en'): string {
  * (`start → end`), and 12-hour AM/PM would make that arrow misleading.
  */
 export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
   return new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).format(d);
+  }).format(date);
 }
 
 /**

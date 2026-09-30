@@ -36,11 +36,14 @@ export function isFeedRecovered(report: RefreshReport): boolean {
 }
 
 /** Gone feeds first (dead, act now), then erroring; each alphabetical by title. */
-export function unhealthyFeeds(subs: SubscriptionDto[], now: Date = new Date()): SubscriptionDto[] {
-  const rank = (s: SubscriptionDto): number => (isGone(s) ? 0 : 1);
-  return subs
+export function unhealthyFeeds(
+  subscriptions: SubscriptionDto[],
+  now: Date = new Date(),
+): SubscriptionDto[] {
+  const rank = (subscription: SubscriptionDto): number => (isGone(subscription) ? 0 : 1);
+  return subscriptions
     .filter((sub) => isUnhealthy(sub, now))
-    .sort((a, b) => rank(a) - rank(b) || a.title.localeCompare(b.title));
+    .sort((left, right) => rank(left) - rank(right) || left.title.localeCompare(right.title));
 }
 
 export function daysSince(iso: string, now: Date): number {

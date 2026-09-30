@@ -1,4 +1,3 @@
-// e2e/organise-bulk-tag.spec.ts
 import { test, expect, Page } from '@playwright/test';
 
 // The seeded e2e admin, as in `magazine-smoke.spec.ts`.

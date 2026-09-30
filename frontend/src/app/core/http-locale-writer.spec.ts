@@ -24,10 +24,10 @@ describe('HttpLocaleWriter', () => {
 
   it('PATCHes the locale to /api/me and resolves true on success', async () => {
     const result = firstValueFrom(writer.write('de'));
-    const req = ctrl.expectOne('https://api.test/api/me');
-    expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ locale: 'de' });
-    req.flush({ locale: 'de' });
+    const testRequest = ctrl.expectOne('https://api.test/api/me');
+    expect(testRequest.request.method).toBe('PATCH');
+    expect(testRequest.request.body).toEqual({ locale: 'de' });
+    testRequest.flush({ locale: 'de' });
     await expect(result).resolves.toBe(true);
   });
 

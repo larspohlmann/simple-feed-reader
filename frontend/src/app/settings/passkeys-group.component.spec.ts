@@ -68,20 +68,20 @@ describe('PasskeysGroupComponent', () => {
         },
       ],
     });
-    const f = TestBed.createComponent(PasskeysGroupComponent);
-    f.detectChanges();
-    return f;
+    const fixture = TestBed.createComponent(PasskeysGroupComponent);
+    fixture.detectChanges();
+    return fixture;
   }
 
-  function clickAdd(f: ReturnType<typeof mount>): void {
-    const addButton = Array.from(f.nativeElement.querySelectorAll('button')).find((button) =>
+  function clickAdd(fixture: ReturnType<typeof mount>): void {
+    const addButton = Array.from(fixture.nativeElement.querySelectorAll('button')).find((button) =>
       (button as HTMLButtonElement).textContent?.includes('Add a passkey'),
     ) as HTMLButtonElement;
     addButton.click();
   }
 
-  function clickRemove(f: ReturnType<typeof mount>): void {
-    const removeButton = f.nativeElement.querySelector(
+  function clickRemove(fixture: ReturnType<typeof mount>): void {
+    const removeButton = fixture.nativeElement.querySelector(
       '[data-test="remove-passkey"]',
     ) as HTMLButtonElement;
     removeButton.click();
@@ -101,9 +101,9 @@ describe('PasskeysGroupComponent', () => {
   describe('when the browser has no WebAuthn support', () => {
     it('renders nothing at all', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
-      const f = mount();
+      const fixture = mount();
 
-      expect(f.nativeElement.textContent.trim()).toBe('');
+      expect(fixture.nativeElement.textContent.trim()).toBe('');
       expect(passkeyService.list).not.toHaveBeenCalled();
     });
   });
@@ -120,25 +120,25 @@ describe('PasskeysGroupComponent', () => {
 
     it('renders nothing when the instance reports it unavailable', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
-      const f = mount(false);
+      const fixture = mount(false);
 
-      expect(f.nativeElement.textContent.trim()).toBe('');
+      expect(fixture.nativeElement.textContent.trim()).toBe('');
       expect(passkeyService.list).not.toHaveBeenCalled();
     });
 
     it('renders nothing while availability is still unknown', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
-      const f = mount(null);
+      const fixture = mount(null);
 
-      expect(f.nativeElement.textContent.trim()).toBe('');
+      expect(fixture.nativeElement.textContent.trim()).toBe('');
       expect(passkeyService.list).not.toHaveBeenCalled();
     });
 
     it('renders the group once availability is confirmed', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
-      const f = mount(true);
+      const fixture = mount(true);
 
-      expect(f.nativeElement.textContent.trim()).not.toBe('');
+      expect(fixture.nativeElement.textContent.trim()).not.toBe('');
       expect(passkeyService.list).toHaveBeenCalledTimes(1);
     });
   });
@@ -153,9 +153,9 @@ describe('PasskeysGroupComponent', () => {
 
     it('renders one row per credential with its label and creation date', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID, NEVER_USED]);
-      const f = mount();
+      const fixture = mount();
 
-      const rows = f.nativeElement.querySelectorAll('app-settings-row');
+      const rows = fixture.nativeElement.querySelectorAll('app-settings-row');
       expect(rows.length).toBe(2);
       expect(rows[0].textContent).toContain('MacBook Touch ID');
       expect(rows[0].textContent).toContain('August 16, 2026');
@@ -168,9 +168,9 @@ describe('PasskeysGroupComponent', () => {
       // so two credentials rendered with IDENTICAL titles -- telling them
       // apart required reading near-identical timestamps.
       passkeyService = passkeyServiceStub([TOUCH_ID, NEVER_USED]);
-      const f = mount();
+      const fixture = mount();
 
-      const titles = Array.from(f.nativeElement.querySelectorAll('.row-title')).map((title) =>
+      const titles = Array.from(fixture.nativeElement.querySelectorAll('.row-title')).map((title) =>
         (title as HTMLElement).textContent?.trim(),
       );
       expect(titles).toEqual(['MacBook Touch ID', 'YubiKey 5C']);
@@ -178,9 +178,9 @@ describe('PasskeysGroupComponent', () => {
 
     it('shows the never-used copy for a credential with no lastUsedAt, not a blank', () => {
       passkeyService = passkeyServiceStub([NEVER_USED]);
-      const f = mount();
+      const fixture = mount();
 
-      const row = f.nativeElement.querySelector('app-settings-row');
+      const row = fixture.nativeElement.querySelector('app-settings-row');
       expect(row.textContent).toContain('Never');
       // The row still names when it was added -- "never used" must not read
       // as "we have no data on this row at all".
@@ -189,9 +189,9 @@ describe('PasskeysGroupComponent', () => {
 
     it('does not render a credential’s used-date twice for the one that has been used', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
-      const f = mount();
+      const fixture = mount();
 
-      const row = f.nativeElement.querySelector('app-settings-row');
+      const row = fixture.nativeElement.querySelector('app-settings-row');
       expect(row.textContent).toContain('August 20, 2026');
       expect(row.textContent).not.toContain('Never');
     });
@@ -199,9 +199,9 @@ describe('PasskeysGroupComponent', () => {
     it('opens the naming dialog and enrols with the name it returns', () => {
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
 
       expect(dialogStub.open).toHaveBeenCalledWith(
         PasskeyNameDialogComponent,
@@ -216,9 +216,9 @@ describe('PasskeysGroupComponent', () => {
       // already exists, whose ceremony then fails with InvalidStateError.
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of('MacBook Touch ID') });
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
       await Promise.resolve();
       await Promise.resolve();
 
@@ -228,9 +228,9 @@ describe('PasskeysGroupComponent', () => {
     it('does not enrol when the naming dialog is dismissed with no name', () => {
       passkeyService = passkeyServiceStub([]);
       dialogStub.open.mockReturnValue({ closed: of(undefined) });
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
 
       expect(passkeyService.enrol).not.toHaveBeenCalled();
     });
@@ -242,10 +242,10 @@ describe('PasskeysGroupComponent', () => {
       passkeyService = passkeyServiceStub([]);
       const closed = new Subject<string | undefined>();
       dialogStub.open.mockReturnValue({ closed });
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
-      clickAdd(f);
+      clickAdd(fixture);
+      clickAdd(fixture);
 
       expect(dialogStub.open).toHaveBeenCalledTimes(1);
     });
@@ -263,17 +263,17 @@ describe('PasskeysGroupComponent', () => {
         ceremonyRejected: true,
       };
       passkeyService.enrol.mockRejectedValue(alreadyEnrolled);
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
       await Promise.resolve();
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.textContent).toContain(
+      expect(fixture.nativeElement.textContent).toContain(
         'This device is already registered as a passkey for this account.',
       );
-      expect(f.nativeElement.textContent).not.toContain('relying party');
+      expect(fixture.nativeElement.textContent).not.toContain('relying party');
     });
 
     it('shows a translated message, not the raw DOMException text, on any other ceremony failure', async () => {
@@ -289,15 +289,15 @@ describe('PasskeysGroupComponent', () => {
         ceremonyRejected: true,
       };
       passkeyService.enrol.mockRejectedValue(authenticatorError);
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
       await Promise.resolve();
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.textContent).toContain('The passkey could not be added.');
-      expect(f.nativeElement.textContent).not.toContain('requested criteria');
+      expect(fixture.nativeElement.textContent).toContain('The passkey could not be added.');
+      expect(fixture.nativeElement.textContent).not.toContain('requested criteria');
     });
 
     it('shows the server-unreachable message on a genuine network failure during enrolment, not the generic passkey fallback', async () => {
@@ -312,25 +312,25 @@ describe('PasskeysGroupComponent', () => {
         status: 0,
       };
       passkeyService.enrol.mockRejectedValue(networkFailure);
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
       await Promise.resolve();
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.textContent).toContain('Could not reach the server');
-      expect(f.nativeElement.textContent).not.toContain('The passkey could not be added.');
+      expect(fixture.nativeElement.textContent).toContain('Could not reach the server');
+      expect(fixture.nativeElement.textContent).not.toContain('The passkey could not be added.');
     });
 
     it('opens a confirm dialog naming the passkey, and removes only once confirmed', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
       dialogStub.open.mockReturnValue({ closed: of(true) });
-      const f = mount();
+      const fixture = mount();
       passkeyService.list.mockReturnValue(of([]));
 
-      clickRemove(f);
-      f.detectChanges();
+      clickRemove(fixture);
+      fixture.detectChanges();
 
       expect(dialogStub.open).toHaveBeenCalledWith(
         ConfirmDialogComponent,
@@ -347,20 +347,20 @@ describe('PasskeysGroupComponent', () => {
       // The refresh after a successful remove re-lists: the stub above now
       // reports none left, and the row for it is gone.
       expect(passkeyService.list).toHaveBeenCalledTimes(2);
-      expect(f.nativeElement.querySelectorAll('app-settings-row').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('app-settings-row').length).toBe(0);
     });
 
     it('sends no request when the removal confirmation is dismissed', () => {
       passkeyService = passkeyServiceStub([TOUCH_ID]);
       dialogStub.open.mockReturnValue({ closed: of(false) });
-      const f = mount();
+      const fixture = mount();
 
-      clickRemove(f);
-      f.detectChanges();
+      clickRemove(fixture);
+      fixture.detectChanges();
 
       expect(passkeyService.remove).not.toHaveBeenCalled();
       expect(passkeyService.list).toHaveBeenCalledTimes(1);
-      expect(f.nativeElement.querySelectorAll('app-settings-row').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('app-settings-row').length).toBe(1);
     });
 
     it('renders the lock-out message from the problem body on a 409', () => {
@@ -380,17 +380,17 @@ describe('PasskeysGroupComponent', () => {
           () => new HttpErrorResponse({ error: conflict, status: 409, statusText: 'Conflict' }),
         ),
       );
-      const f = mount();
+      const fixture = mount();
 
-      clickRemove(f);
-      f.detectChanges();
+      clickRemove(fixture);
+      fixture.detectChanges();
 
-      expect(f.nativeElement.textContent).toContain(
+      expect(fixture.nativeElement.textContent).toContain(
         'Removing this passkey would leave you unable to sign in. Add another one first.',
       );
       // The row survives: the server refused the delete, so the list is
       // unchanged rather than refreshed away.
-      expect(f.nativeElement.querySelectorAll('app-settings-row').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('app-settings-row').length).toBe(1);
     });
 
     it('does not render an error when the ceremony is cancelled', async () => {
@@ -403,15 +403,15 @@ describe('PasskeysGroupComponent', () => {
         ceremonyRejected: true,
       };
       passkeyService.enrol.mockRejectedValue(cancelled);
-      const f = mount();
+      const fixture = mount();
 
-      clickAdd(f);
+      clickAdd(fixture);
       await Promise.resolve();
       await Promise.resolve();
-      f.detectChanges();
+      fixture.detectChanges();
 
-      expect(f.nativeElement.querySelector('.banner')).toBeNull();
-      expect(f.nativeElement.textContent).not.toContain('timed out');
+      expect(fixture.nativeElement.querySelector('.banner')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('timed out');
     });
   });
 });

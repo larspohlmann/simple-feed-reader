@@ -68,33 +68,32 @@ export class RefreshService {
 
   private step(busyRetries: number, onDone?: () => void, scope?: RefreshScope): void {
     this.api.refresh(scope).subscribe({
-      next: (r) => {
-        this.report.set(r);
-        this.slice.update((n) => n + 1);
-        if (r.status === 'partial' && r.remaining > 0) {
+      next: (report) => {
+        this.report.set(report);
+        this.slice.update((slice) => slice + 1);
+        if (report.status === 'partial' && report.remaining > 0) {
           // A slice that leaves as many feeds due as before did no work the next
           // slice would undo -- asking again is a hammer, not a poll: a feed whose
           // outcome writes no fetch time never leaves the due set (89 requests to
           // one rationed feed in production, #302). Without server progress, stop.
-          if (r.remaining >= this.previousRemaining) {
+          if (report.remaining >= this.previousRemaining) {
             this.stopWith({ kind: 'stalled' }, onDone);
             return;
           }
-          this.previousRemaining = r.remaining;
+          this.previousRemaining = report.remaining;
           this.step(0, onDone, scope);
-        } else if (r.status === 'busy') {
+        } else if (report.status === 'busy') {
           this.backOffWhileBusy(busyRetries, onDone, scope);
-        } else if (r.status === 'aborted') {
+        } else if (report.status === 'aborted') {
           // The backend closed the EntityManager and stopped mid-sweep. Feeds
-          // are unfetched and still due, so this is NOT the `completed` case it
-          // used to share a branch with (#119).
+          // are unfetched and still due, so this is NOT `completed` (#119).
           this.stopWith({ kind: 'aborted' }, onDone);
         } else {
           this.finish(onDone);
         }
       },
-      error: (e: HttpErrorResponse) => {
-        this.stopWith({ kind: 'http', problem: parseProblem(e) }, onDone);
+      error: (error: HttpErrorResponse) => {
+        this.stopWith({ kind: 'http', problem: parseProblem(error) }, onDone);
       },
     });
   }

@@ -22,9 +22,9 @@ describe('PaywallNoticeComponent', () => {
   };
 
   it('states the body is the free preview of a paywalled article', async () => {
-    const el: HTMLElement = (await mount()).nativeElement;
-    expect(el.textContent).toContain('free preview of a paywalled article');
-    expect(el.querySelector('.warning-glyph')?.getAttribute('aria-hidden')).toBe('true');
+    const element: HTMLElement = (await mount()).nativeElement;
+    expect(element.textContent).toContain('free preview of a paywalled article');
+    expect(element.querySelector('.warning-glyph')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('renders the publisher link when a url is given', async () => {
