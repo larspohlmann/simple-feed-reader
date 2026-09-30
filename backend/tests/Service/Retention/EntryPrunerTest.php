@@ -435,17 +435,15 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testFeedAtOrUnderCapIsUntouched(): void
     {
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
+        $cap = self::CAP_ABOVE_THE_FLOOR;
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
-        $feed = new Feed('https://example.com/feed');
-        $this->entityManager->persist($feed);
-        for ($index = 0; $index < 3; ++$index) {
-            $this->persistEntry($feed, 'entry-' . $index, $this->daysAgo($index + 1));
-        }
-        $this->entityManager->flush();
+        $atTheCap = $this->feedWithEntries($cap, $this->daysAgo(1));
+        $underTheCap = $this->feedWithEntries($cap - 1, $this->daysAgo(1));
 
         self::assertSame(0, $pruner->prune());
-        self::assertCount(3, $this->findAllEntries($feed));
+        self::assertCount($cap, $this->findAllEntries($atTheCap));
+        self::assertCount($cap - 1, $this->findAllEntries($underTheCap));
     }
 
     public function testPruningTheLastEntryOfACompletedRunAlsoDropsTheRun(): void
@@ -528,19 +526,19 @@ final class EntryPrunerTest extends DbTestCase
         self::assertCount(self::FLOOR, $this->findAllEntries($feed));
     }
 
+    /** Ranked across all feeds, the cap would reach into the older feed or put the boundary inside the newer one. */
     public function testCapIsPerFeedNotGlobal(): void
     {
-        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
+        $cap = self::CAP_ABOVE_THE_FLOOR;
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
-        foreach (['https://a.example/feed', 'https://b.example/feed'] as $feedNumber => $url) {
-            $feed = new Feed($url);
-            $this->entityManager->persist($feed);
-            $this->persistEntry($feed, "feed{$feedNumber}-a", $this->daysAgo(2));
-            $this->persistEntry($feed, "feed{$feedNumber}-b", $this->daysAgo(1));
-        }
-        $this->entityManager->flush();
+        $newerFeedAtTheCap = $this->feedWithEntries($cap, $this->daysAgo(1));
+        $overTheCap = $this->feedWithEntries($cap + 1, $this->daysAgo(2));
+        $olderFeedAtTheCap = $this->feedWithEntries($cap, $this->daysAgo(3));
 
-        self::assertSame(0, $pruner->prune());
-        self::assertCount(4, $this->entityManager->getRepository(Entry::class)->findAll());
+        self::assertSame(1, $pruner->prune());
+        self::assertEqualsCanonicalizing(self::entryGuids(1, $cap), $this->remainingGuids($overTheCap));
+        self::assertCount($cap, $this->findAllEntries($newerFeedAtTheCap));
+        self::assertCount($cap, $this->findAllEntries($olderFeedAtTheCap));
     }
 }
