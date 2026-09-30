@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\Exception\InvalidRunStatusException;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunTest extends TestCase
@@ -394,7 +396,7 @@ final class RecommendationRunTest extends TestCase
 
     public function testAPendingRunHandsOutNoThrottle(): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRunStatusException::class);
         $this->expectExceptionMessage('Cannot throttle a recommendation run from status "pending".');
 
         $this->makeRun()->getRunningThrottle();
@@ -402,7 +404,7 @@ final class RecommendationRunTest extends TestCase
 
     public function testAPendingRunHandsOutNoCallAttempts(): void
     {
-        $this->expectException(\LogicException::class);
+        $this->expectException(InvalidRunStatusException::class);
         $this->expectExceptionMessage('Cannot record a call attempt on a recommendation run from status "pending".');
 
         $this->makeRun()->getRunningCallAttempts();
@@ -437,6 +439,80 @@ final class RecommendationRunTest extends TestCase
         $run->getRunningThrottle()->reduceConcurrency(8);
 
         self::assertSame(4, $run->getWaveConcurrencyCap(8));
+    }
+
+    /** @return iterable<string, array{\Closure(RecommendationRun): void, string}> */
+    public static function runEndings(): iterable
+    {
+        $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
+
+        yield 'complete()' => [static fn (RecommendationRun $run) => $run->complete($when), 'completed'];
+        yield 'fail()' => [static fn (RecommendationRun $run) => $run->fail('boom', $when), 'failed'];
+        yield 'cancel()' => [static fn (RecommendationRun $run) => $run->cancel($when), 'cancelled'];
+    }
+
+    /** @param \Closure(RecommendationRun): void $end */
+    #[DataProvider('runEndings')]
+    public function testAThrottleHeldPastTheRunsEndRefusesToDefer(\Closure $end, string $endStatus): void
+    {
+        $run = $this->runInRunningState();
+        $throttle = $run->getRunningThrottle();
+        $end($run);
+
+        $this->expectException(InvalidRunStatusException::class);
+        $this->expectExceptionMessage(
+            sprintf('Cannot defer a recommendation run from status "%s".', $endStatus),
+        );
+
+        $throttle->deferUntil(new \DateTimeImmutable('2026-08-07T10:05:00Z'));
+    }
+
+    /** @param \Closure(RecommendationRun): void $end */
+    #[DataProvider('runEndings')]
+    public function testAThrottleHeldPastTheRunsEndRefusesToNarrowTheWave(\Closure $end, string $endStatus): void
+    {
+        $run = $this->runInRunningState();
+        $throttle = $run->getRunningThrottle();
+        $end($run);
+
+        $this->expectException(InvalidRunStatusException::class);
+        $this->expectExceptionMessage(
+            sprintf('Cannot narrow the wave of a recommendation run from status "%s".', $endStatus),
+        );
+
+        $throttle->reduceConcurrency(8);
+    }
+
+    /** @param \Closure(RecommendationRun): void $end */
+    #[DataProvider('runEndings')]
+    public function testCallAttemptsHeldPastTheRunsEndRefuseAnInvalidReply(\Closure $end, string $endStatus): void
+    {
+        $run = $this->runInRunningState();
+        $callAttempts = $run->getRunningCallAttempts();
+        $end($run);
+
+        $this->expectException(InvalidRunStatusException::class);
+        $this->expectExceptionMessage(
+            sprintf('Cannot record an invalid reply on a recommendation run from status "%s".', $endStatus),
+        );
+
+        $callAttempts->recordInvalidReply('garbage');
+    }
+
+    /** @param \Closure(RecommendationRun): void $end */
+    #[DataProvider('runEndings')]
+    public function testCallAttemptsHeldPastTheRunsEndRefuseATransportFailure(\Closure $end, string $endStatus): void
+    {
+        $run = $this->runInRunningState();
+        $callAttempts = $run->getRunningCallAttempts();
+        $end($run);
+
+        $this->expectException(InvalidRunStatusException::class);
+        $this->expectExceptionMessage(
+            sprintf('Cannot record a transport failure on a recommendation run from status "%s".', $endStatus),
+        );
+
+        $callAttempts->recordTransportFailure();
     }
 
     public function testRecordBatchWinnersClearsTheDeferralButKeepsTheReducedCap(): void

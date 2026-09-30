@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Exception\InvalidRunStatusException;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use Doctrine\DBAL\Types\Types;
@@ -213,7 +214,7 @@ final class RecommendationRun
     {
         $this->guardStatus(RunStatus::Running, 'record a call attempt on');
 
-        return new RunningCallAttempts($this->callAttempts);
+        return new RunningCallAttempts($this, $this->callAttempts);
     }
 
     /**
@@ -275,7 +276,7 @@ final class RecommendationRun
     {
         $this->guardStatus(RunStatus::Running, 'throttle');
 
-        return new RunningThrottle($this->throttle);
+        return new RunningThrottle($this, $this->throttle);
     }
 
     public function stampProvider(?string $providerHost, ?string $model): void
@@ -378,11 +379,7 @@ final class RecommendationRun
     private function guardStatusOneOf(array $allowedStatuses, string $transition): void
     {
         if (!\in_array($this->status, $allowedStatuses, true)) {
-            throw new \LogicException(sprintf(
-                'Cannot %s a recommendation run from status "%s".',
-                $transition,
-                $this->status->value,
-            ));
+            throw new InvalidRunStatusException($transition, $this->status);
         }
     }
 }
