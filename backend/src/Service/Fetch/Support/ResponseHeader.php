@@ -18,6 +18,16 @@ final class ResponseHeader
         }
     }
 
+    /** @return list<string> */
+    public static function all(ResponseInterface $response, string $name): array
+    {
+        try {
+            return $response->getHeaders(false)[$name] ?? [];
+        } catch (ExceptionInterface) {
+            return [];
+        }
+    }
+
     private function __construct()
     {
     }

@@ -41,6 +41,23 @@ final class ResponseHeaderTest extends TestCase
         self::assertNull(ResponseHeader::first($response, 'location'));
     }
 
+    public function testAllReturnsEveryValueOfARepeatedHeader(): void
+    {
+        $response = $this->response(new MockResponse('', [
+            'response_headers' => ['Set-Cookie: a=1', 'Set-Cookie: b=2'],
+        ]));
+
+        self::assertSame(['a=1', 'b=2'], ResponseHeader::all($response, 'set-cookie'));
+        self::assertSame([], ResponseHeader::all($response, 'x-absent'));
+    }
+
+    public function testAllOfAResponseThatCannotBeReadIsEmpty(): void
+    {
+        $response = $this->response(new MockResponse('', ['error' => 'connection reset']));
+
+        self::assertSame([], ResponseHeader::all($response, 'set-cookie'));
+    }
+
     private function response(MockResponse $mock): ResponseInterface
     {
         return (new MockHttpClient($mock))->request('GET', 'https://example.test/');
