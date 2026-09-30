@@ -52,14 +52,11 @@ export function pullTriggersRefresh(travel: number): boolean {
   return travel >= PULL_REFRESH_MIN;
 }
 
-/** Whether the scroller is at (within `tol` of) its end. */
-export function atBottom(
-  scrollTop: number,
-  clientHeight: number,
-  scrollHeight: number,
-  tol = 2,
-): boolean {
-  return scrollTop + clientHeight >= scrollHeight - tol;
+export type ScrollMetrics = Pick<Element, 'scrollTop' | 'clientHeight' | 'scrollHeight'>;
+
+/** Whether the scroller is at (within `tolerance` of) its end. */
+export function atBottom(metrics: ScrollMetrics, tolerance = 2): boolean {
+  return metrics.scrollTop + metrics.clientHeight >= metrics.scrollHeight - tolerance;
 }
 
 /** Whether the scroller is at (within `tol` of) its top. */

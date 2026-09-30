@@ -122,7 +122,7 @@ export class ReadingFocusApplier {
       const last = unit.length === 1 ? first : unit[unit.length - 1].getBoundingClientRect();
       const top = first.top - scrollerTop;
       const bottom = last.top + last.height - scrollerTop;
-      return String(focusOpacityForSpan(top, bottom, viewport, curve));
+      return String(focusOpacityForSpan({ top, bottom }, viewport, curve));
     });
   }
 

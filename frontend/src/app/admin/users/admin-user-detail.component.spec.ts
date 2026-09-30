@@ -12,6 +12,10 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AdminUserDetailComponent } from './admin-user-detail.component';
 
+function cellTexts(root: HTMLElement, selector: string): string[] {
+  return Array.from(root.querySelectorAll(selector), (cell) => (cell.textContent ?? '').trim());
+}
+
 const detail = {
   user: {
     id: 7,
@@ -110,37 +114,39 @@ describe('AdminUserDetailComponent', () => {
 
     // Account card: status and roles are two DISTINCT dt/dd pairs, not one
     // pair carrying both — a status-as-term regression collapses them.
-    const accountDds = element.querySelectorAll('.card.account dd');
-    expect(accountDds[0]?.textContent?.trim()).toBe('Active');
-    expect(accountDds[1]?.textContent?.trim()).toBe('ROLE_USER');
-    expect(accountDds[2]?.textContent?.trim()).toBe('en');
+    const accountDds = cellTexts(element, '.card.account dd');
+    expect(accountDds[0]).toBe('Active');
+    expect(accountDds[1]).toBe('ROLE_USER');
+    expect(accountDds[2]).toBe('en');
     // Created carries the date AND its age, e.g. "January 1, 2026 (211 days
     // ago)" — the day count moves with the clock, so only the stable parts
     // are pinned here.
-    expect(accountDds[3]?.textContent).toContain('January 1, 2026');
-    expect(accountDds[3]?.textContent).toContain('ago');
-    expect(accountDds[4]?.textContent?.trim()).toBe('January 2, 2026');
-    expect(accountDds[5]?.textContent?.trim()).toBe('google');
+    expect(accountDds[3]).toContain('January 1, 2026');
+    expect(accountDds[3]).toContain('ago');
+    expect(accountDds[4]).toBe('January 2, 2026');
+    expect(accountDds[5]).toBe('google');
 
     // The status dt/dd pair renders as a badge keyed by status, matching the
     // list page's own status badge, not bare text.
-    const statusBadge = accountDds[0]?.querySelector('.badge') as HTMLElement;
+    const statusBadge = element
+      .querySelector('.card.account dd')
+      ?.querySelector('.badge') as HTMLElement;
     expect(statusBadge).not.toBeNull();
     expect(statusBadge.getAttribute('data-s')).toBe('active');
 
     // Activity card: a present login next to an absent refresh — proves the
     // two date fields, and their "never" fallbacks, are not interchangeable.
-    const activityDds = element.querySelectorAll('.card.activity dd');
-    expect(activityDds[0]?.textContent?.trim()).toBe('July 29, 2026');
-    expect(activityDds[1]?.textContent?.trim()).toBe('never');
+    const activityDds = cellTexts(element, '.card.activity dd');
+    expect(activityDds[0]).toBe('July 29, 2026');
+    expect(activityDds[1]).toBe('never');
     expect(element.querySelector('.card.activity .flag')).toBeNull();
 
     // Footprint card: feedsCount (2) and tagsCount (1) are different numbers
     // on purpose, so a swap between them is visible.
-    const footprintPs = element.querySelectorAll('.card.footprint p');
-    expect(footprintPs[0]?.textContent?.trim()).toBe('2 of 500 feeds');
-    expect(footprintPs[1]?.textContent?.trim()).toBe('1 tags');
-    expect(footprintPs[2]?.textContent?.trim()).toBe('1 not refreshed recently');
+    const footprintPs = cellTexts(element, '.card.footprint p');
+    expect(footprintPs[0]).toBe('2 of 500 feeds');
+    expect(footprintPs[1]).toBe('1 tags');
+    expect(footprintPs[2]).toBe('1 not refreshed recently');
     expect(element.textContent).toContain('Limits');
     expect(element.textContent).toContain('No trial');
 

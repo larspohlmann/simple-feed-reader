@@ -30,7 +30,13 @@ function concatBytes(parts: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
   return result;
 }
 
-function buildLocalFileHeader(nameBytes: Uint8Array, data: Uint8Array, crc: number): Uint8Array {
+interface EncodedMember {
+  readonly nameBytes: Uint8Array;
+  readonly data: Uint8Array;
+  readonly crc: number;
+}
+
+function buildLocalFileHeader({ nameBytes, data, crc }: EncodedMember): Uint8Array {
   const header = new Uint8Array(30 + nameBytes.length + data.length);
   const view = new DataView(header.buffer);
   view.setUint32(0, 0x04034b50, true);
@@ -45,9 +51,7 @@ function buildLocalFileHeader(nameBytes: Uint8Array, data: Uint8Array, crc: numb
 }
 
 function buildCentralDirectoryEntry(
-  nameBytes: Uint8Array,
-  dataLength: number,
-  crc: number,
+  { nameBytes, data, crc }: EncodedMember,
   offset: number,
 ): Uint8Array {
   const entry = new Uint8Array(46 + nameBytes.length);
@@ -56,8 +60,8 @@ function buildCentralDirectoryEntry(
   view.setUint16(4, 20, true);
   view.setUint16(6, 20, true);
   view.setUint32(16, crc, true);
-  view.setUint32(20, dataLength, true);
-  view.setUint32(24, dataLength, true);
+  view.setUint32(20, data.length, true);
+  view.setUint32(24, data.length, true);
   view.setUint16(28, nameBytes.length, true);
   view.setUint32(42, offset, true);
   entry.set(nameBytes, 46);
@@ -85,10 +89,13 @@ function buildStoredZip(members: readonly ZipMember[]): Uint8Array<ArrayBuffer> 
   const centralEntries: Uint8Array[] = [];
   let offset = 0;
   for (const member of members) {
-    const nameBytes = encoder.encode(member.name);
-    const crc = crc32(member.data);
-    localEntries.push(buildLocalFileHeader(nameBytes, member.data, crc));
-    centralEntries.push(buildCentralDirectoryEntry(nameBytes, member.data.length, crc, offset));
+    const encoded: EncodedMember = {
+      nameBytes: encoder.encode(member.name),
+      data: member.data,
+      crc: crc32(member.data),
+    };
+    localEntries.push(buildLocalFileHeader(encoded));
+    centralEntries.push(buildCentralDirectoryEntry(encoded, offset));
     offset += localEntries[localEntries.length - 1].length;
   }
   const centralOffset = offset;

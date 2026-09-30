@@ -591,7 +591,7 @@ export class ReaderViewComponent {
     this.touchDy = 0;
     this.axis = 'none';
     const element = this.host.nativeElement;
-    this.atBottomOnStart = atBottom(element.scrollTop, element.clientHeight, element.scrollHeight);
+    this.atBottomOnStart = atBottom(element);
     this.snapping.set(false);
   }
 
@@ -673,7 +673,12 @@ export class ReaderViewComponent {
       // `isWide` is false by definition here: full-screen reading only exists
       // on the narrow layout, and the split pane keeps its toolbar put.
       this.toolbarHidden.set(
-        nextHeaderHidden(this.toolbarHidden(), this.lastToolbarScrollTop, scrollTop, false),
+        nextHeaderHidden({
+          previousHidden: this.toolbarHidden(),
+          lastTop: this.lastToolbarScrollTop,
+          top: scrollTop,
+          isWide: false,
+        }),
       );
     }
     this.lastToolbarScrollTop = scrollTop;

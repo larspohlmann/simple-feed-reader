@@ -1690,21 +1690,20 @@ describe('EntryListComponent', () => {
       }) as unknown as HTMLElement;
 
     /** Stubs the component's `rows`/`listHdr` viewChild signals with fakes whose
-     *  geometry is scripted: `scrollerTop`/`headerBottom` place the fold line,
+     *  geometry is scripted: `fold.scrollerTop`/`fold.headerBottom` place the fold line,
      *  `entries` become the tagged rows `querySelector(All)` finds. */
     function stubGeometry(
       fixture: ReturnType<typeof mount>,
-      scrollerTop: number,
-      headerBottom: number,
       entries: HTMLElement[],
+      fold: { scrollerTop?: number; headerBottom?: number } = {},
     ): void {
       const scroller = {
-        getBoundingClientRect: () => ({ top: scrollerTop }),
+        getBoundingClientRect: () => ({ top: fold.scrollerTop ?? 0 }),
         querySelector: () => entries[0] ?? null,
         querySelectorAll: () => entries as unknown as NodeListOf<Element>,
       } as unknown as HTMLElement;
       const header = {
-        getBoundingClientRect: () => ({ bottom: headerBottom }),
+        getBoundingClientRect: () => ({ bottom: fold.headerBottom ?? 100 }),
       } as unknown as HTMLElement;
 
       jest
@@ -1718,7 +1717,7 @@ describe('EntryListComponent', () => {
     it('collects ids of entries fully above the fold at click', () => {
       const fixture = mount();
       // fold line = max(scroller.top=0, listHdr.bottom=100) = 100
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         measuredEntry('1', 40),
         measuredEntry('2', 90),
         measuredEntry('3', 150),
@@ -1735,7 +1734,7 @@ describe('EntryListComponent', () => {
       const fixture = mount({
         entries: [entry(1, { duplicates: [entry(101), entry(102)] }), entry(2)],
       });
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
       const emitted: number[][] = [];
       fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
@@ -1746,7 +1745,7 @@ describe('EntryListComponent', () => {
 
     it('emits nothing when no entry has cleared the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
+      stubGeometry(fixture, [measuredEntry('1', 150)]);
 
       const emitted: number[][] = [];
       fixture.componentInstance.markAboveRead.subscribe((ids) => emitted.push(ids));
@@ -1778,7 +1777,7 @@ describe('EntryListComponent', () => {
 
     it('emits the collected ids when the rendered button is clicked', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('7', 40)]);
+      stubGeometry(fixture, [measuredEntry('7', 40)]);
       fixture.componentInstance.showToTop.set(true);
       fixture.componentInstance.hasAboveFold.set(true);
       fixture.detectChanges();
@@ -1806,7 +1805,7 @@ describe('EntryListComponent', () => {
       const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
       const tail = group.entries.slice(group.previewCount).map((groupEntry) => groupEntry.id);
       expect(tail.length).toBeGreaterThan(0);
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         ...preview.map((id) => measuredEntry(String(id), 40)),
         measuredEntry('9', 150),
       ]);
@@ -1829,7 +1828,7 @@ describe('EntryListComponent', () => {
         .find((block) => block.kind === 'group') as Extract<MagazineBlock, { kind: 'group' }>;
       const preview = group.entries.slice(0, group.previewCount).map((groupEntry) => groupEntry.id);
       const [last, ...above] = [...preview].reverse();
-      stubGeometry(fixture, 0, 100, [
+      stubGeometry(fixture, [
         ...above.reverse().map((id) => measuredEntry(String(id), 40)),
         measuredEntry(String(last), 150),
       ]);
@@ -1857,7 +1856,7 @@ describe('EntryListComponent', () => {
     // `stubGeometry` drives the click-time collection above.
     it('flags hasAboveFold from a scroll event once the first entry clears the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
       fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 
@@ -1866,7 +1865,7 @@ describe('EntryListComponent', () => {
 
     it('leaves hasAboveFold false below the back-to-top threshold, without measuring', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 40)]);
+      stubGeometry(fixture, [measuredEntry('1', 40)]);
 
       fixture.componentInstance.onRowsScroll({ target: { scrollTop: 100 } } as unknown as Event);
 
@@ -1875,7 +1874,7 @@ describe('EntryListComponent', () => {
 
     it('leaves hasAboveFold false while the boundary entry has not cleared the fold', () => {
       const fixture = mount();
-      stubGeometry(fixture, 0, 100, [measuredEntry('1', 150)]);
+      stubGeometry(fixture, [measuredEntry('1', 150)]);
 
       fixture.componentInstance.onRowsScroll({ target: { scrollTop: 900 } } as unknown as Event);
 

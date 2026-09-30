@@ -177,14 +177,17 @@ describe('focusUnits', () => {
 
   it('keeps a block shorter than the tall threshold as one unit', () => {
     const block = paragraph(FOUR_SENTENCES);
-    const units = focusUnits([block], SCROLLER, measureBy({ P: 200 }), 'en');
+    const units = focusUnits([block], SCROLLER, { measure: measureBy({ P: 200 }), lang: 'en' });
     expect(units).toEqual([[block]]);
     expect(block.querySelector('span')).toBeNull(); // not measured tall, not wrapped
   });
 
   it('splits a tall paragraph into sentence spans grouped into sections', () => {
     const block = paragraph(FOUR_SENTENCES);
-    const units = focusUnits([block], SCROLLER, measureBy({ P: 400, SPAN: 100 }), 'en');
+    const units = focusUnits([block], SCROLLER, {
+      measure: measureBy({ P: 400, SPAN: 100 }),
+      lang: 'en',
+    });
     expect(units).toHaveLength(3); // ceil(400/150) sections over four spans
     expect(units[0]).toHaveLength(2);
     expect(units.flat().every((element) => element.classList.contains('reading-sentence'))).toBe(
@@ -196,7 +199,10 @@ describe('focusUnits', () => {
   it('replaces a tall list with its items, grouped the same way', () => {
     const list = document.createElement('ul');
     list.innerHTML = '<li>One</li><li>Two</li><li>Three</li><li>Four</li>';
-    const units = focusUnits([list], SCROLLER, measureBy({ UL: 400, LI: 100 }), 'en');
+    const units = focusUnits([list], SCROLLER, {
+      measure: measureBy({ UL: 400, LI: 100 }),
+      lang: 'en',
+    });
     expect(units).toHaveLength(3);
     expect(units.flat().every((element) => element.tagName === 'LI')).toBe(true);
   });
@@ -204,20 +210,23 @@ describe('focusUnits', () => {
   it('keeps a tall figure as one block — a half-dimmed image looks broken', () => {
     const figure = document.createElement('figure');
     figure.innerHTML = '<img alt=""><figcaption>A caption.</figcaption>';
-    const units = focusUnits([figure], SCROLLER, measureBy({ FIGURE: 500 }), 'en');
+    const units = focusUnits([figure], SCROLLER, {
+      measure: measureBy({ FIGURE: 500 }),
+      lang: 'en',
+    });
     expect(units).toEqual([[figure]]);
   });
 
   it('keeps a tall <pre> as one block — the highlighter owns that DOM', () => {
     const pre = document.createElement('pre');
     pre.textContent = 'line one.\nline two.\nline three is a whole sentence here.';
-    const units = focusUnits([pre], SCROLLER, measureBy({ PRE: 500 }), 'en');
+    const units = focusUnits([pre], SCROLLER, { measure: measureBy({ PRE: 500 }), lang: 'en' });
     expect(units).toEqual([[pre]]);
   });
 
   it('keeps a tall single-sentence paragraph as one block', () => {
     const block = paragraph('This one long sentence has no interior boundary at all.');
-    const units = focusUnits([block], SCROLLER, measureBy({ P: 400 }), 'en');
+    const units = focusUnits([block], SCROLLER, { measure: measureBy({ P: 400 }), lang: 'en' });
     expect(units).toEqual([[block]]);
   });
 
@@ -228,7 +237,10 @@ describe('focusUnits', () => {
     const long = paragraph(FOUR_SENTENCES);
     long.dataset['h'] = '360';
     quote.append(short, long);
-    const units = focusUnits([quote], SCROLLER, measureBy({ BLOCKQUOTE: 460, SPAN: 90 }), 'en');
+    const units = focusUnits([quote], SCROLLER, {
+      measure: measureBy({ BLOCKQUOTE: 460, SPAN: 90 }),
+      lang: 'en',
+    });
     // Atoms: the short paragraph plus the long paragraph's four sentence spans.
     const atoms = units.flat();
     expect(atoms[0]).toBe(short);
@@ -241,7 +253,10 @@ describe('focusUnits', () => {
   it('reaches the paragraphs of a tall blockquote through a wrapper', () => {
     const quote = document.createElement('blockquote');
     quote.innerHTML = '<div><p>First quoted line.</p><p>Second quoted line.</p></div>';
-    const units = focusUnits([quote], SCROLLER, measureBy({ BLOCKQUOTE: 400, P: 200 }), 'en');
+    const units = focusUnits([quote], SCROLLER, {
+      measure: measureBy({ BLOCKQUOTE: 400, P: 200 }),
+      lang: 'en',
+    });
     expect(units.flat().map((element) => element.tagName)).toEqual(['P', 'P']);
   });
 
@@ -250,7 +265,7 @@ describe('focusUnits', () => {
     list.innerHTML = `<li>${FOUR_SENTENCES}<ul><li>Nested item.</li></ul></li><li>Short.</li>`;
     const measure = measureBy({ UL: 500, LI: 100 });
     (list.firstElementChild as HTMLElement).dataset['h'] = '400';
-    focusUnits([list], SCROLLER, measure, 'en');
+    focusUnits([list], SCROLLER, { measure: measure, lang: 'en' });
     expect(list.querySelector('span')).toBeNull();
   });
 });

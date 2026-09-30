@@ -635,7 +635,12 @@ export class EntryListComponent implements OnDestroy {
     if (!element || typeof element.scrollTop !== 'number') return;
     const top = element.scrollTop;
     this.collapsed.set(
-      nextHeaderHidden(this.collapsed(), this.lastScrollTop, top, this.screen.isWide()),
+      nextHeaderHidden({
+        previousHidden: this.collapsed(),
+        lastTop: this.lastScrollTop,
+        top,
+        isWide: this.screen.isWide(),
+      }),
     );
     this.lastScrollTop = top;
     const pastTop = top > BACK_TO_TOP_AFTER_PX;

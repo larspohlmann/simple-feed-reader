@@ -49,6 +49,27 @@ const DEFAULT_PROPS: MountProperties = {
   failed: false,
 };
 
+const HEADER_CELLS: [selector: string, label: string][] = [
+  ['.run-history-month__when', 'When'],
+  // Scoped the same way as the token headers below, and for the same
+  // reason: the status header cell also carries `&__col-icon`, the glyph
+  // that replaces the word below the mobile breakpoint (#465), and a
+  // Material Symbol is a text ligature -- an unscoped query reads
+  // "Status flag".
+  ['.run-history-month__status .run-history-month__col-full', 'Status'],
+  ['.run-history-month__duration', 'Time'],
+  // Scoped to `&__col-full`: the cell also carries `&__col-short` ("In"),
+  // shown only below the mobile breakpoint -- an unscoped query would run
+  // the two together.
+  ['.run-history-month__tokens-in .run-history-month__col-full', 'Tokens in'],
+  ['.run-history-month__tokens-out .run-history-month__col-full', 'Tokens out'],
+  ['.run-history-month__cost', 'Cost'],
+];
+
+function cellText(header: HTMLElement, selector: string): string | undefined {
+  return header.querySelector(selector)?.textContent?.trim();
+}
+
 describe('RecommendationRunHistoryMonthComponent', () => {
   let lang: ReturnType<typeof signal<Lang>>;
   let fixture: ReturnType<typeof TestBed.createComponent<RecommendationRunHistoryMonthComponent>>;
@@ -220,32 +241,9 @@ describe('RecommendationRunHistoryMonthComponent', () => {
     const header = element.querySelector('.run-history-month__row--header') as HTMLElement;
 
     expect(header.getAttribute('aria-hidden')).toBe('true');
-    expect(header.querySelector('.run-history-month__when')?.textContent?.trim()).toBe('When');
-    // Scoped the same way as the token headers below, and for the same
-    // reason: the status header cell also carries `&__col-icon`, the glyph
-    // that replaces the word below the mobile breakpoint (#465), and a
-    // Material Symbol is a text ligature -- an unscoped query reads
-    // "Status flag".
-    expect(
-      header
-        .querySelector('.run-history-month__status .run-history-month__col-full')
-        ?.textContent?.trim(),
-    ).toBe('Status');
-    expect(header.querySelector('.run-history-month__duration')?.textContent?.trim()).toBe('Time');
-    // Scoped to `&__col-full`: the cell also carries `&__col-short` ("In"),
-    // shown only below the mobile breakpoint -- an unscoped query would run
-    // the two together.
-    expect(
-      header
-        .querySelector('.run-history-month__tokens-in .run-history-month__col-full')
-        ?.textContent?.trim(),
-    ).toBe('Tokens in');
-    expect(
-      header
-        .querySelector('.run-history-month__tokens-out .run-history-month__col-full')
-        ?.textContent?.trim(),
-    ).toBe('Tokens out');
-    expect(header.querySelector('.run-history-month__cost')?.textContent?.trim()).toBe('Cost');
+    for (const [selector, label] of HEADER_CELLS) {
+      expect(cellText(header, selector)).toBe(label);
+    }
     // The provider cell moved to its own full-width row 2 and has no column
     // header of its own -- see the provider-cell test below.
     expect(header.querySelector('.run-history-month__provider')).toBeNull();

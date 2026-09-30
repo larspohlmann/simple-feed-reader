@@ -37,9 +37,10 @@ describe('DrawerSwipeDirective', () => {
       target: target ?? null,
     }) as unknown as TouchEvent;
 
-  function swipe(fromX: number, toX: number, y = 0, target?: Element) {
-    directive.onTouchStart(touch(fromX, y, target));
-    directive.onTouchMove(touch(toX, y, target));
+  function swipe(fromX: number, toX: number, at: { y?: number; target?: Element } = {}) {
+    const y = at.y ?? 0;
+    directive.onTouchStart(touch(fromX, y, at.target));
+    directive.onTouchMove(touch(toX, y, at.target));
     directive.onTouchEnd();
   }
 
@@ -90,7 +91,7 @@ describe('DrawerSwipeDirective', () => {
     host.open.set(true);
     fixture.detectChanges();
     const inPanel = fixture.debugElement.query(By.css('.in-panel')).nativeElement as Element;
-    swipe(200, 40, 0, inPanel);
+    swipe(200, 40, { target: inPanel });
     expect(host.closed).toBe(0);
   });
 });

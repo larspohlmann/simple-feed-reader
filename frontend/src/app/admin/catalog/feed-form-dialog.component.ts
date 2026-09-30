@@ -19,6 +19,40 @@ export interface FeedFormData {
   categoryId: number;
 }
 
+interface FeedFormValues {
+  title: string;
+  url: string;
+  siteUrl: string;
+  description: string;
+  categoryId: number;
+  enabled: boolean;
+  locked: boolean;
+}
+
+function initialFeedValues({ feed, categoryId }: FeedFormData): FeedFormValues {
+  if (feed === null) {
+    return {
+      title: '',
+      url: '',
+      siteUrl: '',
+      description: '',
+      categoryId,
+      enabled: true,
+      locked: false,
+    };
+  }
+
+  return {
+    title: feed.title,
+    url: feed.url,
+    siteUrl: feed.siteUrl ?? '',
+    description: feed.description ?? '',
+    categoryId: feed.categoryId,
+    enabled: feed.enabled,
+    locked: feed.locked,
+  };
+}
+
 /** Create or edit a catalog feed. Performs its own API write and closes with
  *  the saved entity — the same contract as the tag form. */
 @Component({
@@ -43,14 +77,16 @@ export class FeedFormDialogComponent {
   readonly isEdit = this.data.feed !== null;
   readonly titleKey = this.isEdit ? 'admin.feedDialog.editTitle' : 'admin.feedDialog.newTitle';
 
+  private readonly initial = initialFeedValues(this.data);
+
   readonly form = this.fb.group({
-    title: [this.data.feed?.title ?? '', [Validators.required, Validators.maxLength(255)]],
-    url: [this.data.feed?.url ?? '', [Validators.required]],
-    siteUrl: [this.data.feed?.siteUrl ?? ''],
-    description: [this.data.feed?.description ?? ''],
-    categoryId: [this.data.feed?.categoryId ?? this.data.categoryId],
-    enabled: [this.data.feed?.enabled ?? true],
-    locked: [this.data.feed?.locked ?? false],
+    title: [this.initial.title, [Validators.required, Validators.maxLength(255)]],
+    url: [this.initial.url, [Validators.required]],
+    siteUrl: [this.initial.siteUrl],
+    description: [this.initial.description],
+    categoryId: [this.initial.categoryId],
+    enabled: [this.initial.enabled],
+    locked: [this.initial.locked],
   });
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);

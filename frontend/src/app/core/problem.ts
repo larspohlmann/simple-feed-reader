@@ -53,22 +53,31 @@ export async function parseProblemAsync(error: HttpErrorResponse): Promise<Probl
 }
 
 function problemFromBody(body: unknown, status: number): Problem | null {
-  if (!body || body instanceof Blob || typeof body !== 'object' || !('type' in body)) return null;
+  if (!isProblemBody(body)) return null;
 
-  const fields = body as Record<string, unknown>;
   return {
-    type: String(fields['type'] ?? 'about:blank'),
-    title: String(fields['title'] ?? 'Request failed'),
-    status: typeof fields['status'] === 'number' ? (fields['status'] as number) : status,
-    detail: typeof fields['detail'] === 'string' ? (fields['detail'] as string) : undefined,
-    errors: (fields['errors'] as Record<string, string[]> | undefined) ?? undefined,
-    accountStatus:
-      typeof fields['accountStatus'] === 'string' ? (fields['accountStatus'] as string) : undefined,
-    invalidatedPasskeyCount:
-      typeof fields['invalidatedPasskeyCount'] === 'number'
-        ? (fields['invalidatedPasskeyCount'] as number)
-        : undefined,
+    type: String(body['type'] ?? 'about:blank'),
+    title: String(body['title'] ?? 'Request failed'),
+    status: numberField(body, 'status') ?? status,
+    detail: stringField(body, 'detail'),
+    errors: (body['errors'] as Record<string, string[]> | undefined) ?? undefined,
+    accountStatus: stringField(body, 'accountStatus'),
+    invalidatedPasskeyCount: numberField(body, 'invalidatedPasskeyCount'),
   };
+}
+
+function isProblemBody(body: unknown): body is Record<string, unknown> {
+  return !!body && !(body instanceof Blob) && typeof body === 'object' && 'type' in body;
+}
+
+function stringField(fields: Record<string, unknown>, key: string): string | undefined {
+  const value = fields[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function numberField(fields: Record<string, unknown>, key: string): number | undefined {
+  const value = fields[key];
+  return typeof value === 'number' ? value : undefined;
 }
 
 function parseJsonOrNull(text: string): unknown {

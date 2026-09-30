@@ -40,10 +40,9 @@ describe('AboutSectionComponent', () => {
 
   function mount(
     api: ReleaseVersion | null,
-    unavailable = false,
-    store: StoreState = {},
-    activity: ReadingActivity = NO_ACTIVITY,
+    options: { unavailable?: boolean; store?: StoreState; activity?: ReadingActivity } = {},
   ) {
+    const store = options.store ?? {};
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
@@ -51,7 +50,11 @@ describe('AboutSectionComponent', () => {
         provideRouter([]),
         {
           provide: VersionService,
-          useValue: { load, apiVersion: signal(api), unavailable: signal(unavailable) },
+          useValue: {
+            load,
+            apiVersion: signal(api),
+            unavailable: signal(options.unavailable ?? false),
+          },
         },
         {
           provide: SubscriptionsStore,
@@ -63,7 +66,10 @@ describe('AboutSectionComponent', () => {
             favoritesCount: signal(store.favoritesCount ?? 0),
           },
         },
-        { provide: SettingsApi, useValue: { readingActivity: () => of(activity) } },
+        {
+          provide: SettingsApi,
+          useValue: { readingActivity: () => of(options.activity ?? NO_ACTIVITY) },
+        },
       ],
     });
     const fixture = TestBed.createComponent(AboutSectionComponent);
@@ -112,7 +118,7 @@ describe('AboutSectionComponent', () => {
 
   it('still shows the app version when the API cannot be reached', () => {
     Object.assign(buildVersion, { version: 'v0.5.0-dev.3', commit: 'a1b2c3d', builtAt: '' });
-    const fixture = mount(null, true);
+    const fixture = mount(null, { unavailable: true });
 
     expect(text(fixture)).toContain('v0.5.0-dev.3');
     expect(text(fixture)).toContain('unavailable');
@@ -145,11 +151,13 @@ describe('AboutSectionComponent', () => {
   });
 
   it('shows the four reading tiles with the store counts', () => {
-    const fixture = mount(null, false, {
-      subscriptions: [feed('A', 1), feed('B', 2)],
-      totalUnread: 137,
-      viewedCount: 2814,
-      favoritesCount: 96,
+    const fixture = mount(null, {
+      store: {
+        subscriptions: [feed('A', 1), feed('B', 2)],
+        totalUnread: 137,
+        viewedCount: 2814,
+        favoritesCount: 96,
+      },
     });
     const tiles = fixture.nativeElement.querySelectorAll('.tile-value');
 
@@ -158,8 +166,8 @@ describe('AboutSectionComponent', () => {
   });
 
   it('ranks the top unread feeds, busiest first, and drops zero-unread feeds', () => {
-    const fixture = mount(null, false, {
-      subscriptions: [feed('Quiet', 0), feed('Loud', 40), feed('Middle', 12)],
+    const fixture = mount(null, {
+      store: { subscriptions: [feed('Quiet', 0), feed('Loud', 40), feed('Middle', 12)] },
     });
     const names = [...fixture.nativeElement.querySelectorAll('.bar-name')].map(
       (node) => node.textContent,
@@ -169,11 +177,9 @@ describe('AboutSectionComponent', () => {
   });
 
   it('ranks the top read feeds from the activity payload', () => {
-    const fixture = mount(
-      null,
-      false,
-      { subscriptions: [feed('Alpha', 0, 10), feed('Beta', 0, 20)] },
-      {
+    const fixture = mount(null, {
+      store: { subscriptions: [feed('Alpha', 0, 10), feed('Beta', 0, 20)] },
+      activity: {
         days: [],
         total: 0,
         topFeedsByRead: [
@@ -181,7 +187,7 @@ describe('AboutSectionComponent', () => {
           { feedId: 10, readCount: 5 },
         ],
       },
-    );
+    });
     // Unread feeds are all zero, so every bar shown is a read bar.
     const names = [...fixture.nativeElement.querySelectorAll('.bar-name')].map(
       (node) => node.textContent,
@@ -191,30 +197,24 @@ describe('AboutSectionComponent', () => {
   });
 
   it('links each top feed to its feed page', () => {
-    const fixture = mount(null, false, { subscriptions: [feed('Loud', 40, 7)] });
+    const fixture = mount(null, { store: { subscriptions: [feed('Loud', 40, 7)] } });
     const link = fixture.nativeElement.querySelector('a.bar-row');
 
     expect(link?.getAttribute('href')).toContain('subscription=7');
   });
 
   it('shows an empty chart message when there is no reading history', () => {
-    const fixture = mount(
-      null,
-      false,
-      {},
-      { days: [{ date: '2026-09-01', count: 0 }], total: 0, topFeedsByRead: [] },
-    );
+    const fixture = mount(null, {
+      activity: { days: [{ date: '2026-09-01', count: 0 }], total: 0, topFeedsByRead: [] },
+    });
 
     expect(fixture.nativeElement.querySelector('.chart')).toBeNull();
     expect(text(fixture)).toContain('Not enough reading history yet');
   });
 
   it('draws the chart when there is reading history', () => {
-    const fixture = mount(
-      null,
-      false,
-      {},
-      {
+    const fixture = mount(null, {
+      activity: {
         days: [
           { date: '2026-09-01', count: 3 },
           { date: '2026-09-02', count: 5 },
@@ -222,7 +222,7 @@ describe('AboutSectionComponent', () => {
         total: 8,
         topFeedsByRead: [],
       },
-    );
+    });
 
     expect(fixture.nativeElement.querySelector('.chart-line')).not.toBeNull();
     expect(fixture.nativeElement.querySelectorAll('.chart-col')).toHaveLength(2);

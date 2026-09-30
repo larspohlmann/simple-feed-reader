@@ -21,7 +21,6 @@ const sub = (
   id: number,
   unread: number,
   tags = [] as ReturnType<typeof tag>[],
-  entryCount = 0,
 ): SubscriptionDto => ({
   id,
   feedId: id * 10,
@@ -44,9 +43,22 @@ const sub = (
   position: 0,
   tags,
   unreadCount: unread,
-  entryCount,
+  entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
+});
+
+interface CountTotals {
+  favorites?: number;
+  kept?: number;
+  viewed?: number;
+}
+
+const counts = <Row>(subscriptions: Row[], totals: CountTotals = {}) => ({
+  subscriptions,
+  favoritesCount: totals.favorites ?? 0,
+  keptCount: totals.kept ?? 0,
+  viewedCount: totals.viewed ?? 0,
 });
 
 describe('subscription derivations', () => {
@@ -93,13 +105,19 @@ describe('subscription derivations', () => {
   });
 
   it("sums a tag's entry counts from its feeds, like its unread count", () => {
-    const tree = buildTagTree([sub(1, 0, [tag(7, 'News')], 30), sub(2, 0, [tag(7, 'News')], 12)]);
+    const tree = buildTagTree([
+      { ...sub(1, 0, [tag(7, 'News')]), entryCount: 30 },
+      { ...sub(2, 0, [tag(7, 'News')]), entryCount: 12 },
+    ]);
     expect(tree[0].entryCount).toBe(42);
   });
 
   it('totals entries over the feeds included in All items only', () => {
     expect(
-      sumEntries([sub(1, 0, [], 30), { ...sub(2, 0, [], 12), includeInAllItems: false }]),
+      sumEntries([
+        { ...sub(1, 0, []), entryCount: 30 },
+        { ...sub(2, 0, []), entryCount: 12, includeInAllItems: false },
+      ]),
     ).toBe(30);
   });
 });
@@ -377,17 +395,12 @@ describe('SubscriptionsStore quiet reload', () => {
   let store: SubscriptionsStore;
   let ctrl: HttpTestingController;
 
-  const counts = (subscriptions: SubscriptionDto[], favorites = 0, kept = 0, viewed = 0) => ({
-    subscriptions,
-    favoritesCount: favorites,
-    keptCount: kept,
-    viewedCount: viewed,
-  });
-
   /** A settled store, one poll interval old, so a quiet reload may fire. */
   const settleAndAge = (subscriptions: SubscriptionDto[]) => {
     store.load();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts(subscriptions, 1, 2, 3));
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts(subscriptions, { favorites: 1, kept: 2, viewed: 3 }));
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
   };
 
@@ -417,7 +430,9 @@ describe('SubscriptionsStore quiet reload', () => {
     store.reloadQuietlyIfStale();
     expect(store.loading()).toBe(false);
 
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 7)], 4, 5, 6));
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts([sub(1, 7)], { favorites: 4, kept: 5, viewed: 6 }));
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
@@ -476,7 +491,7 @@ describe('SubscriptionsStore quiet reload', () => {
     // The user reads one entry while the tick is on the wire. The response was
     // counted before that, so adopting it would put the badge back up to 5.
     store.decrementUnread(1);
-    tick.flush(counts([sub(1, 5)], 9, 9, 9));
+    tick.flush(counts([sub(1, 5)], { favorites: 9, kept: 9, viewed: 9 }));
 
     expect(store.subscriptions()[0].unreadCount).toBe(4);
     expect(store.favoritesCount()).toBe(1);
@@ -491,7 +506,9 @@ describe('SubscriptionsStore quiet reload', () => {
 
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
     store.reloadQuietlyIfStale();
-    ctrl.expectOne('https://api.test/api/subscriptions').flush(counts([sub(1, 2)], 7, 8, 9));
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush(counts([sub(1, 2)], { favorites: 7, kept: 8, viewed: 9 }));
 
     expect(store.subscriptions()[0].unreadCount).toBe(2);
     expect(store.favoritesCount()).toBe(7);
@@ -577,29 +594,19 @@ describe('SubscriptionsStore counts-only reload', () => {
   const list = 'https://api.test/api/subscriptions';
   const countsUrl = 'https://api.test/api/subscriptions/counts';
 
-  const fullCounts = (subscriptions: SubscriptionDto[], favorites = 0, kept = 0, viewed = 0) => ({
-    subscriptions,
-    favoritesCount: favorites,
-    keptCount: kept,
-    viewedCount: viewed,
-  });
-
   const countsBody = (
     subscriptions: { id: number; unreadCount: number; entryCount?: number }[],
-    favorites = 0,
-    kept = 0,
-    viewed = 0,
-  ) => ({
-    subscriptions: subscriptions.map((subscription) => ({ entryCount: 0, ...subscription })),
-    favoritesCount: favorites,
-    keptCount: kept,
-    viewedCount: viewed,
-  });
+    totals: CountTotals = {},
+  ) =>
+    counts(
+      subscriptions.map((subscription) => ({ entryCount: 0, ...subscription })),
+      totals,
+    );
 
   /** A settled store, one interval old, so a counts tick may fire. */
   const settleAndAge = (subscriptions: SubscriptionDto[]) => {
     store.load();
-    ctrl.expectOne(list).flush(fullCounts(subscriptions, 1, 2, 3));
+    ctrl.expectOne(list).flush(counts(subscriptions, { favorites: 1, kept: 2, viewed: 3 }));
     jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
   };
 
@@ -629,7 +636,9 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.reloadCountsIfStale();
 
     ctrl.expectNone(list);
-    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 7 }], 4, 5, 6));
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 7 }], { favorites: 4, kept: 5, viewed: 6 }));
     expect(store.totalUnread()).toBe(7);
     expect(store.favoritesCount()).toBe(4);
     expect(store.keptCount()).toBe(5);
@@ -653,7 +662,7 @@ describe('SubscriptionsStore counts-only reload', () => {
   });
 
   it('patches entry counts from the counts-only tick', () => {
-    settleAndAge([sub(1, 1, [], 3)]);
+    settleAndAge([{ ...sub(1, 1, []), entryCount: 3 }]);
 
     store.reloadCountsIfStale();
     ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 1, entryCount: 5 }]));
@@ -666,7 +675,9 @@ describe('SubscriptionsStore counts-only reload', () => {
     const before = store.subscriptions();
 
     store.reloadCountsIfStale();
-    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 2 }], 1, 2, 3));
+    ctrl
+      .expectOne(countsUrl)
+      .flush(countsBody([{ id: 1, unreadCount: 2 }], { favorites: 1, kept: 2, viewed: 3 }));
 
     // Nothing moved, so the array is not replaced and the derived signals do
     // not recompute (#720).
@@ -679,7 +690,7 @@ describe('SubscriptionsStore counts-only reload', () => {
     const tick = ctrl.expectOne(countsUrl);
 
     store.decrementUnread(1);
-    tick.flush(countsBody([{ id: 1, unreadCount: 5 }], 9, 9, 9));
+    tick.flush(countsBody([{ id: 1, unreadCount: 5 }], { favorites: 9, kept: 9, viewed: 9 }));
 
     expect(store.subscriptions()[0].unreadCount).toBe(4);
     expect(store.favoritesCount()).toBe(1);
@@ -700,6 +711,6 @@ describe('SubscriptionsStore counts-only reload', () => {
     store.reloadCountsIfStale();
     ctrl.expectNone(countsUrl);
     expect(pendingLoad.cancelled).toBe(false);
-    pendingLoad.flush(fullCounts([sub(1, 4)]));
+    pendingLoad.flush(counts([sub(1, 4)]));
   });
 });

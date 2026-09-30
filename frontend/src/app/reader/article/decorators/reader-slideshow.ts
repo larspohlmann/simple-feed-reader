@@ -24,7 +24,6 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   figure.setAttribute('aria-roledescription', 'carousel');
   figure.tabIndex = 0;
 
-  let current = 0;
   slides.forEach((slide, index) =>
     slide.setAttribute('aria-label', `${index + 1} / ${slides.length}`),
   );
@@ -34,8 +33,26 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
   counter.setAttribute('aria-live', 'polite');
 
   const track = slides[0].parentElement as HTMLElement;
-  const show = (target: number): void => {
-    current = (target + slides.length) % slides.length;
+  const step = slideStepper({ slides, track, counter, labels });
+
+  figure.append(controlBar(labels, counter, step));
+  bindArrowKeys(figure, step);
+  bindSwipe(figure, step);
+
+  step(0);
+}
+
+interface SlideshowParts {
+  slides: HTMLElement[];
+  track: HTMLElement;
+  counter: HTMLElement;
+  labels: SlideshowLabels;
+}
+
+function slideStepper({ slides, track, counter, labels }: SlideshowParts): (delta: number) => void {
+  let current = 0;
+  return (delta) => {
+    current = (current + delta + slides.length) % slides.length;
     // Slide the track; CSS transitions the transform (instant under reduced motion).
     track.style.transform = `translateX(${current * -100}%)`;
     slides.forEach((slide, index) => {
@@ -47,35 +64,45 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
     });
     counter.textContent = labels.position(current + 1, slides.length);
   };
+}
 
+function controlBar(
+  labels: SlideshowLabels,
+  counter: HTMLElement,
+  step: (delta: number) => void,
+): HTMLElement {
   const previous = control({
     className: 'reader-slideshow__prev',
     glyph: '‹',
     label: labels.previous,
-    onClick: () => show(current - 1),
+    onClick: () => step(-1),
   });
   const next = control({
     className: 'reader-slideshow__next',
     glyph: '›',
     label: labels.next,
-    onClick: () => show(current + 1),
+    onClick: () => step(1),
   });
 
   const controls = document.createElement('div');
   controls.className = 'reader-slideshow__controls';
   controls.append(previous, counter, next);
-  figure.append(controls);
+  return controls;
+}
 
+function bindArrowKeys(figure: HTMLElement, step: (delta: number) => void): void {
   figure.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowRight') show(current + 1);
-    else if (event.key === 'ArrowLeft') show(current - 1);
+    if (event.key === 'ArrowRight') step(1);
+    else if (event.key === 'ArrowLeft') step(-1);
     else return;
     event.preventDefault();
   });
+}
 
-  // The reader body is a horizontally-swipeable "back to list" surface, so the
-  // carousel claims horizontal drags (stop them reaching it) while letting a
-  // vertical drag bubble, so the article still scrolls when dragging on an image.
+// The reader body is a horizontally-swipeable "back to list" surface, so the
+// carousel claims horizontal drags (stop them reaching it) while letting a
+// vertical drag bubble, so the article still scrolls when dragging on an image.
+function bindSwipe(figure: HTMLElement, step: (delta: number) => void): void {
   let startX = 0;
   let startY = 0;
   let axis: 'none' | 'horizontal' | 'vertical' = 'none';
@@ -110,13 +137,11 @@ function build(figure: HTMLElement, slides: HTMLElement[], labels: SlideshowLabe
       (event.changedTouches[0]?.clientY ?? 0) - startY,
     );
     if (direction !== 0) {
-      show(current + direction);
+      step(direction);
       event.stopPropagation();
     }
     axis = 'none';
   });
-
-  show(0);
 }
 
 interface ControlSpec {

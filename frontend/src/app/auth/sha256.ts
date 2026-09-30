@@ -28,18 +28,7 @@ const MESSAGE_SCHEDULE = new Uint32Array(64);
 
 /** SHA-256 of a UTF-8 string, lowercase hex. */
 export function sha256Hex(input: string): string {
-  const bytes = utf8Bytes(input);
-  const bitLength = bytes.length * 8;
-
-  // Pad: 0x80, then zeroes, then the 64-bit big-endian bit length.
-  const padded = new Uint8Array(((bytes.length + 9 + 63) >> 6) << 6);
-  padded.set(bytes);
-  padded[bytes.length] = 0x80;
-  // Lengths here are far below 2^32 bits, so the high word is always zero.
-  padded[padded.length - 4] = (bitLength >>> 24) & 0xff;
-  padded[padded.length - 3] = (bitLength >>> 16) & 0xff;
-  padded[padded.length - 2] = (bitLength >>> 8) & 0xff;
-  padded[padded.length - 1] = bitLength & 0xff;
+  const padded = padMessage(utf8Bytes(input));
 
   let h0 = 0x6a09e667,
     h1 = 0xbb67ae85,
@@ -51,22 +40,7 @@ export function sha256Hex(input: string): string {
     h7 = 0x5be0cd19;
 
   for (let blockOffset = 0; blockOffset < padded.length; blockOffset += 64) {
-    for (let index = 0; index < 16; index++) {
-      const byteOffset = blockOffset + index * 4;
-      MESSAGE_SCHEDULE[index] =
-        (padded[byteOffset] << 24) |
-        (padded[byteOffset + 1] << 16) |
-        (padded[byteOffset + 2] << 8) |
-        padded[byteOffset + 3];
-    }
-    for (let index = 16; index < 64; index++) {
-      const w15 = MESSAGE_SCHEDULE[index - 15];
-      const w2 = MESSAGE_SCHEDULE[index - 2];
-      const s0 = ((w15 >>> 7) | (w15 << 25)) ^ ((w15 >>> 18) | (w15 << 14)) ^ (w15 >>> 3);
-      const s1 = ((w2 >>> 17) | (w2 << 15)) ^ ((w2 >>> 19) | (w2 << 13)) ^ (w2 >>> 10);
-      MESSAGE_SCHEDULE[index] =
-        (MESSAGE_SCHEDULE[index - 16] + s0 + MESSAGE_SCHEDULE[index - 7] + s1) | 0;
-    }
+    expandSchedule(padded, blockOffset);
 
     let workingA = h0,
       workingB = h1,
@@ -111,6 +85,39 @@ export function sha256Hex(input: string): string {
   }
 
   return word(h0) + word(h1) + word(h2) + word(h3) + word(h4) + word(h5) + word(h6) + word(h7);
+}
+
+/** Pad: 0x80, then zeroes, then the 64-bit big-endian bit length. */
+function padMessage(bytes: Uint8Array): Uint8Array {
+  const bitLength = bytes.length * 8;
+  const padded = new Uint8Array(((bytes.length + 9 + 63) >> 6) << 6);
+  padded.set(bytes);
+  padded[bytes.length] = 0x80;
+  // Lengths here are far below 2^32 bits, so the high word is always zero.
+  padded[padded.length - 4] = (bitLength >>> 24) & 0xff;
+  padded[padded.length - 3] = (bitLength >>> 16) & 0xff;
+  padded[padded.length - 2] = (bitLength >>> 8) & 0xff;
+  padded[padded.length - 1] = bitLength & 0xff;
+  return padded;
+}
+
+function expandSchedule(padded: Uint8Array, blockOffset: number): void {
+  for (let index = 0; index < 16; index++) {
+    const byteOffset = blockOffset + index * 4;
+    MESSAGE_SCHEDULE[index] =
+      (padded[byteOffset] << 24) |
+      (padded[byteOffset + 1] << 16) |
+      (padded[byteOffset + 2] << 8) |
+      padded[byteOffset + 3];
+  }
+  for (let index = 16; index < 64; index++) {
+    const w15 = MESSAGE_SCHEDULE[index - 15];
+    const w2 = MESSAGE_SCHEDULE[index - 2];
+    const s0 = ((w15 >>> 7) | (w15 << 25)) ^ ((w15 >>> 18) | (w15 << 14)) ^ (w15 >>> 3);
+    const s1 = ((w2 >>> 17) | (w2 << 15)) ^ ((w2 >>> 19) | (w2 << 13)) ^ (w2 >>> 10);
+    MESSAGE_SCHEDULE[index] =
+      (MESSAGE_SCHEDULE[index - 16] + s0 + MESSAGE_SCHEDULE[index - 7] + s1) | 0;
+  }
 }
 
 function word(x: number): string {

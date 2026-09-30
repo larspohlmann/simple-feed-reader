@@ -91,6 +91,24 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   includeInForYou: true,
 });
 
+function inputDefaults() {
+  return {
+    tagTree: [] as TagNode[],
+    untagged: [] as SubscriptionDto[],
+    totalUnread: 0,
+    favoritesCount: 0,
+    keptCount: 0,
+    selection: { kind: 'all', id: null, unread: true } as Selection,
+    loading: false,
+    searchLoading: false,
+    organising: false,
+    savedSearches: [] as SavedSearchDto[],
+    activeSavedSearchId: null as number | null,
+    mailEnabled: false,
+    digestEnabled: true,
+  };
+}
+
 function mount(
   over: Partial<{
     tagTree: TagNode[];
@@ -131,22 +149,9 @@ function mount(
     ],
   });
   const fixture = TestBed.createComponent(SidebarComponent);
-  fixture.componentRef.setInput('tagTree', over.tagTree ?? []);
-  fixture.componentRef.setInput('untagged', over.untagged ?? []);
-  fixture.componentRef.setInput('totalUnread', over.totalUnread ?? 0);
-  fixture.componentRef.setInput('favoritesCount', over.favoritesCount ?? 0);
-  fixture.componentRef.setInput('keptCount', over.keptCount ?? 0);
-  fixture.componentRef.setInput(
-    'selection',
-    over.selection ?? { kind: 'all', id: null, unread: true },
-  );
-  fixture.componentRef.setInput('loading', false);
-  fixture.componentRef.setInput('searchLoading', over.searchLoading ?? false);
-  fixture.componentRef.setInput('organising', over.organising ?? false);
-  fixture.componentRef.setInput('savedSearches', over.savedSearches ?? []);
-  fixture.componentRef.setInput('activeSavedSearchId', over.activeSavedSearchId ?? null);
-  fixture.componentRef.setInput('mailEnabled', over.mailEnabled ?? false);
-  fixture.componentRef.setInput('digestEnabled', over.digestEnabled ?? true);
+  for (const [name, fallback] of Object.entries(inputDefaults())) {
+    fixture.componentRef.setInput(name, over[name as keyof typeof over] ?? fallback);
+  }
   fixture.detectChanges();
   return fixture;
 }
@@ -338,14 +343,13 @@ describe('SidebarComponent', () => {
     function drop(
       item: SubscriptionDto,
       target: DropData,
-      source: DropData = { kind: 'untagged' },
-      currentIndex = 0,
+      from: { source?: DropData; currentIndex?: number } = {},
     ): CdkDragDrop<DropData> {
       return {
-        previousContainer: { data: source },
+        previousContainer: { data: from.source ?? { kind: 'untagged' } },
         container: { data: target },
         item: { data: item },
-        currentIndex,
+        currentIndex: from.currentIndex ?? 0,
       } as unknown as CdkDragDrop<DropData>;
     }
 
@@ -367,13 +371,13 @@ describe('SidebarComponent', () => {
     }
 
     it('moves an untagged feed into a tag at the drop index', () => {
-      const spy = moveOf(drop(sub(1), onTag(3), { kind: 'untagged' }, 2));
+      const spy = moveOf(drop(sub(1), onTag(3), { source: { kind: 'untagged' }, currentIndex: 2 }));
       expect(spy).toHaveBeenCalledWith({ sub: sub(1), fromTagId: null, toTagId: 3, position: 2 });
     });
 
     it('moves a feed from its source tag to the target tag at the drop index', () => {
       const subscription = withTags(sub(1), [tag(3)]);
-      const spy = moveOf(drop(subscription, onTag(7), onTag(3), 1));
+      const spy = moveOf(drop(subscription, onTag(7), { source: onTag(3), currentIndex: 1 }));
       expect(spy).toHaveBeenCalledWith({
         sub: subscription,
         fromTagId: 3,
@@ -384,7 +388,9 @@ describe('SidebarComponent', () => {
 
     it('moves a feed onto the untagged list at the drop index', () => {
       const subscription = withTags(sub(1), [tag(3)]);
-      const spy = moveOf(drop(subscription, { kind: 'untagged' }, onTag(3), 0));
+      const spy = moveOf(
+        drop(subscription, { kind: 'untagged' }, { source: onTag(3), currentIndex: 0 }),
+      );
       expect(spy).toHaveBeenCalledWith({
         sub: subscription,
         fromTagId: 3,
@@ -405,7 +411,7 @@ describe('SidebarComponent', () => {
           position: number | null,
         ) => spy({ sub, fromTagId, toTagId, position }),
       );
-      fixture.componentInstance.onTagHeadDrop(drop(subscription, onTag(7), onTag(3)));
+      fixture.componentInstance.onTagHeadDrop(drop(subscription, onTag(7), { source: onTag(3) }));
       expect(spy).toHaveBeenCalledWith({
         sub: subscription,
         fromTagId: 3,

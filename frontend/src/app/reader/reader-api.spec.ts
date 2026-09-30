@@ -33,7 +33,7 @@ describe('ReaderApi', () => {
   });
 
   it('POSTs a subscribe URL', () => {
-    api.subscribe('https://example.com/feed').subscribe();
+    api.subscribe({ url: 'https://example.com/feed' }).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.method).toBe('POST');
     expect(testRequest.request.body).toEqual({ url: 'https://example.com/feed' });
@@ -41,13 +41,13 @@ describe('ReaderApi', () => {
   });
 
   it('includes tagIds in the subscribe body only when tags are selected', () => {
-    api.subscribe('https://example.com/feed', undefined, [2, 5]).subscribe();
+    api.subscribe({ url: 'https://example.com/feed', tagIds: [2, 5] }).subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.body).toEqual({ url: 'https://example.com/feed', tagIds: [2, 5] });
     testRequest.flush({ subscription: {} });
 
     // An empty selection stays byte-compatible with the tag-less body.
-    api.subscribe('https://example.com/feed', undefined, []).subscribe();
+    api.subscribe({ url: 'https://example.com/feed', tagIds: [] }).subscribe();
     expect(ctrl.expectOne('https://api.test/api/subscriptions').request.body).toEqual({
       url: 'https://example.com/feed',
     });
@@ -55,12 +55,11 @@ describe('ReaderApi', () => {
 
   it('detects ReaderApi dropping a supplied WordPress title from the subscribe body', () => {
     api
-      .subscribe(
-        'https://wp.example/wp-json/wp/v2/posts',
-        'wp-json',
-        undefined,
-        'WordPress Example',
-      )
+      .subscribe({
+        url: 'https://wp.example/wp-json/wp/v2/posts',
+        format: 'wp-json',
+        title: 'WordPress Example',
+      })
       .subscribe();
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.body).toEqual({

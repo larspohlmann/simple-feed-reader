@@ -293,40 +293,38 @@ export function queryFromSelection(selection: Selection): EntryQuery {
 }
 
 function viewQuery(selection: Selection): EntryQuery {
-  switch (selection.kind) {
-    case 'favorites':
-      return { view: 'favorites' };
-    case 'kept':
-      return { view: 'kept' };
-    case 'viewed':
-      return { view: 'viewed' };
-    case 'for-you':
-      // The one list whose unread filter is not a view of its own: the ranked
-      // feed IS the view, so the filter travels beside it (#710).
-      return selection.unread ? { view: 'for-you', unread: true } : { view: 'for-you' };
-    case 'tag':
-      return { view: selection.unread ? 'unread' : 'all', tag: selection.id ?? undefined };
-    case 'subscription':
-      return { view: selection.unread ? 'unread' : 'all', subscription: selection.id ?? undefined };
-    case 'all':
-      return { view: selection.unread ? 'unread' : 'all' };
-    case 'saved-searches':
-      // Its own endpoint, so the filter rides beside the view exactly as for
-      // you's does rather than becoming a view of its own.
-      return selection.unread
-        ? { view: 'saved-searches', unread: true }
-        : { view: 'saved-searches' };
-    case 'saved-search':
-      // A single saved search reads the membership table by id, not a live
-      // query, so it carries the id and takes the unread refinement like any list.
-      return selection.unread
-        ? { view: 'all', savedSearchId: selection.id ?? undefined, unread: true }
-        : { view: 'all', savedSearchId: selection.id ?? undefined };
-    case 'search':
-      return selection.unread
-        ? { view: 'all', q: selection.term, unread: true }
-        : { view: 'all', q: selection.term };
-  }
+  return VIEW_QUERY[selection.kind](selection);
+}
+
+type SelectionKind = Selection['kind'];
+
+const VIEW_QUERY: Record<SelectionKind, (selection: Selection) => EntryQuery> = {
+  favorites: () => ({ view: 'favorites' }),
+  kept: () => ({ view: 'kept' }),
+  viewed: () => ({ view: 'viewed' }),
+  // The one list whose unread filter is not a view of its own: the ranked
+  // feed IS the view, so the filter travels beside it (#710).
+  'for-you': (selection) => withUnread({ view: 'for-you' }, selection.unread),
+  tag: (selection) => ({ view: listView(selection), tag: selection.id ?? undefined }),
+  subscription: (selection) => ({
+    view: listView(selection),
+    subscription: selection.id ?? undefined,
+  }),
+  all: (selection) => ({ view: listView(selection) }),
+  'saved-searches': (selection) => withUnread({ view: 'saved-searches' }, selection.unread),
+  // A single saved search reads the membership table by id, not a live
+  // query, so it carries the id and takes the unread refinement like any list.
+  'saved-search': (selection) =>
+    withUnread({ view: 'all', savedSearchId: selection.id ?? undefined }, selection.unread),
+  search: (selection) => withUnread({ view: 'all', q: selection.term }, selection.unread),
+};
+
+function withUnread(query: EntryQuery, unread: boolean): EntryQuery {
+  return unread ? { ...query, unread: true } : query;
+}
+
+function listView(selection: Selection): EntryQuery['view'] {
+  return selection.unread ? 'unread' : 'all';
 }
 
 /** What "Mark all read" applies to for a selection, or null where the action
@@ -341,27 +339,27 @@ export type MarkReadTarget =
   | { scope: 'saved-search'; id: number };
 
 export function markReadTarget(selection: Selection): MarkReadTarget | null {
-  switch (selection.kind) {
-    case 'all':
-      return { scope: 'all' };
-    case 'tag':
-      return selection.id != null ? { scope: 'tag', id: selection.id } : null;
-    case 'subscription':
-      return selection.id != null ? { scope: 'feed', id: selection.id } : null;
-    case 'search':
-      return selection.term ? { scope: 'search', term: selection.term } : null;
-    case 'for-you':
-      // No id and no term: the list is the reader's own ranked feed, so the
-      // endpoint needs nothing beyond who is asking (#710).
-      return { scope: 'for-you' };
-    case 'saved-searches':
-      // No id and no term: the endpoint needs nothing beyond who is asking.
-      return { scope: 'saved-searches' };
-    case 'saved-search':
-      return selection.id != null ? { scope: 'saved-search', id: selection.id } : null;
-    default:
-      return null;
-  }
+  return MARK_READ_TARGET[selection.kind]?.(selection) ?? null;
+}
+
+const MARK_READ_TARGET: Partial<
+  Record<SelectionKind, (selection: Selection) => MarkReadTarget | null>
+> = {
+  all: () => ({ scope: 'all' }),
+  tag: idScoped('tag'),
+  subscription: idScoped('feed'),
+  search: (selection) => (selection.term ? { scope: 'search', term: selection.term } : null),
+  // No id and no term: the list is the reader's own ranked feed, so the
+  // endpoint needs nothing beyond who is asking (#710).
+  'for-you': () => ({ scope: 'for-you' }),
+  'saved-searches': () => ({ scope: 'saved-searches' }),
+  'saved-search': idScoped('saved-search'),
+};
+
+function idScoped(
+  scope: Extract<MarkReadTarget, { id: number }>['scope'],
+): (selection: Selection) => MarkReadTarget | null {
+  return (selection) => (selection.id != null ? { scope, id: selection.id } : null);
 }
 
 function posInt(value: string | null): number | null {

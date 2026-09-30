@@ -60,61 +60,89 @@ interface DetectedRun {
   end: number;
 }
 
+/** One planning pass: what every step reads, and the blocks and page index it
+ *  advances. */
+interface PlanPass {
+  readonly ordered: EntryDto[];
+  readonly templates: readonly (readonly Slot[])[];
+  readonly complete: boolean;
+  readonly collapseEnabled: boolean;
+  readonly blocks: MagazineBlock[];
+  page: number;
+}
+
+interface SlotAt {
+  page: number;
+  position: number;
+}
+
 export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
+  const pass = startPass(input);
+  let index: number | null = 0;
+  while (index !== null && index < pass.ordered.length) index = planStep(pass, index);
+  return pass.blocks;
+}
+
+function startPass(input: MagazinePlanInput): PlanPass {
   const { entries, grouping, complete } = input;
-  const blocks: MagazineBlock[] = [];
   const sample = entries.slice(0, LEADING_WINDOW);
-  const collapseEnabled = grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES;
   // An image-poor view always goes text-forward — with almost no pictures, every
   // image slot would collapse anyway. Otherwise the text family is worth it only
   // when the copy is long enough to fill its quotes (isTextRich).
   const useTextFamily = isImagePoor(sample) || (!isImageRich(sample) && isTextRich(sample));
-  const templates = useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES;
-  // Land the reader on a picture: the image family pulls the nearest image entry
-  // to the front when the first are image-less. The text family opens on a
-  // headline by design, so it keeps strict order.
-  const ordered = useTextFamily ? entries : leadWithImage(entries);
+  return {
+    // Land the reader on a picture: the image family pulls the nearest image entry
+    // to the front when the first are image-less. The text family opens on a
+    // headline by design, so it keeps strict order.
+    ordered: useTextFamily ? entries : leadWithImage(entries),
+    templates: useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES,
+    complete,
+    collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
+    blocks: [],
+    page: 0,
+  };
+}
 
-  let index = 0;
-  let page = 0;
-
-  while (index < ordered.length) {
-    if (collapseEnabled) {
-      const run = detectRun(ordered, index);
-      if (run.sourceEntries.length >= RUN_MIN) {
-        // Defer only while the run's OWN membership is undetermined — it might
-        // still grow, or a trailing foreign entry might turn out bridged. Once
-        // terminated (a real gap, or a foreign entry with a successor), it
-        // collapses. Keeps the plan a stable prefix.
-        if (!complete && run.end >= ordered.length - 1) break;
-        // Featured lead comes FIRST, so a group block never opens the list.
-        page = emitFeaturedLead(blocks, run.sourceEntries, templates, page);
-        blocks.push(digest(run.sourceEntries.slice(FEATURED_LEAD)));
-        page = emitInterlopers(blocks, run.interlopers, templates, page);
-        index = run.end;
-        continue;
-      }
-    }
-
-    const template = templateFor(page, templates);
-    const remaining = ordered.length - index;
-    if (remaining < template.length && !complete) break;
-
-    // Stop an ordinary page short of a collapsing run's head. Template pages
-    // advance in whole strides, so a run not aligned to a boundary would be
-    // straddled — laid out flat, too short to qualify. Ending the page at the
-    // run start avoids this.
-    const naturalLength = Math.min(template.length, remaining);
-    const take = collapseEnabled
-      ? cappedBeforeLongRun(ordered, index, naturalLength)
-      : naturalLength;
-    const slice = ordered.slice(index, index + take);
-    blocks.push(...layOutPage(template, slice, page));
-    index += slice.length;
-    page += 1;
+/** Plans from `index` and returns where the next step starts, or null when the
+ *  rest is held back until more entries load. */
+function planStep(pass: PlanPass, index: number): number | null {
+  if (pass.collapseEnabled) {
+    const run = detectRun(pass.ordered, index);
+    if (run.sourceEntries.length >= RUN_MIN) return collapseRun(pass, run);
   }
+  return emitOrdinaryPage(pass, index);
+}
 
-  return blocks;
+function collapseRun(pass: PlanPass, run: DetectedRun): number | null {
+  // Defer only while the run's OWN membership is undetermined — it might
+  // still grow, or a trailing foreign entry might turn out bridged. Once
+  // terminated (a real gap, or a foreign entry with a successor), it
+  // collapses. Keeps the plan a stable prefix.
+  if (!pass.complete && run.end >= pass.ordered.length - 1) return null;
+  // Featured lead comes FIRST, so a group block never opens the list.
+  emitFeaturedLead(pass, run);
+  pass.blocks.push(digest(run.sourceEntries.slice(FEATURED_LEAD)));
+  emitInterlopers(pass, run);
+  return run.end;
+}
+
+function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
+  const template = templateFor(pass.page, pass.templates);
+  const remaining = pass.ordered.length - index;
+  if (remaining < template.length && !pass.complete) return null;
+
+  // Stop an ordinary page short of a collapsing run's head. Template pages
+  // advance in whole strides, so a run not aligned to a boundary would be
+  // straddled — laid out flat, too short to qualify. Ending the page at the
+  // run start avoids this.
+  const naturalLength = Math.min(template.length, remaining);
+  const take = pass.collapseEnabled
+    ? cappedBeforeLongRun(pass.ordered, index, naturalLength)
+    : naturalLength;
+  const slice = pass.ordered.slice(index, index + take);
+  pass.blocks.push(...layOutPage(template, slice, pass.page));
+  pass.page += 1;
+  return index + slice.length;
 }
 
 /** Walk a same-source run from `start`, bridging any single foreign post the
@@ -260,47 +288,31 @@ function layOutPage(template: readonly Slot[], slice: EntryDto[], page: number):
   const budgeted = withinBudget(wanted);
   const assigned = assign(budgeted, slice);
 
-  return assigned.map((kind, position) => toBlock(kind, slice[position], page, position));
+  return assigned.map((kind, position) => toBlock(kind, slice[position], { page, position }));
 }
 
 /** The run's first entries, laid out as ordinary magazine blocks. */
-function emitFeaturedLead(
-  blocks: MagazineBlock[],
-  sourceEntries: EntryDto[],
-  templates: readonly (readonly Slot[])[],
-  page: number,
-): number {
-  return emitPages(blocks, sourceEntries.slice(0, FEATURED_LEAD), templates, page);
+function emitFeaturedLead(pass: PlanPass, run: DetectedRun): void {
+  emitPages(pass, run.sourceEntries.slice(0, FEATURED_LEAD));
 }
 
 /** The foreign posts a run bridged, surfaced after its widget as ordinary
  *  blocks — collapsing the run reveals them rather than re-hiding them. */
-function emitInterlopers(
-  blocks: MagazineBlock[],
-  interlopers: EntryDto[],
-  templates: readonly (readonly Slot[])[],
-  page: number,
-): number {
-  return emitPages(blocks, interlopers, templates, page);
+function emitInterlopers(pass: PlanPass, run: DetectedRun): void {
+  emitPages(pass, run.interlopers);
 }
 
 /** Lay a short list of entries out through the template machinery, in
  *  template-sized chunks so a list longer than one template is never truncated. */
-function emitPages(
-  blocks: MagazineBlock[],
-  items: EntryDto[],
-  templates: readonly (readonly Slot[])[],
-  page: number,
-): number {
+function emitPages(pass: PlanPass, items: EntryDto[]): void {
   let index = 0;
   while (index < items.length) {
-    const template = templateFor(page, templates);
+    const template = templateFor(pass.page, pass.templates);
     const slice = items.slice(index, index + template.length);
-    blocks.push(...layOutPage(template, slice, page));
+    pass.blocks.push(...layOutPage(template, slice, pass.page));
     index += slice.length;
-    page += 1;
+    pass.page += 1;
   }
-  return page;
 }
 
 /** Demote the largest slot until the page fits the height cap. */
@@ -382,31 +394,34 @@ function hasSummary(entry: EntryDto): boolean {
   return entrySnippet(entry).length > 0;
 }
 
+const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
+  // Portraits are refused, demoting to `split`.
+  hero: (entry) => landscapeImageAtLeast(entry, 500),
+  // A portrait image cannot fill a 3:1 band at all.
+  wide: (entry) => landscapeImageAtLeast(entry, 400),
+  split: (entry) => imageAtLeast(entry, 300),
+  thumb: (entry) => entryImage(entry) !== null,
+  quote: (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
+  // A kicker shows a title AND a dek; with no dek it is only a taller
+  // compact, so a summary-less entry demotes past it to the `compact` floor.
+  kicker: (entry) => hasSummary(entry),
+  compact: () => true,
+};
+
 function fits(kind: EntryKind, entry: EntryDto): boolean {
+  return FITS[kind](entry);
+}
+
+/** An unknown width is trusted only alongside the persisted image field. */
+function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
   const image = entryImage(entry);
   const width = image?.width ?? 0;
-  switch (kind) {
-    case 'hero':
-      // An unknown width is trusted at hero size only alongside the persisted
-      // field. Portraits are refused, demoting to `split`.
-      return !!image && !isPortrait(image) && (width >= 500 || (width === 0 && !!entry.imageUrl));
-    case 'wide':
-      // Same unknown-width and portrait guards as hero: a portrait image
-      // cannot fill a 3:1 band at all.
-      return !!image && !isPortrait(image) && (width >= 400 || (width === 0 && !!entry.imageUrl));
-    case 'split':
-      return !!image && (width >= 300 || (width === 0 && !!entry.imageUrl));
-    case 'thumb':
-      return !!image;
-    case 'quote':
-      return entrySnippet(entry).length >= QUOTE_MIN_TEXT;
-    case 'kicker':
-      // A kicker shows a title AND a dek; with no dek it is only a taller
-      // compact, so a summary-less entry demotes past it to the `compact` floor.
-      return hasSummary(entry);
-    case 'compact':
-      return true;
-  }
+  return !!image && (width >= minimumWidth || (width === 0 && !!entry.imageUrl));
+}
+
+function landscapeImageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
+  const image = entryImage(entry);
+  return !!image && !isPortrait(image) && imageAtLeast(entry, minimumWidth);
 }
 
 /** A known-portrait image — declared height clearly exceeds width. Unknown
@@ -416,9 +431,9 @@ function isPortrait(image: EntryImage): boolean {
   return !!image.width && !!image.height && image.height > image.width * 1.05;
 }
 
-function toBlock(kind: EntryKind, entry: EntryDto, page: number, position: number): MagazineBlock {
+function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {
   if (kind === 'split') {
-    return { kind, entry, imageSide: seed(page, position + 97) < 0.5 ? 'left' : 'right' };
+    return { kind, entry, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
   }
   return { kind, entry } as MagazineBlock;
 }

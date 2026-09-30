@@ -26,50 +26,50 @@ describe('focusOpacityForSpan', () => {
   // its top and bottom coincide, so these cases are the plain centre fade.
   describe('a short block (top and bottom coincide)', () => {
     it('is fully opaque at the viewport centre', () => {
-      expect(focusOpacityForSpan(500, 500, 1000)).toBe(1);
+      expect(focusOpacityForSpan({ top: 500, bottom: 500 }, 1000)).toBe(1);
     });
 
     it('fades to the minimum a half-viewport away from the centre', () => {
-      expect(focusOpacityForSpan(0, 0, 1000)).toBe(LIST_FOCUS_CURVE.min);
-      expect(focusOpacityForSpan(1000, 1000, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan({ top: 0, bottom: 0 }, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan({ top: 1000, bottom: 1000 }, 1000)).toBe(LIST_FOCUS_CURVE.min);
     });
 
     it('fades symmetrically and monotonically with distance from the centre', () => {
-      const near = focusOpacityForSpan(600, 600, 1000); // 100px from centre
-      const far = focusOpacityForSpan(800, 800, 1000); // 300px from centre
+      const near = focusOpacityForSpan({ top: 600, bottom: 600 }, 1000); // 100px from centre
+      const far = focusOpacityForSpan({ top: 800, bottom: 800 }, 1000); // 300px from centre
       expect(near).toBeLessThan(1);
       expect(near).toBeGreaterThan(far);
-      expect(focusOpacityForSpan(400, 400, 1000)).toBeCloseTo(near, 5); // mirror above centre
+      expect(focusOpacityForSpan({ top: 400, bottom: 400 }, 1000)).toBeCloseTo(near, 5); // mirror above centre
     });
 
     it('clamps blocks beyond a half-viewport to the minimum, never below', () => {
-      expect(focusOpacityForSpan(-500, -500, 1000)).toBe(LIST_FOCUS_CURVE.min);
-      expect(focusOpacityForSpan(5000, 5000, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan({ top: -500, bottom: -500 }, 1000)).toBe(LIST_FOCUS_CURVE.min);
+      expect(focusOpacityForSpan({ top: 5000, bottom: 5000 }, 1000)).toBe(LIST_FOCUS_CURVE.min);
     });
   });
 
   it('keeps a block fully opaque while its span covers the reading centre', () => {
     // A source group taller than the viewport whose centre is far off-screen: it
     // still straddles the centre line, so it is what the reader is reading (#213).
-    expect(focusOpacityForSpan(-400, 600, 1000)).toBe(1);
-    expect(focusOpacityForSpan(0, 5000, 1000)).toBe(1);
-    expect(focusOpacityForSpan(500, 500, 1000)).toBe(1); // edge touching the centre
+    expect(focusOpacityForSpan({ top: -400, bottom: 600 }, 1000)).toBe(1);
+    expect(focusOpacityForSpan({ top: 0, bottom: 5000 }, 1000)).toBe(1);
+    expect(focusOpacityForSpan({ top: 500, bottom: 500 }, 1000)).toBe(1); // edge touching the centre
   });
 
   it('fades a block clear of the centre by its nearest edge, not its centre', () => {
     // A tall block sitting just below the centre: its geometric centre is a full
     // viewport away (the old curve would clamp it to the minimum), but its top
     // edge is only 100px past the centre, so it stays close to opaque.
-    expect(focusOpacityForSpan(600, 1600, 1000)).toBe(0.84); // 1 - (100/500)*(1 - 0.2)
+    expect(focusOpacityForSpan({ top: 600, bottom: 1600 }, 1000)).toBe(0.84); // 1 - (100/500)*(1 - 0.2)
   });
 
   it('fades to the minimum once the nearest edge is a half-viewport away', () => {
-    expect(focusOpacityForSpan(1000, 2000, 1000)).toBe(LIST_FOCUS_CURVE.min); // top at centre+half
-    expect(focusOpacityForSpan(-2000, 0, 1000)).toBe(LIST_FOCUS_CURVE.min); // bottom at centre-half
+    expect(focusOpacityForSpan({ top: 1000, bottom: 2000 }, 1000)).toBe(LIST_FOCUS_CURVE.min); // top at centre+half
+    expect(focusOpacityForSpan({ top: -2000, bottom: 0 }, 1000)).toBe(LIST_FOCUS_CURVE.min); // bottom at centre-half
   });
 
   it('degrades to fully opaque when the viewport has no measured height', () => {
-    expect(focusOpacityForSpan(0, 400, 0)).toBe(1);
+    expect(focusOpacityForSpan({ top: 0, bottom: 400 }, 0)).toBe(1);
   });
 });
 
@@ -153,46 +153,46 @@ describe('a curve with a plateau and a step', () => {
   const stepped: FocusCurve = { plateau: 0.1, falloff: 0.4, curvature: 1, min: 0.2 };
 
   it('holds full opacity across the plateau, to its very edge', () => {
-    expect(focusOpacityForSpan(500, 500, 1000, stepped)).toBe(1);
-    expect(focusOpacityForSpan(600, 600, 1000, stepped)).toBe(1);
-    expect(focusOpacityForSpan(400, 400, 1000, stepped)).toBe(1);
+    expect(focusOpacityForSpan({ top: 500, bottom: 500 }, 1000, stepped)).toBe(1);
+    expect(focusOpacityForSpan({ top: 600, bottom: 600 }, 1000, stepped)).toBe(1);
+    expect(focusOpacityForSpan({ top: 400, bottom: 400 }, 1000, stepped)).toBe(1);
   });
 
   it('drops by the falloff the moment a block leaves the plateau', () => {
-    expect(focusOpacityForSpan(601, 601, 1000, stepped)).toBe(0.599);
-    expect(focusOpacityForSpan(399, 399, 1000, stepped)).toBe(0.599);
+    expect(focusOpacityForSpan({ top: 601, bottom: 601 }, 1000, stepped)).toBe(0.599);
+    expect(focusOpacityForSpan({ top: 399, bottom: 399 }, 1000, stepped)).toBe(0.599);
   });
 
   it('runs the curve from the stepped value down to the floor', () => {
-    expect(focusOpacityForSpan(800, 800, 1000, stepped)).toBe(0.4); // halfway: 0.6 - 0.5 * 0.4
+    expect(focusOpacityForSpan({ top: 800, bottom: 800 }, 1000, stepped)).toBe(0.4); // halfway: 0.6 - 0.5 * 0.4
   });
 
   it('bends the curve after the step by its curvature', () => {
     const early = { ...stepped, curvature: 0.5 };
     const late = { ...stepped, curvature: 2 };
-    expect(focusOpacityForSpan(700, 700, 1000, early)).toBe(0.4); // 0.6 - sqrt(0.25) * 0.4
-    expect(focusOpacityForSpan(800, 800, 1000, late)).toBe(0.5); // 0.6 - 0.5^2 * 0.4
+    expect(focusOpacityForSpan({ top: 700, bottom: 700 }, 1000, early)).toBe(0.4); // 0.6 - sqrt(0.25) * 0.4
+    expect(focusOpacityForSpan({ top: 800, bottom: 800 }, 1000, late)).toBe(0.5); // 0.6 - 0.5^2 * 0.4
   });
 
   it('reaches its floor a half-viewport away, and never goes below it', () => {
-    expect(focusOpacityForSpan(1000, 1000, 1000, stepped)).toBe(0.2);
-    expect(focusOpacityForSpan(9000, 9000, 1000, stepped)).toBe(0.2);
+    expect(focusOpacityForSpan({ top: 1000, bottom: 1000 }, 1000, stepped)).toBe(0.2);
+    expect(focusOpacityForSpan({ top: 9000, bottom: 9000 }, 1000, stepped)).toBe(0.2);
   });
 
   it('fades straight from full opacity when the falloff is zero', () => {
     const smooth = { ...stepped, falloff: 0 };
-    expect(focusOpacityForSpan(601, 601, 1000, smooth)).toBe(0.998);
-    expect(focusOpacityForSpan(800, 800, 1000, smooth)).toBe(0.6); // 1 - 0.5 * 0.8
+    expect(focusOpacityForSpan({ top: 601, bottom: 601 }, 1000, smooth)).toBe(0.998);
+    expect(focusOpacityForSpan({ top: 800, bottom: 800 }, 1000, smooth)).toBe(0.6); // 1 - 0.5 * 0.8
   });
 
   it('never steps below the floor, however large the falloff', () => {
     const harsh = { ...stepped, falloff: 0.9 };
-    expect(focusOpacityForSpan(601, 601, 1000, harsh)).toBe(0.2);
-    expect(focusOpacityForSpan(800, 800, 1000, harsh)).toBe(0.2);
+    expect(focusOpacityForSpan({ top: 601, bottom: 601 }, 1000, harsh)).toBe(0.2);
+    expect(focusOpacityForSpan({ top: 800, bottom: 800 }, 1000, harsh)).toBe(0.2);
   });
 
   it('leaves everything opaque when a plateau swallows the half-viewport', () => {
-    expect(focusOpacityForSpan(0, 0, 1000, { ...stepped, plateau: 0.5 })).toBe(1);
-    expect(focusOpacityForSpan(0, 0, 1000, { ...stepped, plateau: 0.9 })).toBe(1);
+    expect(focusOpacityForSpan({ top: 0, bottom: 0 }, 1000, { ...stepped, plateau: 0.5 })).toBe(1);
+    expect(focusOpacityForSpan({ top: 0, bottom: 0 }, 1000, { ...stepped, plateau: 0.9 })).toBe(1);
   });
 });
