@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { signInAsAdmin } from './support/auth';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryDetailJson, entryWire } from './support/reader';
 
 const PHONE = { width: 375, height: 812 };
@@ -124,7 +124,7 @@ async function stubEntries(page: Page): Promise<void> {
  * width where a long word has room to fit.
  */
 async function chooseLayout(page: Page, layout: 'list' | 'magazine'): Promise<void> {
-  await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
+  await presetLocalStorage(page, { 'sfr.layout': layout });
 }
 
 async function signInWithEntries(page: Page): Promise<boolean> {
