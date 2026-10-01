@@ -1,5 +1,4 @@
-import { DestroyRef, Injectable, inject } from '@angular/core';
-import { READER_SCROLLER } from '../../scroll/reader-scroller';
+import { DestroyRef, ElementRef, Injectable, Signal, inject, signal } from '@angular/core';
 import { ListScrollMemory } from '../../scroll/list-scroll-memory';
 
 // Article scroll-restore settle: re-assert the target for at most this many frames
@@ -12,8 +11,9 @@ const ARTICLE_SETTLE_STABLE = 4;
  *  (re-asserted across the content swap/image loads) or the user scrolls. */
 @Injectable()
 export class ArticleScrollRestore {
-  private readonly scroller = inject(READER_SCROLLER);
+  private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly scroll = inject(ListScrollMemory);
+  private scroller: Signal<HTMLElement | undefined> = signal(undefined);
 
   private pendingRestore: { id: number; top: number } | null = null;
   private restoreRaf = 0;
@@ -22,11 +22,15 @@ export class ArticleScrollRestore {
     // A real wheel gesture hands scrolling back to the user, cancelling any
     // in-flight restore so it never fights them.
     const abortRestore = (): void => this.abort();
-    this.scroller.addEventListener('wheel', abortRestore, { passive: true });
+    this.layer.addEventListener('wheel', abortRestore, { passive: true });
     inject(DestroyRef).onDestroy(() => {
-      this.scroller.removeEventListener('wheel', abortRestore);
+      this.layer.removeEventListener('wheel', abortRestore);
       this.cancelRestore();
     });
+  }
+
+  connect(scroller: Signal<HTMLElement | undefined>): void {
+    this.scroller = scroller;
   }
 
   /** Arm a restore for a newly opened entry if a position is remembered for it. */
@@ -65,20 +69,20 @@ export class ArticleScrollRestore {
   private startRestore(currentId: () => number | undefined): void {
     this.cancelRestore();
     const pending = this.pendingRestore;
-    if (!pending) return;
+    const scroller = this.scroller();
+    if (!pending || !scroller) return;
     // Rough landing right away so the restore holds even where rAF is throttled
     // (e.g. a backgrounded tab); the loop below then refines it as height settles.
-    this.scroller.scrollTop = pending.top;
+    scroller.scrollTop = pending.top;
     if (typeof requestAnimationFrame === 'undefined') return;
     let frames = 0;
     let stable = 0;
     let lastHeight = -1;
     const step = (): void => {
       const pending = this.pendingRestore;
-      const element = this.scroller;
       if (!pending || pending.id !== currentId()) return; // aborted or entry changed
-      element.scrollTop = pending.top;
-      const height = element.scrollHeight;
+      scroller.scrollTop = pending.top;
+      const height = scroller.scrollHeight;
       stable = height === lastHeight ? stable + 1 : 0;
       lastHeight = height;
       if (++frames < ARTICLE_SETTLE_FRAMES && stable < ARTICLE_SETTLE_STABLE) {

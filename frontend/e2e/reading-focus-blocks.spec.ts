@@ -80,7 +80,7 @@ test.describe('Reading focus block detection', () => {
     await page.reload();
 
     await page.getByText('Nested article', { exact: false }).first().click();
-    const pane = page.locator('app-reader-view');
+    const pane = page.locator('app-reader-view .scroller');
     await expect(pane.locator('.content p').last()).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 

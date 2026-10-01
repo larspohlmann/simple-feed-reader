@@ -85,7 +85,7 @@ app-reader-header.hidden {
 
 /* Full-screen article over the still-mounted list (#128), sliding in from the
    right. Lives on a wrapper, not `app-reader-view` itself: a transform on that
-   component's own scroller would hijack `position: fixed` descendants (#100). */
+   component would hijack its `position: fixed` descendants (#100). */
 .article-overlay {
   position: absolute;
   inset: 0;

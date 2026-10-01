@@ -55,6 +55,7 @@ discover panel and the auth card each arrived at 12px independently.
 | `--bar-h` | `56px` | **fallback** for the floating app bar's height |
 | `--tap-target` | `44px` | the documented minimum touch target |
 | `--list-bar-h` | `0px` | the entry list's own bar; overwritten on its host once measured |
+| `--reader-bar-h` | `0px` | the article's toolbar; overwritten on the reader view's host once measured |
 | `--bar-gap` | `var(--space-4)` | breathing room between a floating bar and the content under it |
 | `--magazine-measure` | `680px` | the magazine column's content measure. A token rather than a literal in `entry-list` because `<app-feed-intro>` needs the same width, and it cannot inherit it: the list's `.rows.magazine > *` rule carries the list's encapsulation attribute, while the block is created by the reader shell |
 | `--feed-logo-max-h` | `28px` | the ceiling for a feed's own logo in `<app-feed-intro>`; sized as a wordmark beside one line of text, not as a hero — a channel `<image>` is a brand logo on only about half the feeds that carry one, and the rest ship a favicon, a generic RSS glyph or an article photo |
@@ -1361,6 +1362,13 @@ have a definite height, which it does not. Stopping the gesture at the dialog is
 already the panel body's job, and it still does it. The add-feed dialog's tag
 list has the same shape with a 160px cap; it has not been reported, but it is
 the same trap.
+
+**Chrome a tap must reach stays outside the scroller.** On iOS a tap inside a
+scroller that is still coasting only stops the scroll; no click fires. The list's
+header always sat beside `.rows`, so its icons worked mid-fling, while the
+article's toolbar, nameplate and back-to-top button sat inside the article's own
+scroller and swallowed the tap (#1332). Float such chrome over the scroller and
+reserve its height, as the list and the article both do now.
 
 **Content beneath a floating bar offsets by the measured height plus `--bar-gap`,
 never by a literal:**
