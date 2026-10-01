@@ -107,6 +107,7 @@ describe('ReaderShellComponent', () => {
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,
+    imageRenditions: [],
     media: [],
     attachments: [],
     categories: [],

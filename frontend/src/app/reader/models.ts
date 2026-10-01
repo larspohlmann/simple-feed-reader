@@ -170,6 +170,12 @@ export interface EntryAttachmentDto {
   title?: string;
 }
 
+/** One declared-width rendition of an entry's lead picture (#1330). */
+export interface ImageRenditionDto {
+  url: string;
+  width: number;
+}
+
 export type CommentsLoad = 'auto' | 'manual';
 
 export interface EntryCommentDto {
@@ -200,6 +206,9 @@ export interface EntryDto {
   /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
   imageWidth: number | null;
   imageHeight: number | null;
+  /** The same picture at each width the feed declared, for `srcset` (#1330). Always
+   *  sent by the API; empty when the feed declared no ladder. */
+  imageRenditions: ImageRenditionDto[];
   /** Visual media the feed declared, lead image first (#906). Always sent by
    *  the API, empty when the feed declared none. Dimensions are as declared;
    *  missing fields are absent. No view consumes it yet. */

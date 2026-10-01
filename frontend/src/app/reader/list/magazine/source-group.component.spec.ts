@@ -34,6 +34,7 @@ const entryAt = (id: number): EntryDto => ({
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],

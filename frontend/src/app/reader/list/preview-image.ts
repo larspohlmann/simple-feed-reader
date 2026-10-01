@@ -1,4 +1,4 @@
-import { EntryDto, HeroImageDto } from '../models';
+import { EntryDto, HeroImageDto, ImageRenditionDto } from '../models';
 
 /** The entry's dek: the server's own plain-text excerpt. */
 export function entrySnippet(entry: EntryDto): string {
@@ -14,4 +14,20 @@ export type EntryImage = HeroImageDto;
 export function entryImage(entry: EntryDto): EntryImage | null {
   if (!entry.imageUrl) return null;
   return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
+}
+
+/** The renditions as a `srcset`, narrowest first and one candidate per width, or null
+ *  when there are none. Stubbed e2e entries predate the field and omit it. */
+export function renditionSrcset(
+  renditions: readonly ImageRenditionDto[] | undefined,
+): string | null {
+  if (!renditions?.length) return null;
+  const urlByWidth = new Map<number, string>();
+  for (const rendition of renditions) {
+    if (!urlByWidth.has(rendition.width)) urlByWidth.set(rendition.width, rendition.url);
+  }
+  return [...urlByWidth]
+    .sort(([left], [right]) => left - right)
+    .map(([width, url]) => `${url} ${width}w`)
+    .join(', ');
 }

@@ -34,6 +34,7 @@ const entry: EntryDto = {
   imageUrl: null,
   imageWidth: null,
   imageHeight: null,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],

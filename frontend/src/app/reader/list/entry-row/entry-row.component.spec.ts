@@ -31,6 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageUrl: 'https://cdn.test/a.jpg',
   imageWidth: null,
   imageHeight: null,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],
