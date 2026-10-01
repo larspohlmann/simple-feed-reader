@@ -11,6 +11,8 @@
     <img
       class="img"
       [src]="image()!.url"
+      [appRenditions]="entry().imageRenditions"
+      [renditionSizes]="'(max-width: 728px) calc(100vw - 24px), 680px'"
       [style.aspect-ratio]="aspect()"
       [attr.width]="image()!.width"
       [attr.height]="image()!.height"

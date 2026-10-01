@@ -18,6 +18,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { entryImage, entrySnippet } from '../preview-image';
 import { relativeTime } from '../../format';
+import { RenditionsDirective } from '../renditions.directive';
 
 @Component({
   selector: 'app-entry-row',
@@ -32,6 +33,7 @@ import { relativeTime } from '../../format';
     EntryPillsComponent,
     EntryActionsComponent,
     forwardRef(() => EntryDuplicatesComponent),
+    RenditionsDirective,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',

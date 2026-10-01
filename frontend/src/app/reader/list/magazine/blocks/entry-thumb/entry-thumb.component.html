@@ -11,6 +11,8 @@
     <img
       class="img"
       [src]="image()!.url"
+      [appRenditions]="entry().imageRenditions"
+      [renditionSizes]="'88px'"
       [attr.width]="image()!.width"
       [attr.height]="image()!.height"
       alt=""

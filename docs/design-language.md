@@ -1514,6 +1514,18 @@ An entry that cannot fill its planned slot demotes transitively:
 never one step, since demoting a hero straight to `wide` in an image-less
 view would still leave an image block with no image.
 
+**Each image block states its rendered width as `sizes`.** An entry with a
+rendition ladder (`imageRenditions`, #1330) gets a `srcset` through
+`RenditionsDirective` (`reader/list/renditions.directive.ts`), and the browser
+loads the smallest file that covers the box. The values are upper bounds read
+off the CSS above; a block whose width changes changes its value too:
+
+| Block | `sizes` | Read from |
+|---|---|---|
+| Hero, Wide | `(max-width: 728px) calc(100vw - 24px), 680px` | a full-width image in the `--magazine-measure` column, inset `--space-3` (boxed) or `--space-5` (airy) a side |
+| Split | `(max-width: 728px) calc(38vw - 18px), 259px` | 38% of that card's content box |
+| Thumb, list row | `88px` | the fixed 88px box |
+
 ---
 
 ## 6. Deliberate exceptions

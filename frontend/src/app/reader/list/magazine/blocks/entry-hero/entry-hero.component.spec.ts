@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryHeroComponent } from './entry-hero.component';
-import { EntryDto } from '../../../../models';
+import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
@@ -165,5 +165,22 @@ describe('EntryHeroComponent', () => {
     (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
     expect(opened).toHaveBeenCalledWith(dup);
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers its renditions to the browser at the column width', () => {
+    const renditions: ImageRenditionDto[] = [
+      { url: 'https://x/a-424.jpg', width: 424 },
+      { url: 'https://x/a-848.jpg', width: 848 },
+    ];
+    const element = mount(entry({ imageRenditions: renditions })).nativeElement as HTMLElement;
+    const img = element.querySelector('img.img') as HTMLImageElement;
+    expect(img.getAttribute('srcset')).toBe('https://x/a-424.jpg 424w, https://x/a-848.jpg 848w');
+    expect(img.getAttribute('sizes')).toBe('(max-width: 728px) calc(100vw - 24px), 680px');
+  });
+
+  it('keeps a plain src when the entry has no renditions', () => {
+    const img = (mount(entry()).nativeElement as HTMLElement).querySelector('img.img')!;
+    expect(img.hasAttribute('srcset')).toBe(false);
+    expect(img.hasAttribute('sizes')).toBe(false);
   });
 });
