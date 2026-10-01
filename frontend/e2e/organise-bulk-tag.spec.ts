@@ -1,8 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `magazine-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
 
 const TAGS = [
   { id: 1, name: 'Nachrichten', color: null, icon: null, position: 0 },
@@ -67,24 +64,6 @@ async function stubFixture(page: Page): Promise<void> {
       },
     });
   });
-}
-
-/**
- * Sign in through the real login form with the seeded admin credentials.
- * Returns `false` (rather than failing) when the credentials are rejected, so
- * a stack without the seeded admin — or a rate-limited login — skips cleanly
- * instead of flaking. Mirrors `magazine-smoke.spec.ts`'s helper.
- */
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
 }
 
 /**

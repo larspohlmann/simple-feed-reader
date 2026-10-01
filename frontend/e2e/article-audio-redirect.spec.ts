@@ -1,11 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 /**
  * The shape a Substack audio post ships (#786): the reader body keeps the
@@ -89,16 +86,9 @@ function origin(server: Server): string {
   return `http://127.0.0.1:${port}`;
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+async function signInToList(page: Page): Promise<boolean> {
+  await presetLocalStorage(page, { 'sfr.layout': 'list' });
+  return signInAsAdmin(page);
 }
 
 /** Serve one article whose reader body carries the publisher's player. */
@@ -141,7 +131,7 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
   const { server, origin: audio } = await audioOrigin();
   try {
     await stubArticle(page, `${audio}${SOURCE_PATH}`);
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

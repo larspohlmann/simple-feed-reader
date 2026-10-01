@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
-
-// The seeded e2e admin, as in `magazine-kicker-one-line.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 /** Two saved searches. Both carry no unread matches of their own
  *  (`unreadEntryIds: []`), so the sidebar toggle's accessible name stays the
@@ -82,21 +79,13 @@ async function stubReaderData(page: Page): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithReaderData(page: Page): Promise<boolean> {
   await stubReaderData(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 test('the Saved searches row opens one combined list', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithReaderData(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   // Scoped to the sidebar's own toggle row, not any `getByRole('link', ...)`
@@ -121,7 +110,7 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
 });
 
 test('the unread switch narrows the list and stays on into a saved search', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithReaderData(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.locator('a.savedsearch-toggle', { hasText: 'Saved searches' }).click();

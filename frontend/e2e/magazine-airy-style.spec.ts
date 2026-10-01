@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
-
-// The seeded e2e admin, as in `magazine-kicker-one-line.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 /** The sticky list header is frosted glass: the page surface (--surface-0) at
  *  80%, over a blur (#758). It must stay the PAGE colour — never take a card
@@ -99,20 +96,11 @@ async function stubEntryStateWrites(page: Page): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithLightTheme(page: Page): Promise<boolean> {
   // Pins the resolved theme so the background-colour assertions below are not
   // at the mercy of the runner's OS colour scheme.
-  await page.addInitScript(() => localStorage.setItem('sfr.theme', 'light'));
-
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  await presetLocalStorage(page, { 'sfr.theme': 'light' });
+  return signInAsAdmin(page);
 }
 
 /** Computed styles: a class proves the binding fired, not that it landed. */
@@ -201,7 +189,7 @@ async function textInsetFromEdge(page: Page): Promise<number> {
 
 test('the airy magazine drops the card border and rules the slots instead', async ({ page }) => {
   await stubAccount(page, 'airy', ENTRIES);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await expect(page.locator('.rows.magazine')).toHaveClass(/airy/);
@@ -228,7 +216,7 @@ test('the airy magazine drops the card border and rules the slots instead', asyn
 
 test('the boxed magazine keeps the card border and rules nothing', async ({ page }) => {
   await stubAccount(page, 'boxed', ENTRIES);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await expect(page.locator('.rows.magazine')).not.toHaveClass(/airy/);
@@ -249,7 +237,7 @@ test('the boxed magazine keeps the card border and rules nothing', async ({ page
 
 test('airy hero and wide images run full bleed with rounded corners', async ({ page }) => {
   await stubAccount(page, 'airy', IMAGE_ENTRIES);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   const heroImg = page.locator('.rows.magazine app-entry-hero .img').first();
@@ -278,7 +266,7 @@ test('airy hero and wide images run full bleed with rounded corners', async ({ p
 
 test('boxed hero and wide images keep square corners and the card padding', async ({ page }) => {
   await stubAccount(page, 'boxed', IMAGE_ENTRIES);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   const heroImg = page.locator('.rows.magazine app-entry-hero .img').first();
@@ -316,7 +304,7 @@ test('an un-favourited row collapses its slot to zero height, not a residue', as
   const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
   await stubAccount(page, 'airy', favourited);
   await stubEntryStateWrites(page);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.getByRole('link', { name: 'Favorites' }).click();
@@ -355,7 +343,7 @@ test('un-favouriting the first entry leaves no rule above the new first block', 
   const favourited = ENTRIES.map((e) => ({ ...e, isFavorite: true }));
   await stubAccount(page, 'airy', favourited);
   await stubEntryStateWrites(page);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.getByRole('link', { name: 'Favorites' }).click();
@@ -391,7 +379,7 @@ test('reduced motion collapses the airy leaving slot in ~1ms, not 260ms', async 
   await stubAccount(page, 'airy', favourited);
   await stubEntryStateWrites(page);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithLightTheme(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.getByRole('link', { name: 'Favorites' }).click();
@@ -425,7 +413,7 @@ test.describe('on a phone', () => {
 
   test('airy keeps the text off the edge, within a few px of boxed', async ({ page }) => {
     await stubAccount(page, 'boxed', ENTRIES);
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLightTheme(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

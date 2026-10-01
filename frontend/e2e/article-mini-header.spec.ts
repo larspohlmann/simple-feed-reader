@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 const PHONE = { width: 375, height: 667 };
 /** Past the 900px `isWide` boundary, so the article renders in the split pane. */
@@ -32,18 +29,11 @@ const entry = (title: string) =>
     source: 'stub',
   });
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInToList(page: Page): Promise<boolean> {
   // Pin the flat list: the default magazine layout groups same-source entries
   // and would not give this stub a plain row to click.
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  await presetLocalStorage(page, { 'sfr.layout': 'list' });
+  return signInAsAdmin(page);
 }
 
 /** One article, extraction failing so the stubbed body is what renders. */
@@ -97,7 +87,7 @@ test.describe('Article mini header on a phone', () => {
   // a scrolled-down article named nothing at all. This strip has to survive
   // exactly the scroll that takes the toolbar away.
   test('the strip holds the top edge while the toolbar retracts behind it', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();
@@ -132,7 +122,7 @@ test.describe('Article mini header on a phone', () => {
   });
 
   test('a long title is cut to one line instead of widening the pane', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_TITLE);
     await page.reload();
@@ -164,7 +154,7 @@ test.describe('Article mini header on the split pane', () => {
   // toolbar rather than in a strip of its own. The headline still scrolls away
   // with the body, which is what the name is there to replace.
   test('the toolbar carries the name, and keeps carrying it down the article', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();
@@ -191,7 +181,7 @@ test.describe('Article mini header on the split pane', () => {
   });
 
   test('the toolbar offers favourite and keep', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();

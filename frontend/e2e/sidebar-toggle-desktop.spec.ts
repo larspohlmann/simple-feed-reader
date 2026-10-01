@@ -1,8 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in the other desktop specs.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
 
 /** A tablet in landscape: wide enough that the sidebar is a permanent column,
  *  not the swipe-in drawer, so the manual hide/show control applies. */
@@ -21,24 +18,16 @@ async function stubEntries(page: Page): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithEmptyList(page: Page): Promise<boolean> {
   await stubEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 test('hides the sidebar, keeps it hidden across a reload, then shows it again', async ({
   page,
 }) => {
   await page.setViewportSize(TABLET_LANDSCAPE);
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithEmptyList(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   const body = page.locator('app-reader-shell > .body');

@@ -1,7 +1,9 @@
 import { expect, Page } from '@playwright/test';
 
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+// The seeded e2e admin (`bin/console app:e2e:seed-admin`, run by `bin/e2e.sh`);
+// overridable so a spec can point at another environment without edits.
+export const ADMIN_EMAIL = process.env['E2E_ADMIN_EMAIL'] ?? 'e2e-admin@example.com';
+export const ADMIN_PASSWORD = process.env['E2E_ADMIN_PASSWORD'] ?? 'e2e-admin-password-123';
 
 /**
  * Put a token where the route guard looks, without a round trip.
@@ -33,6 +35,16 @@ export async function signInAsAdmin(page: Page): Promise<boolean> {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
   const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  await expect(sidebar.or(page.getByRole('alert'))).toBeVisible();
+  await expect(sidebar.or(page.getByRole('alert'))).toBeVisible({ timeout: 15_000 });
   return sidebar.isVisible();
+}
+
+/** Values the app reads from localStorage at boot, set before every navigation. */
+export async function presetLocalStorage(
+  page: Page,
+  values: Record<string, string>,
+): Promise<void> {
+  await page.addInitScript((entries) => {
+    for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value);
+  }, values);
 }

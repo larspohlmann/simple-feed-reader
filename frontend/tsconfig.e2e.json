@@ -2,8 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/e2e",
-    "types": ["node"],
-    "noPropertyAccessFromIndexSignature": false
+    "types": ["node"]
   },
   "include": ["e2e/**/*.ts", "playwright.config.ts"]
 }

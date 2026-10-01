@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
 // column (>720px) and the wide layout is active (>=900px), which keeps the app
@@ -38,16 +35,9 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) =>
  * the article itself, 'pane' splits the main area and gives the article its own
  * sticky toolbar. Both are desktop, and both have to stay clear of the app bar.
  */
-async function signInAsAdmin(page: Page, layout: 'magazine' | 'pane'): Promise<boolean> {
-  await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+async function signInWithLayout(page: Page, layout: 'magazine' | 'pane'): Promise<boolean> {
+  await presetLocalStorage(page, { 'sfr.layout': layout });
+  return signInAsAdmin(page);
 }
 
 async function stubEntries(page: Page): Promise<void> {
@@ -118,7 +108,7 @@ test.describe('Article back button on desktop', () => {
   test('the full-pane article sits beneath the app bar, back button clear of it', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page, 'magazine');
+    const signedIn = await signInWithLayout(page, 'magazine');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -161,7 +151,7 @@ test.describe('Article back button on desktop', () => {
   // the scroller's own top edge — otherwise scrolling slides the back button
   // (and prev/next) underneath it.
   test('the split-pane toolbar stays clear of the app bar while scrolling', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page, 'pane');
+    const signedIn = await signInWithLayout(page, 'pane');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

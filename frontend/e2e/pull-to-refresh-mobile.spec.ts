@@ -1,9 +1,6 @@
 import { test, expect, Locator, Page } from '@playwright/test';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 const PHONE = { width: 375, height: 667 };
 
@@ -22,18 +19,11 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) =>
   }),
 );
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInToList(page: Page): Promise<boolean> {
   // Pin the flat list so the first row's geometry is predictable (the default
   // magazine layout groups same-source entries).
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  await presetLocalStorage(page, { 'sfr.layout': 'list' });
+  return signInAsAdmin(page);
 }
 
 async function stubEntries(page: Page): Promise<void> {
@@ -81,7 +71,7 @@ test.describe('Pull-to-refresh on a phone', () => {
   // the viewport top *underneath* the floating app bar. Anchored there it could
   // never be pulled clear of the bars, so the gesture gave no feedback at all.
   test('the indicator comes out from under the bars while pulling', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();
@@ -104,7 +94,7 @@ test.describe('Pull-to-refresh on a phone', () => {
   });
 
   test('releasing a decisive pull refreshes; a short one does not', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInToList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();

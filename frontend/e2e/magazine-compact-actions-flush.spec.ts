@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { signInAsAdmin } from './support/auth';
 import { entryWire } from './support/reader';
-
-// The seeded e2e admin, as in `magazine-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 /**
  * Short titles on purpose. The bug this guards (#414) hid behind long ones: the
@@ -81,7 +78,7 @@ async function stubEntries(page: Page): Promise<void> {
 }
 
 test('airy grouped-entry rules have space on both sides', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithFixtureEntries(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   const items = page.locator('app-source-group .item');
@@ -111,17 +108,9 @@ test('airy grouped-entry rules have space on both sides', async ({ page }) => {
   expect(await more.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('12px');
 });
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithFixtureEntries(page: Page): Promise<boolean> {
   await stubEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -137,7 +126,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
  * all; it needs a real engine.
  */
 test('the compact card flushes its actions to the card edge', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithFixtureEntries(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   // Both compact variants: the standalone card, and the grouped row a
@@ -231,15 +220,7 @@ async function stubSplitEntries(page: Page): Promise<void> {
 
 async function signInForSplitFixture(page: Page): Promise<boolean> {
   await stubSplitEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 test('the split card drops its meta row to the bottom under a tall image', async ({ page }) => {

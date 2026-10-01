@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
+import { signInAsAdmin } from './support/auth';
 import { entryDetailJson, entryWire } from './support/reader';
-
-// The seeded e2e admin, as in `reader-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
 const PHONE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -130,17 +127,9 @@ async function chooseLayout(page: Page, layout: 'list' | 'magazine'): Promise<vo
   await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithEntries(page: Page): Promise<boolean> {
   await stubEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -248,7 +237,7 @@ for (const [size, viewport] of [
 
       test('an unbreakable word wraps instead of breaking the row', async ({ page }) => {
         await chooseLayout(page, layout);
-        const signedIn = await signInAsAdmin(page);
+        const signedIn = await signInWithEntries(page);
         test.skip(
           !signedIn,
           'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -266,7 +255,7 @@ for (const [size, viewport] of [
     test.use({ viewport });
 
     test('an unbreakable word wraps instead of breaking the article', async ({ page }) => {
-      const signedIn = await signInAsAdmin(page);
+      const signedIn = await signInWithEntries(page);
       test.skip(
         !signedIn,
         'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
