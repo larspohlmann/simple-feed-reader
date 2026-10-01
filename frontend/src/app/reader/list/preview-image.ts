@@ -31,3 +31,11 @@ export function renditionSrcset(
     .map(([width, url]) => `${url} ${width}w`)
     .join(', ');
 }
+
+/** The widest rendition's width, or null when there are none. */
+export function widestRenditionWidth(
+  renditions: readonly ImageRenditionDto[] | undefined,
+): number | null {
+  if (!renditions?.length) return null;
+  return Math.max(...renditions.map((rendition) => rendition.width));
+}

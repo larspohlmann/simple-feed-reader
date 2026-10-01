@@ -1,4 +1,4 @@
-import { entryImage, entrySnippet, renditionSrcset } from './preview-image';
+import { entryImage, entrySnippet, renditionSrcset, widestRenditionWidth } from './preview-image';
 import { EntryDto } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -79,5 +79,22 @@ describe('renditionSrcset', () => {
   it('is null without renditions', () => {
     expect(renditionSrcset([])).toBeNull();
     expect(renditionSrcset(undefined)).toBeNull();
+  });
+});
+
+describe('widestRenditionWidth', () => {
+  it('is the widest declared width, in any order', () => {
+    expect(
+      widestRenditionWidth([
+        { url: 'https://x/a-848.jpg', width: 848 },
+        { url: 'https://x/a-1696.jpg', width: 1696 },
+        { url: 'https://x/a-424.jpg', width: 424 },
+      ]),
+    ).toBe(1696);
+  });
+
+  it('is null without renditions', () => {
+    expect(widestRenditionWidth([])).toBeNull();
+    expect(widestRenditionWidth(undefined)).toBeNull();
   });
 });

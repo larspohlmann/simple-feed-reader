@@ -105,6 +105,41 @@ describe('EntryHeroComponent', () => {
     expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
   });
 
+  it('demotes a hero whose widest rendition is tiny, whatever slot width the browser reports', () => {
+    const fixture = mount(
+      entry({
+        imageRenditions: [
+          { url: 'https://x/a-50x50.jpg', width: 50 },
+          { url: 'https://x/a-150x150.jpg', width: 150 },
+        ],
+      }),
+    );
+    fixture.componentInstance.onLoad({ target: { naturalWidth: 680 } } as unknown as Event);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
+  });
+
+  it('keeps a hero whose widest rendition is large, though the browser picked a narrow one', () => {
+    const fixture = mount(
+      entry({
+        imageRenditions: [
+          { url: 'https://x/a-150.jpg', width: 150 },
+          { url: 'https://x/a-1024.jpg', width: 1024 },
+        ],
+      }),
+    );
+    fixture.componentInstance.onLoad({ target: { naturalWidth: 150 } } as unknown as Event);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('img.img')).not.toBeNull();
+  });
+
+  it('keeps a hero without renditions whose image loads wide', () => {
+    const fixture = mount(entry());
+    fixture.componentInstance.onLoad({ target: { naturalWidth: 680 } } as unknown as Event);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('img.img')).not.toBeNull();
+  });
+
   it('sets the aspect ratio from the declared dimensions', () => {
     const element = mount(
       entry({ imageUrl: 'https://i/a.jpg', imageWidth: 1232, imageHeight: 1232 }),
