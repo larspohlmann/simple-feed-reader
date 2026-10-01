@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { entryWire } from './support/reader';
 
 // The seeded e2e admin, as in `magazine-kicker-one-line.spec.ts`.
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -17,25 +18,13 @@ const IMG =
   ).toString('base64');
 
 function entry(id: number, source: string) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: 'A summary long enough that the planner has a dek to place.',
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
     source,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /** Enough entries, across enough sources, that the planner emits several slots. */

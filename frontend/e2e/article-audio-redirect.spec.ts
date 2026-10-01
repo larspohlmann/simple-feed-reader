@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { entryWire } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -22,25 +23,14 @@ const SOURCE_PATH = '/api/v1/audio/upload/7adcfe96/src';
 const LANDING_PATH = '/video_upload/post/1/7adcfe96/transcoded.wav';
 const LANDING_QUERY = '?post_id=1&relation=embed&Expires=1788502848&Key-Pair-Id=K&Signature=s';
 
-const ENTRY = {
+const ENTRY = entryWire({
   id: 1,
   title: 'Audio version of the essay',
   url: 'https://fixtures.invalid/p/audio-version',
-  author: null,
   summary: 'summary',
   excerpt: 'summary',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  publishedAt: '2026-08-01T12:50:34+00:00',
-  createdAt: '2026-08-01T12:50:34+00:00',
-  subscriptionId: 1,
   source: 'Fixture source',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-};
+});
 
 /** One second of 8 kHz 8-bit mono silence: a container every browser decodes. */
 function silentWav(): Buffer {

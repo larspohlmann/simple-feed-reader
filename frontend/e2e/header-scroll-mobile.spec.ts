@@ -1,5 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson, savedSearchWire, savedSearchesJson } from './support/reader';
+import {
+  entryDetailJson,
+  entryWire,
+  readerFailedJson,
+  savedSearchWire,
+  savedSearchesJson,
+} from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -12,21 +18,19 @@ const PHONE = { width: 375, height: 667 };
  * (`HEADER_NEAR_TOP` is 40px). Stubbed rather than seeded: this measures
  * layout, and a fixed list keeps the row geometry deterministic.
  */
-const ENTRIES = Array.from({ length: 30 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
+const ENTRIES = Array.from({ length: 30 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   // The default layout is magazine, which collapses a run of same-source
@@ -64,10 +68,7 @@ async function stubEntries(page: Page): Promise<void> {
       if (route.request().method() !== 'GET') return route.fallback();
       const id = Number(new URL(route.request().url()).pathname.split('/').pop());
       const match = ENTRIES.find((e) => e.id === id) ?? ENTRIES[0];
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...match, contentHtml: '<p>body</p>' } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(match, '<p>body</p>') });
     },
   );
   await page.route('**/api/entries*', async (route) => {
@@ -381,10 +382,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     ).join('');
     await page.route('**/api/entries/1', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...ENTRIES[0], contentHtml: TALL_BODY } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], TALL_BODY) });
     });
     await page.reload();
     await expect(page.locator(ROWS)).toBeVisible();

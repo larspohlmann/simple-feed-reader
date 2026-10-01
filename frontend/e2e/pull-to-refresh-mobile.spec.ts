@@ -1,4 +1,5 @@
 import { test, expect, Locator, Page } from '@playwright/test';
+import { entryWire } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -7,21 +8,19 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123
 const PHONE = { width: 375, height: 667 };
 
 /** A handful of rows is enough: the gesture only ever starts at the top. */
-const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
+const ENTRIES = Array.from({ length: 10 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   // Pin the flat list so the first row's geometry is predictable (the default

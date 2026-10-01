@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -17,21 +17,19 @@ const BODY_HTML = Array.from(
     `<p>Paragraph ${i} of filler text, long enough to give the article real height so the reading pane can actually scroll.</p>`,
 ).join('');
 
-const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
+const ENTRIES = Array.from({ length: 10 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 /**
  * Sign in with the layout pinned, so the test picks its shell branch instead of
@@ -63,10 +61,7 @@ async function stubEntries(page: Page): Promise<void> {
   // The body store's own fetch (#1100): only entry 1 is ever opened here.
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({
-      status: 200,
-      json: { entry: { ...ENTRIES[0], contentHtml: BODY_HTML } },
-    });
+    await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], BODY_HTML) });
   });
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({

@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { entryWire } from './support/reader';
 
 // Same seeded admin as reading-focus-blocks.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -13,25 +14,12 @@ const LANDSCAPE = { width: 667, height: 375 };
 const ENTRY_COUNT = 40;
 
 function entry(id: number) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
-    source: 'Fixture feed',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 // Identical rows, so the row nearest the reading centre is decided by

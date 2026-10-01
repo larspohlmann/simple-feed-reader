@@ -1,6 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
-import { readerFailedJson, savedSearchesJson, savedSearchWire } from './support/reader';
+import { entryWire, readerFailedJson, savedSearchesJson, savedSearchWire } from './support/reader';
 
 const SAVED_SEARCH = savedSearchWire({
   id: 501,
@@ -8,26 +8,17 @@ const SAVED_SEARCH = savedSearchWire({
   unreadEntryIds: [],
 });
 
-const ENTRY = {
+const ENTRY = entryWire({
   id: 1,
   title: 'Climate fixture article',
   url: 'https://fixtures.invalid/article',
-  author: null,
   summary: 'A fixture for saved-search reading layouts.',
   excerpt: 'Fixture article body.',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
   publishedAt: '2026-08-01T12:00:00Z',
   createdAt: '2026-08-01T12:00:00Z',
-  subscriptionId: 1,
-  source: 'Fixture feed',
-  faviconUrl: null,
   isHidden: true,
   isViewed: true,
-  isFavorite: false,
-  isKept: false,
-};
+});
 
 async function stubReader(page: Page): Promise<void> {
   await stubAuthToken(page);

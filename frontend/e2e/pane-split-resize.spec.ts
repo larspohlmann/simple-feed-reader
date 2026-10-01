@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
+import { entryWire, readerFailedJson } from './support/reader';
 
 // Same seeded admin as the other reader specs (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -9,21 +9,19 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123
 // layout is active (>=900px), so `sfr.layout = pane` splits the main area (#810).
 const DESKTOP = { width: 1280, height: 900 };
 
-const ENTRIES = Array.from({ length: 8 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
+const ENTRIES = Array.from({ length: 8 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 /** Sign in with the pane layout pinned, so the split is on screen regardless of
  *  what the previous run left in localStorage. */

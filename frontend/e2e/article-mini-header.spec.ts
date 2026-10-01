@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 // Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -19,21 +19,18 @@ const BODY = Array.from(
     `<p>Paragraph ${i + 1}. ${'Long enough to take a few lines on a phone. '.repeat(3)}</p>`,
 ).join('');
 
-const entry = (title: string) => ({
-  id: 1,
-  title,
-  url: 'https://example.invalid/1',
-  author: null,
-  summary: 'summary',
-  excerpt: 'summary',
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-});
+const entry = (title: string) =>
+  entryWire({
+    id: 1,
+    title,
+    url: 'https://example.invalid/1',
+    summary: 'summary',
+    excerpt: 'summary',
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  });
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   // Pin the flat list: the default magazine layout groups same-source entries
@@ -75,10 +72,7 @@ async function stubArticle(page: Page, title: string): Promise<void> {
   // The body store's own fetch (#1100): list rows carry no body of their own.
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({
-      status: 200,
-      json: { entry: { ...entry(title), contentHtml: BODY } },
-    });
+    await route.fulfill({ status: 200, json: entryDetailJson(entry(title), BODY) });
   });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();

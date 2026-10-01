@@ -1,5 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
@@ -7,26 +7,19 @@ const DESKTOP = { width: 1280, height: 800 };
 const SEARCH_TERM = 'desktop fixture';
 
 function entry(id: number, title: string) {
-  return {
+  return entryWire({
     id,
     title,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: 'A fixture summary.',
     excerpt: 'A fixture summary.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
     publishedAt: '2026-08-25T12:00:00+00:00',
     createdAt: '2026-08-25T12:00:00+00:00',
     subscriptionId: 607,
     source: 'Desktop search fixture',
-    faviconUrl: null,
     isHidden: true,
-    isFavorite: false,
-    isKept: false,
     isViewed: true,
-  };
+  });
 }
 
 const MAGAZINE_ENTRY = entry(6070, 'Magazine fixture entry');
@@ -98,7 +91,7 @@ async function stubReaderData(page: Page): Promise<void> {
       const entry = [MAGAZINE_ENTRY, SEARCH_ENTRY].find((e) => e.id === id) ?? SEARCH_ENTRY;
       await route.fulfill({
         status: 200,
-        json: { entry: { ...entry, contentHtml: '<p>Fixture body.</p>' } },
+        json: entryDetailJson(entry, '<p>Fixture body.</p>'),
       });
     },
   );

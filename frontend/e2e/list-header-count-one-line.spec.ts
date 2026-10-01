@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { stubAuthToken } from './support/auth';
+import { entryWire } from './support/reader';
 
 /**
  * The list heading carries a count pill beside the list's name (#709). The bar
@@ -40,26 +41,16 @@ function subscription(id: number, title: string, unreadCount: number) {
 }
 
 function entry(id: number) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/e/${id}`,
-    author: null,
     summary: 'A short fixture summary.',
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
     publishedAt: '2026-08-29T08:00:00Z',
     createdAt: '2026-08-29T08:00:00Z',
     subscriptionId: 1,
     source: SHORT_NAME,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-    isViewed: false,
-  };
+  });
 }
 
 async function stubReader(page: Page): Promise<void> {

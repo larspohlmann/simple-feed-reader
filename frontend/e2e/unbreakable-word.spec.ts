@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { entryDetailJson, entryWire } from './support/reader';
 
 // The seeded e2e admin, as in `reader-smoke.spec.ts`.
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -56,25 +57,18 @@ const CONTENT_HTML = `
 `;
 
 function entry(id: number, withImage: boolean) {
-  return {
+  return entryWire({
     id,
     title: `${LONG_WORD} ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: `${PROSE}${LONG_TOKEN}`,
     excerpt: `${PROSE}${LONG_TOKEN}`,
     imageUrl: withImage ? `https://fixtures.invalid/${id}.jpg` : null,
     imageWidth: withImage ? 1200 : null,
     imageHeight: withImage ? 800 : null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
     subscriptionId: (id % 3) + 1,
     source: 'Fixture source',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /** A mix of image-bearing and text-only entries, so the magazine planner emits
@@ -101,10 +95,7 @@ async function stubEntries(page: Page): Promise<void> {
     (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...ENTRIES[0], contentHtml: CONTENT_HTML } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], CONTENT_HTML) });
     },
   );
   await page.route(

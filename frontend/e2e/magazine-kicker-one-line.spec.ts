@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { entryWire } from './support/reader';
 
 // The seeded e2e admin, as in `magazine-smoke.spec.ts`.
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
@@ -16,25 +17,13 @@ const LONG_SOURCE =
 const PHONE = { width: 375, height: 812 };
 
 function entry(id: number, source: string) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
     source,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /**
