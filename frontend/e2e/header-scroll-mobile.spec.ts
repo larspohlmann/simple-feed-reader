@@ -179,7 +179,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   // The article renders as an overlay over the still-mounted list, and its
-  // scrolling host is transparent on purpose so a swipe-away reveals that list.
+  // host is transparent on purpose so a swipe-away reveals that list.
   // Anything the article reserves at its top therefore has to be reserved on
   // the opaque panel inside it, or the list shows through the gap.
   test('an open article is opaque all the way to the top', async ({ page }) => {
@@ -403,8 +403,8 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // Sample across frames rather than measuring once, because the regression
     // this guards against is transient: a transform on the overlay makes it the
     // containing block for this fixed-position button, and while that holds the
-    // button resolves against the article's own scrolled box and rides off the
-    // top of the screen (#100). Every sampled y must stay on screen; x is free
+    // button resolves against the overlay instead of the viewport and rides off
+    // the top of the screen (#100). Every sampled y must stay on screen; x is free
     // to move, since the button rides along with the slide-in.
     //
     // Honest limitation: the overlay's animation is ~220ms and several

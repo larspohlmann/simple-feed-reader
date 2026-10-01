@@ -234,9 +234,10 @@ export class ReaderViewComponent {
       const bar = this.bar()?.nativeElement;
       if (!bar || typeof ResizeObserver === 'undefined') return;
       const style = this.host.nativeElement.style;
-      const observer = new ResizeObserver(() =>
-        style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`),
-      );
+      const observer = new ResizeObserver(() => {
+        style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
+        this.scope.refresh();
+      });
       observer.observe(bar);
       onCleanup(() => observer.disconnect());
     });

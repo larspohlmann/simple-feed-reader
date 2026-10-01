@@ -34,8 +34,6 @@
   min-height: 100%;
   padding-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
   background: var(--surface-read);
-  container-type: inline-size;
-  container-name: reader;
 }
 
 /* Split pane: the shell's bar floats over this panel and the toolbar hangs

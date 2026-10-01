@@ -502,6 +502,20 @@ describe('ReaderViewComponent', () => {
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
       expect(host.querySelector('.progress-rail, .progress')).toBeNull();
     });
+
+    it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {
+      const fixture = mount(entry());
+      const host = stubGeometry(fixture, 400, 800);
+      expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
+
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () => ({ top: 0, bottom: 2400 }) as DOMRect;
+      const bar = host.querySelector('.bar') as HTMLElement;
+      MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
+      fixture.detectChanges();
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+    });
   });
 
   it('renders the article’s action row through the shared entry actions', () => {
