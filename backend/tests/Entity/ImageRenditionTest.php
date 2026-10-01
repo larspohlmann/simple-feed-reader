@@ -39,6 +39,28 @@ final class ImageRenditionTest extends TestCase
         );
     }
 
+    /** @return iterable<string, array{ImageRendition}> */
+    public static function duplicateRungProvider(): iterable
+    {
+        yield 'same url' => [new ImageRendition('https://i/a-300.jpg', 310)];
+        yield 'same width' => [new ImageRendition('https://i/a-300.webp', 300)];
+    }
+
+    #[DataProvider('duplicateRungProvider')]
+    public function testADuplicateRungDoesNotEndTheLadder(ImageRendition $duplicate): void
+    {
+        $ladder = ImageRendition::ladder([
+            new ImageRendition('https://i/a-300.jpg', 300),
+            $duplicate,
+            new ImageRendition('https://i/a-900.jpg', 900),
+        ]);
+
+        self::assertEquals(
+            [new ImageRendition('https://i/a-300.jpg', 300), new ImageRendition('https://i/a-900.jpg', 900)],
+            $ladder,
+        );
+    }
+
     public function testAStoredRenditionReadsBackAsWritten(): void
     {
         $rendition = new ImageRendition('https://i/a.jpg', 640);
