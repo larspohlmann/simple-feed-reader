@@ -181,21 +181,22 @@ final readonly class ImageIdentityModel
      */
     public function isRenditionOf(self $other): bool
     {
-        if ($this->carriesAssetIdsLike($other)) {
-            return $this->isSameRendition($other);
-        }
-
-        $sizelessStem = self::withoutTrailingSize($this->stem);
-
-        return $sizelessStem !== ''
-            && $sizelessStem === self::withoutTrailingSize($other->stem)
-            && $this->sourceFolder === $other->sourceFolder;
+        return $this->asSizelessFileInFolder()->isSameRendition($other->asSizelessFileInFolder());
     }
 
-    private function carriesAssetIdsLike(self $other): bool
+    private function asSizelessFileInFolder(): self
     {
-        return ($this->pathUuid !== null && $other->pathUuid !== null)
-            || ($this->ids !== [] && $other->ids !== []);
+        $sizelessStem = self::withoutTrailingSize($this->stem);
+
+        return new self(
+            $this->sourcePath,
+            $sizelessStem === '' ? '' : $this->sourceFolder . '/' . $sizelessStem,
+            $this->ids,
+            $this->tokens,
+            $this->assetToken,
+            $this->pathUuid,
+            $this->sourceFolder,
+        );
     }
 
     private static function withoutTrailingSize(string $stem): string
