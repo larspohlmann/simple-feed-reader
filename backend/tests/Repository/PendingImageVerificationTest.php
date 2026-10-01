@@ -17,12 +17,8 @@ final class PendingImageVerificationTest extends DbTestCase
         $pending = $this->entry($feed, 'pending');
         $pending->getImage()->storePending('https://i/pending.jpg', null, null);
         $verified = $this->entry($feed, 'verified');
-        $verified->getImage()->storeVerified(
-            'https://i/verified.jpg',
-            800,
-            600,
-            new \DateTimeImmutable('2026-09-21 10:00:00'),
-        );
+        $verified->getImage()->storePending('https://i/verified.jpg', null, null);
+        $verified->getImage()->recordMeasurement(800, 600, new \DateTimeImmutable('2026-09-21 10:00:00'));
         $this->entry($feed, 'no-image');
         $this->entityManager->flush();
 

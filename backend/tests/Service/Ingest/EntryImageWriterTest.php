@@ -6,15 +6,13 @@ namespace App\Tests\Service\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Clock\MockClock;
 
 final class EntryImageWriterTest extends TestCase
 {
-    public function testANativeHttpsImageWithBothDimensionsIsStoredVerified(): void
+    public function testANativeHttpsImageWithBothDimensionsIsStoredPendingVerification(): void
     {
         $entry = $this->entry();
 
@@ -24,7 +22,8 @@ final class EntryImageWriterTest extends TestCase
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
         self::assertSame(800, $entry->getImage()->getWidth());
         self::assertSame(600, $entry->getImage()->getHeight());
-        self::assertSame('2026-09-21 12:00:00', $entry->getImage()->getCheckedAt()?->format('Y-m-d H:i:s'));
+        self::assertNull($entry->getImage()->getCheckedAt());
+        self::assertSame(0, $entry->getImage()->getVerifyAttempts());
     }
 
     public function testAnUpgradedHttpImageIsStoredPendingVerification(): void
@@ -84,7 +83,7 @@ final class EntryImageWriterTest extends TestCase
 
     private function writer(): EntryImageWriter
     {
-        return new EntryImageWriter(new NaiveUtcClock(new MockClock('2026-09-21 12:00:00', 'UTC')));
+        return new EntryImageWriter();
     }
 
     private function entry(): Entry

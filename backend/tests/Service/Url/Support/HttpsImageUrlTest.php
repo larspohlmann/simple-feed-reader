@@ -78,19 +78,4 @@ final class HttpsImageUrlTest extends TestCase
     {
         self::assertNull(HttpsImageUrl::orNull('HTTP://Host/a.jpg'));
     }
-
-    public function testIsNativeHttpsAcceptsAnUppercaseHttpsScheme(): void
-    {
-        self::assertTrue(HttpsImageUrl::isNativeHttps('HTTPS://h/a'));
-    }
-
-    public function testIsNativeHttpsRejectsAProtocolRelativeUrl(): void
-    {
-        self::assertFalse(HttpsImageUrl::isNativeHttps('//h/a'));
-    }
-
-    public function testIsNativeHttpsRejectsHttp(): void
-    {
-        self::assertFalse(HttpsImageUrl::isNativeHttps('http://h/a'));
-    }
 }
