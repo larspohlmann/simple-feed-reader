@@ -1,5 +1,4 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
-import { ProxiedImageDirective } from '../../../../shared/proxied-image/proxied-image.directive';
 import { FaviconComponent } from '../../../../shared/favicon/favicon.component';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { relativeTime } from '../../../format';
@@ -10,7 +9,7 @@ import { FeedPreviewItem } from '../../../models';
 // no tags, no read dot — so the preview never entangles the reader's row.
 @Component({
   selector: 'app-preview-entry-row',
-  imports: [ProxiedImageDirective, FaviconComponent],
+  imports: [FaviconComponent],
   templateUrl: './preview-entry-row.component.html',
   styleUrl: './preview-entry-row.component.scss',
 })

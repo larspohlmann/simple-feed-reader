@@ -35,14 +35,13 @@
   </div>
   @if (image() && !imgError()) {
     <img
-      appProxiedImage
       class="thumb"
       [src]="image()!"
       alt=""
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (imageFailed)="imgError.set(true)"
+      (error)="imgError.set(true)"
     />
   }
 </article>

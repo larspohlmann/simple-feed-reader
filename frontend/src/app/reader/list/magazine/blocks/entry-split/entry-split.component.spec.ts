@@ -4,6 +4,8 @@ import { provideTranslocoTesting } from '../../../../../../testing/transloco-tes
 import { EntrySplitComponent } from './entry-split.component';
 import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -12,8 +14,11 @@ const entryActions = {
   open: jest.fn(),
 };
 
+let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
+
 beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
+  imageProxy = neverRecoveringImageProxy();
 });
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -46,7 +51,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
   TestBed.configureTestingModule({
     imports: [EntrySplitComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      { provide: EntryActionHandler, useValue: entryActions },
+      { provide: ImageProxyService, useValue: imageProxy },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntrySplitComponent);
   fixture.componentRef.setInput('entry', testEntry);
@@ -56,6 +65,15 @@ function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
 }
 
 describe('EntrySplitComponent', () => {
+  it('hides an image that fails to load, without a proxy retry', () => {
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector('img.img')!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(element.querySelector('img.img')).toBeNull();
+    expect(imageProxy.attempts).toEqual([]);
+  });
+
   it('renders the title, snippet and image', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.textContent).toContain('A medium headline');

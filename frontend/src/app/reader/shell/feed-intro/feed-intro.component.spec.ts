@@ -1,19 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
-import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
+import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { FeedIntroComponent } from './feed-intro.component';
 
 describe('FeedIntroComponent', () => {
   let fixture: ComponentFixture<FeedIntroComponent>;
-  let outcome: ProxyOutcome;
+  let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
 
   beforeEach(async () => {
-    outcome = 'failed';
+    imageProxy = neverRecoveringImageProxy();
     await TestBed.configureTestingModule({
       imports: [FeedIntroComponent, provideTranslocoTesting()],
-      providers: [
-        { provide: ImageProxyService, useValue: { recover: () => Promise.resolve(outcome) } },
-      ],
+      providers: [{ provide: ImageProxyService, useValue: imageProxy }],
     }).compileComponents();
     fixture = TestBed.createComponent(FeedIntroComponent);
   });
@@ -121,13 +120,12 @@ describe('FeedIntroComponent', () => {
     expect(host.querySelector('img')?.getAttribute('src')).toBe('https://example.com/favicon.ico');
   });
 
-  it('degrades a dead feed image to the favicon rather than to nothing', async () => {
+  it('degrades a dead feed image to the favicon rather than to nothing', () => {
     const host = render({
       imageUrl: 'https://example.com/dead.png',
       faviconUrl: 'https://example.com/favicon.ico',
     });
     host.querySelector('img')?.dispatchEvent(new Event('error'));
-    await fixture.whenStable();
     fixture.detectChanges();
     expect(host.querySelector('app-favicon')).not.toBeNull();
   });
@@ -140,20 +138,11 @@ describe('FeedIntroComponent', () => {
     expect(img?.getAttribute('src')).toBe('https://example.com/logo.png');
   });
 
-  it('hides a broken image instead of leaving a broken-image box', async () => {
+  it('hides a broken image instead of leaving a broken-image box, without a proxy retry', () => {
     const host = render({ imageUrl: 'https://example.com/dead.png' });
     host.querySelector('img')?.dispatchEvent(new Event('error'));
-    await fixture.whenStable();
     fixture.detectChanges();
     expect(host.querySelector('img')).toBeNull();
-  });
-
-  it('keeps the feed image while the proxy recovers it', async () => {
-    outcome = 'recovered';
-    const host = render({ imageUrl: 'https://example.com/hotlinked.png' });
-    host.querySelector('img')?.dispatchEvent(new Event('error'));
-    await fixture.whenStable();
-    fixture.detectChanges();
-    expect(host.querySelector('img.logo')).not.toBeNull();
+    expect(imageProxy.attempts).toEqual([]);
   });
 });

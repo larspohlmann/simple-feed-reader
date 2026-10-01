@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -14,7 +13,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
  */
 @Component({
   selector: 'app-feed-intro',
-  imports: [ProxiedImageDirective, FaviconComponent, IconComponent, TranslocoPipe],
+  imports: [FaviconComponent, IconComponent, TranslocoPipe],
   templateUrl: './feed-intro.component.html',
   styleUrl: './feed-intro.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
