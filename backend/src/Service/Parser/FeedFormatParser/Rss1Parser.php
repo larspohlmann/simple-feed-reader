@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser\FeedFormatParser;
 
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -25,7 +25,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
 
     public function __construct(
-        private ItemImageExtractor $imageExtractor,
+        private FeedItemImageSelector $imageSelector,
         private ItemMediaExtractor $mediaExtractor,
     ) {
     }
@@ -70,9 +70,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         $about = trim($item->getAttributeNS(self::RDF_NS, 'about'));
         $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
-        $image = $this->imageExtractor->fromMedia($item)
-            ?? $this->imageExtractor->fromCustomImageElement($item)
-            ?? $this->imageExtractor->fromHtml($contentEncoded ?? $description);
+        $image = $this->imageSelector->fromRss1($item, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(

@@ -10,6 +10,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -117,6 +118,10 @@ final readonly class FullyPopulatedAccount
         $entry->setSummary('A summary of the article.');
         $entry->setContentHtml('<p>The body of the article.</p>');
         $entry->getImage()->storePending('https://populated.example/lead.jpg', 1200, 630);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://populated.example/lead-600.jpg', 600),
+            new ImageRendition('https://populated.example/lead.jpg', 1200),
+        ]);
         $entry->setMedia(
             [
                 new EntryMedium('https://populated.example/lead.jpg', 'image', 1200, 630),

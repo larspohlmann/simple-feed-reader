@@ -11,13 +11,16 @@
     <img
       class="img"
       [src]="image()!.url"
+      #renditions="appRenditions"
+      [appRenditions]="entry().imageRenditions"
+      [renditionSizes]="coverBoxSizes"
       [attr.width]="image()!.width"
       [attr.height]="image()!.height"
       alt=""
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="imgError.set(true)"
+      (error)="renditions.fallBackToSrc() || imgError.set(true)"
     />
   }
   <div class="body">

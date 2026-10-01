@@ -80,12 +80,14 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
             'counts.entry', 'counts.entryState',
         ],
-        // media[] and attachments[] hold value objects, not entities, so their subkeys are claimed here like the
-        // footer's `counts`. A third such list earns its own NESTED_VALUE_OBJECTS map.
+    ];
+
+    /** Lists of value objects, not entities, per kind: their subkeys are claimed here, dotted under the list's key. */
+    private const array NESTED_VALUE_OBJECTS = [
         BackupSchema::KIND_ENTRY => [
-            'media.url', 'media.kind', 'media.width', 'media.height', 'media.previewImageUrl',
-            'attachments.url', 'attachments.mimeType', 'attachments.durationInSeconds',
-            'attachments.sizeInBytes', 'attachments.title',
+            'media' => ['url', 'kind', 'width', 'height', 'previewImageUrl'],
+            'attachments' => ['url', 'mimeType', 'durationInSeconds', 'sizeInBytes', 'title'],
+            'imageRenditions' => ['url', 'width'],
         ],
     ];
 
@@ -574,13 +576,30 @@ final class BackupSchemaCoverageTest extends DbTestCase
     /** @return list<string> the keys one kind of line is allowed to carry */
     private function claimedKeysOf(string $kind): array
     {
-        $keys = array_merge(self::EVERY_LINE, self::FILE_SCAFFOLDING[$kind] ?? []);
+        $keys = array_merge(
+            self::EVERY_LINE,
+            self::FILE_SCAFFOLDING[$kind] ?? [],
+            $this->nestedValueObjectKeysOf($kind),
+        );
         foreach (self::BACKED_UP as $entityClass => $fields) {
             if (self::KIND_OF[$entityClass] !== $kind) {
                 continue;
             }
             foreach ($fields as $declared) {
                 $keys = array_merge($keys, $this->exportedKeysFor($declared));
+            }
+        }
+
+        return $keys;
+    }
+
+    /** @return list<string> */
+    private function nestedValueObjectKeysOf(string $kind): array
+    {
+        $keys = [];
+        foreach (self::NESTED_VALUE_OBJECTS[$kind] ?? [] as $listKey => $subkeys) {
+            foreach ($subkeys as $subkey) {
+                $keys[] = $listKey . '.' . $subkey;
             }
         }
 

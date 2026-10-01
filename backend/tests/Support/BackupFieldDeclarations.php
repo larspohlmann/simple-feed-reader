@@ -65,7 +65,7 @@ final class BackupFieldDeclarations
             'title' => 'title', 'author' => 'author', 'summary' => 'summary',
             'contentHtml' => 'contentHtml',
             'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
-            'image.height' => 'imageHeight',
+            'image.height' => 'imageHeight', 'image.renditions' => 'imageRenditions',
             'mediaSet.media' => 'media', 'mediaSet.attachments' => 'attachments',
             'publishedAt' => 'publishedAt', 'createdAt' => 'createdAt',
             'effectiveDate' => 'effectiveDate',

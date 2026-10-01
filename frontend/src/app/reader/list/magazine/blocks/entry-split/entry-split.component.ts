@@ -3,15 +3,23 @@ import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
+import { RenditionsDirective } from '../../../renditions.directive';
+import { SPLIT_SIDE_IMAGE_SIZES } from '../../../rendition-sizes';
 
 @Component({
   selector: 'app-entry-split',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
+  imports: [
+    EntryKickerLineComponent,
+    EntryMetaComponent,
+    EntryDuplicatesComponent,
+    RenditionsDirective,
+  ],
   templateUrl: './entry-split.component.html',
   styleUrl: './entry-split.component.scss',
 })
 export class EntrySplitComponent extends EntryImageBlockBase {
+  protected readonly splitSideImageSizes = SPLIT_SIDE_IMAGE_SIZES;
   readonly imageSide = input<'left' | 'right'>('right');
 
   /** The side box adapts to the image but stays bounded — landscape crops to

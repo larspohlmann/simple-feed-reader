@@ -18,6 +18,8 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { entryImage, entrySnippet } from '../preview-image';
 import { relativeTime } from '../../format';
+import { RenditionsDirective } from '../renditions.directive';
+import { COVER_BOX_SIZES } from '../rendition-sizes';
 
 @Component({
   selector: 'app-entry-row',
@@ -32,11 +34,13 @@ import { relativeTime } from '../../format';
     EntryPillsComponent,
     EntryActionsComponent,
     forwardRef(() => EntryDuplicatesComponent),
+    RenditionsDirective,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
 })
 export class EntryRowComponent {
+  protected readonly coverBoxSizes = COVER_BOX_SIZES;
   readonly entry = input.required<EntryDto>();
   readonly imageSide = input<'left' | 'right'>('right');
   readonly tags = input<SubscriptionTagDto[]>([]);

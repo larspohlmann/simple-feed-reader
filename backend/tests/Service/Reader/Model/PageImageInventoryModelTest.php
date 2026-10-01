@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Model;
 
-use App\Service\Reader\Model\ImageIdentityModel;
+use App\Service\Image\Model\ImageIdentityModel;
 use App\Service\Reader\Model\PageImageInventoryModel;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Reader\Model\ImageIdentityModel;
+use App\Service\Image\Model\ImageIdentityModel;
 use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;

@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
@@ -59,6 +60,55 @@ final class EntryJsonTest extends TestCase
 
         self::assertSame([], $json['media']);
         self::assertSame([], $json['attachments']);
+        self::assertSame([], $json['imageRenditions']);
+    }
+
+    public function testEmitsTheStoredImageRenditions(): void
+    {
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            'Article',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->getImage()->storePending('https://i/lead-1024.jpg', 1024, 683);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://i/lead-300.jpg', 300),
+            new ImageRendition('https://i/lead-1024.jpg', 1024),
+        ]);
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame(
+            [
+                ['url' => 'https://i/lead-300.jpg', 'width' => 300],
+                ['url' => 'https://i/lead-1024.jpg', 'width' => 1024],
+            ],
+            $json['imageRenditions'],
+        );
+    }
+
+    public function testEmitsNoRenditionsThatCannotReachTheLeadImage(): void
+    {
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            'Article',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->getImage()->storePending('https://i/lead.jpg', null, null);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://i/lead-100x100.jpg', 100),
+            new ImageRendition('https://i/lead-150x150.jpg', 150),
+        ]);
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame([], $json['imageRenditions']);
     }
 
     public function testEmitsDuplicatesAsFlattenedEntryJson(): void

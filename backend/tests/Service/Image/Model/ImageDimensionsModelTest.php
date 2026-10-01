@@ -55,4 +55,23 @@ final class ImageDimensionsModelTest extends TestCase
         self::assertNotNull($dimensions);
         self::assertFalse($dimensions->isBeacon());
     }
+
+    public function testRenditionsWhoseHeightsRoundDifferentlyAreOneCrop(): void
+    {
+        self::assertFalse((new ImageDimensionsModel(1024, 683))->isAnotherCropThan(new ImageDimensionsModel(300, 200)));
+    }
+
+    public function testARoundingGapOfExactlyTheSummedWidthsIsStillOneCrop(): void
+    {
+        self::assertFalse((new ImageDimensionsModel(100, 50))->isAnotherCropThan(new ImageDimensionsModel(200, 103)));
+    }
+
+    public function testASquareCropOfALandscapePictureIsAnotherCrop(): void
+    {
+        $landscape = new ImageDimensionsModel(1152, 648);
+        $square = new ImageDimensionsModel(500, 500);
+
+        self::assertTrue($landscape->isAnotherCropThan($square));
+        self::assertTrue($square->isAnotherCropThan($landscape));
+    }
 }

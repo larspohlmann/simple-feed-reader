@@ -39,4 +39,18 @@ final class EntryLineTest extends TestCase
         self::assertSame([], $line->media);
         self::assertSame([], $line->attachments);
     }
+
+    public function testReadsTheImageRenditions(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + [
+            'imageRenditions' => [['url' => 'https://i/lead-600.jpg', 'width' => 600]],
+        ]);
+
+        self::assertSame([['url' => 'https://i/lead-600.jpg', 'width' => 600]], $line->imageRenditions);
+    }
+
+    public function testAnOlderFileWithoutImageRenditionsReadsAsNone(): void
+    {
+        self::assertSame([], EntryLine::fromLine($this->baseLine())->imageRenditions);
+    }
 }

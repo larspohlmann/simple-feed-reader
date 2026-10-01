@@ -36,6 +36,8 @@ final readonly class EntryLine
         public ?string $discussionUrl = null,
         public ?string $commentsFeedUrl = null,
         public ?string $commentsLoad = null,
+        /** @var list<array<string, mixed>> */
+        public array $imageRenditions = [],
     ) {
     }
 
@@ -64,6 +66,7 @@ final readonly class EntryLine
             discussionUrl: LineField::stringOrNull($line, 'discussionUrl'),
             commentsFeedUrl: LineField::stringOrNull($line, 'commentsFeedUrl'),
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
+            imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
         );
     }
 }

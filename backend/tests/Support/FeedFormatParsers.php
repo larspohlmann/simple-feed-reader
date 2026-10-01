@@ -26,7 +26,7 @@ final class FeedFormatParsers
 
     public static function rss1(): Rss1Parser
     {
-        return new Rss1Parser(new ItemImageExtractor(), new ItemMediaExtractor());
+        return new Rss1Parser(self::imageSelector(), new ItemMediaExtractor());
     }
 
     public static function atom10(): Atom10Parser

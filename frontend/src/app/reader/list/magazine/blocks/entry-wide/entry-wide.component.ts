@@ -3,12 +3,21 @@ import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
+import { RenditionsDirective } from '../../../renditions.directive';
+import { FULL_COLUMN_SIZES } from '../../../rendition-sizes';
 
 @Component({
   selector: 'app-entry-wide',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
+  imports: [
+    EntryKickerLineComponent,
+    EntryMetaComponent,
+    EntryDuplicatesComponent,
+    RenditionsDirective,
+  ],
   templateUrl: './entry-wide.component.html',
   styleUrl: './entry-wide.component.scss',
 })
-export class EntryWideComponent extends EntryImageBlockBase {}
+export class EntryWideComponent extends EntryImageBlockBase {
+  protected readonly fullColumnSizes = FULL_COLUMN_SIZES;
+}

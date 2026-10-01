@@ -86,6 +86,7 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
     imageUrl: null,
     imageWidth: null,
     imageHeight: null,
+    imageRenditions: [],
     media: [],
     attachments: [],
     categories: [],

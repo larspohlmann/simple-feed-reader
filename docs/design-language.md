@@ -1508,11 +1508,28 @@ thumbnail: exactly what used to produce heroes and bands with no real picture.
 `thumb` is the exception — it accepts any image regardless of width, since its
 box is fixed at 88px, so even that miniature thumbnail fills it cleanly, which
 is precisely why it is the demotion target for the larger image blocks.
+A known width is the wider of `imageWidth` and the widest served rendition
+(`entryImage()`), the height scaled to keep the lead image's aspect ratio.
 
 An entry that cannot fill its planned slot demotes transitively:
 `hero → wide → split → thumb → compact`, and `quote → kicker → compact` —
 never one step, since demoting a hero straight to `wide` in an image-less
 view would still leave an image block with no image.
+
+**Each image block states its rendered width as `sizes`.** An entry with a
+rendition ladder (`imageRenditions`, #1330) gets a `srcset` through
+`RenditionsDirective` (`reader/list/renditions.directive.ts`), and the browser
+loads the smallest file that covers the box. The values are upper bounds read
+off the CSS above, and live in `reader/list/rendition-sizes.ts`; a block whose width changes changes its value too:
+
+| Block | `sizes` | Read from |
+|---|---|---|
+| Hero, Wide | `(max-width: 728px) calc(100vw - 24px), 680px` | a full-width image in the `--magazine-measure` column, inset `--space-3` (boxed) or `--space-5` (airy) a side |
+| Split | `(max-width: 728px) calc(38vw - 18px), 259px` | 38% of that card's content box |
+| Thumb, list row | `132px` | the 88×66 cover box, up to a 2:1 picture |
+
+A failing rendition drops the `srcset` (`fallBackToSrc()`) so the browser retries the
+plain `src`; only a failing `src` hides the image.
 
 ---
 

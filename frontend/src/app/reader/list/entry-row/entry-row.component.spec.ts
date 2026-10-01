@@ -5,7 +5,7 @@ import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
-import { EntryDto } from '../../models';
+import { EntryDto, ImageRenditionDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
@@ -31,6 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageUrl: 'https://cdn.test/a.jpg',
   imageWidth: null,
   imageHeight: null,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],
@@ -205,5 +206,18 @@ describe('EntryRowComponent', () => {
     (overlay.querySelector('.dup-popover app-entry-row .row') as HTMLElement).click();
     expect(opened).toHaveBeenCalledWith(dup);
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {
+    const renditions: ImageRenditionDto[] = [
+      { url: 'https://cdn.test/a-150.jpg', width: 150 },
+      { url: 'https://cdn.test/a-300.jpg', width: 300 },
+    ];
+    const element = mount(entry({ imageRenditions: renditions })).nativeElement as HTMLElement;
+    const img = element.querySelector('img.thumb') as HTMLImageElement;
+    expect(img.getAttribute('srcset')).toBe(
+      'https://cdn.test/a-150.jpg 150w, https://cdn.test/a-300.jpg 300w',
+    );
+    expect(img.getAttribute('sizes')).toBe('132px');
   });
 });

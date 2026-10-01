@@ -19,7 +19,7 @@ final readonly class EntryBatchInserter
 
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
-        'summary', 'content_html', 'image_url', 'image_width', 'image_height',
+        'summary', 'content_html', 'image_url', 'image_width', 'image_height', 'image_renditions',
         'media', 'attachments',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
@@ -63,7 +63,7 @@ final readonly class EntryBatchInserter
             $feedId, $line->guid, $line->guidHash, $line->url,
             $this->urlNormalizer->hash($line->url), $line->title,
             $line->author, $line->summary, $line->contentHtml, $line->imageUrl,
-            $line->imageWidth, $line->imageHeight,
+            $line->imageWidth, $line->imageHeight, self::encodeList($line->imageRenditions),
             self::encodeList($line->media), self::encodeList($line->attachments),
             self::storageDate($line->publishedAt),
             self::storageDate($line->createdAt),
@@ -74,8 +74,8 @@ final readonly class EntryBatchInserter
     }
 
     /**
-     * Re-encodes a media list to the JSON the ORM's json type reads back — null
-     * for an empty list, matching the "no media" case a fresh ingest persists.
+     * Re-encodes a list to the JSON the ORM's json type reads back — null for an
+     * empty list, matching the "none" case a fresh ingest persists.
      *
      * @param list<array<string, mixed>> $list
      */

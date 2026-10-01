@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedia;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -145,6 +146,7 @@ final readonly class BackupLines
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
+            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),

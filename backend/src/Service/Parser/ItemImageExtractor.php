@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
 use Dom\Element;
 
@@ -18,7 +19,7 @@ final readonly class ItemImageExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
-    /** Media RSS image, searching <media:group> when nothing is attached directly. */
+    /** Media RSS image, searching <media:group> when nothing is attached directly; its other widths join it. */
     public function fromMedia(\DOMElement $item): ?DeclaredImageModel
     {
         $candidates = self::mediaCandidatesIn($item);
@@ -30,7 +31,7 @@ final readonly class ItemImageExtractor
             }
         }
 
-        return self::widest($candidates);
+        return self::widest($candidates)?->joinedWith(...$candidates);
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
@@ -86,10 +87,10 @@ final readonly class ItemImageExtractor
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
-    /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions it declares. */
+    /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions and renditions it declares. */
     public function fromHtml(?string $html): ?DeclaredImageModel
     {
-        if ($html === null || $html === '') {
+        if ($html === null || stripos($html, '<img') === false) {
             return null;
         }
         $document = HtmlDocumentParser::parseOrEmpty($html);
@@ -110,10 +111,15 @@ final readonly class ItemImageExtractor
             return null;
         }
 
+        $width = self::positiveInt($element->getAttribute('width') ?? '');
+        $srcsetRenditions = DeclaredRenditions::fromSrcset($element->getAttribute('srcset'));
+
         return new DeclaredImageModel(
             $src,
-            self::positiveInt($element->getAttribute('width') ?? ''),
+            $width,
             self::positiveInt($element->getAttribute('height') ?? ''),
+            // A `w` descriptor is a file's width; beside one, the width attribute is only a display size.
+            $srcsetRenditions === [] ? DeclaredRenditions::ofWidth($src, $width) : $srcsetRenditions,
         );
     }
 
@@ -162,10 +168,13 @@ final readonly class ItemImageExtractor
 
     private static function imageFrom(\DOMElement $element, string $url): DeclaredImageModel
     {
+        $width = self::positiveInt($element->getAttribute('width'));
+
         return new DeclaredImageModel(
             $url,
-            self::positiveInt($element->getAttribute('width')),
+            $width,
             self::positiveInt($element->getAttribute('height')),
+            DeclaredRenditions::ofWidth($url, $width),
         );
     }
 

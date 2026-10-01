@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser;
 
+use App\Entity\ImageRendition;
 use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
@@ -301,6 +302,18 @@ final class ItemImageExtractorTest extends TestCase
         self::assertNull($this->extractor->fromHtml('<p>just words</p>'));
     }
 
+    public function testReturnsNullWithoutHtml(): void
+    {
+        self::assertNull($this->extractor->fromHtml(null));
+    }
+
+    public function testFindsAnUpperCaseImgTag(): void
+    {
+        $image = $this->extractor->fromHtml('<P>x</P><IMG SRC="https://i/shouted.jpg">');
+
+        self::assertSame('https://i/shouted.jpg', $image?->url);
+    }
+
     public function testSkipsADeclaredBeaconAndTakesTheNextImage(): void
     {
         $image = $this->extractor->fromHtml(
@@ -373,5 +386,154 @@ final class ItemImageExtractorTest extends TestCase
         self::assertInstanceOf(\DOMElement::class, $entry);
 
         return $entry;
+    }
+
+    public function testReadsTheWidthDescribedSrcsetOfABodyImage(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img width="696" height="464" src="https://mag.example/funk-system-1024x683.jpg"'
+            . ' srcset="https://mag.example/funk-system-1024x683.jpg 1024w,'
+            . ' https://mag.example/funk-system-300x200.jpg 300w,'
+            . ' https://mag.example/funk-system-1536x1024.jpg 1536w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('https://mag.example/funk-system-1024x683.jpg', $image->url);
+        self::assertEquals(
+            [
+                new ImageRendition('https://mag.example/funk-system-1024x683.jpg', 1024),
+                new ImageRendition('https://mag.example/funk-system-300x200.jpg', 300),
+                new ImageRendition('https://mag.example/funk-system-1536x1024.jpg', 1536),
+            ],
+            $image->renditions,
+        );
+        self::assertSame(696, $image->width);
+    }
+
+    public function testTheWidthAttributeIsNoRenditionBesideAWidthDescribedSrcset(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/photo.jpg" width="300"'
+            . ' srcset="https://i/photo-768x512.jpg 768w, https://i/photo-1024x683.jpg 1024w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [
+                new ImageRendition('https://i/photo-768x512.jpg', 768),
+                new ImageRendition('https://i/photo-1024x683.jpg', 1024),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testTheWidthAttributeIsTheRenditionBesideADensityOnlySrcset(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/photo.jpg" width="300" srcset="https://i/photo-2x.jpg 2x">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/photo.jpg', 300)], $image->renditions);
+    }
+
+    public function testIgnoresDensityBareAndMalformedSrcsetCandidates(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/a.jpg" srcset="https://i/a-2x.jpg 2x, https://i/bare.jpg,'
+            . ' https://i/zero.jpg 0w, https://i/wide.jpg 800wide, https://i/a-640.jpg 640w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/a-640.jpg', 640)], $image->renditions);
+    }
+
+    public function testAnInlineImgsDeclaredWidthIsItsOwnRendition(): void
+    {
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" width="640" height="360">');
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/a.jpg', 640)], $image->renditions);
+    }
+
+    public function testAnInlineImgWithoutWidthOrSrcsetHasNoRenditions(): void
+    {
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" height="360">');
+
+        self::assertNotNull($image);
+        self::assertSame([], $image->renditions);
+    }
+
+    public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
+    {
+        $image = $this->extractor->fromRssEnclosure(
+            $this->item('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/e.jpg', 1200)], $image->renditions);
+    }
+
+    public function testAMediaVariantWithoutAWidthHasNoRendition(): void
+    {
+        $image = $this->extractor->fromMedia($this->item('<media:content url="https://i/a.jpg" medium="image"/>'));
+
+        self::assertNotNull($image);
+        self::assertSame([], $image->renditions);
+    }
+
+    public function testCollectsEveryWidthOfTheWidestMediaPicture(): void
+    {
+        $photo = 'https://i.guim.co.uk/img/media/f6d33de551f7fcdc046178cfccc4037e79b99f3e'
+            . '/276_0_4639_3711/master/4639.jpg';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content width="140" url="' . $photo . '?width=140&amp;s=406198660"/>'
+            . '<media:content width="460" url="' . $photo . '?width=460&amp;s=fed507e2"/>'
+            . '<media:content width="700" url="' . $photo . '?width=700&amp;s=6192bfa4"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame($photo . '?width=700&s=6192bfa4', $image->url);
+        self::assertEquals(
+            [
+                new ImageRendition($photo . '?width=700&s=6192bfa4', 700),
+                new ImageRendition($photo . '?width=140&s=406198660', 140),
+                new ImageRendition($photo . '?width=460&s=fed507e2', 460),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testKeepsAnotherPictureOfAMediaGalleryOutOfTheLadder(): void
+    {
+        $uploads = 'https://kursfahrradstadt.de/wp-content/uploads/2026/05/';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-21.jpg" medium="image"'
+            . ' width="1200"/>'
+            . '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-33.jpg" medium="image"'
+            . ' width="800"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [new ImageRendition($uploads . 'superbuettel-eroeffnung-relli-festtag-21.jpg', 1200)],
+            $image->renditions,
+        );
+    }
+
+    public function testKeepsASquareThumbnailCropOutOfTheLadder(): void
+    {
+        $uploads = 'https://cdn.arstechnica.net/wp-content/uploads/2026/09/';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content height="648" medium="image" url="' . $uploads . 'GettyImages-1042124682-1152x648.jpg"'
+            . ' width="1152"/>'
+            . '<media:thumbnail height="500" url="' . $uploads . 'GettyImages-1042124682-500x500.jpg" width="500"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [new ImageRendition($uploads . 'GettyImages-1042124682-1152x648.jpg', 1152)],
+            $image->renditions,
+        );
     }
 }

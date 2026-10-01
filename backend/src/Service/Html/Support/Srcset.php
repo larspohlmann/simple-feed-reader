@@ -38,7 +38,7 @@ final class Srcset
     }
 
     /** @return list<SrcsetCandidateModel> */
-    private static function candidates(?string $srcset): array
+    public static function candidates(?string $srcset): array
     {
         if ($srcset === null) {
             return [];

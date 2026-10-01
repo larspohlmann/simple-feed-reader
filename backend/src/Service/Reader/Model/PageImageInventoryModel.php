@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Model;
 
 use App\Service\Html\Support\Srcset;
+use App\Service\Image\Model\ImageIdentityModel;
 use Dom\HTMLDocument;
 
 /**

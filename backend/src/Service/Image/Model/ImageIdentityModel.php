@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Model;
+namespace App\Service\Image\Model;
 
-use App\Service\Reader\Support\ImageProxyUrl;
+use App\Service\Image\Support\ImageProxyUrl;
 
 /** Fingerprints image URLs for broad rendition matching and conservative asset equality. */
 final readonly class ImageIdentityModel
@@ -41,6 +41,7 @@ final readonly class ImageIdentityModel
         private array $tokens,
         private ?string $assetToken,
         private ?string $pathUuid,
+        private string $sourceFolder,
     ) {
     }
 
@@ -60,7 +61,20 @@ final readonly class ImageIdentityModel
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($path, $stem, $ids, $tokens, self::assetToken($words), self::pathUuid($path));
+        return new self(
+            $path,
+            $stem,
+            $ids,
+            $tokens,
+            self::assetToken($words),
+            self::pathUuid($path),
+            self::sourceFolder($source, $path),
+        );
+    }
+
+    private static function sourceFolder(string $source, string $path): string
+    {
+        return strtolower((string) (parse_url($source, PHP_URL_HOST) ?? '')) . dirname($path);
     }
 
     public function isShareRender(): bool
@@ -158,6 +172,36 @@ final readonly class ImageIdentityModel
 
         return array_intersect($this->tokens, $other->tokens) !== []
             && !$this->hasDifferentAssetToken($other);
+    }
+
+    /**
+     * One source file at any size: a shared path UUID or image id, or the same stem once one trailing `-WxH` is
+     * dropped (WordPress sizes) in the same folder of the same host. A bare trailing number, a shared word or a
+     * file of the same name in another folder is another picture.
+     */
+    public function isRenditionOf(self $other): bool
+    {
+        return $this->asSizelessFileInFolder()->isSameRendition($other->asSizelessFileInFolder());
+    }
+
+    private function asSizelessFileInFolder(): self
+    {
+        $sizelessStem = self::withoutTrailingSize($this->stem);
+
+        return new self(
+            $this->sourcePath,
+            $sizelessStem === '' ? '' : $this->sourceFolder . '/' . $sizelessStem,
+            $this->ids,
+            $this->tokens,
+            $this->assetToken,
+            $this->pathUuid,
+            $this->sourceFolder,
+        );
+    }
+
+    private static function withoutTrailingSize(string $stem): string
+    {
+        return (string) preg_replace('/[-_]\d+x\d+$/', '', $stem);
     }
 
     private function hasDifferentAssetToken(self $other): bool

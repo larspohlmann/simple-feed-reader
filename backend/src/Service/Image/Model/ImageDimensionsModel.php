@@ -32,4 +32,10 @@ final readonly class ImageDimensionsModel
     {
         return $this->width <= self::BEACON_EDGE_CEILING && $this->height <= self::BEACON_EDGE_CEILING;
     }
+
+    /** Each height may be a pixel off by rounding, which moves the cross product by up to the sum of the widths. */
+    public function isAnotherCropThan(self $other): bool
+    {
+        return abs($this->width * $other->height - $other->width * $this->height) > $this->width + $other->width;
+    }
 }

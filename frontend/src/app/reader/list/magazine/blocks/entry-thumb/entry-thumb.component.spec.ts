@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryThumbComponent } from './entry-thumb.component';
-import { EntryDto } from '../../../../models';
+import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
@@ -31,6 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageUrl: 'https://i/a.jpg',
   imageWidth: 700,
   imageHeight: 400,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],
@@ -96,5 +97,16 @@ describe('EntryThumbComponent', () => {
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();
+  });
+
+  it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {
+    const renditions: ImageRenditionDto[] = [
+      { url: 'https://i/a-150.jpg', width: 150 },
+      { url: 'https://i/a-300.jpg', width: 300 },
+    ];
+    const element = mount(entry({ imageRenditions: renditions })).nativeElement as HTMLElement;
+    const img = element.querySelector('img.img') as HTMLImageElement;
+    expect(img.getAttribute('srcset')).toBe('https://i/a-150.jpg 150w, https://i/a-300.jpg 300w');
+    expect(img.getAttribute('sizes')).toBe('132px');
   });
 });

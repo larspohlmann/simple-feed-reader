@@ -11,6 +11,9 @@
     <img
       class="img"
       [src]="image()!.url"
+      #renditions="appRenditions"
+      [appRenditions]="entry().imageRenditions"
+      [renditionSizes]="fullColumnSizes"
       [style.aspect-ratio]="aspect()"
       [attr.width]="image()!.width"
       [attr.height]="image()!.height"
@@ -19,7 +22,7 @@
       decoding="async"
       referrerpolicy="no-referrer"
       (load)="onLoad($event)"
-      (error)="imgError.set(true)"
+      (error)="renditions.fallBackToSrc() || imgError.set(true)"
     />
   }
   <div class="body">

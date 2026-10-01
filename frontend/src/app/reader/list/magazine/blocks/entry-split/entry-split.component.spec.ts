@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntrySplitComponent } from './entry-split.component';
-import { EntryDto } from '../../../../models';
+import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
@@ -31,6 +31,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   imageUrl: 'https://i/a.jpg',
   imageWidth: 700,
   imageHeight: 400,
+  imageRenditions: [],
   media: [],
   attachments: [],
   categories: [],
@@ -140,5 +141,16 @@ describe('EntrySplitComponent', () => {
     const buttons = fixture.nativeElement.querySelectorAll('app-entry-actions button');
     (buttons[0] as HTMLElement).click();
     expect(favorite).toHaveBeenCalled();
+  });
+
+  it('offers its renditions to the browser at the side-image width', () => {
+    const renditions: ImageRenditionDto[] = [
+      { url: 'https://i/a-424.jpg', width: 424 },
+      { url: 'https://i/a-848.jpg', width: 848 },
+    ];
+    const element = mount(entry({ imageRenditions: renditions })).nativeElement as HTMLElement;
+    const img = element.querySelector('img.img') as HTMLImageElement;
+    expect(img.getAttribute('srcset')).toBe('https://i/a-424.jpg 424w, https://i/a-848.jpg 848w');
+    expect(img.getAttribute('sizes')).toBe('(max-width: 728px) calc(38vw - 18px), 259px');
   });
 });

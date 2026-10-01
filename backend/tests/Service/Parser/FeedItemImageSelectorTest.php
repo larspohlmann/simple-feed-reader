@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser;
 
+use App\Entity\ImageRendition;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
@@ -116,5 +117,112 @@ final class FeedItemImageSelectorTest extends TestCase
 
         self::assertNotNull($image);
         self::assertSame('https://i/second.jpg', $image->url);
+    }
+
+    private const string SUBSTACK_SOURCE = 'https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages'
+        . '%2F10a5f3c6-6b92-48ff-8280-0cd3a9f25e41_750x1054.jpeg';
+
+    private static function substack(string $transforms): string
+    {
+        return 'https://substackcdn.com/image/fetch/$s_!v2GA!,' . $transforms . '/' . self::SUBSTACK_SOURCE;
+    }
+
+    private function rss1Item(string $innerXml): \DOMElement
+    {
+        $document = new \DOMDocument();
+        /** @noinspection XmlUnusedNamespaceDeclaration */
+        $rdf = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"'
+            . ' xmlns="http://purl.org/rss/1.0/" xmlns:media="http://search.yahoo.com/mrss/"><item>'
+            . $innerXml . '</item></rdf:RDF>';
+        $document->loadXML($rdf);
+        $item = $document->getElementsByTagName('item')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $item);
+
+        return $item;
+    }
+
+    public function testASubstackEnclosureTakesTheBodyImagesLadder(): void
+    {
+        $item = $this->rss2Item(
+            '<enclosure url="' . self::substack('f_auto,q_auto:good,fl_progressive:steep')
+            . '" length="0" type="image/jpeg"/>',
+        );
+        $body = '<img src="' . self::substack('w_1456,c_limit,f_auto') . '" width="750" height="1054"'
+            . ' srcset="' . self::substack('w_424,c_limit,f_auto') . ' 424w, '
+            . self::substack('w_1456,c_limit,f_auto') . ' 1456w">';
+
+        $image = $this->selector->fromRss2($item, $body);
+
+        self::assertNotNull($image);
+        self::assertSame(self::substack('f_auto,q_auto:good,fl_progressive:steep'), $image->url);
+        self::assertEquals(
+            [
+                new ImageRendition(self::substack('w_424,c_limit,f_auto'), 424),
+                new ImageRendition(self::substack('w_1456,c_limit,f_auto'), 1456),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testABodyImageOfAnotherPictureLendsNoRenditions(): void
+    {
+        $item = $this->rss2Item('<media:content url="https://i/harbor-lighthouse.jpg" medium="image" width="700"/>');
+        $body = '<img src="https://i/mountain-summit.jpg" srcset="https://i/mountain-summit-300.jpg 300w">';
+
+        $image = $this->selector->fromRss2($item, $body);
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse.jpg', 700)], $image->renditions);
+    }
+
+    public function testABodyImageAloneKeepsItsOwnLadder(): void
+    {
+        $image = $this->selector->fromRss2(
+            $this->rss2Item('<description>no media</description>'),
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
+    }
+
+    public function testAnAtomEnclosureTakesTheFirstBodyImagesLadder(): void
+    {
+        $entry = $this->atomEntry(
+            '<link rel="enclosure" type="image/jpeg" href="https://i/harbor-lighthouse.jpg"/>',
+        );
+
+        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', [
+            null,
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
+        ]);
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/harbor-lighthouse.jpg', $image->url);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
+    }
+
+    public function testAnRss1MediaImageTakesTheBodyImagesLadder(): void
+    {
+        $item = $this->rss1Item('<media:content url="https://i/harbor-lighthouse.jpg" medium="image"/>');
+
+        $image = $this->selector->fromRss1(
+            $item,
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/harbor-lighthouse.jpg', $image->url);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
+    }
+
+    public function testAnRss1ItemFallsBackToItsBodyImage(): void
+    {
+        $image = $this->selector->fromRss1($this->rss1Item('<title>t</title>'), '<img src="https://i/body.jpg">');
+
+        self::assertSame('https://i/body.jpg', $image?->url);
     }
 }
