@@ -349,7 +349,7 @@ docker compose down && docker volume rm simple-feed-reader_frontend-node-modules
 
 > npm note: the container pins npm 11 before installing. node 22 ships npm 10.9.8,
 > but the lockfile was authored by npm 11; npm 10 mis-resolves a transitive dep
-> and rejects the lock. The same pin is in the CI frontend job and the prod image.
+> and rejects the lock. The same pin is in CI's `setup-frontend` action and the prod image.
 
 ### Previewing the production topology
 
