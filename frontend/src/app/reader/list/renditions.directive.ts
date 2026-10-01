@@ -11,7 +11,7 @@ import { renditionSrcset } from './preview-image';
 export class RenditionsDirective {
   readonly appRenditions = input.required<readonly ImageRenditionDto[] | undefined>();
   /** The image's rendered width as a `sizes` value, read off its block's CSS. Bind it
-   *  (`[renditionSizes]="'88px'"`): a static attribute would also land in the DOM. */
+   *  (`[renditionSizes]="'132px'"`): a static attribute would also land in the DOM. */
   readonly renditionSizes = input.required<string>();
 
   readonly srcset = computed(() => renditionSrcset(this.appRenditions()));

@@ -1524,7 +1524,7 @@ off the CSS above; a block whose width changes changes its value too:
 |---|---|---|
 | Hero, Wide | `(max-width: 728px) calc(100vw - 24px), 680px` | a full-width image in the `--magazine-measure` column, inset `--space-3` (boxed) or `--space-5` (airy) a side |
 | Split | `(max-width: 728px) calc(38vw - 18px), 259px` | 38% of that card's content box |
-| Thumb, list row | `88px` | the fixed 88px box |
+| Thumb, list row | `132px` | the 88×66 cover box, up to a 2:1 picture |
 
 ---
 

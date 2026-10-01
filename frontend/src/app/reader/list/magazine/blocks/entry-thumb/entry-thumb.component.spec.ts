@@ -99,7 +99,7 @@ describe('EntryThumbComponent', () => {
     expect(favorite).toHaveBeenCalled();
   });
 
-  it('offers its renditions to the browser at the 88px box', () => {
+  it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {
     const renditions: ImageRenditionDto[] = [
       { url: 'https://i/a-150.jpg', width: 150 },
       { url: 'https://i/a-300.jpg', width: 300 },
@@ -107,7 +107,7 @@ describe('EntryThumbComponent', () => {
     const element = mount(entry({ imageRenditions: renditions })).nativeElement as HTMLElement;
     const img = element.querySelector('img.img') as HTMLImageElement;
     expect(img.getAttribute('srcset')).toBe('https://i/a-150.jpg 150w, https://i/a-300.jpg 300w');
-    expect(img.getAttribute('sizes')).toBe('88px');
+    expect(img.getAttribute('sizes')).toBe('132px');
   });
 
   it('keeps a plain src when the entry has no renditions', () => {

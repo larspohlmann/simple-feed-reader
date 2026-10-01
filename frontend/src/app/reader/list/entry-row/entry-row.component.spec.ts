@@ -208,7 +208,7 @@ describe('EntryRowComponent', () => {
     expect(opened).toHaveBeenCalledTimes(1);
   });
 
-  it('offers its renditions to the browser at the 88px box', () => {
+  it('offers its renditions to the browser at the 88×66 cover box, up to a 2:1 picture', () => {
     const renditions: ImageRenditionDto[] = [
       { url: 'https://cdn.test/a-150.jpg', width: 150 },
       { url: 'https://cdn.test/a-300.jpg', width: 300 },
@@ -218,7 +218,7 @@ describe('EntryRowComponent', () => {
     expect(img.getAttribute('srcset')).toBe(
       'https://cdn.test/a-150.jpg 150w, https://cdn.test/a-300.jpg 300w',
     );
-    expect(img.getAttribute('sizes')).toBe('88px');
+    expect(img.getAttribute('sizes')).toBe('132px');
   });
 
   it('keeps a plain src when the entry has no renditions', () => {
