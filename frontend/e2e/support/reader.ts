@@ -1,6 +1,11 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
 import type { Page } from '@playwright/test';
-import type { EntryDto, SavedSearchWire, SubscriptionDto } from '../../src/app/reader/models';
+import type {
+  EntryDetailDto,
+  EntryDto,
+  SavedSearchWire,
+  SubscriptionDto,
+} from '../../src/app/reader/models';
 import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
@@ -103,6 +108,11 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
     comments: null,
     ...overrides,
   };
+}
+
+/** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100). */
+export function entryDetailJson(entry: EntryDto, contentHtml: string): { entry: EntryDetailDto } {
+  return { entry: { ...entry, contentHtml } };
 }
 
 /** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */

@@ -87,7 +87,7 @@ function audioOrigin(): Promise<{ server: Server; origin: string }> {
       'content-length': end - start + 1,
       ...(range ? { 'content-range': `bytes ${start}-${end}/${file.length}` } : {}),
     });
-    response.end(file.subarray(start, end + 1));
+    return response.end(file.subarray(start, end + 1));
   });
   return new Promise((resolve) =>
     server.listen(0, '127.0.0.1', () => resolve({ server, origin: origin(server) })),
