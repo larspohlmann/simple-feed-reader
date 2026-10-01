@@ -160,6 +160,32 @@ final readonly class ImageIdentityModel
             && !$this->hasDifferentAssetToken($other);
     }
 
+    /**
+     * One source file at any size: the same rendition, or the same stem once one trailing `-WxH` is dropped
+     * (WordPress sizes). A bare trailing number or a shared word is another picture of a gallery.
+     */
+    public function isRenditionOf(self $other): bool
+    {
+        if ($this->isSameRendition($other)) {
+            return true;
+        }
+        if ($this->pathUuid !== null && $other->pathUuid !== null) {
+            return false;
+        }
+        if ($this->ids !== [] && $other->ids !== []) {
+            return false;
+        }
+
+        $sizelessStem = self::withoutTrailingSize($this->stem);
+
+        return $sizelessStem !== '' && $sizelessStem === self::withoutTrailingSize($other->stem);
+    }
+
+    private static function withoutTrailingSize(string $stem): string
+    {
+        return (string) preg_replace('/[-_]\d+x\d+$/', '', $stem);
+    }
+
     private function hasDifferentAssetToken(self $other): bool
     {
         return $this->assetToken !== null

@@ -133,4 +133,12 @@ final class DeclaredImageModelTest extends TestCase
 
         self::assertEquals($image->renditions, $image->joinedWith($image)->renditions);
     }
+
+    public function testKeepsWidthOnlyGalleryFilesThatShareWordsApart(): void
+    {
+        $first = self::sized('https://i/hamburg-hafen-elbphilharmonie.jpg', 1200);
+        $second = self::sized('https://i/hamburg-hafen-speicherstadt.jpg', 800);
+
+        self::assertEquals($first->renditions, $first->joinedWith($second)->renditions);
+    }
 }

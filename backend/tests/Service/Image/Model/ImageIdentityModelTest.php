@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Image\Model;
 
 use App\Service\Image\Model\ImageIdentityModel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ImageIdentityModelTest extends TestCase
@@ -595,5 +596,58 @@ final class ImageIdentityModelTest extends TestCase
     private function substackFetch(string $transforms, string $source): string
     {
         return 'https://substackcdn.com/image/fetch/' . $transforms . '/' . rawurlencode($source);
+    }
+
+    private function renditionOf(string $left, string $right): bool
+    {
+        return ImageIdentityModel::fromUrl($left)->isRenditionOf(ImageIdentityModel::fromUrl($right));
+    }
+
+    public function testIsRenditionOfAWordPressSizeOfTheSameUpload(): void
+    {
+        self::assertTrue($this->renditionOf(
+            'https://cdn.example/wp-content/uploads/2026/09/funk-system-1800.jpg',
+            'https://cdn.example/wp-content/uploads/2026/09/funk-system-1800-1024x683.jpg',
+        ));
+    }
+
+    public function testIsRenditionOfAGuardianPathWithAnotherSignedQuery(): void
+    {
+        $photo = 'https://i.guim.co.uk/img/media/f6d33de551f7fcdc046178cfccc4037e79b99f3e'
+            . '/276_0_4639_3711/master/4639.jpg';
+
+        self::assertTrue($this->renditionOf($photo . '?width=700&s=6192bfa4', $photo . '?width=140&s=406198660'));
+    }
+
+    public function testIsRenditionOfTwoSubstackWrappersOfOneSource(): void
+    {
+        $source = 'https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages'
+            . '%2F10a5f3c6-6b92-48ff-8280-0cd3a9f25e41_750x1054.jpeg';
+
+        self::assertTrue($this->renditionOf(
+            'https://substackcdn.com/image/fetch/$s_!v2GA!,f_auto/' . $source,
+            'https://substackcdn.com/image/fetch/$s_!v2GA!,w_424,c_limit,f_auto/' . $source,
+        ));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function galleryPicturesOfOneSharedWordProvider(): iterable
+    {
+        yield 'shared words' => [
+            'https://i/hamburg-hafen-elbphilharmonie.jpg',
+            'https://i/hamburg-hafen-speicherstadt.jpg',
+        ];
+        yield 'shared event words' => [
+            'https://i/radweg-eroeffnung-buergermeister.jpg',
+            'https://i/radweg-eroeffnung-publikum.jpg',
+        ];
+        yield 'letter suffix' => ['https://i/festtag-a.jpg', 'https://i/festtag-b.jpg'];
+        yield 'asset numbers' => ['https://i/relli-festtag-21.jpg', 'https://i/relli-festtag-33.jpg'];
+    }
+
+    #[DataProvider('galleryPicturesOfOneSharedWordProvider')]
+    public function testIsNotRenditionOfAnotherPictureOfTheSameGallery(string $left, string $right): void
+    {
+        self::assertFalse($this->renditionOf($left, $right));
     }
 }

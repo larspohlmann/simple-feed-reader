@@ -42,7 +42,7 @@ final readonly class DeclaredImageModel
     private function showsSamePictureAs(self $other): bool
     {
         return !$this->declaresAnotherCropThan($other)
-            && ImageIdentityModel::fromUrl($this->url)->isSameAsset(ImageIdentityModel::fromUrl($other->url));
+            && ImageIdentityModel::fromUrl($this->url)->isRenditionOf(ImageIdentityModel::fromUrl($other->url));
     }
 
     private function declaresAnotherCropThan(self $other): bool

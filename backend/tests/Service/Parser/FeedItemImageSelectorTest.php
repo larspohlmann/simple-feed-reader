@@ -180,11 +180,12 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $image = $this->selector->fromRss2(
             $this->rss2Item('<description>no media</description>'),
-            '<img src="https://i/harbor-lighthouse-1024.jpg" srcset="https://i/harbor-lighthouse-300.jpg 300w">',
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
         );
 
         self::assertNotNull($image);
-        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300.jpg', 300)], $image->renditions);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
     }
 
     public function testAnAtomEnclosureTakesTheFirstBodyImagesLadder(): void
@@ -195,12 +196,13 @@ final class FeedItemImageSelectorTest extends TestCase
 
         $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', [
             null,
-            '<img src="https://i/harbor-lighthouse-1024.jpg" srcset="https://i/harbor-lighthouse-300.jpg 300w">',
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
         ]);
 
         self::assertNotNull($image);
         self::assertSame('https://i/harbor-lighthouse.jpg', $image->url);
-        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300.jpg', 300)], $image->renditions);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
     }
 
     public function testAnRss1MediaImageTakesTheBodyImagesLadder(): void
@@ -209,12 +211,13 @@ final class FeedItemImageSelectorTest extends TestCase
 
         $image = $this->selector->fromRss1(
             $item,
-            '<img src="https://i/harbor-lighthouse-1024.jpg" srcset="https://i/harbor-lighthouse-300.jpg 300w">',
+            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
         );
 
         self::assertNotNull($image);
         self::assertSame('https://i/harbor-lighthouse.jpg', $image->url);
-        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300.jpg', 300)], $image->renditions);
+        self::assertEquals([new ImageRendition('https://i/harbor-lighthouse-300x200.jpg', 300)], $image->renditions);
     }
 
     public function testAnRss1ItemFallsBackToItsBodyImage(): void
