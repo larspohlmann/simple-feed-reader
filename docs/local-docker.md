@@ -209,10 +209,11 @@ and re-runs `docker/mysql/init.sql`, after which you migrate again. One
 exception to "plain `down` keeps everything": Mailpit's inbox is in-memory,
 so it starts empty after any `down`.
 
-A stack started before tracing and profiling were removed (#1328) keeps their
-data: `docker volume rm simple-feed-reader_tempo-data simple-feed-reader_pyroscope-data`
-frees it, and the leftover "Application performance" dashboard can be deleted in
-Grafana.
+A stack started before tracing and profiling were removed (#1328) still runs
+their containers: `docker compose up -d --remove-orphans` removes them, then
+`docker volume rm simple-feed-reader_tempo-data simple-feed-reader_pyroscope-data`
+frees their data, and the leftover "Application performance" dashboard can be
+deleted in Grafana.
 
 ### Log retention
 

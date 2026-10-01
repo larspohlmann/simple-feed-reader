@@ -9,7 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** PLATFORM-AWARE DDL: SQLite drops one column per ALTER and rejects the multi-DROP MySQL accepts. */
+/** down() is platform-aware: SQLite adds one column per ALTER and rejects the multi-ADD MySQL accepts. */
 final class Version20261001120000 extends AbstractMigration
 {
     public function getDescription(): string
@@ -19,22 +19,8 @@ final class Version20261001120000 extends AbstractMigration
 
     public function up(Schema $schema): void
     {
-        $platform = $this->connection->getDatabasePlatform();
-
-        if ($platform instanceof AbstractMySQLPlatform) {
-            $this->addSql('ALTER TABLE grafana_settings DROP profiling_enabled, DROP pyroscope_push_url');
-
-            return;
-        }
-
-        if ($platform instanceof SQLitePlatform) {
-            $this->addSql('ALTER TABLE grafana_settings DROP COLUMN profiling_enabled');
-            $this->addSql('ALTER TABLE grafana_settings DROP COLUMN pyroscope_push_url');
-
-            return;
-        }
-
-        throw new \RuntimeException('Unsupported database platform for the grafana_settings profiling migration.');
+        $this->addSql('ALTER TABLE grafana_settings DROP COLUMN profiling_enabled');
+        $this->addSql('ALTER TABLE grafana_settings DROP COLUMN pyroscope_push_url');
     }
 
     public function down(Schema $schema): void

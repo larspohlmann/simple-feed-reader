@@ -19,7 +19,7 @@ import { toastOnSaved } from '../../../shared/toast/saved-toast';
 import { GrafanaSettingsService } from './grafana-settings.service';
 
 /** The admin "Grafana" settings section (#983), on the grouped design language
- *  from #541. Every field is typed and waits behind the shared save bar. */
+ *  from #541. */
 @Component({
   selector: 'app-grafana-section',
   imports: [

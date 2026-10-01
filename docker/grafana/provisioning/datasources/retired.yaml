@@ -1,0 +1,8 @@
+# Deleting a datasource's provisioning file leaves it in Grafana's database; list it here instead.
+apiVersion: 1
+
+deleteDatasources:
+  - name: Tempo
+    orgId: 1
+  - name: Pyroscope
+    orgId: 1

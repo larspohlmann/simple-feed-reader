@@ -88,7 +88,6 @@ describe('GrafanaSectionComponent', () => {
     expect(groups.length).toBe(2);
     expect(fixture.nativeElement.textContent).toContain('Log shipping');
     expect(fixture.nativeElement.textContent).toContain('Viewing');
-    expect(fixture.nativeElement.textContent).not.toContain('Profiling');
   });
 
   it('shows the local-container hint with the effective push URL when a container is present', () => {

@@ -183,11 +183,8 @@ final class EntryListRepository extends ServiceEntityRepository
         return array_map(fn (array $row): EntryListRow => $this->rowHydrator->hydrate($row), $rows);
     }
 
-    /**
-     * The entry only if the caller subscribes to its feed — the IDOR gate for
-     * per-entry state writes. Returns a managed Entry (or null → 404).
-     */
-    public function findOneSubscribedForUser(int $userId, int $entryId): ?Entry
+    /** The entry only if the caller subscribes to its feed — the IDOR gate for per-entry state writes. */
+    public function getOneSubscribedForUser(int $userId, int $entryId): Entry
     {
         /** @var Entry|null $entry */
         $entry = $this->createQueryBuilder('e')
@@ -198,13 +195,7 @@ final class EntryListRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $entry;
-    }
-
-    public function getOneSubscribedForUser(int $userId, int $entryId): Entry
-    {
-        return $this->findOneSubscribedForUser($userId, $entryId)
-            ?? throw new RecordNotFoundException('No such entry.');
+        return $entry ?? throw new RecordNotFoundException('No such entry.');
     }
 
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder

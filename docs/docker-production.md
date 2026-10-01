@@ -317,6 +317,11 @@ idempotent — running it again is always safe.
 `./scripts/update.sh --ref <branch-or-tag>` moves the install to that ref
 instead, for a test instance that has to run a change before it is released.
 
+The update that removed tracing and profiling (#1328) removes their containers
+but keeps their data. Free it with
+`docker volume rm simple-feed-reader-prod_tempo-data simple-feed-reader-prod_pyroscope-data`,
+and delete the leftover "Application performance" dashboard in Grafana.
+
 ## 7. Reconfigure
 
 To change the public origin, the search engine, the mail settings or the
@@ -347,11 +352,7 @@ Losing it is not fatal — `app:search:reindex` rebuilds the whole index from
 the database — but back it up anyway if you would rather not run that command
 by hand after a restore. The Grafana dashboard adds `loki-data` and
 `grafana-data`: logs and Grafana's own state, neither of which the app needs to
-run. An install from before tracing and profiling were removed (#1328) still
-holds their data; once the update is through, free it with
-`docker volume rm simple-feed-reader-prod_tempo-data simple-feed-reader-prod_pyroscope-data`,
-and delete the leftover "Application performance" dashboard in Grafana.
-A database dump before major updates:
+run. A database dump before major updates:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \

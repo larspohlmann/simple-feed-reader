@@ -15,8 +15,7 @@ composer md          # PHPMD, codesize ruleset
 composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.json)
 composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
-php bin/phpunit      # unit/integration suite (SQLite natively)
-composer test        # phpunit; `composer test -- --filter=Foo` passes args
+php bin/phpunit      # unit/integration suite (SQLite natively); `composer test` is the same
 composer test:parallel    # the suite over ParaTest, one TEST_TOKEN worker per CPU — what CI runs
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
 composer infection:diff   # …over the files this branch changes — what CI gates

@@ -16,12 +16,11 @@ trait BuildsEffectiveGrafanaSettings
     private function effectiveGrafanaSettingsOver(
         ?GrafanaSettingsEntity $row,
         GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', ''),
-        ?GrafanaSettingsCache $cache = null,
     ): EffectiveGrafanaSettings {
         $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturn($row);
 
-        return $this->effectiveGrafanaSettingsOverRepository($repository, $defaults, $cache);
+        return $this->effectiveGrafanaSettingsOverRepository($repository, $defaults);
     }
 
     private function effectiveGrafanaSettingsOverRepository(
