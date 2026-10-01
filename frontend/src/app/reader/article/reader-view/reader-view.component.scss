@@ -266,8 +266,6 @@ app-to-top-button {
 }
 
 article {
-  /* The anchor for the wide layout's back button: the column the reader's eye
-     follows, not the pane. See the container query below. */
   position: relative;
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
