@@ -91,6 +91,26 @@ final class EntryImageWriterTest extends TestCase
         );
     }
 
+    public function testDropsARenditionWhoseUrlHoldsWhitespace(): void
+    {
+        $entry = $this->entry();
+
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a.jpg', null, null, [
+            new ImageRendition('https://img.example.com/a-300.jpg', 300),
+            new ImageRendition('https://img.example.com/a 600.jpg', 600),
+            new ImageRendition("https://img.example.com/a-700.jpg\t", 700),
+            new ImageRendition('https://img.example.com/a-900.jpg', 900),
+        ]));
+
+        self::assertEquals(
+            [
+                new ImageRendition('https://img.example.com/a-300.jpg', 300),
+                new ImageRendition('https://img.example.com/a-900.jpg', 900),
+            ],
+            $entry->getImage()->getRenditions(),
+        );
+    }
+
     public function testASingleRenditionIsNoLadder(): void
     {
         $entry = $this->entry();

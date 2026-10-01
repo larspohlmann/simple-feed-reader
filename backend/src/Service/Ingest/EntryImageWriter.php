@@ -46,12 +46,17 @@ final readonly class EntryImageWriter
         $secure = [];
         foreach ($declared as $rendition) {
             $url = HttpsImageUrl::orNullUpgrading($rendition->url);
-            if ($url !== null) {
+            if ($url !== null && self::fitsASrcsetCandidate($url)) {
                 $secure[] = new ImageRendition($url, $rendition->width);
             }
         }
         $ladder = ImageRendition::ladder($secure);
 
         return \count($ladder) < self::FEWEST_RENDITIONS_TO_CHOOSE_FROM ? [] : $ladder;
+    }
+
+    private static function fitsASrcsetCandidate(string $url): bool
+    {
+        return preg_match('/\s/', $url) !== 1;
     }
 }
