@@ -323,8 +323,7 @@ control, not ceremony — do not "simplify" it away, and do not delete
 ## Testing
 
 - Backend unit/integration: `php bin/phpunit` (SQLite) natively, or
-  `docker compose exec php composer test` (MySQL — see the Docker stack note on why
-  not bare `vendor/bin/phpunit`). Run both legs before a PR.
+  `docker compose exec php composer test` (MySQL). Run both legs before a PR.
 - **Direct-invocation tests mislead.** A listener test that bypasses the dispatcher
   can assert something the real wiring makes impossible — back it with a
   functional test.

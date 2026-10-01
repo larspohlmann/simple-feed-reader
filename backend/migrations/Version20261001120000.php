@@ -9,10 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/**
- * PLATFORM-AWARE DDL: SQLite drops one column per ALTER, and tests never run a migration, so a dialect error here is
- * caught only by CI's migrate-from-empty leg.
- */
+/** PLATFORM-AWARE DDL: SQLite drops one column per ALTER and rejects the multi-DROP MySQL accepts. */
 final class Version20261001120000 extends AbstractMigration
 {
     public function getDescription(): string

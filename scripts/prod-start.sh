@@ -84,8 +84,8 @@ fi
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
 
-# --remove-orphans drops containers of services this file no longer defines
-# (tempo and pyroscope, #1328); a service only switched off by profile is kept.
+# --remove-orphans drops containers of services this file no longer defines;
+# a service only switched off by profile is kept.
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
   prod_compose up -d --build --remove-orphans
 

@@ -21,7 +21,7 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Eleven services, started with one command from the repository root:
+Nine services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
@@ -208,6 +208,11 @@ databases. Adding `-v` wipes them; the next `up` starts from an empty server
 and re-runs `docker/mysql/init.sql`, after which you migrate again. One
 exception to "plain `down` keeps everything": Mailpit's inbox is in-memory,
 so it starts empty after any `down`.
+
+A stack started before tracing and profiling were removed (#1328) keeps their
+data: `docker volume rm simple-feed-reader_tempo-data simple-feed-reader_pyroscope-data`
+frees it, and the leftover "Application performance" dashboard can be deleted in
+Grafana.
 
 ### Log retention
 
