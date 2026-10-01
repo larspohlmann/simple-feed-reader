@@ -9,10 +9,12 @@
 }
 
 /* The article layer the return swipe moves. The back-to-top button stays
-   outside it: a transform re-anchors `position: fixed` (#100). */
+   outside it: a transform re-anchors `position: fixed` (#100). Isolated so the
+   chrome's z-indices stay off the shell's pane divider (#128). */
 .frame {
   position: relative;
   height: 100%;
+  isolation: isolate;
 }
 
 /* The only scroller. Chrome a tap must reach stays outside it: iOS spends a tap

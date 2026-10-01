@@ -325,8 +325,6 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('back-to-top button', () => {
-    afterEach(() => sessionStorage.clear());
-
     function scrollArticleTo(fixture: ReturnType<typeof mount>, top: number): void {
       const scroller = scrollerOf(fixture);
       Object.defineProperty(scroller, 'scrollTop', { configurable: true, value: top });
@@ -383,8 +381,6 @@ describe('ReaderViewComponent', () => {
   // changes value (mode flips reader -> original but the feed's own content is
   // shown either way), so the content signal alone can never trigger it.
   describe('article scroll restore', () => {
-    // jsdom has no layout, so a real scrollTop write is a no-op and always reads
-    // back 0. Record the writes instead — that is what the restore does.
     function trackScrollTop(scroller: HTMLElement): { top: number } {
       const state = { top: 0 };
       Object.defineProperty(scroller, 'scrollTop', {
@@ -415,8 +411,6 @@ describe('ReaderViewComponent', () => {
       fixture.detectChanges();
       await Promise.resolve();
     }
-
-    afterEach(() => sessionStorage.clear());
 
     it('restores the remembered offset when extraction fails', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
@@ -596,7 +590,9 @@ describe('ReaderViewComponent', () => {
     fixture.detectChanges();
 
     for (const chrome of ['.mini', '.bar', 'app-to-top-button']) {
-      expect(scroller.contains(element.querySelector(chrome))).toBe(false);
+      const found = element.querySelector(chrome);
+      expect(found).not.toBeNull();
+      expect(scroller.contains(found)).toBe(false);
     }
     expect(scroller.contains(element.querySelector('.content'))).toBe(true);
     fixture.destroy();
