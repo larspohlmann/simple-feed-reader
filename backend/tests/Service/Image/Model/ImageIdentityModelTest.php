@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Model;
+namespace App\Tests\Service\Image\Model;
 
-use App\Service\Reader\Model\ImageIdentityModel;
+use App\Service\Image\Model\ImageIdentityModel;
 use PHPUnit\Framework\TestCase;
 
 final class ImageIdentityModelTest extends TestCase

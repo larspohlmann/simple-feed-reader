@@ -7,6 +7,7 @@ namespace App\Service\Reader\Model;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
+use App\Service\Image\Model\ImageIdentityModel;
 
 /**
  * The media the feed declared for one entry. For a scraped URL the feed enumerated, its declared kind, MIME and pixel

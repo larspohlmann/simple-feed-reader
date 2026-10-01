@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Reader\Model\ImageIdentityModel;
+use App\Service\Image\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
