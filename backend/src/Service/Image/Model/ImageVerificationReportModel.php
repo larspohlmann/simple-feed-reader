@@ -13,4 +13,15 @@ final readonly class ImageVerificationReportModel
         public int $retried,
     ) {
     }
+
+    /** @return array{measured: int, kept: int, dropped: int, retried: int} */
+    public function toLogContext(): array
+    {
+        return [
+            'measured' => $this->measured,
+            'kept' => $this->kept,
+            'dropped' => $this->dropped,
+            'retried' => $this->retried,
+        ];
+    }
 }
