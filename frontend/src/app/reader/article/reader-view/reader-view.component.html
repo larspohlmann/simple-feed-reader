@@ -198,7 +198,7 @@
         <p class="categories">{{ e.categories.join(', ') }}</p>
       }
       @if (!source.loading() && e.comments) {
-        <app-entry-comments [entry]="e" />
+        <app-entry-comments [entry]="e" [scroller]="scroller()" />
       }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place

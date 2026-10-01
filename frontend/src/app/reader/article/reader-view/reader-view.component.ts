@@ -30,7 +30,6 @@ import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.compone
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
-import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
@@ -73,16 +72,7 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
     EntryCommentsComponent,
     ReaderTocComponent,
   ],
-  providers: [
-    {
-      provide: READER_SCROLLER,
-      useFactory: () => inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
-    },
-    ArticleScrollRestore,
-    ArticleGestures,
-    ArticleSource,
-    ReadingScope,
-  ],
+  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -109,6 +99,7 @@ export class ReaderViewComponent {
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  protected readonly scroller = computed(() => this.host.nativeElement);
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
@@ -163,7 +154,12 @@ export class ReaderViewComponent {
 
   constructor() {
     this.source.connect(this.entry);
-    this.gestures.connect({ fullscreen: this.fullscreen, close: () => this.close.emit() });
+    this.gestures.connect({
+      fullscreen: this.fullscreen,
+      scroller: this.scroller,
+      close: () => this.close.emit(),
+    });
+    this.restore.connect(this.scroller);
 
     effect(() => {
       const entry = this.entry();
@@ -188,7 +184,11 @@ export class ReaderViewComponent {
       this.source.open(entry);
     });
 
-    this.scope.connect(this.content, this.commentsSection);
+    this.scope.connect({
+      scroller: this.scroller,
+      content: this.content,
+      comments: this.commentsSection,
+    });
 
     // Body images arrive through [innerHTML], so one capturing listener gives them the proxy
     // fallback (error events do not bubble).

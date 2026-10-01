@@ -1,5 +1,12 @@
-import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { READER_SCROLLER } from '../../scroll/reader-scroller';
+import {
+  DestroyRef,
+  ElementRef,
+  Injectable,
+  Signal,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import {
   AXIS_LOCK_MIN,
   atBottom,
@@ -25,6 +32,7 @@ function startsOnMediaControl(target: EventTarget | null): boolean {
 
 export interface ArticleGestureHost {
   readonly fullscreen: Signal<boolean>;
+  readonly scroller: Signal<HTMLElement | undefined>;
   readonly close: () => void;
 }
 
@@ -33,10 +41,14 @@ export interface ArticleGestureHost {
  *  at-the-end overscroll (rubber-banded). `leaving` commits to going back. */
 @Injectable()
 export class ArticleGestures {
-  private readonly scroller = inject(READER_SCROLLER);
+  private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
-  private host: ArticleGestureHost = { fullscreen: signal(false), close: () => undefined };
+  private host: ArticleGestureHost = {
+    fullscreen: signal(false),
+    scroller: signal(undefined),
+    close: () => undefined,
+  };
 
   private readonly dragX = signal(0);
   private readonly pull = signal(0);
@@ -61,9 +73,9 @@ export class ArticleGestures {
   readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
 
   constructor() {
-    // Touch listeners live on the scroll host. touchmove is non-passive so a
+    // A swipe may start anywhere on the article layer. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
-    const element = this.scroller;
+    const element = this.layer;
     const start = (touchEvent: TouchEvent) => this.onTouchStart(touchEvent);
     const move = (touchEvent: TouchEvent) => this.onTouchMove(touchEvent);
     const end = () => this.onTouchEnd();
@@ -95,7 +107,8 @@ export class ArticleGestures {
     this.touchDx = 0;
     this.touchDy = 0;
     this.axis = 'none';
-    this.atBottomOnStart = atBottom(this.scroller);
+    const scroller = this.host.scroller();
+    this.atBottomOnStart = scroller !== undefined && atBottom(scroller);
     this.snapping.set(false);
   }
 

@@ -4,7 +4,6 @@ import { EntryCommentsComponent } from './entry-comments.component';
 import { CommentsService, CommentsState } from './comments.service';
 import { CommentsLoad } from '../../models';
 import { prefetchMargin } from '../../list/paging';
-import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
@@ -43,10 +42,7 @@ describe('EntryCommentsComponent', () => {
     ) as unknown as typeof IntersectionObserver;
     TestBed.configureTestingModule({
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
-      providers: [
-        { provide: CommentsService, useValue: service },
-        { provide: READER_SCROLLER, useValue: scroller },
-      ],
+      providers: [{ provide: CommentsService, useValue: service }],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
   });
@@ -64,6 +60,7 @@ describe('EntryCommentsComponent', () => {
   }
 
   function show(comments: CommentsLoad, id = 5, discussionUrl: string | null = DISCUSSION): void {
+    fixture.componentRef.setInput('scroller', scroller);
     fixture.componentRef.setInput('entry', { id, comments, discussionUrl });
     fixture.detectChanges();
   }
