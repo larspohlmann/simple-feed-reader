@@ -9,6 +9,7 @@ use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\SavedSearch;
@@ -258,6 +259,10 @@ final class EntryControllerTest extends WebTestCase
         $july2 = new \DateTimeImmutable('2026-07-02T00:00:00Z');
         $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1, $july1);
         $withImage->getImage()->storePending('https://i.example.com/big.jpg', 948, 474);
+        $withImage->getImage()->storeRenditions([
+            new ImageRendition('https://i.example.com/big-474.jpg', 474),
+            new ImageRendition('https://i.example.com/big.jpg', 948),
+        ]);
         $entityManager->persist($withImage);
         $entityManager->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2, $july2));
         $entityManager->flush();
@@ -274,9 +279,17 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('https://i.example.com/big.jpg', $first['imageUrl']);
         self::assertSame(948, $first['imageWidth']);
         self::assertSame(474, $first['imageHeight']);
+        self::assertSame(
+            [
+                ['url' => 'https://i.example.com/big-474.jpg', 'width' => 474],
+                ['url' => 'https://i.example.com/big.jpg', 'width' => 948],
+            ],
+            $first['imageRenditions'],
+        );
         self::assertNull($second['imageUrl']);
         self::assertNull($second['imageWidth']);
         self::assertNull($second['imageHeight']);
+        self::assertSame([], $second['imageRenditions']);
     }
 
     public function testEntryDuplicatesNameTheOtherFeedAsSource(): void
