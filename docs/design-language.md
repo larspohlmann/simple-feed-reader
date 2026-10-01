@@ -1518,7 +1518,7 @@ view would still leave an image block with no image.
 rendition ladder (`imageRenditions`, #1330) gets a `srcset` through
 `RenditionsDirective` (`reader/list/renditions.directive.ts`), and the browser
 loads the smallest file that covers the box. The values are upper bounds read
-off the CSS above; a block whose width changes changes its value too:
+off the CSS above, and live in `reader/list/rendition-sizes.ts`; a block whose width changes changes its value too:
 
 | Block | `sizes` | Read from |
 |---|---|---|

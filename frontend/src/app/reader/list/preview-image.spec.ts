@@ -52,22 +52,13 @@ describe('entryImage', () => {
 });
 
 describe('renditionSrcset', () => {
-  it('lists the renditions narrowest first as width candidates', () => {
+  it('lists the renditions as width candidates, in the order served', () => {
     expect(
       renditionSrcset([
-        { url: 'https://i/a-848.jpg', width: 848 },
         { url: 'https://i/a-424.jpg', width: 424 },
+        { url: 'https://i/a-848.jpg', width: 848 },
       ]),
     ).toBe('https://i/a-424.jpg 424w, https://i/a-848.jpg 848w');
-  });
-
-  it('keeps the first rendition of a repeated width', () => {
-    expect(
-      renditionSrcset([
-        { url: 'https://i/a-424.webp', width: 424 },
-        { url: 'https://i/a-424.jpg', width: 424 },
-      ]),
-    ).toBe('https://i/a-424.webp 424w');
   });
 
   it('keeps the commas inside a transform url', () => {
@@ -83,12 +74,12 @@ describe('renditionSrcset', () => {
 });
 
 describe('widestRenditionWidth', () => {
-  it('is the widest declared width, in any order', () => {
+  it('is the width of the last, widest rung', () => {
     expect(
       widestRenditionWidth([
+        { url: 'https://x/a-424.jpg', width: 424 },
         { url: 'https://x/a-848.jpg', width: 848 },
         { url: 'https://x/a-1696.jpg', width: 1696 },
-        { url: 'https://x/a-424.jpg', width: 424 },
       ]),
     ).toBe(1696);
   });

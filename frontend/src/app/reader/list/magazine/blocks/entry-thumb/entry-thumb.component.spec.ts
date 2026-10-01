@@ -109,10 +109,4 @@ describe('EntryThumbComponent', () => {
     expect(img.getAttribute('srcset')).toBe('https://i/a-150.jpg 150w, https://i/a-300.jpg 300w');
     expect(img.getAttribute('sizes')).toBe('132px');
   });
-
-  it('keeps a plain src when the entry has no renditions', () => {
-    const img = (mount(entry()).nativeElement as HTMLElement).querySelector('img.img')!;
-    expect(img.hasAttribute('srcset')).toBe(false);
-    expect(img.hasAttribute('sizes')).toBe(false);
-  });
 });

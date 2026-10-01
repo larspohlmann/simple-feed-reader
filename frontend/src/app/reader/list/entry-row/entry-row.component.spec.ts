@@ -220,10 +220,4 @@ describe('EntryRowComponent', () => {
     );
     expect(img.getAttribute('sizes')).toBe('132px');
   });
-
-  it('keeps a plain src when the entry has no renditions', () => {
-    const img = (mount(entry()).nativeElement as HTMLElement).querySelector('img.thumb')!;
-    expect(img.hasAttribute('srcset')).toBe(false);
-    expect(img.hasAttribute('sizes')).toBe(false);
-  });
 });

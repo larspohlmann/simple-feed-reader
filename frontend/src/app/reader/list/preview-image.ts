@@ -16,26 +16,18 @@ export function entryImage(entry: EntryDto): EntryImage | null {
   return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
 }
 
-/** The renditions as a `srcset`, narrowest first and one candidate per width, or null
- *  when there are none. Stubbed e2e entries predate the field and omit it. */
+/** The renditions as a `srcset`, or null when there are none. Stubbed e2e entries predate
+ *  the field and omit it. */
 export function renditionSrcset(
   renditions: readonly ImageRenditionDto[] | undefined,
 ): string | null {
   if (!renditions?.length) return null;
-  const urlByWidth = new Map<number, string>();
-  for (const rendition of renditions) {
-    if (!urlByWidth.has(rendition.width)) urlByWidth.set(rendition.width, rendition.url);
-  }
-  return [...urlByWidth]
-    .sort(([left], [right]) => left - right)
-    .map(([width, url]) => `${url} ${width}w`)
-    .join(', ');
+  return renditions.map(({ url, width }) => `${url} ${width}w`).join(', ');
 }
 
 /** The widest rendition's width, or null when there are none. */
 export function widestRenditionWidth(
   renditions: readonly ImageRenditionDto[] | undefined,
 ): number | null {
-  if (!renditions?.length) return null;
-  return Math.max(...renditions.map((rendition) => rendition.width));
+  return renditions?.at(-1)?.width ?? null;
 }

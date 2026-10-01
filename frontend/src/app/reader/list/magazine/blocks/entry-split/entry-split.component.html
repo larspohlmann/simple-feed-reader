@@ -14,7 +14,7 @@
         class="img"
         [src]="image()!.url"
         [appRenditions]="entry().imageRenditions"
-        [renditionSizes]="'(max-width: 728px) calc(38vw - 18px), 259px'"
+        [renditionSizes]="splitSideImageSizes"
         [style.aspect-ratio]="aspect()"
         [attr.width]="image()!.width"
         [attr.height]="image()!.height"

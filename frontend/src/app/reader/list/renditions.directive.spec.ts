@@ -27,8 +27,8 @@ describe('RenditionsDirective', () => {
 
   it('offers the renditions and the rendered width to the browser', () => {
     const img = mount([
-      { url: 'https://i/a-848.jpg', width: 848 },
       { url: 'https://i/a-424.jpg', width: 424 },
+      { url: 'https://i/a-848.jpg', width: 848 },
     ]);
     expect(img.getAttribute('srcset')).toBe('https://i/a-424.jpg 424w, https://i/a-848.jpg 848w');
     expect(img.getAttribute('sizes')).toBe('88px');

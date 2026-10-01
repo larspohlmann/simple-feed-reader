@@ -14,6 +14,8 @@ export class RenditionsDirective {
    *  (`[renditionSizes]="'132px'"`): a static attribute would also land in the DOM. */
   readonly renditionSizes = input.required<string>();
 
-  readonly srcset = computed(() => renditionSrcset(this.appRenditions()));
-  readonly sizes = computed(() => (this.srcset() === null ? null : this.renditionSizes()));
+  protected readonly srcset = computed(() => renditionSrcset(this.appRenditions()));
+  protected readonly sizes = computed(() =>
+    this.srcset() === null ? null : this.renditionSizes(),
+  );
 }

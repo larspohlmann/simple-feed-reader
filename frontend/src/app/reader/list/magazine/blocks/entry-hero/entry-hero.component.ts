@@ -5,6 +5,7 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { entryImage, widestRenditionWidth } from '../../../preview-image';
 import { EntryBlockBase } from '../../entry-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
+import { FULL_COLUMN_SIZES } from '../../../rendition-sizes';
 
 @Component({
   selector: 'app-entry-hero',
@@ -19,6 +20,7 @@ import { RenditionsDirective } from '../../../renditions.directive';
   styleUrl: './entry-hero.component.scss',
 })
 export class EntryHeroComponent extends EntryBlockBase {
+  protected readonly fullColumnSizes = FULL_COLUMN_SIZES;
   readonly imgError = signal(false);
   readonly tooSmall = signal(false);
   readonly image = computed(() => entryImage(this.entry()));

@@ -38,7 +38,7 @@ final readonly class ImageRendition implements \JsonSerializable
     }
 
     /**
-     * One rendition per URL, the first declared winning, narrowest first.
+     * One rendition per URL and per width, the first declared winning, narrowest first.
      *
      * @param list<self> $renditions
      *
@@ -47,8 +47,13 @@ final readonly class ImageRendition implements \JsonSerializable
     public static function ladder(array $renditions): array
     {
         $byUrl = [];
+        $byWidth = [];
         foreach ($renditions as $rendition) {
-            $byUrl[$rendition->url] ??= $rendition;
+            if (isset($byUrl[$rendition->url]) || isset($byWidth[$rendition->width])) {
+                continue;
+            }
+            $byUrl[$rendition->url] = $rendition;
+            $byWidth[$rendition->width] = $rendition;
         }
         $ladder = array_values($byUrl);
         usort($ladder, static fn (self $left, self $right): int => $left->width <=> $right->width);

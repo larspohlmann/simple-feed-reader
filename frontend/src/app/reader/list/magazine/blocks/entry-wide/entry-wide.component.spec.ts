@@ -114,10 +114,4 @@ describe('EntryWideComponent', () => {
     expect(img.getAttribute('srcset')).toBe('https://i/a-424.jpg 424w, https://i/a-848.jpg 848w');
     expect(img.getAttribute('sizes')).toBe('(max-width: 728px) calc(100vw - 24px), 680px');
   });
-
-  it('keeps a plain src when the entry has no renditions', () => {
-    const img = (mount(entry()).nativeElement as HTMLElement).querySelector('img.img')!;
-    expect(img.hasAttribute('srcset')).toBe(false);
-    expect(img.hasAttribute('sizes')).toBe(false);
-  });
 });

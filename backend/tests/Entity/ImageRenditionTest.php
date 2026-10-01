@@ -25,6 +25,20 @@ final class ImageRenditionTest extends TestCase
         );
     }
 
+    public function testALadderKeepsTheFirstRenditionOfEachWidth(): void
+    {
+        $ladder = ImageRendition::ladder([
+            new ImageRendition('https://i/a-424.webp', 424),
+            new ImageRendition('https://i/a-848.jpg', 848),
+            new ImageRendition('https://i/a-424.jpg', 424),
+        ]);
+
+        self::assertEquals(
+            [new ImageRendition('https://i/a-424.webp', 424), new ImageRendition('https://i/a-848.jpg', 848)],
+            $ladder,
+        );
+    }
+
     public function testAStoredRenditionReadsBackAsWritten(): void
     {
         $rendition = new ImageRendition('https://i/a.jpg', 640);
