@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   Injector,
   computed,
   effect,
@@ -38,7 +39,6 @@ import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
-import { listenToScrollOutsideZone } from '../../scroll/scroll-outside-zone';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../reading/reduced-motion';
@@ -164,7 +164,6 @@ export class ReaderViewComponent {
   constructor() {
     this.source.connect(this.entry);
     this.gestures.connect({ fullscreen: this.fullscreen, close: () => this.close.emit() });
-    listenToScrollOutsideZone(this.host.nativeElement, () => this.onScroll());
 
     effect(() => {
       const entry = this.entry();
@@ -235,7 +234,8 @@ export class ReaderViewComponent {
     else this.close.emit();
   }
 
-  private onScroll(): void {
+  @HostListener('scroll')
+  protected onScroll(): void {
     const scrollTop = this.host.nativeElement.scrollTop;
     this.scope.trackScroll(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
