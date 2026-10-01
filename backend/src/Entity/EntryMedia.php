@@ -28,8 +28,8 @@ final class EntryMedia
      */
     public function set(array $media, array $attachments): void
     {
-        $this->media = self::encode($media);
-        $this->attachments = self::encode($attachments);
+        $this->media = StoredList::orNull(self::toJsonList($media));
+        $this->attachments = StoredList::orNull(self::toJsonList($attachments));
     }
 
     /** Removes every medium whose url matches, re-indexed; attachments are untouched. */
@@ -49,17 +49,17 @@ final class EntryMedia
     /** @return list<EntryMedium> */
     public function getMedia(): array
     {
-        $complete = array_filter($this->media ?? [], EntryMedium::isComplete(...));
-
-        return array_values(array_map(EntryMedium::fromStored(...), $complete));
+        return StoredList::read($this->media, EntryMedium::isComplete(...), EntryMedium::fromStored(...));
     }
 
     /** @return list<EntryAttachment> */
     public function getAttachments(): array
     {
-        $complete = array_filter($this->attachments ?? [], EntryAttachment::isComplete(...));
-
-        return array_values(array_map(EntryAttachment::fromStored(...), $complete));
+        return StoredList::read(
+            $this->attachments,
+            EntryAttachment::isComplete(...),
+            EntryAttachment::fromStored(...),
+        );
     }
 
     /**
@@ -74,15 +74,5 @@ final class EntryMedia
     public static function toJsonList(array $items): array
     {
         return array_map(static fn (EntryMedium|EntryAttachment $item): array => $item->jsonSerialize(), $items);
-    }
-
-    /**
-     * @param list<EntryMedium>|list<EntryAttachment> $items
-     *
-     * @return list<array<string, string|int>>|null
-     */
-    private static function encode(array $items): ?array
-    {
-        return $items === [] ? null : self::toJsonList($items);
     }
 }

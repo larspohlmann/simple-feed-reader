@@ -52,7 +52,7 @@ final class EntryImage
      */
     public function storeRenditions(array $renditions): void
     {
-        $this->renditions = $renditions === [] ? null : ImageRendition::toJsonList($renditions);
+        $this->renditions = StoredList::orNull(ImageRendition::toJsonList($renditions));
     }
 
     public function recordMeasurement(int $width, int $height, \DateTimeImmutable $checkedAt): void
@@ -109,9 +109,7 @@ final class EntryImage
     /** @return list<ImageRendition> */
     public function getRenditions(): array
     {
-        $complete = array_filter($this->renditions ?? [], ImageRendition::isComplete(...));
-
-        return array_values(array_map(ImageRendition::fromStored(...), $complete));
+        return StoredList::read($this->renditions, ImageRendition::isComplete(...), ImageRendition::fromStored(...));
     }
 
     /**
