@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -23,11 +23,6 @@ const entry = (id: number) =>
     subscriptionId: 5,
     source: 'stub',
   });
-
-async function signInToList(page: Page): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
 
 /** Serve one article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, body: string): Promise<void> {
@@ -64,7 +59,7 @@ test.describe('Article tail space', () => {
   test('the last paragraph can be scrolled to the centre and fully highlighted', async ({
     page,
   }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
@@ -99,7 +94,7 @@ test.describe('Article tail space', () => {
   });
 
   test('an article that fits the screen gains no dead scroll', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, SHORT_BODY);
     await page.reload();

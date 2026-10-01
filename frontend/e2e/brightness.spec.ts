@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { presetLocalStorage } from './support/auth';
 
 function mediaFilter(page: Page): Promise<string> {
   return page.evaluate(() => {
@@ -13,10 +14,7 @@ function mediaFilter(page: Page): Promise<string> {
 test('a saved dark brightness step paints from the first frame and dims media', async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('sfr.theme', 'dark');
-    localStorage.setItem('sfr.brightness.dark', '-3');
-  });
+  await presetLocalStorage(page, { 'sfr.theme': 'dark', 'sfr.brightness.dark': '-3' });
   await page.goto('/login');
 
   await expect(page.locator('html')).toHaveAttribute('data-brightness', '-3');
@@ -24,10 +22,7 @@ test('a saved dark brightness step paints from the first frame and dims media', 
 });
 
 test('a light step above the default is clamped before the app boots', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('sfr.theme', 'light');
-    localStorage.setItem('sfr.brightness.light', '3');
-  });
+  await presetLocalStorage(page, { 'sfr.theme': 'light', 'sfr.brightness.light': '3' });
   await page.goto('/login');
 
   await expect(page.locator('html')).toHaveAttribute('data-brightness', '0');

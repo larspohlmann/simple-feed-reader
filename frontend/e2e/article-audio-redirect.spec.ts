@@ -1,8 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
-import { entryWire } from './support/reader';
+import { signInWithLayout } from './support/auth';
+import { entryDetailJson, entryWire } from './support/reader';
 
 /**
  * The shape a Substack audio post ships (#786): the reader body keeps the
@@ -86,11 +86,6 @@ function origin(server: Server): string {
   return `http://127.0.0.1:${port}`;
 }
 
-async function signInToList(page: Page): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
-
 /** Serve one article whose reader body carries the publisher's player. */
 async function stubArticle(page: Page, audioSrc: string): Promise<void> {
   const body =
@@ -117,6 +112,10 @@ async function stubArticle(page: Page, audioSrc: string): Promise<void> {
       }),
   );
   await page.route(
+    (url) => url.pathname === `/api/entries/${ENTRY.id}`,
+    async (route) => route.fulfill({ status: 200, json: entryDetailJson(ENTRY, body) }),
+  );
+  await page.route(
     (url) => url.pathname === '/api/entries',
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
@@ -131,7 +130,7 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
   const { server, origin: audio } = await audioOrigin();
   try {
     await stubArticle(page, `${audio}${SOURCE_PATH}`);
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

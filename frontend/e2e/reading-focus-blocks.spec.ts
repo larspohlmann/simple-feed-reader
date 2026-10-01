@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -31,11 +31,6 @@ const entry = () =>
     source: 'stub',
   });
 
-async function signInToList(page: Page): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
-
 async function stubArticle(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
     route.fulfill({ status: 200, json: readerFailedJson() }),
@@ -58,7 +53,7 @@ test.describe('Reading focus block detection', () => {
   test.use({ viewport: PHONE });
 
   test('fades each paragraph on its own, not the section around them', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page);
     await page.reload();

@@ -1,4 +1,5 @@
 import { expect, Page } from '@playwright/test';
+import type { ReadingLayout } from '../../src/app/reader/reading-layout.service';
 
 // The seeded e2e admin (`bin/console app:e2e:seed-admin`, run by `bin/e2e.sh`);
 // overridable so a spec can point at another environment without edits.
@@ -47,4 +48,11 @@ export async function presetLocalStorage(
   await page.addInitScript((entries) => {
     for (const [key, value] of Object.entries(entries)) localStorage.setItem(key, value);
   }, values);
+}
+
+/** Signs in with the reading layout pinned, so a spec takes the shell branch it
+ *  measures instead of whatever the previous run left in localStorage. */
+export async function signInWithLayout(page: Page, layout: ReadingLayout): Promise<boolean> {
+  await presetLocalStorage(page, { 'sfr.layout': layout });
+  return signInAsAdmin(page);
 }

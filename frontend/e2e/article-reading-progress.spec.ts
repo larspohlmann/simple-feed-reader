@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -26,13 +26,6 @@ const entry = (id: number) =>
     subscriptionId: 5,
     source: 'stub',
   });
-
-/** Pin the layout, so a test picks its shell branch instead of inheriting
- *  whatever the previous run left in localStorage — see article-back-desktop. */
-async function signInWithLayout(page: Page, layout: 'list' | 'pane' = 'list'): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': layout });
-  return signInAsAdmin(page);
-}
 
 /** Serve one article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, body: string): Promise<void> {
@@ -80,7 +73,7 @@ test.describe('Article reading progress', () => {
   test('the rail fills as the reader scrolls and is full at the end of the text', async ({
     page,
   }) => {
-    const signedIn = await signInWithLayout(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
@@ -117,7 +110,7 @@ test.describe('Article reading progress', () => {
   // with the text, which is the whole defect in a different disguise. Verified
   // by making the rail static — this test then misses the scrollport by 3178px.
   test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
-    const signedIn = await signInWithLayout(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
@@ -141,7 +134,7 @@ test.describe('Article reading progress', () => {
   });
 
   test('an article that fits the screen shows no bar', async ({ page }) => {
-    const signedIn = await signInWithLayout(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, SHORT_BODY);
     await page.reload();

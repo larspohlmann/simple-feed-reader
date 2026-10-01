@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
@@ -27,18 +27,6 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) =>
     source: 'stub',
   }),
 );
-
-/**
- * Sign in with the layout pinned, so the test picks its shell branch instead of
- * inheriting whatever the previous run left in localStorage: 'magazine' (or
- * 'list') puts the article in a full-pane overlay whose back button lives in
- * the article itself, 'pane' splits the main area and gives the article its own
- * sticky toolbar. Both are desktop, and both have to stay clear of the app bar.
- */
-async function signInWithLayout(page: Page, layout: 'magazine' | 'pane'): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': layout });
-  return signInAsAdmin(page);
-}
 
 async function stubEntries(page: Page): Promise<void> {
   // Force extraction to fail so the view stays in 'original' mode (the feed
@@ -108,6 +96,9 @@ test.describe('Article back button on desktop', () => {
   test('the full-pane article sits beneath the app bar, back button clear of it', async ({
     page,
   }) => {
+    // 'magazine' puts the article in a full-pane overlay whose back button lives in the
+    // article itself; 'pane' splits the main area and gives the article its own sticky
+    // toolbar. Both are desktop, and both have to stay clear of the app bar.
     const signedIn = await signInWithLayout(page, 'magazine');
     test.skip(
       !signedIn,

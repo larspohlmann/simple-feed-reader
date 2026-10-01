@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryWire, readerFailedJson } from './support/reader';
 
 // Wide enough for the split pane: the sidebar is a column (>720px) and the wide
@@ -19,13 +19,6 @@ const ENTRIES = Array.from({ length: 8 }, (_, i) =>
     source: 'stub',
   }),
 );
-
-/** Sign in with the pane layout pinned, so the split is on screen regardless of
- *  what the previous run left in localStorage. */
-async function signInToPane(page: Page): Promise<boolean> {
-  await presetLocalStorage(page, { 'sfr.layout': 'pane' });
-  return signInAsAdmin(page);
-}
 
 async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) => {
@@ -67,7 +60,7 @@ test.describe('split-pane resize handle (#810)', () => {
   test.use({ viewport: DESKTOP });
 
   test.beforeEach(async ({ page }) => {
-    const signedIn = await signInToPane(page);
+    const signedIn = await signInWithLayout(page, 'pane');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

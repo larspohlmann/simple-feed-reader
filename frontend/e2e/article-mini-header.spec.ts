@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -28,13 +28,6 @@ const entry = (title: string) =>
     subscriptionId: 5,
     source: 'stub',
   });
-
-async function signInToList(page: Page): Promise<boolean> {
-  // Pin the flat list: the default magazine layout groups same-source entries
-  // and would not give this stub a plain row to click.
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
 
 /** One article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, title: string): Promise<void> {
@@ -87,7 +80,9 @@ test.describe('Article mini header on a phone', () => {
   // a scrolled-down article named nothing at all. This strip has to survive
   // exactly the scroll that takes the toolbar away.
   test('the strip holds the top edge while the toolbar retracts behind it', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    // Pin the flat list: the default magazine layout groups same-source entries
+    // and would not give this stub a plain row to click.
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();
@@ -122,7 +117,7 @@ test.describe('Article mini header on a phone', () => {
   });
 
   test('a long title is cut to one line instead of widening the pane', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_TITLE);
     await page.reload();
@@ -154,7 +149,7 @@ test.describe('Article mini header on the split pane', () => {
   // toolbar rather than in a strip of its own. The headline still scrolls away
   // with the body, which is what the name is there to replace.
   test('the toolbar carries the name, and keeps carrying it down the article', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();
@@ -181,7 +176,7 @@ test.describe('Article mini header on the split pane', () => {
   });
 
   test('the toolbar offers favourite and keep', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, 'Entry number one');
     await page.reload();

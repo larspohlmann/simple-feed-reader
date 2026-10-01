@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInAsAdmin, signInWithLayout } from './support/auth';
 import {
   entryDetailJson,
   entryWire,
@@ -28,14 +28,6 @@ const ENTRIES = Array.from({ length: 30 }, (_, i) =>
     source: 'stub',
   }),
 );
-
-async function signInToList(page: Page): Promise<boolean> {
-  // The default layout is magazine, which collapses a run of same-source
-  // entries into a group and renders only three of them. Pin the flat list so
-  // every stubbed entry is a row and the geometry is predictable.
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
 
 async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/tags', async (route) => {
@@ -106,7 +98,10 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test.use({ viewport: PHONE });
 
   test('retracting the header does not move the content', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    // The default layout is magazine, which collapses a run of same-source
+    // entries into a group and renders only three of them. Pin the flat list so
+    // every stubbed entry is a row and the geometry is predictable.
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -144,7 +139,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   test('expanding the header again does not move the content', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -174,7 +169,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   // Anything the article reserves at its top therefore has to be reserved on
   // the opaque panel inside it, or the list shows through the gap.
   test('an open article is opaque all the way to the top', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -197,7 +192,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   test('the content area keeps its height while the header slides', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -220,7 +215,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('the bar’s empty middle and the corner button both return the list to the top', async ({
     page,
   }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -266,7 +261,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('returning from an article keeps the retracted header retracted and the list still', async ({
     page,
   }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -344,7 +339,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('the article’s back-to-top button stays pinned while the article scrolls', async ({
     page,
   }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

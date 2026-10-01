@@ -1,5 +1,5 @@
 import { test, expect, Locator, Page } from '@playwright/test';
-import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { signInWithLayout } from './support/auth';
 import { entryWire } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
@@ -18,13 +18,6 @@ const ENTRIES = Array.from({ length: 10 }, (_, i) =>
     source: 'stub',
   }),
 );
-
-async function signInToList(page: Page): Promise<boolean> {
-  // Pin the flat list so the first row's geometry is predictable (the default
-  // magazine layout groups same-source entries).
-  await presetLocalStorage(page, { 'sfr.layout': 'list' });
-  return signInAsAdmin(page);
-}
 
 async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/entries*', async (route) => {
@@ -71,7 +64,9 @@ test.describe('Pull-to-refresh on a phone', () => {
   // the viewport top *underneath* the floating app bar. Anchored there it could
   // never be pulled clear of the bars, so the gesture gave no feedback at all.
   test('the indicator comes out from under the bars while pulling', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    // Pin the flat list so the first row's geometry is predictable (the default
+    // magazine layout groups same-source entries).
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();
@@ -94,7 +89,7 @@ test.describe('Pull-to-refresh on a phone', () => {
   });
 
   test('releasing a decisive pull refreshes; a short one does not', async ({ page }) => {
-    const signedIn = await signInToList(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();
