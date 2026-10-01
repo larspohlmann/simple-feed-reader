@@ -65,8 +65,14 @@ export class ArticleGestures {
   private gestureSuppressed = false;
   private leaveTimer = 0;
 
-  readonly readerTransform = computed(() => `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)`);
-  readonly readerTransition = computed(() =>
+  readonly swipeTransform = computed(() =>
+    this.dragX() === 0 ? 'none' : `translate3d(${this.dragX()}px, 0, 0)`,
+  );
+  /** Moves the article alone, not the layer: the spinner the pull reveals sits at its end. */
+  readonly pullTransform = computed(() =>
+    this.pull() === 0 ? 'none' : `translate3d(0, ${-this.pull()}px, 0)`,
+  );
+  readonly snapTransition = computed(() =>
     !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
   );
   readonly pulling = computed(() => this.pull() > 0);

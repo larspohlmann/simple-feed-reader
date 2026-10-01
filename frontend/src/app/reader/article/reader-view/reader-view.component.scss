@@ -1,24 +1,49 @@
 @use '../../../theme/breakpoints' as bp;
 
+/* `clip`, not `hidden`: the return swipe's overflow is cut without the host
+   becoming a scroller the chrome would sit in (#1332). */
 :host {
   display: block;
   height: 100%;
-  overflow: auto;
+  overflow: clip;
 }
 
-/* A query container so the back button can react to the reading pane's own
-   width (differs from the window in split-pane mode). Opaque and full-height
-   so this overlay hides the still-mounted list until a swipe slides it aside. */
+/* The article layer the return swipe moves. The back-to-top button stays
+   outside it: a transform re-anchors `position: fixed` (#100). */
+.frame {
+  position: relative;
+  height: 100%;
+}
+
+/* The only scroller. Chrome a tap must reach stays outside it: iOS spends a tap
+   inside a coasting scroller on stopping it (#1332). Isolated so nothing that
+   scrolls, dimmed paragraphs and progress cues included, paints over that chrome. */
+.scroller {
+  height: 100%;
+  overflow: auto;
+  isolation: isolate;
+  scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
+}
+
+/* Opaque and full-height so this overlay hides the still-mounted list until a
+   swipe slides it aside. Reserves the chrome floating above it (#87). */
 .reader {
   position: relative;
   min-height: 100%;
+  padding-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
   background: var(--surface-read);
   container-type: inline-size;
   container-name: reader;
+}
 
-  /* No app-bar reservation here: full-screen, the article overlay rides ABOVE
-     the shell's bar, which stays put as the list's chrome (#128). Only the
-     split pane, where the bar floats over this panel, reserves it (.with-bar). */
+/* Split pane: the shell's bar floats over this panel and the toolbar hangs
+   beneath it, never retracting, so the whole stack stays covered. */
+.with-bar .scroller {
+  scroll-padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
+}
+
+.with-bar .reader {
+  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
 }
 
 /* Tail padding so a long article's closing paragraph can reach the reading
@@ -43,7 +68,7 @@
 
   /* Reading-focus sets an inline `opacity` on every article block, and an
      element with opacity < 1 paints as if it were at z-index 0 — so a dimmed
-     paragraph would cover this bar, exactly as it would the toolbar (see .bar). */
+     paragraph would cover this bar. */
   z-index: 2;
   height: var(--space-0);
   background: var(--border);
@@ -87,13 +112,6 @@
   background: var(--accent);
 }
 
-/* Split pane: the shell's bar floats over this panel, so the panel reserves
-   its height and the toolbar hangs flush beneath it — the same arrangement the
-   list header uses — carrying the gap under itself. */
-.reader.with-bar {
-  padding-top: var(--app-bar-h, var(--bar-h));
-}
-
 /* Overscroll-to-return affordance: anchored just below the article's end, so a
          pull past the bottom (which translates .reader up) slides it into view.
          .armed marks that releasing now will return to the list. */
@@ -112,8 +130,7 @@
   color: var(--accent);
 }
 
-/* Back-to-top affordance, pinned to the viewport corner (fixed, so it sits
-         above the transformed .reader rather than scrolling with the article). */
+/* Back-to-top affordance, pinned to the viewport corner. */
 app-to-top-button {
   position: fixed;
   right: 24px;
@@ -128,18 +145,19 @@ app-to-top-button {
   bottom: calc(24px + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
 }
 
-/* Standing nameplate: headline and toolbar both scroll/retract away, leaving
-   nothing naming a scrolled-down article (#270). Sticky, not fixed (#100 trap).
-   Above the toolbar (z-index 3) so it isn't buried by dimmed paragraphs' opacity. */
+/* Standing nameplate: the toolbar retracts, leaving nothing naming a
+   scrolled-down article (#270). Above the toolbar, which slides up beneath it. */
 .mini {
-  position: sticky;
+  position: absolute;
   top: 0;
-  z-index: 3;
+  left: 0;
+  right: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: var(--space-2);
 
-  /* The token, not `min-height`: the toolbar pins at exactly this offset, so
+  /* The token, not `min-height`: the toolbar hangs at exactly this offset, so
      the strip's box may not grow away from it. */
   height: var(--reader-mini-h);
   padding: 0 var(--space-4);
@@ -182,19 +200,12 @@ app-to-top-button {
 }
 
 .bar {
-  position: sticky;
-
-  /* Hangs beneath the nameplate above (fixed-height, so a token offset works)
-     and retracts on scroll (.hidden below). Split pane overrides the offset:
-     the shell's bar floats above there (#87), else this toolbar slides under it (#97). */
+  position: absolute;
   top: var(--reader-mini-h);
+  left: 0;
+  right: 0;
+  z-index: 1;
   transition: transform 0.12s ease;
-
-  /* Sticky alone doesn't win paint order: reading-focus's inline opacity < 1
-     paints a block as z-index 0, so a later, dimmed paragraph would land on
-     top of this bar and swallow its clicks without this z-index. */
-  z-index: 2;
-  margin-bottom: var(--bar-gap);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -207,9 +218,6 @@ app-to-top-button {
   transform: translateY(-100%);
 }
 
-/* Split pane: pinned directly beneath the floating app bar (see .bar above);
-   its resting place is exactly this offset, so it never actually moves — the
-   app bar does not retract on the wide layout. */
 .with-bar .bar {
   top: var(--app-bar-h, var(--bar-h));
   transition: none;

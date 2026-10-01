@@ -1,20 +1,10 @@
 @if (entry(); as e) {
   <div
-    class="reader"
+    class="frame"
     [class.with-bar]="!fullscreen()"
-    [class.with-tail]="scope.hasTail()"
-    [class.leaving]="gestures.leaving()"
-    [style.transform]="gestures.readerTransform()"
-    [style.transition]="gestures.readerTransition()"
+    [style.transform]="gestures.swipeTransform()"
+    [style.transition]="gestures.snapTransition()"
   >
-    @if (scope.showProgress() && !screen.isWide()) {
-      <!-- The same cue as the split pane's hairline, stood up on the right edge and
-           run the full height: 2px along a phone's bottom is easy to miss, with no
-           scrollbar to fall back on (#238). Decorative; leads the article for sticky positioning. -->
-      <div class="progress-rail" aria-hidden="true">
-        <i [style.height.%]="scope.progressPercent()"></i>
-      </div>
-    }
     @if (fullscreen()) {
       <!-- The toolbar below retracts on scroll, so full-screen the nameplate needs
            a strip of its own. aria-hidden: the h1 carries the same title, so
@@ -24,7 +14,7 @@
         <span class="mini-title">{{ e.title }}</span>
       </div>
     }
-    <div class="bar" [class.hidden]="toolbarHidden()">
+    <div #bar class="bar" [class.hidden]="toolbarHidden()">
       <button
         class="close"
         type="button"
@@ -96,127 +86,148 @@
         </button>
       </div>
     </div>
-    <article [attr.aria-busy]="source.loading() ? 'true' : null">
-      <div class="title-row">
-        <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
-      </div>
-      <p class="meta">
-        <app-favicon [url]="e.faviconUrl" [size]="16" /><a
-          class="source-link"
-          [routerLink]="['/']"
-          [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
-          queryParamsHandling="merge"
-          >{{ e.source }}</a
-        >
-        @if (e.author) {
-          · {{ e.author }}
+    <div #scroller class="scroller" (scroll)="onScroll(scroller.scrollTop)">
+      <div
+        class="reader"
+        [class.with-tail]="scope.hasTail()"
+        [style.transform]="gestures.pullTransform()"
+        [style.transition]="gestures.snapTransition()"
+      >
+        @if (scope.showProgress() && !screen.isWide()) {
+          <!-- The same cue as the split pane's hairline, stood up on the right edge and
+               run the full height: 2px along a phone's bottom is easy to miss, with no
+               scrollbar to fall back on (#238). Decorative; leads the article for sticky positioning. -->
+          <div class="progress-rail" aria-hidden="true">
+            <i [style.height.%]="scope.progressPercent()"></i>
+          </div>
         }
-        · {{ when(e) }}
-        @if (readingMinutes(); as minutes) {
-          · {{ 'reader.readingTime' | transloco: { minutes } }}
-        }
-        @if (e.url) {
-          ·
-          <a [href]="e.url" target="_blank" rel="noopener noreferrer" (click)="openOriginal.emit()"
-            >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
-          /></a>
-        }
-        @if (e.discussionUrl) {
-          ·
-          <a
-            class="discussion-link"
-            [href]="e.discussionUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
-          /></a>
-        }
-      </p>
-      <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
-      <app-entry-actions class="actions" size="md" [entry]="e" />
-      @if (audioAttachment(); as audio) {
-        <button class="listen" type="button" (click)="listen()">
-          <app-icon name="play_circle" size="lg" />
-          <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
-          @if (audio.durationInSeconds; as seconds) {
-            <span class="listen-duration">{{ formatDuration(seconds) }}</span>
-          }
-        </button>
-      }
-      <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
-      @if (!source.loading()) {
-        @if (source.paywalled()) {
-          <app-paywall-notice class="paywall-note" [url]="source.paywallUrl()" />
-        }
-        @if (source.failed() && mode() === 'original') {
-          <app-warning-box class="reader-fallback">
-            <span class="warning-glyph" aria-hidden="true">⚠</span>
-            <div class="warning-text">
-              <p class="reader-note">
-                {{ 'reader.readerFallback' | transloco }}
-                <button type="button" class="note-link" (click)="refreshArticle()">
-                  {{ 'reader.retry' | transloco }}
-                </button>
-              </p>
-              @if (source.errorDetail(); as detail) {
-                <details class="reader-error">
-                  <summary>{{ 'reader.showError' | transloco }}</summary>
-                  <pre>{{ detail }}</pre>
-                </details>
+        <article [attr.aria-busy]="source.loading() ? 'true' : null">
+          <div class="title-row">
+            <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
+          </div>
+          <p class="meta">
+            <app-favicon [url]="e.faviconUrl" [size]="16" /><a
+              class="source-link"
+              [routerLink]="['/']"
+              [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
+              queryParamsHandling="merge"
+              >{{ e.source }}</a
+            >
+            @if (e.author) {
+              · {{ e.author }}
+            }
+            · {{ when(e) }}
+            @if (readingMinutes(); as minutes) {
+              · {{ 'reader.readingTime' | transloco: { minutes } }}
+            }
+            @if (e.url) {
+              ·
+              <a
+                [href]="e.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                (click)="openOriginal.emit()"
+                >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
+              /></a>
+            }
+            @if (e.discussionUrl) {
+              ·
+              <a
+                class="discussion-link"
+                [href]="e.discussionUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
+              /></a>
+            }
+          </p>
+          <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
+          <app-entry-actions class="actions" size="md" [entry]="e" />
+          @if (audioAttachment(); as audio) {
+            <button class="listen" type="button" (click)="listen()">
+              <app-icon name="play_circle" size="lg" />
+              <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
+              @if (audio.durationInSeconds; as seconds) {
+                <span class="listen-duration">{{ formatDuration(seconds) }}</span>
               }
-            </div>
-          </app-warning-box>
+            </button>
+          }
+          <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
+          @if (!source.loading()) {
+            @if (source.paywalled()) {
+              <app-paywall-notice class="paywall-note" [url]="source.paywallUrl()" />
+            }
+            @if (source.failed() && mode() === 'original') {
+              <app-warning-box class="reader-fallback">
+                <span class="warning-glyph" aria-hidden="true">⚠</span>
+                <div class="warning-text">
+                  <p class="reader-note">
+                    {{ 'reader.readerFallback' | transloco }}
+                    <button type="button" class="note-link" (click)="refreshArticle()">
+                      {{ 'reader.retry' | transloco }}
+                    </button>
+                  </p>
+                  @if (source.errorDetail(); as detail) {
+                    <details class="reader-error">
+                      <summary>{{ 'reader.showError' | transloco }}</summary>
+                      <pre>{{ detail }}</pre>
+                    </details>
+                  }
+                </div>
+              </app-warning-box>
+            }
+            @if (source.feedBodyFailed()) {
+              <app-error-banner
+                class="body-error"
+                [message]="'reader.bodyLoadFailed' | transloco"
+                [actionLabel]="'reader.retry' | transloco"
+                (action)="retryBody()"
+              />
+            }
+            @if (source.hero(); as image) {
+              <!-- The original-feed view's lead picture (the reader view carries its own
+                   inside contentHtml, #681). Width/height carry the aspect ratio so the
+                   article doesn't jump; `height: auto` keeps it from overriding the fluid layout. -->
+              <img
+                appProxiedImage
+                class="lead-image"
+                [src]="image.url"
+                [attr.width]="image.width"
+                [attr.height]="image.height"
+                (imageFailed)="source.heroFailed.set(true)"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                referrerpolicy="no-referrer"
+              />
+            }
+            <div #content class="content" [innerHTML]="source.displayHtml()"></div>
+          }
+          @if (e.categories.length) {
+            <p class="categories">{{ e.categories.join(', ') }}</p>
+          }
+          @if (!source.loading() && e.comments) {
+            <app-entry-comments [entry]="e" [scroller]="scroller" />
+          }
+        </article>
+        <!-- Laid over the whole pane while an article loads or refetches, in place
+             of a line of text — the same overlay the feed list raises on reload. -->
+        <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
+        @if (fullscreen() && gestures.pulling()) {
+          <div class="pull-back" [class.armed]="gestures.pullArmed()" aria-hidden="true">
+            <app-spinner [size]="22" />
+          </div>
         }
-        @if (source.feedBodyFailed()) {
-          <app-error-banner
-            class="body-error"
-            [message]="'reader.bodyLoadFailed' | transloco"
-            [actionLabel]="'reader.retry' | transloco"
-            (action)="retryBody()"
-          />
+        @if (scope.showProgress() && screen.isWide()) {
+          <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
+               it carries no progressbar role — a screen reader already reports the
+               reading position, and announcing every scroll frame would be noise. -->
+          <div class="progress" aria-hidden="true">
+            <i [style.width.%]="scope.progressPercent()"></i>
+          </div>
         }
-        @if (source.hero(); as image) {
-          <!-- The original-feed view's lead picture (the reader view carries its own
-               inside contentHtml, #681). Width/height carry the aspect ratio so the
-               article doesn't jump; `height: auto` keeps it from overriding the fluid layout. -->
-          <img
-            appProxiedImage
-            class="lead-image"
-            [src]="image.url"
-            [attr.width]="image.width"
-            [attr.height]="image.height"
-            (imageFailed)="source.heroFailed.set(true)"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            referrerpolicy="no-referrer"
-          />
-        }
-        <div #content class="content" [innerHTML]="source.displayHtml()"></div>
-      }
-      @if (e.categories.length) {
-        <p class="categories">{{ e.categories.join(', ') }}</p>
-      }
-      @if (!source.loading() && e.comments) {
-        <app-entry-comments [entry]="e" [scroller]="scroller()" />
-      }
-    </article>
-    <!-- Laid over the whole pane while an article loads or refetches, in place
-         of a line of text — the same overlay the feed list raises on reload. -->
-    <app-loading-overlay [shown]="source.loading()" [label]="'common.loading' | transloco" />
-    @if (fullscreen() && gestures.pulling()) {
-      <div class="pull-back" [class.armed]="gestures.pullArmed()" aria-hidden="true">
-        <app-spinner [size]="22" />
       </div>
-    }
-    @if (scope.showProgress() && screen.isWide()) {
-      <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
-           it carries no progressbar role — a screen reader already reports the
-           reading position, and announcing every scroll frame would be noise. -->
-      <div class="progress" aria-hidden="true">
-        <i [style.width.%]="scope.progressPercent()"></i>
-      </div>
-    }
+    </div>
   </div>
   @if (showToTop()) {
     <app-to-top-button (activate)="scrollToTop()" />
