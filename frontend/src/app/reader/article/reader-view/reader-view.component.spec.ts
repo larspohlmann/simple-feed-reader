@@ -1,4 +1,4 @@
-import { Signal, WritableSignal, signal } from '@angular/core';
+import { NgZone, Signal, WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -7,6 +7,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from './article-gestures.service';
+import { ReadingScope } from '../reading/reading-scope.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
@@ -369,6 +370,20 @@ describe('ReaderViewComponent', () => {
 
       expect(document.activeElement).toBe(host.querySelector('h1.title'));
     });
+  });
+
+  it('tracks the scroll outside the Angular zone, as the list does (#1332)', () => {
+    const fixture = mount(entry());
+    const zones: boolean[] = [];
+    jest
+      .spyOn(fixture.debugElement.injector.get(ReadingScope), 'trackScroll')
+      .mockImplementation(() => zones.push(NgZone.isInAngularZone()));
+
+    TestBed.inject(NgZone).run(() =>
+      (fixture.nativeElement as HTMLElement).dispatchEvent(new Event('scroll')),
+    );
+
+    expect(zones).toEqual([false]);
   });
 
   // #101: the restore has to fire on every path that ends with the article
@@ -1231,6 +1246,32 @@ describe('ReaderViewComponent', () => {
       component.onTouchMove(touch(7, 0)); // strong upward pull → rubber-banded past threshold
       component.onTouchEnd();
       expect(component.leaving()).toBe(true);
+      fixture.destroy();
+    });
+
+    // #1332: any transform keeps the article on its own GPU layer, as #501 found for the list.
+    it('carries no transform at rest, and a short swipe snaps back to none', () => {
+      const fixture = fullscreen();
+      const reader = (fixture.nativeElement as HTMLElement).querySelector('.reader') as HTMLElement;
+      expect(reader.style.transform).toBe('none');
+
+      const component = gestures(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(30, 4));
+      fixture.detectChanges();
+      expect(reader.style.transform).toContain('30px');
+      component.onTouchEnd();
+      fixture.detectChanges();
+      expect(reader.style.transform).toBe('none');
+      fixture.destroy();
+    });
+
+    it('leaves the transition alone on a plain tap (#1332)', () => {
+      const fixture = fullscreen();
+      const component = gestures(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchEnd();
+      expect(component.readerTransition()).toBe('none');
       fixture.destroy();
     });
 

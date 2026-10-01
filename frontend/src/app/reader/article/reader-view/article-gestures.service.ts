@@ -53,7 +53,12 @@ export class ArticleGestures {
   private gestureSuppressed = false;
   private leaveTimer = 0;
 
-  readonly readerTransform = computed(() => `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)`);
+  private readonly moved = computed(() => this.dragX() !== 0 || this.pull() !== 0);
+  // `none` at rest, never a zero translate: any transform keeps the article on
+  // its own GPU layer, as #501 found for the list (#1332).
+  readonly readerTransform = computed(() =>
+    this.moved() ? `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)` : 'none',
+  );
   readonly readerTransition = computed(() =>
     !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
   );
@@ -118,6 +123,7 @@ export class ArticleGestures {
     if (!this.host.fullscreen() || this.leaving()) return;
     const axis = this.axis;
     this.axis = 'none';
+    if (!this.moved()) return;
     this.snapping.set(true);
     if (axis === 'h' && isBackSwipe(this.touchDx, this.touchDy)) {
       this.dragX.set(typeof window !== 'undefined' ? window.innerWidth : 999);
