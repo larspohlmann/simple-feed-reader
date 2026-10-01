@@ -114,6 +114,34 @@ final class EntryImage
         return array_values(array_map(ImageRendition::fromStored(...), $complete));
     }
 
+    /**
+     * The renditions a client may choose from, which must reach the lead image: a browser given a srcset never
+     * loads its src, so a ladder that cannot is served only once the lead image's width is known to top it.
+     *
+     * @return list<ImageRendition>
+     */
+    public function servedRenditions(): array
+    {
+        $renditions = $this->getRenditions();
+        if ($renditions === [] || $this->isAmong($renditions)) {
+            return $renditions;
+        }
+        if ($this->url === null || $this->width === null) {
+            return [];
+        }
+        if ($this->width <= max(array_map(static fn (ImageRendition $rung): int => $rung->width, $renditions))) {
+            return $renditions;
+        }
+
+        return ImageRendition::ladder([...$renditions, new ImageRendition($this->url, $this->width)]);
+    }
+
+    /** @param list<ImageRendition> $renditions */
+    private function isAmong(array $renditions): bool
+    {
+        return array_any($renditions, fn (ImageRendition $rung): bool => $rung->url === $this->url);
+    }
+
     public function getCheckedAt(): ?\DateTimeImmutable
     {
         return $this->checkedAt;

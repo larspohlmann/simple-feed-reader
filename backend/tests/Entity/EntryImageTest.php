@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\EntryImage;
 use App\Entity\ImageRendition;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryImageTest extends TestCase
@@ -142,5 +143,85 @@ final class EntryImageTest extends TestCase
         $image->recordMeasurement(1024, 683, new \DateTimeImmutable('2026-10-01 12:00:00'));
 
         self::assertEquals($renditions, $image->getRenditions());
+    }
+
+    public function testServesNoRenditionsWhenNoneAreStored(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', 1200, 800);
+
+        self::assertSame([], $image->servedRenditions());
+    }
+
+    public function testServesTheStoredRenditionsWhenTheyHoldTheLeadImage(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo-1024.jpg', null, null);
+        $renditions = self::thumbnailLadder('https://i/photo-1024.jpg', 1024);
+        $image->storeRenditions($renditions);
+
+        self::assertEquals($renditions, $image->servedRenditions());
+    }
+
+    public function testServesTheLeadImageAsTheTopRungWhenItIsWiderThanTheLadder(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', 1200, 800);
+        $image->storeRenditions(self::thumbnailLadder());
+
+        self::assertEquals(
+            [...self::thumbnailLadder(), new ImageRendition('https://i/photo.jpg', 1200)],
+            $image->servedRenditions(),
+        );
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function leadWidthNoWiderThanTheLadderProvider(): iterable
+    {
+        yield 'as wide as the widest rung' => [150];
+        yield 'narrower than the widest rung' => [120];
+    }
+
+    #[DataProvider('leadWidthNoWiderThanTheLadderProvider')]
+    public function testServesTheStoredRenditionsWhenTheLeadImageIsNoWider(int $leadWidth): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', $leadWidth, $leadWidth);
+        $image->storeRenditions(self::thumbnailLadder());
+
+        self::assertEquals(self::thumbnailLadder(), $image->servedRenditions());
+    }
+
+    public function testServesNoRenditionsWhileTheLeadImageWidthIsUnknown(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', null, null);
+        $image->storeRenditions(self::thumbnailLadder());
+
+        self::assertSame([], $image->servedRenditions());
+    }
+
+    public function testServesTheLeadImageOnTopOnceTheVerifierMeasuredIt(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', null, null);
+        $image->storeRenditions(self::thumbnailLadder());
+
+        $image->recordMeasurement(1600, 1067, new \DateTimeImmutable('2026-10-01 12:00:00'));
+
+        self::assertEquals(
+            [...self::thumbnailLadder(), new ImageRendition('https://i/photo.jpg', 1600)],
+            $image->servedRenditions(),
+        );
+    }
+
+    /** @return list<ImageRendition> */
+    private static function thumbnailLadder(string $widestUrl = 'https://i/photo-150x150.jpg', int $widest = 150): array
+    {
+        return [
+            new ImageRendition('https://i/photo-50x50.jpg', 50),
+            new ImageRendition('https://i/photo-100x100.jpg', 100),
+            new ImageRendition($widestUrl, $widest),
+        ];
     }
 }

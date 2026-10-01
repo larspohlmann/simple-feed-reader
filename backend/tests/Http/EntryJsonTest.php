@@ -90,6 +90,27 @@ final class EntryJsonTest extends TestCase
         );
     }
 
+    public function testEmitsNoRenditionsThatCannotReachTheLeadImage(): void
+    {
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            'Article',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->getImage()->storePending('https://i/lead.jpg', null, null);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://i/lead-100x100.jpg', 100),
+            new ImageRendition('https://i/lead-150x150.jpg', 150),
+        ]);
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame([], $json['imageRenditions']);
+    }
+
     public function testEmitsDuplicatesAsFlattenedEntryJson(): void
     {
         $sibling = new Entry(

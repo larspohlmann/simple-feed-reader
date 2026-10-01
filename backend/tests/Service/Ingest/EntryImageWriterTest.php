@@ -9,6 +9,8 @@ use App\Entity\Feed;
 use App\Entity\ImageRendition;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
+use App\Service\Parser\FeedItemImageSelector;
+use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class EntryImageWriterTest extends TestCase
@@ -143,6 +145,45 @@ final class EntryImageWriterTest extends TestCase
         $this->writer()->writeOrMarkNone($entry, new DeclaredImageModel('https://img.example.com/a.jpg', 800, 600));
 
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
+    }
+
+    public function testAThumbnailLadderBesideAnEnclosureIsServedOnlyOnceTheEnclosureTopsIt(): void
+    {
+        $entry = $this->entry();
+
+        $this->writeEnclosureWithThumbnailExcerpt($entry);
+
+        self::assertCount(3, $entry->getImage()->getRenditions());
+        self::assertSame([], $entry->getImage()->servedRenditions());
+
+        $entry->getImage()->recordMeasurement(1600, 1067, new \DateTimeImmutable('2026-10-01 12:00:00'));
+
+        self::assertEquals(
+            [
+                new ImageRendition('https://img.example.com/2026/09/photo-50x50.jpg', 50),
+                new ImageRendition('https://img.example.com/2026/09/photo-100x100.jpg', 100),
+                new ImageRendition('https://img.example.com/2026/09/photo-150x150.jpg', 150),
+                new ImageRendition('https://img.example.com/2026/09/photo.jpg', 1600),
+            ],
+            $entry->getImage()->servedRenditions(),
+        );
+    }
+
+    private function writeEnclosureWithThumbnailExcerpt(Entry $entry): void
+    {
+        $folder = 'https://img.example.com/2026/09/';
+        $document = new \DOMDocument();
+        $document->loadXML('<rss><channel><item><enclosure url="' . $folder . 'photo.jpg" length="0"'
+            . ' type="image/jpeg"/></item></channel></rss>');
+        $item = $document->getElementsByTagName('item')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $item);
+        $excerpt = '<img width="150" height="150" src="' . $folder . 'photo-150x150.jpg" srcset="'
+            . $folder . 'photo-150x150.jpg 150w, ' . $folder . 'photo-100x100.jpg 100w, '
+            . $folder . 'photo-50x50.jpg 50w">';
+
+        $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2($item, $excerpt);
+        self::assertNotNull($image);
+        $this->writer()->write($entry, $image);
     }
 
     private function writer(): EntryImageWriter

@@ -94,7 +94,7 @@ final class EntryJson
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
-            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
+            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'categories' => $row->categories,
