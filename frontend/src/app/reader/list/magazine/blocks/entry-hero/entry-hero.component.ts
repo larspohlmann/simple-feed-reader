@@ -31,11 +31,13 @@ export class EntryHeroComponent extends EntryBlockBase {
     const img = this.image();
     return img?.width && img?.height ? `${img.width} / ${img.height}` : '16 / 9';
   });
-  /** A srcset makes `naturalWidth` the slot width, so a ladder is judged by its widest rung. */
+  /** A srcset makes `naturalWidth` the slot width, so a ladder still on the element is
+   *  judged by its widest rung. */
   onLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
     const width =
-      widestRenditionWidth(this.entry().imageRenditions) ??
-      (event.target as HTMLImageElement).naturalWidth;
+      (img.hasAttribute('srcset') ? widestRenditionWidth(this.entry().imageRenditions) : null) ??
+      img.naturalWidth;
     if (width && width < 200) this.tooSmall.set(true);
   }
 

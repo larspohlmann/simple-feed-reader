@@ -1526,6 +1526,9 @@ off the CSS above, and live in `reader/list/rendition-sizes.ts`; a block whose w
 | Split | `(max-width: 728px) calc(38vw - 18px), 259px` | 38% of that card's content box |
 | Thumb, list row | `132px` | the 88×66 cover box, up to a 2:1 picture |
 
+A failing rendition drops the `srcset` (`fallBackToSrc()`) so the browser retries the
+plain `src`; only a failing `src` hides the image.
+
 ---
 
 ## 6. Deliberate exceptions

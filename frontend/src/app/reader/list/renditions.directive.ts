@@ -1,4 +1,4 @@
-import { Directive, computed, input } from '@angular/core';
+import { Directive, computed, input, linkedSignal } from '@angular/core';
 import { ImageRenditionDto } from '../models';
 import { renditionSrcset } from './preview-image';
 
@@ -6,6 +6,7 @@ import { renditionSrcset } from './preview-image';
  *  an image without renditions keeps its plain `src`. */
 @Directive({
   selector: 'img[appRenditions]',
+  exportAs: 'appRenditions',
   host: { '[attr.srcset]': 'srcset()', '[attr.sizes]': 'sizes()' },
 })
 export class RenditionsDirective {
@@ -14,8 +15,22 @@ export class RenditionsDirective {
    *  (`[renditionSizes]="'132px'"`): a static attribute would also land in the DOM. */
   readonly renditionSizes = input.required<string>();
 
-  protected readonly srcset = computed(() => renditionSrcset(this.appRenditions()));
+  private readonly droppedToSrc = linkedSignal({
+    source: this.appRenditions,
+    computation: () => false,
+  });
+  protected readonly srcset = computed(() =>
+    this.droppedToSrc() ? null : renditionSrcset(this.appRenditions()),
+  );
   protected readonly sizes = computed(() =>
     this.srcset() === null ? null : this.renditionSizes(),
   );
+
+  /** Drops a failed srcset so the browser retries the plain, verified `src`; false when
+   *  there was none to drop, and the failure is the image's own. */
+  fallBackToSrc(): boolean {
+    if (this.srcset() === null) return false;
+    this.droppedToSrc.set(true);
+    return true;
+  }
 }

@@ -37,13 +37,14 @@
     <img
       class="thumb"
       [src]="image()!"
+      #renditions="appRenditions"
       [appRenditions]="entry().imageRenditions"
       [renditionSizes]="coverBoxSizes"
       alt=""
       loading="lazy"
       decoding="async"
       referrerpolicy="no-referrer"
-      (error)="imgError.set(true)"
+      (error)="renditions.fallBackToSrc() || imgError.set(true)"
     />
   }
 </article>

@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
@@ -65,6 +65,30 @@ function mount(testEntry: EntryDto) {
   return fixture;
 }
 
+function loadAt(fixture: ComponentFixture<EntryHeroComponent>, naturalWidth: number): void {
+  const img = fixture.nativeElement.querySelector('img.img') as HTMLImageElement;
+  Object.defineProperty(img, 'naturalWidth', { configurable: true, value: naturalWidth });
+  img.dispatchEvent(new Event('load'));
+  fixture.detectChanges();
+}
+
+function failToLoad(fixture: ComponentFixture<EntryHeroComponent>): void {
+  (fixture.nativeElement.querySelector('img.img') as HTMLImageElement).dispatchEvent(
+    new Event('error'),
+  );
+  fixture.detectChanges();
+}
+
+const thumbnailLadder: ImageRenditionDto[] = [
+  { url: 'https://x/a-50x50.jpg', width: 50 },
+  { url: 'https://x/a-150x150.jpg', width: 150 },
+];
+
+const wideLadder: ImageRenditionDto[] = [
+  { url: 'https://x/a-150.jpg', width: 150 },
+  { url: 'https://x/a-1024.jpg', width: 1024 },
+];
+
 describe('EntryHeroComponent', () => {
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());
@@ -100,43 +124,25 @@ describe('EntryHeroComponent', () => {
 
   it('demotes a tiny image (tracking pixel) to a text hero', () => {
     const fixture = mount(entry());
-    fixture.componentInstance.onLoad({ target: { naturalWidth: 100 } } as unknown as Event);
-    fixture.detectChanges();
+    loadAt(fixture, 100);
     expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
   });
 
   it('demotes a hero whose widest rendition is tiny, whatever slot width the browser reports', () => {
-    const fixture = mount(
-      entry({
-        imageRenditions: [
-          { url: 'https://x/a-50x50.jpg', width: 50 },
-          { url: 'https://x/a-150x150.jpg', width: 150 },
-        ],
-      }),
-    );
-    fixture.componentInstance.onLoad({ target: { naturalWidth: 680 } } as unknown as Event);
-    fixture.detectChanges();
+    const fixture = mount(entry({ imageRenditions: thumbnailLadder }));
+    loadAt(fixture, 680);
     expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
   });
 
   it('keeps a hero whose widest rendition is large, though the browser picked a narrow one', () => {
-    const fixture = mount(
-      entry({
-        imageRenditions: [
-          { url: 'https://x/a-150.jpg', width: 150 },
-          { url: 'https://x/a-1024.jpg', width: 1024 },
-        ],
-      }),
-    );
-    fixture.componentInstance.onLoad({ target: { naturalWidth: 150 } } as unknown as Event);
-    fixture.detectChanges();
+    const fixture = mount(entry({ imageRenditions: wideLadder }));
+    loadAt(fixture, 150);
     expect(fixture.nativeElement.querySelector('img.img')).not.toBeNull();
   });
 
   it('keeps a hero without renditions whose image loads wide', () => {
     const fixture = mount(entry());
-    fixture.componentInstance.onLoad({ target: { naturalWidth: 680 } } as unknown as Event);
-    fixture.detectChanges();
+    loadAt(fixture, 680);
     expect(fixture.nativeElement.querySelector('img.img')).not.toBeNull();
   });
 
@@ -211,5 +217,36 @@ describe('EntryHeroComponent', () => {
     const img = element.querySelector('img.img') as HTMLImageElement;
     expect(img.getAttribute('srcset')).toBe('https://x/a-424.jpg 424w, https://x/a-848.jpg 848w');
     expect(img.getAttribute('sizes')).toBe('(max-width: 728px) calc(100vw - 24px), 680px');
+  });
+
+  it('retries the plain src when a rendition fails, and hides the image when that fails too', () => {
+    const fixture = mount(entry({ imageRenditions: wideLadder }));
+
+    failToLoad(fixture);
+    const img = fixture.nativeElement.querySelector('img.img') as HTMLImageElement;
+    expect(img).not.toBeNull();
+    expect(img.hasAttribute('srcset')).toBe(false);
+    expect(img.hasAttribute('sizes')).toBe(false);
+
+    failToLoad(fixture);
+    expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
+  });
+
+  it('judges the plain src it fell back to by its own width, not the dropped ladder', () => {
+    const fixture = mount(entry({ imageRenditions: wideLadder }));
+    failToLoad(fixture);
+
+    loadAt(fixture, 100);
+
+    expect(fixture.nativeElement.querySelector('img.img')).toBeNull();
+  });
+
+  it('keeps a wide plain src it fell back to, though the dropped ladder was tiny', () => {
+    const fixture = mount(entry({ imageRenditions: thumbnailLadder }));
+    failToLoad(fixture);
+
+    loadAt(fixture, 680);
+
+    expect(fixture.nativeElement.querySelector('img.img')).not.toBeNull();
   });
 });

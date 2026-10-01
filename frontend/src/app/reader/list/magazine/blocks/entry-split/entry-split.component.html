@@ -13,6 +13,7 @@
       <img
         class="img"
         [src]="image()!.url"
+        #renditions="appRenditions"
         [appRenditions]="entry().imageRenditions"
         [renditionSizes]="splitSideImageSizes"
         [style.aspect-ratio]="aspect()"
@@ -22,7 +23,7 @@
         loading="lazy"
         decoding="async"
         referrerpolicy="no-referrer"
-        (error)="imgError.set(true)"
+        (error)="renditions.fallBackToSrc() || imgError.set(true)"
       />
     }
     <div class="body">
