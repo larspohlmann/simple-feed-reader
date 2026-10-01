@@ -24,12 +24,6 @@ final readonly class GrafanaSettingsJson
      *     hasToken: bool,
      *     tokenHint: string,
      *     containerPresent: bool,
-     *     pyroscopePushUrl: string|null,
-     *     pyroscopePushUrlDefault: string,
-     *     pyroscopePushUrlEffective: string|null,
-     *     profilingEnabled: bool,
-     *     profilingContainerPresent: bool,
-     *     profilerAvailable: bool,
      * }
      */
     public static function from(GrafanaSettingsOverviewModel $overview): array
@@ -49,12 +43,6 @@ final readonly class GrafanaSettingsJson
             'hasToken' => $stored->hasToken(),
             'tokenHint' => $stored->tokenHint,
             'containerPresent' => '' !== $defaults->lokiPushUrl,
-            'pyroscopePushUrl' => $connection->pyroscopePushUrl,
-            'pyroscopePushUrlDefault' => $defaults->pyroscopePushUrl,
-            'pyroscopePushUrlEffective' => self::effective($connection->pyroscopePushUrl, $defaults->pyroscopePushUrl),
-            'profilingEnabled' => $connection->profilingEnabled,
-            'profilingContainerPresent' => '' !== $defaults->pyroscopePushUrl,
-            'profilerAvailable' => $overview->profilerAvailable,
         ];
     }
 

@@ -228,13 +228,6 @@ services:
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
 
-    App\Service\Profiling\ProfileSampler\ProfileSamplerInterface:
-        factory: ['@App\Service\Profiling\Factory\ProfileSamplerFactory', 'create']
-
-    App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
-
-    App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface: '@App\Service\Grafana\EffectiveGrafanaSettings'
-
     App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface: '@App\Service\Grafana\SettingsLokiEndpoint'
 
     App\Service\Logging\Loki\LokiSink\SpoolLokiSink:

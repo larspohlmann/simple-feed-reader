@@ -9,7 +9,6 @@ use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
 use App\Service\Grafana\Model\GrafanaSettingsUpdateModel;
 use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
-use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class GrafanaSettings
@@ -20,17 +19,12 @@ final readonly class GrafanaSettings
         private GrafanaApiKeyCipher $cipher,
         private EffectiveGrafanaSettings $effective,
         private GrafanaEnvDefaults $defaults,
-        private ProfileSamplerInterface $sampler,
     ) {
     }
 
     public function overview(): GrafanaSettingsOverviewModel
     {
-        return new GrafanaSettingsOverviewModel(
-            $this->effective->stored(),
-            $this->defaults,
-            $this->sampler->isAvailable(),
-        );
+        return new GrafanaSettingsOverviewModel($this->effective->stored(), $this->defaults);
     }
 
     public function update(GrafanaSettingsUpdateModel $update): void

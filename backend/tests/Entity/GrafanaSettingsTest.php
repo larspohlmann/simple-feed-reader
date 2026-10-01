@@ -20,8 +20,6 @@ final class GrafanaSettingsTest extends TestCase
         self::assertNull($settings->getGrafanaUrlOverride());
         self::assertFalse($settings->hasToken());
         self::assertSame('', $settings->getTokenHint());
-        self::assertFalse($settings->isProfilingEnabled());
-        self::assertNull($settings->getPyroscopePushUrlOverride());
     }
 
     public function testApplyStoresOverridesAndSealedToken(): void
@@ -29,13 +27,7 @@ final class GrafanaSettingsTest extends TestCase
         $settings = new GrafanaSettings();
 
         $settings->apply(
-            new GrafanaConnection(
-                'https://loki.example/loki/api/v1/push',
-                'tenant42',
-                'https://grafana.example',
-                'https://pyroscope.example',
-                true,
-            ),
+            new GrafanaConnection('https://loki.example/loki/api/v1/push', 'tenant42', 'https://grafana.example'),
             new SealedSecret('cipher', 'nonce', 'salt', 3),
             'wxyz',
         );
@@ -43,8 +35,6 @@ final class GrafanaSettingsTest extends TestCase
         self::assertSame('https://loki.example/loki/api/v1/push', $settings->getLokiPushUrlOverride());
         self::assertSame('tenant42', $settings->getLokiUsername());
         self::assertSame('https://grafana.example', $settings->getGrafanaUrlOverride());
-        self::assertSame('https://pyroscope.example', $settings->getPyroscopePushUrlOverride());
-        self::assertTrue($settings->isProfilingEnabled());
         self::assertTrue($settings->hasToken());
         self::assertSame('wxyz', $settings->getTokenHint());
         self::assertEquals(new SealedSecret('cipher', 'nonce', 'salt', 3), $settings->getSealedToken());
@@ -54,7 +44,7 @@ final class GrafanaSettingsTest extends TestCase
     {
         $settings = new GrafanaSettings();
         $settings->apply(
-            new GrafanaConnection('u', null, null, null, false),
+            new GrafanaConnection('u', null, null),
             new SealedSecret('c', 'n', 's', 1),
             'abcd',
         );
@@ -69,13 +59,7 @@ final class GrafanaSettingsTest extends TestCase
 
     public function testConnectionReadsBackWhatWasApplied(): void
     {
-        $connection = new GrafanaConnection(
-            'https://loki.example/push',
-            'tenant42',
-            'https://grafana.example',
-            'https://pyroscope.example',
-            true,
-        );
+        $connection = new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example');
         $settings = new GrafanaSettings();
 
         $settings->applyWithoutToken($connection);

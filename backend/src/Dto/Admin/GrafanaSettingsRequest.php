@@ -26,11 +26,6 @@ final readonly class GrafanaSettingsRequest
         #[Assert\Length(max: 255)]
         #[Assert\Url(requireTld: false)]
         public ?string $grafanaUrl,
-        #[Assert\Length(max: 255)]
-        #[Assert\Url(requireTld: false)]
-        public ?string $pyroscopePushUrl,
-        #[Assert\Type('bool')]
-        public bool $profilingEnabled,
         #[Assert\Length(max: 512)]
         public ?string $token = null,
         #[Assert\Type('bool')]
@@ -45,8 +40,6 @@ final readonly class GrafanaSettingsRequest
                 self::blankToNull($this->lokiPushUrl),
                 self::blankToNull($this->lokiUsername),
                 self::blankToNull($this->grafanaUrl),
-                self::blankToNull($this->pyroscopePushUrl),
-                $this->profilingEnabled,
             ),
             $this->removeToken
                 ? SecretChangeModel::remove()

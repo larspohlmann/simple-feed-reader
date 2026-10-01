@@ -77,8 +77,6 @@ final class AdminGrafanaControllerTest extends ApiTestCase
             'lokiPushUrl' => null,
             'lokiUsername' => null,
             'grafanaUrl' => 'https://cloud.example/grafana',
-            'pyroscopePushUrl' => null,
-            'profilingEnabled' => false,
             ...$changes,
         ];
     }
@@ -158,45 +156,21 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         self::assertFalse($this->payload($this->client)['hasToken']);
     }
 
-    public function testAdminCanRoundTripTheProfilingToggleAndPyroscopeUrl(): void
-    {
-        $admin = $this->admin();
-
-        $this->requestWithJsonBody(
-            'PUT',
-            $admin,
-            $this->grafanaBody(['profilingEnabled' => true, 'pyroscopePushUrl' => 'http://custom:4040']),
-        );
-        self::assertResponseIsSuccessful();
-
-        $this->client->request(
-            'GET',
-            self::GRAFANA,
-            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
-        );
-
-        self::assertResponseIsSuccessful();
-        $body = $this->payload($this->client);
-        self::assertTrue($body['profilingEnabled']);
-        self::assertSame('http://custom:4040', $body['pyroscopePushUrl']);
-        self::assertIsBool($body['profilerAvailable']);
-    }
-
     public function testAPutLeavingSettingsOutIsRefusedAndStoresNothing(): void
     {
         $admin = $this->admin();
-        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['profilingEnabled' => true]));
+        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['lokiPushUrl' => 'https://loki.example/push']));
         self::assertResponseIsSuccessful();
 
         $incomplete = $this->grafanaBody(['lokiUsername' => 'tenant7']);
-        unset($incomplete['grafanaUrl'], $incomplete['profilingEnabled']);
+        unset($incomplete['lokiPushUrl'], $incomplete['grafanaUrl']);
         $this->requestWithJsonBody('PUT', $admin, $incomplete);
 
         self::assertResponseStatusCodeSame(422);
         $problem = $this->payload($this->client);
         self::assertSame('validation_error', $problem['type']);
         self::assertIsArray($problem['errors']);
-        self::assertSame(['grafanaUrl', 'profilingEnabled'], array_keys($problem['errors']));
+        self::assertSame(['lokiPushUrl', 'grafanaUrl'], array_keys($problem['errors']));
 
         $this->client->request(
             'GET',
@@ -205,8 +179,8 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         );
         $stored = $this->payload($this->client);
         self::assertSame('https://cloud.example/grafana', $stored['grafanaUrl']);
+        self::assertSame('https://loki.example/push', $stored['lokiPushUrl']);
         self::assertNull($stored['lokiUsername']);
-        self::assertTrue($stored['profilingEnabled']);
     }
 
     /**
@@ -217,8 +191,6 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         yield 'lokiPushUrl' => ['lokiPushUrl'];
         yield 'lokiUsername' => ['lokiUsername'];
         yield 'grafanaUrl' => ['grafanaUrl'];
-        yield 'pyroscopePushUrl' => ['pyroscopePushUrl'];
-        yield 'profilingEnabled' => ['profilingEnabled'];
     }
 
     #[DataProvider('grafanaBodyKeys')]

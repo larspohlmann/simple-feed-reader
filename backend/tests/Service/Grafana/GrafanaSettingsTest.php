@@ -11,12 +11,9 @@ use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsCache;
 use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
-use App\Service\Profiling\ProfileSampler\NullProfileSampler;
-use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use App\Tests\Support\SettingsRequests;
-use App\Tests\Support\TrackingProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -32,8 +29,6 @@ final class GrafanaSettingsTest extends TestCase
      *     lokiPushUrl: string|null, lokiPushUrlDefault: string, lokiPushUrlEffective: string|null,
      *     lokiUsername: string|null, grafanaUrl: string|null, grafanaUrlDefault: string,
      *     grafanaUrlEffective: string|null, hasToken: bool, tokenHint: string, containerPresent: bool,
-     *     pyroscopePushUrl: string|null, pyroscopePushUrlDefault: string, pyroscopePushUrlEffective: string|null,
-     *     profilingEnabled: bool, profilingContainerPresent: bool, profilerAvailable: bool,
      * }
      */
     private function viewOf(GrafanaSettings $settings): array
@@ -116,29 +111,21 @@ final class GrafanaSettingsTest extends TestCase
         self::assertNull($effective->lokiUsername());
     }
 
-    public function testTheViewReportsWhetherTheProfilerIsAvailable(): void
-    {
-        self::assertFalse($this->viewOf($this->settings($this->effective()))['profilerAvailable']);
-        self::assertTrue(
-            $this->viewOf($this->settings($this->effective(), new TrackingProfileSampler()))['profilerAvailable'],
-        );
-    }
-
     /**
-     * The admin form saves in php-fpm; the worker re-checks the toggle in its own process. A save forgets the shared
-     * pool, so the worker reads the new row once it refreshes its memo, not the stale cache.
+     * The admin form saves in php-fpm; the worker re-reads the row in its own process. A save forgets the shared
+     * pool, so the worker reads the new row once its memo is reset, not the stale cache.
      */
     public function testAnAdminSaveInvalidatesTheSharedCacheSoTheWorkerSeesTheChange(): void
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
         $webProcess = $this->settings($this->effective($cache));
         $workerProcess = $this->effective($cache);
-        self::assertFalse($workerProcess->profilingEnabled());
+        self::assertNull($workerProcess->lokiUsername());
 
-        $webProcess->update(SettingsRequests::grafana(profilingEnabled: true)->toUpdate());
+        $webProcess->update(SettingsRequests::grafana(lokiUsername: 'tenant42')->toUpdate());
 
-        $workerProcess->refresh();
-        self::assertTrue($workerProcess->profilingEnabled());
+        $workerProcess->reset();
+        self::assertSame('tenant42', $workerProcess->lokiUsername());
     }
 
     public function testUpdateFlushesTheEntityManager(): void
@@ -152,8 +139,7 @@ final class GrafanaSettingsTest extends TestCase
             $entityManager,
             GrafanaApiKeyCiphers::withTestSecret(),
             $this->effective(),
-            new GrafanaEnvDefaults('', '', ''),
-            new NullProfileSampler(),
+            new GrafanaEnvDefaults('', ''),
         );
 
         $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example')->toUpdate());
@@ -164,10 +150,8 @@ final class GrafanaSettingsTest extends TestCase
         return $this->effectiveGrafanaSettingsOverRepository($this->repository(), cache: $cache);
     }
 
-    private function settings(
-        EffectiveGrafanaSettings $effective,
-        ProfileSamplerInterface $sampler = new NullProfileSampler(),
-    ): GrafanaSettings {
+    private function settings(EffectiveGrafanaSettings $effective): GrafanaSettings
+    {
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
             if ($entity instanceof GrafanaSettingsEntity) {
@@ -180,8 +164,7 @@ final class GrafanaSettingsTest extends TestCase
             $entityManager,
             GrafanaApiKeyCiphers::withTestSecret(),
             $effective,
-            new GrafanaEnvDefaults('', '', ''),
-            $sampler,
+            new GrafanaEnvDefaults('', ''),
         );
     }
 

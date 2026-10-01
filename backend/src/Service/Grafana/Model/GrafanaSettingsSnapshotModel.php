@@ -31,15 +31,13 @@ final readonly class GrafanaSettingsSnapshotModel
         return '' !== $this->sealedToken->ciphertext;
     }
 
-    /** @return array<string, string|bool|int|null> */
+    /** @return array<string, string|int|null> */
     public function toCacheEntry(): array
     {
         return [
             'lokiPushUrl' => $this->connection->lokiPushUrl,
             'lokiUsername' => $this->connection->lokiUsername,
             'grafanaUrl' => $this->connection->grafanaUrl,
-            'pyroscopePushUrl' => $this->connection->pyroscopePushUrl,
-            'profilingEnabled' => $this->connection->profilingEnabled,
             'tokenCiphertext' => $this->sealedToken->ciphertext,
             'tokenNonce' => $this->sealedToken->nonce,
             'tokenSalt' => $this->sealedToken->salt,
@@ -70,19 +68,15 @@ final readonly class GrafanaSettingsSnapshotModel
         $lokiPushUrl = $stored['lokiPushUrl'] ?? null;
         $lokiUsername = $stored['lokiUsername'] ?? null;
         $grafanaUrl = $stored['grafanaUrl'] ?? null;
-        $pyroscopePushUrl = $stored['pyroscopePushUrl'] ?? null;
-        $profilingEnabled = $stored['profilingEnabled'] ?? null;
         if (
             !self::isNullableString($lokiPushUrl)
             || !self::isNullableString($lokiUsername)
             || !self::isNullableString($grafanaUrl)
-            || !self::isNullableString($pyroscopePushUrl)
-            || !\is_bool($profilingEnabled)
         ) {
             return null;
         }
 
-        return new GrafanaConnection($lokiPushUrl, $lokiUsername, $grafanaUrl, $pyroscopePushUrl, $profilingEnabled);
+        return new GrafanaConnection($lokiPushUrl, $lokiUsername, $grafanaUrl);
     }
 
     /** @param array<array-key, mixed> $stored */

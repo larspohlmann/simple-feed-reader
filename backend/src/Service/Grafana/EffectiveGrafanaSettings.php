@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
-use App\DependencyInjection\ProcessLifetimeState;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
 use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
-use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
-#[ProcessLifetimeState('A per-process memo over the shared cache; refresh() and forgetStored() renew it (#1159)')]
-final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
+final class EffectiveGrafanaSettings implements ResetInterface
 {
     private ?GrafanaSettingsSnapshotModel $memoised = null;
 
@@ -29,7 +27,7 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
         return $this->memoised ??= $this->cache->remember($this->loadSingleton(...));
     }
 
-    public function refresh(): void
+    public function reset(): void
     {
         $this->memoised = null;
     }
@@ -37,23 +35,12 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
     public function forgetStored(): void
     {
         $this->cache->forget();
-        $this->refresh();
+        $this->reset();
     }
 
     public function effectiveLokiPushUrl(): ?string
     {
         return $this->stored()->connection->lokiPushUrl ?? $this->defaultOrNull($this->defaults->lokiPushUrl);
-    }
-
-    public function effectivePyroscopePushUrl(): ?string
-    {
-        return $this->stored()->connection->pyroscopePushUrl
-            ?? $this->defaultOrNull($this->defaults->pyroscopePushUrl);
-    }
-
-    public function profilingEnabled(): bool
-    {
-        return $this->stored()->connection->profilingEnabled;
     }
 
     public function lokiUsername(): ?string

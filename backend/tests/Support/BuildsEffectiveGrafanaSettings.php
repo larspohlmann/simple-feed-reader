@@ -15,7 +15,7 @@ trait BuildsEffectiveGrafanaSettings
 {
     private function effectiveGrafanaSettingsOver(
         ?GrafanaSettingsEntity $row,
-        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', '', ''),
+        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', ''),
         ?GrafanaSettingsCache $cache = null,
     ): EffectiveGrafanaSettings {
         $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
@@ -26,7 +26,7 @@ trait BuildsEffectiveGrafanaSettings
 
     private function effectiveGrafanaSettingsOverRepository(
         StoredGrafanaSettingsInterface $repository,
-        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', '', ''),
+        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', ''),
         ?GrafanaSettingsCache $cache = null,
     ): EffectiveGrafanaSettings {
         return new EffectiveGrafanaSettings(

@@ -19,28 +19,21 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     use BuildsEffectiveGrafanaSettings;
 
     private const string LOKI_DEFAULT = 'http://loki:3100/loki/api/v1/push';
-    private const string PYROSCOPE_DEFAULT = 'http://pyroscope:4040';
 
-    public function testWithNoRowEachUrlFallsBackToItsEnvDefault(): void
+    public function testWithNoRowTheLokiPushUrlFallsBackToItsEnvDefault(): void
     {
-        $defaults = new GrafanaEnvDefaults(self::LOKI_DEFAULT, '', self::PYROSCOPE_DEFAULT);
-        $settings = $this->effectiveGrafanaSettingsOver(null, $defaults);
+        $settings = $this->effectiveGrafanaSettingsOver(null, new GrafanaEnvDefaults(self::LOKI_DEFAULT, ''));
 
         self::assertSame(self::LOKI_DEFAULT, $settings->effectiveLokiPushUrl());
-        self::assertSame(self::PYROSCOPE_DEFAULT, $settings->effectivePyroscopePushUrl());
     }
 
     public function testAStoredOverrideWinsOverTheEnvDefault(): void
     {
-        $row = $this->row(
-            new GrafanaConnection('https://cloud.example/loki/push', null, null, 'http://custom:4040', false),
-        );
-        $defaults = new GrafanaEnvDefaults(self::LOKI_DEFAULT, '', self::PYROSCOPE_DEFAULT);
+        $row = $this->row(new GrafanaConnection('https://cloud.example/loki/push', null, null));
 
-        $settings = $this->effectiveGrafanaSettingsOver($row, $defaults);
+        $settings = $this->effectiveGrafanaSettingsOver($row, new GrafanaEnvDefaults(self::LOKI_DEFAULT, ''));
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
-        self::assertSame('http://custom:4040', $settings->effectivePyroscopePushUrl());
     }
 
     public function testAUrlIsNullWhenNeitherOverrideNorDefaultIsConfigured(): void
@@ -48,23 +41,20 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         $settings = $this->effectiveGrafanaSettingsOver(null);
 
         self::assertNull($settings->effectiveLokiPushUrl());
-        self::assertNull($settings->effectivePyroscopePushUrl());
     }
 
-    public function testProfilingAndTheLokiUsernameComeFromTheRow(): void
+    public function testTheLokiUsernameComesFromTheRow(): void
     {
-        $row = $this->row(new GrafanaConnection(null, 'tenant42', null, null, true));
+        $row = $this->row(new GrafanaConnection(null, 'tenant42', null));
         $settings = $this->effectiveGrafanaSettingsOver($row);
 
-        self::assertTrue($settings->profilingEnabled());
         self::assertSame('tenant42', $settings->lokiUsername());
     }
 
-    public function testWithNoRowProfilingIsOffAndThereIsNoUsernameOrToken(): void
+    public function testWithNoRowThereIsNoUsernameOrToken(): void
     {
         $settings = $this->effectiveGrafanaSettingsOver(null);
 
-        self::assertFalse($settings->profilingEnabled());
         self::assertNull($settings->lokiUsername());
         self::assertNull($settings->lokiToken());
     }
@@ -88,16 +78,16 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         self::assertSame('glc_secret', $settings->lokiToken());
     }
 
-    /** The worker calls refresh() every 30 s; a warm shared pool must keep that off the database. */
-    public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
+    /** The worker resets services after every message; a warm shared pool must keep that off the database. */
+    public function testResetAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
         $repository->expects($this->once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
-        $settings->profilingEnabled();
-        $settings->refresh();
-        $settings->profilingEnabled();
+        $settings->lokiUsername();
+        $settings->reset();
+        $settings->lokiUsername();
     }
 
     public function testForgetStoredSendsTheNextReadBackToTheDatabase(): void
@@ -106,32 +96,32 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         $repository->expects($this->exactly(2))->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
-        $settings->profilingEnabled();
+        $settings->lokiUsername();
         $settings->forgetStored();
-        $settings->profilingEnabled();
+        $settings->lokiUsername();
     }
 
-    public function testTheMemoKeepsServingTheOldValueUntilRefreshRereadsTheInvalidatedCache(): void
+    public function testTheMemoKeepsServingTheOldValueUntilResetRereadsTheInvalidatedCache(): void
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
         $repositoryBeforeSave = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repositoryBeforeSave->method('findSingleton')->willReturn(null);
         $worker = $this->effectiveGrafanaSettingsOverRepository($repositoryBeforeSave, cache: $cache);
 
-        self::assertFalse($worker->profilingEnabled());
+        self::assertNull($worker->lokiUsername());
 
         $repositoryAfterSave = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repositoryAfterSave->method('findSingleton')
-            ->willReturn($this->row(new GrafanaConnection(null, null, null, null, true)));
+            ->willReturn($this->row(new GrafanaConnection(null, 'tenant42', null)));
         $adminSideAfterSave = $this->effectiveGrafanaSettingsOverRepository($repositoryAfterSave, cache: $cache);
         $adminSideAfterSave->forgetStored();
-        self::assertTrue($adminSideAfterSave->profilingEnabled());
+        self::assertSame('tenant42', $adminSideAfterSave->lokiUsername());
 
-        self::assertFalse($worker->profilingEnabled());
+        self::assertNull($worker->lokiUsername());
 
-        $worker->refresh();
+        $worker->reset();
 
-        self::assertTrue($worker->profilingEnabled());
+        self::assertSame('tenant42', $worker->lokiUsername());
     }
 
     private function row(GrafanaConnection $connection): GrafanaSettingsEntity
@@ -146,7 +136,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     {
         $row = new GrafanaSettingsEntity();
         $row->apply(
-            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null, null, false),
+            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null),
             GrafanaApiKeyCiphers::withTestSecret()->seal($token),
             substr($token, -4),
         );

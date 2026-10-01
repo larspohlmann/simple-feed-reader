@@ -46,8 +46,6 @@ final class SettingsRequests
         ?string $lokiPushUrl = null,
         ?string $lokiUsername = null,
         ?string $grafanaUrl = null,
-        ?string $pyroscopePushUrl = null,
-        bool $profilingEnabled = false,
         ?string $token = null,
         bool $removeToken = false,
     ): GrafanaSettingsRequest {
@@ -55,8 +53,6 @@ final class SettingsRequests
             lokiPushUrl: $lokiPushUrl,
             lokiUsername: $lokiUsername,
             grafanaUrl: $grafanaUrl,
-            pyroscopePushUrl: $pyroscopePushUrl,
-            profilingEnabled: $profilingEnabled,
             token: $token,
             removeToken: $removeToken,
         );
