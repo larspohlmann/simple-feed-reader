@@ -12,12 +12,6 @@ export interface GrafanaSettingsState {
   readonly hasToken: boolean;
   readonly tokenHint: string;
   readonly containerPresent: boolean;
-  readonly pyroscopePushUrl: string | null;
-  readonly pyroscopePushUrlDefault: string;
-  readonly pyroscopePushUrlEffective: string | null;
-  readonly profilingEnabled: boolean;
-  readonly profilingContainerPresent: boolean;
-  readonly profilerAvailable: boolean;
 }
 
 export interface SaveGrafanaSettings {
@@ -27,13 +21,9 @@ export interface SaveGrafanaSettings {
   /** null keeps the stored token; a string replaces it. */
   readonly token: string | null;
   readonly removeToken: boolean;
-  readonly pyroscopePushUrl: string | null;
-  readonly profilingEnabled: boolean;
 }
 
-export type TypedGrafanaEdits = Partial<
-  Omit<SaveGrafanaSettings, 'removeToken' | 'profilingEnabled'>
->;
+export type TypedGrafanaEdits = Partial<Omit<SaveGrafanaSettings, 'removeToken'>>;
 
 @Injectable()
 export class GrafanaSettingsService extends DraftSettingsService<
@@ -59,8 +49,6 @@ export class GrafanaSettingsService extends DraftSettingsService<
       grafanaUrl: state.grafanaUrl,
       token: null,
       removeToken: false,
-      pyroscopePushUrl: state.pyroscopePushUrl,
-      profilingEnabled: state.profilingEnabled,
     };
   }
 }
