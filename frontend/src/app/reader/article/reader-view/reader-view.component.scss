@@ -27,6 +27,17 @@
   scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
 }
 
+/* The rail is the phone's scrollbar (#238); iOS would draw its own over it (#1336). */
+@media (width < bp.$bp-lg) {
+  .scroller {
+    scrollbar-width: none;
+  }
+
+  .scroller::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Opaque and full-height so this overlay hides the still-mounted list until a
    swipe slides it aside. Reserves the chrome floating above it (#87). */
 .reader {
