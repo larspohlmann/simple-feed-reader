@@ -37,8 +37,8 @@ final class Srcset
         return $widest?->rendition();
     }
 
-    /** @return list<SrcsetCandidateModel> */
-    private static function candidates(?string $srcset): array
+    /** @return list<SrcsetCandidateModel> every candidate, in list order */
+    public static function candidates(?string $srcset): array
     {
         if ($srcset === null) {
             return [];

@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
 use Dom\Element;
 
@@ -13,6 +14,7 @@ use Dom\Element;
  * The images a feed item declares, source by source; FeedItemImageSelector combines them in each format's order.
  * Within Media RSS the widest variant wins, not the first: feeds ship size ladders in ascending order (#148).
  * An undeclared width loses to any declared one, with no widths document order decides, and URLs stay unresolved.
+ * Every declared width is a rendition, as is each srcset `w` candidate (#1330).
  */
 final readonly class ItemImageExtractor
 {
@@ -86,7 +88,7 @@ final readonly class ItemImageExtractor
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
-    /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions it declares. */
+    /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions and renditions it declares. */
     public function fromHtml(?string $html): ?DeclaredImageModel
     {
         if ($html === null || $html === '') {
@@ -110,10 +112,17 @@ final readonly class ItemImageExtractor
             return null;
         }
 
+        $width = self::positiveInt($element->getAttribute('width') ?? '');
+
         return new DeclaredImageModel(
             $src,
-            self::positiveInt($element->getAttribute('width') ?? ''),
+            $width,
             self::positiveInt($element->getAttribute('height') ?? ''),
+            // srcset first: a `w` descriptor is the file's width, the width attribute only its display size.
+            [
+                ...DeclaredRenditions::fromSrcset($element->getAttribute('srcset')),
+                ...DeclaredRenditions::ofWidth($src, $width),
+            ],
         );
     }
 
@@ -162,10 +171,13 @@ final readonly class ItemImageExtractor
 
     private static function imageFrom(\DOMElement $element, string $url): DeclaredImageModel
     {
+        $width = self::positiveInt($element->getAttribute('width'));
+
         return new DeclaredImageModel(
             $url,
-            self::positiveInt($element->getAttribute('width')),
+            $width,
             self::positiveInt($element->getAttribute('height')),
+            DeclaredRenditions::ofWidth($url, $width),
         );
     }
 

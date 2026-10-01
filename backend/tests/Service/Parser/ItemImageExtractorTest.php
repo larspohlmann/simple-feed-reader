@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser;
 
+use App\Entity\ImageRendition;
 use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
@@ -373,5 +374,72 @@ final class ItemImageExtractorTest extends TestCase
         self::assertInstanceOf(\DOMElement::class, $entry);
 
         return $entry;
+    }
+
+    public function testReadsTheWidthDescribedSrcsetOfABodyImage(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img width="696" height="464" src="https://mag.example/funk-system-1024x683.jpg"'
+            . ' srcset="https://mag.example/funk-system-1024x683.jpg 1024w,'
+            . ' https://mag.example/funk-system-300x200.jpg 300w,'
+            . ' https://mag.example/funk-system-1536x1024.jpg 1536w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('https://mag.example/funk-system-1024x683.jpg', $image->url);
+        self::assertEquals(
+            [
+                new ImageRendition('https://mag.example/funk-system-1024x683.jpg', 1024),
+                new ImageRendition('https://mag.example/funk-system-300x200.jpg', 300),
+                new ImageRendition('https://mag.example/funk-system-1536x1024.jpg', 1536),
+                new ImageRendition('https://mag.example/funk-system-1024x683.jpg', 696),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testIgnoresDensityBareAndMalformedSrcsetCandidates(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/a.jpg" srcset="https://i/a-2x.jpg 2x, https://i/bare.jpg,'
+            . ' https://i/zero.jpg 0w, https://i/wide.jpg 800wide, https://i/a-640.jpg 640w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/a-640.jpg', 640)], $image->renditions);
+    }
+
+    public function testAnInlineImgsDeclaredWidthIsItsOwnRendition(): void
+    {
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" width="640" height="360">');
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/a.jpg', 640)], $image->renditions);
+    }
+
+    public function testAnInlineImgWithoutWidthOrSrcsetHasNoRenditions(): void
+    {
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" height="360">');
+
+        self::assertNotNull($image);
+        self::assertSame([], $image->renditions);
+    }
+
+    public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
+    {
+        $image = $this->extractor->fromRssEnclosure(
+            $this->item('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/e.jpg', 1200)], $image->renditions);
+    }
+
+    public function testAMediaVariantWithoutAWidthHasNoRendition(): void
+    {
+        $image = $this->extractor->fromMedia($this->item('<media:content url="https://i/a.jpg" medium="image"/>'));
+
+        self::assertNotNull($image);
+        self::assertSame([], $image->renditions);
     }
 }
