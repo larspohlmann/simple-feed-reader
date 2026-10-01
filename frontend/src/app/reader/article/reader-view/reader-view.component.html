@@ -194,7 +194,7 @@
         }
         <div #content class="content" [innerHTML]="source.displayHtml()"></div>
       }
-      @if (e.categories?.length) {
+      @if (e.categories.length) {
         <p class="categories">{{ e.categories.join(', ') }}</p>
       }
       @if (!source.loading() && e.comments) {

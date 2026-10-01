@@ -84,8 +84,12 @@ describe('BackupSectionComponent', () => {
     // jsdom lacks these:
     (URL as unknown as { createObjectURL: unknown }).createObjectURL = jest.fn(() => 'blob:x');
     (URL as unknown as { revokeObjectURL: unknown }).revokeObjectURL = jest.fn();
+    jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
   });
-  afterEach(() => ctrl.verify());
+  afterEach(() => {
+    ctrl.verify();
+    jest.restoreAllMocks();
+  });
 
   it('opens the archive, previews with its foundation part and renders the report counts', async () => {
     const fixture = mount();
