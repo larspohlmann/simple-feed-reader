@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
@@ -80,6 +81,51 @@ final class EntryMediaBackupRoundTripTest extends DbTestCase
         self::assertCount(1, $attachments);
         self::assertSame('https://cdn/ep.mp3', $attachments[0]->url);
         self::assertSame(3723, $attachments[0]->durationInSeconds);
+    }
+
+    public function testImageRenditionsSurviveExportAndRestore(): void
+    {
+        $user = $this->makeUser('renditions-backup@example.com');
+        $feed = new Feed('https://renditions.example/feed.xml');
+        $this->entityManager->persist($feed);
+        $entry = new Entry(
+            $feed,
+            'guid-renditions',
+            'https://renditions.example/post',
+            'Post',
+            new \DateTimeImmutable('2026-10-01T00:00:00Z'),
+            new \DateTimeImmutable('2026-10-01T00:00:00Z'),
+        );
+        $entry->getImage()->storePending('https://i/lead.jpg', 1200, 800);
+        $entry->getImage()->storeRenditions([
+            new ImageRendition('https://i/lead-600.jpg', 600),
+            new ImageRendition('https://i/lead.jpg', 1200),
+        ]);
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
+
+        $entryLine = $this->exportedEntryLine($user);
+        self::assertSame(
+            [['url' => 'https://i/lead-600.jpg', 'width' => 600], ['url' => 'https://i/lead.jpg', 'width' => 1200]],
+            $entryLine['imageRenditions'],
+        );
+
+        $target = new Feed('https://restore-renditions.example/feed.xml');
+        $this->entityManager->persist($target);
+        $this->entityManager->flush();
+        $targetId = $target->requireId();
+
+        (new EntryBatchInserter($this->entityManager->getConnection(), new UrlNormalizer()))
+            ->insert($targetId, [EntryLine::fromLine($entryLine)]);
+
+        $this->entityManager->clear();
+        $restored = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $targetId]);
+        self::assertInstanceOf(Entry::class, $restored);
+        self::assertEquals(
+            [new ImageRendition('https://i/lead-600.jpg', 600), new ImageRendition('https://i/lead.jpg', 1200)],
+            $restored->getImage()->getRenditions(),
+        );
     }
 
     /** @return array<string, mixed> */

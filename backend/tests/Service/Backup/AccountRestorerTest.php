@@ -466,13 +466,17 @@ final class AccountRestorerTest extends DbTestCase
             $sourceRows['entry'],
             $targetRows['entry'],
             [
-                'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url',
+                'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
         self::assertEquals($sourceRows['entry']->getMedia(), $targetRows['entry']->getMedia());
         self::assertEquals($sourceRows['entry']->getAttachments(), $targetRows['entry']->getAttachments());
+        self::assertEquals(
+            $sourceRows['entry']->getImage()->getRenditions(),
+            $targetRows['entry']->getImage()->getRenditions(),
+        );
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
 
