@@ -7,6 +7,7 @@ namespace App\Tests\Service\Ingest;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Enum\CommentsLoad;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryIngestor;
@@ -347,6 +348,26 @@ final class EntryIngestorTest extends DbTestCase
         self::assertNotNull($entry);
 
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
+    }
+
+    public function testDeclaredRenditionsPersistBesideTheImage(): void
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
+            $this->parsedEntryWithImage('with-ladder', new DeclaredImageModel('https://i/x-1024.jpg', 1024, 683, [
+                new ImageRendition('https://i/x-1024.jpg', 1024),
+                new ImageRendition('http://i/x-300.jpg', 300),
+            ])),
+        ]), self::context());
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'with-ladder']);
+        self::assertNotNull($entry);
+        self::assertEquals(
+            [new ImageRendition('https://i/x-300.jpg', 300), new ImageRendition('https://i/x-1024.jpg', 1024)],
+            $entry->getImage()->getRenditions(),
+        );
     }
 
     private function parsedEntryWithImage(string $guid, ?DeclaredImageModel $image): ParsedEntryModel

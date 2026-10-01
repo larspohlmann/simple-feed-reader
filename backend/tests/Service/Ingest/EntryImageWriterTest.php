@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\ImageRendition;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use PHPUnit\Framework\TestCase;
@@ -48,6 +49,69 @@ final class EntryImageWriterTest extends TestCase
 
         self::assertFalse($stored);
         self::assertSame('https://img.example.com/old.jpg', $entry->getImage()->getUrl());
+    }
+
+    public function testStoresTheLadderNarrowestFirstOncePerUrl(): void
+    {
+        $entry = $this->entry();
+
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a-1024.jpg', 696, 464, [
+            new ImageRendition('https://img.example.com/a-1024.jpg', 1024),
+            new ImageRendition('https://img.example.com/a-300.jpg', 300),
+            new ImageRendition('https://img.example.com/a-1024.jpg', 696),
+        ]));
+
+        self::assertEquals(
+            [
+                new ImageRendition('https://img.example.com/a-300.jpg', 300),
+                new ImageRendition('https://img.example.com/a-1024.jpg', 1024),
+            ],
+            $entry->getImage()->getRenditions(),
+        );
+    }
+
+    public function testUpgradesHttpRenditionsAndDropsUnstorableOnes(): void
+    {
+        $entry = $this->entry();
+
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a.jpg', null, null, [
+            new ImageRendition('http://img.example.com/a-300.jpg', 300),
+            new ImageRendition('/relative-600.jpg', 600),
+            new ImageRendition('//img.example.com/a-900.jpg', 900),
+        ]));
+
+        self::assertEquals(
+            [
+                new ImageRendition('https://img.example.com/a-300.jpg', 300),
+                new ImageRendition('https://img.example.com/a-900.jpg', 900),
+            ],
+            $entry->getImage()->getRenditions(),
+        );
+    }
+
+    public function testASingleRenditionIsNoLadder(): void
+    {
+        $entry = $this->entry();
+
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a.jpg', 800, 600, [
+            new ImageRendition('https://img.example.com/a.jpg', 800),
+            new ImageRendition('http://img.example.com/a.jpg', 800),
+        ]));
+
+        self::assertSame([], $entry->getImage()->getRenditions());
+    }
+
+    public function testAnotherImageReplacesTheStoredLadder(): void
+    {
+        $entry = $this->entry();
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a.jpg', null, null, [
+            new ImageRendition('https://img.example.com/a-300.jpg', 300),
+            new ImageRendition('https://img.example.com/a-900.jpg', 900),
+        ]));
+
+        $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/b.jpg', 800, 600));
+
+        self::assertSame([], $entry->getImage()->getRenditions());
     }
 
     public function testNoDeclaredImageMarksTheEntryAsHavingNone(): void
