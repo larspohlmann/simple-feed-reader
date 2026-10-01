@@ -37,6 +37,7 @@ import { ArticleSource } from '../content/article-source.service';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
+import { ScrollOutsideZoneDirective } from '../../scroll/scroll-outside-zone.directive';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
 import { ReadingScope } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../reading/reduced-motion';
@@ -63,6 +64,7 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
     EntryPillsComponent,
     EntryActionsComponent,
     ToTopButtonComponent,
+    ScrollOutsideZoneDirective,
     RouterLink,
     TranslocoPipe,
     PaywallNoticeComponent,
@@ -251,7 +253,8 @@ export class ReaderViewComponent {
     else this.close.emit();
   }
 
-  protected onScroll(scrollTop: number): void {
+  protected readonly onScroll = (event: Event): void => {
+    const scrollTop = (event.target as HTMLElement).scrollTop;
     this.scope.trackScroll(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
@@ -268,7 +271,7 @@ export class ReaderViewComponent {
     }
     this.lastToolbarScrollTop = scrollTop;
     if (!this.gestures.leaving()) this.restore.remember(this.entry()?.id, scrollTop);
-  }
+  };
 
   /** Jump the reading pane back to the top of the article. */
   scrollToTop(): void {

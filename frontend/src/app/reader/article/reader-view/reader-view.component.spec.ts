@@ -1,4 +1,4 @@
-import { Signal, WritableSignal, signal } from '@angular/core';
+import { NgZone, Signal, WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
@@ -7,6 +7,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ReaderViewComponent } from './reader-view.component';
 import { ArticleGestures } from './article-gestures.service';
+import { ReadingScope } from '../reading/reading-scope.service';
 import { ReaderContentService } from '../content/reader-content.service';
 import { EntryBodyService, EntryBodyState } from '../content/entry-body.service';
 import { entryScrollKey } from '../../scroll/list-scroll-memory';
@@ -610,6 +611,23 @@ describe('ReaderViewComponent', () => {
     }
     expect(scroller.contains(element.querySelector('.content'))).toBe(true);
     fixture.destroy();
+  });
+
+  it('follows the article’s scroll outside the Angular zone', () => {
+    const zones: boolean[] = [];
+    const trackScroll = jest
+      .spyOn(ReadingScope.prototype, 'trackScroll')
+      .mockImplementation(() => zones.push(NgZone.isInAngularZone()));
+    try {
+      const fixture = mount(entry());
+
+      scrollerOf(fixture).dispatchEvent(new Event('scroll'));
+
+      expect(zones).toEqual([false]);
+      fixture.destroy();
+    } finally {
+      trackScroll.mockRestore();
+    }
   });
 
   it('reserves the toolbar’s measured height above the article', () => {

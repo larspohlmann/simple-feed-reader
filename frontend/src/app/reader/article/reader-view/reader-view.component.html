@@ -86,7 +86,7 @@
         </button>
       </div>
     </div>
-    <div #scroller class="scroller" (scroll)="onScroll(scroller.scrollTop)">
+    <div #scroller class="scroller" [appScrollOutsideZone]="onScroll">
       <div
         class="reader"
         [class.with-tail]="scope.hasTail()"
