@@ -139,7 +139,7 @@ function mount(
     imports: [SidebarComponent, provideTranslocoTesting()],
     providers: [
       { provide: ManageActions, useValue: manageActions },
-      provideRouter([]),
+      provideRouter([{ path: '**', children: [] }]),
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_BASE_URL, useValue: 'https://api.test' },
@@ -778,7 +778,7 @@ describe('SidebarComponent', () => {
       expect(chevron.getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('navigates to the combined view instead of expanding', () => {
+    it('navigates to the combined view instead of expanding', async () => {
       const fixture = mount({
         savedSearches: [
           {
@@ -798,8 +798,10 @@ describe('SidebarComponent', () => {
       expect(label.tagName).toBe('A');
 
       label.click();
+      await fixture.whenStable();
       fixture.detectChanges();
 
+      expect(TestBed.inject(Router).url).toBe('/searches/saved/all');
       expect(fixture.nativeElement.querySelectorAll('.savedsearch-item').length).toBe(0);
     });
 

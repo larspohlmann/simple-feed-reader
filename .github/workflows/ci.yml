@@ -217,8 +217,8 @@ jobs:
           --no-progress
           --ignore-msi-with-no-mutations
 
-  frontend:
-    name: Frontend
+  frontend-static:
+    name: Frontend (static)
     runs-on: ubuntu-latest
 
     defaults:
@@ -228,27 +228,47 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Set up Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - uses: ./.github/actions/setup-frontend
 
-      # node 22 ships npm 10.9.8, but the lockfile was authored by npm 11; npm 10
-      # mis-resolves a transitive dep (chokidar) and rejects the lock. Pin npm 11.
-      - name: Pin npm 11 (matches the lockfile author)
-        run: npm i -g npm@11
+      # The Playwright smoke needs the Docker stack and is deliberately not
+      # part of this gate.
+      - name: ESLint, Prettier, Stylelint, spec typecheck
+        run: npm run check:static
 
-      - name: Install dependencies
-        run: npm ci
+  # Jest is most of the frontend gate's time, so it is split across runners.
+  frontend-unit:
+    name: Frontend (unit ${{ matrix.shard }})
+    runs-on: ubuntu-latest
 
-      # ESLint + Prettier + Stylelint + Jest. Stylelint's color-no-hex covers the
-      # .scss files (theme excepted); component styles are inline TS and kept
-      # token-only by convention. The Playwright smoke needs the Docker stack and
-      # is deliberately not part of this gate.
-      - name: Gate (lint, format, stylelint, unit)
-        run: npm run check
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-frontend
+
+      - name: Jest
+        run: npm test -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  frontend-build:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-frontend
 
       - name: Build
         run: npm run build

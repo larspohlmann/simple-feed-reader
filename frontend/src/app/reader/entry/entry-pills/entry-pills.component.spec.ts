@@ -21,7 +21,7 @@ const savedSearch = (id: number, term: string): SavedSearchMembershipDto => ({
 function mount(tags: SubscriptionTagDto[], savedSearches: SavedSearchMembershipDto[] = []) {
   TestBed.configureTestingModule({
     imports: [EntryPillsComponent, provideTranslocoTesting()],
-    providers: [provideRouter([])],
+    providers: [provideRouter([{ path: '**', children: [] }])],
   });
   const fixture = TestBed.createComponent(EntryPillsComponent);
   fixture.componentRef.setInput('tags', tags);

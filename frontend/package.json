@@ -15,7 +15,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\"",
     "stylelint": "stylelint \"src/**/*.scss\"",
     "typecheck:spec": "tsc -p tsconfig.spec.json --noEmit",
-    "check": "npm run lint && npm run format:check && npm run stylelint && npm run typecheck:spec && npm test"
+    "check:static": "npm run lint && npm run format:check && npm run stylelint && npm run typecheck:spec",
+    "check": "npm run check:static && npm test"
   },
   "private": true,
   "dependencies": {
