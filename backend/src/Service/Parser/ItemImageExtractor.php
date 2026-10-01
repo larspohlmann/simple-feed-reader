@@ -91,7 +91,7 @@ final readonly class ItemImageExtractor
     /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions and renditions it declares. */
     public function fromHtml(?string $html): ?DeclaredImageModel
     {
-        if ($html === null || $html === '') {
+        if ($html === null || stripos($html, '<img') === false) {
             return null;
         }
         $document = HtmlDocumentParser::parseOrEmpty($html);

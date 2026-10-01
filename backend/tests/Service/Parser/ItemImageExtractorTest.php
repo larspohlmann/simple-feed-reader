@@ -302,6 +302,18 @@ final class ItemImageExtractorTest extends TestCase
         self::assertNull($this->extractor->fromHtml('<p>just words</p>'));
     }
 
+    public function testReturnsNullWithoutHtml(): void
+    {
+        self::assertNull($this->extractor->fromHtml(null));
+    }
+
+    public function testFindsAnUpperCaseImgTag(): void
+    {
+        $image = $this->extractor->fromHtml('<P>x</P><IMG SRC="https://i/shouted.jpg">');
+
+        self::assertSame('https://i/shouted.jpg', $image?->url);
+    }
+
     public function testSkipsADeclaredBeaconAndTakesTheNextImage(): void
     {
         $image = $this->extractor->fromHtml(
