@@ -657,30 +657,21 @@ final class EntryIngestorTest extends DbTestCase
         self::assertNull($entry->getImage()->getCheckedAt());
     }
 
-    public function testANativeHttpsImageWithDeclaredDimensionsIsTrustedAtIngest(): void
+    public function testANativeHttpsImageWithDeclaredDimensionsStaysPendingWithThoseDimensions(): void
     {
         $feed = $this->feed();
         $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
-            $this->parsedEntryWithImage('https-trusted', new DeclaredImageModel('https://i/x.jpg', 400, 300)),
+            $this->parsedEntryWithImage('https-declared', new DeclaredImageModel('https://i/x.jpg', 400, 300)),
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-trusted']);
-        self::assertNotNull($entry);
-        self::assertNotNull($entry->getImage()->getCheckedAt());
-    }
-
-    public function testANativeHttpsDeclaredBeaconStaysPending(): void
-    {
-        $feed = $this->feed();
-        $this->ingestor->ingest($feed, new ParsedFeedModel('T', null, null, null, [
-            $this->parsedEntryWithImage('https-beacon', new DeclaredImageModel('https://i/pixel.gif', 1, 1)),
-        ]), self::context());
-        $this->entityManager->flush();
-
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-beacon']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-declared']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
+        self::assertSame(0, $entry->getImage()->getVerifyAttempts());
+        self::assertSame('https://i/x.jpg', $entry->getImageUrl());
+        self::assertSame(400, $entry->getImageWidth());
+        self::assertSame(300, $entry->getImageHeight());
     }
 
     public function testANativeHttpsImageMissingOneDimensionStaysPending(): void

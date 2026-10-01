@@ -3,6 +3,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../../../testing/transloco-testing';
 import { PreviewEntryRowComponent } from './preview-entry-row.component';
 import { FeedPreviewItem } from '../../../models';
+import { ImageProxyService } from '../../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../../testing/image-proxy-testing';
 
 function item(over: Partial<FeedPreviewItem> = {}): FeedPreviewItem {
   return {
@@ -21,10 +23,13 @@ function item(over: Partial<FeedPreviewItem> = {}): FeedPreviewItem {
 describe('PreviewEntryRowComponent', () => {
   let fixture: ComponentFixture<PreviewEntryRowComponent>;
   let ref: ComponentRef<PreviewEntryRowComponent>;
+  let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
 
   beforeEach(() => {
+    imageProxy = neverRecoveringImageProxy();
     TestBed.configureTestingModule({
       imports: [PreviewEntryRowComponent, provideTranslocoTesting()],
+      providers: [{ provide: ImageProxyService, useValue: imageProxy }],
     });
     fixture = TestBed.createComponent(PreviewEntryRowComponent);
     ref = fixture.componentRef;
@@ -47,6 +52,15 @@ describe('PreviewEntryRowComponent', () => {
     ref.setInput('item', item({ imageUrl: null, imageWidth: null, imageHeight: null }));
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('img.thumb')).toBeNull();
+  });
+
+  it('hides a thumbnail that fails to load, without a proxy retry', () => {
+    fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector('img.thumb')!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(element.querySelector('img.thumb')).toBeNull();
+    expect(imageProxy.attempts).toEqual([]);
   });
 
   it('is inert: no button role and no action buttons', () => {

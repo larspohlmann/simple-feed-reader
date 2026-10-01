@@ -11,7 +11,6 @@
   <div class="top">
     @if (showImage()) {
       <img
-        appProxiedImage
         class="img"
         [src]="image()!.url"
         [style.aspect-ratio]="aspect()"
@@ -21,7 +20,7 @@
         loading="lazy"
         decoding="async"
         referrerpolicy="no-referrer"
-        (imageFailed)="imgError.set(true)"
+        (error)="imgError.set(true)"
       />
     }
     <div class="body">

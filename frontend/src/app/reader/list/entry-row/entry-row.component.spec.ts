@@ -7,6 +7,8 @@ import { EntryRowComponent } from './entry-row.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -75,12 +77,19 @@ function pressSpace(target: HTMLElement): void {
 }
 
 describe('EntryRowComponent', () => {
-  beforeEach(() =>
+  let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
+
+  beforeEach(() => {
+    imageProxy = neverRecoveringImageProxy();
     TestBed.configureTestingModule({
       imports: [EntryRowComponent, provideTranslocoTesting()],
-      providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
-    }),
-  );
+      providers: [
+        { provide: EntryActionHandler, useValue: entryActions },
+        { provide: ImageProxyService, useValue: imageProxy },
+        provideRouter([]),
+      ],
+    });
+  });
 
   it('renders title, source, snippet and the https thumbnail', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
@@ -101,6 +110,15 @@ describe('EntryRowComponent', () => {
     expect(element.querySelector('img.thumb')!.getAttribute('src')).toBe(
       'https://cdn.test/hero.jpg',
     );
+  });
+
+  it('hides a thumbnail that fails to load, without a proxy retry', () => {
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector('img.thumb')!.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(element.querySelector('img.thumb')).toBeNull();
+    expect(imageProxy.attempts).toEqual([]);
   });
 
   it('moves the thumbnail to the left when imageSide is left', () => {

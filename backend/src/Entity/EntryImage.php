@@ -41,15 +41,6 @@ final class EntryImage
         $this->verifyAttempts = $url === null ? null : 0;
     }
 
-    public function storeVerified(?string $url, ?int $width, ?int $height, \DateTimeImmutable $checkedAt): void
-    {
-        $this->url = $url;
-        $this->width = $width;
-        $this->height = $height;
-        $this->checkedAt = $checkedAt;
-        $this->verifyAttempts = null;
-    }
-
     public function recordMeasurement(int $width, int $height, \DateTimeImmutable $checkedAt): void
     {
         $this->width = $width;

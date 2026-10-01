@@ -14,12 +14,6 @@ final class HttpsImageUrl
     /** Matches the length of every column one of these is persisted into. */
     public const int MAX_LENGTH = 2048;
 
-    /** A //host URL is not native: its https is as unproven as an upgraded http one. */
-    public static function isNativeHttps(string $url): bool
-    {
-        return self::withoutPrefix($url, 'https://') !== null;
-    }
-
     public static function orNull(?string $url): ?string
     {
         return self::withinColumn(self::secure($url ?? ''));

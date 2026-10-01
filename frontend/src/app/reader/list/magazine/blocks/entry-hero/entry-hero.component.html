@@ -9,7 +9,6 @@
 >
   @if (showImage()) {
     <img
-      appProxiedImage
       class="img"
       [src]="image()!.url"
       [style.aspect-ratio]="aspect()"
@@ -20,7 +19,7 @@
       decoding="async"
       referrerpolicy="no-referrer"
       (load)="onLoad($event)"
-      (imageFailed)="imgError.set(true)"
+      (error)="imgError.set(true)"
     />
   }
   <div class="body">
