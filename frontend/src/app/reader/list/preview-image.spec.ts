@@ -49,6 +49,51 @@ describe('entryImage', () => {
   it('returns null when the entry has no image', () => {
     expect(entryImage(entry())).toBeNull();
   });
+
+  const ladderTo1920 = [
+    { url: 'https://i/a-768.jpg', width: 768 },
+    { url: 'https://i/a-1920.jpg', width: 1920 },
+  ];
+
+  it('takes the width of a ladder that tops the lead image, scaling the height with it', () => {
+    expect(
+      entryImage(
+        entry({
+          imageUrl: 'https://i/a.jpg',
+          imageWidth: 367,
+          imageHeight: 245,
+          imageRenditions: ladderTo1920,
+        }),
+      ),
+    ).toEqual({ url: 'https://i/a.jpg', width: 1920, height: 1282 });
+  });
+
+  it('keeps an unknown height unknown when the ladder tops the lead image', () => {
+    expect(
+      entryImage(
+        entry({ imageUrl: 'https://i/a.jpg', imageWidth: 367, imageRenditions: ladderTo1920 }),
+      ),
+    ).toEqual({ url: 'https://i/a.jpg', width: 1920, height: null });
+  });
+
+  it('keeps the dimensions of a lead image that declares none, whatever the ladder', () => {
+    expect(
+      entryImage(entry({ imageUrl: 'https://i/a.jpg', imageRenditions: ladderTo1920 })),
+    ).toEqual({ url: 'https://i/a.jpg', width: null, height: null });
+  });
+
+  it('keeps the dimensions of a lead image at least as wide as its ladder', () => {
+    expect(
+      entryImage(
+        entry({
+          imageUrl: 'https://i/a.jpg',
+          imageWidth: 1920,
+          imageHeight: 1280,
+          imageRenditions: ladderTo1920,
+        }),
+      ),
+    ).toEqual({ url: 'https://i/a.jpg', width: 1920, height: 1280 });
+  });
 });
 
 describe('renditionSrcset', () => {

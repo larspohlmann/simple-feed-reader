@@ -128,6 +128,51 @@ describe('planMagazine', () => {
     expect(entryCount(blocks)).toBe(80);
   });
 
+  it('sizes a narrow lead image by its rendition ladder, so it can fill a hero or wide slot', () => {
+    // factmag: the lead image is a 367px inline img, but its srcset reaches 1920px.
+    const factmag = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+      entryAt(id, {
+        imageUrl: `https://i/${id}-367x245.jpg`,
+        imageWidth: 367,
+        imageHeight: 245,
+        imageRenditions: [
+          { url: `https://i/${id}-768x512.jpg`, width: 768 },
+          { url: `https://i/${id}-1920x1280.jpg`, width: 1920 },
+        ],
+        subscriptionId: (id % 6) + 1,
+        ...over,
+      });
+    const withLadder = kinds(
+      planMagazine({ entries: many(80, factmag), grouping: true, complete: true }),
+    );
+    const withoutLadder = kinds(
+      planMagazine({
+        entries: many(80, (index) => factmag(index, { imageRenditions: [] })),
+        grouping: true,
+        complete: true,
+      }),
+    );
+
+    expect(withLadder.some((kind) => kind === 'hero' || kind === 'wide')).toBe(true);
+    expect(withoutLadder).not.toContain('hero');
+    expect(withoutLadder).not.toContain('wide');
+  });
+
+  it('keeps a portrait lead image out of a hero slot, however wide its ladder', () => {
+    const entries = many(80, (index) =>
+      portrait(index, {
+        imageWidth: 300,
+        imageHeight: 533,
+        imageRenditions: [{ url: `https://i/${index}-1800.jpg`, width: 1800 }],
+        subscriptionId: (index % 6) + 1,
+      }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks).not.toContain('hero');
+    expect(ks).not.toContain('wide');
+    expect(ks).toContain('split');
+  });
+
   it('renders a text-forward rhythm for an image-poor, text-rich view', () => {
     // A wire service ships only tiny thumbnails and long copy. The image family
     // would collapse every large slot to one `thumb` — a uniform wall — so the

@@ -1508,6 +1508,8 @@ thumbnail: exactly what used to produce heroes and bands with no real picture.
 `thumb` is the exception — it accepts any image regardless of width, since its
 box is fixed at 88px, so even that miniature thumbnail fills it cleanly, which
 is precisely why it is the demotion target for the larger image blocks.
+A known width is the wider of `imageWidth` and the widest served rendition
+(`entryImage()`), the height scaled to keep the lead image's aspect ratio.
 
 An entry that cannot fill its planned slot demotes transitively:
 `hero → wide → split → thumb → compact`, and `quote → kicker → compact` —

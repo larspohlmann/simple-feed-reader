@@ -10,10 +10,18 @@ export function entrySnippet(entry: EntryDto): string {
  *  Null width/height mean the feed did not say. */
 export type EntryImage = HeroImageDto;
 
-/** The entry's persisted image, or null. */
+/** The entry's persisted image, or null, as wide as the widest file it can be shown at. */
 export function entryImage(entry: EntryDto): EntryImage | null {
   if (!entry.imageUrl) return null;
-  return { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
+  const image = { url: entry.imageUrl, width: entry.imageWidth, height: entry.imageHeight };
+  return atLadderWidth(image, widestRenditionWidth(entry.imageRenditions));
+}
+
+/** A lead image without a declared width keeps its unknowns: no height is invented. */
+function atLadderWidth(image: EntryImage, widest: number | null): EntryImage {
+  if (image.width === null || widest === null || widest <= image.width) return image;
+  const height = image.height === null ? null : Math.round((image.height * widest) / image.width);
+  return { ...image, width: widest, height };
 }
 
 /** The renditions as a `srcset`, or null when there are none. Stubbed e2e entries predate
