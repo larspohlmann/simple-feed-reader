@@ -44,6 +44,12 @@ final class CrossFamilyFailoverTest extends TestCase
         self::assertTrue($this->failover->isRetryableStatus(503));
     }
 
+    public function testAMissingResourceStatusDoesNotWarrantAnotherFamily(): void
+    {
+        self::assertFalse($this->failover->isRetryableStatus(404));
+        self::assertFalse($this->failover->isRetryableStatus(410));
+    }
+
     public function testASuccessOrRedirectStatusDoesNotWarrantAnotherFamily(): void
     {
         // 2xx and 304 are answers; 3xx is a redirect the caller follows. None is
