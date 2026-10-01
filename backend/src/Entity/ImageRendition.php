@@ -9,6 +9,9 @@ use App\Entity\Exception\IncompleteStoredMediaException;
 /** One declared-width rendition of an entry's lead picture, as a `srcset` candidate names it. */
 final readonly class ImageRendition implements \JsonSerializable
 {
+    /** The frontend's `--magazine-measure` in CSS px: the widest slot a list block gives an image. */
+    public const int WIDEST_LIST_SLOT = 680;
+
     public function __construct(
         public string $url,
         public int $width,
@@ -59,6 +62,12 @@ final readonly class ImageRendition implements \JsonSerializable
         usort($ladder, static fn (self $left, self $right): int => $left->width <=> $right->width);
 
         return $ladder;
+    }
+
+    /** @param non-empty-list<self> $renditions */
+    public static function widestOf(array $renditions): int
+    {
+        return max(array_map(static fn (self $rendition): int => $rendition->width, $renditions));
     }
 
     /**

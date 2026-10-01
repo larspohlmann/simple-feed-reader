@@ -114,7 +114,8 @@ final class EntryImage
 
     /**
      * The renditions a client may choose from, which must reach the lead image: a browser given a srcset never
-     * loads its src, so a ladder that cannot is served only once the lead image's width is known to top it.
+     * loads its src, so a ladder that cannot is served once the lead image's width is known to top it, or
+     * while that width is unknown, when the ladder already fills the widest list slot.
      *
      * @return list<ImageRendition>
      */
@@ -124,10 +125,14 @@ final class EntryImage
         if ($renditions === [] || $this->isAmong($renditions)) {
             return $renditions;
         }
-        if ($this->url === null || $this->width === null) {
+        if ($this->url === null) {
             return [];
         }
-        if ($this->width <= max(array_map(static fn (ImageRendition $rung): int => $rung->width, $renditions))) {
+        $widest = ImageRendition::widestOf($renditions);
+        if ($this->width === null) {
+            return $widest >= ImageRendition::WIDEST_LIST_SLOT ? $renditions : [];
+        }
+        if ($this->width <= $widest) {
             return $renditions;
         }
 

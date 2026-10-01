@@ -123,6 +123,37 @@ final class EntryImageWriterTest extends TestCase
         self::assertSame([], $entry->getImage()->getRenditions());
     }
 
+    public function testASingleRenditionOfTheLeadImageUpgradedToHttpsIsNoLadder(): void
+    {
+        $entry = $this->entry();
+
+        $this->writer()->write($entry, new DeclaredImageModel('http://img.example.com/a.jpg', null, null, [
+            new ImageRendition('https://img.example.com/a.jpg', 800),
+        ]));
+
+        self::assertSame([], $entry->getImage()->getRenditions());
+    }
+
+    public function testASingleRenditionBesideAnUnmeasuredLeadIsServedAndToppedOnceTheLeadIsMeasured(): void
+    {
+        $entry = $this->entry();
+        $rendition = new ImageRendition('https://img.example.com/a-800.jpg', 800);
+
+        $image = new DeclaredImageModel('https://img.example.com/a.jpg', null, null, [$rendition]);
+
+        $this->writer()->write($entry, $image);
+
+        self::assertEquals([$rendition], $entry->getImage()->getRenditions());
+        self::assertEquals([$rendition], $entry->getImage()->servedRenditions());
+
+        $entry->getImage()->recordMeasurement(3000, 2000, new \DateTimeImmutable('2026-10-01 12:00:00'));
+
+        self::assertEquals(
+            [$rendition, new ImageRendition('https://img.example.com/a.jpg', 3000)],
+            $entry->getImage()->servedRenditions(),
+        );
+    }
+
     public function testAnotherImageReplacesTheStoredLadder(): void
     {
         $entry = $this->entry();

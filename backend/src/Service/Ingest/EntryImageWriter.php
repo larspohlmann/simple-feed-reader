@@ -22,7 +22,7 @@ final readonly class EntryImageWriter
             return false;
         }
         $entry->getImage()->storePending($url, $image->width, $image->height);
-        $entry->getImage()->storeRenditions(self::storableRenditions($image->renditions));
+        $entry->getImage()->storeRenditions(self::storableRenditions($image->renditions, $url));
 
         return true;
     }
@@ -35,13 +35,29 @@ final readonly class EntryImageWriter
     }
 
     /**
-     * The renditions under the image URL's own https rule; a single one leaves the browser no choice, so it is none.
+     * The renditions under the image URL's own https rule. Only a rung that is not the lead image can pair with it,
+     * so a single rung counts only then; one alone that is the lead image leaves the browser no choice.
      *
      * @param list<ImageRendition> $declared
      *
      * @return list<ImageRendition>
      */
-    private static function storableRenditions(array $declared): array
+    private static function storableRenditions(array $declared, string $leadUrl): array
+    {
+        $ladder = ImageRendition::ladder(self::secureRenditions($declared));
+        if (\count($ladder) >= self::FEWEST_RENDITIONS_TO_CHOOSE_FROM) {
+            return $ladder;
+        }
+
+        return array_values(array_filter($ladder, static fn (ImageRendition $rung): bool => $rung->url !== $leadUrl));
+    }
+
+    /**
+     * @param list<ImageRendition> $declared
+     *
+     * @return list<ImageRendition>
+     */
+    private static function secureRenditions(array $declared): array
     {
         $secure = [];
         foreach ($declared as $rendition) {
@@ -50,9 +66,8 @@ final readonly class EntryImageWriter
                 $secure[] = new ImageRendition($url, $rendition->width);
             }
         }
-        $ladder = ImageRendition::ladder($secure);
 
-        return \count($ladder) < self::FEWEST_RENDITIONS_TO_CHOOSE_FROM ? [] : $ladder;
+        return $secure;
     }
 
     private static function fitsASrcsetCandidate(string $url): bool

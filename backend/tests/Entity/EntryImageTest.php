@@ -214,6 +214,51 @@ final class EntryImageTest extends TestCase
         self::assertSame([], $image->servedRenditions());
     }
 
+    /** @return iterable<string, array{int}> */
+    public static function ladderWideEnoughForTheWidestListSlotProvider(): iterable
+    {
+        yield 'exactly the widest list slot' => [680];
+        yield 'wider than the widest list slot' => [1456];
+    }
+
+    #[DataProvider('ladderWideEnoughForTheWidestListSlotProvider')]
+    public function testServesALadderFillingTheWidestListSlotWhileTheLeadWidthIsUnknown(int $widest): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', null, null);
+        $renditions = [
+            new ImageRendition('https://i/photo-424.jpg', 424),
+            new ImageRendition('https://i/photo-wide.jpg', $widest),
+        ];
+        $image->storeRenditions($renditions);
+
+        self::assertEquals($renditions, $image->servedRenditions());
+    }
+
+    public function testServesNoLadderJustNarrowerThanTheWidestListSlotWhileTheLeadWidthIsUnknown(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', null, null);
+        $image->storeRenditions(self::thumbnailLadder('https://i/photo-679.jpg', 679));
+
+        self::assertSame([], $image->servedRenditions());
+    }
+
+    public function testServesAWideLadderOfAnImageKeptUnmeasured(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/photo.jpg', null, null);
+        $renditions = [
+            new ImageRendition('https://i/photo-424.jpg', 424),
+            new ImageRendition('https://i/photo-1456.jpg', 1456),
+        ];
+        $image->storeRenditions($renditions);
+
+        $image->keepUnmeasured(new \DateTimeImmutable('2026-10-01 12:00:00'));
+
+        self::assertEquals($renditions, $image->servedRenditions());
+    }
+
     public function testServesTheLeadImageOnTopOnceTheVerifierMeasuredIt(): void
     {
         $image = new EntryImage();
