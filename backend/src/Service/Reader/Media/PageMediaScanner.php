@@ -9,7 +9,6 @@ use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Model\FeedMediaModel;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -25,7 +24,6 @@ final readonly class PageMediaScanner
     ) {
     }
 
-    #[WithSpan]
     public function scan(RawPageModel $page, ?FeedMediaModel $feedMedia = null): ArticleMediaModel
     {
         $feedMedia ??= FeedMediaModel::none();

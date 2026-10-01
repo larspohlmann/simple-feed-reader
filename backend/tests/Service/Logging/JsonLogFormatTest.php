@@ -6,7 +6,6 @@ namespace App\Tests\Service\Logging;
 
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
-use App\Service\Logging\TraceContext\TraceContextInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -18,7 +17,7 @@ final class JsonLogFormatTest extends TestCase
     {
         $provider = new RequestIdProvider();
         $provider->set('01J000000000000000000TEST');
-        $processor = new RequestLogProcessor($provider, $this->noTracingContext());
+        $processor = new RequestLogProcessor($provider);
         $formatter = new JsonFormatter(JsonFormatter::BATCH_MODE_JSON, true, false, true);
 
         $record = $processor(new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'hello', ['k' => 'v']));
@@ -36,20 +35,5 @@ final class JsonLogFormatTest extends TestCase
         $context = $decoded['context'];
         self::assertIsArray($context);
         self::assertSame('v', $context['k']);
-    }
-
-    private function noTracingContext(): TraceContextInterface
-    {
-        return new class implements TraceContextInterface {
-            public function traceId(): ?string
-            {
-                return null;
-            }
-
-            public function spanId(): ?string
-            {
-                return null;
-            }
-        };
     }
 }

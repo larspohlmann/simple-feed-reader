@@ -12,7 +12,6 @@ use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * The caller's entry list rows (entry, subscription, feed, folded state) for the list, search and id-hydration reads,
@@ -40,7 +39,6 @@ final class EntryListRepository extends ServiceEntityRepository
      *
      * @return list<EntryListRow>
      */
-    #[WithSpan]
     public function listForUser(EntryQuery $query): array
     {
         $ordering = $query->ordering();
@@ -189,7 +187,6 @@ final class EntryListRepository extends ServiceEntityRepository
      * The entry only if the caller subscribes to its feed — the IDOR gate for
      * per-entry state writes. Returns a managed Entry (or null → 404).
      */
-    #[WithSpan]
     public function findOneSubscribedForUser(int $userId, int $entryId): ?Entry
     {
         /** @var Entry|null $entry */

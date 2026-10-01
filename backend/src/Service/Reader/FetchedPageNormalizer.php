@@ -10,7 +10,6 @@ use App\Service\Reader\PageRepair\PageRepairInterface;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Parses a fetched page once and runs the PageRepairInterface pipeline over it, in the order services.yaml wires,
@@ -26,7 +25,6 @@ final readonly class FetchedPageNormalizer
     }
 
     /** @throws UnparseableHtmlException when the page is blank or cannot be parsed */
-    #[WithSpan]
     public function normalize(string $html): HTMLDocument
     {
         return $this->repair($html);

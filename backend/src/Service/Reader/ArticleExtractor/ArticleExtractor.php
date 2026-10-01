@@ -24,7 +24,6 @@ use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Sanitize\EntrySanitizer;
 use fivefilters\Readability\Article;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Fetch, normalise, read the page, run readability, clean the body, sanitise (EntrySanitizer is the XSS barrier).
@@ -44,7 +43,6 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
     ) {
     }
 
-    #[WithSpan]
     public function extract(string $url, EntryHintsModel $hints = new EntryHintsModel()): ExtractionResultModel
     {
         try {

@@ -12,7 +12,6 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * @extends ServiceEntityRepository<EntryState>
@@ -125,7 +124,6 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
      *
      * @return array{favorites: int, kept: int, viewed: int}
      */
-    #[WithSpan]
     public function stateCountsForUser(int $userId): array
     {
         /** @var array{favorites: int|string, kept: int|string, viewed: int|string} $row */
@@ -235,7 +233,6 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
      *
      * @return array<int, int>
      */
-    #[WithSpan]
     public function unreadCountsForUser(int $userId): array
     {
         $qb = $this->getEntityManager()->createQueryBuilder()

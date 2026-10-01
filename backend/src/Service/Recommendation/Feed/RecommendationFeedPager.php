@@ -10,7 +10,6 @@ use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationFeedPageModel;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 final readonly class RecommendationFeedPager
 {
@@ -19,7 +18,6 @@ final readonly class RecommendationFeedPager
     ) {
     }
 
-    #[WithSpan]
     public function page(ForYouFeedQuery $query): RecommendationFeedPageModel
     {
         $rows = $this->items->listForYou($query, self::cursorOf($query));

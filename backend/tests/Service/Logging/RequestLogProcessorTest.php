@@ -4,115 +4,37 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Logging;
 
-use App\Service\Logging\Loki\LokiPushHandler;
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
-use App\Service\Logging\TraceContext\TraceContextInterface;
 use Monolog\Level;
 use Monolog\LogRecord;
 use PHPUnit\Framework\TestCase;
 
 final class RequestLogProcessorTest extends TestCase
 {
-    public function testStampsRequestIdWithoutTraceWhenNoSpanIsActive(): void
+    public function testStampsTheRequestId(): void
     {
         $provider = new RequestIdProvider();
         $provider->set('01J000000000000000000TEST');
-        $processor = new RequestLogProcessor($provider, $this->partialTracingContext(null, null));
 
-        $record = $processor($this->record());
+        $record = new RequestLogProcessor($provider)($this->record([]));
 
         self::assertSame('01J000000000000000000TEST', $record->extra['request_id']);
-        self::assertArrayNotHasKey('trace_id', $record->extra);
-        self::assertArrayNotHasKey('span_id', $record->extra);
     }
 
-    public function testStampsTraceAndSpanWhenASpanIsActive(): void
-    {
-        $provider = new RequestIdProvider();
-        $processor = new RequestLogProcessor($provider, $this->tracingContext('trace-abc', 'span-xyz'));
-
-        $record = $processor($this->record());
-
-        self::assertSame('trace-abc', $record->extra['trace_id']);
-        self::assertSame('span-xyz', $record->extra['span_id']);
-    }
-
-    public function testOmitsBothIdsWhenOnlyATraceIdIsPresent(): void
-    {
-        $provider = new RequestIdProvider();
-        $processor = new RequestLogProcessor($provider, $this->partialTracingContext('trace-abc', null));
-
-        $record = $processor($this->record());
-
-        self::assertArrayNotHasKey('trace_id', $record->extra);
-        self::assertArrayNotHasKey('span_id', $record->extra);
-    }
-
-    public function testOmitsBothIdsWhenOnlyASpanIdIsPresent(): void
-    {
-        $provider = new RequestIdProvider();
-        $processor = new RequestLogProcessor($provider, $this->partialTracingContext(null, 'span-xyz'));
-
-        $record = $processor($this->record());
-
-        self::assertArrayNotHasKey('trace_id', $record->extra);
-        self::assertArrayNotHasKey('span_id', $record->extra);
-    }
-
-    public function testOmitsTraceForClientErrorsChannelEvenWhenASpanIsActive(): void
+    public function testKeepsTheExtrasAnEarlierProcessorAdded(): void
     {
         $provider = new RequestIdProvider();
         $provider->set('01J000000000000000000TEST');
-        $processor = new RequestLogProcessor($provider, $this->tracingContext('trace-abc', 'span-xyz'));
 
-        $record = $processor($this->record(LokiPushHandler::CLIENT_ERRORS_CHANNEL));
+        $record = new RequestLogProcessor($provider)($this->record(['memory_peak' => '12 MB']));
 
-        self::assertSame('01J000000000000000000TEST', $record->extra['request_id']);
-        self::assertArrayNotHasKey('trace_id', $record->extra);
-        self::assertArrayNotHasKey('span_id', $record->extra);
+        self::assertSame(['memory_peak' => '12 MB', 'request_id' => '01J000000000000000000TEST'], $record->extra);
     }
 
-    private function record(string $channel = 'app'): LogRecord
+    /** @param array<string, mixed> $extra */
+    private function record(array $extra): LogRecord
     {
-        return new LogRecord(new \DateTimeImmutable(), $channel, Level::Info, 'hello');
-    }
-
-    private function tracingContext(string $traceId, string $spanId): TraceContextInterface
-    {
-        return new class ($traceId, $spanId) implements TraceContextInterface {
-            public function __construct(private string $traceId, private string $spanId)
-            {
-            }
-
-            public function traceId(): string
-            {
-                return $this->traceId;
-            }
-
-            public function spanId(): string
-            {
-                return $this->spanId;
-            }
-        };
-    }
-
-    private function partialTracingContext(?string $traceId, ?string $spanId): TraceContextInterface
-    {
-        return new class ($traceId, $spanId) implements TraceContextInterface {
-            public function __construct(private ?string $traceId, private ?string $spanId)
-            {
-            }
-
-            public function traceId(): ?string
-            {
-                return $this->traceId;
-            }
-
-            public function spanId(): ?string
-            {
-                return $this->spanId;
-            }
-        };
+        return new LogRecord(new \DateTimeImmutable(), 'app', Level::Info, 'hello', extra: $extra);
     }
 }

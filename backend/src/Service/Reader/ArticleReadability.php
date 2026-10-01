@@ -12,7 +12,6 @@ use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;
 use fivefilters\Readability\ParseException;
 use fivefilters\Readability\Readability;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Runs readability over the normalised page and over its wrapper-collapsed variant and keeps the richer extraction,
@@ -34,7 +33,6 @@ final readonly class ArticleReadability
      *
      * @param list<ContainerSignatureModel> $slideshowContainers
      */
-    #[WithSpan]
     public function richest(HTMLDocument $normalized, PageResponseModel $page, array $slideshowContainers): ?Article
     {
         $collapsed = $this->normalizer->collapseWrapperChains($page->html);

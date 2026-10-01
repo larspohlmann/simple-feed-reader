@@ -9,7 +9,6 @@ use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Cleans readability's article HTML through one shared document: parse once, run the steps in the order
@@ -23,7 +22,6 @@ final readonly class ReaderBodyCleaner
     {
     }
 
-    #[WithSpan]
     public function clean(string $contentHtml, BodyCleaningInputModel $input): string
     {
         try {

@@ -22,11 +22,6 @@
         "lcobucci/jwt": "^5.6",
         "lexik/jwt-authentication-bundle": "^3.2",
         "maennchen/zipstream-php": "^3.2.2",
-        "nyholm/psr7": "^1.8.2",
-        "open-telemetry/exporter-otlp": "^1.4",
-        "open-telemetry/opentelemetry-auto-doctrine": "^0.5",
-        "open-telemetry/opentelemetry-auto-symfony": "^1.4",
-        "open-telemetry/sdk": "^1.15",
         "paragonie/constant_time_encoding": "^3.1",
         "symfony/clock": "7.4.*",
         "symfony/console": "7.4.*",
@@ -77,7 +72,6 @@
     },
     "config": {
         "allow-plugins": {
-            "php-http/discovery": true,
             "symfony/flex": true,
             "symfony/runtime": true,
             "infection/extension-installer": true
@@ -85,8 +79,7 @@
         "bump-after-update": true,
         "sort-packages": true,
         "platform": {
-            "php": "8.4.0",
-            "ext-opentelemetry": "1.0.0"
+            "php": "8.4.0"
         }
     },
     "autoload": {
@@ -132,22 +125,10 @@
             "@stan",
             "@tramp"
         ],
-        "test": [
-            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
-            "@php bin/phpunit"
-        ],
-        "test:parallel": [
-            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
-            "paratest"
-        ],
-        "infection": [
-            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
-            "infection --threads=max"
-        ],
-        "infection:diff": [
-            "@putenv OTEL_PHP_DISABLED_INSTRUMENTATIONS=all",
-            "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations"
-        ],
+        "test": "@php bin/phpunit",
+        "test:parallel": "paratest",
+        "infection": "infection --threads=max",
+        "infection:diff": "infection --git-diff-filter=AM --git-diff-base=origin/develop --threads=max --ignore-msi-with-no-mutations",
         "e2e": "bin/e2e.sh"
     },
     "conflict": {
