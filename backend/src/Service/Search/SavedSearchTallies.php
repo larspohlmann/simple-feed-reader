@@ -7,7 +7,6 @@ namespace App\Service\Search;
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Search\Model\SavedSearchTallyModel;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * What each saved search's badge and heading count: the unread member ids,
@@ -25,7 +24,6 @@ final readonly class SavedSearchTallies
      *
      * @return array<int, SavedSearchTallyModel> saved-search id => its tally
      */
-    #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
     {
         $ids = array_map(static fn (SavedSearch $savedSearch): int => $savedSearch->requireId(), $savedSearches);

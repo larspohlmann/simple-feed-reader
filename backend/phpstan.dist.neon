@@ -14,9 +14,6 @@ parameters:
     excludePaths:
         # Deliberate custom-rule violations, analysed only by each rule's RuleTestCase.
         - tests/PhpStan/data/*
-    stubFiles:
-        # ext-excimer is absent on the native/CI PHP that runs PHPStan.
-        - tests/PhpStan/stubs/excimer.stub
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
 

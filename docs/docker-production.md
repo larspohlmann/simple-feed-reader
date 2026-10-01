@@ -7,7 +7,7 @@ the M and L packages (§1) — a MySQL container beside them, defined
 in [`docker-compose.prod.yml`](../docker-compose.prod.yml). A Meilisearch
 container joins them for the L package, or for a C install that enables
 full-content search (§1); the app answers searches from the database whenever
-it is absent. Loki, Tempo, Pyroscope and Grafana join them when the installer's
+it is absent. Loki and Grafana join them when the installer's
 Grafana question is answered yes (§1). It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
@@ -132,12 +132,11 @@ values only you know:
   before an admin has configured mail; answer 3 to finish it by hand later.
   `./scripts/prod-configure.sh` asks again at any time.
 - **Whether to run a Grafana log dashboard** — asked for every package but
-  **Q**, and **no by default**. Answer yes to run Loki, Tempo, Pyroscope and
-  Grafana containers beside the app: the app ships its logs to Loki and its
-  traces to Tempo, and Grafana shows them on `GRAFANA_PORT` (3000 by default),
-  signed in as `admin` with the `GRAFANA_ADMIN_PASSWORD` the installer writes
-  into `.env.prod`. Declining leaves the logs in `docker compose logs` and
-  builds the image without the opentelemetry and excimer extensions.
+  **Q**, and **no by default**. Answer yes to run Loki and Grafana containers
+  beside the app: the app ships its logs to Loki, and Grafana shows them on
+  `GRAFANA_PORT` (3000 by default), signed in as `admin` with the
+  `GRAFANA_ADMIN_PASSWORD` the installer writes into `.env.prod`. Declining
+  leaves the logs in `docker compose logs`.
   `./scripts/prod-configure.sh` asks again at any time.
 
 Once the stack is up, the installer fills the **onboarding catalog** from the
@@ -318,6 +317,11 @@ idempotent — running it again is always safe.
 `./scripts/update.sh --ref <branch-or-tag>` moves the install to that ref
 instead, for a test instance that has to run a change before it is released.
 
+The update that removed tracing and profiling (#1328) removes their containers
+but keeps their data. Free it with
+`docker volume rm simple-feed-reader-prod_tempo-data simple-feed-reader-prod_pyroscope-data`,
+and delete the leftover "Application performance" dashboard in Grafana.
+
 ## 7. Reconfigure
 
 To change the public origin, the search engine, the mail settings or the
@@ -346,9 +350,9 @@ Everything worth keeping lives in three named volumes: the database
 (`jwt-keys`). Running the bundled search engine adds a fourth, `meili-data`.
 Losing it is not fatal — `app:search:reindex` rebuilds the whole index from
 the database — but back it up anyway if you would rather not run that command
-by hand after a restore. The Grafana dashboard adds `loki-data`, `tempo-data`,
-`pyroscope-data` and `grafana-data`: logs, traces, profiles and Grafana's own
-state, none of which the app needs to run. A database dump before major updates:
+by hand after a restore. The Grafana dashboard adds `loki-data` and
+`grafana-data`: logs and Grafana's own state, neither of which the app needs to
+run. A database dump before major updates:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \

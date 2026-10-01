@@ -10,7 +10,6 @@ use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * @extends ServiceEntityRepository<SavedSearch>
@@ -25,7 +24,6 @@ final class SavedSearchRepository extends ServiceEntityRepository implements Dig
     /**
      * @return list<SavedSearch> the user's saved searches, newest saved first
      */
-    #[WithSpan]
     public function findForUser(int $userId): array
     {
         /** @var list<SavedSearch> $rows */

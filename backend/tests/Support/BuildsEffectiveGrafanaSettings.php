@@ -15,18 +15,17 @@ trait BuildsEffectiveGrafanaSettings
 {
     private function effectiveGrafanaSettingsOver(
         ?GrafanaSettingsEntity $row,
-        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', '', ''),
-        ?GrafanaSettingsCache $cache = null,
+        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', ''),
     ): EffectiveGrafanaSettings {
         $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturn($row);
 
-        return $this->effectiveGrafanaSettingsOverRepository($repository, $defaults, $cache);
+        return $this->effectiveGrafanaSettingsOverRepository($repository, $defaults);
     }
 
     private function effectiveGrafanaSettingsOverRepository(
         StoredGrafanaSettingsInterface $repository,
-        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', '', ''),
+        GrafanaEnvDefaults $defaults = new GrafanaEnvDefaults('', ''),
         ?GrafanaSettingsCache $cache = null,
     ): EffectiveGrafanaSettings {
         return new EffectiveGrafanaSettings(

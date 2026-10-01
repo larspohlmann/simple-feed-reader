@@ -18,7 +18,7 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testNoRowFallsBackToDefaultsAndReportsContainerPresent(): void
     {
         $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverviewModel($this->unconfigured(), $this->defaults(), false),
+            new GrafanaSettingsOverviewModel($this->unconfigured(), $this->defaults()),
         );
 
         self::assertNull($payload['lokiPushUrl']);
@@ -35,12 +35,12 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testOverrideWinsOverDefaultAndSecretNeverLeaks(): void
     {
         $stored = new GrafanaSettingsSnapshotModel(
-            new GrafanaConnection('https://cloud/loki/push', 'tenant42', 'https://cloud/grafana', null, false),
+            new GrafanaConnection('https://cloud/loki/push', 'tenant42', 'https://cloud/grafana'),
             new SealedSecret('c', 'n', 's', 1),
             'wxyz',
         );
 
-        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverviewModel($stored, $this->defaults(), false));
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverviewModel($stored, $this->defaults()));
 
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrl']);
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrlEffective']);
@@ -56,41 +56,11 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testNoContainerWhenDefaultEmpty(): void
     {
         $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverviewModel($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
+            new GrafanaSettingsOverviewModel($this->unconfigured(), new GrafanaEnvDefaults('', '')),
         );
 
         self::assertFalse($payload['containerPresent']);
         self::assertNull($payload['lokiPushUrlEffective']);
-    }
-
-    public function testProfilingOverrideToggleAndAvailabilityAreReported(): void
-    {
-        $stored = new GrafanaSettingsSnapshotModel(
-            new GrafanaConnection(null, null, null, 'http://custom:4040', true),
-            new SealedSecret('c', 'n', 's', 1),
-            'wxyz',
-        );
-
-        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverviewModel($stored, $this->defaults(), true));
-
-        self::assertSame('http://custom:4040', $payload['pyroscopePushUrl']);
-        self::assertSame('http://pyroscope:4040', $payload['pyroscopePushUrlDefault']);
-        self::assertSame('http://custom:4040', $payload['pyroscopePushUrlEffective']);
-        self::assertTrue($payload['profilingContainerPresent']);
-        self::assertTrue($payload['profilingEnabled']);
-        self::assertTrue($payload['profilerAvailable']);
-    }
-
-    public function testProfilingReportsAbsentContainerAndOffToggleWithoutARow(): void
-    {
-        $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverviewModel($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
-        );
-
-        self::assertNull($payload['pyroscopePushUrlEffective']);
-        self::assertFalse($payload['profilingContainerPresent']);
-        self::assertFalse($payload['profilingEnabled']);
-        self::assertFalse($payload['profilerAvailable']);
     }
 
     private function unconfigured(): GrafanaSettingsSnapshotModel
@@ -100,10 +70,6 @@ final class GrafanaSettingsJsonTest extends TestCase
 
     private function defaults(): GrafanaEnvDefaults
     {
-        return new GrafanaEnvDefaults(
-            'http://loki:3100/loki/api/v1/push',
-            'http://localhost:3000',
-            'http://pyroscope:4040',
-        );
+        return new GrafanaEnvDefaults('http://loki:3100/loki/api/v1/push', 'http://localhost:3000');
     }
 }

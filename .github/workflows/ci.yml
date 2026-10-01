@@ -203,11 +203,6 @@ jobs:
       # Infection compares the threshold against an MSI of 0% and fails a PR
       # that has nothing to answer for.
       - name: Infection
-        # The opentelemetry auto-instrumentation warns to STDERR at autoload when
-        # the extension is absent (it is here), and Infection aborts its initial
-        # run on the first STDERR byte. Disable it so that run stays clean.
-        env:
-          OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
         run: >-
           vendor/bin/infection
           --git-diff-filter=AM
@@ -333,14 +328,6 @@ jobs:
       # a configured install without it.
       - name: configure_search_engine
         run: scripts/test/configure-search-engine.test.sh
-
-      # The observability build arg (#1044). Declining Grafana must skip
-      # compiling the opentelemetry and excimer extensions into the prod image,
-      # so prod-start.sh exports WITH_OBSERVABILITY from the same signal. A
-      # wrong mapping bakes two unused extensions in or drops them from an
-      # install that wants tracing -- both invisible until a build.
-      - name: observability_build_arg
-        run: scripts/test/observability-build-arg.test.sh
 
       # The mail question, whose default decides whether a new instance can
       # send account mail at all. A wrong answer here is invisible until the

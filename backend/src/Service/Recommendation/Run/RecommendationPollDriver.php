@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -44,7 +43,6 @@ final readonly class RecommendationPollDriver
         return $this->latestReport($user)->inBackground()->waitingForLock();
     }
 
-    #[WithSpan]
     public function current(User $user): RecommendationRunReportModel
     {
         $report = $this->latestReport($user);

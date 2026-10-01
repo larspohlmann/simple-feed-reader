@@ -11,7 +11,6 @@ use App\Repository\RecommendationFeedRow;
 use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
 use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * A page of the user's for-you feed, enriched like every entry list, annotated as the reader's "show reasons" allows.
@@ -25,7 +24,6 @@ final readonly class ForYouFeed
     ) {
     }
 
-    #[WithSpan]
     public function page(ForYouFeedQuery $query): ForYouFeedPageModel
     {
         $page = $this->pager->page($query);

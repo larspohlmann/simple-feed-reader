@@ -98,7 +98,7 @@ fi
 # install. Both stacks can exist on a developer machine; update both.
 if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   say 'Updating the development stack ...'
-  run_step 'Rebuilding images where their definitions changed' compose up -d --build
+  run_step 'Rebuilding images where their definitions changed' compose up -d --build --remove-orphans
 
   # Reinstall the frontend packages only when the lockfile actually changed;
   # the install runs into a named volume and is the slow part of an update.

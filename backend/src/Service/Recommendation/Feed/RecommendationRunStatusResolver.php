@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\RecommendationEtaEstimator;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -24,7 +23,6 @@ final readonly class RecommendationRunStatusResolver
     ) {
     }
 
-    #[WithSpan]
     public function forReport(RecommendationRunReportModel $report, User $user): RecommendationRunStatusModel
     {
         return new RecommendationRunStatusModel(

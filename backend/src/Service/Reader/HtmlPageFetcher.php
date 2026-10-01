@@ -13,7 +13,6 @@ use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
 use App\Service\Text\Support\Whitespace;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -39,7 +38,6 @@ final readonly class HtmlPageFetcher
     ) {
     }
 
-    #[WithSpan]
     public function fetch(string $url): PageResponseModel
     {
         $remainingHops = self::MAX_REDIRECTS;

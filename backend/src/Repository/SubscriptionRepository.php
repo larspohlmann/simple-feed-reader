@@ -9,7 +9,6 @@ use App\Entity\Subscription;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * @extends ServiceEntityRepository<Subscription>
@@ -39,7 +38,6 @@ final class SubscriptionRepository extends ServiceEntityRepository
      *
      * @return list<Subscription>
      */
-    #[WithSpan]
     public function findForUserWithTags(int $userId): array
     {
         /** @var list<Subscription> $rows */
@@ -175,7 +173,6 @@ final class SubscriptionRepository extends ServiceEntityRepository
     /**
      * @return array<int, int> subscription id => entries in its feed, read or not
      */
-    #[WithSpan]
     public function entryCountsForUser(int $userId): array
     {
         /** @var list<array{subscriptionId: int, entryCount: int}> $rows */

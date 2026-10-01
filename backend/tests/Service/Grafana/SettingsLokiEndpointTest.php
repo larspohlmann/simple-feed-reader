@@ -20,11 +20,11 @@ final class SettingsLokiEndpointTest extends TestCase
     {
         $row = new GrafanaSettingsEntity();
         $row->apply(
-            new GrafanaConnection(null, 'tenant42', null, null, false),
+            new GrafanaConnection(null, 'tenant42', null),
             GrafanaApiKeyCiphers::withTestSecret()->seal('secret'),
             'cret',
         );
-        $defaults = new GrafanaEnvDefaults('http://loki:3100/loki/api/v1/push', '', '');
+        $defaults = new GrafanaEnvDefaults('http://loki:3100/loki/api/v1/push', '');
 
         $endpoint = new SettingsLokiEndpoint($this->effectiveGrafanaSettingsOver($row, $defaults));
 

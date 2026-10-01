@@ -454,21 +454,6 @@ export_build_version_args() {
   export APP_VERSION APP_COMMIT APP_BUILT_AT
 }
 
-# The opentelemetry and excimer extensions serve the observability stack and
-# nothing else, so the prod image compiles them only when the operator runs
-# it. Export the WITH_OBSERVABILITY build arg from the same signal
-# prod_uses_grafana reads; docker compose interpolates it into the php and
-# worker build args. Called before `prod_compose up -d --build`, next to
-# export_build_version_args.
-export_observability_build_arg() {
-  if prod_uses_grafana; then
-    SFR_WITH_OBSERVABILITY=1
-  else
-    SFR_WITH_OBSERVABILITY=0
-  fi
-  export SFR_WITH_OBSERVABILITY
-}
-
 # `docker compose up -d` only STARTS services that are in the active
 # profiles -- it never stops one that has just fallen OUT of them, and
 # nothing else in this flow calls `down` or `rm`. Without this, declining the
@@ -505,11 +490,11 @@ stop_disabled_grafana_containers() {
   if prod_uses_grafana; then
     return 0
   fi
-  if [ -z "$(prod_compose ps -aq loki grafana tempo pyroscope 2>/dev/null)" ]; then
+  if [ -z "$(prod_compose ps -aq loki grafana 2>/dev/null)" ]; then
     return 0
   fi
   say 'Grafana is disabled -- removing its containers (data volumes are kept) ...'
-  prod_compose rm -sf loki grafana tempo pyroscope >/dev/null
+  prod_compose rm -sf loki grafana >/dev/null
 }
 
 # --- what an earlier production install leaves behind -----------------------
@@ -1669,8 +1654,7 @@ configure_grafana() {
   say 'Run a Grafana log dashboard?'
   tell '  A Loki + Grafana container pair collects the app'\''s logs into a'
   tell '  browsable dashboard. Declining leaves logs in the container output'
-  tell '  only (docker compose logs), which needs no extra container, and skips'
-  tell '  the opentelemetry and excimer extensions when the image is built.'
+  tell '  only (docker compose logs), which needs no extra container.'
   choice=$(prompt_with_default 'Enable Grafana? (y/n)' "${default}")
   apply_grafana_choice "${choice}"
 }
@@ -1701,11 +1685,6 @@ current_grafana_choice() {
 use_no_grafana() {
   env_prod_set GRAFANA_LOKI_PUSH_URL ''
   env_prod_set GRAFANA_URL ''
-  env_prod_set PYROSCOPE_PUSH_URL ''
-  # Tracing rides the same off switch: no extension-loading and every
-  # auto-instrumentation disabled, matching the tempo container staying off.
-  env_prod_set OTEL_PHP_AUTOLOAD_ENABLED 'false'
-  env_prod_set OTEL_PHP_DISABLED_INSTRUMENTATIONS 'all'
   say 'No Grafana log dashboard.'
 }
 
@@ -1715,15 +1694,9 @@ use_no_grafana() {
 use_grafana() {
   env_prod_set GRAFANA_LOKI_PUSH_URL 'http://loki:3100/loki/api/v1/push'
   env_prod_set GRAFANA_URL 'http://localhost:3000'
-  env_prod_set PYROSCOPE_PUSH_URL 'http://pyroscope:4040'
   if [ -z "$(trim_whitespace "$(env_prod_get GRAFANA_ADMIN_PASSWORD)")" ]; then
     env_prod_set GRAFANA_ADMIN_PASSWORD "$(generate_secret)"
   fi
-  # Tracing rides the same on switch: load the extension and leave nothing
-  # disabled -- an empty OTEL_PHP_DISABLED_INSTRUMENTATIONS means every
-  # auto-instrumentation stays active.
-  env_prod_set OTEL_PHP_AUTOLOAD_ENABLED 'true'
-  env_prod_set OTEL_PHP_DISABLED_INSTRUMENTATIONS ''
   say 'Using the bundled Grafana + Loki containers. The admin password is in'
   say '.env.prod (GRAFANA_ADMIN_PASSWORD).'
 }

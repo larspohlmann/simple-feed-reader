@@ -15,13 +15,7 @@ final class GrafanaSettingsSnapshotModelTest extends TestCase
 {
     public function testItCarriesTheRowsConnectionTokenAndHint(): void
     {
-        $connection = new GrafanaConnection(
-            'https://loki.example/push',
-            'tenant42',
-            'https://grafana.example',
-            'http://pyro:4040',
-            true,
-        );
+        $connection = new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example');
         $entity = new GrafanaSettingsEntity();
         $entity->apply($connection, new SealedSecret('cipher', 'nonce', 'salt', 3), 'oken');
 
@@ -39,13 +33,13 @@ final class GrafanaSettingsSnapshotModelTest extends TestCase
 
         self::assertFalse($snapshot->hasToken());
         self::assertSame('', $snapshot->tokenHint);
-        self::assertEquals(new GrafanaConnection(null, null, null, null, false), $snapshot->connection);
+        self::assertEquals(new GrafanaConnection(null, null, null), $snapshot->connection);
     }
 
     public function testARowWithATokenSurvivesTheCacheEntryRoundTrip(): void
     {
         $snapshot = new GrafanaSettingsSnapshotModel(
-            new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example', null, true),
+            new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example'),
             new SealedSecret('cipher', 'nonce', 'salt', 3),
             'oken',
         );
@@ -76,8 +70,6 @@ final class GrafanaSettingsSnapshotModelTest extends TestCase
             'lokiPushUrl' => null,
             'lokiUsername' => null,
             'grafanaUrl' => null,
-            'pyroscopePushUrl' => null,
-            'profilingEnabled' => true,
             'tokenCiphertext' => 'cipher',
             'tokenNonce' => 'nonce',
             'tokenSalt' => 'salt',
@@ -87,7 +79,6 @@ final class GrafanaSettingsSnapshotModelTest extends TestCase
 
         yield 'not an array' => ['a string'];
         yield 'missing a key' => [array_diff_key($valid, ['tokenHint' => null])];
-        yield 'profiling flag is not a bool' => [['profilingEnabled' => 1] + $valid];
         yield 'key version is not an int' => [['tokenKeyVersion' => '1'] + $valid];
         yield 'url override is not a string' => [['lokiPushUrl' => 42] + $valid];
         yield 'hint is not a string' => [['tokenHint' => null] + $valid];

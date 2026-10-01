@@ -20,11 +20,11 @@ final class GrafanaSettingsCacheTest extends TestCase
         $loader = function () use (&$loads): GrafanaSettingsSnapshotModel {
             ++$loads;
 
-            return $this->enabledSnapshot();
+            return $this->configuredSnapshot();
         };
 
-        self::assertTrue($cache->remember($loader)->connection->profilingEnabled);
-        self::assertTrue($cache->remember($loader)->connection->profilingEnabled);
+        self::assertSame('tenant42', $cache->remember($loader)->connection->lokiUsername);
+        self::assertSame('tenant42', $cache->remember($loader)->connection->lokiUsername);
         self::assertSame(1, $loads);
     }
 
@@ -35,7 +35,7 @@ final class GrafanaSettingsCacheTest extends TestCase
         $loader = function () use (&$loads): GrafanaSettingsSnapshotModel {
             ++$loads;
 
-            return $this->enabledSnapshot();
+            return $this->configuredSnapshot();
         };
 
         $cache->remember($loader);
@@ -45,10 +45,10 @@ final class GrafanaSettingsCacheTest extends TestCase
         self::assertSame(2, $loads);
     }
 
-    private function enabledSnapshot(): GrafanaSettingsSnapshotModel
+    private function configuredSnapshot(): GrafanaSettingsSnapshotModel
     {
         $entity = new GrafanaSettingsEntity();
-        $entity->applyWithoutToken(new GrafanaConnection(null, null, null, null, true));
+        $entity->applyWithoutToken(new GrafanaConnection(null, 'tenant42', null));
 
         return GrafanaSettingsSnapshotModel::fromEntity($entity);
     }

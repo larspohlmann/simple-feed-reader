@@ -66,19 +66,6 @@ x-app-environment: &app-environment
   GRAFANA_LOKI_USERNAME: ${GRAFANA_LOKI_USERNAME:-}
   GRAFANA_LOKI_TOKEN: ${GRAFANA_LOKI_TOKEN:-}
   GRAFANA_URL: ${GRAFANA_URL:-}
-  PYROSCOPE_PUSH_URL: ${PYROSCOPE_PUSH_URL:-}
-  # Single-dash `-` (not `:-`): use_grafana writes DISABLED_INSTRUMENTATIONS empty
-  # ("nothing disabled"); `:-` would read empty as unset and force it back to "all".
-  # Both vars gate tracing together -- AUTOLOAD_ENABLED alone does not.
-  OTEL_PHP_AUTOLOAD_ENABLED: ${OTEL_PHP_AUTOLOAD_ENABLED-false}
-  OTEL_PHP_DISABLED_INSTRUMENTATIONS: ${OTEL_PHP_DISABLED_INSTRUMENTATIONS-all}
-  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-simple-feed-reader}
-  OTEL_TRACES_EXPORTER: ${OTEL_TRACES_EXPORTER:-otlp}
-  OTEL_METRICS_EXPORTER: "none"
-  OTEL_LOGS_EXPORTER: "none"
-  OTEL_EXPORTER_OTLP_PROTOCOL: ${OTEL_EXPORTER_OTLP_PROTOCOL:-http/protobuf}
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4318}
-  OTEL_TRACES_SAMPLER: ${OTEL_TRACES_SAMPLER:-always_on}
   GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
   GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
   APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
@@ -162,25 +149,6 @@ services:
       - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki-data:/loki
 
-  # Distributed tracing, on the same grafana profile as loki+grafana above:
-  # enabling observability enables tracing too. No published port -- only php
-  # and worker reach it, on the internal compose network.
-  tempo:
-    image: grafana/tempo:2.7.1
-    profiles: ["grafana"]
-    restart: unless-stopped
-    command: ["-config.file=/etc/tempo/tempo-config.yaml"]
-    volumes:
-      - ./docker/tempo/tempo-config.yaml:/etc/tempo/tempo-config.yaml:ro
-      - tempo-data:/var/tempo
-
-  pyroscope:
-    image: grafana/pyroscope:2.3.1
-    profiles: ["grafana"]
-    restart: unless-stopped
-    volumes:
-      - pyroscope-data:/data
-
   grafana:
     image: grafana/grafana:13.2.1
     profiles: ["grafana"]
@@ -207,12 +175,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-      # php and worker share these args so both bake the identical image:
-      # WITH_OBSERVABILITY compiles opentelemetry+excimer only when the operator
-      # runs the observability stack (#1044), exported by prod-start.sh.
-      args:
-        <<: *version-build-args
-        WITH_OBSERVABILITY: ${SFR_WITH_OBSERVABILITY:-1}
+      args: *version-build-args
     restart: unless-stopped
     environment: *app-environment
     extra_hosts:
@@ -240,9 +203,7 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
       target: prod
-      args:
-        <<: *version-build-args
-        WITH_OBSERVABILITY: ${SFR_WITH_OBSERVABILITY:-1}
+      args: *version-build-args
     # --memory-limit raised from 128M in #437: one recommendation wave reads
     # several answer streams at once, and 128M cut a live run short at 201 MB.
     command: ["php", "bin/console", "messenger:consume", "scheduler_worker", "--time-limit=3600", "--memory-limit=512M"]
@@ -299,7 +260,5 @@ volumes:
   meili-data:
   loki-data:
   grafana-data:
-  tempo-data:
-  pyroscope-data:
   php-var:
   jwt-keys:

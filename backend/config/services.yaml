@@ -144,7 +144,6 @@ services:
     App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface: '@App\Repository\EntryStateRepository'
     App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface: '@App\Service\Version\ReleaseVersionReader\FileReleaseVersionReader'
     App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface: '@App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader'
-    App\Service\Logging\TraceContext\TraceContextInterface: '@App\Service\Logging\TraceContext\OtelTraceContext'
     App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader:
         arguments:
             $gitHubRepository: '%github_release_repository%'
@@ -227,13 +226,6 @@ services:
             $appendNewline: true
             $ignoreEmptyContextAndExtra: false
             $includeStacktraces: true
-
-    App\Service\Profiling\ProfileSampler\ProfileSamplerInterface:
-        factory: ['@App\Service\Profiling\Factory\ProfileSamplerFactory', 'create']
-
-    App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
-
-    App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface: '@App\Service\Grafana\EffectiveGrafanaSettings'
 
     App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface: '@App\Service\Grafana\SettingsLokiEndpoint'
 

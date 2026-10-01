@@ -10,8 +10,6 @@ final readonly class GrafanaConnection
         public ?string $lokiPushUrl,
         public ?string $lokiUsername,
         public ?string $grafanaUrl,
-        public ?string $pyroscopePushUrl,
-        public bool $profilingEnabled,
     ) {
     }
 }

@@ -44,12 +44,6 @@ final class GrafanaSettings
     #[ORM\Column(options: ['default' => 1])]
     private int $keyVersion = 1;
 
-    #[ORM\Column(name: 'profiling_enabled', options: ['default' => false])]
-    private bool $profilingEnabled = false;
-
-    #[ORM\Column(name: 'pyroscope_push_url', length: 255, nullable: true)]
-    private ?string $pyroscopePushUrl = null;
-
     public function getLokiPushUrlOverride(): ?string
     {
         return $this->lokiPushUrl;
@@ -65,25 +59,9 @@ final class GrafanaSettings
         return $this->grafanaUrl;
     }
 
-    public function isProfilingEnabled(): bool
-    {
-        return $this->profilingEnabled;
-    }
-
-    public function getPyroscopePushUrlOverride(): ?string
-    {
-        return $this->pyroscopePushUrl;
-    }
-
     public function connection(): GrafanaConnection
     {
-        return new GrafanaConnection(
-            $this->lokiPushUrl,
-            $this->lokiUsername,
-            $this->grafanaUrl,
-            $this->pyroscopePushUrl,
-            $this->profilingEnabled,
-        );
+        return new GrafanaConnection($this->lokiPushUrl, $this->lokiUsername, $this->grafanaUrl);
     }
 
     public function hasToken(): bool
@@ -116,8 +94,6 @@ final class GrafanaSettings
         $this->lokiPushUrl = $connection->lokiPushUrl;
         $this->lokiUsername = $connection->lokiUsername;
         $this->grafanaUrl = $connection->grafanaUrl;
-        $this->pyroscopePushUrl = $connection->pyroscopePushUrl;
-        $this->profilingEnabled = $connection->profilingEnabled;
     }
 
     public function clearStoredToken(): void

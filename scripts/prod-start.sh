@@ -84,12 +84,10 @@ fi
 # sidebar and /api/version report it instead of the 'dev' placeholder (#500).
 export_build_version_args
 
-# Compile the opentelemetry and excimer extensions only when observability is
-# on (#1044); prod-configure.sh's Grafana question toggles them via a rebuild.
-export_observability_build_arg
-
+# --remove-orphans drops containers of services this file no longer defines;
+# a service only switched off by profile is kept.
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
-  prod_compose up -d --build
+  prod_compose up -d --build --remove-orphans
 
 # `up` only starts what is in the active profiles; it never stops the search
 # engine's container when the operator has just declined it, so this runs on

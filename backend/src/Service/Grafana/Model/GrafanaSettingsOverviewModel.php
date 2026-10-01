@@ -11,7 +11,6 @@ final readonly class GrafanaSettingsOverviewModel
     public function __construct(
         public GrafanaSettingsSnapshotModel $stored,
         public GrafanaEnvDefaults $defaults,
-        public bool $profilerAvailable,
     ) {
     }
 }
