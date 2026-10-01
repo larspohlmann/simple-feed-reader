@@ -1,8 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `reader-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { entryDetailJson, entryWire } from './support/reader';
 
 const PHONE = { width: 375, height: 812 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -56,25 +54,18 @@ const CONTENT_HTML = `
 `;
 
 function entry(id: number, withImage: boolean) {
-  return {
+  return entryWire({
     id,
     title: `${LONG_WORD} ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: `${PROSE}${LONG_TOKEN}`,
     excerpt: `${PROSE}${LONG_TOKEN}`,
     imageUrl: withImage ? `https://fixtures.invalid/${id}.jpg` : null,
     imageWidth: withImage ? 1200 : null,
     imageHeight: withImage ? 800 : null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
     subscriptionId: (id % 3) + 1,
     source: 'Fixture source',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /** A mix of image-bearing and text-only entries, so the magazine planner emits
@@ -101,10 +92,7 @@ async function stubEntries(page: Page): Promise<void> {
     (url) => /^\/api\/entries\/\d+$/.test(url.pathname),
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...ENTRIES[0], contentHtml: CONTENT_HTML } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], CONTENT_HTML) });
     },
   );
   await page.route(
@@ -136,20 +124,12 @@ async function stubEntries(page: Page): Promise<void> {
  * width where a long word has room to fit.
  */
 async function chooseLayout(page: Page, layout: 'list' | 'magazine'): Promise<void> {
-  await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
+  await presetLocalStorage(page, { 'sfr.layout': layout });
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithEntries(page: Page): Promise<boolean> {
   await stubEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -257,7 +237,7 @@ for (const [size, viewport] of [
 
       test('an unbreakable word wraps instead of breaking the row', async ({ page }) => {
         await chooseLayout(page, layout);
-        const signedIn = await signInAsAdmin(page);
+        const signedIn = await signInWithEntries(page);
         test.skip(
           !signedIn,
           'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -275,7 +255,7 @@ for (const [size, viewport] of [
     test.use({ viewport });
 
     test('an unbreakable word wraps instead of breaking the article', async ({ page }) => {
-      const signedIn = await signInAsAdmin(page);
+      const signedIn = await signInWithEntries(page);
       test.skip(
         !signedIn,
         'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

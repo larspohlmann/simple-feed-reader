@@ -1,8 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `magazine-kicker-one-line.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
 
 const ENDPOINT = 'https://api.example.test/v1';
 const OVER_LONG_KEY = 'a'.repeat(513);
@@ -58,17 +55,9 @@ async function stubAi(page: Page): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithStubbedAi(page: Page): Promise<boolean> {
   await stubAi(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -77,7 +66,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
  * typed values must survive.
  */
 test('a rejected configuration keeps the typed values and names the field', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithStubbedAi(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   await page.goto('/settings/ai');

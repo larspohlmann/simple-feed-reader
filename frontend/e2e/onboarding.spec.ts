@@ -1,4 +1,5 @@
 import { APIRequestContext, Page, expect, test } from '@playwright/test';
+import { ADMIN_EMAIL, ADMIN_PASSWORD } from './support/auth';
 
 // The onboarding journey, end to end against the live Docker stack: a brand-new
 // user registers, clears whichever gates the instance has switched on, signs in,
@@ -18,9 +19,7 @@ import { APIRequestContext, Page, expect, test } from '@playwright/test';
 // policy's own verdict out of the register response and clears exactly the
 // gates that are actually up.
 
-const MAILPIT_API = process.env.E2E_MAILPIT_API ?? 'http://localhost:8025/api/v1';
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+const MAILPIT_API = process.env['E2E_MAILPIT_API'] ?? 'http://localhost:8025/api/v1';
 
 /** A password comfortably over the 12-char minimum the register form enforces. */
 const PASSWORD = 'onboarding-e2e-password-123';

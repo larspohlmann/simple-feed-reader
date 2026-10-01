@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInWithLayout } from './support/auth';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
 
@@ -21,33 +18,18 @@ const NESTED_BODY = `
     <div>${[7, 8, 9, 10, 11, 12].map(para).join('')}</div>
   </div></div>`;
 
-const entry = () => ({
-  id: 1,
-  title: 'Nested article',
-  url: 'https://example.invalid/1',
-  author: null,
-  summary: 'summary',
-  excerpt: 'summary',
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-});
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+const entry = () =>
+  entryWire({
+    id: 1,
+    title: 'Nested article',
+    url: 'https://example.invalid/1',
+    summary: 'summary',
+    excerpt: 'summary',
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  });
 
 async function stubArticle(page: Page): Promise<void> {
   await page.route('**/api/entries/*/reader', async (route) =>
@@ -56,10 +38,7 @@ async function stubArticle(page: Page): Promise<void> {
   // The body store's own fetch (#1100): list rows carry no body of their own.
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({
-      status: 200,
-      json: { entry: { ...entry(), contentHtml: NESTED_BODY } },
-    });
+    await route.fulfill({ status: 200, json: entryDetailJson(entry(), NESTED_BODY) });
   });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
@@ -74,7 +53,7 @@ test.describe('Reading focus block detection', () => {
   test.use({ viewport: PHONE });
 
   test('fades each paragraph on its own, not the section around them', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page);
     await page.reload();

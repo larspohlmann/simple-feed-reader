@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
-
-// Same seeded admin as reading-focus-blocks.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
 
@@ -15,35 +12,22 @@ const LONG_PARAGRAPH = `<p>${Array.from(
     `across a couple of lines on a narrow phone screen.`,
 ).join(' ')}</p>`;
 
-const entry = () => ({
-  id: 1,
-  title: 'One long paragraph',
-  url: 'https://example.invalid/1',
-  author: null,
-  summary: 'summary',
-  excerpt: 'summary',
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-});
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.addInitScript(() => {
-    localStorage.setItem('sfr.layout', 'list');
-    localStorage.setItem('sfr.readingFocus', 'true');
+const entry = () =>
+  entryWire({
+    id: 1,
+    title: 'One long paragraph',
+    url: 'https://example.invalid/1',
+    summary: 'summary',
+    excerpt: 'summary',
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
   });
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+
+async function signInWithReadingFocus(page: Page): Promise<boolean> {
+  await presetLocalStorage(page, { 'sfr.layout': 'list', 'sfr.readingFocus': 'true' });
+  return signInAsAdmin(page);
 }
 
 // This spec owns its data (#96): the entry list, the entry detail (the body
@@ -55,10 +39,7 @@ async function stubArticle(page: Page): Promise<void> {
   );
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({
-      status: 200,
-      json: { entry: { ...entry(), contentHtml: LONG_PARAGRAPH } },
-    });
+    await route.fulfill({ status: 200, json: entryDetailJson(entry(), LONG_PARAGRAPH) });
   });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
@@ -73,7 +54,7 @@ test.describe('Reading focus splits a long paragraph', () => {
   test.use({ viewport: PHONE });
 
   test('fades sections within the paragraph, without reflowing it', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReadingFocus(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page);
     await page.reload();

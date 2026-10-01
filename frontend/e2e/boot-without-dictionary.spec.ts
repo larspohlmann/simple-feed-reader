@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { presetLocalStorage } from './support/auth';
 
 /**
  * #280: a mobile browser discards the backgrounded tab and resume-reloads on a
@@ -25,7 +26,7 @@ const ENGLISH_SUBTITLE = 'Welcome back to your reader.';
 const GERMAN_SUBTITLE = 'Willkommen zurück bei deinem Reader.';
 
 async function bootAsGermanDevice(page: Page) {
-  await page.addInitScript(() => localStorage.setItem('sfr.lang', 'de'));
+  await presetLocalStorage(page, { 'sfr.lang': 'de' });
 }
 
 /** The app rendered, and it rendered via the bundled fallback. */

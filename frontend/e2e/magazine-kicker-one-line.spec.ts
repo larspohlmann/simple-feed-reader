@@ -1,8 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `magazine-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
+import { entryWire } from './support/reader';
 
 /**
  * The title that motivated #155: five clauses, no shortage of spaces to wrap
@@ -16,25 +14,13 @@ const LONG_SOURCE =
 const PHONE = { width: 375, height: 812 };
 
 function entry(id: number, source: string) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
     source,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /**
@@ -70,17 +56,9 @@ async function stubEntries(page: Page, entries = ENTRIES): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page, entries = ENTRIES): Promise<boolean> {
+async function signInWithEntries(page: Page, entries = ENTRIES): Promise<boolean> {
   await stubEntries(page, entries);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -112,7 +90,7 @@ async function resizeTo(page: Page, viewport: { width: number; height: number })
  * row is compared against a single line's height.
  */
 test('the kicker line never wraps, at any viewport', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithEntries(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   for (const viewport of [{ width: 1280, height: 900 }, { width: 768, height: 1024 }, PHONE]) {
@@ -154,7 +132,7 @@ const SPLIT_ENTRIES = ENTRIES.map((each) => ({
 const KICKER_NARROW_PX = 17 * 16;
 
 test('the time takes its narrow form exactly when the kicker line is narrow', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page, SPLIT_ENTRIES);
+  const signedIn = await signInWithEntries(page, SPLIT_ENTRIES);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   // 768 puts a split card below the threshold and a thumb card above it on one page.
@@ -195,7 +173,7 @@ test.describe('Magazine kicker on a phone', () => {
   test.use({ viewport: PHONE });
 
   test('a long source never widens the page', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithEntries(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -249,7 +227,7 @@ test.describe('Magazine kicker on a phone', () => {
   });
 
   test('a source too long for the row is ellipsised, never the time', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithEntries(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

@@ -1,5 +1,6 @@
 import { expect, Page, test } from '@playwright/test';
 import { MIN_LIST_PERCENT } from '../src/app/reader/shell/pane-split';
+import { presetLocalStorage } from './support/auth';
 import { stubOneFeedReader } from './support/reader';
 
 // The sidebar column plus a split main area: `sfr.paneSplit` sets the list column's share.
@@ -59,13 +60,7 @@ async function expectEveryAction(page: Page, form: { labelled: boolean }): Promi
 
 async function openSplit(page: Page, list: SplitList, paneSplit: string): Promise<void> {
   await stubOneFeedReader(page, 'Design feeds with a rather long title');
-  await page.addInitScript(
-    ([layout, split]) => {
-      localStorage.setItem('sfr.layout', layout);
-      localStorage.setItem('sfr.paneSplit', split);
-    },
-    [list.layout, paneSplit],
-  );
+  await presetLocalStorage(page, { 'sfr.layout': list.layout, 'sfr.paneSplit': paneSplit });
 
   await page.goto(list.url);
   await expect(page.locator('.list-header')).toBeVisible();

@@ -1,41 +1,23 @@
 import { test, expect, Locator, Page } from '@playwright/test';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInWithLayout } from './support/auth';
+import { entryWire } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
 
 /** A handful of rows is enough: the gesture only ever starts at the top. */
-const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  // Pin the flat list so the first row's geometry is predictable (the default
-  // magazine layout groups same-source entries).
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+const ENTRIES = Array.from({ length: 10 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/entries*', async (route) => {
@@ -82,7 +64,9 @@ test.describe('Pull-to-refresh on a phone', () => {
   // the viewport top *underneath* the floating app bar. Anchored there it could
   // never be pulled clear of the bars, so the gesture gave no feedback at all.
   test('the indicator comes out from under the bars while pulling', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    // Pin the flat list so the first row's geometry is predictable (the default
+    // magazine layout groups same-source entries).
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();
@@ -105,7 +89,7 @@ test.describe('Pull-to-refresh on a phone', () => {
   });
 
   test('releasing a decisive pull refreshes; a short one does not', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubEntries(page);
     await page.reload();

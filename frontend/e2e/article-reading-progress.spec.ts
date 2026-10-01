@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInWithLayout } from './support/auth';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
 // Wide enough for the split layout, where the article shares the main area with
@@ -17,35 +14,18 @@ const LONG_BODY = Array.from(
 ).join('');
 const SHORT_BODY = '<p>One short paragraph, nowhere near a screenful.</p>';
 
-const entry = (id: number) => ({
-  id,
-  title: `Article ${id}`,
-  url: `https://example.invalid/${id}`,
-  author: null,
-  summary: 'summary',
-  excerpt: 'summary',
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-});
-
-/** Pin the layout, so a test picks its shell branch instead of inheriting
- *  whatever the previous run left in localStorage — see article-back-desktop. */
-async function signInAsAdmin(page: Page, layout: 'list' | 'pane' = 'list'): Promise<boolean> {
-  await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+const entry = (id: number) =>
+  entryWire({
+    id,
+    title: `Article ${id}`,
+    url: `https://example.invalid/${id}`,
+    summary: 'summary',
+    excerpt: 'summary',
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  });
 
 /** Serve one article, extraction failing so the stubbed body is what renders. */
 async function stubArticle(page: Page, body: string): Promise<void> {
@@ -55,7 +35,7 @@ async function stubArticle(page: Page, body: string): Promise<void> {
   // The body store's own fetch (#1100): list rows carry no body of their own.
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({ status: 200, json: { entry: { ...entry(1), contentHtml: body } } });
+    await route.fulfill({ status: 200, json: entryDetailJson(entry(1), body) });
   });
   await page.route('**/api/entries*', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
@@ -93,7 +73,7 @@ test.describe('Article reading progress', () => {
   test('the rail fills as the reader scrolls and is full at the end of the text', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
@@ -130,7 +110,7 @@ test.describe('Article reading progress', () => {
   // with the text, which is the whole defect in a different disguise. Verified
   // by making the rail static — this test then misses the scrollport by 3178px.
   test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
@@ -154,7 +134,7 @@ test.describe('Article reading progress', () => {
   });
 
   test('an article that fits the screen shows no bar', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, SHORT_BODY);
     await page.reload();
@@ -171,7 +151,7 @@ test.describe('Article reading progress on the split layout', () => {
   // list occupies the left of the same row, and a bar spanning the viewport
   // would report the article's position underneath the list as well.
   test('the bar spans the reading pane only, not the window', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page, 'pane');
+    const signedIn = await signInWithLayout(page, 'pane');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();

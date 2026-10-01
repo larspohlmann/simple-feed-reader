@@ -1,8 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-
-// Same seeded admin as reading-focus-blocks.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { presetLocalStorage, signInAsAdmin } from './support/auth';
+import { entryWire } from './support/reader';
 
 /** A phone portrait and the same phone rotated — both under `WIDE_QUERY`
  *  (900px), the dim's only gate, so it stays active; only the viewport
@@ -13,25 +11,12 @@ const LANDSCAPE = { width: 667, height: 375 };
 const ENTRY_COUNT = 40;
 
 function entry(id: number) {
-  return {
+  return entryWire({
     id,
     title: `Fixture entry ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
-    source: 'Fixture feed',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 // Identical rows, so the row nearest the reading centre is decided by
@@ -52,24 +37,13 @@ async function stubEntries(page: Page): Promise<void> {
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithFocusedList(page: Page): Promise<boolean> {
   await stubEntries(page);
   // Pin layout to list (not magazine) and reading focus on — the trick from
   // reading-focus-blocks.spec.ts, now also covering the focus toggle so this
   // spec doesn't depend on the app's own default.
-  await page.addInitScript(() => {
-    localStorage.setItem('sfr.layout', 'list');
-    localStorage.setItem('sfr.readingFocus', 'true');
-  });
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  await presetLocalStorage(page, { 'sfr.layout': 'list', 'sfr.readingFocus': 'true' });
+  return signInAsAdmin(page);
 }
 
 interface FocusEdge {
@@ -124,7 +98,7 @@ test.describe('Reading focus dim survives a rotation', () => {
   test.use({ viewport: PORTRAIT });
 
   test('the dim re-applies against the new viewport centre after rotating', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithFocusedList(page);
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
 
     // `.rows > *:not(.foot)` — what `ReadingFocusApplier` actually fades — also

@@ -1,6 +1,12 @@
 import { expect, Page, test } from '@playwright/test';
-import { stubAuthToken } from './support/auth';
-import { readerFailedJson, savedSearchesJson, savedSearchWire } from './support/reader';
+import { presetLocalStorage, stubAuthToken } from './support/auth';
+import {
+  entryDetailJson,
+  entryWire,
+  readerFailedJson,
+  savedSearchesJson,
+  savedSearchWire,
+} from './support/reader';
 
 const SAVED_SEARCH = savedSearchWire({
   id: 501,
@@ -8,30 +14,21 @@ const SAVED_SEARCH = savedSearchWire({
   unreadEntryIds: [],
 });
 
-const ENTRY = {
+const ENTRY = entryWire({
   id: 1,
   title: 'Climate fixture article',
   url: 'https://fixtures.invalid/article',
-  author: null,
   summary: 'A fixture for saved-search reading layouts.',
   excerpt: 'Fixture article body.',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
   publishedAt: '2026-08-01T12:00:00Z',
   createdAt: '2026-08-01T12:00:00Z',
-  subscriptionId: 1,
-  source: 'Fixture feed',
-  faviconUrl: null,
   isHidden: true,
   isViewed: true,
-  isFavorite: false,
-  isKept: false,
-};
+});
 
 async function stubReader(page: Page): Promise<void> {
   await stubAuthToken(page);
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'magazine'));
+  await presetLocalStorage(page, { 'sfr.layout': 'magazine' });
   await page.route('**/api/**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     const json = (body: unknown) => route.fulfill({ json: body });
@@ -75,7 +72,9 @@ async function stubReader(page: Page): Promise<void> {
       return json({ entries: [ENTRY], nextCursor: null });
     }
     if (path.endsWith('/entries/1/reader')) return json(readerFailedJson('unextractable'));
-    if (path.endsWith('/entries/1')) return json(ENTRY);
+    if (path.endsWith('/entries/1')) {
+      return json(entryDetailJson(ENTRY, '<p>Fixture article body.</p>'));
+    }
     if (path.endsWith('/recommendations/runs/current')) {
       return json({
         status: 'none',

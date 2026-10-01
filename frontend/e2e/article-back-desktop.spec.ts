@@ -1,9 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInWithLayout } from './support/auth';
+import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 // Wide enough for both shell breakpoints that matter here: the sidebar is a
 // column (>720px) and the wide layout is active (>=900px), which keeps the app
@@ -17,40 +14,19 @@ const BODY_HTML = Array.from(
     `<p>Paragraph ${i} of filler text, long enough to give the article real height so the reading pane can actually scroll.</p>`,
 ).join('');
 
-const ENTRIES = Array.from({ length: 10 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
-
-/**
- * Sign in with the layout pinned, so the test picks its shell branch instead of
- * inheriting whatever the previous run left in localStorage: 'magazine' (or
- * 'list') puts the article in a full-pane overlay whose back button lives in
- * the article itself, 'pane' splits the main area and gives the article its own
- * sticky toolbar. Both are desktop, and both have to stay clear of the app bar.
- */
-async function signInAsAdmin(page: Page, layout: 'magazine' | 'pane'): Promise<boolean> {
-  await page.addInitScript((mode) => localStorage.setItem('sfr.layout', mode), layout);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+const ENTRIES = Array.from({ length: 10 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 async function stubEntries(page: Page): Promise<void> {
   // Force extraction to fail so the view stays in 'original' mode (the feed
@@ -63,10 +39,7 @@ async function stubEntries(page: Page): Promise<void> {
   // The body store's own fetch (#1100): only entry 1 is ever opened here.
   await page.route('**/api/entries/1', async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
-    await route.fulfill({
-      status: 200,
-      json: { entry: { ...ENTRIES[0], contentHtml: BODY_HTML } },
-    });
+    await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], BODY_HTML) });
   });
   await page.route('**/api/entries/*/state', async (route) => {
     await route.fulfill({
@@ -123,7 +96,10 @@ test.describe('Article back button on desktop', () => {
   test('the full-pane article sits beneath the app bar, back button clear of it', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page, 'magazine');
+    // 'magazine' puts the article in a full-pane overlay whose back button lives in the
+    // article itself; 'pane' splits the main area and gives the article its own sticky
+    // toolbar. Both are desktop, and both have to stay clear of the app bar.
+    const signedIn = await signInWithLayout(page, 'magazine');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -166,7 +142,7 @@ test.describe('Article back button on desktop', () => {
   // the scroller's own top edge — otherwise scrolling slides the back button
   // (and prev/next) underneath it.
   test('the split-pane toolbar stays clear of the app bar while scrolling', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page, 'pane');
+    const signedIn = await signInWithLayout(page, 'pane');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

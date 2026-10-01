@@ -1,10 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInWithLayout } from './support/auth';
+import { entryDetailJson, entryWire } from './support/reader';
 
 /**
  * The shape a Substack audio post ships (#786): the reader body keeps the
@@ -22,25 +20,14 @@ const SOURCE_PATH = '/api/v1/audio/upload/7adcfe96/src';
 const LANDING_PATH = '/video_upload/post/1/7adcfe96/transcoded.wav';
 const LANDING_QUERY = '?post_id=1&relation=embed&Expires=1788502848&Key-Pair-Id=K&Signature=s';
 
-const ENTRY = {
+const ENTRY = entryWire({
   id: 1,
   title: 'Audio version of the essay',
   url: 'https://fixtures.invalid/p/audio-version',
-  author: null,
   summary: 'summary',
   excerpt: 'summary',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  publishedAt: '2026-08-01T12:50:34+00:00',
-  createdAt: '2026-08-01T12:50:34+00:00',
-  subscriptionId: 1,
   source: 'Fixture source',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-};
+});
 
 /** One second of 8 kHz 8-bit mono silence: a container every browser decodes. */
 function silentWav(): Buffer {
@@ -87,7 +74,7 @@ function audioOrigin(): Promise<{ server: Server; origin: string }> {
       'content-length': end - start + 1,
       ...(range ? { 'content-range': `bytes ${start}-${end}/${file.length}` } : {}),
     });
-    response.end(file.subarray(start, end + 1));
+    return response.end(file.subarray(start, end + 1));
   });
   return new Promise((resolve) =>
     server.listen(0, '127.0.0.1', () => resolve({ server, origin: origin(server) })),
@@ -97,18 +84,6 @@ function audioOrigin(): Promise<{ server: Server; origin: string }> {
 function origin(server: Server): string {
   const { port } = server.address() as AddressInfo;
   return `http://127.0.0.1:${port}`;
-}
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
 }
 
 /** Serve one article whose reader body carries the publisher's player. */
@@ -137,6 +112,10 @@ async function stubArticle(page: Page, audioSrc: string): Promise<void> {
       }),
   );
   await page.route(
+    (url) => url.pathname === `/api/entries/${ENTRY.id}`,
+    async (route) => route.fulfill({ status: 200, json: entryDetailJson(ENTRY, body) }),
+  );
+  await page.route(
     (url) => url.pathname === '/api/entries',
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
@@ -151,7 +130,7 @@ test('the reader plays an audio source that redirects to a signed octet-stream l
   const { server, origin: audio } = await audioOrigin();
   try {
     await stubArticle(page, `${audio}${SOURCE_PATH}`);
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

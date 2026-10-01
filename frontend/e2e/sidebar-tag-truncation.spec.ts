@@ -1,8 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
 
 // Above the 720px breakpoint, so the sidebar is an in-flow 260px column rather
 // than the mobile drawer — that fixed width is what the row has to fit into.
@@ -35,17 +32,6 @@ function subscription(id: number, title: string, tagId: number) {
     unreadCount: 1026,
     entryCount: 1026,
   };
-}
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
 }
 
 /**

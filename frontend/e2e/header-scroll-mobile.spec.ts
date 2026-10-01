@@ -1,9 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
-import { readerFailedJson, savedSearchWire, savedSearchesJson } from './support/reader';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin, signInWithLayout } from './support/auth';
+import {
+  entryDetailJson,
+  entryWire,
+  readerFailedJson,
+  savedSearchWire,
+  savedSearchesJson,
+} from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
 
@@ -12,36 +15,19 @@ const PHONE = { width: 375, height: 667 };
  * (`HEADER_NEAR_TOP` is 40px). Stubbed rather than seeded: this measures
  * layout, and a fixed list keeps the row geometry deterministic.
  */
-const ENTRIES = Array.from({ length: 30 }, (_, i) => ({
-  id: i + 1,
-  title: `Entry number ${i + 1}`,
-  url: `https://example.invalid/${i + 1}`,
-  author: null,
-  summary: 'A summary long enough to give the row some height. '.repeat(3),
-  excerpt: 'A summary long enough to give the row some height. '.repeat(3),
-  publishedAt: '2026-07-25T10:00:00Z',
-  createdAt: '2026-07-25T10:00:00Z',
-  subscriptionId: 5,
-  source: 'stub',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-}));
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  // The default layout is magazine, which collapses a run of same-source
-  // entries into a group and renders only three of them. Pin the flat list so
-  // every stubbed entry is a row and the geometry is predictable.
-  await page.addInitScript(() => localStorage.setItem('sfr.layout', 'list'));
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+const ENTRIES = Array.from({ length: 30 }, (_, i) =>
+  entryWire({
+    id: i + 1,
+    title: `Entry number ${i + 1}`,
+    url: `https://example.invalid/${i + 1}`,
+    summary: 'A summary long enough to give the row some height. '.repeat(3),
+    excerpt: 'A summary long enough to give the row some height. '.repeat(3),
+    publishedAt: '2026-07-25T10:00:00Z',
+    createdAt: '2026-07-25T10:00:00Z',
+    subscriptionId: 5,
+    source: 'stub',
+  }),
+);
 
 async function stubEntries(page: Page): Promise<void> {
   await page.route('**/api/tags', async (route) => {
@@ -64,10 +50,7 @@ async function stubEntries(page: Page): Promise<void> {
       if (route.request().method() !== 'GET') return route.fallback();
       const id = Number(new URL(route.request().url()).pathname.split('/').pop());
       const match = ENTRIES.find((e) => e.id === id) ?? ENTRIES[0];
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...match, contentHtml: '<p>body</p>' } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(match, '<p>body</p>') });
     },
   );
   await page.route('**/api/entries*', async (route) => {
@@ -115,7 +98,10 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test.use({ viewport: PHONE });
 
   test('retracting the header does not move the content', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    // The default layout is magazine, which collapses a run of same-source
+    // entries into a group and renders only three of them. Pin the flat list so
+    // every stubbed entry is a row and the geometry is predictable.
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -153,7 +139,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   test('expanding the header again does not move the content', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -183,7 +169,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   // Anything the article reserves at its top therefore has to be reserved on
   // the opaque panel inside it, or the list shows through the gap.
   test('an open article is opaque all the way to the top', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -206,7 +192,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   test('the content area keeps its height while the header slides', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -229,7 +215,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('the bar’s empty middle and the corner button both return the list to the top', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -275,7 +261,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('returning from an article keeps the retracted header retracted and the list still', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -353,7 +339,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   test('the article’s back-to-top button stays pinned while the article scrolls', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithLayout(page, 'list');
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -381,10 +367,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     ).join('');
     await page.route('**/api/entries/1', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({
-        status: 200,
-        json: { entry: { ...ENTRIES[0], contentHtml: TALL_BODY } },
-      });
+      await route.fulfill({ status: 200, json: entryDetailJson(ENTRIES[0], TALL_BODY) });
     });
     await page.reload();
     await expect(page.locator(ROWS)).toBeVisible();
@@ -452,14 +435,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   }) => {
     // Magazine layout on purpose (no list pin). A unique feed per entry keeps
     // magazine from collapsing the run into one group, so the list scrolls.
-    await page.goto('/login');
-    await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-    await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-    const loginError = page.getByRole('alert');
-    await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-    test.skip(!(await sidebar.isVisible()), 'seeded admin login unavailable');
+    test.skip(!(await signInAsAdmin(page)), 'seeded admin login unavailable');
 
     const perFeed = ENTRIES.map((e, i) => ({ ...e, subscriptionId: i + 1 }));
     await page.route('**/api/entries*', async (route) => {

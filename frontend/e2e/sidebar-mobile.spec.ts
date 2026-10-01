@@ -1,8 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// Same seeded admin as reader-smoke.spec.ts (`bin/console app:e2e:seed-admin`).
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
 
 const NEWS_TAG = { id: 1, name: 'News', color: null, icon: null, position: 0 };
 
@@ -64,17 +61,6 @@ async function stubSidebarData(page: Page): Promise<void> {
       ? route.fulfill({ status: 200, json: { entries: [], nextCursor: null } })
       : route.fallback(),
   );
-}
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
 }
 
 test.describe('Sidebar on a phone', () => {

@@ -1,8 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `magazine-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
+import { entryWire } from './support/reader';
 
 /**
  * Short titles on purpose. The bug this guards (#414) hid behind long ones: the
@@ -11,25 +9,14 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123
  * flush by accident, and only a short title exposed them stranded mid-card.
  */
 function entry(id: number, source: string, subscriptionId: number) {
-  return {
+  return entryWire({
     id,
     title: `Short ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
     subscriptionId,
     source,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 /**
@@ -91,7 +78,7 @@ async function stubEntries(page: Page): Promise<void> {
 }
 
 test('airy grouped-entry rules have space on both sides', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithFixtureEntries(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   const items = page.locator('app-source-group .item');
@@ -121,17 +108,9 @@ test('airy grouped-entry rules have space on both sides', async ({ page }) => {
   expect(await more.evaluate((el) => getComputedStyle(el).paddingBottom)).toBe('12px');
 });
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithFixtureEntries(page: Page): Promise<boolean> {
   await stubEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /**
@@ -147,7 +126,7 @@ async function signInAsAdmin(page: Page): Promise<boolean> {
  * all; it needs a real engine.
  */
 test('the compact card flushes its actions to the card edge', async ({ page }) => {
-  const signedIn = await signInAsAdmin(page);
+  const signedIn = await signInWithFixtureEntries(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
   // Both compact variants: the standalone card, and the grouped row a
@@ -200,25 +179,17 @@ test('the compact card flushes its actions to the card edge', async ({ page }) =
  * sets the card's height is exactly what exercises the bottom-drop layout.
  */
 function splitEntry(id: number) {
-  return {
+  return entryWire({
     id,
     title: `Split fixture ${id}`,
     url: `https://fixtures.invalid/${id}`,
-    author: null,
     summary: null,
-    excerpt: 'Fixture body.',
     imageUrl: `https://fixtures.invalid/${id}.jpg`,
     imageWidth: 600,
     imageHeight: 800,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
     subscriptionId: 100 + id,
     source: `Split source ${id}`,
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 const SPLIT_ENTRIES = Array.from({ length: 6 }, (_, index) => splitEntry(index + 1));
@@ -249,15 +220,7 @@ async function stubSplitEntries(page: Page): Promise<void> {
 
 async function signInForSplitFixture(page: Page): Promise<boolean> {
   await stubSplitEntries(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 test('the split card drops its meta row to the bottom under a tall image', async ({ page }) => {

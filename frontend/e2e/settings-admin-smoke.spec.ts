@@ -1,31 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin — the same fixture the backend ReaderJourneyE2eTest
-// authenticates as (`bin/console app:e2e:seed-admin`, run by `bin/e2e.sh`).
-// Overridable so this smoke can point at another environment without edits.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
-
-/**
- * Sign in through the real login form — the same selectors and cross-origin
- * flow `auth-smoke.spec.ts` drives — with the seeded admin credentials, then
- * wait for the reader shell to mount. Returns `false` (rather than failing)
- * when the credentials are rejected, so a stack without the seeded admin — or
- * a rate-limited login — skips cleanly instead of flaking. Mirrors the backend
- * real-feed e2e convention: an unavailable precondition is skipped, not failed.
- */
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  // Success mounts the reader sidebar; failure surfaces the login error alert.
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible({ timeout: 15_000 });
-  return sidebar.isVisible();
-}
+import { signInAsAdmin } from './support/auth';
 
 test('settings shell navigates sections; admin pages live inside it', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
