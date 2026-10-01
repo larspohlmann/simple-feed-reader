@@ -5,6 +5,11 @@ on:
     branches: [main, develop]
   pull_request:
 
+# The opentelemetry auto-instrumentation warns to STDERR at autoload when the
+# extension is absent, as it is here; Infection aborts its initial run on that.
+env:
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
+
 jobs:
   # Nothing here reads a database, so it runs once instead of in each leg below.
   backend-static:
@@ -203,11 +208,6 @@ jobs:
       # Infection compares the threshold against an MSI of 0% and fails a PR
       # that has nothing to answer for.
       - name: Infection
-        # The opentelemetry auto-instrumentation warns to STDERR at autoload when
-        # the extension is absent (it is here), and Infection aborts its initial
-        # run on the first STDERR byte. Disable it so that run stays clean.
-        env:
-          OTEL_PHP_DISABLED_INSTRUMENTATIONS: all
         run: >-
           vendor/bin/infection
           --git-diff-filter=AM
