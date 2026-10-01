@@ -151,7 +151,7 @@ test.describe('Article back button on desktop', () => {
 
     // The toolbar sticks below the bar while the article scrolls, same
     // contract as the split pane.
-    await page.locator('app-reader-view').evaluate((el) => el.scrollTo({ top: 800 }));
+    await page.locator('app-reader-view .scroller').evaluate((el) => el.scrollTo({ top: 800 }));
     await page.waitForTimeout(200);
     expect((await back.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
 
@@ -184,7 +184,7 @@ test.describe('Article back button on desktop', () => {
     expect((await close.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
 
     // Scroll the reading pane: the toolbar sticks, and must stick below the bar.
-    await page.locator('app-reader-view').evaluate((el) => el.scrollTo({ top: 800 }));
+    await page.locator('app-reader-view .scroller').evaluate((el) => el.scrollTo({ top: 800 }));
     await page.waitForTimeout(200);
 
     expect((await close.boundingBox())!.y).toBeGreaterThanOrEqual(bar.y + bar.height);
