@@ -8,9 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * An entry's lead image: the URL, the dimensions, and its verification state.
- * Embedded rather than three scalar columns — these values are stamped and
- * read together and mean nothing apart.
+ * An entry's lead image: the URL, the dimensions, its verification state and the renditions of the same picture.
+ * Embedded rather than scalar columns — these values are stamped and read together and mean nothing apart.
  */
 #[ORM\Embeddable]
 final class EntryImage
@@ -32,6 +31,10 @@ final class EntryImage
     #[ORM\Column(name: 'image_verify_attempts', nullable: true)]
     private ?int $verifyAttempts = null;
 
+    /** @var list<array<string, mixed>>|null */
+    #[ORM\Column(name: 'image_renditions', type: Types::JSON, nullable: true)]
+    private ?array $renditions = null;
+
     public function storePending(?string $url, ?int $width, ?int $height): void
     {
         $this->url = $url;
@@ -39,6 +42,17 @@ final class EntryImage
         $this->height = $height;
         $this->checkedAt = null;
         $this->verifyAttempts = $url === null ? null : 0;
+        $this->renditions = null;
+    }
+
+    /**
+     * The renditions of the stored picture; storePending() and drop() clear them, so they never outlive their URL.
+     *
+     * @param list<ImageRendition> $renditions
+     */
+    public function storeRenditions(array $renditions): void
+    {
+        $this->renditions = $renditions === [] ? null : ImageRendition::toJsonList($renditions);
     }
 
     public function recordMeasurement(int $width, int $height, \DateTimeImmutable $checkedAt): void
@@ -57,6 +71,7 @@ final class EntryImage
         $this->height = null;
         $this->checkedAt = $checkedAt;
         $this->verifyAttempts = null;
+        $this->renditions = null;
     }
 
     /** The host or this fetcher's policy refused the image; a browser may still render it, so it is kept as-is. */
@@ -89,6 +104,14 @@ final class EntryImage
     public function getHeight(): ?int
     {
         return $this->height;
+    }
+
+    /** @return list<ImageRendition> */
+    public function getRenditions(): array
+    {
+        $complete = array_filter($this->renditions ?? [], ImageRendition::isComplete(...));
+
+        return array_values(array_map(ImageRendition::fromStored(...), $complete));
     }
 
     public function getCheckedAt(): ?\DateTimeImmutable
