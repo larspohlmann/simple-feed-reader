@@ -8,15 +8,10 @@ datasources:
     url: http://loki:3100
     isDefault: true
     editable: false
-    jsonData:
-      derivedFields:
-        # trace_id rides inside the JSON log line, not as a stream label, so the
-        # matcher must read the line, not a label.
-        - name: TraceID
-          matcherType: regex
-          matcherRegex: '"trace_id":"(\w+)"'
-          datasourceUid: tempo
-          # $$ escapes Grafana's config env-var interpolation, so the literal
-          # ${__value.raw} reaches the datasource and resolves to the captured
-          # trace id at click time. A single $ is expanded to empty at load.
-          url: '$${__value.raw}'
+
+# Retired in #1328: deleting a datasource's provisioning file leaves it in Grafana's database.
+deleteDatasources:
+  - name: Tempo
+    orgId: 1
+  - name: Pyroscope
+    orgId: 1
