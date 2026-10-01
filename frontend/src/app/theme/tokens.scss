@@ -132,9 +132,6 @@
      a var() fallback at each site so the arithmetic reads as arithmetic. */
   --list-bar-h: 0px;
 
-  /* The reader view overwrites this on its host once it measures its toolbar. */
-  --reader-bar-h: 0px;
-
   /* Type scale. --fs-read is a step above --fs-base: long-form reading wants
      more than UI chrome. Article headings size in `em` against it, so this
      one value rescales the whole article. */

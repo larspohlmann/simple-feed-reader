@@ -96,9 +96,7 @@ test.describe('Article mini header on a phone', () => {
     await expect(bar).not.toHaveClass(/hidden/);
 
     // Scroll well past HEADER_NEAR_TOP, then let the 0.2s transform settle.
-    await pane
-      .locator('.scroller')
-      .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
+    await pane.evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
     await page.waitForTimeout(400);
 
     // The toolbar really did retract — otherwise this proves nothing.
@@ -136,9 +134,7 @@ test.describe('Article mini header on a phone', () => {
     const box = (await mini.boundingBox())!;
     expect(box.height).toBeLessThanOrEqual(32);
     expect(box.width).toBeLessThanOrEqual(PHONE.width);
-    expect(await pane.locator('.scroller').evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(
-      0,
-    );
+    expect(await pane.evaluate((el) => el.scrollWidth - el.clientWidth)).toBe(0);
   });
 });
 
@@ -161,9 +157,7 @@ test.describe('Article mini header on the split pane', () => {
     await expect(pane.locator('.mini')).toHaveCount(0);
     await expect(bar.locator('.bar-title')).toHaveText('Entry number one');
 
-    await pane
-      .locator('.scroller')
-      .evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
+    await pane.evaluate((el) => el.scrollTo({ top: 600, behavior: 'instant' }));
     await page.waitForTimeout(300);
 
     // Flush under the app bar, with no band of article showing between them,

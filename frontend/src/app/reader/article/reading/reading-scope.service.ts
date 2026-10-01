@@ -10,6 +10,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { LayoutService } from '../../layout.service';
@@ -21,20 +22,6 @@ import { prefersReducedMotion } from './reduced-motion';
 
 type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 
-export interface ReadingScopeParts {
-  readonly scroller: Signal<HTMLElement | undefined>;
-  readonly content: ElementQuery;
-  readonly comments: ElementQuery;
-}
-
-function bottomWithin(scroller: HTMLElement, element: HTMLElement): number {
-  return (
-    element.getBoundingClientRect().bottom -
-    scroller.getBoundingClientRect().top +
-    scroller.scrollTop
-  );
-}
-
 function isPresent(element: HTMLElement | undefined): element is HTMLElement {
   return element !== undefined;
 }
@@ -45,6 +32,7 @@ function isPresent(element: HTMLElement | undefined): element is HTMLElement {
  *  its own effect order. */
 @Injectable()
 export class ReadingScope {
+  private readonly scroller = inject(READER_SCROLLER);
   private readonly readingFocus = inject(ReadingFocusService);
   private readonly screen = inject(LayoutService);
   private readonly language = inject(LanguageService);
@@ -54,7 +42,6 @@ export class ReadingScope {
   // while the rest dims. Skipped entirely when the setting is off or the reader
   // prefers reduced motion.
   private readonly reduceMotion = prefersReducedMotion();
-  private scroller: Signal<HTMLElement | undefined> = signal(undefined);
   private content: ElementQuery = signal(undefined);
   private comments: ElementQuery = signal(undefined);
   private applier?: ReadingFocusApplier;
@@ -91,21 +78,19 @@ export class ReadingScope {
   }
 
   /** Bind the article body and comments, and create the focus effects. */
-  connect(parts: ReadingScopeParts): void {
-    this.scroller = parts.scroller;
-    this.content = parts.content;
-    this.comments = parts.comments;
+  connect(content: ElementQuery, comments: ElementQuery): void {
+    this.content = content;
+    this.comments = comments;
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
     effect(
       () => {
-        const scroller = this.scroller();
         const element = this.content()?.nativeElement;
         this.applier?.destroy();
         this.applier = undefined;
-        if (!scroller || !element) return;
+        if (!element) return;
         this.applier = new ReadingFocusApplier({
-          scroller,
+          scroller: this.scroller,
           blocks: () =>
             [element, this.commentsHost()].filter(isPresent).flatMap((root) => readingBlocks(root)),
           curve: ARTICLE_FOCUS_CURVE,
@@ -176,17 +161,22 @@ export class ReadingScope {
    * the tail and would feed the measurement back into itself.
    */
   private measureScrollRange(): void {
-    const scroller = untracked(this.scroller);
+    this.viewportHeight.set(this.scroller.clientHeight);
     const content = untracked(this.content)?.nativeElement;
-    if (!scroller || !content) {
-      this.viewportHeight.set(0);
+    if (!content) {
       this.contentBottom.set(0);
       this.readingBottom.set(0);
       return;
     }
-    this.viewportHeight.set(scroller.clientHeight);
-    this.contentBottom.set(bottomWithin(scroller, content));
-    this.readingBottom.set(bottomWithin(scroller, this.commentsHost() ?? content));
+    this.contentBottom.set(this.bottomInScroller(content));
+    this.readingBottom.set(this.bottomInScroller(this.commentsHost() ?? content));
+  }
+
+  private bottomInScroller(element: HTMLElement): number {
+    const host = this.scroller;
+    return (
+      element.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop
+    );
   }
 
   // `blocks()` runs inside effects, which must not rerun when the comments mount.

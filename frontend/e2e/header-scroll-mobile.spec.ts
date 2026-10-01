@@ -165,7 +165,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
   });
 
   // The article renders as an overlay over the still-mounted list, and its
-  // host is transparent on purpose so a swipe-away reveals that list.
+  // scrolling host is transparent on purpose so a swipe-away reveals that list.
   // Anything the article reserves at its top therefore has to be reserved on
   // the opaque panel inside it, or the list shows through the gap.
   test('an open article is opaque all the way to the top', async ({ page }) => {
@@ -375,19 +375,18 @@ test.describe('Hide-on-scroll header on a phone', () => {
 
     await page.getByText('Entry number 1', { exact: false }).first().click();
     const article = page.locator('app-reader-view');
-    const scroller = page.locator('app-reader-view .scroller');
     await expect(article).toBeVisible();
     await expect(page.getByText('Paragraph 0 of filler text').first()).toBeVisible();
 
-    await scroller.evaluate((el) => el.scrollTo({ top: 900 }));
+    await article.evaluate((el) => el.scrollTo({ top: 900 }));
     const button = page.locator('app-reader-view app-to-top-button');
     await expect(button).toBeVisible();
 
     // Sample across frames rather than measuring once, because the regression
     // this guards against is transient: a transform on the overlay makes it the
     // containing block for this fixed-position button, and while that holds the
-    // button resolves against the overlay instead of the viewport and rides off
-    // the top of the screen (#100). Every sampled y must stay on screen; x is free
+    // button resolves against the article's own scrolled box and rides off the
+    // top of the screen (#100). Every sampled y must stay on screen; x is free
     // to move, since the button rides along with the slide-in.
     //
     // Honest limitation: the overlay's animation is ~220ms and several
@@ -415,7 +414,7 @@ test.describe('Hide-on-scroll header on a phone', () => {
     // above) has settled, so this is the steady-state position.
     const first = (await button.boundingBox())!;
 
-    await scroller.evaluate((el) => el.scrollTo({ top: 1400 }));
+    await article.evaluate((el) => el.scrollTo({ top: 1400 }));
     const second = (await button.boundingBox())!;
 
     // Fixed to the viewport, so 500px of article scroll must not move it.

@@ -60,7 +60,7 @@ test.describe('Reading focus splits a long paragraph', () => {
     await page.reload();
 
     await page.getByText('One long paragraph', { exact: false }).first().click();
-    const pane = page.locator('app-reader-view .scroller');
+    const pane = page.locator('app-reader-view');
     await expect(pane.locator('.content p').first()).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
 

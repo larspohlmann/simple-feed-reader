@@ -1,12 +1,5 @@
-import {
-  DestroyRef,
-  ElementRef,
-  Injectable,
-  Signal,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { DestroyRef, Injectable, Signal, computed, inject, signal } from '@angular/core';
+import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import {
   AXIS_LOCK_MIN,
   atBottom,
@@ -32,7 +25,6 @@ function startsOnMediaControl(target: EventTarget | null): boolean {
 
 export interface ArticleGestureHost {
   readonly fullscreen: Signal<boolean>;
-  readonly scroller: Signal<HTMLElement | undefined>;
   readonly close: () => void;
 }
 
@@ -41,14 +33,10 @@ export interface ArticleGestureHost {
  *  at-the-end overscroll (rubber-banded). `leaving` commits to going back. */
 @Injectable()
 export class ArticleGestures {
-  private readonly layer = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly scroller = inject(READER_SCROLLER);
   private readonly restore = inject(ArticleScrollRestore);
   private readonly reduceMotion = prefersReducedMotion();
-  private host: ArticleGestureHost = {
-    fullscreen: signal(false),
-    scroller: signal(undefined),
-    close: () => undefined,
-  };
+  private host: ArticleGestureHost = { fullscreen: signal(false), close: () => undefined };
 
   private readonly dragX = signal(0);
   private readonly pull = signal(0);
@@ -65,23 +53,17 @@ export class ArticleGestures {
   private gestureSuppressed = false;
   private leaveTimer = 0;
 
-  readonly swipeTransform = computed(() =>
-    this.dragX() === 0 ? 'none' : `translate3d(${this.dragX()}px, 0, 0)`,
-  );
-  /** Moves the article alone, not the layer: the spinner the pull reveals sits at its end. */
-  readonly pullTransform = computed(() =>
-    this.pull() === 0 ? 'none' : `translate3d(0, ${-this.pull()}px, 0)`,
-  );
-  readonly snapTransition = computed(() =>
+  readonly readerTransform = computed(() => `translate3d(${this.dragX()}px, ${-this.pull()}px, 0)`);
+  readonly readerTransition = computed(() =>
     !this.reduceMotion && this.snapping() ? `transform ${LEAVE_ANIM_MS}ms ease-out` : 'none',
   );
   readonly pulling = computed(() => this.pull() > 0);
   readonly pullArmed = computed(() => overscrollTriggersBack(this.pull()));
 
   constructor() {
-    // A swipe may start anywhere on the article layer. touchmove is non-passive so a
+    // Touch listeners live on the scroll host. touchmove is non-passive so a
     // committed horizontal swipe / at-end pull can preventDefault the scroll.
-    const element = this.layer;
+    const element = this.scroller;
     const start = (touchEvent: TouchEvent) => this.onTouchStart(touchEvent);
     const move = (touchEvent: TouchEvent) => this.onTouchMove(touchEvent);
     const end = () => this.onTouchEnd();
@@ -113,8 +95,7 @@ export class ArticleGestures {
     this.touchDx = 0;
     this.touchDy = 0;
     this.axis = 'none';
-    const scroller = this.host.scroller();
-    this.atBottomOnStart = scroller !== undefined && atBottom(scroller);
+    this.atBottomOnStart = atBottom(this.scroller);
     this.snapping.set(false);
   }
 

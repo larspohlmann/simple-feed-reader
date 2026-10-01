@@ -64,10 +64,9 @@ test.describe('Article tail space', () => {
     await stubArticle(page, LONG_BODY);
     await page.reload();
     const pane = await openArticle(page);
-    const scroller = pane.locator('.scroller');
 
     // All the way to the end of the article.
-    await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+    await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
     await page.waitForTimeout(400);
 
     const last = pane.locator('.content p').last();
@@ -76,7 +75,7 @@ test.describe('Article tail space', () => {
     expect(box.y + box.height).toBeLessThan(PHONE.height * 0.75);
 
     // Park its centre on the reading centre, the way a reader would.
-    await scroller.evaluate((el) => {
+    await pane.evaluate((el) => {
       const p = el.querySelectorAll('.content p');
       const rect = p[p.length - 1].getBoundingClientRect();
       const paneRect = el.getBoundingClientRect();
@@ -98,9 +97,9 @@ test.describe('Article tail space', () => {
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, SHORT_BODY);
     await page.reload();
-    const scroller = (await openArticle(page)).locator('.scroller');
+    const pane = await openArticle(page);
 
-    const overflow = await scroller.evaluate((el) => el.scrollHeight - el.clientHeight);
+    const overflow = await pane.evaluate((el) => el.scrollHeight - el.clientHeight);
     expect(overflow).toBeLessThanOrEqual(2);
   });
 });

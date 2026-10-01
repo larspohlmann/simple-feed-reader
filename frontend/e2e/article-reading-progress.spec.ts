@@ -78,7 +78,6 @@ test.describe('Article reading progress', () => {
     await stubArticle(page, LONG_BODY);
     await page.reload();
     const pane = await openArticle(page);
-    const scroller = pane.locator('.scroller');
 
     const rail = pane.locator('.progress-rail');
     await expect(rail).toBeVisible();
@@ -89,7 +88,7 @@ test.describe('Article reading progress', () => {
 
     // The end of the text — NOT the end of the scroller, which carries half a
     // viewport of reading tail past it.
-    await scroller.evaluate((el) => {
+    await pane.evaluate((el) => {
       const content = el.querySelector('.content')!;
       const bottom = content.getBoundingClientRect().bottom - el.getBoundingClientRect().top;
       el.scrollTo({ top: el.scrollTop + bottom - el.clientHeight, behavior: 'instant' });
@@ -114,12 +113,12 @@ test.describe('Article reading progress', () => {
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
     await stubArticle(page, LONG_BODY);
     await page.reload();
-    const scroller = (await openArticle(page)).locator('.scroller');
+    const pane = await openArticle(page);
 
-    await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
+    await pane.evaluate((el) => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
     await page.waitForTimeout(300);
 
-    const gaps = await scroller.evaluate((el) => {
+    const gaps = await pane.evaluate((el) => {
       const rail = el.querySelector('.progress-rail')!.getBoundingClientRect();
       const scrollport = el.getBoundingClientRect();
       return {
@@ -162,7 +161,7 @@ test.describe('Article reading progress on the split layout', () => {
     await expect(pane.locator('.progress-rail')).toHaveCount(0);
 
     const box = (await pane.locator('.progress').boundingBox())!;
-    const paneBox = (await pane.locator('.scroller').boundingBox())!;
+    const paneBox = (await pane.boundingBox())!;
     expect(box.width).toBeCloseTo(paneBox.width, 0);
     expect(box.width).toBeLessThan(DESKTOP.width);
     expect(box.x).toBeCloseTo(paneBox.x, 0);

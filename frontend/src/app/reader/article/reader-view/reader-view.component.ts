@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   Injector,
   computed,
   effect,
@@ -29,6 +30,7 @@ import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.compone
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
+import { READER_SCROLLER } from '../../scroll/reader-scroller';
 import { WarningBoxComponent } from '../../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
@@ -71,7 +73,16 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
     EntryCommentsComponent,
     ReaderTocComponent,
   ],
-  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope],
+  providers: [
+    {
+      provide: READER_SCROLLER,
+      useFactory: () => inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
+    },
+    ArticleScrollRestore,
+    ArticleGestures,
+    ArticleSource,
+    ReadingScope,
+  ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -98,9 +109,6 @@ export class ReaderViewComponent {
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
-  private readonly scroller = computed(() => this.scrollerRef()?.nativeElement);
-  private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
@@ -155,12 +163,7 @@ export class ReaderViewComponent {
 
   constructor() {
     this.source.connect(this.entry);
-    this.gestures.connect({
-      fullscreen: this.fullscreen,
-      scroller: this.scroller,
-      close: () => this.close.emit(),
-    });
-    this.restore.connect(this.scroller);
+    this.gestures.connect({ fullscreen: this.fullscreen, close: () => this.close.emit() });
 
     effect(() => {
       const entry = this.entry();
@@ -185,11 +188,7 @@ export class ReaderViewComponent {
       this.source.open(entry);
     });
 
-    this.scope.connect({
-      scroller: this.scroller,
-      content: this.content,
-      comments: this.commentsSection,
-    });
+    this.scope.connect(this.content, this.commentsSection);
 
     // Body images arrive through [innerHTML], so one capturing listener gives them the proxy
     // fallback (error events do not bubble).
@@ -225,22 +224,6 @@ export class ReaderViewComponent {
     });
 
     this.scope.observeResizes();
-    this.reserveToolbarHeight();
-  }
-
-  /** The toolbar floats over the scroller, which reserves its height (#1332). */
-  private reserveToolbarHeight(): void {
-    effect((onCleanup) => {
-      const bar = this.bar()?.nativeElement;
-      if (!bar || typeof ResizeObserver === 'undefined') return;
-      const style = this.host.nativeElement.style;
-      const observer = new ResizeObserver(() => {
-        style.setProperty('--reader-bar-h', `${bar.offsetHeight}px`);
-        this.scope.refresh();
-      });
-      observer.observe(bar);
-      onCleanup(() => observer.disconnect());
-    });
   }
 
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
@@ -251,7 +234,9 @@ export class ReaderViewComponent {
     else this.close.emit();
   }
 
-  protected onScroll(scrollTop: number): void {
+  @HostListener('scroll')
+  protected onScroll(): void {
+    const scrollTop = this.host.nativeElement.scrollTop;
     this.scope.trackScroll(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
@@ -273,26 +258,24 @@ export class ReaderViewComponent {
   /** Jump the reading pane back to the top of the article. */
   scrollToTop(): void {
     this.restore.abort(); // don't let a restore fight the jump
-    this.scroller()?.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
+    this.host.nativeElement.scrollTo({ top: 0, behavior: this.reduceMotion ? 'auto' : 'smooth' });
     // Land focus on the title, not wherever the button was — an unmounted button
     // drops focus to <body>. preventScroll is needed since the heading is still
     // off-screen (why the button showed); a plain focus() would cancel the scroll.
     this.titleHeading()?.nativeElement.focus({ preventScroll: true });
   }
 
-  /** Scroll the reading pane to a heading, clearing the chrome that covers the scroller. */
+  /** Scroll the reading pane to a heading, clearing the sticky bar (split-pane). */
   scrollToHeading(id: string): void {
-    const scroller = this.scroller();
-    const heading = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
-    if (!scroller || !heading) return;
+    const element = this.content()?.nativeElement.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!element) return;
     this.restore.abort(); // a jump takes over from any in-flight restore
+    const host = this.host.nativeElement;
+    const offset = this.fullscreen() ? 8 : 52;
     const top =
-      heading.getBoundingClientRect().top -
-      scroller.getBoundingClientRect().top +
-      scroller.scrollTop;
-    const covered = parseFloat(getComputedStyle(scroller).scrollPaddingTop) || 0;
-    scroller.scrollTo({
-      top: Math.max(0, top - covered),
+      element.getBoundingClientRect().top - host.getBoundingClientRect().top + host.scrollTop;
+    host.scrollTo({
+      top: Math.max(0, top - offset),
       behavior: this.reduceMotion ? 'auto' : 'smooth',
     });
   }

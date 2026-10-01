@@ -21,6 +21,7 @@ import { CommentsService } from './comments.service';
 import { relativeTime } from '../../format';
 import { EntryDto } from '../../models';
 import { prefetchMargin } from '../../list/paging';
+import { READER_SCROLLER } from '../../scroll/reader-scroller';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
 
@@ -41,12 +42,11 @@ type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
 })
 export class EntryCommentsComponent {
   readonly entry = input.required<CommentsEntry>();
-  /** The pane whose viewport the section loads on sight of. */
-  readonly scroller = input.required<HTMLElement>();
 
   private readonly service = inject(CommentsService);
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly scroller = inject(READER_SCROLLER);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
   private readonly entryId = computed(() => this.entry().id);
@@ -88,12 +88,11 @@ export class EntryCommentsComponent {
 
   private loadOnSight(id: number): () => void {
     const host = this.host.nativeElement;
-    const scroller = this.scroller();
     const observer = new IntersectionObserver(
       ([sighting]) => {
         if (sighting?.isIntersecting) this.service.load(id);
       },
-      { root: scroller, rootMargin: prefetchMargin(scroller.clientHeight) },
+      { root: this.scroller, rootMargin: prefetchMargin(this.scroller.clientHeight) },
     );
     observer.observe(host);
     return () => observer.disconnect();

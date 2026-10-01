@@ -103,9 +103,6 @@ class MockResizeObserver {
 const gestures = (fixture: ComponentFixture<ReaderViewComponent>): ArticleGestures =>
   fixture.debugElement.injector.get(ArticleGestures);
 
-const scrollerOf = (fixture: ComponentFixture<ReaderViewComponent>): HTMLElement =>
-  (fixture.nativeElement as HTMLElement).querySelector('.scroller') as HTMLElement;
-
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -190,7 +187,6 @@ describe('ReaderViewComponent', () => {
   beforeEach(() => {
     imageProxy = { recover: jest.fn().mockResolvedValue('failed') };
     localStorage.clear();
-    sessionStorage.clear();
     MockResizeObserver.instances = [];
     (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
     // Default: extraction fails so the existing presentational tests keep
@@ -325,10 +321,11 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('back-to-top button', () => {
-    function scrollArticleTo(fixture: ReturnType<typeof mount>, top: number): void {
-      const scroller = scrollerOf(fixture);
-      Object.defineProperty(scroller, 'scrollTop', { configurable: true, value: top });
-      scroller.dispatchEvent(new Event('scroll'));
+    afterEach(() => sessionStorage.clear());
+
+    function scrollHostTo(host: HTMLElement, top: number): void {
+      Object.defineProperty(host, 'scrollTop', { configurable: true, value: top });
+      host.dispatchEvent(new Event('scroll'));
     }
 
     it('appears only after scrolling down and jumps back to the top on click', () => {
@@ -336,14 +333,13 @@ describe('ReaderViewComponent', () => {
       const host = fixture.nativeElement as HTMLElement;
       expect(host.querySelector('app-to-top-button')).toBeNull(); // hidden at the top
 
-      scrollArticleTo(fixture, 900);
+      scrollHostTo(host, 900);
       fixture.detectChanges();
       const button = host.querySelector('app-to-top-button button') as HTMLButtonElement;
       expect(button).not.toBeNull();
 
-      const scroller = scrollerOf(fixture);
       const scrollTo = jest.fn();
-      scroller.scrollTo = scrollTo as unknown as typeof scroller.scrollTo;
+      host.scrollTo = scrollTo as unknown as typeof host.scrollTo;
       button.click();
       expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }));
     });
@@ -351,11 +347,11 @@ describe('ReaderViewComponent', () => {
     it('hides again when scrolled back near the top', () => {
       const fixture = mount(entry());
       const host = fixture.nativeElement as HTMLElement;
-      scrollArticleTo(fixture, 900);
+      scrollHostTo(host, 900);
       fixture.detectChanges();
       expect(host.querySelector('app-to-top-button')).not.toBeNull();
 
-      scrollArticleTo(fixture, 20);
+      scrollHostTo(host, 20);
       fixture.detectChanges();
       expect(host.querySelector('app-to-top-button')).toBeNull();
     });
@@ -365,10 +361,9 @@ describe('ReaderViewComponent', () => {
     it('moves focus to the article title instead of dropping it to the body', () => {
       const fixture = mount(entry());
       const host = fixture.nativeElement as HTMLElement;
-      scrollArticleTo(fixture, 900);
+      scrollHostTo(host, 900);
       fixture.detectChanges();
-      const scroller = scrollerOf(fixture);
-      scroller.scrollTo = jest.fn() as unknown as typeof scroller.scrollTo;
+      host.scrollTo = jest.fn() as unknown as typeof host.scrollTo;
 
       (host.querySelector('app-to-top-button button') as HTMLButtonElement).click();
 
@@ -381,9 +376,11 @@ describe('ReaderViewComponent', () => {
   // changes value (mode flips reader -> original but the feed's own content is
   // shown either way), so the content signal alone can never trigger it.
   describe('article scroll restore', () => {
-    function trackScrollTop(scroller: HTMLElement): { top: number } {
+    // jsdom has no layout, so a real scrollTop write is a no-op and always reads
+    // back 0. Record the writes instead — that is what the restore does.
+    function trackScrollTop(host: HTMLElement): { top: number } {
       const state = { top: 0 };
-      Object.defineProperty(scroller, 'scrollTop', {
+      Object.defineProperty(host, 'scrollTop', {
         configurable: true,
         get: () => state.top,
         set: (value: number) => {
@@ -399,9 +396,9 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(load);
       sessionStorage.setItem(entryScrollKey(1), String(top));
       const fixture = TestBed.createComponent(ReaderViewComponent);
+      const scroll = trackScrollTop(fixture.nativeElement as HTMLElement);
       fixture.componentRef.setInput('entry', entry({ id: 1 }));
       fixture.detectChanges();
-      const scroll = trackScrollTop(scrollerOf(fixture));
       return { fixture, scroll, load };
     }
 
@@ -411,6 +408,8 @@ describe('ReaderViewComponent', () => {
       fixture.detectChanges();
       await Promise.resolve();
     }
+
+    afterEach(() => sessionStorage.clear());
 
     it('restores the remembered offset when extraction fails', async () => {
       const { fixture, scroll, load } = mountRemembering(900);
@@ -441,27 +440,17 @@ describe('ReaderViewComponent', () => {
   // centre, so the article needs tail space for its last paragraph to get there.
   describe('tail space below a long article', () => {
     /** Pin the pane's height and where the article's own content box ends. */
-    function pinGeometry(
-      fixture: ReturnType<typeof mount>,
-      contentBottom: number,
-      viewport: number,
-    ): HTMLElement {
-      const host = fixture.nativeElement as HTMLElement;
-      const scroller = scrollerOf(fixture);
-      Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: viewport });
-      scroller.getBoundingClientRect = () => ({ top: 0, bottom: viewport }) as DOMRect;
-      const content = host.querySelector('.content') as HTMLElement;
-      content.getBoundingClientRect = () => ({ top: 0, bottom: contentBottom }) as DOMRect;
-      return host;
-    }
-
-    /** Pin the geometry, then re-measure it on a resize, one of the moments the pane does. */
     function stubGeometry(
       fixture: ReturnType<typeof mount>,
       contentBottom: number,
       viewport: number,
-    ): HTMLElement {
-      const host = pinGeometry(fixture, contentBottom, viewport);
+    ) {
+      const host = fixture.nativeElement as HTMLElement;
+      Object.defineProperty(host, 'clientHeight', { configurable: true, value: viewport });
+      host.getBoundingClientRect = () => ({ top: 0, bottom: viewport }) as DOMRect;
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () => ({ top: 0, bottom: contentBottom }) as DOMRect;
+      // A resize is one of the moments the pane re-measures itself.
       window.dispatchEvent(new Event('resize'));
       fixture.detectChanges();
       return host;
@@ -470,16 +459,6 @@ describe('ReaderViewComponent', () => {
     it('adds it when the article is taller than the pane', () => {
       const fixture = mount(entry());
       const host = stubGeometry(fixture, 2400, 800);
-      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-    });
-
-    it('measures the inner scroller once the article first renders', async () => {
-      const fixture = mount(entry());
-      const host = pinGeometry(fixture, 2400, 800);
-
-      await Promise.resolve(); // the content-processing microtask
-      fixture.detectChanges();
-
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
@@ -501,20 +480,6 @@ describe('ReaderViewComponent', () => {
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
       expect(host.querySelector('.progress-rail, .progress')).toBeNull();
-    });
-
-    it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {
-      const fixture = mount(entry());
-      const host = stubGeometry(fixture, 400, 800);
-      expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
-
-      const content = host.querySelector('.content') as HTMLElement;
-      content.getBoundingClientRect = () => ({ top: 0, bottom: 2400 }) as DOMRect;
-      const bar = host.querySelector('.bar') as HTMLElement;
-      MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
-      fixture.detectChanges();
-
-      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
   });
 
@@ -575,76 +540,20 @@ describe('ReaderViewComponent', () => {
 
   // The panel reserves the floating app bar's height only in the split pane,
   // where the shell's bar floats above it (#97). Full-screen, the article rides
-  // an overlay ABOVE that bar and brings its own toolbar, so a
+  // an overlay ABOVE that bar and brings its own in-flow toolbar, so a
   // reservation would be a blank strip. jsdom cannot see the resulting layout,
   // so pin the flag the stylesheet keys off instead.
   it('reserves the app bar only in the split pane, not full-screen', () => {
     const withBar = mount(entry()).nativeElement as HTMLElement;
-    expect(withBar.querySelector('.frame')!.classList).toContain('with-bar');
+    expect(withBar.querySelector('.reader')!.classList).toContain('with-bar');
 
     const fixture = TestBed.createComponent(ReaderViewComponent);
     fixture.componentRef.setInput('entry', entry());
     fixture.componentRef.setInput('fullscreen', true);
     fixture.detectChanges();
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.frame')!.classList).not.toContain('with-bar');
+    expect(element.querySelector('.reader')!.classList).not.toContain('with-bar');
     fixture.destroy();
-  });
-
-  // #1332: iOS spends a tap inside a coasting scroller on stopping it.
-  it('keeps the chrome a tap must reach outside the article’s scroller', () => {
-    const fixture = TestBed.createComponent(ReaderViewComponent);
-    fixture.componentRef.setInput('entry', entry());
-    fixture.componentRef.setInput('fullscreen', true);
-    fixture.detectChanges();
-    const element = fixture.nativeElement as HTMLElement;
-    const scroller = scrollerOf(fixture);
-    scroller.scrollTop = 900;
-    scroller.dispatchEvent(new Event('scroll'));
-    fixture.detectChanges();
-
-    for (const chrome of ['.mini', '.bar', 'app-to-top-button']) {
-      const found = element.querySelector(chrome);
-      expect(found).not.toBeNull();
-      expect(scroller.contains(found)).toBe(false);
-    }
-    expect(scroller.contains(element.querySelector('.content'))).toBe(true);
-    fixture.destroy();
-  });
-
-  it('reserves the toolbar’s measured height above the article', () => {
-    const fixture = mount(entry());
-    const element = fixture.nativeElement as HTMLElement;
-    const bar = element.querySelector('.bar') as HTMLElement;
-    Object.defineProperty(bar, 'offsetHeight', { configurable: true, value: 44 });
-
-    MockResizeObserver.instances.find((observer) => observer.targets.has(bar))!.fire();
-
-    expect(element.style.getPropertyValue('--reader-bar-h')).toBe('44px');
-  });
-
-  it('lands a contents jump below the chrome covering the scroller', async () => {
-    const fixture = mount(entryWithBody('<h2>A</h2><p>a</p><h2>B</h2><p>b</p>'));
-    await Promise.resolve();
-    fixture.detectChanges();
-    const scroller = scrollerOf(fixture);
-    const heading = scroller.querySelector('.content h2:last-of-type') as HTMLElement;
-    heading.getBoundingClientRect = () => ({ top: 700 }) as DOMRect;
-    scroller.getBoundingClientRect = () => ({ top: 0 }) as DOMRect;
-    const computedStyle = jest
-      .spyOn(window, 'getComputedStyle')
-      .mockReturnValue({ scrollPaddingTop: '120px' } as CSSStyleDeclaration);
-    const scrollTo = jest.fn();
-    scroller.scrollTo = scrollTo as unknown as typeof scroller.scrollTo;
-    // jsdom ships no `CSS` namespace; the decorator's ids need no escaping.
-    const globals = globalThis as unknown as { CSS?: { escape: (value: string) => string } };
-    globals.CSS = { escape: (value) => value };
-
-    fixture.componentInstance.scrollToHeading(heading.id);
-    computedStyle.mockRestore();
-    delete globals.CSS;
-
-    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 580 }));
   });
 
   describe('full-screen toolbar hide-on-scroll', () => {
@@ -656,10 +565,10 @@ describe('ReaderViewComponent', () => {
       return fixture;
     }
 
-    function scrollArticleTo(fixture: ReturnType<typeof mount>, top: number): void {
-      const scroller = scrollerOf(fixture);
-      scroller.scrollTop = top;
-      scroller.dispatchEvent(new Event('scroll'));
+    function scrollHostTo(fixture: ReturnType<typeof mount>, top: number): void {
+      const host = fixture.nativeElement as HTMLElement;
+      host.scrollTop = top;
+      host.dispatchEvent(new Event('scroll'));
       fixture.detectChanges();
     }
 
@@ -668,10 +577,10 @@ describe('ReaderViewComponent', () => {
       const bar = (fixture.nativeElement as HTMLElement).querySelector('.bar')!;
       expect(bar.classList).not.toContain('hidden');
 
-      scrollArticleTo(fixture, 400); // down
+      scrollHostTo(fixture, 400); // down
       expect(bar.classList).toContain('hidden');
 
-      scrollArticleTo(fixture, 300); // up
+      scrollHostTo(fixture, 300); // up
       expect(bar.classList).not.toContain('hidden');
       fixture.destroy();
     });
@@ -680,7 +589,7 @@ describe('ReaderViewComponent', () => {
       // prev/next reuse this component instance; a toolbar the previous
       // article's reading had retracted must not open the next one headless.
       const fixture = fullscreenMount();
-      scrollArticleTo(fixture, 400);
+      scrollHostTo(fixture, 400);
       expect((fixture.nativeElement as HTMLElement).querySelector('.bar')!.classList).toContain(
         'hidden',
       );
@@ -696,8 +605,8 @@ describe('ReaderViewComponent', () => {
     it('never retracts the split-pane toolbar', () => {
       const fixture = mount(entry());
       const bar = (fixture.nativeElement as HTMLElement).querySelector('.bar')!;
-      scrollArticleTo(fixture, 100);
-      scrollArticleTo(fixture, 500);
+      scrollHostTo(fixture, 100);
+      scrollHostTo(fixture, 500);
       expect(bar.classList).not.toContain('hidden');
     });
 
@@ -706,7 +615,7 @@ describe('ReaderViewComponent', () => {
       // is gone, so it must survive the very scroll that retracts the toolbar.
       const fixture = fullscreenMount();
       const element = fixture.nativeElement as HTMLElement;
-      scrollArticleTo(fixture, 400);
+      scrollHostTo(fixture, 400);
 
       expect(element.querySelector('.bar')!.classList).toContain('hidden');
       expect(element.querySelector('.mini')!.classList).not.toContain('hidden');
@@ -1254,28 +1163,6 @@ describe('ReaderViewComponent', () => {
       return fixture;
     }
 
-    it('moves nothing at rest, the layer on a swipe and the article on a pull', () => {
-      const fixture = fullscreen();
-      const element = fixture.nativeElement as HTMLElement;
-      const frame = element.querySelector('.frame') as HTMLElement;
-      const reader = element.querySelector('.reader') as HTMLElement;
-      expect([frame.style.transform, reader.style.transform]).toEqual(['none', 'none']);
-
-      gestures(fixture).onTouchStart(touch(0, 0));
-      gestures(fixture).onTouchMove(touch(40, 4));
-      fixture.detectChanges();
-      expect(frame.style.transform).toBe('translate3d(40px, 0, 0)');
-      expect(reader.style.transform).toBe('none');
-      gestures(fixture).onTouchEnd();
-
-      gestures(fixture).onTouchStart(touch(5, 300));
-      gestures(fixture).onTouchMove(touch(7, 280));
-      fixture.detectChanges();
-      expect(frame.style.transform).toBe('none');
-      expect(reader.style.transform).toMatch(/^translate3d\(0, -\d/);
-      fixture.destroy();
-    });
-
     it('returns to the list on a decisive rightward swipe', () => {
       const fixture = fullscreen();
       const component = gestures(fixture);
@@ -1295,7 +1182,7 @@ describe('ReaderViewComponent', () => {
       fixture.detectChanges();
       // Committed to leaving and slid fully off to the right (same as a swipe).
       expect(gestures(fixture).leaving()).toBe(true);
-      expect((element.querySelector('.frame') as HTMLElement).style.transform).toContain(
+      expect((element.querySelector('.reader') as HTMLElement).style.transform).toContain(
         `${window.innerWidth}px`,
       );
       // close only fires once the slide-out animation has played.
