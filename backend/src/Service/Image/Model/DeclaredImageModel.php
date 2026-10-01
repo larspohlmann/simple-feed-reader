@@ -29,9 +29,10 @@ final readonly class DeclaredImageModel
     /** This image, adding the renditions of each other image that shows the same picture in the same crop. */
     public function joinedWith(self ...$others): self
     {
+        $identity = ImageIdentityModel::fromUrl($this->url);
         $renditions = $this->renditions;
         foreach ($others as $other) {
-            if ($other !== $this && $this->showsSamePictureAs($other)) {
+            if ($other !== $this && $this->showsSamePictureAs($other, $identity)) {
                 $renditions = [...$renditions, ...$other->renditions];
             }
         }
@@ -39,10 +40,10 @@ final readonly class DeclaredImageModel
         return new self($this->url, $this->width, $this->height, $renditions);
     }
 
-    private function showsSamePictureAs(self $other): bool
+    private function showsSamePictureAs(self $other, ImageIdentityModel $identity): bool
     {
         return !$this->declaresAnotherCropThan($other)
-            && ImageIdentityModel::fromUrl($this->url)->isRenditionOf(ImageIdentityModel::fromUrl($other->url));
+            && $identity->isRenditionOf(ImageIdentityModel::fromUrl($other->url));
     }
 
     private function declaresAnotherCropThan(self $other): bool
