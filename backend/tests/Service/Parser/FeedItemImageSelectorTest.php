@@ -159,7 +159,6 @@ final class FeedItemImageSelectorTest extends TestCase
             [
                 new ImageRendition(self::substack('w_424,c_limit,f_auto'), 424),
                 new ImageRendition(self::substack('w_1456,c_limit,f_auto'), 1456),
-                new ImageRendition(self::substack('w_1456,c_limit,f_auto'), 750),
             ],
             $image->renditions,
         );

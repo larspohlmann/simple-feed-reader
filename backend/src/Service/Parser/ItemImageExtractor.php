@@ -112,16 +112,14 @@ final readonly class ItemImageExtractor
         }
 
         $width = self::positiveInt($element->getAttribute('width') ?? '');
+        $srcsetRenditions = DeclaredRenditions::fromSrcset($element->getAttribute('srcset'));
 
         return new DeclaredImageModel(
             $src,
             $width,
             self::positiveInt($element->getAttribute('height') ?? ''),
-            // srcset first: a `w` descriptor is the file's width, the width attribute only its display size.
-            [
-                ...DeclaredRenditions::fromSrcset($element->getAttribute('srcset')),
-                ...DeclaredRenditions::ofWidth($src, $width),
-            ],
+            // A `w` descriptor is a file's width; beside one, the width attribute is only a display size.
+            $srcsetRenditions === [] ? DeclaredRenditions::ofWidth($src, $width) : $srcsetRenditions,
         );
     }
 

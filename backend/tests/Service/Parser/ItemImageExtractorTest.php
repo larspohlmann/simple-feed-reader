@@ -404,10 +404,37 @@ final class ItemImageExtractorTest extends TestCase
                 new ImageRendition('https://mag.example/funk-system-1024x683.jpg', 1024),
                 new ImageRendition('https://mag.example/funk-system-300x200.jpg', 300),
                 new ImageRendition('https://mag.example/funk-system-1536x1024.jpg', 1536),
-                new ImageRendition('https://mag.example/funk-system-1024x683.jpg', 696),
             ],
             $image->renditions,
         );
+        self::assertSame(696, $image->width);
+    }
+
+    public function testTheWidthAttributeIsNoRenditionBesideAWidthDescribedSrcset(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/photo.jpg" width="300"'
+            . ' srcset="https://i/photo-768x512.jpg 768w, https://i/photo-1024x683.jpg 1024w">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [
+                new ImageRendition('https://i/photo-768x512.jpg', 768),
+                new ImageRendition('https://i/photo-1024x683.jpg', 1024),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testTheWidthAttributeIsTheRenditionBesideADensityOnlySrcset(): void
+    {
+        $image = $this->extractor->fromHtml(
+            '<img src="https://i/photo.jpg" width="300" srcset="https://i/photo-2x.jpg 2x">',
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/photo.jpg', 300)], $image->renditions);
     }
 
     public function testIgnoresDensityBareAndMalformedSrcsetCandidates(): void
