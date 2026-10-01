@@ -41,6 +41,7 @@ final readonly class ImageIdentityModel
         private array $tokens,
         private ?string $assetToken,
         private ?string $pathUuid,
+        private string $sourceFolder,
     ) {
     }
 
@@ -60,7 +61,20 @@ final readonly class ImageIdentityModel
         $words = preg_split('/[^a-z0-9]+/', $stem, -1, \PREG_SPLIT_NO_EMPTY) ?: [];
         $tokens = array_values(array_filter($words, self::isPhotoSpecificToken(...)));
 
-        return new self($path, $stem, $ids, $tokens, self::assetToken($words), self::pathUuid($path));
+        return new self(
+            $path,
+            $stem,
+            $ids,
+            $tokens,
+            self::assetToken($words),
+            self::pathUuid($path),
+            self::sourceFolder($source, $path),
+        );
+    }
+
+    private static function sourceFolder(string $source, string $path): string
+    {
+        return strtolower((string) (parse_url($source, PHP_URL_HOST) ?? '')) . dirname($path);
     }
 
     public function isShareRender(): bool
@@ -161,24 +175,27 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * One source file at any size: the same rendition, or the same stem once one trailing `-WxH` is dropped
-     * (WordPress sizes). A bare trailing number or a shared word is another picture of a gallery.
+     * One source file at any size: a shared path UUID or image id, or the same stem once one trailing `-WxH` is
+     * dropped (WordPress sizes) in the same folder of the same host. A bare trailing number, a shared word or a
+     * file of the same name in another folder is another picture.
      */
     public function isRenditionOf(self $other): bool
     {
-        if ($this->isSameRendition($other)) {
-            return true;
-        }
-        if ($this->pathUuid !== null && $other->pathUuid !== null) {
-            return false;
-        }
-        if ($this->ids !== [] && $other->ids !== []) {
-            return false;
+        if ($this->carriesAssetIdsLike($other)) {
+            return $this->isSameRendition($other);
         }
 
         $sizelessStem = self::withoutTrailingSize($this->stem);
 
-        return $sizelessStem !== '' && $sizelessStem === self::withoutTrailingSize($other->stem);
+        return $sizelessStem !== ''
+            && $sizelessStem === self::withoutTrailingSize($other->stem)
+            && $this->sourceFolder === $other->sourceFolder;
+    }
+
+    private function carriesAssetIdsLike(self $other): bool
+    {
+        return ($this->pathUuid !== null && $other->pathUuid !== null)
+            || ($this->ids !== [] && $other->ids !== []);
     }
 
     private static function withoutTrailingSize(string $stem): string

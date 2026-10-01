@@ -650,4 +650,47 @@ final class ImageIdentityModelTest extends TestCase
     {
         self::assertFalse($this->renditionOf($left, $right));
     }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function picturesOfOneFileNameInAnotherFolderProvider(): iterable
+    {
+        yield 'identical stem in sibling folders' => [
+            'https://cdn.test/a1/original.jpg',
+            'https://cdn.test/b2/original.jpg',
+        ];
+        yield 'identical stem in a subfolder' => [
+            'https://cdn.test/uploads/1.jpg',
+            'https://cdn.test/uploads/other/1.jpg',
+        ];
+        yield 'sized stems in sibling folders' => [
+            'https://cdn.test/a/hero-1024x683.jpg',
+            'https://cdn.test/b/hero-300x200.jpg',
+        ];
+        yield 'squarespace asset folders' => [
+            'https://images.squarespace-cdn.com/content/v1/5f1a/1500000000000-AAAA/image-asset.jpeg',
+            'https://images.squarespace-cdn.com/content/v1/5f1a/1600000000001-BBBB/image-asset.jpeg?format=500w',
+        ];
+        yield 'wordpress uploads of another month' => [
+            'https://cdn.example/wp-content/uploads/2026/08/image.png',
+            'https://cdn.example/wp-content/uploads/2026/09/image-1024x576.png',
+        ];
+        yield 'identical path on another host' => [
+            'https://one.test/uploads/2026/09/funk-system.jpg',
+            'https://two.test/uploads/2026/09/funk-system.jpg',
+        ];
+    }
+
+    #[DataProvider('picturesOfOneFileNameInAnotherFolderProvider')]
+    public function testIsNotRenditionOfAPictureOfTheSameFileNameInAnotherFolder(string $left, string $right): void
+    {
+        self::assertFalse($this->renditionOf($left, $right));
+    }
+
+    public function testIsRenditionOfTheSameFileOnAnotherQuery(): void
+    {
+        self::assertTrue($this->renditionOf(
+            'https://cdn.test/uploads/original.jpg?width=300',
+            'https://CDN.test/uploads/original.jpg?width=1200',
+        ));
+    }
 }
