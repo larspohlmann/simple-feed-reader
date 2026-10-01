@@ -101,6 +101,19 @@ final class EntryImageTest extends TestCase
         self::assertEquals($renditions, $image->getRenditions());
     }
 
+    public function testAnIncompleteStoredRenditionReadsBackAsNone(): void
+    {
+        $image = new EntryImage();
+        $image->storePending('https://i/a.jpg', null, null);
+
+        (new \ReflectionProperty(EntryImage::class, 'renditions'))->setValue($image, [
+            ['url' => 'https://i/a-150.jpg'],
+            ['url' => 'https://i/a-300.jpg', 'width' => 300],
+        ]);
+
+        self::assertEquals([new ImageRendition('https://i/a-300.jpg', 300)], $image->getRenditions());
+    }
+
     public function testStoringNoRenditionsReadsBackAsNone(): void
     {
         $image = new EntryImage();
