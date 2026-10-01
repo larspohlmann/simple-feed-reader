@@ -20,7 +20,7 @@ final readonly class ItemImageExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
-    /** Media RSS image, searching <media:group> when nothing is attached directly. */
+    /** Media RSS image, searching <media:group> when nothing is attached directly; its other widths join it. */
     public function fromMedia(\DOMElement $item): ?DeclaredImageModel
     {
         $candidates = self::mediaCandidatesIn($item);
@@ -32,7 +32,7 @@ final readonly class ItemImageExtractor
             }
         }
 
-        return self::widest($candidates);
+        return self::widest($candidates)?->joinedWith(...$candidates);
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */

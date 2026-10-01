@@ -442,4 +442,59 @@ final class ItemImageExtractorTest extends TestCase
         self::assertNotNull($image);
         self::assertSame([], $image->renditions);
     }
+
+    public function testCollectsEveryWidthOfTheWidestMediaPicture(): void
+    {
+        $photo = 'https://i.guim.co.uk/img/media/f6d33de551f7fcdc046178cfccc4037e79b99f3e'
+            . '/276_0_4639_3711/master/4639.jpg';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content width="140" url="' . $photo . '?width=140&amp;s=406198660"/>'
+            . '<media:content width="460" url="' . $photo . '?width=460&amp;s=fed507e2"/>'
+            . '<media:content width="700" url="' . $photo . '?width=700&amp;s=6192bfa4"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame($photo . '?width=700&s=6192bfa4', $image->url);
+        self::assertEquals(
+            [
+                new ImageRendition($photo . '?width=700&s=6192bfa4', 700),
+                new ImageRendition($photo . '?width=140&s=406198660', 140),
+                new ImageRendition($photo . '?width=460&s=fed507e2', 460),
+            ],
+            $image->renditions,
+        );
+    }
+
+    public function testKeepsAnotherPictureOfAMediaGalleryOutOfTheLadder(): void
+    {
+        $uploads = 'https://kursfahrradstadt.de/wp-content/uploads/2026/05/';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-21.jpg" medium="image"'
+            . ' width="1200"/>'
+            . '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-33.jpg" medium="image"'
+            . ' width="800"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [new ImageRendition($uploads . 'superbuettel-eroeffnung-relli-festtag-21.jpg', 1200)],
+            $image->renditions,
+        );
+    }
+
+    public function testKeepsASquareThumbnailCropOutOfTheLadder(): void
+    {
+        $uploads = 'https://cdn.arstechnica.net/wp-content/uploads/2026/09/';
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content height="648" medium="image" url="' . $uploads . 'GettyImages-1042124682-1152x648.jpg"'
+            . ' width="1152"/>'
+            . '<media:thumbnail height="500" url="' . $uploads . 'GettyImages-1042124682-500x500.jpg" width="500"/>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertEquals(
+            [new ImageRendition($uploads . 'GettyImages-1042124682-1152x648.jpg', 1152)],
+            $image->renditions,
+        );
+    }
 }

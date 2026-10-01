@@ -23,8 +23,42 @@ final readonly class DeclaredImageModel
 
     public function declaresBeacon(): bool
     {
-        return $this->width !== null
-            && $this->height !== null
-            && (new ImageDimensionsModel($this->width, $this->height))->isBeacon();
+        return $this->declaredDimensions()?->isBeacon() ?? false;
+    }
+
+    /** This image, adding the renditions of each other image that shows the same picture in the same crop. */
+    public function joinedWith(self ...$others): self
+    {
+        $renditions = $this->renditions;
+        foreach ($others as $other) {
+            if ($other !== $this && $this->showsSamePictureAs($other)) {
+                $renditions = [...$renditions, ...$other->renditions];
+            }
+        }
+
+        return new self($this->url, $this->width, $this->height, $renditions);
+    }
+
+    private function showsSamePictureAs(self $other): bool
+    {
+        return !$this->declaresAnotherCropThan($other)
+            && ImageIdentityModel::fromUrl($this->url)->isSameAsset(ImageIdentityModel::fromUrl($other->url));
+    }
+
+    private function declaresAnotherCropThan(self $other): bool
+    {
+        $dimensions = $this->declaredDimensions();
+        $otherDimensions = $other->declaredDimensions();
+
+        return $dimensions !== null && $otherDimensions !== null && $dimensions->isAnotherCropThan($otherDimensions);
+    }
+
+    private function declaredDimensions(): ?ImageDimensionsModel
+    {
+        if ($this->width === null || $this->height === null) {
+            return null;
+        }
+
+        return new ImageDimensionsModel($this->width, $this->height);
     }
 }

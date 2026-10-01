@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Image\Model\DeclaredImageModel;
 
+/** Each format's image order; the body image stands in for a missing declared one, or lends it its renditions. */
 final readonly class FeedItemImageSelector
 {
     public function __construct(private ItemImageExtractor $extractor)
@@ -14,11 +15,18 @@ final readonly class FeedItemImageSelector
 
     public function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
     {
-        $image = $this->extractor->fromMedia($item) ?? $this->extractor->fromRssEnclosure($item);
+        $declared = $this->extractor->fromMedia($item)
+            ?? $this->extractor->fromRssEnclosure($item)
+            ?? $this->extractor->fromCustomImageElement($item);
 
-        return $image
-            ?? $this->extractor->fromCustomImageElement($item)
-            ?? $this->extractor->fromHtml($bodyHtml);
+        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
+    }
+
+    public function fromRss1(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    {
+        $declared = $this->extractor->fromMedia($item) ?? $this->extractor->fromCustomImageElement($item);
+
+        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
@@ -27,11 +35,11 @@ final readonly class FeedItemImageSelector
         string $namespace,
         array $bodyHtmlCandidates,
     ): ?DeclaredImageModel {
-        $image = $this->extractor->fromMedia($entry) ?? $this->extractor->fromAtomEnclosure($entry, $namespace);
+        $declared = $this->extractor->fromMedia($entry)
+            ?? $this->extractor->fromAtomEnclosure($entry, $namespace)
+            ?? $this->extractor->fromCustomImageElement($entry);
 
-        return $image
-            ?? $this->extractor->fromCustomImageElement($entry)
-            ?? $this->firstBodyImage($bodyHtmlCandidates);
+        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates));
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
@@ -45,5 +53,16 @@ final readonly class FeedItemImageSelector
         }
 
         return null;
+    }
+
+    private static function withBodyImage(
+        ?DeclaredImageModel $declared,
+        ?DeclaredImageModel $bodyImage,
+    ): ?DeclaredImageModel {
+        if ($declared === null) {
+            return $bodyImage;
+        }
+
+        return $bodyImage === null ? $declared : $declared->joinedWith($bodyImage);
     }
 }
