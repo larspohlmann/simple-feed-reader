@@ -1249,6 +1249,32 @@ describe('ReaderViewComponent', () => {
       fixture.destroy();
     });
 
+    // #1332: any transform keeps the article on its own GPU layer, as #501 found for the list.
+    it('carries no transform at rest, and a short swipe snaps back to none', () => {
+      const fixture = fullscreen();
+      const reader = (fixture.nativeElement as HTMLElement).querySelector('.reader') as HTMLElement;
+      expect(reader.style.transform).toBe('none');
+
+      const component = gestures(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchMove(touch(30, 4));
+      fixture.detectChanges();
+      expect(reader.style.transform).toContain('30px');
+      component.onTouchEnd();
+      fixture.detectChanges();
+      expect(reader.style.transform).toBe('none');
+      fixture.destroy();
+    });
+
+    it('leaves the transition alone on a plain tap (#1332)', () => {
+      const fixture = fullscreen();
+      const component = gestures(fixture);
+      component.onTouchStart(touch(0, 0));
+      component.onTouchEnd();
+      expect(component.readerTransition()).toBe('none');
+      fixture.destroy();
+    });
+
     it('ignores swipes while the in-pane toolbar is shown (split-pane)', () => {
       const component = gestures(mount(entry())); // showToolbar defaults to true
       component.onTouchStart(touch(0, 0));
