@@ -168,7 +168,7 @@ articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
 Every path but Quick also asks a separate question about an optional Grafana
 dashboard — off by default, not part of any package, viewing only. It runs Loki
-for logs, Tempo for traces and Pyroscope for profiles beside Grafana;
+for logs beside Grafana;
 `./scripts/prod-configure.sh` can turn it on or off later.
 
 Both installers take a target directory and `--ref <branch-or-tag>`, which

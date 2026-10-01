@@ -16,7 +16,7 @@ composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.
 composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
 php bin/phpunit      # unit/integration suite (SQLite natively)
-composer test        # phpunit with OpenTelemetry off — use this in Docker (see below)
+composer test        # phpunit; `composer test -- --filter=Foo` passes args
 composer test:parallel    # the suite over ParaTest, one TEST_TOKEN worker per CPU — what CI runs
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
 composer infection:diff   # …over the files this branch changes — what CI gates
@@ -41,14 +41,9 @@ docker compose exec php composer test         # the MySQL leg of the suite
 docker compose exec php bin/console doctrine:migrations:migrate --no-interaction
 ```
 
-**Run the MySQL leg with `composer test`, not bare `vendor/bin/phpunit`.** The dev
-stack exports OpenTelemetry traces on every query, and a bare phpunit inherits that
-env — a ~6x tax. `composer test` disables it (`composer test -- --filter=Foo` passes
-args); CI never installs the extension, so it is unaffected.
-
 `docker compose down` is safe. **`docker compose down -v` deletes the MySQL volume.**
-Dev also runs Grafana (http://localhost:3000, `admin`/`admin`), Loki, Tempo and
-Pyroscope, for viewing app logs, traces and profiles.
+Dev also runs Grafana (http://localhost:3000, `admin`/`admin`) and Loki, for viewing
+app logs.
 
 ## Layout
 

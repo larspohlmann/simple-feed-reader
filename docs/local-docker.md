@@ -30,10 +30,8 @@ Eleven services, started with one command from the repository root:
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
-| Grafana — provisioned with "Application logs" and "Application performance" (per-route timings, methods, queries, traces, flame graph) dashboards | http://localhost:3000 (login `admin`/`admin`) |
+| Grafana — provisioned with the "Application logs" dashboard | http://localhost:3000 (login `admin`/`admin`) |
 | Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
-| Tempo — trace storage behind Grafana, fed by the app's OTel exporter | 127.0.0.1:4318 (OTLP) |
-| Pyroscope — continuous + per-request profiles, off until the admin toggle is on | http://localhost:4040 |
 | Worker — the scheduled background jobs: recommendation runs, due scheduled runs, 5-minute feed refresh sweep, digest mails, saved-search memberships, failure-transport purge | `docker compose logs -f worker` |
 
 The app answers searches from the database whenever Meilisearch is absent or
@@ -192,9 +190,7 @@ uses
 `feedreader_test`, not `feedreader` — Doctrine's `when@test` `dbname_suffix`
 appends `_test` to whatever `DATABASE_URL` points at — so a test run never
 touches your dev data. `backend/phpunit.dist.xml` forces `MAILER_FALLBACK_DSN`
-back to `null://null`, so a test run sends nothing to Mailpit. Run it through
-`composer test`: it turns the stack's OpenTelemetry instrumentation off, which
-a bare `vendor/bin/phpunit` inherits and pays for on every query.
+back to `null://null`, so a test run sends nothing to Mailpit.
 
 Both e2e entry points (`composer e2e`, `npm run e2e`) send their mail to Mailpit
 even when an admin has saved a real mail server: they recreate `php` with
@@ -202,7 +198,7 @@ even when an admin has saved a real mail server: they recreate `php` with
 run is killed before its cleanup, `docker compose up -d php` followed by
 `docker compose restart nginx` puts it back by hand. `php` is recreated from the
 invoking shell's environment, so any other override the stack was booted with
-(such as #1262's tracing gates) is dropped unless set in that shell; a stack
+is dropped unless set in that shell; a stack
 already at `MAILER_FORCE_FALLBACK=1` is left as it is. The switch does not cover
 the worker, and the two suites should not run at the same time.
 
@@ -383,18 +379,6 @@ A Playwright run where every spec skipped exits 0, which for an unattended
 check is the worst outcome. `scripts/assert-playwright-ran.sh` re-decides that
 verdict and fails the job when nothing was verified.
 
-The runner boots `php` with tracing off. The job exports
-`OTEL_PHP_AUTOLOAD_ENABLED=false` and `OTEL_PHP_DISABLED_INSTRUMENTATIONS=all`,
-and `docker-compose.yml` reads both. With tracing on, every request and query
-became a span, both suites ran about 3.5 times slower, and the onboarding spec
-outran Playwright's 30-second test timeout (#1262). For a like-for-like local
-run, recreate `php` and `nginx` the same way, then bring them back with a plain
-`docker compose up -d php nginx`:
-
-```bash
-OTEL_PHP_AUTOLOAD_ENABLED=false OTEL_PHP_DISABLED_INSTRUMENTATIONS=all docker compose up -d php nginx
-```
-
 When a suite rots, the run opens a single issue labelled `e2e-rot` and comments
 on that issue on later failures rather than opening more. A red run does not
 block a deploy; the deploy guard still only reads `ci.yml`.
@@ -404,39 +388,3 @@ Run it early with:
 ```bash
 gh workflow run e2e-rot-check.yml
 ```
-
-## Profiling (Pyroscope)
-
-The stack runs a `pyroscope` container (<http://localhost:4040>) that stores
-code-level profiles. Profiling is **off by default**: turn it on in the admin
-**Settings → Grafana → Profiling** toggle (or a `PUT /api/admin/grafana` whose
-body carries every setting). While it is on, each traced HTTP request and the
-`messenger:consume` worker sample PHP stacks (via `ext-excimer`) and ship folded
-stacks to Pyroscope; the pusher fails open, so a dead or absent Pyroscope never
-breaks a request or the worker. The toggle takes effect within ~30 s on the
-worker without a restart.
-
-See the profiles two ways:
-
-- The **Application performance** dashboard's flame graph, filtered to the route
-  picked at the top (per-request profiles carry a `route` label).
-- From a trace: **Explore → Tempo →** open a request's root span **→ Profiles** —
-  the span carries `pyroscope.profile.id`, so the flame graph is that one
-  request's hotspots.
-
-`ext-excimer` is only in the Docker image, so profiling is inert on hosts
-without it (the toggle then says "The profiler extension is not installed on
-this host, so profiling cannot run here.").
-
-## Application performance dashboard
-
-The top row ranks every route seen in the time range four ways: p95 latency,
-average latency, request count, and error count. Click a route in any of those
-tables to load its detail below (or type a route name in the **Route** box). The
-panels below belong to the picked route: one point per request, the `#[WithSpan]`
-methods and the DBAL statements that ran under it (each by average duration), the
-slowest traces, and the flame graph of its sampled requests. Max is avoided in
-the aggregate tables on purpose — a single outlier makes it misleading; p95 and
-average describe the route better. It is built for a site that serves a handful
-of requests per hour, so it shows per-request timings and percentiles, not
-requests-per-second rates.
