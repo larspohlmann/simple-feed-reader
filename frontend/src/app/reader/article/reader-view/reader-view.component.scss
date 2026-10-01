@@ -11,10 +11,6 @@
    so this overlay hides the still-mounted list until a swipe slides it aside. */
 .reader {
   position: relative;
-
-  /* Keeps the toolbar's and nameplate's z-index inside the article at rest, when
-     the gestures leave it untransformed (#1332): they must not cover the split seam. */
-  isolation: isolate;
   min-height: 100%;
   background: var(--surface-read);
   container-type: inline-size;
