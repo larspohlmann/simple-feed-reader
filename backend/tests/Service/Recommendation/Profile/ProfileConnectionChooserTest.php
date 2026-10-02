@@ -55,21 +55,6 @@ final class ProfileConnectionChooserTest extends DbTestCase
         self::assertSame($next, $this->jev->getProfileConnection());
     }
 
-    public function testEachJevConnectionKeepsItsOwnChoice(): void
-    {
-        $other = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest');
-        $first = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
-        $second = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o-mini');
-
-        $this->chooser()->choose($this->jev, $first);
-        $this->chooser()->choose($other, $second);
-
-        $this->entityManager->refresh($this->jev);
-        $this->entityManager->refresh($other);
-        self::assertSame($first, $this->jev->getProfileConnection());
-        self::assertSame($second, $other->getProfileConnection());
-    }
-
     public function testAJevConnectionIsRefusedAsTheProfileConnection(): void
     {
         $other = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest');

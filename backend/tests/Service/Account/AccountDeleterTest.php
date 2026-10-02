@@ -13,6 +13,7 @@ use App\Exception\ValidationException;
 use App\Service\Account\AccountDeleter;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 
 final class AccountDeleterTest extends DbTestCase
@@ -21,12 +22,17 @@ final class AccountDeleterTest extends DbTestCase
 
     private AccountDeleter $deleter;
     private UserFactory $userFactory;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->deleter = self::getContainer()->get(AccountDeleter::class);
+        $this->fixtures = new RecommendationRunFixtures(
+            $this->entityManager,
+            self::getContainer()->get(ApiKeyCipher::class),
+        );
         $this->userFactory = new UserFactory(
             $this->entityManager,
             self::getContainer()->get('security.user_password_hasher'),
@@ -87,7 +93,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai@example.com');
-        $configurationId = $this->persistedConfigurationOf($target)->requireId();
+        $configurationId = $this->fixtures->seedInactiveAiSettingsFor($target, 'gpt-4o')->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -103,7 +109,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai-2@example.com');
-        $configuration = $this->persistedConfigurationOf($target);
+        $configuration = $this->fixtures->seedInactiveAiSettingsFor($target, 'gpt-4o');
         $target->setActiveAiProviderSettings($configuration);
         $this->entityManager->flush();
         $targetId = $target->requireId();
@@ -126,9 +132,8 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai-3@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai-3@example.com');
-        $profileConnection = $this->persistedConfigurationOf($target);
-        $borrower = $this->persistedConfigurationOf($target);
-        $borrower->setProfileConnection($profileConnection);
+        $borrower = $this->fixtures->seedInactiveAiSettingsFor($target, 'jev-latest');
+        $this->fixtures->seedProfileConnectionBorrowedBy($borrower);
         $target->setActiveAiProviderSettings($borrower);
         $this->entityManager->flush();
         $targetId = $target->requireId();
@@ -140,24 +145,6 @@ final class AccountDeleterTest extends DbTestCase
             [$targetId],
         )->fetchOne();
         self::assertSame(0, is_numeric($count) ? (int) $count : -1);
-    }
-
-    private function persistedConfigurationOf(User $owner): AiProviderSettings
-    {
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $configuration = new AiProviderSettings(
-            $owner,
-            null,
-            'https://api.example.test/v1',
-            $cipher->seal($owner->requireId(), 'sk-throwaway1234'),
-            '1234',
-            new \DateTimeImmutable(self::NOW),
-        );
-        $this->entityManager->persist($configuration);
-        $this->entityManager->flush();
-
-        return $configuration;
     }
 
     public function testAnAdminCannotDeleteThemselves(): void

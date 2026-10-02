@@ -185,10 +185,8 @@ final readonly class AiProviderConfigurator
             $user->setActiveAiProviderSettings(null);
         }
 
-        foreach ($this->aiProviderSettings->findAllForUser($user) as $sibling) {
-            if ($sibling->getProfileConnection() === $settings) {
-                $sibling->setProfileConnection(null);
-            }
+        foreach ($this->aiProviderSettings->findBorrowersOf($settings) as $borrower) {
+            $borrower->setProfileConnection(null);
         }
     }
 

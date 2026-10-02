@@ -1092,6 +1092,19 @@ describe('AiSectionComponent', () => {
     const picker = (fixture: ComponentFixture<AiSectionComponent>): HTMLSelectElement | null =>
       (fixture.nativeElement as HTMLElement).querySelector('.profile-connection select');
 
+    const profilePickers = (
+      fixture: ComponentFixture<AiSectionComponent>,
+    ): { areas: HTMLElement[]; selects: HTMLSelectElement[] } => {
+      const areas = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.profile-connection'),
+      );
+
+      return {
+        areas,
+        selects: areas.map((area) => area.querySelector('select') as HTMLSelectElement),
+      };
+    };
+
     const mountReady = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
       const fixture = mount();
       ai.configs.set(configs);
@@ -1149,9 +1162,7 @@ describe('AiSectionComponent', () => {
       ]);
 
       expect(areaOf(fixture, 7).querySelector('.profile-connection')).toBeNull();
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelectorAll('.profile-connection'),
-      ).toHaveLength(1);
+      expect(profilePickers(fixture).areas).toHaveLength(1);
     });
 
     it('shows each borrowed connection its own choice and saves a change for that row only', () => {
@@ -1161,11 +1172,7 @@ describe('AiSectionComponent', () => {
         config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
         config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
       ]);
-      const selects = Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLSelectElement>(
-          '.profile-connection select',
-        ),
-      );
+      const { selects } = profilePickers(fixture);
       expect(selects.map(shown)).toEqual(['Local', 'Cloud']);
 
       pick(selects[1], 1);
@@ -1332,11 +1339,7 @@ describe('AiSectionComponent', () => {
         const fixture = mountWithRealService([
           { ...jevActive, id: 13, name: 'second', active: false },
         ]);
-        const selects = Array.from(
-          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLSelectElement>(
-            '.profile-connection select',
-          ),
-        );
+        const { selects } = profilePickers(fixture);
 
         pick(selects[1], 1);
         fixture.detectChanges();
@@ -1355,12 +1358,7 @@ describe('AiSectionComponent', () => {
         const fixture = mountWithRealService([
           { ...jevActive, id: 13, name: 'second', active: false },
         ]);
-        const areas = Array.from(
-          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
-            '.profile-connection',
-          ),
-        );
-        const selects = areas.map((area) => area.querySelector('select') as HTMLSelectElement);
+        const { areas, selects } = profilePickers(fixture);
 
         pick(selects[1], 1);
         fixture.detectChanges();

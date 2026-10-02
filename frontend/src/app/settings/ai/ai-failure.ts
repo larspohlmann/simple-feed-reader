@@ -51,8 +51,7 @@ export const SERVER_TEXT_KINDS: ReadonlySet<AiFailureKind> = new Set<AiFailureKi
 export type AiFailureScope =
   | { readonly action: 'load' }
   | { readonly action: 'add' }
-  | { readonly action: 'profile'; readonly configId: number }
-  | { readonly action: 'row'; readonly configId: number };
+  | { readonly action: 'row' | 'profile'; readonly configId: number };
 
 export interface ScopedAiFailure {
   readonly failure: AiFailure;

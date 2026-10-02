@@ -182,7 +182,7 @@ export class AiSectionComponent {
   private failureFor(action: 'row' | 'profile', configId: number): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== action) return null;
-    if (!('configId' in scoped.scope) || scoped.scope.configId !== configId) return null;
+    if (scoped.scope.configId !== configId) return null;
 
     return this.message(scoped.failure);
   }

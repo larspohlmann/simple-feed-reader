@@ -90,10 +90,7 @@ final class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
-    /**
-     * The connection that distils the profile for this one when its engine cannot. AiProviderConfigurator clears it
-     * before removing that row; ON DELETE SET NULL is only the database floor.
-     */
+    /** Cleared on delete before the row goes; ON DELETE SET NULL is only the database floor. */
     #[ORM\ManyToOne(targetEntity: self::class)]
     #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
     private ?self $profileConnection = null;
