@@ -17,6 +17,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\RecommendationEngineSwitchFailure;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Tests\DbTestCase;
@@ -232,6 +233,28 @@ final class JevRecommendationEngineTest extends DbTestCase
             [CallVerdict::Unusable, CallVerdict::Unusable, CallVerdict::Unusable],
             array_map(static fn (RecommendationRunLog $log): ?CallVerdict => $log->getVerdict(), $this->logs($run)),
         );
+    }
+
+    public function testAnLlmRunWhoseConnectionSwitchedToJevFailsWithoutAnyCall(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
+        $this->entityManager->flush();
+        $this->starter()->start($this->owner);
+        $this->advancer()->advance($this->owner);
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:10:00'), 64_000);
+        $this->entityManager->flush();
+
+        $this->advancer()->advance($this->owner);
+
+        $run = $this->latestRun();
+        self::assertSame('failed', $run->getStatus()->value);
+        self::assertSame(RecommendationEngineSwitchFailure::MESSAGE, $run->getError());
+        self::assertSame([], $this->systemOne()->requests());
     }
 
     /** Snapshot, then the one-request warm-up wave banks the first 100-question batch; 101 candidates leave one more. */

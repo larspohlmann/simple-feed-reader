@@ -22,6 +22,7 @@ final readonly class TickPhases
         private RecommendationEngineResolver $engines,
         private RecommendationRunDeferral $deferral,
         private RecommendationTransportFailureRecorder $transportFailures,
+        private RecommendationEngineSwitchFailure $engineSwitch,
         private ClockInterface $clock,
     ) {
     }
@@ -31,6 +32,10 @@ final readonly class TickPhases
         $run = $tick->run;
         if (RunStatus::Pending === $run->getStatus()) {
             return $this->snapshot->advance($tick);
+        }
+
+        if ($run->getEngineKind() !== $tick->engineKind) {
+            return $this->engineSwitch->fail($run);
         }
 
         if ($run->isRetryDeferredAt($this->clock->now())) {
