@@ -6,29 +6,28 @@ namespace App\Http;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
- * The effective recommendation settings plus the fixed prompt layers the card shows read-only. `contextWindowOverride`
- * is the user's own value or null; `contextWindow` is always the effective one.
+ * The effective recommendation settings plus, for an engine that sends a prompt, the prompt layers the card shows
+ * read-only. `contextWindowOverride` is the user's own value or null; `contextWindow` is always the effective one.
  */
 final class RecommendationSettingsJson
 {
     /**
      * @return array<string, mixed>
      */
-    public static function state(EffectiveRecommendationSettingsModel $effective, bool $workerAlive): array
-    {
+    public static function state(
+        EffectiveRecommendationSettingsModel $effective,
+        RecommendationEngineCapabilitiesModel $capabilities,
+        bool $workerAlive,
+    ): array {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
-            'profileText' => $effective->profileText,
-            'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
-            'fixedPrompt' => [
-                'role' => RecommendationPromptText::BATCH_SYSTEM_ROLE,
-                'outputContract' => RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
-            ],
+            ...self::promptPieces($effective, $capabilities),
             'expertDefaults' => [
                 'guidancePrompt' => null,
                 'favoritesCap' => RecommendationSettings::DEFAULT_FAVORITES_CAP,
@@ -56,6 +55,31 @@ final class RecommendationSettingsJson
             'showReasons' => $effective->showReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
             'workerAlive' => $workerAlive,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     profileText: ?string,
+     *     defaultGuidancePrompt: ?string,
+     *     fixedPrompt: array{role: string, outputContract: string}|null,
+     * }
+     */
+    private static function promptPieces(
+        EffectiveRecommendationSettingsModel $effective,
+        RecommendationEngineCapabilitiesModel $capabilities,
+    ): array {
+        if (!$capabilities->sendsPrompt) {
+            return ['profileText' => null, 'defaultGuidancePrompt' => null, 'fixedPrompt' => null];
+        }
+
+        return [
+            'profileText' => $effective->profileText,
+            'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
+            'fixedPrompt' => [
+                'role' => RecommendationPromptText::BATCH_SYSTEM_ROLE,
+                'outputContract' => RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
+            ],
         ];
     }
 }

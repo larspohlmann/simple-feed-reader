@@ -14,7 +14,7 @@ final readonly class ActiveAiJson
     {
     }
 
-    /** @return array{ready: bool, model: ?string, capabilities: array{reasons: bool, tuningFields: list<string>}|null} */
+    /** @return array{ready: bool, model: ?string, capabilities: array{reasons: bool, prompt: bool, tuningFields: list<string>}|null} */
     public function of(User $user): array
     {
         $connection = $user->getActiveAiProviderSettings();

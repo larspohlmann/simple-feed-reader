@@ -223,7 +223,11 @@ describe('RecommendationSettingsCardComponent', () => {
     });
 
     it('offers each tuning control by its own field', () => {
-      const fixture = mount(STATE, { reasons: false, tuningFields: ['contextWindow'] });
+      const fixture = mount(STATE, {
+        reasons: false,
+        prompt: false,
+        tuningFields: ['contextWindow'],
+      });
 
       expect(contextWindowInput(fixture)).not.toBeNull();
       expect(batchSizeSelect(fixture)).toBeNull();
@@ -231,11 +235,27 @@ describe('RecommendationSettingsCardComponent', () => {
     });
 
     it('offers the reasons switch to an engine that writes reasons but reads no tuning', () => {
-      const fixture = mount(STATE, { reasons: true, tuningFields: [] });
+      const fixture = mount(STATE, { reasons: true, prompt: true, tuningFields: [] });
 
       expect(showReasonsToggle(fixture)).not.toBeNull();
       expect(batchSizeSelect(fixture)).toBeNull();
       expect(contextWindowInput(fixture)).toBeNull();
+    });
+  });
+
+  describe("the prompt capability's read-only pieces", () => {
+    it('shows no fixed prompt, distilled profile or guidance default to an engine that sends no prompt', () => {
+      const fixture = mount(
+        { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
+        { reasons: false, prompt: false, tuningFields: ['batchConcurrency'] },
+      );
+      const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+      expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
+      ).toBeNull();
+      expect(guidance.placeholder).toBe('');
     });
   });
 

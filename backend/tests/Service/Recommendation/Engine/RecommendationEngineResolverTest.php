@@ -28,11 +28,12 @@ final class RecommendationEngineResolverTest extends TestCase
         self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('typesafe/jev-router')));
     }
 
-    public function testTheLlmKindWritesReasonsAndReadsEveryTuningFieldInTheirOrder(): void
+    public function testTheLlmKindWritesReasonsSendsAPromptAndReadsEveryTuningFieldInTheirOrder(): void
     {
         $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
 
         self::assertTrue($capabilities->writesReasons);
+        self::assertTrue($capabilities->sendsPrompt);
         self::assertSame(
             [
                 RecommendationTuningField::ContextWindow,
@@ -56,6 +57,18 @@ final class RecommendationEngineResolverTest extends TestCase
         self::assertEquals(
             RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
             $resolver->capabilitiesFor($this->connection('gpt-4o-mini')),
+        );
+    }
+
+    /** Reads as the LLM, the kind a connection without a model resolves to: the unconfigured payload stays as it was. */
+    public function testAnAccountWithoutAnActiveConnectionReadsAsTheLlm(): void
+    {
+        $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
+        $account = new User('no-connection@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
+
+        self::assertEquals(
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
+            $resolver->capabilitiesForAccount($account),
         );
     }
 

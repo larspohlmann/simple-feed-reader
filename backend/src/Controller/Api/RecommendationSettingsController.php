@@ -7,6 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Recommendation\SaveRecommendationSettingsRequest;
 use App\Entity\User;
 use App\Http\RecommendationSettingsJson;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Service\Recommendation\Run\WorkerPresence;
@@ -22,6 +23,7 @@ final readonly class RecommendationSettingsController
         private RecommendationSettingsResolver $resolver,
         private RecommendationSettingsWriter $writer,
         private WorkerPresence $presence,
+        private RecommendationEngineResolver $engines,
     ) {
     }
 
@@ -30,6 +32,7 @@ final readonly class RecommendationSettingsController
     {
         return new JsonResponse(RecommendationSettingsJson::state(
             $this->resolver->forUser($user),
+            $this->engines->capabilitiesForAccount($user),
             $this->presence->hasPersistentRecommendationWorker(),
         ));
     }
@@ -43,6 +46,7 @@ final readonly class RecommendationSettingsController
 
         return new JsonResponse(RecommendationSettingsJson::state(
             $this->resolver->forUser($user),
+            $this->engines->capabilitiesForAccount($user),
             $this->presence->hasPersistentRecommendationWorker(),
         ));
     }

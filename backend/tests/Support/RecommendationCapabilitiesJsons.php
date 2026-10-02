@@ -12,6 +12,7 @@ final class RecommendationCapabilitiesJsons
 {
     public const array LLM = [
         'reasons' => true,
+        'prompt' => true,
         'tuningFields' => [
             'contextWindow',
             'batchSize',

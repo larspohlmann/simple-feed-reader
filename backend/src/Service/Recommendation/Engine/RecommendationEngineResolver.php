@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
@@ -29,6 +30,16 @@ final readonly class RecommendationEngineResolver
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
         return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
+    }
+
+    /** An account without an active connection reads as the LLM, the kind a connection without a model resolves to. */
+    public function capabilitiesForAccount(User $user): RecommendationEngineCapabilitiesModel
+    {
+        $connection = $user->getActiveAiProviderSettings();
+
+        return null === $connection
+            ? RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm)
+            : $this->capabilitiesFor($connection);
     }
 
     public function engineOf(RecommendationEngineKind $kind): RecommendationEngineInterface

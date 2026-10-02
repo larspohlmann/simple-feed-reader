@@ -17,6 +17,8 @@ export type RecommendationTuningField = (typeof RECOMMENDATION_TUNING_FIELDS)[nu
 /** What a connection's recommendation engine can do; the client renders from it and never learns the engine. */
 export interface RecommendationCapabilities {
   readonly reasons: boolean;
+  /** Whether the engine sends a prompt of its own: a fixed prompt, a guidance default and a distilled profile. */
+  readonly prompt: boolean;
   readonly tuningFields: readonly RecommendationTuningField[];
 }
 
@@ -30,6 +32,7 @@ export function offersTuning(
 
 export const NO_RECOMMENDATION_CAPABILITIES: RecommendationCapabilities = {
   reasons: false,
+  prompt: false,
   tuningFields: [],
 };
 

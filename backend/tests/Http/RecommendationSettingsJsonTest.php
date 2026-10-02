@@ -8,7 +8,9 @@ use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationSettingsJson;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
@@ -20,7 +22,7 @@ final class RecommendationSettingsJsonTest extends TestCase
     {
         $effective = $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.');
 
-        $state = RecommendationSettingsJson::state($effective, workerAlive: true);
+        $state = RecommendationSettingsJson::state($effective, self::llm(), workerAlive: true);
 
         self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
     }
@@ -31,7 +33,7 @@ final class RecommendationSettingsJsonTest extends TestCase
      */
     public function testFixedPromptIsTheBatchPromptTheRunnerActuallySends(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         /** @var array{role: string, outputContract: string} $fixedPrompt */
         $fixedPrompt = $state['fixedPrompt'];
@@ -50,9 +52,23 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertStringNotContainsString('"reason"', $fixedPrompt['outputContract']);
     }
 
+    /** An engine without a prompt has no profile, no guidance default and no fixed prompt to show. */
+    public function testAnEngineWithoutAPromptSendsNoneOfThePromptPieces(): void
+    {
+        $state = RecommendationSettingsJson::state(
+            $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.'),
+            new RecommendationEngineCapabilitiesModel(false, false, []),
+            workerAlive: true,
+        );
+
+        self::assertNull($state['profileText']);
+        self::assertNull($state['defaultGuidancePrompt']);
+        self::assertNull($state['fixedPrompt']);
+    }
+
     public function testStateEmitsNullProfileTextWhenAbsent(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         self::assertNull($state['profileText']);
     }
@@ -61,6 +77,7 @@ final class RecommendationSettingsJsonTest extends TestCase
     {
         $state = RecommendationSettingsJson::state(
             $this->effectiveSettings(showReasons: true),
+            self::llm(),
             workerAlive: true,
         );
 
@@ -69,14 +86,14 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateEmitsShowReasonsFalseByDefault(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         self::assertFalse($state['showReasons']);
     }
 
     public function testStateEmitsFactoryDefaultsForTheExpertDraft(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         self::assertSame([
             'guidancePrompt' => null,
@@ -92,14 +109,14 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     public function testStateEmitsTheEffectiveBatchSize(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         self::assertSame('medium', $state['batchSize']);
     }
 
     public function testStateEmitsTheExpertFieldBounds(): void
     {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), workerAlive: true);
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
         self::assertSame([
             'favoritesCap' => ['min' => 0, 'max' => 500],
@@ -109,6 +126,11 @@ final class RecommendationSettingsJsonTest extends TestCase
             'picksLimit' => ['min' => 1, 'max' => 500],
             'contextWindow' => ['min' => 4096, 'max' => 2097152],
         ], $state['expertBounds']);
+    }
+
+    private static function llm(): RecommendationEngineCapabilitiesModel
+    {
+        return RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
     }
 
     private function effectiveSettings(

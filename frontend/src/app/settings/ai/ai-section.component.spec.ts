@@ -438,7 +438,11 @@ describe('AiSectionComponent', () => {
       config({
         id: 7,
         slowModel: false,
-        capabilities: { reasons: false, tuningFields: ['slowModel', 'batchConcurrency'] },
+        capabilities: {
+          reasons: false,
+          prompt: false,
+          tuningFields: ['slowModel', 'batchConcurrency'],
+        },
       }),
     ]);
     const setSlowModel = jest.spyOn(ai, 'setSlowModel').mockImplementation(() => undefined);

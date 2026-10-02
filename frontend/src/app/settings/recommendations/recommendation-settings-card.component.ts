@@ -80,6 +80,8 @@ export class RecommendationSettingsCardComponent {
 
   /** Only an engine that writes reasons offers the switch that shows them. */
   readonly offersReasons = computed(() => this.availability.capabilities().reasons);
+  /** Only an engine that sends a prompt has a fixed prompt, a guidance default and a distilled profile to show. */
+  readonly offersPrompt = computed(() => this.availability.capabilities().prompt);
 
   // Typed fields: displayed here, held as a pending draft in the service until
   // the explicit Save. Each seeds from server truth and recomputes when the

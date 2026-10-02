@@ -33,11 +33,13 @@ export type RecommendationExpertField =
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
   readonly guidancePrompt: string | null;
-  readonly defaultGuidancePrompt: string;
+  /** The guidance the engine falls back to; null when the engine sends no prompt of its own. */
+  readonly defaultGuidancePrompt: string | null;
+  /** The batch call's fixed layers; null when the engine sends no prompt of its own. */
   readonly fixedPrompt: {
     readonly role: string;
     readonly outputContract: string;
-  };
+  } | null;
   readonly expertDefaults: RecommendationExpertDefaults;
   readonly expertBounds: Readonly<Record<RecommendationExpertField, RecommendationSettingBounds>>;
   readonly favoritesCap: number;

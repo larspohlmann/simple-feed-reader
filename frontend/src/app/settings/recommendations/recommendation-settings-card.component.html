@@ -226,7 +226,7 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
               <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
                 <p class="prompt-info">{{ 'settings.ai.info.guidance' | transloco }}</p>
                 <textarea
-                  [placeholder]="state.defaultGuidancePrompt"
+                  [placeholder]="offersPrompt() ? (state.defaultGuidancePrompt ?? '') : ''"
                   [value]="guidance()"
                   (input)="onGuidanceInput($event)"
                 ></textarea>
@@ -236,31 +236,35 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
               </app-button>
             </div>
 
-            @if (state.profileText; as profile) {
-              <app-disclosure
-                appearance="drill-in"
-                data-testid="recommendation-profile"
-                [label]="'settings.ai.recommendations.profileLabel' | transloco"
-              >
-                <div class="prompt-body">
-                  <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
-                  <p class="expert-profile-text">{{ profile }}</p>
-                </div>
-              </app-disclosure>
+            @if (offersPrompt()) {
+              @if (state.profileText; as profile) {
+                <app-disclosure
+                  appearance="drill-in"
+                  data-testid="recommendation-profile"
+                  [label]="'settings.ai.recommendations.profileLabel' | transloco"
+                >
+                  <div class="prompt-body">
+                    <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
+                    <p class="expert-profile-text">{{ profile }}</p>
+                  </div>
+                </app-disclosure>
+              }
+
+              @if (state.fixedPrompt; as fixedPrompt) {
+                <app-disclosure
+                  appearance="drill-in"
+                  [label]="'settings.ai.recommendations.fixedShow' | transloco"
+                >
+                  <div class="prompt-body">
+                    <p class="prompt-info">{{ 'settings.ai.info.fixedPrompt' | transloco }}</p>
+                    <pre class="fixed"
+                      >{{ fixedPrompt.role }}
+
+{{ fixedPrompt.outputContract }}</pre>
+                  </div>
+                </app-disclosure>
+              }
             }
-
-            <app-disclosure
-              appearance="drill-in"
-              [label]="'settings.ai.recommendations.fixedShow' | transloco"
-            >
-              <div class="prompt-body">
-                <p class="prompt-info">{{ 'settings.ai.info.fixedPrompt' | transloco }}</p>
-                <pre class="fixed"
-                  >{{ state.fixedPrompt.role }}
-
-{{ state.fixedPrompt.outputContract }}</pre>
-              </div>
-            </app-disclosure>
           </div>
 
           <div class="inset">
