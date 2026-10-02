@@ -9,7 +9,7 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Ai\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\TestCase;

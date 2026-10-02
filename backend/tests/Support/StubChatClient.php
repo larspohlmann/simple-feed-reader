@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
-use App\Service\Ai\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface;
-use App\Service\Ai\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Llm\Completion\Model\CompletionOutcomeModel;
-use App\Service\Ai\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Ai\Llm\Completion\Model\CompletionStreamProgressModel;
-use App\Service\Ai\Llm\Completion\Model\Reasoning;
 use App\Service\Ai\Model\ProviderConnectionModel;
+use App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface;
+use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 
 /**
  * The test container's ChatCompletionClientInterface: records every call and answers from one FIFO queue, so a queued

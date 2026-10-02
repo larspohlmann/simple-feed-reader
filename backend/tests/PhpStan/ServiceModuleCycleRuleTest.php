@@ -79,29 +79,29 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         );
     }
 
-    public function testAnLlmEngineMayDependOnRecommendationWhichDependsOnTheRestOfAi(): void
+    public function testTheLlmSubModuleMayReachRecommendationDirectlyAndThroughAnotherModule(): void
     {
-        $this->analyse([self::fixture('ai-sub-module-acyclic')], []);
+        $this->analyse([self::fixture('recommendation-sub-module-acyclic')], []);
     }
 
-    public function testRecommendationNamingTheLlmSubModuleClosesACycle(): void
+    public function testRecommendationNamingItsLlmSubModuleClosesACycle(): void
     {
         $this->analyse(
-            [self::fixture('ai-sub-module-cycle')],
-            [[self::message('Ai\Llm -> Recommendation -> Ai\Llm'), 25]],
+            [self::fixture('recommendation-sub-module-cycle')],
+            [[self::message('Recommendation -> Recommendation\Llm -> Recommendation'), 31]],
         );
     }
 
-    public function testASiblingWhoseNameStartsLikeTheSubModuleStaysInAi(): void
+    public function testASiblingWhoseNameStartsLikeTheSubModuleStaysInRecommendation(): void
     {
-        $this->analyse([self::fixture('ai-sibling-of-sub-module')], []);
+        $this->analyse([self::fixture('recommendation-sibling-of-sub-module')], []);
     }
 
     public function testAnAliasImportOfTheSubModulesNamespaceNamesTheSubModule(): void
     {
         $this->analyse(
-            [self::fixture('ai-sub-module-alias')],
-            [[self::message('Ai\Llm -> Recommendation -> Ai\Llm'), 9]],
+            [self::fixture('recommendation-sub-module-alias')],
+            [[self::message('Recommendation\Llm -> Schedule -> Recommendation\Llm'), 9]],
         );
     }
 

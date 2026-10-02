@@ -358,7 +358,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $this->analyse([self::INSTANCE_PROPERTY_FIXTURE], []);
     }
 
-    public function testAnAiLlmClassImplementingAnAiInterfaceIsAnotherModulesImplementationAndStaysPut(): void
+    public function testAnLlmSubModuleClassImplementingARecommendationInterfaceIsAnotherModulesAndStaysPut(): void
     {
         require_once self::SUB_MODULE_FIXTURE;
 

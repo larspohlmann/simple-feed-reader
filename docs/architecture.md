@@ -206,17 +206,19 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with all its
+A `Service/*` module is the first directory under `backend/src/Service`: `Reading` with all its
 subdirectories is one module.
-The one exception is a directory listed in `ServiceModules::SUB_MODULES` (`backend/tests/PhpStan/`): `Service/Ai/Llm`
-is a module of its own, so the LLM engine there may depend on `Recommendation` while `Recommendation` depends on the
-rest of `Ai` (#1344). Every service belongs to a module, and the modules depend on each other without a
-cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+The one exception is a directory listed in `ServiceModules::SUB_MODULES` (`backend/tests/PhpStan/`):
+`Service/Recommendation/Llm` is a module of its own, so the LLM engine there depends on `Recommendation` and `Ai`
+while `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai` (#1344). Every service belongs to
+a module, and the modules depend on each other without a cycle, so each one can be read, tested and moved without
+the others. Decided in #1161.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
-  (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Ai\Llm`; and
-  `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the `Ai\Llm` transport calls).
+  (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Recommendation\Llm`;
+  and `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the `Recommendation\Llm`
+  transport calls).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.

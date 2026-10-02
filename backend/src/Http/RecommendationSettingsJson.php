@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Ai\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 

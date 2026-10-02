@@ -5,7 +5,7 @@ declare(strict_types=1);
 // A fixture for ServiceRoleRuleTest, excluded from `composer stan` like everything in this directory.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-namespace App\Service\Ai\Probe\ProbeCatalog {
+namespace App\Service\Recommendation\Probe\ProbeCatalog {
     /** @noinspection AutoloadingIssuesInspection */
     interface ProbeCatalogInterface
     {
@@ -13,8 +13,8 @@ namespace App\Service\Ai\Probe\ProbeCatalog {
     }
 }
 
-namespace App\Service\Ai\Llm {
-    use App\Service\Ai\Probe\ProbeCatalog\ProbeCatalogInterface;
+namespace App\Service\Recommendation\Llm {
+    use App\Service\Recommendation\Probe\ProbeCatalog\ProbeCatalogInterface;
 
     /** @noinspection AutoloadingIssuesInspection */
     final readonly class LlmProbeCatalog implements ProbeCatalogInterface

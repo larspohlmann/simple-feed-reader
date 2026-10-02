@@ -18,7 +18,7 @@ services:
         autowire: true
 
     # Every test talks to StubChatClient, never to a real provider.
-    App\Service\Ai\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
+    App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
 
     # No container-wired code path may exec() a real drainer process against the test database.

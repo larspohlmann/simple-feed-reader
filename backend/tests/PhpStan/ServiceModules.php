@@ -10,7 +10,7 @@ final class ServiceModules
     public const string SERVICE_NAMESPACE = 'App\\Service\\';
 
     /** Directories below Service/ that are modules of their own; the rest of their parent stays the parent's (#1344). */
-    private const array SUB_MODULES = ['Ai\\Llm'];
+    private const array SUB_MODULES = ['Recommendation\\Llm'];
 
     private function __construct()
     {
