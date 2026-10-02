@@ -163,6 +163,7 @@ final class RecommendationRun
             $this->batchProgress->batchesDone(),
             $this->callAttempts->attempts(),
             $this->isDistilled(),
+            $this->getEngineKind(),
         );
     }
 

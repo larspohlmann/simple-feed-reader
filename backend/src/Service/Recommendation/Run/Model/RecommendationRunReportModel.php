@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run\Model;
 
 use App\Entity\RecommendationRun;
+use App\Enum\RecommendationEngineKind;
 
 /**
  * The poll-facing view of a run, without its checkpoint internals. `status` also takes the two values below, which
@@ -26,19 +27,9 @@ final readonly class RecommendationRunReportModel
         public bool $background = false,
         public bool $waitingForLock = false,
         public int $streamedChars = 0,
-        public ?\DateTimeImmutable $startedAt = null,
-        public bool $firstBatchStarted = false,
+        public RunStartModel $start = new RunStartModel(),
+        public ?RecommendationEngineKind $engineKind = null,
     ) {
-    }
-
-    /** Null before the run has a start (the none and busy reports); the status payload and the ETA both read this. */
-    public function elapsedSecondsAt(\DateTimeImmutable $now): ?int
-    {
-        if (null === $this->startedAt) {
-            return null;
-        }
-
-        return max(0, $now->getTimestamp() - $this->startedAt->getTimestamp());
     }
 
     public static function none(): self
@@ -61,8 +52,8 @@ final readonly class RecommendationRunReportModel
             $progress->batchesDone,
             $run->getError(),
             streamedChars: $run->getStreamedChars(),
-            startedAt: $run->getCreatedAt(),
-            firstBatchStarted: $run->hasFirstBatchStarted(),
+            start: new RunStartModel($run->getCreatedAt(), $run->hasFirstBatchStarted()),
+            engineKind: $run->getEngineKind(),
         );
     }
 
@@ -77,8 +68,8 @@ final readonly class RecommendationRunReportModel
             background: true,
             waitingForLock: $this->waitingForLock,
             streamedChars: $this->streamedChars,
-            startedAt: $this->startedAt,
-            firstBatchStarted: $this->firstBatchStarted,
+            start: $this->start,
+            engineKind: $this->engineKind,
         );
     }
 
@@ -96,8 +87,8 @@ final readonly class RecommendationRunReportModel
             background: $this->background,
             waitingForLock: true,
             streamedChars: $this->streamedChars,
-            startedAt: $this->startedAt,
-            firstBatchStarted: $this->firstBatchStarted,
+            start: $this->start,
+            engineKind: $this->engineKind,
         );
     }
 }
