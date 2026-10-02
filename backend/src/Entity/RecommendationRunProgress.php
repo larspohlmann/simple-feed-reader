@@ -36,8 +36,8 @@ final readonly class RecommendationRunProgress
         bool $distilled,
         RecommendationEngineKind $engineKind,
     ): self {
-        $batchCount = $candidateBatches === null ? 0 : count($candidateBatches);
-        $hasPlan = $candidateBatches !== null && $batchCount > 0;
+        $batchCount = count($candidateBatches ?? []);
+        $hasPlan = $batchCount > 0;
         $allBatchCallsDone = $batchesDone === $batchCount;
         $distillationDone = $distilled || !$engineKind->runs(CallPhase::Distill);
 
