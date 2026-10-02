@@ -10,6 +10,7 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
 /** The LLM connection an engine without its own distillation borrows, with that connection's window and ceiling. */
 final readonly class BorrowedProfileModel
 {
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         public AiProviderSettings $connection,
         public EffectiveRecommendationSettingsModel $settings,

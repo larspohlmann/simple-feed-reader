@@ -129,7 +129,7 @@ final class TickPhasesTest extends DbTestCase
             try {
                 $this->phases($engine)->advance($tick);
             } catch (ProviderUnreachableException) {
-                self::addToAssertionCount(1);
+                $this->addToAssertionCount(1);
             }
         }
 
