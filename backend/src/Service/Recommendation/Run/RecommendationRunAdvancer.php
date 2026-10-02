@@ -7,11 +7,8 @@ namespace App\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
@@ -30,22 +27,15 @@ final readonly class RecommendationRunAdvancer
 {
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
 
-    /**
-     * Headroom over the longest silence a live holder produces: loading and packing before a request, banking between
-     * waves, the whole snapshot tick. Public so the test pins the TTL against its two inputs.
-     */
-    public const float LOCK_TTL_MARGIN_SECONDS = 300.0;
-
     public function __construct(
         private RecommendationRunRepository $runs,
         private LockFactory $lockFactory,
-        private AiProviderConfigurator $configurator,
-        private ProviderConnectionFactory $connectionFactory,
         private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
         private TickContextFactory $tickContexts,
         private TickLockKeepalive $keepalive,
         private TickPhases $phases,
+        private TickLockTtl $lockTtl,
     ) {
     }
 
@@ -58,7 +48,7 @@ final readonly class RecommendationRunAdvancer
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReportModel
     {
         $lockName = self::lockNameFor($user);
-        $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
+        $lock = $this->lockFactory->createLock($lockName, $this->lockTtl->secondsFor($user));
 
         if (!$lock->acquire()) {
             // Silent: a failed acquire is the healthy, frequent case; only the poll driver can tell a stall.
@@ -84,20 +74,6 @@ final readonly class RecommendationRunAdvancer
             $this->keepalive->release();
             $lock->release();
         }
-    }
-
-    /**
-     * One first-byte wait plus the margin, not the whole tick: the keepalive refreshes the lock on streamed chunks.
-     * Sizing: docs/recommendations-runs.md#the-tick-lock
-     */
-    private function lockTtlFor(User $user): float
-    {
-        $settings = $this->configurator->settingsFor($user);
-        $timeouts = null === $settings
-            ? ProviderTimeoutsModel::standard()
-            : $this->connectionFactory->timeoutsFor($settings);
-
-        return $timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_SECONDS;
     }
 
     private function tick(User $user, TickDriver $driver): RecommendationRunReportModel

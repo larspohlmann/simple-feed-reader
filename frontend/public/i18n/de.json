@@ -147,6 +147,10 @@
       "noStoredKey": "Es ist kein Schlüssel gespeichert — dieser Endpunkt wird ohne Schlüssel verwendet.",
       "model": "Modell",
       "modelPlaceholder": "Modell auswählen",
+      "modelHint": {
+        "noReasons": "bewertet Artikel, schreibt keine Begründungen",
+        "borrowedProfile": "braucht eine Profilverbindung"
+      },
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
       "provider": {
@@ -161,6 +165,7 @@
         "caption": "Laufverlauf und Protokolle. Standardmäßig eingeklappt."
       },
       "addTitle": "Konfiguration hinzufügen",
+      "addIntro": "Funktioniert mit jedem OpenAI-kompatiblen LLM-Endpunkt und mit Jev, dem System One von TypeSafe: Füge OpenRouter (https://openrouter.ai/api/v1) oder den eigenen Endpunkt von TypeSafe hinzu und wähle dann jev-latest als Modell.",
       "configs": {
         "active": "Aktiv",
         "activate": "Diesen verwenden",
@@ -188,6 +193,12 @@
         "validation": "Prüfe die eingegebenen Werte.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."
       },
+      "profileConnection": {
+        "label": "Profilverbindung",
+        "info": "Die Engine der aktiven Verbindung kann dein Leseprofil nicht selbst schreiben. Diese Verbindung schreibt es zu Beginn jedes Durchlaufs.",
+        "none": "Keine",
+        "empty": "Füge oben eine Verbindung mit einem Textmodell hinzu und wähle sie hier aus, um dein Profil zu erstellen."
+      },
       "fields": {
         "name": "Optionaler Name",
         "baseUrl": "Endpunkt",
@@ -200,13 +211,14 @@
         "slowModel": "Gibt dieser Verbindung deutlich mehr Zeit zum Antworten: eine Stunde für eine ganze Antwort und fünfzehn Minuten bis zum ersten Token. Aktiviere es für einen lokalen Modell-Server, der minutenlang nachdenkt, bevor er antwortet. Lass es für einen gehosteten Anbieter aus — dort bedeutet lange Stille, dass die Verbindung tot ist und schnell scheitern soll. Die langen Limits gelten nur, wenn ein Worker die Empfehlungs-Ticks ausführt; eine Web-Anfrage wird vom Webserver lange vorher abgebrochen.",
         "maxBatchSize": "Wie viele Artikel eine Anfrage dem Modell höchstens zur Bewertung vorlegt. Eine kürzere Liste behält ein kleines Modell leichter im Überblick und begrenzt, was ein außer Kontrolle geratener Lauf kosten kann — ein lokales 4B-Modell bekam pro Batch 45 Artikel vorgelegt, beantwortete acht Batches korrekt und verlor dann beim neunten den Faden: Es erfand immer neue IDs, bis ihm für die Antwort der Platz ausging. Die Geschmacks-Historie wird aber bei jedem Batch erneut mitgeschickt — ein niedrigerer Wert bedeutet also auch mehr Anfragen und mehr Prompt-Tokens über den gesamten Lauf. Leer lassen, um den Standardwert von {{default}} zu verwenden.",
         "batchConcurrency": "Wie viele Batch-Anfragen ein Lauf gleichzeitig sendet (1–8). Ein gehosteter Anbieter verkraftet meist 4–8 und beendet den Lauf schneller; ein lokaler Modell-Server läuft oft am besten mit 1. Senke den Wert, wenn der Anbieter dich drosselt.",
-        "modelPicker": "Die Liste wird live vom Endpunkt dieser Konfiguration geladen. Wähle das Modell, das die KI-Funktionen nutzen sollen — die Konfiguration ist einsatzbereit, sobald ein Modell gespeichert ist.",
+        "modelPicker": "Die Liste wird live vom Endpunkt dieser Konfiguration geladen. Wähle das Modell, das die KI-Funktionen nutzen sollen — die Konfiguration ist einsatzbereit, sobald ein Modell gespeichert ist. Jev-Modelle (jev-…) bewerten jeden Artikel, ohne Begründungen zu schreiben, und übernehmen dein Leseprofil von einer Profilverbindung.",
         "name": "Ein freier Name für diese Konfiguration, nur in dieser Liste sichtbar. Leer lassen, um stattdessen den Host des Endpunkts anzuzeigen.",
         "baseUrl": "Die Basis-URL einer OpenAI-kompatiblen API, inklusive Versionspfad — zum Beispiel https://api.openai.com/v1 für OpenAI selbst oder die Adresse eines lokalen Servers wie LM Studio. Jeder Anbieter, der die OpenAI-Chat-API spricht, funktioniert.",
         "apiKey": "Optional — ein lokaler Modell-Server wie LM Studio oder Ollama braucht keinen Schlüssel, du kannst das Feld also leer lassen. Der Schlüssel wird einmal gesendet und verschlüsselt gespeichert; er wird nie wieder angezeigt. Danach zeigt die Liste nur seine letzten Zeichen, damit du Schlüssel unterscheiden kannst. Gib einen neuen Schlüssel ein, um den gespeicherten zu ersetzen.",
         "autoGenerate": "Wie oft ein neuer „Für dich“-Lauf von selbst startet. Der Zeitplan braucht den Hintergrund-Worker (Docker) oder den Wartungs-Cron — ohne beides startet nichts von selbst, und unten erscheint eine Notiz mit dem Aufruf, um Läufe extern auszulösen. „Nur manuell“ schaltet den Zeitplan ab; Läufe lassen sich weiterhin selbst starten.",
         "lookback": "Wie viele Tage ein Lauf zurückblickt, um Kandidaten-Artikel zu finden. Nur ungelesene Artikel in diesem Zeitraum kommen infrage; „Max. Artikel“ begrenzt, wie viele davon ein Lauf übernimmt.",
         "guidance": "Dein eigener Steuertext für die Auswahl — bevorzugte Themen, unerwünschte Themen, Tonalität. Er wird zusätzlich zum festen Prompt unten gesendet. Leer bedeutet der eingebaute Standard (als Platzhalter sichtbar); „Auf Standard zurücksetzen“ leert dein Feld.",
+        "guidanceWithoutPrompt": "Dein eigener Steuertext für die Auswahl — bevorzugte Themen, unerwünschte Themen, Tonalität. Er wird zusammen mit deinem Leseverlauf gesendet; leer entscheidet der Verlauf allein.",
         "profile": "Was das Modell aus deinem Leseverhalten abgeleitet hat, um seine Auswahl zu steuern. Schreibgeschützt und aktualisiert sich, wenn sich dein Geschmack ändert.",
         "showScoreAndReasons": "Zeigt die Bewertung jedes empfohlenen Artikels und, wenn das Modell eine schreibt, eine einzeilige Begründung, warum er gewählt wurde. Zum Ausschalten für eine schlichtere Liste; die Bewertungen werden ohnehin erzeugt, dies steuert nur die Anzeige.",
         "favoritesCap": "Wie viele deiner zuletzt favorisierten Artikel dem Modell als Geschmacks-Historie gezeigt werden. 0 lässt Favoriten weg.",
@@ -222,7 +234,7 @@
       },
       "guide": {
         "title": "Schritt-für-Schritt-Einrichtung",
-        "intro": "Zwei kurze Anleitungen: zuerst einen KI-Endpunkt verbinden, dann die „Für dich“-Empfehlungen einstellen.",
+        "intro": "Drei kurze Anleitungen: einen KI-Endpunkt verbinden, die „Für dich“-Empfehlungen einstellen und sie optional von Jev bewerten lassen.",
         "connectionTitle": "KI-Verbindung einrichten",
         "connectionStep1": "Öffne unten „Konfiguration hinzufügen“.",
         "connectionStep2": "Trage den Endpunkt einer OpenAI-kompatiblen API ein — zum Beispiel https://api.openai.com/v1.",
@@ -234,7 +246,13 @@
         "recommendationsStep2": "Wähle ein leistungsfähiges Modell. qwen3.7-flash ist eine gute Voreinstellung — es bietet ein starkes Verhältnis von Qualität zu Preis. Stelle es mit „Modell ändern“ auf der aktiven Konfiguration ein.",
         "recommendationsStep3": "Wähle einen Zeitplan für „Für dich“ oder belasse es bei „Nur manuell“. Ein Zeitplan braucht den Hintergrund-Worker oder den Wartungs-Cron.",
         "recommendationsStep4": "Optional: Öffne die „Experteneinstellungen“, um Historien-Limits, Artikel- und Auswahl-Grenzen sowie den Leitprompt anzupassen.",
-        "recommendationsStep5": "Speichern. Schalte den Debug-Modus ein, um den nächsten Lauf im Debug-Protokoll zu untersuchen."
+        "recommendationsStep5": "Speichern. Schalte den Debug-Modus ein, um den nächsten Lauf im Debug-Protokoll zu untersuchen.",
+        "jevTitle": "Jev verwenden (TypeSafe System One)",
+        "jevStep1": "Jev bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. Für dein Leseprofil braucht es eine LLM-Verbindung — richte also zuerst wie oben eine ein.",
+        "jevStep2": "Öffne „Konfiguration hinzufügen“ und trage https://openrouter.ai/api/v1 mit deinem OpenRouter-Schlüssel ein oder den eigenen Endpunkt von TypeSafe mit einem TypeSafe-Schlüssel.",
+        "jevStep3": "Drücke „Konfiguration hinzufügen“, wähle dann in der Modellliste, die sich öffnet, „jev-latest · Jev“ und speichere es.",
+        "jevStep4": "Klappe die Zeile der neuen Konfiguration auf und wähle unter „Profilverbindung“ deine LLM-Verbindung.",
+        "jevStep5": "Drücke „Diesen verwenden“. Jevs Empfehlungen tragen dann eine Bewertung, aber keine Begründung."
       },
       "recommendations": {
         "title": "Empfehlungen",
@@ -262,6 +280,7 @@
         "lookback7": "Letzte 7 Tage",
         "guidance": "Leitprompt",
         "guidanceReset": "Prompt auf Standard zurücksetzen",
+        "guidanceClear": "Steuertext leeren",
         "factoryDefaultsReset": "Auf Werkseinstellungen zurücksetzen",
         "fixedShow": "Festen Prompt anzeigen",
         "expertTitle": "Experteneinstellungen",

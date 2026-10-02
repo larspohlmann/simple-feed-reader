@@ -78,18 +78,39 @@ How the fast path is provided depends on the deployment:
 ### Engines
 
 A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
-an engine (today every connection is an LLM connection); `SnapshotPhase` asks that engine to pack the candidate pool
+an engine (a model id starting with `jev-` is TypeSafe's System One, any other an LLM); `SnapshotPhase` asks that engine to pack the candidate pool
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile,
 scores the batches in waves and consolidates the best of them into the final list with reasons. Each engine kind
 declares the phases it runs; a run records the kind it was packed for, and its progress (`batchesTotal`) and the
-time-left estimate follow that kind's phases, learning only from completed runs of the same kind. The batch-wave
-skeleton (`BatchWavePhase`) loads each wave's batches and hands them to the engine's wave; it, the rate-limit loop
-(`Ai\RateLimitedCalls`) and the run-log recorder are shared, so an engine supplies only its own wave. Each kind also
-declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
-which shows only the settings that apply.
+time-left estimate follow that kind's phases, learning only from completed runs of the same kind; the estimate also
+adds those runs' median time between calls (worker pickup, tick waits), since elapsed counts from the run's
+creation. The batch-wave skeleton (`BatchWavePhase`) loads each wave's batches, and `BatchWaveRounds` runs the wave's
+rounds: an unusable batch retries alone, a deferring 429 settles every call, and one transport failure settles the
+whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\RateLimitedCalls`) and the run-log
+recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
+which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
+`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
+label beside its id (`RecommendationEngineResolver::labelForModel`: `"Jev"`, or `null` for an LLM), so the picker
+marks a Jev model without the client parsing its id; no client logic branches on the label:
+
+```json
+{"models": [{"id": "jev-latest", "label": "Jev",
+  "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
+```
+
+The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
+OpenRouter) one yes/no question per candidate: would this reader, described by the profile an LLM distilled and the
+guidance in `state`, want to read this article? A Jev run distils first, through the profile connection the account
+picks in Settings → AI (falling back to the last stored profile when the distillation fails); without one the run fails
+with a message that says so. The probability is the score (× 1000); there are no reasons and no consolidation,
+so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
+the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
+records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with
+an error that says so (switch back to resume it). The model catalog offers `jev-latest` wherever
+`{base}/systemone` answers.
 
 ### The tick lock
 
@@ -105,8 +126,9 @@ every 30 seconds, so the TTL only has to outlast the longest stretch in which a 
 - candidate loading and prompt assembly before the first request;
 - ranking, banking and recording between calls and waves, and the whole snapshot tick.
 
-The TTL is therefore the connection's first-byte timeout plus `RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS`
-(300 s): 8 minutes on a standard connection, 20 on a slow one. Only a slow connection pays the longer TTL. Do not size
+The TTL is therefore the connection's first-byte timeout plus `TickLockTtl::MARGIN_SECONDS`
+(300 s): 8 minutes on a standard connection, 20 on a slow one. Only a slow connection pays the longer TTL. A Jev
+account's lock covers the slower of its connection and the profile connection that distils for it. Do not size
 it from the keepalive's 30-second interval: that interval is a ceiling on refreshes, not a promise of one, and a live
 slow-profile holder's lock would lapse mid-call for a second tick to take. Do not size it for the longest tick either
 (`RecommendationRun::MAX_ATTEMPTS` rounds of a one-hour call, about three hours on the slow profile): a worker that

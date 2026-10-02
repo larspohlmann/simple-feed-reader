@@ -22,4 +22,33 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
             RecommendationCapabilitiesJsons::ofTheKind()->of($connection),
         );
     }
+
+    public function testAJevConnectionReportsNoReasonsNoPromptAndOnlyTheBatchConcurrency(): void
+    {
+        $connection = AiProviderSettingsFactory::build(
+            new User('capabilities-json-jev@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
+        );
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 32_000);
+
+        self::assertSame(
+            RecommendationCapabilitiesJsons::JEV,
+            RecommendationCapabilitiesJsons::ofTheKind()->of($connection),
+        );
+    }
+
+    public function testAnOfferedJevModelReportsTheCapabilitiesAJevConnectionHas(): void
+    {
+        self::assertSame(
+            RecommendationCapabilitiesJsons::JEV,
+            RecommendationCapabilitiesJsons::ofTheKind()->ofModel('jev-latest'),
+        );
+    }
+
+    public function testAnOfferedChatModelReportsTheLlmCapabilities(): void
+    {
+        self::assertSame(
+            RecommendationCapabilitiesJsons::LLM,
+            RecommendationCapabilitiesJsons::ofTheKind()->ofModel('typesafe/jev-router'),
+        );
+    }
 }

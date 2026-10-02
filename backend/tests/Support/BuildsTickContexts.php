@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\RecommendationRun;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
@@ -30,5 +31,12 @@ trait BuildsTickContexts
             $resolver->forUser($user),
             TickDriver::Poll,
         );
+    }
+
+    private function tickOfKind(RecommendationRun $run, RecommendationEngineKind $kind): TickContext
+    {
+        $tick = $this->tick($run);
+
+        return new TickContext($run, $tick->connection, $kind, $tick->settings, $tick->driver);
     }
 }

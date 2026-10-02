@@ -13,14 +13,11 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Tests\DbTestCase;
+use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -30,7 +27,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationPipelineTest extends DbTestCase
 {
-    private const int MAX_TICKS = 20;
+    use DrivesRecommendationRuns;
 
     private User $user;
     private RecommendationRunFixtures $fixtures;
@@ -62,9 +59,9 @@ final class RecommendationPipelineTest extends DbTestCase
             ['id' => $firstId, 'score' => 900, 'reason' => 'On Rust.'],
         ]);
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->user);
 
-        $items = $this->recommendationItems($run);
+        $items = $this->items($run);
         self::assertNotEmpty($items);
         // The consolidation reply's own pick outranks every other survivor,
         // which kept its plain batch score of 800 with an empty reason.
@@ -74,7 +71,7 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertSame('Likes Rust.', $this->storedProfileText()); // cached on settings
         self::assertSame(
             ['profile', 'recommendations', 'recommendations', 'recommendations'],
-            array_column($this->stubChatClient()->calls(), 'responseSchemaName'),
+            array_column($this->chat()->calls(), 'responseSchemaName'),
         );
     }
 
@@ -90,14 +87,14 @@ final class RecommendationPipelineTest extends DbTestCase
             ['id' => $firstId, 'score' => 700, 'reason' => 'y'],
         ]);
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->user);
 
-        $items = $this->recommendationItems($run);
+        $items = $this->items($run);
         self::assertNotEmpty($items);
         self::assertSame('y', $items[0]->getReason());
         self::assertSame(
             ['profile', 'recommendations', 'recommendations'],
-            array_column($this->stubChatClient()->calls(), 'responseSchemaName'),
+            array_column($this->chat()->calls(), 'responseSchemaName'),
         );
     }
 
@@ -111,16 +108,16 @@ final class RecommendationPipelineTest extends DbTestCase
         $firstId = $this->idOf($entries[0]);
 
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
-            $this->stubChatClient()->queueContent('not json');
+            $this->chat()->queueContent('not json');
         }
         $this->queueBatchReplyScoringEveryEntry($entries, 600);
         $this->queueConsolidationReply([
             ['id' => $firstId, 'score' => 600, 'reason' => 'z'],
         ]);
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->user);
 
-        self::assertNotEmpty($this->recommendationItems($run)); // the run still completes
+        self::assertNotEmpty($this->items($run)); // the run still completes
         self::assertNull($this->runProfileTextFor($run));       // no profile frozen on the run
         self::assertNull($this->storedProfileText());           // nothing was cached on settings either
     }
@@ -136,12 +133,12 @@ final class RecommendationPipelineTest extends DbTestCase
         $this->queueDistillReply('x');
         $this->queueBatchReplyScoringEveryEntry($entries, 500);
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
-            $this->stubChatClient()->queueContent('not json');
+            $this->chat()->queueContent('not json');
         }
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->user);
 
-        $items = $this->recommendationItems($run);
+        $items = $this->items($run);
         self::assertNotEmpty($items);
         self::assertSame('', $items[0]->getReason()); // empty-string reason on degrade
         self::assertSame(500, $items[0]->getScore());  // the undeduped batch score, not a consolidation one
@@ -197,7 +194,7 @@ final class RecommendationPipelineTest extends DbTestCase
 
     private function queueDistillReply(string $profile): void
     {
-        $this->stubChatClient()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
+        $this->chat()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -205,7 +202,7 @@ final class RecommendationPipelineTest extends DbTestCase
      */
     private function queueBatchReplyScoringEveryEntry(array $entries, int $score): void
     {
-        $this->stubChatClient()->queueContent(json_encode([
+        $this->chat()->queueContent(json_encode([
             'recommendations' => array_map(
                 fn (Entry $entry): array => ['id' => $this->idOf($entry), 'score' => $score],
                 $entries,
@@ -218,37 +215,10 @@ final class RecommendationPipelineTest extends DbTestCase
      */
     private function queueConsolidationReply(array $recommendations): void
     {
-        $this->stubChatClient()->queueContent(json_encode(
+        $this->chat()->queueContent(json_encode(
             ['recommendations' => $recommendations, 'duplicates' => []],
             \JSON_THROW_ON_ERROR,
         ));
-    }
-
-    /**
-     * Starts a run and drives advance() until nothing is active, exactly the
-     * way the poll driver and the worker both drain a run in production --
-     * the loop itself is the thing under test, not a shortcut around it.
-     */
-    private function runToCompletion(): RecommendationRun
-    {
-        $this->starter()->start($this->user);
-
-        for ($tick = 0; $tick < self::MAX_TICKS; $tick++) {
-            if (null === $this->runs()->findActiveForUser($this->user)) {
-                break;
-            }
-            $this->advancer()->advance($this->user);
-        }
-
-        self::assertNull(
-            $this->runs()->findActiveForUser($this->user),
-            'The pipeline did not reach a terminal state within ' . self::MAX_TICKS . ' ticks.',
-        );
-
-        $run = $this->runs()->findLatestForUser($this->user);
-        self::assertNotNull($run);
-
-        return $run;
     }
 
     private function idOf(Entry $entry): int
@@ -265,21 +235,6 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertNotNull($id);
 
         return $id;
-    }
-
-    /**
-     * @return list<RecommendationItem>
-     */
-    private function recommendationItems(RecommendationRun $run): array
-    {
-        $this->entityManager->clear();
-
-        /** @var list<RecommendationItem> $items */
-        $items = $this->entityManager
-            ->getRepository(RecommendationItem::class)
-            ->findBy(['run' => $run], ['position' => 'ASC']);
-
-        return $items;
     }
 
     private function runProfileTextFor(RecommendationRun $run): ?string
@@ -299,37 +254,5 @@ final class RecommendationPipelineTest extends DbTestCase
         $settings = $repository->findForUser($this->user);
 
         return $settings?->values()->profileText;
-    }
-
-    private function runs(): RecommendationRunRepository
-    {
-        /** @var RecommendationRunRepository $repository */
-        $repository = $this->entityManager->getRepository(RecommendationRun::class);
-
-        return $repository;
-    }
-
-    private function starter(): RecommendationRunStarter
-    {
-        /** @var RecommendationRunStarter $starter */
-        $starter = self::getContainer()->get(RecommendationRunStarter::class);
-
-        return $starter;
-    }
-
-    private function advancer(): RecommendationRunAdvancer
-    {
-        /** @var RecommendationRunAdvancer $advancer */
-        $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
-
-        return $advancer;
-    }
-
-    private function stubChatClient(): StubChatClient
-    {
-        /** @var StubChatClient $client */
-        $client = self::getContainer()->get(StubChatClient::class);
-
-        return $client;
     }
 }

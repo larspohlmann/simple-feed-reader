@@ -11,7 +11,9 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
 use App\Service\Recommendation\Run\SnapshotPhase;
@@ -113,6 +115,95 @@ final class TickPhasesTest extends DbTestCase
         self::assertSame(1, $run->getTransportFailures());
     }
 
+    /** The run's error names the address that failed: the profile connection's, while it distils for a Jev run. */
+    public function testABorrowedDistillationsFailureStrikesAgainstTheProfileConnection(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $engine = ScriptedRecommendationEngine::failingWith(new ProviderUnreachableException('It refused.'));
+        $run = $this->fixtures->createRun($this->owner);
+        $run->snapshot(RecommendationEngineKind::Jev, [[101, 102]]);
+        $this->entityManager->flush();
+        $tick = $this->tickOfKind($run, RecommendationEngineKind::Jev);
+        $tick = $tick->borrowingProfileFrom(
+            new BorrowedProfileModel($profile, RecommendationEngineKind::Llm, $tick->settings),
+        );
+
+        for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
+            try {
+                $this->phases($engine)->advance($tick);
+            } catch (ProviderUnreachableException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+
+        self::assertSame(
+            'The AI provider at ' . RecommendationRunFixtures::PROFILE_BASE_URL . ' failed: It refused.',
+            $run->getError(),
+        );
+    }
+
+    public function testARunPackedForAnotherEngineFailsWithoutBeingAdvanced(): void
+    {
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRun();
+
+        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
+    /** A run deferred by the old engine's rate limit fails at once: it would wait for a provider it never calls again. */
+    public function testTheSwitchIsCheckedBeforeARateLimitWait(): void
+    {
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRun();
+        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-08 10:10:00'));
+        $this->entityManager->flush();
+
+        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+
+        self::assertSame('failed', $report->status);
+    }
+
+    /** Runs from before the column carry no kind and keep running on the LLM. */
+    public function testARunWithoutARecordedKindKeepsRunningOnTheLlm(): void
+    {
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRun();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE recommendation_run SET engine_kind = NULL WHERE id = ?',
+            [$run->requireId()],
+        );
+        $this->entityManager->refresh($run);
+
+        $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Llm));
+
+        self::assertCount(1, $engine->advancedTicks);
+    }
+
+    /** Failed, not cancelled: back on the run's own engine it resumes and continues; on the other it fails again. */
+    public function testAFailedSwitchResumesOnItsOwnEngineAndFailsAgainOnTheOther(): void
+    {
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRun();
+        $phases = $this->phases($engine);
+        $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        self::assertSame('failed', $run->getStatus()->value);
+
+        $run->resume();
+        $this->entityManager->flush();
+        $report = $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Llm));
+        self::assertSame('running', $report->status);
+        self::assertCount(1, $engine->advancedTicks);
+
+        $report = $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertCount(1, $engine->advancedTicks);
+    }
+
     private function runningRun(): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
@@ -135,6 +226,7 @@ final class TickPhasesTest extends DbTestCase
             $resolver,
             new RecommendationRunDeferral($checkpoint, $this->entityManager, $this->clock),
             new RecommendationTransportFailureRecorder($checkpoint, $this->entityManager, $this->clock),
+            new RecommendationRunFailure($checkpoint, $this->entityManager, $this->clock),
             $this->clock,
         );
     }

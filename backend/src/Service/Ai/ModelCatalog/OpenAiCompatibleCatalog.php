@@ -8,6 +8,8 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\ResponseByteCap;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -16,6 +18,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Reads `GET {baseUrl}/models`, which every OpenAI-compatible provider answers alike. The caps are no SSRF boundary
  * (docs/security.md#ai-provider-endpoints); they stop one endpoint holding a request open or filling memory.
  */
+#[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 10])]
 final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
 {
     private const float TIMEOUT_SECONDS = 10.0;
@@ -52,16 +55,16 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             $status = $response->getStatusCode();
 
             if (401 === $status || 403 === $status) {
-                throw new CredentialsRejectedException('That provider refused the API key.');
+                throw CredentialsRejectedException::refusedKey();
             }
 
             if ($status >= 300) {
-                throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
+                throw ProviderUnreachableException::answeredWithStatus($status);
             }
 
             return $response->getContent();
         } catch (ExceptionInterface $exception) {
-            throw new ProviderUnreachableException('That address did not answer.', 0, $exception);
+            throw ProviderUnreachableException::didNotAnswer($exception);
         }
     }
 
@@ -78,16 +81,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
             'max_redirects' => 0,
-            // Refused on the wire as the bytes arrive, not truncated into an unparseable body; readBody() reports the
-            // aborted transfer as unreachable.
-            'on_progress' => static function (int $downloaded): void {
-                if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
-                    throw new ProviderUnreachableException(sprintf(
-                        'That provider answered with more than %d bytes.',
-                        self::MAXIMUM_RESPONSE_BYTES,
-                    ));
-                }
-            },
+            'on_progress' => ResponseByteCap::onProgress(self::MAXIMUM_RESPONSE_BYTES),
         ]);
     }
 

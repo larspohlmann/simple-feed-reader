@@ -8,12 +8,14 @@ namespace App\Enum;
 enum RecommendationEngineKind: string
 {
     case Llm = 'llm';
+    case Jev = 'jev';
 
     /** @return list<CallPhase> the phases a run of this kind calls the provider in, in order */
     public function phases(): array
     {
         return match ($this) {
             self::Llm => [CallPhase::Distill, CallPhase::Batch, CallPhase::Consolidate],
+            self::Jev => [CallPhase::Distill, CallPhase::Batch],
         };
     }
 

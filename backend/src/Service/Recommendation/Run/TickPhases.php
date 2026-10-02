@@ -17,11 +17,19 @@ use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
 {
+    /**
+     * A run belongs to the engine whose batches it froze. Failed, not cancelled: the error says why, and switching back
+     * to that connection makes the run resumable where it stopped.
+     */
+    public const string ENGINE_SWITCH = 'This run was started with a different recommendation engine than the active '
+        . 'AI connection uses. Start a new run, or switch back to that connection to resume this one.';
+
     public function __construct(
         private SnapshotPhase $snapshot,
         private RecommendationEngineResolver $engines,
         private RecommendationRunDeferral $deferral,
         private RecommendationTransportFailureRecorder $transportFailures,
+        private RecommendationRunFailure $runFailure,
         private ClockInterface $clock,
     ) {
     }
@@ -31,6 +39,10 @@ final readonly class TickPhases
         $run = $tick->run;
         if (RunStatus::Pending === $run->getStatus()) {
             return $this->snapshot->advance($tick);
+        }
+
+        if ($run->getEngineKind() !== $tick->engineKind) {
+            return $this->runFailure->fail($run, self::ENGINE_SWITCH);
         }
 
         if ($run->isRetryDeferredAt($this->clock->now())) {
@@ -49,7 +61,7 @@ final readonly class TickPhases
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
-            $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
+            $this->transportFailures->record($tick->run, $tick->connectionInFlight(), $exception->getMessage());
 
             throw $exception;
         }

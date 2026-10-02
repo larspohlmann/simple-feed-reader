@@ -31,6 +31,7 @@ const EXISTING = {
   capabilities: {
     reasons: true,
     prompt: true,
+    profile: 'own',
     tuningFields: [
       'contextWindow',
       'batchSize',

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\User;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Recommendation\Jev\JevRecommendationEngine;
 use App\Service\Recommendation\Llm\LlmRecommendationEngine;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -24,5 +25,18 @@ final class RecommendationEngineWiringTest extends KernelTestCase
         $connection->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-10-02 09:05:00'), null);
 
         self::assertInstanceOf(LlmRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
+    }
+
+    public function testTheContainerResolvesAJevConnectionToTheJevEngine(): void
+    {
+        self::bootKernel();
+        $resolver = self::getContainer()->get(RecommendationEngineResolver::class);
+        self::assertInstanceOf(RecommendationEngineResolver::class, $resolver);
+        $connection = AiProviderSettingsFactory::build(
+            new User('engine-wiring-jev@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
+        );
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 32_000);
+
+        self::assertInstanceOf(JevRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
     }
 }

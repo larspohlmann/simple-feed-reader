@@ -52,6 +52,9 @@
               (click)="choose(option)"
             >
               {{ option.label }}
+              @if (option.hint) {
+                <span class="option-hint">{{ option.hint }}</span>
+              }
             </li>
           }
         } @else {

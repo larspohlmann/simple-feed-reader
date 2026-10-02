@@ -45,6 +45,16 @@ final class TickContextFactoryTest extends DbTestCase
         self::assertSame(TickDriver::Worker, $tick->driver);
     }
 
+    public function testAJevConnectionTicksWithTheJevKind(): void
+    {
+        $owner = $this->user('tick-context-jev@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertSame(RecommendationEngineKind::Jev, $this->factory()->create($run, TickDriver::Poll)->engineKind);
+    }
+
     public function testAConnectionWithoutAModelCannotTick(): void
     {
         $owner = $this->user('tick-context-no-model@example.test');
@@ -58,6 +68,47 @@ final class TickContextFactoryTest extends DbTestCase
         $this->expectExceptionMessage('No model is chosen.');
 
         $this->factory()->create($run, TickDriver::Poll);
+    }
+
+    public function testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings(): void
+    {
+        $owner = $this->user('tick-context-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $profile = $this->fixtures->seedProfileConnectionFor($owner);
+        $profile->setMaxBatchSize(30);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        $profileTick = $this->factory()->create($run, TickDriver::Worker)->profileTick();
+
+        self::assertNotNull($profileTick);
+        self::assertSame($profile, $profileTick->connection);
+        self::assertSame(RecommendationEngineKind::Llm, $profileTick->engineKind);
+        self::assertSame(30, $profileTick->settings->packing->maximumBatchSize);
+        self::assertSame(TickDriver::Worker, $profileTick->driver);
+        self::assertSame($run, $profileTick->run);
+    }
+
+    public function testAJevTickWithoutAUsableProfileConnectionBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-no-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick());
+    }
+
+    /** The LLM distils on its own connection: a chosen profile connection is ignored. */
+    public function testAnLlmTickBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-llm-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedProfileConnectionFor($owner);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick());
     }
 
     private function factory(): TickContextFactory

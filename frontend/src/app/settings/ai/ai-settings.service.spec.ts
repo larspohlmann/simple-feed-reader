@@ -12,7 +12,7 @@ import {
 } from '../../core/ai-availability.service';
 import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
 import { API_BASE_URL } from '../../core/api';
-import { AiConfig, AiConfigList, AiSettingsService } from './ai-settings.service';
+import { AiConfig, AiConfigList, AiModel, AiSettingsService } from './ai-settings.service';
 
 const base = 'https://api.test';
 
@@ -24,12 +24,19 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
+  profileSource: false,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
   maxBatchSize: null,
   capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
+});
+
+const offered = (id: string): AiModel => ({
+  id,
+  label: null,
+  capabilities: EVERY_RECOMMENDATION_CAPABILITY,
 });
 
 describe('AiSettingsService', () => {
@@ -54,6 +61,93 @@ describe('AiSettingsService', () => {
   afterEach(() => {
     ctrl.verify();
     jest.useRealTimers();
+  });
+
+  it('chooses the profile connection and clears the flag on whichever row held it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: true }),
+      config({ id: 2, profileSource: false }),
+    ]);
+
+    service.chooseProfileSource(2);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/2/profile`);
+    expect(request.request.method).toBe('PUT');
+    request.flush(config({ id: 2, profileSource: true }));
+
+    expect(service.configs().map((each) => [each.id, each.profileSource])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
+  it('scopes a refused profile choice to the picker', () => {
+    service.chooseProfileSource(3);
+    ctrl.expectOne(`${base}/api/me/ai/configs/3/profile`).flush(
+      {
+        type: 'profile_connection_rejected',
+        detail: 'Only a ready LLM connection can build your profile.',
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+
+    expect(service.failure()?.scope).toEqual({ action: 'profile' });
+    expect(service.failure()?.failure).toMatchObject({
+      kind: 'unknown',
+      detail: 'Only a ready LLM connection can build your profile.',
+    });
+  });
+
+  it('reloads the settings when the profile connection it names is gone', () => {
+    service.configs.set([config({ id: 4, profileSource: true })]);
+
+    service.clearProfileSource();
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/4/profile`)
+      .flush(null, { status: 404, statusText: 'Not Found' });
+
+    ctrl
+      .expectOne(`${base}/api/me/ai`)
+      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
+    expect(service.configs().map((each) => each.id)).toEqual([5]);
+    expect(service.failure()).toBeNull();
+  });
+
+  it('stays busy through the reload when the chosen profile connection is gone', () => {
+    service.chooseProfileSource(4);
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/4/profile`)
+      .flush(null, { status: 404, statusText: 'Not Found' });
+
+    expect(service.busy()).toBe(true);
+
+    ctrl
+      .expectOne(`${base}/api/me/ai`)
+      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
+    expect(service.busy()).toBe(false);
+    expect(service.configs().map((each) => each.id)).toEqual([5]);
+    expect(service.failure()).toBeNull();
+  });
+
+  it('clears the profile connection on whichever row holds it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: false }),
+      config({ id: 4, profileSource: true }),
+    ]);
+
+    service.clearProfileSource();
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/4/profile`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.configs().map((each) => each.profileSource)).toEqual([false, false]);
+  });
+
+  it('sends nothing when no row holds the profile connection', () => {
+    service.configs.set([config({ id: 1, profileSource: false })]);
+
+    service.clearProfileSource();
+
+    ctrl.expectNone((request) => request.method === 'DELETE');
   });
 
   it('loads the list and follows the active configuration', () => {
@@ -113,10 +207,13 @@ describe('AiSettingsService', () => {
       apiKey: 'sk-secret',
     });
 
-    request.flush({ ...config({ id: 7, name: 'My provider' }), models: ['gpt-4o', 'gpt-4o-mini'] });
+    request.flush({
+      ...config({ id: 7, name: 'My provider' }),
+      models: [offered('gpt-4o'), offered('gpt-4o-mini')],
+    });
 
     expect(service.configs()).toEqual([config({ id: 7, name: 'My provider' })]);
-    expect(service.models()).toEqual(['gpt-4o', 'gpt-4o-mini']);
+    expect(service.models()).toEqual([offered('gpt-4o'), offered('gpt-4o-mini')]);
     expect(service.choosingModelFor()).toBe(7);
   });
 
@@ -130,7 +227,9 @@ describe('AiSettingsService', () => {
     });
 
     service.add({ name: null, baseUrl: 'https://other.test/v1', apiKey: 'sk-other' }, jest.fn());
-    ctrl.expectOne(`${base}/api/me/ai/configs`).flush({ ...config({ id: 2 }), models: ['claude'] });
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs`)
+      .flush({ ...config({ id: 2 }), models: [offered('claude')] });
 
     expect(availability.ready()).toBe(true);
     expect(availability.model()).toBe('gpt-4o');
@@ -142,9 +241,9 @@ describe('AiSettingsService', () => {
     const request = ctrl.expectOne(`${base}/api/me/ai/configs/3/models`);
     expect(request.request.method).toBe('GET');
 
-    request.flush({ models: ['gpt-4o'] });
+    request.flush({ models: [offered('gpt-4o')] });
 
-    expect(service.models()).toEqual(['gpt-4o']);
+    expect(service.models()).toEqual([offered('gpt-4o')]);
     expect(service.choosingModelFor()).toBe(3);
   });
 
@@ -440,7 +539,9 @@ describe('AiSettingsService', () => {
     const onAdded = jest.fn();
     service.add(DRAFT, onAdded);
 
-    ctrl.expectOne(`${base}/api/me/ai/configs`).flush({ ...config({ id: 4 }), models: ['gpt-4o'] });
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs`)
+      .flush({ ...config({ id: 4 }), models: [offered('gpt-4o')] });
 
     expect(onAdded).toHaveBeenCalledTimes(1);
     expect(service.failure()).toBeNull();

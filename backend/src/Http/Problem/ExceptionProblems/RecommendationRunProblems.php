@@ -8,6 +8,7 @@ use App\Http\Problem\ApiProblem;
 use App\Http\Problem\ResolvedProblem;
 use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -33,6 +34,12 @@ final readonly class RecommendationRunProblems implements ExceptionProblemsInter
                 'A recommendation run is still active',
                 Response::HTTP_CONFLICT,
                 'Wait for the current run to finish, then try again.',
+            )),
+            $exception instanceof ProfileConnectionRejectedException => new ResolvedProblem(new ApiProblem(
+                'profile_connection_rejected',
+                'This connection cannot build the profile',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
             )),
             default => null,
         };

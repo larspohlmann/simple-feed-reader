@@ -90,6 +90,10 @@ final class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
+    /** The connection that distils the profile for an engine that cannot; ProfileConnectionChooser keeps it one. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $profileSource = false;
+
     /**
      * The caller passes $verifiedAt: a row is normally born of a successful live call, but a duplicate
      * (AiProviderConfigurator::duplicateConfiguration) carries its sibling's. Delegates to replaceConnection().
@@ -217,6 +221,16 @@ final class AiProviderSettings
     public function copyRunTuningFrom(self $source): void
     {
         $this->runTuning->copyFrom($source->runTuning);
+    }
+
+    public function isProfileSource(): bool
+    {
+        return $this->profileSource;
+    }
+
+    public function setProfileSource(bool $profileSource): void
+    {
+        $this->profileSource = $profileSource;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

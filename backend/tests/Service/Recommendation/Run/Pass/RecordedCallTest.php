@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
+use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
 use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
 use App\Service\Recommendation\Run\Model\CallProgressModel;
@@ -288,6 +289,44 @@ final class RecordedCallTest extends DbTestCase
 
         self::assertSame(500, $this->runTotals()['promptTokens']);
         self::assertSame(7000, $this->runTotals()['costNanoCredits']);
+    }
+
+    /** A reply that arrives whole: its size, its usage on the run, and the provider's receipt on its row. */
+    public function testAWholeReplyRecordsItsReceiptAndBanksItsUsageOnTheRun(): void
+    {
+        $call = $this->call();
+
+        $call->received(new ProviderCallReceiptModel(
+            'req-91',
+            'typesafe/jev-1.13-20260917',
+            new ProviderCallUsageModel(
+                promptTokens: 1200,
+                completionTokens: 30,
+                reasoningTokens: 0,
+                cachedTokens: 0,
+                costNanoCredits: 4_200_000,
+            ),
+        ), 812);
+        $call->finishUsable('{"answers":{}}');
+
+        $log = $this->reload($this->log);
+        self::assertSame('req-91', $log->getRequestId());
+        self::assertSame('typesafe/jev-1.13-20260917', $log->getAnsweringModel());
+        self::assertSame(4_200_000, $log->getCostNanoCredits());
+        self::assertSame(812, $log->getWireBytes());
+        self::assertSame(1200, $this->runTotals()['promptTokens']);
+        self::assertSame(4_200_000, $this->runTotals()['costNanoCredits']);
+    }
+
+    /** A wave a sibling's failure aborts still says what this call's answer was and what it cost. */
+    public function testAnAbortedCallThatHadAnsweredKeepsItsReceipt(): void
+    {
+        $call = $this->call();
+
+        $call->received(new ProviderCallReceiptModel('req-92', null, null), 64);
+        $call->abortAfterTransportFailure('That provider refused the API key.');
+
+        self::assertSame('req-92', $this->reload($this->log)->getRequestId());
     }
 
     private function call(): RecordedCall

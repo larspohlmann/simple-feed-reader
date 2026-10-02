@@ -8,13 +8,14 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * Each phase's wall-clock span and batch count for the account's latest completed runs, which PhaseDurationsModel
- * averages into the time-left estimate. Spans are computed in PHP from MIN/MAX, so the query stays dialect-free.
+ * Phase spans and batch counts of the latest completed runs of one kind, a kind-less run counting as the LLM's, for
+ * PhaseDurationsModel. Spans are computed in PHP from MIN/MAX, so the query stays dialect-free.
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
@@ -26,12 +27,12 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}>
+     * @return list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int, runSeconds: float}>
      */
-    public function completedRunPhaseSpans(User $user, int $limit): array
+    public function completedRunPhaseSpans(User $user, RecommendationEngineKind $engineKind, int $limit): array
     {
-        $runIds = $this->newestCompletedRunIds($user, $limit);
-        if ([] === $runIds) {
+        $runSeconds = $this->newestCompletedRunSeconds($user, $engineKind, $limit);
+        if ([] === $runSeconds) {
             return [];
         }
 
@@ -44,7 +45,7 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
             . ' FROM ' . RecommendationRunLog::class . ' l'
             . ' WHERE IDENTITY(l.run) IN (:runIds) AND l.finishedAt IS NOT NULL'
             . ' GROUP BY l.run, l.phase',
-        )->setParameter('runIds', $runIds)->getArrayResult();
+        )->setParameter('runIds', array_keys($runSeconds))->getArrayResult();
 
         return array_map(
             static fn (array $row): array => [
@@ -52,29 +53,39 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
                 'phase' => $row['phase'],
                 'spanSeconds' => self::spanSeconds($row['startedAt'], $row['finishedAt']),
                 'batchCount' => (int) $row['batchCount'],
+                'runSeconds' => $runSeconds[$row['runId']],
             ],
             $rows,
         );
     }
 
     /**
-     * @return list<int>
+     * @return array<int, float> each run's created-to-completed seconds, by run id
      */
-    private function newestCompletedRunIds(User $user, int $limit): array
+    private function newestCompletedRunSeconds(User $user, RecommendationEngineKind $engineKind, int $limit): array
     {
-        /** @var list<array{id: int}> $rows */
+        /** @var list<array{id: int, createdAt: \DateTimeImmutable, completedAt: \DateTimeImmutable}> $rows */
         $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('r.id AS id')
+            ->select('r.id AS id', 'r.createdAt AS createdAt', 'r.completedAt AS completedAt')
             ->from(RecommendationRun::class, 'r')
             ->andWhere('r.user = :user')->setParameter('user', $user)
             ->andWhere('r.status = :completed')
             ->setParameter('completed', RunStatus::Completed)
+            ->andWhere(RecommendationEngineKind::Llm === $engineKind
+                ? '(r.engineKind = :kind OR r.engineKind IS NULL)'
+                : 'r.engineKind = :kind')
+            ->setParameter('kind', $engineKind)
             ->orderBy('r.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getArrayResult();
 
-        return array_column($rows, 'id');
+        $runSeconds = [];
+        foreach ($rows as $row) {
+            $runSeconds[$row['id']] = (float) ($row['completedAt']->getTimestamp() - $row['createdAt']->getTimestamp());
+        }
+
+        return $runSeconds;
     }
 
     private static function spanSeconds(string $startedAt, string $finishedAt): float

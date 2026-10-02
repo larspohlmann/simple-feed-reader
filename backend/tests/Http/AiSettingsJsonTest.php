@@ -8,10 +8,12 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class AiSettingsJsonTest extends TestCase
 {
@@ -19,7 +21,10 @@ final class AiSettingsJsonTest extends TestCase
 
     private function json(): AiSettingsJson
     {
-        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
+        return new AiSettingsJson(
+            RecommendationCapabilitiesJsons::ofTheKind(),
+            new RecommendationEngineResolver(new ServiceLocator([])),
+        );
     }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
@@ -154,9 +159,28 @@ final class AiSettingsJsonTest extends TestCase
     {
         $shape = $this->json()->added($this->settings(null, 'Work OpenAI'), ['gpt-4o', 'gpt-4o-mini']);
 
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $shape['models']);
+        self::assertSame(
+            [
+                ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+            ],
+            $shape['models'],
+        );
         self::assertSame('Work OpenAI', $shape['name']);
         self::assertFalse($shape['ready']);
+    }
+
+    public function testEachOfferedModelCarriesTheCapabilitiesItWouldGiveTheConnection(): void
+    {
+        self::assertSame(
+            [
+                'models' => [
+                    ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                ],
+            ],
+            $this->json()->models(['gpt-4o', 'jev-latest']),
+        );
     }
 
     public function testConfigurationForIsActiveWhenItIsTheOwnersActiveConfiguration(): void

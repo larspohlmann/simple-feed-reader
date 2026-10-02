@@ -8,7 +8,11 @@ import {
   signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
+import {
+  offersTuning,
+  RecommendationCapabilities,
+  RecommendationTuningField,
+} from '../../core/ai-availability.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
@@ -94,7 +98,15 @@ export class AiSectionComponent {
   });
 
   readonly modelOptions = computed<SelectOption[]>(() =>
-    this.ai.models().map((model) => ({ value: model, label: model })),
+    this.ai.models().map((model) => ({
+      value: model.id,
+      label: [model.id, model.label].filter(Boolean).join(' · '),
+      hint: this.modelHint(model.capabilities),
+    })),
+  );
+
+  readonly chosenModelHint = computed(
+    () => this.modelOptions().find((option) => option.value === this.chosenModel())?.hint ?? null,
   );
 
   /** The key is optional — a local model server needs none — so only the
@@ -119,6 +131,44 @@ export class AiSectionComponent {
   readonly listFailure: Signal<string | null> = computed(() => this.messageFor('load'));
   readonly addFailure: Signal<string | null> = computed(() => this.messageFor('add'));
 
+  readonly profileCandidates = computed(() =>
+    this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
+  );
+  readonly profileSourceId = computed(
+    () => this.profileCandidates().find((config) => config.profileSource)?.id ?? null,
+  );
+  readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
+
+  /** The pick while its write is in flight, the stored choice once it settles: the select keeps
+   *  the user's pick through the request, and a refused one falls back to what the server holds. */
+  readonly shownProfileSourceId = linkedSignal<
+    { stored: number | null; busy: boolean },
+    number | null
+  >({
+    source: () => ({ stored: this.profileSourceId(), busy: this.ai.busy() }),
+    computation: (source, previous) => (source.busy && previous ? previous.value : source.stored),
+  });
+
+  chooseProfileSource(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const id = value === '' ? null : Number(value);
+    this.shownProfileSourceId.set(id);
+    if (id === null) {
+      this.ai.clearProfileSource();
+      return;
+    }
+    this.ai.chooseProfileSource(id);
+  }
+
+  private modelHint(capabilities: RecommendationCapabilities): string | undefined {
+    const differences = [
+      capabilities.reasons ? null : 'settings.ai.modelHint.noReasons',
+      capabilities.profile === 'borrowed' ? 'settings.ai.modelHint.borrowedProfile' : null,
+    ].filter((key) => key !== null);
+
+    return differences.map((key) => this.i18n.translate(key)).join(' · ') || undefined;
+  }
+
   rowFailure(configId: number): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== 'row') return null;
@@ -127,7 +177,7 @@ export class AiSectionComponent {
     return this.message(scoped.failure);
   }
 
-  private messageFor(action: 'load' | 'add'): string | null {
+  private messageFor(action: 'load' | 'add' | 'profile'): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== action) return null;
 

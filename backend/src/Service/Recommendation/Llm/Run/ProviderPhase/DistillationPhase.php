@@ -7,12 +7,13 @@ namespace App\Service\Recommendation\Llm\Run\ProviderPhase;
 use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Llm\Run\InvalidReplyRetry;
 use App\Service\Recommendation\Llm\Run\RecommendationProfileDistiller;
+use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Records the distilled profile; an unusable reply is retried, then the run proceeds without a profile. */
-final readonly class DistillationPhase implements ProviderPhaseInterface
+final readonly class DistillationPhase implements ProviderPhaseInterface, ProfileDistillerInterface
 {
     public function __construct(
         private RecommendationProfileDistiller $distiller,

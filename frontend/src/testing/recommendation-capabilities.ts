@@ -7,5 +7,14 @@ import {
 export const EVERY_RECOMMENDATION_CAPABILITY: RecommendationCapabilities = {
   reasons: true,
   prompt: true,
+  profile: 'own',
   tuningFields: RECOMMENDATION_TUNING_FIELDS,
+};
+
+/** What Jev reports: no reasons, no prompt, a borrowed profile, only parallel requests to tune. */
+export const JEV_RECOMMENDATION_CAPABILITIES: RecommendationCapabilities = {
+  reasons: false,
+  prompt: false,
+  profile: 'borrowed',
+  tuningFields: ['batchConcurrency'],
 };

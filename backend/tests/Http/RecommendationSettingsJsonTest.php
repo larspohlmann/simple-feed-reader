@@ -51,16 +51,18 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertStringNotContainsString('"reason"', $fixedPrompt['outputContract']);
     }
 
-    /** An engine without a prompt has no profile, no guidance default and no fixed prompt to show. */
-    public function testAnEngineWithoutAPromptSendsNoneOfThePromptPieces(): void
+    /** Every engine runs on a distilled profile; only the LLM's own prompt pieces depend on the prompt capability. */
+    public function testAnEngineWithoutAPromptShowsTheProfileButNoPromptPieces(): void
     {
         $state = RecommendationSettingsJson::state(
             $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.'),
-            new RecommendationEngineCapabilitiesModel(false, false, []),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
             workerAlive: true,
         );
 
-        self::assertNull($state['profileText']);
+        self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
+        self::assertArrayHasKey('defaultGuidancePrompt', $state);
+        self::assertArrayHasKey('fixedPrompt', $state);
         self::assertNull($state['defaultGuidancePrompt']);
         self::assertNull($state['fixedPrompt']);
     }

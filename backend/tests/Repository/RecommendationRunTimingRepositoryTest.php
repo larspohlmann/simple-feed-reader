@@ -58,15 +58,36 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         $spans = array_map(
             static fn (array $span): array => [...$span, 'phase' => $span['phase']->value],
-            $this->timings->completedRunPhaseSpans($this->user, 10),
+            $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10),
         );
 
         $runId = $run->getId();
         self::assertEqualsCanonicalizing([
-            ['runId' => $runId, 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0],
-            ['runId' => $runId, 'phase' => 'batch', 'spanSeconds' => 30.0, 'batchCount' => 2],
-            ['runId' => $runId, 'phase' => 'consolidate', 'spanSeconds' => 30.0, 'batchCount' => 0],
+            ['runId' => $runId, 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0, 'runSeconds' => 3600.0],
+            ['runId' => $runId, 'phase' => 'batch', 'spanSeconds' => 30.0, 'batchCount' => 2, 'runSeconds' => 3600.0],
+            [
+                'runId' => $runId,
+                'phase' => 'consolidate',
+                'spanSeconds' => 30.0,
+                'batchCount' => 0,
+                'runSeconds' => 3600.0,
+            ],
         ], $spans);
+    }
+
+    /** Each run's own clock, created to completed, rides on every one of its spans: 10:00:00 → 10:00:46. */
+    public function testEachSpanCarriesItsRunsWallClock(): void
+    {
+        $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-08T10:00:46Z'));
+        $this->finishedLog($run, CallPhase::Distill, null, '10:00:16', '10:00:21');
+        $this->finishedLog($run, CallPhase::Batch, 1, '10:00:26', '10:00:37');
+        $this->entityManager->flush();
+
+        $spans = $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10);
+
+        self::assertSame([46.0, 46.0], array_column($spans, 'runSeconds'));
     }
 
     public function testIgnoresRunningRunsOtherUsersAndRunsBeyondTheLimit(): void
@@ -90,7 +111,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $this->finishedLog($newer, CallPhase::Distill, null, '10:00:00', '10:00:09');
         $this->entityManager->flush();
 
-        $spans = $this->timings->completedRunPhaseSpans($this->user, 1);
+        $spans = $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 1);
 
         self::assertSame([$newer->getId()], array_values(array_unique(array_column($spans, 'runId'))));
         self::assertSame(9.0, $spans[0]['spanSeconds']);
@@ -116,7 +137,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $this->entityManager->clear();
 
         try {
-            $this->timings->completedRunPhaseSpans($this->user, 10);
+            $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10);
             self::fail('Expected a ValueError while the dedup row survives.');
         } catch (\ValueError $exception) {
             self::assertStringContainsString('dedup', $exception->getMessage());
@@ -135,13 +156,49 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         $spans = array_map(
             static fn (array $span): array => [...$span, 'phase' => $span['phase']->value],
-            $this->timings->completedRunPhaseSpans($this->user, 10),
+            $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10),
         );
 
         self::assertSame(
-            [['runId' => $run->getId(), 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0]],
+            [[
+                'runId' => $run->getId(),
+                'phase' => 'distill',
+                'spanSeconds' => 10.0,
+                'batchCount' => 0,
+                'runSeconds' => 3600.0,
+            ]],
             $spans,
         );
+    }
+
+    /** Each kind reads only its own runs; a run from before the kind column counts as the LLM's. */
+    public function testOnlyRunsOfTheAskedKindAreRead(): void
+    {
+        $llm = $this->completedRun();
+        $this->finishedLog($llm, CallPhase::Distill, null, '10:00:00', '10:00:10');
+        $legacy = $this->completedRun();
+        $this->finishedLog($legacy, CallPhase::Distill, null, '10:00:00', '10:00:20');
+        $jev = $this->fixtures->createRun($this->user);
+        $jev->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $jev->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
+        $this->finishedLog($jev, CallPhase::Distill, null, '10:00:00', '10:00:30');
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE recommendation_run SET engine_kind = NULL WHERE id = ?',
+            [$legacy->requireId()],
+        );
+
+        self::assertEqualsCanonicalizing(
+            [$llm->requireId(), $legacy->requireId()],
+            $this->runIdsOf(RecommendationEngineKind::Llm),
+        );
+        self::assertSame([$jev->requireId()], $this->runIdsOf(RecommendationEngineKind::Jev));
+    }
+
+    /** @return list<int> */
+    private function runIdsOf(RecommendationEngineKind $engineKind): array
+    {
+        return array_column($this->timings->completedRunPhaseSpans($this->user, $engineKind, 10), 'runId');
     }
 
     private function completedRun(?User $user = null): RecommendationRun

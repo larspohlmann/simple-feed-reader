@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Run;
 
-use App\Entity\RecommendationRun;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\RateLimitedResultModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
 use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
@@ -20,20 +19,20 @@ use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
 use App\Service\Recommendation\Llm\Run\Pass\WaveContext;
-use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
+use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
+use App\Service\Recommendation\Run\BatchWaveEngine\BatchWaveEngineInterface;
+use App\Service\Recommendation\Run\Model\BatchReplyVerdictModel;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Run\Pass\RecordedCall;
-use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
-use App\Service\Recommendation\Run\Support\BatchWaveWinners;
+use App\Service\Recommendation\Run\Pass\BatchCall;
 
 /**
- * The batch phase's concurrent fan-out: an unusable batch retries alone up to MAX_ATTEMPTS rounds, then yields no
- * winners. A transport failure settles every open call and banks nothing, the atomic-wave rule; a deferring plan's 429
- * throws ProviderRateLimitedException instead.
+ * The batch phase's streamed completions: a batch's retry quotes its own last invalid reply back.
+ *
+ * @implements BatchWaveEngineInterface<WaveContext, CompletionRequestModel, CompletionOutcomeModel>
  */
-final readonly class RecommendationBatchWave
+final readonly class RecommendationBatchWave implements BatchWaveEngineInterface
 {
     public function __construct(
         private RateLimitedCompletion $completion,
@@ -42,176 +41,69 @@ final readonly class RecommendationBatchWave
         private RecommendationPromptBuilder $promptBuilder,
         private RecommendationPickParser $parser,
         private RecommendationCompletionRequestFactory $requestFactory,
-        private RecommendationTickCheckpoint $checkpoint,
     ) {
     }
 
     /**
-     * @throws \App\Service\Ai\Exception\ProviderUnreachableException
-     * @throws \App\Service\Ai\Exception\CredentialsRejectedException
-     * @throws \App\Service\Ai\Exception\RetryableProviderException
-     * @throws ProviderRateLimitedException
+     * @param WaveContext $wave
+     *
+     * @return BatchCall<CompletionRequestModel>
      */
-    public function resolve(WaveContext $wave): BatchWaveResultModel
+    public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
-        $correctiveReply = [];
-        $rateLimitObserved = false;
-        [$winners, $pending] = BatchWaveWinners::splitByPruned($wave->batches);
+        $tick = $wave->tick();
+        $waveBatch = $wave->batches()[$position];
+        $messages = $this->batchMessages($wave, $waveBatch, $wave->lastInvalidReply($position));
+        $request = $this->requestFactory->create(
+            $tick->connection,
+            new CallPromptModel($messages, \count($waveBatch->validIds()), RecommendationResponseSchema::BatchScore),
+        );
+        $slot = CallSlotModel::batch($waveBatch->index + 1);
 
-        for ($round = 1; [] !== $pending; $round++) {
-            $roundResult = $this->sendRound($wave, $pending, $correctiveReply);
-            $rateLimitObserved = $rateLimitObserved || $roundResult['observed'];
-            $pending = [];
-            foreach ($roundResult['replies'] as $position => $reply) {
-                $result = $this->parser->parse($reply['content'], $wave->batches[$position]->validIds());
-                if ($result->usable) {
-                    $reply['call']->finishUsable($reply['content']);
-                    $winners[$position] = self::asWinners($result->picks);
-
-                    continue;
-                }
-                $reply['call']->finishUnusable($reply['content']);
-                $correctiveReply[$position] = $reply['content'];
-                $pending[] = $position;
-            }
-
-            $this->checkpoint->guard($wave->tick->run);
-            if ([] === $pending || $round >= RecommendationRun::MAX_ATTEMPTS) {
-                break;
-            }
-        }
-
-        return new BatchWaveResultModel(BatchWaveWinners::degradeUnresolved($winners, $pending), $rateLimitObserved);
+        return new BatchCall($request, $this->callRecorder->begin($tick->run, $slot, $request));
     }
 
     /**
-     * @param non-empty-list<int> $pending         positions into the wave still awaiting a usable reply
-     * @param array<int, string>  $correctiveReply each position's own last invalid reply
-     *
-     * @return array{replies: array<int, array{content: string, call: RecordedCall}>, observed: bool}
-     */
-    private function sendRound(WaveContext $wave, array $pending, array $correctiveReply): array
-    {
-        $tick = $wave->tick;
-        $calls = [];
-        $recordedCalls = [];
-        foreach ($pending as $position) {
-            $waveBatch = $wave->batches[$position];
-            $messages = $this->batchMessages($wave, $waveBatch, $correctiveReply[$position] ?? null);
-            $validIdCount = \count($waveBatch->validIds());
-            $request = $this->requestFactory->create(
-                $tick->connection,
-                new CallPromptModel($messages, $validIdCount, RecommendationResponseSchema::BatchScore),
-            );
-            $slot = CallSlotModel::batch($waveBatch->index + 1);
-            $recordedCall = $this->callRecorder->begin($tick->run, $slot, $request);
-            $calls[] = new ConcurrentCompletion($request, new RecordedCallObserver($recordedCall));
-            $recordedCalls[] = $recordedCall;
-        }
-
-        $result = $this->completeRound($tick, $calls, $recordedCalls);
-
-        if ($result->isDeferred()) {
-            foreach ($recordedCalls as $recordedCall) {
-                $recordedCall->abortAfterTransportFailure('Provider rate limited; deferring.');
-            }
-
-            throw new ProviderRateLimitedException($result->deferSeconds);
-        }
-
-        $outcomes = $result->outcomes;
-        $this->guardWaveTransport($recordedCalls, $outcomes);
-
-        return [
-            'replies' => $this->repliesByPosition($pending, $outcomes, $recordedCalls),
-            'observed' => $result->rateLimitObserved,
-        ];
-    }
-
-    /**
-     * A throw here means no call got a reply (an unreadable key, say): every opened row is settled first, so none
-     * reads as "still streaming", then the error propagates unchanged.
-     *
-     * @param non-empty-list<ConcurrentCompletion> $calls
-     * @param list<RecordedCall>                   $recordedCalls
+     * @param WaveContext                                       $wave
+     * @param non-empty-list<BatchCall<CompletionRequestModel>> $calls
      *
      * @return RateLimitedResultModel<CompletionOutcomeModel>
      */
-    private function completeRound(TickContext $tick, array $calls, array $recordedCalls): RateLimitedResultModel
+    public function sendAll(BatchWaveInterface $wave, array $calls): RateLimitedResultModel
     {
-        try {
-            return $this->completion->completeMany(
-                $this->connectionFactory->forSettings($tick->connection),
+        $tick = $wave->tick();
+
+        return $this->completion->completeMany(
+            $this->connectionFactory->forSettings($tick->connection),
+            array_map(
+                static fn (BatchCall $call): ConcurrentCompletion => new ConcurrentCompletion(
+                    $call->request,
+                    new RecordedCallObserver($call->recordedCall),
+                ),
                 $calls,
-                $tick->retryPlan(),
-            );
-        } catch (\Throwable $exception) {
-            foreach ($recordedCalls as $recordedCall) {
-                $recordedCall->abortAfterTransportFailure($exception->getMessage());
-            }
-
-            throw $exception;
-        }
+            ),
+            $tick->retryPlan(),
+        );
     }
 
     /**
-     * The atomic-wave rule: one transport failure settles every call of the round and banks none of it. A healthy
-     * sibling's answer is discarded and re-billed next tick; that cost is accepted, not a bug.
-     *
-     * @param list<RecordedCall>           $recordedCalls
-     * @param list<CompletionOutcomeModel> $outcomes
+     * @param WaveContext            $wave
+     * @param CompletionOutcomeModel $outcome
      */
-    private function guardWaveTransport(array $recordedCalls, array $outcomes): void
-    {
-        $firstFailure = $this->firstFailureIn($outcomes);
-        if (null === $firstFailure) {
-            return;
+    public function judge(
+        BatchWaveInterface $wave,
+        int $position,
+        BatchCallOutcomeInterface $outcome,
+    ): BatchReplyVerdictModel {
+        // content() covers a spoiled reply too: the partial answer the parser judges and the retry quotes back.
+        $content = $outcome->content();
+        $result = $this->parser->parse($content, $wave->batches()[$position]->validIds());
+        if ($result->usable) {
+            return BatchReplyVerdictModel::usable(self::asWinners($result->picks), $content);
         }
+        $wave->rememberInvalidReply($position, $content);
 
-        foreach ($outcomes as $position => $outcome) {
-            $recordedCalls[$position]->abortAfterTransportFailure(self::abortDetailFor($outcome, $firstFailure));
-        }
-
-        throw $firstFailure;
-    }
-
-    /** A call with its own cause, a spoiled reply included, names it; only a bystander borrows the wave's. */
-    private static function abortDetailFor(CompletionOutcomeModel $outcome, \Throwable $waveFailure): string
-    {
-        return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
-    }
-
-    /** @param list<CompletionOutcomeModel> $outcomes */
-    private function firstFailureIn(array $outcomes): ?\Throwable
-    {
-        foreach ($outcomes as $outcome) {
-            if ($outcome->isFailure()) {
-                return $outcome->cause();
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @param list<int>                    $pending       positions into the wave, in call order
-     * @param list<CompletionOutcomeModel> $outcomes      one per call, aligned to $pending
-     * @param list<RecordedCall>           $recordedCalls one per call, aligned to $pending
-     *
-     * @return array<int, array{content: string, call: RecordedCall}>
-     */
-    private function repliesByPosition(array $pending, array $outcomes, array $recordedCalls): array
-    {
-        $replies = [];
-        foreach ($pending as $callIndex => $position) {
-            // content() covers a spoiled reply too: the partial answer the parser judges and the retry quotes back.
-            $replies[$position] = [
-                'content' => $outcomes[$callIndex]->content(),
-                'call' => $recordedCalls[$callIndex],
-            ];
-        }
-
-        return $replies;
+        return BatchReplyVerdictModel::unusable($content);
     }
 
     /** @return list<array{role: string, content: string}> */

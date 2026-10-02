@@ -86,4 +86,17 @@ final class RecommendationRunProgressTest extends TestCase
         self::assertSame(2, $planned->batchCount);
         self::assertNull($unplanned->batchCount);
     }
+
+    /** Three batches and the distillation before them; no consolidation to reach once they are done. */
+    public function testAJevPlanCountsItsDistillationAndHasNoConsolidation(): void
+    {
+        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, false, RecommendationEngineKind::Jev);
+        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, true, RecommendationEngineKind::Jev);
+
+        self::assertSame(4, $pending->batchesTotal);
+        self::assertTrue($pending->distillPending);
+        self::assertFalse($done->distillPending);
+        self::assertTrue($done->allBatchCallsDone);
+        self::assertFalse($done->isConsolidationPhase);
+    }
 }

@@ -72,6 +72,9 @@ final class RecommendationRunLog
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $finishReason = null;
 
+    #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
+    private CallReceipt $receipt;
+
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         RecommendationRun $run,
@@ -87,6 +90,7 @@ final class RecommendationRunLog
         $this->attempt = $attempt;
         $this->requestBody = $requestBody;
         $this->createdAt = $createdAt;
+        $this->receipt = new CallReceipt();
     }
 
     public function getId(): ?int
@@ -152,5 +156,20 @@ final class RecommendationRunLog
     public function getFinishReason(): ?string
     {
         return $this->finishReason;
+    }
+
+    public function getRequestId(): ?string
+    {
+        return $this->receipt->getRequestId();
+    }
+
+    public function getAnsweringModel(): ?string
+    {
+        return $this->receipt->getAnsweringModel();
+    }
+
+    public function getCostNanoCredits(): ?int
+    {
+        return $this->receipt->getCostNanoCredits();
     }
 }

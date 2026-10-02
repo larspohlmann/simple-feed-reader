@@ -10,7 +10,7 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Fetch\Support\ResponseHeader;
+use App\Service\Ai\Support\RetryAfter;
 use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
@@ -128,7 +128,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
                 $response = $this->request($connection, $call->request);
             } catch (ExceptionInterface $exception) {
                 $outcomes[$index] = CompletionOutcomeModel::failure(
-                    new ProviderUnreachableException('That address did not answer.', 0, $exception),
+                    ProviderUnreachableException::didNotAnswer($exception),
                 );
 
                 continue;
@@ -193,7 +193,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
         if (!$slot->reader->hitTokenCeiling()) {
-            return new ProviderUnreachableException('That address did not answer.', 0, $failure);
+            return ProviderUnreachableException::didNotAnswer($failure);
         }
 
         return new ProviderRunawayException(
@@ -281,28 +281,16 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         $status = $response->getStatusCode();
 
         if (401 === $status || 403 === $status) {
-            throw new CredentialsRejectedException('That provider refused the API key.');
+            throw CredentialsRejectedException::refusedKey();
         }
 
         if (\in_array($status, [429, 502, 503, 504], true)) {
-            throw new RetryableProviderException($status, $this->retryAfterSeconds($response));
+            throw new RetryableProviderException($status, RetryAfter::secondsIn($response));
         }
 
         if ($status >= 300) {
-            throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
+            throw ProviderUnreachableException::answeredWithStatus($status);
         }
-    }
-
-    /**
-     * Integer seconds only. An HTTP-date form is left to the caller's backoff:
-     * turning a date into a wait needs a clock this driver-agnostic client does
-     * not carry, and the standard rate-limit form is a seconds count anyway.
-     */
-    private function retryAfterSeconds(ResponseInterface $response): ?int
-    {
-        $header = ResponseHeader::first($response, 'retry-after');
-
-        return null !== $header && ctype_digit($header) ? (int) $header : null;
     }
 
     /**

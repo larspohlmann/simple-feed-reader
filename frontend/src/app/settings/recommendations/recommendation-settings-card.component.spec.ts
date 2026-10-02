@@ -9,7 +9,10 @@ import {
   RecommendationCapabilities,
 } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
-import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
+import {
+  EVERY_RECOMMENDATION_CAPABILITY,
+  JEV_RECOMMENDATION_CAPABILITIES,
+} from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
@@ -62,6 +65,20 @@ describe('RecommendationSettingsCardComponent', () => {
     profileText: null,
     showScoreAndReasons: false,
   };
+
+  function guidanceInfo(fixture: ComponentFixture<RecommendationSettingsCardComponent>): string {
+    return (
+      fixture.nativeElement.querySelector('[data-testid="guidance-info"]') as HTMLElement
+    ).textContent!.trim();
+  }
+
+  function guidanceResetLabel(
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): string {
+    return (
+      fixture.nativeElement.querySelector('[data-testid="guidance-reset"]') as HTMLElement
+    ).textContent!.trim();
+  }
 
   function mount(
     initial: RecommendationSettingsState = STATE,
@@ -242,18 +259,49 @@ describe('RecommendationSettingsCardComponent', () => {
   });
 
   describe("the prompt capability's read-only pieces", () => {
-    it('shows no fixed prompt, distilled profile or guidance default to an engine that sends no prompt', () => {
+    it('shows the distilled profile but no fixed prompt or guidance default to an engine that sends no prompt', () => {
       const fixture = mount(
         { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
-        { ...NO_RECOMMENDATION_CAPABILITIES, tuningFields: ['batchConcurrency'] },
+        JEV_RECOMMENDATION_CAPABILITIES,
       );
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
       expect(
-        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
-      ).toBeNull();
+        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]')?.textContent,
+      ).toContain('Likes self-hosted tooling and Rust.');
       expect(guidance.placeholder).toBe('');
+    });
+
+    it('explains the guidance against the fixed prompt to an engine that sends one', () => {
+      const fixture = mount();
+
+      expect(guidanceInfo(fixture)).toContain('fixed prompt');
+    });
+
+    it('explains the guidance against the reading history to an engine that sends no prompt', () => {
+      const fixture = mount(STATE, {
+        ...NO_RECOMMENDATION_CAPABILITIES,
+        tuningFields: ['batchConcurrency'],
+      });
+
+      expect(guidanceInfo(fixture)).toContain('reading history');
+      expect(guidanceInfo(fixture)).not.toContain('fixed prompt');
+    });
+
+    it('offers to reset the guidance to the default prompt of an engine that has one', () => {
+      const fixture = mount();
+
+      expect(guidanceResetLabel(fixture)).toBe('Reset the prompt to default');
+    });
+
+    it('offers only to clear the guidance of an engine without a default prompt', () => {
+      const fixture = mount(STATE, {
+        ...NO_RECOMMENDATION_CAPABILITIES,
+        tuningFields: ['batchConcurrency'],
+      });
+
+      expect(guidanceResetLabel(fixture)).toBe('Clear the guidance');
     });
   });
 

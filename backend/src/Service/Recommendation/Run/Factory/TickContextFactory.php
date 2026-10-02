@@ -10,6 +10,8 @@ use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Recommendation\Profile\ProfileConnectionResolver;
+use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -21,6 +23,7 @@ final readonly class TickContextFactory
         private AiProviderConfigurator $configurator,
         private RecommendationSettingsResolver $settingsResolver,
         private RecommendationEngineResolver $engines,
+        private ProfileConnectionResolver $profileConnections,
     ) {
     }
 
@@ -29,14 +32,24 @@ final readonly class TickContextFactory
     {
         $user = $run->getUser();
         $connection = $this->activeConnection($user);
-
-        return new TickContext(
+        $settings = $this->settingsResolver->forAccount($user);
+        $tick = new TickContext(
             $run,
             $connection,
             $this->engines->kindFor($connection),
-            $this->settingsResolver->forUser($user),
+            $settings->forConnection($connection),
             $driver,
         );
+
+        $profileConnection = $this->profileConnections->borrowedFor($connection);
+
+        return null === $profileConnection
+            ? $tick
+            : $tick->borrowingProfileFrom(new BorrowedProfileModel(
+                $profileConnection,
+                $this->engines->kindFor($profileConnection),
+                $settings->forConnection($profileConnection),
+            ));
     }
 
     private function activeConnection(User $user): AiProviderSettings

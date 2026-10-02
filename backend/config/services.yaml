@@ -80,6 +80,7 @@ services:
     App\Service\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor\ArticleExtractor'
     App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
     App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
+    App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface: '@App\Service\Recommendation\Llm\Run\ProviderPhase\DistillationPhase'
 
     # Page repairs, in this order, before readability scores the page: the class-reading repairs precede
     # ImageWrapperClassRemover and HeadingClassRemover, which strip the classes they key on.
@@ -147,8 +148,9 @@ services:
     App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader:
         arguments:
             $gitHubRepository: '%github_release_repository%'
-    App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog'
+    App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\CompositeModelCatalog'
     App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
+    App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface: '@App\Service\Recommendation\Jev\SystemOneClient\HttpSystemOneClient'
     # A provider call pings one heartbeat while it runs and must not know who listens: a composite of the run-lock
     # keepalive and the sweep's liveness beat. Both stay injectable by class, as the advancer and the sweep arm them
     # by name. Which beats first is CompositeProviderCallHeartbeat::beat()'s rule.

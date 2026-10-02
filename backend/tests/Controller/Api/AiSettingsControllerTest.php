@@ -7,125 +7,25 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Tests\Support\AiConfigurationRequests;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
-use App\Tests\Support\StubModelCatalog;
+use App\Tests\Support\RecommendationCapabilitiesJsons;
 use Doctrine\ORM\EntityManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The catalog is replaced in the container, so no provider is ever called. Tokens come from the JWT manager, which
- * keeps the login throttler's filesystem pool out of these cases.
- */
 final class AiSettingsControllerTest extends ApiTestCase
 {
-    private const string BASE_URL = 'https://api.example.test/v1';
-    private const string API_KEY = 'sk-abcdef1234';
+    use AiConfigurationRequests;
+
     /** Must match framework.rate_limiter.ai_provider.limit in rate_limiter.yaml. */
     private const int PROVIDER_BUDGET = 30;
-    private const array LLM_CAPABILITIES = [
-        'reasons' => true,
-        'prompt' => true,
-        'tuningFields' => [
-            'contextWindow',
-            'batchSize',
-            'suppressReasoning',
-            'slowModel',
-            'maxBatchSize',
-            'batchConcurrency',
-        ],
-    ];
 
     protected function setUp(): void
     {
-        // The ai_provider limiter counts in a FILESYSTEM pool that outlives the
-        // run, and every case here authenticates as user id 1 once the
-        // transaction rolls back — so a prior case's spend would trip a 429.
-        self::bootKernel();
-        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
-        self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
-        $rateLimiterCache->clear();
-        self::ensureKernelShutdown();
-    }
-
-    /**
-     * @param list<string>|\Throwable|\Closure(ProviderCredentialsModel): list<string> $models
-     */
-    private function clientAnswering(array|\Throwable|\Closure $models): KernelBrowser
-    {
-        $client = static::createClient();
-        // KernelBrowser rebuilds the container after every request, which would
-        // discard the stub before the second call of every multi-request case.
-        $client->disableReboot();
-        self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));
-
-        return $client;
-    }
-
-    private function authenticate(KernelBrowser $client, string $email): void
-    {
-        $user = $this->users()->findOneByEmail($email);
-        self::assertInstanceOf(User::class, $user);
-
-        /** @var JWTTokenManagerInterface $manager */
-        $manager = self::getContainer()->get(JWTTokenManagerInterface::class);
-
-        $client->setServerParameter('HTTP_AUTHORIZATION', 'Bearer ' . $manager->create($user));
-    }
-
-    private function accountOn(KernelBrowser $client, string $email): void
-    {
-        $this->factory()->create($email);
-        $this->authenticate($client, $email);
-    }
-
-    private function putJson(KernelBrowser $client, string $uri, string $json): void
-    {
-        $client->request('PUT', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: $json);
-    }
-
-    private function postJson(KernelBrowser $client, string $uri, string $json): void
-    {
-        $client->request('POST', $uri, server: ['CONTENT_TYPE' => 'application/json'], content: $json);
-    }
-
-    /** @return array<string, mixed> the decoded body of the add response */
-    private function addConfiguration(
-        KernelBrowser $client,
-        string $apiKey = self::API_KEY,
-        ?string $name = null,
-    ): array {
-        $this->postJson(
-            $client,
-            '/api/me/ai/configs',
-            sprintf('{"name":%s,"baseUrl":"%s","apiKey":"%s"}', json_encode($name), self::BASE_URL, $apiKey),
-        );
-
-        return $this->payload($client);
-    }
-
-    private function chooseModel(KernelBrowser $client, int $id, string $model): void
-    {
-        $this->putJson($client, sprintf('/api/me/ai/configs/%d/model', $id), sprintf('{"model":"%s"}', $model));
-    }
-
-    /** Adds a configuration and chooses a model on it in one call — most cases need only that. */
-    private function addAndReadyConfiguration(KernelBrowser $client, string $model = 'gpt-4o'): int
-    {
-        $added = $this->addConfiguration($client);
-        $id = $added['id'];
-        self::assertIsInt($id);
-
-        $this->chooseModel($client, $id, $model);
-        self::assertResponseIsSuccessful();
-
-        return $id;
+        $this->resetTheProviderBudget();
     }
 
     private function body(KernelBrowser $client): string
@@ -171,7 +71,34 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame('1234', $added['apiKeyHint']);
         self::assertFalse($added['ready']);
         self::assertFalse($added['active']);
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added['models']);
+        self::assertSame(
+            [
+                ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+            ],
+            $added['models'],
+        );
+    }
+
+    public function testListingModelsMarksAJevModelByTheCapabilitiesItWouldGive(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'jev-latest']);
+        $this->accountOn($client, 'ai-models-jev@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                'models' => [
+                    ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                ],
+            ],
+            $this->payload($client),
+        );
     }
 
     /**
@@ -249,12 +176,12 @@ final class AiSettingsControllerTest extends ApiTestCase
         $payload = $this->payload($client);
         self::assertIsArray($payload['configs']);
         self::assertIsArray($payload['configs'][0]);
-        self::assertSame(self::LLM_CAPABILITIES, $payload['configs'][0]['capabilities']);
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $payload['configs'][0]['capabilities']);
 
         $client->request('GET', '/api/me');
         $me = $this->payload($client);
         self::assertIsArray($me['ai']);
-        self::assertSame(self::LLM_CAPABILITIES, $me['ai']['capabilities']);
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $me['ai']['capabilities']);
     }
 
     public function testAnAccountWithoutAnActiveConfigurationReportsNoCapabilities(): void

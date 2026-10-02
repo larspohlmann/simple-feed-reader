@@ -1,10 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { SearchableSelectComponent } from './searchable-select.component';
+import { SearchableSelectComponent, SelectOption } from './searchable-select.component';
 
 describe('SearchableSelectComponent', () => {
   function mount(
-    options = [
+    options: readonly SelectOption[] = [
       { value: 'gpt-4o', label: 'gpt-4o' },
       { value: 'gpt-4o-mini', label: 'gpt-4o-mini' },
       { value: 'claude-sonnet', label: 'claude-sonnet' },
@@ -60,6 +60,25 @@ describe('SearchableSelectComponent', () => {
     const fixture = mount();
     open(fixture);
     expect(optionLabels(fixture)).toEqual(['gpt-4o', 'gpt-4o-mini', 'claude-sonnet']);
+  });
+
+  it("shows an option's hint under its label and leaves it out of the closed trigger", () => {
+    const fixture = mount([
+      { value: 'jev-latest', label: 'jev-latest', hint: 'Scores articles' },
+      { value: 'gpt-4o', label: 'gpt-4o' },
+    ]);
+    open(fixture);
+
+    const hints = Array.from(
+      fixture.nativeElement.querySelectorAll('[role="option"] .option-hint'),
+    );
+    expect(hints.map((element) => (element as HTMLElement).textContent!.trim())).toEqual([
+      'Scores articles',
+    ]);
+
+    (fixture.nativeElement.querySelector('[role="option"]') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.current').textContent.trim()).toBe('jev-latest');
   });
 
   it('filters the list on the typed text, ignoring case', () => {

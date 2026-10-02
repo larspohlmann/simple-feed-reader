@@ -13,6 +13,7 @@ final readonly class RecommendationEngineCapabilitiesModel
     public function __construct(
         public bool $writesReasons,
         public bool $sendsPrompt,
+        public RecommendationProfileSource $profileSource,
         public array $tuningFields,
     ) {
     }
@@ -24,7 +25,14 @@ final readonly class RecommendationEngineCapabilitiesModel
             RecommendationEngineKind::Llm => new self(
                 writesReasons: true,
                 sendsPrompt: true,
+                profileSource: RecommendationProfileSource::Own,
                 tuningFields: RecommendationTuningField::cases(),
+            ),
+            RecommendationEngineKind::Jev => new self(
+                writesReasons: false,
+                sendsPrompt: false,
+                profileSource: RecommendationProfileSource::Borrowed,
+                tuningFields: [RecommendationTuningField::BatchConcurrency],
             ),
         };
     }

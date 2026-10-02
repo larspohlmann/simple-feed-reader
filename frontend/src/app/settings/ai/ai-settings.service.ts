@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable, catchError, throwError } from 'rxjs';
 import {
   AiAvailabilityService,
   RecommendationCapabilities,
@@ -21,10 +21,19 @@ export interface AiConfig {
   readonly model: string | null;
   readonly ready: boolean;
   readonly active: boolean;
+  readonly profileSource: boolean;
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
   readonly maxBatchSize: number | null;
+  readonly capabilities: RecommendationCapabilities;
+}
+
+/** A model the provider offers, with what a connection could do once it saves that model. */
+export interface AiModel {
+  readonly id: string;
+  /** Shown beside the id as the server words it; null for an LLM. */
+  readonly label: string | null;
   readonly capabilities: RecommendationCapabilities;
 }
 
@@ -70,7 +79,7 @@ export class AiSettingsService {
   readonly activeId = computed<number | null>(
     () => this.configs().find((each) => each.active)?.id ?? null,
   );
-  readonly models = signal<readonly string[]>([]);
+  readonly models = signal<readonly AiModel[]>([]);
   /** The default batch-cap the backend reports, shown as the empty field's
    *  placeholder. Null until the list has loaded. */
   readonly defaultMaxBatchSize = signal<number | null>(null);
@@ -101,7 +110,7 @@ export class AiSettingsService {
   add(draft: AiDraft, onAdded: () => void): void {
     this.run(
       { action: 'add' },
-      this.http.post<AiConfig & { models: string[] }>(`${this.base}/api/me/ai/configs`, {
+      this.http.post<AiConfig & { models: AiModel[] }>(`${this.base}/api/me/ai/configs`, {
         name: draft.name,
         baseUrl: draft.baseUrl,
         apiKey: draft.apiKey,
@@ -119,7 +128,7 @@ export class AiSettingsService {
   loadModels(id: number): void {
     this.run(
       { action: 'row', configId: id },
-      this.http.get<{ models: string[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
+      this.http.get<{ models: AiModel[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
       (answer) => {
         this.models.set(answer.models);
         this.choosingModelFor.set(id);
@@ -190,6 +199,43 @@ export class AiSettingsService {
     );
   }
 
+  chooseProfileSource(id: number): void {
+    this.run(
+      { action: 'profile' },
+      this.reloadWhenGone(
+        this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+      ),
+      (config) => this.upsert(config),
+    );
+  }
+
+  /** Clears the choice on whichever row holds it, wherever its model went since; nothing to send when none does. */
+  clearProfileSource(): void {
+    const holder = this.configs().find((each) => each.profileSource);
+    if (!holder) return;
+
+    this.run(
+      { action: 'profile' },
+      this.reloadWhenGone(
+        this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+      ),
+      () => this.upsert({ ...holder, profileSource: false }),
+    );
+  }
+
+  /** A 404 means the row the choice names is gone: reload instead of failing. Completing empty
+   *  leaves `busy` to the reload's own request. */
+  private reloadWhenGone<T>(request: Observable<T>): Observable<T> {
+    return request.pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status !== 404) return throwError(() => error);
+
+        this.load();
+        return EMPTY;
+      }),
+    );
+  }
+
   activate(id: number): void {
     this.run(
       { action: 'row', configId: id },
@@ -217,7 +263,8 @@ export class AiSettingsService {
   /** Replaces the row by id when it exists, so a sibling row's write never
    *  reorders the list; otherwise appends (what `add` needs). A row reported
    *  `active` clears the flag on whichever row held it before -- mirroring the
-   *  server's own guarantee of at most one active configuration per account. */
+   *  server's own guarantee of at most one active configuration per account,
+   *  and likewise `profileSource`. */
   private upsert(config: AiConfig): void {
     const current = this.configs();
     const index = current.findIndex((each) => each.id === config.id);
@@ -227,11 +274,15 @@ export class AiSettingsService {
         : current.map((each, position) => (position === index ? config : each));
 
     this.configs.set(
-      config.active
-        ? replaced.map((each) =>
-            each.id !== config.id && each.active ? { ...each, active: false } : each,
-          )
-        : replaced,
+      replaced.map((each) =>
+        each.id !== config.id && holdsAFlagNowTaken(each, config)
+          ? {
+              ...each,
+              active: each.active && !config.active,
+              profileSource: each.profileSource && !config.profileSource,
+            }
+          : each,
+      ),
     );
     this.applyAvailability();
   }
@@ -269,4 +320,9 @@ export class AiSettingsService {
       },
     });
   }
+}
+
+/** Whether `sibling` holds a one-per-account flag that `taken` now reports as its own. */
+function holdsAFlagNowTaken(sibling: AiConfig, taken: AiConfig): boolean {
+  return (taken.active && sibling.active) || (taken.profileSource && sibling.profileSource);
 }

@@ -23,6 +23,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class RecommendationEtaEstimatorTest extends DbTestCase
 {
     private const string RUN_START = '2026-08-08T12:00:00Z';
+    private const string HISTORY_START = '2026-08-07T09:00:00Z';
 
     private User $user;
     private RecommendationRunFixtures $fixtures;
@@ -103,6 +104,40 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         );
     }
 
+    /**
+     * History: an LLM run (10 + 4 × 10 + 30), a Jev run (15 + 3 × 25) and an LLM run that skipped consolidation, whose
+     * phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
+     */
+    public function testAJevRunIsPredictedFromJevRunsAlone(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalJevRun(distill: 15, batchWall: 75, batches: 3);
+        $this->seedHistoricalLlmRunWithoutConsolidation(distill: 10, batchWall: 40, batches: 4);
+        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds($this->liveJevReportWithBatches(4), $this->user);
+
+        self::assertSame(95, $eta);
+    }
+
+    /**
+     * 16 s of pickup, a 5 s distill, a 5 s wait, 11 s of batch waves over 5 batches and a 9 s finalize tick make 46 s.
+     * 28 s into the next 5-batch run, 18 s remain, not the 0 the call time alone leaves.
+     */
+    public function testPredictsTheTimeBetweenCallsOnTheClockElapsedRunsOn(): void
+    {
+        $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
+        $run->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $this->finishedLog($run, CallPhase::Distill, null, 16, 5);
+        for ($batch = 1; $batch <= 5; $batch++) {
+            $this->finishedLog($run, CallPhase::Batch, $batch, 26, 11);
+        }
+        $run->complete((new \DateTimeImmutable(self::HISTORY_START))->modify('+46 seconds'));
+        $this->entityManager->flush();
+
+        $eta = $this->estimatorAt('+28 seconds')->estimateSeconds($this->liveJevReportWithBatches(5), $this->user);
+
+        self::assertSame(18, $eta);
+    }
+
     private function estimatorAt(string $offset): RecommendationEtaEstimator
     {
         /** @var RecommendationRunTimingRepository $timings */
@@ -126,17 +161,59 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         return RecommendationRunReportModel::fromRun($run);
     }
 
+    private function liveJevReportWithBatches(int $batches): RecommendationRunReportModel
+    {
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
+        $run->snapshot(
+            RecommendationEngineKind::Jev,
+            array_map(static fn (int $index): array => [$index], range(1, $batches)),
+        );
+        $run->markFirstBatchStarted();
+
+        return RecommendationRunReportModel::fromRun($run);
+    }
+
     private function seedHistoricalRun(int $distill, int $batchWall, int $batches, int $consolidate): void
     {
-        $run = $this->fixtures->createRun($this->user);
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
-        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Llm, $distill, $batchWall, $batches);
+        $this->finishedLog($run, CallPhase::Consolidate, null, $distill + $batchWall, $consolidate);
+        $this->completeAfter($run, $distill + $batchWall + $consolidate);
+    }
+
+    /** An LLM run whose pool was empty at consolidation: no consolidate row, so its phases are Jev's. */
+    private function seedHistoricalLlmRunWithoutConsolidation(int $distill, int $batchWall, int $batches): void
+    {
+        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Llm, $distill, $batchWall, $batches);
+        $this->completeAfter($run, $distill + $batchWall);
+    }
+
+    private function seedHistoricalJevRun(int $distill, int $batchWall, int $batches): void
+    {
+        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Jev, $distill, $batchWall, $batches);
+        $this->completeAfter($run, $distill + $batchWall);
+    }
+
+    /** Created when its distill call starts, its batches one wave right after: no time passes between calls. */
+    private function runWithDistillationAndBatches(
+        RecommendationEngineKind $engineKind,
+        int $distill,
+        int $batchWall,
+        int $batches,
+    ): RecommendationRun {
+        $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
+        $run->snapshot($engineKind, [[1]]);
 
         $this->finishedLog($run, CallPhase::Distill, null, 0, $distill);
         for ($batch = 1; $batch <= $batches; $batch++) {
-            $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
+            $this->finishedLog($run, CallPhase::Batch, $batch, $distill, $batchWall);
         }
-        $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
+
+        return $run;
+    }
+
+    private function completeAfter(RecommendationRun $run, int $seconds): void
+    {
+        $run->complete((new \DateTimeImmutable(self::HISTORY_START))->modify("+{$seconds} seconds"));
         $this->entityManager->flush();
     }
 
@@ -147,7 +224,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         int $startOffset,
         int $spanSeconds,
     ): void {
-        $base = new \DateTimeImmutable('2026-08-07T09:00:00Z');
+        $base = new \DateTimeImmutable(self::HISTORY_START);
         $log = $this->fixtures->log($run, $phase, $batchNumber, 1, 'req', $base->modify("+{$startOffset} seconds"));
         $this->fixtures->settleLog($log, 'reply', new CallOutcome(
             CallVerdict::Usable,

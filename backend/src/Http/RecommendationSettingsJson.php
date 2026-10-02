@@ -12,8 +12,9 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
- * The effective recommendation settings plus, for an engine that sends a prompt, the prompt layers the card shows
- * read-only. `contextWindowOverride` is the user's own value or null; `contextWindow` is always the effective one.
+ * The effective recommendation settings, the distilled profile and, for an engine that sends a prompt, the prompt
+ * layers the card shows read-only. `contextWindowOverride` is the user's own value or null; `contextWindow` is always
+ * the effective one.
  */
 final class RecommendationSettingsJson
 {
@@ -27,7 +28,8 @@ final class RecommendationSettingsJson
     ): array {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
-            ...self::promptPieces($effective, $capabilities),
+            'profileText' => $effective->profileText,
+            ...self::promptPieces($capabilities),
             'expertDefaults' => [
                 'guidancePrompt' => null,
                 'favoritesCap' => RecommendationSettings::DEFAULT_FAVORITES_CAP,
@@ -60,21 +62,17 @@ final class RecommendationSettingsJson
 
     /**
      * @return array{
-     *     profileText: ?string,
      *     defaultGuidancePrompt: ?string,
      *     fixedPrompt: array{role: string, outputContract: string}|null,
      * }
      */
-    private static function promptPieces(
-        EffectiveRecommendationSettingsModel $effective,
-        RecommendationEngineCapabilitiesModel $capabilities,
-    ): array {
+    private static function promptPieces(RecommendationEngineCapabilitiesModel $capabilities): array
+    {
         if (!$capabilities->sendsPrompt) {
-            return ['profileText' => null, 'defaultGuidancePrompt' => null, 'fixedPrompt' => null];
+            return ['defaultGuidancePrompt' => null, 'fixedPrompt' => null];
         }
 
         return [
-            'profileText' => $effective->profileText,
             'defaultGuidancePrompt' => RecommendationPromptText::DEFAULT_GUIDANCE,
             'fixedPrompt' => [
                 'role' => RecommendationPromptText::BATCH_SYSTEM_ROLE,

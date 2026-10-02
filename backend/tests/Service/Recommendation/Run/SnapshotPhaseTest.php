@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
@@ -92,6 +93,27 @@ final class SnapshotPhaseTest extends DbTestCase
         $this->snapshot(ScriptedRecommendationEngine::packing([[999]]))->advance($this->tick($run));
 
         self::assertSame('llm', $this->storedEngineKind($run));
+    }
+
+    public function testAJevTickRecordsTheJevKindWithAPlan(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 2);
+        $run = $this->pendingRun();
+        $jevTick = $this->tickOfKind($run, RecommendationEngineKind::Jev);
+
+        $this->snapshot(ScriptedRecommendationEngine::packing([[1]]))->advance($jevTick);
+
+        self::assertSame('jev', $this->storedEngineKind($run));
+    }
+
+    public function testAJevTickRecordsTheJevKindForAnEmptyPool(): void
+    {
+        $run = $this->pendingRun();
+        $jevTick = $this->tickOfKind($run, RecommendationEngineKind::Jev);
+
+        $this->snapshot(ScriptedRecommendationEngine::packing([[999]]))->advance($jevTick);
+
+        self::assertSame('jev', $this->storedEngineKind($run));
     }
 
     private function storedEngineKind(RecommendationRun $run): mixed

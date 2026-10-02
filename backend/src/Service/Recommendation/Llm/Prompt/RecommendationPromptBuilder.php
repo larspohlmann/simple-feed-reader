@@ -12,13 +12,14 @@ use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Support\ClippedText;
+use App\Service\Recommendation\Support\TokenEstimate;
 
 /**
  * Renders the recommendation prompts and packs the candidate pool into batches that fit the context window.
  */
 final readonly class RecommendationPromptBuilder
 {
-    private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
     /**
@@ -77,7 +78,7 @@ final readonly class RecommendationPromptBuilder
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
         $favoritesSection = $this->favoritesSection($history, $descriptionLength);
-        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
+        $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::of($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = $this->answerBudget->answerBoundTokens(
             $cap,
@@ -90,7 +91,7 @@ final readonly class RecommendationPromptBuilder
         $used = 0;
 
         foreach ($candidates as $candidate) {
-            $lineTokens = $this->tokens($this->candidateLine($candidate, $descriptionLength));
+            $lineTokens = TokenEstimate::of($this->candidateLine($candidate, $descriptionLength));
             $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
             $atCapacity = \count($current) >= $cap;
             if ([] !== $current && ($overBudget || $atCapacity)) {
@@ -119,10 +120,10 @@ final readonly class RecommendationPromptBuilder
         $picksLimit = $context->settings->poolLimits->picksLimit;
         $descriptionLength = $this->descriptionLength($contextWindow);
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
-            + $this->tokens((string) $context->profile)
-            + $this->tokens($this->favoritesSection($context->history, $descriptionLength));
+            + TokenEstimate::of((string) $context->profile)
+            + TokenEstimate::of($this->favoritesSection($context->history, $descriptionLength));
         $lineChars = $descriptionLength + self::CANDIDATE_LINE_FRAME_CHARS;
-        $perCandidateInputTokens = intdiv($lineChars, self::CHARS_PER_TOKEN) + 1;
+        $perCandidateInputTokens = TokenEstimate::ofLength($lineChars);
 
         $floor = self::CONSOLIDATION_MIN_INPUT_FACTOR * $picksLimit;
         $ceiling = self::CONSOLIDATION_MAX_INPUT_FACTOR * $picksLimit;
@@ -286,20 +287,7 @@ final readonly class RecommendationPromptBuilder
      */
     private function quotableReply(string $invalidReply): string
     {
-        return self::clipped($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
-    }
-
-    /**
-     * Clips by character, not byte: this text goes into a JSON request body, and a German reply cut mid-umlaut makes
-     * json_encode fail and costs the retry the clip exists to enable.
-     */
-    private static function clipped(string $value, int $lengthInCharacters, string $marker): string
-    {
-        if (mb_strlen($value) <= $lengthInCharacters) {
-            return $value;
-        }
-
-        return mb_substr($value, 0, $lengthInCharacters) . $marker;
+        return ClippedText::of($invalidReply, self::QUOTED_REPLY_LIMIT_CHARS, self::QUOTED_REPLY_ELLIPSIS);
     }
 
     /**
@@ -416,11 +404,6 @@ final readonly class RecommendationPromptBuilder
             return null;
         }
 
-        return self::clipped($description, $length, '…');
-    }
-
-    private function tokens(string $text): int
-    {
-        return intdiv(\strlen($text), self::CHARS_PER_TOKEN) + 1;
+        return ClippedText::of($description, $length);
     }
 }

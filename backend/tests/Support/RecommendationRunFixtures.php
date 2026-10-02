@@ -29,6 +29,9 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class RecommendationRunFixtures
 {
+    public const string PROFILE_MODEL = 'profile-llm';
+    public const string PROFILE_BASE_URL = 'https://profile.example.test/v1';
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
@@ -37,15 +40,40 @@ final readonly class RecommendationRunFixtures
 
     public function seedReadyAiSettings(User $user): void
     {
+        $this->seedReadyAiSettingsFor($user, 'm');
+    }
+
+    public function seedReadyAiSettingsFor(User $user, string $model): void
+    {
         $userId = $user->requireId();
         $sealed = $this->cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->entityManager->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
+        $settings->chooseModel($model, $now, 32768);
         $user->setActiveAiProviderSettings($settings);
         $this->entityManager->flush();
+    }
+
+    /** A second ready connection, not active, chosen to build the profile; its base URL tells its calls apart. */
+    public function seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings
+    {
+        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
+        $connection = new AiProviderSettings(
+            $user,
+            'Profile',
+            self::PROFILE_BASE_URL,
+            $this->cipher->seal($user->requireId(), 'sk-profile5678'),
+            '5678',
+            $now,
+        );
+        $this->entityManager->persist($connection);
+        $connection->chooseModel($model, $now, 32768);
+        $connection->setProfileSource(true);
+        $this->entityManager->flush();
+
+        return $connection;
     }
 
     /**
@@ -202,14 +230,20 @@ final readonly class RecommendationRunFixtures
         return $this->recommendationSettings($user, true, showScoreAndReasons: true);
     }
 
+    public function guidanceSettings(User $user, string $guidancePrompt): RecommendationSettings
+    {
+        return $this->recommendationSettings($user, false, guidancePrompt: $guidancePrompt);
+    }
+
     private function recommendationSettings(
         User $user,
         bool $debugEnabled,
         bool $showScoreAndReasons = false,
+        ?string $guidancePrompt = null,
     ): RecommendationSettings {
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
-            guidancePrompt: null,
+            guidancePrompt: $guidancePrompt,
             historyCaps: RecommendationHistoryCaps::defaults(),
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,

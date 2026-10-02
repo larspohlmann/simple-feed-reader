@@ -48,6 +48,13 @@ app-searchable-select {
   color: var(--text-muted);
 }
 
+.profile-connection {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: var(--space-3);
+}
+
 .manage {
   flex: none;
 }
@@ -182,6 +189,10 @@ app-disclosure {
   gap: var(--space-4);
   align-items: flex-start;
   padding: 0 var(--space-5) var(--space-5);
+}
+
+.add-intro {
+  margin: 0;
 }
 
 .guide {

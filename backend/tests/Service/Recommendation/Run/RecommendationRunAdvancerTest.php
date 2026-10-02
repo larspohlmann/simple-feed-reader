@@ -40,6 +40,7 @@ use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Recommendation\Run\TickLockTtl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\BeatDuringReleaseLockFactory;
@@ -385,7 +386,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $ttl = $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId());
         self::assertSame(
-            $firstByteSeconds + RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS,
+            $firstByteSeconds + TickLockTtl::MARGIN_SECONDS,
             $ttl,
             'The TTL is one first-byte silence plus the margin, and nothing else.',
         );
@@ -2579,6 +2580,26 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
+    }
+
+    public function testABatchCallsStreamReportsReachItsLogRow(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+
+        $this->stubChatClient()->queueStreamedReply(new CallProgressModel(
+            json_encode([
+                'recommendations' => [['id' => $run->getCandidateBatches()[0][0], 'score' => 50, 'reason' => 'r']],
+            ], \JSON_THROW_ON_ERROR),
+            512,
+            'stop',
+        ));
+        $this->advancer()->advance($this->user);
+
+        $rows = $this->batchLogRowsOfLatestRun();
+        self::assertSame([CallVerdict::Usable], array_column($rows, 'verdict'));
+        self::assertSame(['stop'], array_column($rows, 'finishReason'));
+        self::assertSame([512], array_column($rows, 'wireBytes'));
     }
 
     public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
