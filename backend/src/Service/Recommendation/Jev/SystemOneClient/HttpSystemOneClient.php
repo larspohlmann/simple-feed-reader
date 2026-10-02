@@ -8,6 +8,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\RetryAfter;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
@@ -131,7 +132,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 new CredentialsRejectedException('That provider refused the API key.'),
             ),
             \in_array($status, self::RETRYABLE_STATUSES, true) => SystemOneOutcomeModel::failed(
-                new RetryableProviderException($status, self::retryAfterSeconds($response)),
+                new RetryableProviderException($status, RetryAfter::secondsIn($response)),
             ),
             400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
                 new ProviderUnreachableException(RefusalMessage::of($status, $body)),
@@ -143,14 +144,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 SystemOneReplyDecoder::decode($body, ResponseHeader::first($response, 'x-typesafe-request-id')),
             ),
         };
-    }
-
-    /** Integer seconds only, as the chat client reads it; a date form falls back to the plan's backoff. */
-    private static function retryAfterSeconds(ResponseInterface $response): ?int
-    {
-        $header = ResponseHeader::first($response, 'retry-after');
-
-        return null !== $header && ctype_digit($header) ? (int) $header : null;
     }
 
     private static function unanswered(ExceptionInterface $exception): ProviderUnreachableException
