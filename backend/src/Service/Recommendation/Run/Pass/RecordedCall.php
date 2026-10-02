@@ -8,6 +8,7 @@ use App\Entity\CallOutcome;
 use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
+use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
 use App\Service\Recommendation\Run\Model\CallProgressModel;
 use Symfony\Component\Clock\ClockInterface;
@@ -31,6 +32,8 @@ final class RecordedCall
 
     /** Sticky: the usage arrives in one late message, so a later report without it must not erase it. */
     private ?ProviderCallUsageModel $usage = null;
+
+    private ?ProviderCallReceiptModel $receipt = null;
 
     /** Billed once across every settle path; set only when bankUsage() writes, so a later path can still bank. */
     private bool $usageBanked = false;
@@ -59,6 +62,14 @@ final class RecordedCall
 
         $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
         $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
+    }
+
+    /** A reply that arrives whole rather than streamed: its size, its usage and what the provider said about it. */
+    public function received(ProviderCallReceiptModel $receipt, int $wireBytes): void
+    {
+        $this->receipt = $receipt;
+        $this->wireBytes = $wireBytes;
+        $this->usage = $receipt->usage ?? $this->usage;
     }
 
     public function finishUsable(string $content): void
@@ -102,6 +113,7 @@ final class RecordedCall
         return new CallSettlement(
             $this->logId,
             new CallOutcome($verdict, $this->wireBytes, $this->clock->now(), $this->finishReason),
+            $this->receipt,
         );
     }
 

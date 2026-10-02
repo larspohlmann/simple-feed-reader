@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
 use Doctrine\DBAL\Connection;
 
@@ -44,6 +45,7 @@ final readonly class RecommendationCallRepository
             'wire_bytes' => $outcome->wireBytes,
             'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
             'finish_reason' => $outcome->finishReason,
+            ...self::receiptColumns($settlement->receipt),
         ], ['id' => $settlement->logId]);
     }
 
@@ -56,6 +58,7 @@ final readonly class RecommendationCallRepository
             'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
             'error_detail' => $errorDetail,
             'finish_reason' => $outcome->finishReason,
+            ...self::receiptColumns($settlement->receipt),
         ], ['id' => $settlement->logId]);
     }
 
@@ -79,6 +82,24 @@ final readonly class RecommendationCallRepository
         );
 
         $this->addCost($runId, $usage->costNanoCredits);
+    }
+
+    /**
+     * A streamed call settles without a receipt and writes none of its columns.
+     *
+     * @return array<string, string|int|null>
+     */
+    private static function receiptColumns(?ProviderCallReceiptModel $receipt): array
+    {
+        if (null === $receipt) {
+            return [];
+        }
+
+        return [
+            'request_id' => $receipt->requestId,
+            'answering_model' => $receipt->answeringModel,
+            'cost_nano_credits' => $receipt->usage?->costNanoCredits,
+        ];
     }
 
     /** An unpriced call leaves the column NULL: null means no price was reported, 0 would claim the run was free. */
