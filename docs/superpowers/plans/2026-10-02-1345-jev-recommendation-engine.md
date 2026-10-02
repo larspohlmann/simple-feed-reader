@@ -4341,10 +4341,20 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
 
 ```php
         return match ($kind) {
-            RecommendationEngineKind::Llm => new self(true, true, RecommendationTuningField::cases()),
-            RecommendationEngineKind::Jev => new self(false, false, [RecommendationTuningField::BatchConcurrency]),
+            RecommendationEngineKind::Llm => new self(
+                writesReasons: true,
+                sendsPrompt: true,
+                tuningFields: RecommendationTuningField::cases(),
+            ),
+            RecommendationEngineKind::Jev => new self(
+                writesReasons: false,
+                sendsPrompt: false,
+                tuningFields: [RecommendationTuningField::BatchConcurrency],
+            ),
         };
 ```
+
+*Amended (PR-A fix wave, item 15):* `of()` builds the model with named arguments, so the two adjacent bools cannot be swapped silently; the Jev arm follows suit.
 
 `RecommendationEngineResolver`:
 
