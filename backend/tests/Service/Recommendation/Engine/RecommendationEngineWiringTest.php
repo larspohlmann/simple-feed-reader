@@ -35,7 +35,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
         $connection = AiProviderSettingsFactory::build(
             new User('engine-wiring-jev@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
-        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 64_000);
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 32_000);
 
         self::assertInstanceOf(JevRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
     }

@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev;
 
 use App\Service\Ai\ModelCatalog\SystemOneCatalog;
-use App\Service\Recommendation\Jev\Factory\JevStateFactory;
 use App\Service\Recommendation\Jev\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 
 /**
  * Packs the pool into System One requests by the token estimate. The state is budgeted at its ceiling, not its size
- * now: every wave rebuilds it from the history as it is then.
+ * now: every wave rebuilds it.
  */
 final readonly class JevBatchPacker
 {
@@ -22,8 +21,10 @@ final readonly class JevBatchPacker
     /** The request's own framing and the estimate's error. */
     private const int FRAMING_TOKENS = 2_000;
 
-    public const int QUESTION_TOKEN_BUDGET = SystemOneCatalog::CONTEXT_WINDOW_TOKENS - self::FRAMING_TOKENS
-        - JevStateFactory::STATE_TOKEN_BUDGET;
+    private const int STATE_TOKENS = 4_000;
+
+    private const int QUESTION_TOKEN_BUDGET = SystemOneCatalog::CONTEXT_WINDOW_TOKENS - self::FRAMING_TOKENS
+        - self::STATE_TOKENS;
 
     public function __construct(private SystemOneRequestFactory $requestFactory)
     {

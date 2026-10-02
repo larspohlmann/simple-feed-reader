@@ -25,15 +25,12 @@ final class SystemOneCatalogTest extends TestCase
     }
 
     #[DataProvider('presentStatuses')]
-    public function testAnEndpointThatRefusesTheEmptyRequestOffersBothAliasesAt64k(int $status): void
+    public function testAnEndpointThatRefusesTheEmptyRequestOffersTheLatestAliasAt32k(int $status): void
     {
         $models = $this->catalogAnswering(new MockResponse('{}', ['http_code' => $status]))
             ->listModels($this->credentials());
 
-        self::assertEquals(
-            [new ModelDescriptorModel('jev-latest', 64_000), new ModelDescriptorModel('jev-preview', 64_000)],
-            $models,
-        );
+        self::assertEquals([new ModelDescriptorModel('jev-latest', 32_000)], $models);
     }
 
     /** @return iterable<string, array{int}> */

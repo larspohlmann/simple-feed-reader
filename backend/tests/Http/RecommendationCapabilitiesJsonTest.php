@@ -28,7 +28,7 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
         $connection = AiProviderSettingsFactory::build(
             new User('capabilities-json-jev@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
-        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 64_000);
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 32_000);
 
         self::assertSame(
             RecommendationCapabilitiesJsons::JEV,

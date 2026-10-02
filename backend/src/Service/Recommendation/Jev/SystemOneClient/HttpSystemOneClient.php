@@ -22,7 +22,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Sends `POST {baseUrl}/systemone`. Its own timeouts, not the connection's slow-model pair: one request is bounded by
- * TypeSafe's 64k tokens. The caps are no SSRF boundary (docs/security.md#ai-provider-endpoints).
+ * a 32k-token window. The caps are no SSRF boundary (docs/security.md#ai-provider-endpoints).
  */
 final readonly class HttpSystemOneClient implements SystemOneClientInterface
 {

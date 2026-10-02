@@ -23,15 +23,15 @@ final class CompositeModelCatalogTest extends TestCase
                 new ModelDescriptorModel('jev-latest', 1_000),
             ]),
             new StubModelCatalog([
-                new ModelDescriptorModel('jev-latest', 64_000),
-                new ModelDescriptorModel('jev-preview', 64_000),
+                new ModelDescriptorModel('jev-latest', 32_000),
+                new ModelDescriptorModel('anthropic/claude-sonnet', 200_000),
             ]),
         ]);
 
         self::assertEquals(
             [
+                new ModelDescriptorModel('anthropic/claude-sonnet', 200_000),
                 new ModelDescriptorModel('jev-latest', 1_000),
-                new ModelDescriptorModel('jev-preview', 64_000),
                 new ModelDescriptorModel('qwen/qwen3.7', 131_072),
             ],
             $catalog->listModels($this->credentials()),
@@ -43,11 +43,11 @@ final class CompositeModelCatalogTest extends TestCase
     {
         $catalog = new CompositeModelCatalog([
             new StubModelCatalog(new ProviderUnreachableException('That address answered, but not with a model list.')),
-            new StubModelCatalog(['jev-latest', 'jev-preview']),
+            new StubModelCatalog(['jev-latest']),
         ]);
 
         self::assertSame(
-            ['jev-latest', 'jev-preview'],
+            ['jev-latest'],
             array_map(
                 static fn (ModelDescriptorModel $model): string => $model->id,
                 $catalog->listModels($this->credentials()),

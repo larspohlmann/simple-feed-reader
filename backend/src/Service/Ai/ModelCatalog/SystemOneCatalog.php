@@ -13,16 +13,17 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Offers TypeSafe's two Jev aliases wherever `{base}/systemone` exists: OpenRouter's `/models` does not list them and
- * TypeSafe's own is not OpenAI-shaped. Aliases only, never a pinned version; the run log records which one answered.
+ * Offers TypeSafe's `jev-latest` alias wherever `{base}/systemone` exists: OpenRouter's `/models` does not list it and
+ * TypeSafe's own is not OpenAI-shaped. An alias, never a pinned version; the run log records which one answered.
  */
 #[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 0])]
 final readonly class SystemOneCatalog implements ModelCatalogInterface
 {
-    /** One System One request, state and every question together (https://docs.typesafe.ai). */
-    public const int CONTEXT_WINDOW_TOKENS = 64_000;
+    /** One System One request, state and every question together, as OpenRouter documents it. */
+    public const int CONTEXT_WINDOW_TOKENS = 32_000;
 
-    public const array MODEL_IDS = ['jev-latest', 'jev-preview'];
+    /** OpenRouter refuses `jev-preview`, and TypeSafe documents only `jev-latest`. */
+    private const array MODEL_IDS = ['jev-latest'];
 
     private const float TIMEOUT_SECONDS = 10.0;
 

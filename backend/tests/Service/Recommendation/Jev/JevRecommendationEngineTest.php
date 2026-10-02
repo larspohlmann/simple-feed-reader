@@ -246,7 +246,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         $this->advancer()->advance($this->owner);
         $connection = $this->owner->getActiveAiProviderSettings();
         self::assertNotNull($connection);
-        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:10:00'), 64_000);
+        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:10:00'), 32_000);
         $this->entityManager->flush();
 
         $this->advancer()->advance($this->owner);
@@ -285,7 +285,7 @@ final class JevRecommendationEngineTest extends DbTestCase
             '1234',
             $now,
         );
-        $connection->chooseModel('jev-latest', $now, 64_000);
+        $connection->chooseModel('jev-latest', $now, 32_000);
         $this->entityManager->flush();
     }
 
