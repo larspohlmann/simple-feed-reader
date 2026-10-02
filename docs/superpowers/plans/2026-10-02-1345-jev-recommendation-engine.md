@@ -8855,7 +8855,7 @@ git commit -m "feat(#1345): the ai settings choose the connection that builds je
 ```
 
 Then, in the browser on the dev stack (`:4200`, Mobile viewport per memory "built-in browser UA is bot-blocked"): with a
-Jev connection active the provider group shows the picker; choosing a connection persists across a reload; the
+Jev connection active the picker is in the Jev connection's configuration (Manage, then expand its row; Lars's ruling, B11); choosing a connection persists across a reload; the
 For-you card shows the profile after a run. Reviewer: yes.
 
 ---
@@ -8971,7 +8971,7 @@ the account's most recently used non-Jev, ready LLM connection, found read only 
 non-Jev run, or the most recently updated LLM connection — named in the report with how it was chosen. If the account
 has none: stop and report BLOCKED; adding a connection is a write outside this step): `curl -sk -X PUT https://localhost:8443/api/me/ai/configs/<llm id>/profile -H "Authorization: Bearer $TOKEN" | jq '{profileSource}'`.
 
-Expected capabilities `{"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else, and the provider group shows the profile-connection picker with that connection selected; the For-you card shows "Show score and reasons", no fixed prompt, and (after run 1) the profile. Turn the switch on if it is off (record that, to restore).
+Expected capabilities `{"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else, and the profile-connection picker is in the Jev connection's configuration (behind Manage and expanding the row, Lars's ruling, B11) with that connection selected; the For-you card shows "Show score and reasons", no fixed prompt, and (after run 1) the profile. Turn the switch on if it is off (record that, to restore).
 
 4. First run: `curl -sk -X POST https://localhost:8443/api/recommendations/runs -H "Authorization: Bearer $TOKEN"`; poll `GET /api/recommendations/runs/current` once a minute (no loop in a background agent) until it leaves `pending`/`running`.
 
