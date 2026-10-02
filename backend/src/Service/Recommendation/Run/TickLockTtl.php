@@ -9,8 +9,6 @@ use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Profile\ProfileConnectionResolver;
 
 /**
@@ -21,14 +19,13 @@ final readonly class TickLockTtl
 {
     /**
      * Headroom over the longest silence a live holder produces: loading and packing before a request, banking between
-     * waves, the whole snapshot tick. Public so the tests pin the TTL against its inputs.
+     * waves, the whole snapshot tick.
      */
     public const float MARGIN_SECONDS = 300.0;
 
     public function __construct(
         private AiProviderConfigurator $configurator,
         private ProviderConnectionFactory $connectionFactory,
-        private RecommendationEngineResolver $engines,
         private ProfileConnectionResolver $profileConnections,
     ) {
     }
@@ -40,17 +37,10 @@ final readonly class TickLockTtl
             return ProviderTimeoutsModel::standard()->firstByteSeconds + self::MARGIN_SECONDS;
         }
 
-        $profileConnection = $this->borrowedProfileConnection($user, $active);
+        $profileConnection = $this->profileConnections->borrowedFor($active);
         $calledConnections = null === $profileConnection ? [$active] : [$active, $profileConnection];
 
         return max(array_map($this->firstByteSeconds(...), $calledConnections)) + self::MARGIN_SECONDS;
-    }
-
-    private function borrowedProfileConnection(User $user, AiProviderSettings $active): ?AiProviderSettings
-    {
-        return RecommendationProfileSource::Borrowed === $this->engines->capabilitiesFor($active)->profileSource
-            ? $this->profileConnections->findUsableFor($user)
-            : null;
     }
 
     private function firstByteSeconds(AiProviderSettings $connection): float

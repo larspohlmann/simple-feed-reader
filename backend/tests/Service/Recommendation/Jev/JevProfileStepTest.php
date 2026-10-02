@@ -94,7 +94,7 @@ final class JevProfileStepTest extends DbTestCase
     {
         $tick = $this->tick($run);
 
-        return $tick->borrowingProfileFrom($tick);
+        return $tick->borrowingProfileFrom($tick->connection, $tick->settings);
     }
 
     private function degradingDistiller(): ProfileDistillerInterface

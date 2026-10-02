@@ -155,7 +155,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $this->user->setActiveAiProviderSettings($active);
         $this->entityManager->flush();
 
-        $forProfile = $this->resolver()->forConnection($profile);
+        $forProfile = $this->resolver()->forAccount($this->user)->forConnection($profile);
 
         self::assertSame(128_000, $forProfile->packing->contextWindow);
         self::assertSame(30, $forProfile->packing->maximumBatchSize);

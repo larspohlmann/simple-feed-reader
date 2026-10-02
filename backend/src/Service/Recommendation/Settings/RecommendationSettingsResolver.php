@@ -4,19 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Settings;
 
-use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
-use App\Entity\RecommendationPoolLimits;
 use App\Entity\User;
-use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Service\Recommendation\Settings\Pass\AccountRecommendationSettings;
 
-/**
- * The settings every recommendation service reads: the user's row over the defaults, and the context window from the
- * row, else the account's AI provider, else the fallback.
- */
+/** The settings every recommendation service reads, against the account's active AI provider unless told another. */
 final readonly class RecommendationSettingsResolver
 {
     public function __construct(
@@ -26,49 +19,12 @@ final readonly class RecommendationSettingsResolver
 
     public function forUser(User $user): EffectiveRecommendationSettingsModel
     {
-        return $this->resolve($user, $user->getActiveAiProviderSettings());
+        return $this->forAccount($user)->forConnection($user->getActiveAiProviderSettings());
     }
 
-    /** The account's settings with the window and the batch ceiling of a connection that need not be the active one. */
-    public function forConnection(AiProviderSettings $connection): EffectiveRecommendationSettingsModel
+    /** The account's row read once, for a caller that resolves it against more than one connection. */
+    public function forAccount(User $user): AccountRecommendationSettings
     {
-        return $this->resolve($connection->getUser(), $connection);
-    }
-
-    private function resolve(User $user, ?AiProviderSettings $provider): EffectiveRecommendationSettingsModel
-    {
-        $row = $this->settings->findForUser($user);
-        $providerWindow = $provider?->getModelContextWindow();
-
-        [$window, $source] = match (true) {
-            null !== $row?->values()->contextWindow => [$row->values()->contextWindow, 'user'],
-            null !== $providerWindow => [$providerWindow, 'provider'],
-            default => [EffectiveRecommendationSettingsModel::FALLBACK_CONTEXT_WINDOW, 'fallback'],
-        };
-
-        return new EffectiveRecommendationSettingsModel(
-            guidancePrompt: $row?->values()->guidancePrompt,
-            profileText: $row?->values()->profileText,
-            historyCaps: $row?->values()->historyCaps ?? RecommendationHistoryCaps::defaults(),
-            poolLimits: $row?->values()->poolLimits ?? RecommendationPoolLimits::defaults(),
-            packing: new RecommendationPackingSettingsModel(
-                contextWindow: $window,
-                contextWindowSource: $source,
-                batchSize: $row?->values()->batchSize ?? RecommendationBatchSize::Medium,
-                maximumBatchSize: self::batchCeilingFor($provider),
-            ),
-            debugEnabled: $row?->values()->debugEnabled ?? false,
-            autoGenerateIntervalHours: $row?->values()->autoGenerateIntervalHours,
-            showScoreAndReasons: $row?->values()->showScoreAndReasons ?? false,
-        );
-    }
-
-    /**
-     * A property of the connection, not an account setting: what the endpoint can be trusted with. It lives on the
-     * connection as configured, so it survives a model change; unset means the default.
-     */
-    private static function batchCeilingFor(?AiProviderSettings $provider): int
-    {
-        return $provider?->maxBatchSize() ?? RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE;
+        return new AccountRecommendationSettings($this->settings->findForUser($user));
     }
 }

@@ -35,11 +35,34 @@ final class TickContextTest extends TestCase
         $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
         $tick = $this->tick($jev, TickDriver::Worker);
         $tick->run->snapshot(RecommendationEngineKind::Jev, [[1]]);
-        $borrowing = $tick->borrowingProfileFrom($this->tick($profile, TickDriver::Worker));
+        $borrowing = $tick->borrowingProfileFrom($profile, $tick->settings);
 
         self::assertSame($profile, $borrowing->connectionInFlight());
         $tick->run->recordProfile('Likes Rust.');
         self::assertSame($jev, $borrowing->connectionInFlight());
+    }
+
+    public function testTheProfileTickRunsTheProfileConnectionAsAnLlmWithItsOwnSettings(): void
+    {
+        $jev = $this->connection();
+        $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
+        $tick = $this->tick($jev, TickDriver::Sweep);
+        $profileSettings = $this->tick($profile, TickDriver::Sweep)->settings;
+
+        $profileTick = $tick->borrowingProfileFrom($profile, $profileSettings)->profileTick();
+
+        self::assertNotNull($profileTick);
+        self::assertSame($tick->run, $profileTick->run);
+        self::assertSame($profile, $profileTick->connection);
+        self::assertSame(RecommendationEngineKind::Llm, $profileTick->engineKind);
+        self::assertSame($profileSettings, $profileTick->settings);
+        self::assertSame(TickDriver::Sweep, $profileTick->driver);
+        self::assertNull($profileTick->borrowedProfile);
+    }
+
+    public function testATickThatBorrowsNothingHasNoProfileTick(): void
+    {
+        self::assertNull($this->tick($this->connection(), TickDriver::Worker)->profileTick());
     }
 
     public function testATickWithoutAProfileTickCallsItsOwnConnection(): void

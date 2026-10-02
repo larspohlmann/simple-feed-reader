@@ -19,7 +19,14 @@ final readonly class ProfileConnectionResolver
     ) {
     }
 
-    /** The connection the account chose to build its profile, while it still can; null when there is none. */
+    /** The profile connection an active connection's engine borrows; null when it distils its own or has none. */
+    public function borrowedFor(AiProviderSettings $active): ?AiProviderSettings
+    {
+        return RecommendationProfileSource::Borrowed === $this->engines->capabilitiesFor($active)->profileSource
+            ? $this->findUsableFor($active->getUser())
+            : null;
+    }
+
     public function findUsableFor(User $user): ?AiProviderSettings
     {
         $connection = $this->aiProviderSettings->findProfileSourceFor($user);

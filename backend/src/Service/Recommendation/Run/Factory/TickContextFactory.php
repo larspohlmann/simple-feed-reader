@@ -9,8 +9,6 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Profile\ProfileConnectionResolver;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -33,32 +31,20 @@ final readonly class TickContextFactory
     {
         $user = $run->getUser();
         $connection = $this->activeConnection($user);
-
-        return $this->withBorrowedProfile(new TickContext(
+        $settings = $this->settingsResolver->forAccount($user);
+        $tick = new TickContext(
             $run,
             $connection,
             $this->engines->kindFor($connection),
-            $this->settingsResolver->forUser($user),
+            $settings->forConnection($connection),
             $driver,
-        ));
-    }
+        );
 
-    private function withBorrowedProfile(TickContext $tick): TickContext
-    {
-        $borrows = RecommendationProfileSource::Borrowed
-            === RecommendationEngineCapabilitiesModel::of($tick->engineKind)->profileSource;
-        $profileConnection = $borrows ? $this->profileConnections->findUsableFor($tick->run->getUser()) : null;
-        if (null === $profileConnection) {
-            return $tick;
-        }
+        $profileConnection = $this->profileConnections->borrowedFor($connection);
 
-        return $tick->borrowingProfileFrom(new TickContext(
-            $tick->run,
-            $profileConnection,
-            $this->engines->kindFor($profileConnection),
-            $this->settingsResolver->forConnection($profileConnection),
-            $tick->driver,
-        ));
+        return null === $profileConnection
+            ? $tick
+            : $tick->borrowingProfileFrom($profileConnection, $settings->forConnection($profileConnection));
     }
 
     private function activeConnection(User $user): AiProviderSettings

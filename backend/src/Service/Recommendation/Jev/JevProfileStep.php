@@ -41,11 +41,12 @@ final readonly class JevProfileStep
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
-        if (null === $tick->profileTick) {
+        $profileTick = $tick->profileTick();
+        if (null === $profileTick) {
             return $this->fail($run, self::NO_PROFILE_CONNECTION);
         }
 
-        $report = $this->profileDistiller->advance($tick->profileTick);
+        $report = $this->profileDistiller->advance($profileTick);
         // A degrade records no profile and resets the attempts; a retry still pending leaves them above zero.
         if (null !== $run->getProfileText() || $run->getAttempts() > 0) {
             return $report;

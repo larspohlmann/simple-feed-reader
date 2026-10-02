@@ -91,6 +91,23 @@ final class ProfileConnectionResolverTest extends DbTestCase
         self::assertNull($this->resolver()->findUsableFor($this->owner));
     }
 
+    public function testAJevConnectionBorrowsTheProfileConnection(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $active = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($active);
+
+        self::assertSame($profile, $this->resolver()->borrowedFor($active));
+    }
+
+    /** The LLM distils on its own connection, whatever the account chose. */
+    public function testAnLlmConnectionBorrowsNothing(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+
+        self::assertNull($this->resolver()->borrowedFor($profile));
+    }
+
     private function resolver(): ProfileConnectionResolver
     {
         /** @var ProfileConnectionResolver $resolver */

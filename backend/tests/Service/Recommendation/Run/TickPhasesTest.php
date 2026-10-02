@@ -11,7 +11,6 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationEngineSwitchFailure;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
@@ -124,14 +123,8 @@ final class TickPhasesTest extends DbTestCase
         $run = $this->fixtures->createRun($this->owner);
         $run->snapshot(RecommendationEngineKind::Jev, [[101, 102]]);
         $this->entityManager->flush();
-        $profileTick = new TickContext(
-            $run,
-            $profile,
-            RecommendationEngineKind::Llm,
-            $this->tick($run)->settings,
-            TickDriver::Poll,
-        );
-        $tick = $this->tickOfKind($run, RecommendationEngineKind::Jev)->borrowingProfileFrom($profileTick);
+        $tick = $this->tickOfKind($run, RecommendationEngineKind::Jev);
+        $tick = $tick->borrowingProfileFrom($profile, $tick->settings);
 
         for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
             try {
