@@ -87,9 +87,10 @@ scores the batches in waves and consolidates the best of them into the final lis
 declares the phases it runs; a run records the kind it was packed for, and its progress (`batchesTotal`) and the
 time-left estimate follow that kind's phases, learning only from completed runs of the same kind; the estimate also
 adds those runs' median time between calls (worker pickup, tick waits), since elapsed counts from the run's
-creation. The batch-wave skeleton (`BatchWavePhase`) loads each wave's batches and hands them to the engine's wave;
-it, the rate-limit loop (`Ai\RateLimitedCalls`) and the run-log recorder are shared, so an engine supplies only its
-own wave. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
+creation. The batch-wave skeleton (`BatchWavePhase`) loads each wave's batches, and `BatchWaveRounds` runs the wave's
+rounds: an unusable batch retries alone, a deferring 429 settles every call, and one transport failure settles the
+whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\RateLimitedCalls`) and the run-log
+recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
 `models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
 label beside its id (`RecommendationEngineResolver::labelForModel`: `"Jev"`, or `null` for an LLM), so the picker
