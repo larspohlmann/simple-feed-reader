@@ -36,10 +36,7 @@ final class RefusalMessage
 
         return match (true) {
             \is_string($detail) => $detail,
-            \is_array($detail) => json_encode(
-                $detail,
-                \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR,
-            ),
+            \is_array($detail) => SystemOneJson::encode($detail),
             default => null,
         };
     }

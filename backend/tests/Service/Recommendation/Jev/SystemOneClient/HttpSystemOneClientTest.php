@@ -33,12 +33,9 @@ final class HttpSystemOneClientTest extends TestCase
         $options = $response->getRequestOptions();
         self::assertContains('Authorization: Bearer sk-jev', $options['headers']);
         self::assertSame(
-            [
-                'model' => 'jev-latest',
-                'state' => ['guidance' => 'Rüstzeug für Rust'],
-                'questions' => ['entry-7' => ['type' => 'noul', 'instructions' => ['question' => 'Read `article`?']]],
-            ],
-            json_decode($options['body'], true),
+            '{"model":"jev-latest","state":{"guidance":"Rüstzeug für Rust"},'
+            . '"questions":{"entry-7":{"type":"noul","instructions":{"question":"Read `article`?"}}}}',
+            $options['body'],
         );
     }
 

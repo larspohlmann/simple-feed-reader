@@ -162,10 +162,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 'User-Agent' => $this->userAgent,
                 ...$credentials->authorizationHeaders(),
             ],
-            'body' => json_encode(
-                $request->payload(),
-                \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR,
-            ),
+            'body' => $request->toRequestBody(),
             'timeout' => self::IDLE_TIMEOUT_SECONDS,
             'max_duration' => self::WALL_CLOCK_SECONDS,
             'max_redirects' => 0,
