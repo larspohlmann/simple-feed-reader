@@ -34,6 +34,7 @@
                 'App\\Service\\Image\\ImageDownloader::assertServed',
                 'App\\Service\\Image\\ImageDownloader::servedType',
                 'App\\Service\\Image\\OriginCookies::visit',
+                'App\\Service\\Recommendation\\Jev\\SystemOneClient\\HttpSystemOneClient::abandoned',
             ],
         },
         // Both read the body only after isSuccess() was confirmed, and getContent()'s flag differs only on a non-2xx.

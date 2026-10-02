@@ -110,10 +110,15 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 
             return $this->outcomeOf($response);
         } catch (ExceptionInterface $exception) {
-            $response->cancel();
-
-            return SystemOneOutcomeModel::failed(self::unanswered($exception));
+            return self::abandoned($response, $exception);
         }
+    }
+
+    private static function abandoned(ResponseInterface $response, ExceptionInterface $exception): SystemOneOutcomeModel
+    {
+        $response->cancel();
+
+        return SystemOneOutcomeModel::failed(self::unanswered($exception));
     }
 
     private function outcomeOf(ResponseInterface $response): SystemOneOutcomeModel
