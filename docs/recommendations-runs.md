@@ -75,6 +75,18 @@ How the fast path is provided depends on the deployment:
 
 ## For developers
 
+### Engines
+
+A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
+an engine (today every connection is an LLM connection); `SnapshotPhase` asks that engine to pack the candidate pool
+into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
+the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
+
+The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile, scores the
+batches in waves and consolidates the best of them into the final list with reasons. Each engine reports its
+capabilities (`reasons`, and which tuning fields it reads); the API passes them to the client, which shows only the
+settings that apply.
+
 ### The tick lock
 
 Every tick runs behind a per-user lock (`RecommendationRunAdvancer::lockNameFor()`), so two drivers never advance
