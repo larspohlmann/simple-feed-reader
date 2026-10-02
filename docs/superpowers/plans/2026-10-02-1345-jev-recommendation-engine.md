@@ -15,10 +15,21 @@
 A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommendation-engine/smoke-real-systemone.md`) answered the happy path as planned and contradicted the plan in four places. These override settled design 2/8/9 and D14, D16, D18, D22, D29 where they differ; the PR B fix wave implements them.
 
 - **Context window 32,000 tokens** (OpenRouter documents 32k; the plan read "64k"): `SystemOneCatalog::CONTEXT_WINDOW_TOKENS = 32_000`, the window the catalog offers and `chooseModel()` stores.
-- **The packer reserves 4,000 tokens for the state:** question budget per request = 32,000 − 2,000 framing − 4,000 state = 26,000 tokens, question cap still 100. The reserve is the packer's own constant (`JevBatchPacker::STATE_TOKENS`), not `JevStateFactory`'s budget: the state's contents are being reworked separately (the preference profile instead of history lines), so `JevStateFactory` and D20 are left as they are until then.
+- **The packer reserves 4,000 tokens for the state:** question budget per request = 32,000 − 2,000 framing − 4,000 state = 26,000 tokens, question cap still 100. The reserve is the packer's own constant (`JevBatchPacker::STATE_TOKENS`), not `JevStateFactory`'s budget: the state's contents are being reworked separately (the preference profile instead of history lines), so `JevStateFactory` and D20 are left as they are until then. *Superseded by B9-D11:* one constant again, `JevStateFactory::STATE_TOKEN_BUDGET = 4_000`, which the packer reads; the private `STATE_TOKENS` goes.
 - **The catalog offers `jev-latest` only:** OpenRouter refuses `jev-preview` ("Model typesafe/jev-preview does not exist", 400) and TypeSafe's docs do not list it. `kindFor()` keeps the `jev-` prefix rule (D13's table unchanged).
 - **A refused request is a 400 or a 422:** OpenRouter answers validation errors with 400 and `{"error":{"message":"<text>","code":400}}`, never 422 `{"detail":[…]}`. Both statuses take D18's path; the detail comes from either shape, scrubbed and clipped, never the raw body (OpenRouter's body carries a `user_id`). The probe (D14) keeps reading a 400 on `{}` as "present".
 - **Request id:** OpenRouter sends no `x-typesafe-request-id`; the body `id` (`gen-…`) is the receipt's id. An empty header falls through to the body id.
+
+## Decisions after the profile-only ruling (Lars and the coordinator, 2026-10-02)
+
+Lars: "Only send the profile prompt to jev." Jev's `state` becomes `{profile, guidance?}`: the reader profile an LLM
+distils, through a per-account "profile connection" the user picks in Settings → AI, plus the guidance. Rulings on the
+planner's questions: a Jev run distils on every run (no reuse-fresh rule; a freshness window is a follow-up); a failed
+distillation falls back to the stored profile, else the run fails resumably (guidance alone is not enough); the
+choice is a per-connection flag that can be set (`PUT`) and cleared (`DELETE /api/me/ai/configs/{id}/profile`). Tasks
+B9 (backend) and B10 (frontend) implement it, before B8; their decisions are B9-D1…D18 under "Decisions". They
+supersede settled design 7, 8 and 10, D6, D10, D20, D21 and D22, the packer's private `STATE_TOKENS`, parts of B3, B5,
+B6 and B7, and B8's docs, gate and real-run steps; each of those places says so.
 
 ## Status
 
@@ -43,6 +54,8 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 | B5 | B | State, questions and packing | ☐ | — |
 | B6 | B | The Jev batch wave and `JevRecommendationEngine` | ☐ | — |
 | B7 | B | A run whose connection switched engines fails | ☐ | — |
+| B9 | B | Jev reads the distilled profile through a profile connection (backend) | ☐ | — |
+| B10 | B | The profile-connection picker and the profile on the card (frontend) | ☐ | — |
 | B8 | B | Docs, gates, a real run, PR B (`Closes #1345`) | ☐ | — |
 
 ## Scope
@@ -61,15 +74,16 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 | Design: discovery catalog in `Service/Ai/ModelCatalog`, probe `{base}/systemone`, contributes `jev-latest` (*Amended (smoke test, Lars 2026-10-02):* not `jev-preview`) | B2 |
 | Deferred from #1344: composite model catalog over a tagged iterator | B2 |
 | Design: the resolver decides (`jev-…` → Jev, else LLM), table incl. `typesafe/jev-router` → LLM | B3 |
-| Design: state = guidance + favourite/kept/viewed lines, capped by the history caps | B5 |
+| Design: state = guidance + favourite/kept/viewed lines, capped by the history caps (*Superseded by B9-D10:* `{profile, guidance?}`, the profile distilled through the profile connection) | B5, B9 |
 | Design: one `noul` per candidate, structured length-capped fields, never interpolated | B5 |
 | Design: score = Noul × 1000; no consolidation, no semantic dedup (URL-hash collapse stays); top `picksLimit` | B6 (collapse is the candidate repository's, unchanged) |
 | Design: packing by own token budget; waves reuse the concurrency setting; 429/529 defer through the throttle; 401/403 reject credentials | B5, B1, B6 |
 | Design: Jev calls in `recommendation_run_log` (phase `batch`) with request id, usage, cost, answering model; ETA and debug panel keep working | B4, B6, B3 (ETA) |
 | Design: mid-run engine switch → the run ends with a clear error | B7 |
-| Design: capabilities row for Jev, frontend hides the rest | B3 (no frontend change: #1344 renders from capabilities) |
+| Design: capabilities row for Jev, frontend hides the rest | B3; *Amended (B9-D6/D7):* the `profile` capability and the picker change the frontend (B10) |
 | Done when: stub-client unit + integration tests for packing, Noul parsing, discovery, resolver table, engine-switch, 429/529 | B1, B2, B3, B5, B6, B7 |
 | Done when: all gates green | A10, B8 |
+| Ruling (Lars): only the profile reaches Jev; a per-account profile connection distils it | B9, B10 |
 | Done when: real run on the dev stack with an OpenRouter connection on `jev-latest` | B8 |
 
 ## Global Constraints
@@ -79,11 +93,11 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 - **Module graph:** `Recommendation\Llm → Recommendation → Ai`, `Recommendation\Jev → Recommendation → Ai`. `composer stan`'s `ServiceModuleCycleRule`/`ServiceRoleRule` decide placement; when one names a different folder than this plan, follow the rule and amend the plan.
 - **Persistence knows no service** (`PersistenceKnowsNoServiceRule`): an enum stored on an entity lives in `App\Enum`.
 - **CLAUDE.md house style:** `final readonly class`, intent-revealing names (no abbreviations, no single letters), guard clauses, no boolean flag parameters, comments only for non-obvious invariants (one line, three at most), interfaces in a folder named after them, `…Model` in `Model/`, `…Factory` in `Factory/`, per-call objects in `Pass/`, static helpers in `Support/`.
-- **PHPMD is at its limits in two places:** `RecommendationRunAdvancer::__construct` has 9 parameters (`ExcessiveParameterList` reports at 10) and `RecommendationRun` has 10 non-accessor public methods (`TooManyPublicMethods` reports above 10). Neither may grow (D4, D3).
+- **PHPMD is at its limits in two places:** `RecommendationRunAdvancer::__construct` has 9 parameters (`ExcessiveParameterList` reports at 10) and `RecommendationRun` has 10 non-accessor public methods (`TooManyPublicMethods` reports above 10). Neither may grow (D4, D3). *Amended (B9-D9):* B9 takes the advancer to 8 parameters (`TickLockTtl` replaces `AiProviderConfigurator` and `ProviderConnectionFactory`).
 - **Deletion checks are binding** for every new pin in a task that adds a test: break the covered code, run the test, quote the FAIL verbatim in the task report, restore. Restore by copying aside first (`cp <file> "$TMPDIR/<name>.orig"` … `mv` back), **never** `git checkout -- <file>`. A pin whose expected value equals a default (null, 0, '', [], `Llm`) cannot fail: pick another value or drop the pin, unless a later task in this plan makes it breakable and the task report names that task. *Amended (preflight F8):* A2's `Llm` kind pin and A8's `'prompt' => true` pin are such deferred pins; B3's deletion checks 7 and 8 make them breakable.
 - **Lean gates for pure moves/renames** (memory "renames get lean testing"): the move script's survey, `composer check`, phpunit on the touched tests. New logic and new tests get a reviewer and deletion checks.
 - **Migrations** get their own verification (CI migrates from empty on SQLite and MySQL, then `doctrine:schema:validate`), and are applied to the live Docker MySQL the moment they land (memory "apply new migrations to the live Docker DB").
-- **Native-iOS rule** (architecture §6): new JSON is plain camelCase, no browser coupling, no new endpoint.
+- **Native-iOS rule** (architecture §6): new JSON is plain camelCase, no browser coupling, no new endpoint. *Amended (B9):* B9 adds `PUT` and `DELETE /api/me/ai/configs/{id}/profile`; both pass the §6 checklist (B9 Step 9).
 - **Frontend:** standalone components and signals; Jest only inside the Docker `frontend` container, one Jest process at a time; Prettier 100 columns.
 - Commands: backend commands run from `backend/`; `docker compose …` from the repository root; `git` from either (paths below are repository-relative unless prefixed with `backend/`).
 - Commits: `refactor(#1345): …` (PR A), `feat(#1345): …` (PR B), lower-case summary, no attribution lines. PR A's body contains no "close/fix/resolve #1345" in any form (run `grep -iE '(close[sd]?|fix(e[sd])?|resolve[sd]?) #1345'` on it before `gh pr create`).
@@ -100,10 +114,10 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 4. The run records its kind in a new nullable enum column on `recommendation_run` (null = runs before = LLM), never derived from `ProviderUsage.model`. A tick whose run kind differs from the active connection's kind ends the run with a clear error (D27).
 5. Phase plan per kind, neutral run-log recorder, resolve once per tick (kind on `TickContext`), generic 429 loop — as the issue's Prerequisites say, LLM byte-identical.
 6. One "show score and reasons" toggle for every engine: with the LLM it gates both, as today; with Jev it gates the score alone. Renamed where the meaning changed; the DB column stays (D12). Not capability-gated.
-7. `profileText`, `defaultGuidancePrompt`, `fixedPrompt` gated by a `prompt` capability; the guidance prompt applies to both engines and stays visible. `cutForConsolidation()` moves to `Recommendation/Llm`.
-8. Jev request: `state` = `{guidance, history: {favorites, kept, viewed}}` capped by the history caps; one `noul` per candidate keyed by entry id, `instructions` = `{"article": {title, feedName, date, description}, "question": "…"}` referencing fields by backtick path; length caps per field; untrusted text only in structured fields. Score = round(Noul × 1000) clamped 0–1000, `reason: ''`, final list = top `picksLimit` through the existing finalizer. Packing by the 4-chars-per-token estimate under 64k per request, the state counted once per request. *Amended (smoke test, Lars 2026-10-02):* under 32k per request.
+7. `profileText`, `defaultGuidancePrompt`, `fixedPrompt` gated by a `prompt` capability; the guidance prompt applies to both engines and stays visible. `cutForConsolidation()` moves to `Recommendation/Llm`. *Superseded by B9-D7:* `profileText` is ungated (every engine runs on a distilled profile); the other two stay gated.
+8. Jev request: `state` = `{guidance, history: {favorites, kept, viewed}}` capped by the history caps; one `noul` per candidate keyed by entry id, `instructions` = `{"article": {title, feedName, date, description}, "question": "…"}` referencing fields by backtick path; length caps per field; untrusted text only in structured fields. Score = round(Noul × 1000) clamped 0–1000, `reason: ''`, final list = top `picksLimit` through the existing finalizer. Packing by the 4-chars-per-token estimate under 64k per request, the state counted once per request. *Amended (smoke test, Lars 2026-10-02):* under 32k per request. *Superseded by B9-D10/D11/D12:* `state` = `{profile, guidance?}` within 4,000 tokens; the question names the profile.
 9. Errors: 401/403 → `CredentialsRejectedException`; 429/529 → retryable, through the generic loop (`retry-after` honoured when present); other ≥300 → unreachable; 422 (`{"detail":[…]}`) → see D18. Request id from `x-typesafe-request-id` (direct) or the response `id` (OpenRouter); cost from `usage.cost` else null; answering model from the response `model`. *Amended (smoke test, Lars 2026-10-02):* OpenRouter refuses with 400 `{"error":{"message":"<text>","code":400}}`; 400 and 422 both take D18's path, and the request id is the body `id` (OpenRouter sends no request-id header).
-10. Jev capabilities: `reasons: false`, `prompt: false`, tuning fields = only what the Jev engine reads (D17: `batchConcurrency` only).
+10. Jev capabilities: `reasons: false`, `prompt: false`, tuning fields = only what the Jev engine reads (D17: `batchConcurrency` only). *Amended (B9-D6):* plus `profile: 'borrowed'` (the LLM: `'own'`).
 11. Tests: `StubSystemOneClient` wired in `services_test.yaml`; unit + integration tests for packing, Noul parsing, discovery, resolver table, engine-switch, 429/529; a Jev pipeline test mirroring `RecommendationPipelineTest`.
 12. PR B ends with a real run on the dev stack through Lars's OpenRouter connection "Jev" (`user_ai_settings.id = 8`, base `https://openrouter.ai/api/v1`), switched to `jev-latest` through the app's own API, the API key never printed or handled; the model is restored afterwards.
 
@@ -112,15 +126,15 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 - **D1 — `RecommendationEngineKind` moves to `App\Enum`; capabilities become `RecommendationEngineCapabilitiesModel::of($kind)`.** The run stores the kind (settled design 4), and `PersistenceKnowsNoServiceRule` forbids an entity naming `App\Service\…`. An `App\Enum` may not name a Service model either, so `capabilities()` leaves the enum for a static named constructor on the capabilities model, a `match` over the kind. #1344 D23's intent holds: per-kind data, rendering capabilities builds no engine. *Contradicts* #1344 (kind in `Recommendation/Engine/Model`, capabilities on the kind) and the issue's "capabilities are per-kind data on `RecommendationEngineKind`".
 - **D2 — The run-kind column lands in PR A; the switch guard stays in PR B.** The brief put the column in PR B, but the phase plan (A4) must read "the kind the run records", and the snapshot records it (issue Prerequisite 3). With one kind the guard cannot fire, so it ships with the second kind (B7).
 - **D3 — `RecommendationRun::snapshot(RecommendationEngineKind $engineKind, array $candidateBatches)`.** A separate `recordEngine()` would be the 11th non-accessor public method (PHPMD `TooManyPublicMethods`), and a default argument would hide an LLM assumption in the entity. The 70 test call sites are rewritten by one script (A3) that only prepends `RecommendationEngineKind::Llm, `. `getEngineKind()` reads null as `Llm` (legacy rows).
-- **D4 — `Run/Factory/TickContextFactory` builds the `TickContext`.** The advancer has 9 constructor parameters and PHPMD reports at 10; the factory takes the advancer's `RecommendationSettingsResolver` slot and adds the resolver, and the advancer's private `activeConnection()` moves into it. Expected side effect: phptramp may report a 3-hop warning for `$driver` (`advance → tick → create`); 3 hops warn, 4 fail. Do not "fix" it; report the count.
+- **D4 — `Run/Factory/TickContextFactory` builds the `TickContext`.** The advancer has 9 constructor parameters and PHPMD reports at 10; the factory takes the advancer's `RecommendationSettingsResolver` slot and adds the resolver, and the advancer's private `activeConnection()` moves into it. Expected side effect: phptramp may report a 3-hop warning for `$driver` (`advance → tick → create`); 3 hops warn, 4 fail. Do not "fix" it; report the count. *Amended (B9-D3/D9):* the factory also builds the profile tick; the advancer drops to 8 parameters.
 - **D5 — `RecommendationEngineResolver::engineFor($connection)` becomes `engineOf(RecommendationEngineKind $kind)`.** Once the tick carries its kind, the only callers (`TickPhases`, `SnapshotPhase`) have a kind, not a connection to re-resolve.
-- **D6 — Phase plan.** `RecommendationEngineKind::phases(): list<CallPhase>`, `runs(CallPhase)`, `singleCallPhaseCount()`. `RecommendationRunProgress::forBatchPlan()` takes the kind: `batchesTotal = batches + singleCallPhaseCount()`, `distillPending` only for a kind that runs Distill, `isConsolidationPhase` only for a kind that runs Consolidate. `RecommendationRunReportModel` carries `?RecommendationEngineKind $engineKind` (null for the `none`/`busy` reports, which have no run). `PhaseDurationsModel::fromCompletedRunSpans($spans, $kind)` averages only runs that carry exactly the kind's phases; a phase the kind does not run contributes 0 s. For the LLM this is the old rule (all three present; `CallPhase` has no fourth case), and it keeps LLM runs out of a Jev estimate and vice versa without a repository change.
+- **D6 — Phase plan.** `RecommendationEngineKind::phases(): list<CallPhase>`, `runs(CallPhase)`, `singleCallPhaseCount()`. `RecommendationRunProgress::forBatchPlan()` takes the kind: `batchesTotal = batches + singleCallPhaseCount()`, `distillPending` only for a kind that runs Distill, `isConsolidationPhase` only for a kind that runs Consolidate. `RecommendationRunReportModel` carries `?RecommendationEngineKind $engineKind` (null for the `none`/`busy` reports, which have no run). `PhaseDurationsModel::fromCompletedRunSpans($spans, $kind)` averages only runs that carry exactly the kind's phases; a phase the kind does not run contributes 0 s. For the LLM this is the old rule (all three present; `CallPhase` has no fourth case), and it keeps LLM runs out of a Jev estimate and vice versa without a repository change. *Amended (B9-D4/D13):* Jev's phases are `[Distill, Batch]`; the span query now filters by the run's kind (a repository change), because an LLM run that skipped consolidation carries exactly Jev's phases.
   *Amended (PR-A fix wave, items 12 and 13):* `PhaseDurationsModel` holds `public array $secondsByPhase` (keyed by `CallPhase` value, built over `$kind->phases()` in order; the batch phase per batch), so a skipped phase is absent rather than a `?? 0.0` slot, and `predictedTotalSeconds($batchCount)` sums the map. `RecommendationRunProgress` carries `?int $batchCount` (null without a plan) beside `batchesTotal`; the report replaces `?RecommendationEngineKind $engineKind` with `?RunPlanModel $plan` (`Run/Model/RunPlanModel`: `engineKind`, `batchCount`; null for `none`/`busy` and before a snapshot), and the ETA reads `$plan->batchCount` directly instead of subtracting `singleCallPhaseCount()` from `batchesTotal`. `singleCallPhaseCount()` has one reader, the progress. Wire JSON unchanged.
 - **D7 — The generic loop lives in `Service/Ai`.** `Ai\RateLimitedCalls::send(array $calls, \Closure $send, RetryPlanModel $plan)` applies the plan to any "send these calls" closure; `Ai\RateLimitedOutcome\RateLimitedOutcomeInterface` (`isRetryable()`, `retryAfterSeconds()`) is what it asks of an outcome; `RateLimitedResultModel` moves to `Ai/Model` as a covariant template. `Ai` already owns `RetryPlanModel` and the provider exceptions the loop reads, and both sub-modules depend on `Ai`. `Llm`'s `RateLimitedCompletion` keeps its API and delegates.
 - **D8 — Neutral recorder.** `RecordedCall`, `RecommendationCallRecorder`, `RecommendationRunLogFactory`, `CallSlotModel` move to `Recommendation/Run`; `CompletionStreamProgressModel` becomes `Run/Model/CallProgressModel`; `CompletionUsageModel` becomes `Ai/Model/ProviderCallUsageModel` (both engines' transports produce it; #1344 D4 left that call to #1345). `begin()` takes the request already rendered (`string`). `Llm` keeps `Run/Pass/RecordedCallObserver` (the one-method stream adapter implementing `CompletionStreamObserverInterface`) and `Run/Support/RenderedCompletionRequest`. `RecordedCall::providerCutTheAnswer()` becomes `CompletionFinishReason::cutByProvider($recordedCall->finishReason())` at its one LLM call site: "cut by the provider" is the chat client's `length` vocabulary. The nano-credit conversion moves to `Ai/Support/ReportedCost` so Jev prices calls the same way.
 - **D9 — The batch-wave skeleton is neutral (not in the issue).** `Run/BatchWavePhase::advance(TickContext $tick, \Closure $resolveWave)` holds what the LLM's `BatchPhase` did besides its wave (first-batch mark, wave size, 429 halving, banking); `Run/WaveBatchLoader::next()` loads the plan's next batches; `WaveBatchModel` and `BatchWaveResultModel` move to `Run/Model`. Without it Jev would copy ~70 lines of `BatchPhase` it may not import. The closure follows `InvalidReplyRetry`'s precedent.
   *Amended (PR-A fix wave, item 14):* `BatchWavePhase` takes `WaveBatchLoader` and loads the wave itself (`next($tick, $this->waveSize($tick))`, after the first-batch mark, before the 429 try); the closure is `\Closure(list<WaveBatchModel>): BatchWaveResultModel`. `WaveBatchLoader` has one consumer, so an engine cannot load a slice other than the one the skeleton sized and banks. The LLM's `WaveContextLoader::load(TickContext, list<WaveBatchModel>)` takes the batches and no longer injects the loader.
-- **D10 — `prompt` capability.** Model field `sendsPrompt`, wire key `prompt`. `RecommendationSettingsJson::state()` takes the capabilities and sends `profileText`, `defaultGuidancePrompt`, `fixedPrompt` as `null` for an engine without a prompt (keys stay, for a typed client). `RecommendationEngineResolver::capabilitiesForAccount(User)` reads an account without an active connection as the LLM, the kind a model-less connection already resolves to, so the unconfigured account's payload stays as today (`RecommendationSettingsControllerTest::testAnUnconfiguredAccountReportsAllDefaults`). The settings card also gates by `capabilities().prompt`: switching the active connection updates the capabilities at once but does not reload the card's settings state.
+- **D10 — `prompt` capability.** Model field `sendsPrompt`, wire key `prompt`. `RecommendationSettingsJson::state()` takes the capabilities and sends `profileText`, `defaultGuidancePrompt`, `fixedPrompt` as `null` for an engine without a prompt (keys stay, for a typed client). `RecommendationEngineResolver::capabilitiesForAccount(User)` reads an account without an active connection as the LLM, the kind a model-less connection already resolves to, so the unconfigured account's payload stays as today (`RecommendationSettingsControllerTest::testAnUnconfiguredAccountReportsAllDefaults`). The settings card also gates by `capabilities().prompt`: switching the active connection updates the capabilities at once but does not reload the card's settings state. *Superseded in part by B9-D7:* `profileText` is always sent.
 - **D11 — `cutForConsolidation()` becomes `Llm/Run/Support/ConsolidationShortlist::of()`.** A one-line static helper; `RecommendationWinnerRanker::ranked()` stays neutral (Jev ranks with it).
 - **D12 — The toggle is `showScoreAndReasons` everywhere: PHP models, entity property, DTO, wire key, SPA, i18n keys; the column stays `show_reasons`** (explicit `#[ORM\Column(name: 'show_reasons')]`). The column's meaning, "show the reasons and their scores where they exist", still holds, so it is not misleading enough for a migration. Label "Show score and reasons", shown for every engine; the `reasons` capability stays on the wire (data for a native client) though the SPA no longer reads it. Risk accepted: a browser tab still running the old SPA after the deploy would PUT `showReasons`, which the new DTO ignores (its `false` default turns the toggle off) — the same release ships the SPA.
 - **D13 — `kindFor()` is case-sensitive** (`str_starts_with($model, 'jev-')`). Model ids are case-sensitive on OpenRouter and TypeSafe, and the configurator stores only ids a catalog offered, compared exactly (`AiProviderConfigurator::offeredDescriptor()`), so `JEV-latest` can never be a stored Jev model. `jev-1.13.0` resolves to Jev though the catalog never offers it (aliases only).
@@ -130,18 +144,169 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 - **D17 — The System One client keeps its own timeouts** (idle 120 s, wall clock 300 s) and beats the tick heartbeat at least every 10 s while waiting. *Amended (B1 review):* Symfony enforces a request's `timeout` only as `stream()`'s default, and `stream()` drops a response after its timeout chunk. So the client streams in 10 s rounds that pace the heartbeat, re-streams the responses still open, and enforces the 120 s idle bound itself: `Pass/SystemOneWave` records each response's last chunk on the injected clock and cancels one silent for longer. It ignores the connection's slow-model flag, so `slowModel` is not a Jev tuning field; Jev reads `batchConcurrency` only (`contextWindow`, `batchSize`, `maxBatchSize`: own budget and question cap; `suppressReasoning`: no reasoning parameter). Retryable statuses are exactly 429 and 529 (settled design 9). *Flag:* the chat client also retries 502/503/504; Jev treats those as unreachable (a transport strike). Raise with Lars if a real run meets a 503.
 - **D18 — 422 is an endpoint failure, not an unusable reply.** `ProviderUnreachableException('That provider refused the request (status 422): <detail, clipped to 500 chars>')` takes the transport-failure path: one strike per tick, the run fails after `MAX_TRANSPORT_FAILURES` with the detail in its error. A 422 is our request failing validation and repeats deterministically; the unusable-reply path would spend three calls per batch per tick and then silently bank no winners. *Amended (smoke test, Lars 2026-10-02):* 400 takes the same path (OpenRouter's status for a refused request). `Jev/Support/RefusalMessage::of($status, $body)` reads the detail from TypeSafe's `detail` (list or string) or OpenRouter's `error.message`, decodes invalid UTF-8 as U+FFFD and clips it through `ClippedText` (500 characters + `…`); a body without either shape gives `That provider refused the request (status <n>).` — the raw body is never quoted (OpenRouter's carries the account's `user_id`).
 - **D19 — An unusable 2xx reply** (any batch candidate without a numeric Noul) is retried alone in-tick up to `RecommendationRun::MAX_ATTEMPTS` rounds, then the batch yields no winners — the LLM batch phase's rule.
-- **D20 — State.** `{"guidance": …?, "history": {"favorites": […], "kept": […], "viewed": […]}}`; `guidance` is omitted when the account has none (the LLM's `DEFAULT_GUIDANCE` is an instruction to a chat model and stays LLM-only). History lines are `{title, feedName, date, description?}` with title 300, feedName 120, description 280 characters. Over `STATE_TOKEN_BUDGET = 24 000` tokens the history loses its oldest lines, viewed before kept before favorites (weakest signal first): the history caps go up to 500 per section, which no request could hold. The guidance (≤ 4000 characters by the DTO) is never clipped.
-- **D21 — Questions.** Key `entry-<id>` (a string key, so `questions` encodes as a JSON object); `{"type": "noul", "instructions": {"article": {title ≤300, feedName ≤120, date, description ≤600}, "question": "Judging by the reading history and guidance in `state`, would this reader want to read `article`?"}}`. No `criteria`: about 40 tokens per question for no documented gain.
-- **D22 — Packing budgets the state at its ceiling**, not its size at snapshot: every wave rebuilds the state from the history as it is then. Per request: 64 000 − 2 000 (framing and estimate error) − 24 000 (state) = 38 000 tokens of questions, and at most `MAX_QUESTIONS_PER_REQUEST = 100` questions. With the caps of D21 a question is ≤ ~310 tokens of ASCII, so the question cap binds for Latin text and the token budget for heavily multi-byte text. State + longest question ≤ 24 000 + ~1 100 < 32 000. *Amended (smoke test, Lars 2026-10-02):* 32 000 − 2 000 − 4 000 (the packer's own `STATE_TOKENS` reserve) = 26 000 tokens of questions; `QUESTION_TOKEN_BUDGET` is private and the packer test pins `[35, 35, 35, 15]` for 120 heavy questions of 731 tokens.
+- **D20 — State.** `{"guidance": …?, "history": {"favorites": […], "kept": […], "viewed": […]}}`; `guidance` is omitted when the account has none (the LLM's `DEFAULT_GUIDANCE` is an instruction to a chat model and stays LLM-only). History lines are `{title, feedName, date, description?}` with title 300, feedName 120, description 280 characters. Over `STATE_TOKEN_BUDGET = 24 000` tokens the history loses its oldest lines, viewed before kept before favorites (weakest signal first): the history caps go up to 500 per section, which no request could hold. The guidance (≤ 4000 characters by the DTO) is never clipped. *Superseded by B9-D10/D11:* `{profile, guidance?}`, `STATE_TOKEN_BUDGET = 4_000`, cut to fit (guidance first), no history.
+- **D21 — Questions.** Key `entry-<id>` (a string key, so `questions` encodes as a JSON object); `{"type": "noul", "instructions": {"article": {title ≤300, feedName ≤120, date, description ≤600}, "question": "Judging by the reading history and guidance in `state`, would this reader want to read `article`?"}}`. No `criteria`: about 40 tokens per question for no documented gain. *Amended (B9-D12):* the question reads "Judging by the reader's profile and guidance in `state`, would this reader want to read `article`?".
+- **D22 — Packing budgets the state at its ceiling**, not its size at snapshot: every wave rebuilds the state from the history as it is then. Per request: 64 000 − 2 000 (framing and estimate error) − 24 000 (state) = 38 000 tokens of questions, and at most `MAX_QUESTIONS_PER_REQUEST = 100` questions. With the caps of D21 a question is ≤ ~310 tokens of ASCII, so the question cap binds for Latin text and the token budget for heavily multi-byte text. State + longest question ≤ 24 000 + ~1 100 < 32 000. *Amended (smoke test, Lars 2026-10-02):* 32 000 − 2 000 − 4 000 (the packer's own `STATE_TOKENS` reserve) = 26 000 tokens of questions; `QUESTION_TOKEN_BUDGET` is private and the packer test pins `[35, 35, 35, 15]` for 120 heavy questions of 731 tokens. *Amended (B9-D11):* the reserve is `JevStateFactory::STATE_TOKEN_BUDGET` again (4,000), now a ceiling the factory guarantees; same 26,000.
 - **D23 — Score** `max(0, min(1000, (int) round($noul * 1000)))`.
-- **D24 — Jev finalises on the tick after its last wave** (`allBatchCallsDone` at the start of `advance()`), one phase per tick like the LLM.
-- **D25 — Receipt columns** `recommendation_run_log.request_id`, `answering_model`, `cost_nano_credits` (PR B), written by one extra UPDATE only when a call has a receipt; the LLM's writes stay byte-identical. Not shown in the debug panel (no frontend change in PR B); offered as a follow-up.
+- **D24 — Jev finalises on the tick after its last wave** (`allBatchCallsDone` at the start of `advance()`), one phase per tick like the LLM. *Amended (B9-D4/D17):* a Jev run first runs its profile step (distil, or fall back, or fail).
+- **D25 — Receipt columns** `recommendation_run_log.request_id`, `answering_model`, `cost_nano_credits` (PR B), written by one extra UPDATE only when a call has a receipt; the LLM's writes stay byte-identical. Not shown in the debug panel (no frontend change in PR B); offered as a follow-up. *Amended (B10):* PR B now changes the frontend (the picker), but still does not show the receipt.
 - **D26 — The answering model goes to the run log only.** `ProviderUsage.model` keeps the configured alias (`jev-latest`).
 - **D27 — An engine switch fails the run (`fail()`), not `cancel()`.** A failed run shows its error and stays resumable: once the active connection resolves to the run's kind again it continues where it stopped; resuming on the other engine fails again at once with the same message. `cancel()` carries no error and means "the user decided". The check runs before the rate-limit wait (a deferred run must not wait out a limit for an engine it will never call again) and goes through `RecommendationTickCheckpoint::guard()` first, like every banking write.
 - **D28 — Usage keys:** `input_tokens`/`output_tokens` (TypeSafe's documented names), falling back to `prompt_tokens`/`completion_tokens`. **Assumption (verify in B8):** OpenRouter's `/systemone` reply uses one of the two.
 - **D29 — Request id:** the `x-typesafe-request-id` header when present, else the body's `id`. *Amended (PR B fix wave):* an empty header counts as absent (`textIn()` on both), so it falls back to the body's `id`; on OpenRouter the body `id` (`gen-…`) is the only one.
 - **D30 — Small duplication across sibling sub-modules is accepted** (a clip helper, the 4-bytes-per-token estimate, the integer `Retry-After` parse, the round loop of a batch wave): `Recommendation\Jev` may not import `Recommendation\Llm`; each is the second occurrence. *Amended (PR B fix wave):* the integer `Retry-After` parse is no longer duplicated: `Ai/Support/RetryAfter::secondsIn()` serves the chat client and the System One client (Fetch's date-aware parse stays its own). Inside Jev the compact JSON flags live in `Jev/Support/SystemOneJson::encode()`, used by `SystemOneRequestModel::toRequestBody()`, `JevTokenEstimate` and `RefusalMessage`.
-- **D31 — The ETA of a Jev run appears from the second completed Jev run on** (D6 needs one completed Jev run's spans). B8 therefore runs twice.
+- **D31 — The ETA of a Jev run appears from the second completed Jev run on** (D6 needs one completed Jev run's spans). B8 therefore runs twice. *Amended (B9-D4):* the Jev phases it learns from are now Distill and Batch.
+
+### Decisions for B9 and B10 (profile-only ruling)
+
+- **B9-D1 — A Jev run distils on every run, as the LLM does (coordinator ruling).** Read:
+  `RecommendationRunProgress::forBatchPlan()` sets `distillPending = $hasPlan && !$distilled` and `RunProfile::$distilled`
+  is per run: the LLM distils once per run, and so does Jev. The settings' `profileText` is the display copy (and,
+  from B9, the fallback of B9-D17); it carries no timestamp. The distiller's docblock sentence "cached on the settings
+  row so a later run can skip it" describes no code: B9 rewords it to "stored on the settings row, which the card shows
+  and a Jev run falls back to".
+  *Follow-up (not in B9):* a freshness window that skips the distillation while the stored profile is recent (a
+  `profile_distilled_at` column, for both engines).
+- **B9-D2 — The seam is a neutral interface the LLM's `DistillationPhase` implements.**
+  `App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface::advance(TickContext): RecommendationRunReportModel`
+  — the exact signature `DistillationPhase` already has (it implements `ProviderPhaseInterface` with it). `Jev` names
+  only the interface; `Recommendation` outside sub-modules names no `Llm` class; the one alias line lives in
+  `config/services.yaml` (precedent: lines 72–79). Reusing the phase, not the distiller, keeps the LLM's retry/degrade
+  (`InvalidReplyRetry`), `recordProfile()` on the run and `storeProfile()` on the settings unchanged and shared.
+  `InterfacePlacement` allows it: "an implementation in another module stays there".
+- **B9-D3 — The distillation runs on a second `TickContext`: the profile connection with settings resolved against
+  it.** `TickContext` gains `public ?TickContext $profileTick = null` (a per-call object may default a value) and
+  `borrowingProfileFrom(TickContext): self`. `TickContextFactory` builds it only for a kind whose capabilities say
+  `profile: borrowed`, from `ProfileConnectionResolver::findUsableFor()`, with
+  `RecommendationSettingsResolver::forConnection($profileConnection)` (new; `forUser()` delegates to the same private
+  resolution with the active connection). So the distill call gets the profile connection's model, key, timeouts
+  (`ProviderConnectionFactory::forSettings()` reads its slow flag), context window (the history's description length,
+  `RecommendationPromptBuilder::descriptionLength()`) and batch ceiling, and the tick's driver, hence its retry plan
+  (429s: `RateLimitedCompletion` with `$tick->retryPlan()`; a deferral is run-level, `RecommendationRunDeferral`). The
+  profile tick is built from the main tick (`withBorrowedProfile(TickContext $tick)`), so `$driver` gains no hop
+  (phptramp: `advance → tick → create` stays 3).
+- **B9-D4 — Phase plan: `Jev => [Distill, Batch]`.** `singleCallPhaseCount()` = 1, so `batchesTotal = batches + 1`;
+  `distillPending` is true until the run records a profile; `isConsolidationPhase` stays false (Jev runs no
+  Consolidate). `forBatchPlan()`'s `|| !$engineKind->runs(CallPhase::Distill)` becomes dead for every kind and is
+  deleted (Infection would keep it as an equivalent mutant). `JevRecommendationEngine::advance()`: profile pending
+  (`JevProfileStep::isPending()`, B9-D17) → the profile step; all batches done → finalise; else the wave.
+- **B9-D5 — A failed distill call strikes against the profile connection.** `TickPhases` records transport failures
+  with `$tick->connection`, whose base URL ends up in the run's error ("The AI provider at %s failed: …"). It now passes
+  `$tick->connectionInFlight()`: the profile tick's connection while a borrowed distillation is pending, else the
+  tick's. An LLM tick has no profile tick, so its strike is byte-identical. One strike per tick, the same ceiling
+  (`MAX_TRANSPORT_FAILURES`), the same propagation to the worker floor.
+- **B9-D6 — Capabilities gain `profile`, a two-value enum, not two booleans.**
+  `Engine/Model/RecommendationProfileSource { Own = 'own', Borrowed = 'borrowed' }`; model field `profileSource`,
+  wire key `profile`. LLM `own`, Jev `borrowed`. The SPA shows the picker iff the active connection's `profile` is
+  `borrowed`, and offers exactly the ready connections whose `profile` is `own` — it never learns an engine name. The
+  server validates with the same capability (B9-D14). One field instead of `distills` + `needsProfileConnection`,
+  which would carry the same information twice.
+- **B9-D7 — `profileText` is no longer gated.** Every engine now runs on a distilled profile, so a capability that
+  is `true` for every kind could not fail its pin. `RecommendationSettingsJson::promptPieces()` keeps
+  `defaultGuidancePrompt` and `fixedPrompt` only; the card shows the profile outside `@if (offersPrompt())` (B10).
+- **B9-D8 — A Jev run with no usable profile connection fails on its first provider tick, resumably.** "Usable" =
+  flagged, still present, ready (`AiReadiness::of`) and `profile: own`. The check sits where the distillation would
+  run (Jev engine, `distillPending`), after the snapshot: a run failed while still `pending` has no recorded kind, so
+  resuming it would trip the engine-switch guard (`getEngineKind()` reads null as `Llm`). After the snapshot the run
+  is `running` with kind `jev`; `fail()` keeps it resumable (D27): once a profile connection is chosen, resume → the
+  distillation runs. The snapshot tick makes no provider call, so "fails at start" holds for the user (the drain
+  ticks back to back). An empty pool completes at the snapshot and needs no profile. The message is
+  `JevProfileStep::NO_PROFILE_CONNECTION` (Lars's wording, plus the resume hint):
+  `Jev needs an LLM connection to build your profile — choose one under Settings → AI, then resume this run.`
+  `JevProfileStep::fail()` repeats `RecommendationEngineSwitchFailure`'s guard-fail-flush (second occurrence,
+  accepted).
+- **B9-D9 — The tick lock covers the slower of the two connections.** `TickLockKeepalive` beats only on streamed
+  chunks, and the chat client streams with the connection's first-byte bound (`OpenAiCompatibleChatClient::completeMany`,
+  `stream(…, $connection->timeouts->firstByteSeconds)`). A Jev connection (standard, 180 + 300 = 480 s TTL) borrowing a
+  slow local LLM (900 s first byte) would lose its lock mid-distillation and let a second driver tick the run. New
+  `Run/TickLockTtl::secondsFor(User)`: max(first byte of the active connection, of the usable profile connection when
+  the active one borrows) + `MARGIN_SECONDS` (moved from `RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS`). The
+  advancer takes `TickLockTtl` instead of `AiProviderConfigurator` and `ProviderConnectionFactory` (both were used only
+  by `lockTtlFor()`): 9 → 8 parameters.
+- **B9-D10 — State = `{profile, guidance?}`.** `profile` = the run's frozen `getProfileText()`, which B9-D17
+  guarantees is set before any wave (a wave without one is a `\LogicException`); `guidance` =
+  `$tick->settings->guidancePrompt`, only when set. Both scrubbed (`mb_scrub`, the B5 ruling). The state therefore
+  never encodes empty, so no `{}`-vs-`[]` question arises.
+- **B9-D11 — The state fits its 4 000-token budget exactly; the guidance wins; one constant.**
+  `JevStateFactory::STATE_TOKEN_BUDGET` becomes `4_000` (Lars, smoke-test decision) and is the only constant for the
+  state: `JevBatchPacker` drops its private `STATE_TOKENS` and reads the factory's again (re-review M1: two copies of
+  one quantity, never compared, would let a later edit raise one alone and push a full request past 32k), so
+  `QUESTION_TOKEN_BUDGET` = 32 000 − 2 000 − 4 000 = 26 000 and the packer's `[35, 35, 35, 15]` pin are unchanged. The
+  packer's docblock "budgeted at its ceiling, not its size now" becomes true again: the factory now guarantees the
+  ceiling. Typical
+  states are far smaller (a ~300-word profile ≈ 500 tokens, the guidance ≤ 4 000 characters by the DTO), but
+  character caps cannot bound bytes (4-byte characters; `\u00XX` escapes take 6 bytes), so the factory cuts by the
+  real estimate: the guidance first (cut only if it alone exceeds the budget), then the profile to what is left, each
+  to its longest prefix that fits — `Jev/Support/FittingPrefix::of()`, a binary search over the character count
+  (encoded length grows with the prefix, so the search is exact; ~12 encodes for 4 000 characters). No ellipsis: the
+  cut must fit. With history gone, `HISTORY_DESCRIPTION_CHARACTERS`, `WEAKEST_SECTION_FIRST`, the trim loop and
+  `JevArticle`'s description parameter are dead (Step 5 deletions).
+- **B9-D12 — The question names the profile.** `SystemOneRequestFactory::QUESTION` = "Judging by the reader's profile
+  and guidance in `state`, would this reader want to read `article`?" The article fields and caps (D21) stay.
+- **B9-D13 — The ETA's span query filters by the run's kind.** With Jev on `[Distill, Batch]`, an LLM run that skipped
+  consolidation (`RecommendationConsolidationResolver::resolve()` returns `finalizeWith([])` for an empty pool, so no
+  consolidate row) carries exactly Jev's phases and would enter a Jev estimate. `completedRunPhaseSpans()` takes the
+  kind; `newestCompletedRunIds()` filters `r.engineKind = :kind` (for the LLM also `IS NULL`, the legacy rows
+  `getEngineKind()` reads as LLM). `PhaseDurationsModel::carriesExactly()` stays (it still drops partial runs). For an
+  account that never ran Jev the LLM estimate is unchanged; for one that did, the LLM now gets up to 10 LLM runs
+  instead of 10 mixed ones — more accurate, accepted.
+- **B9-D14 — The setting is a per-connection flag `user_ai_settings.profile_source`, one per account by the
+  service.** A pointer beside `active_ai_config_id` was the first choice, but `User` has 15 fields and
+  `RecommendationSettings` 15, and PHPMD `TooManyFields` reports above 15 (verified: `vars <= maxfields` returns), and
+  a Doctrine embeddable cannot hold an association. The flag also matches the UI (it is a property of a saved
+  connection, picked in Settings → AI, like "active"), and deleting the connection takes the choice with it (no FK, no
+  `SET NULL`). `ProfileConnectionChooser::choose()` (in `Recommendation`, because the check needs the engine resolver
+  and `Ai` may not depend on `Recommendation`) refuses a connection that is not ready or not `profile: own`
+  (`ProfileConnectionRejectedException`, 422 `profile_connection_rejected`), then sets the flag on it and clears it on
+  every sibling (`findAllForUser`, entity writes, one flush — no bulk DQL). `ProfileConnectionChooser::clear()`
+  (coordinator ruling) unsets the flag on the given connection: `DELETE /api/me/ai/configs/{id}/profile`, 204,
+  idempotent (clearing a connection that holds no flag is a no-op 204; another account's id is 404 through
+  `AiConfigurationForUser`). No validation: any own connection may be cleared, a Jev one included (its flag may
+  predate a model switch). `AiProviderSettings` gains
+  `isProfileSource()`/`setProfileSource(bool)` (precedent `isSlowModel`/`setSlowModel`; PHPMD ignores `is`/`set`;
+  14 → 15 fields). A duplicate does not copy it (the factory builds a fresh entity; `copyRunTuningFrom` copies
+  `RunTuning` only).
+- **B9-D15 — Engine switch and resume (B7) are unchanged.** The guard runs in `TickPhases` before the engine; the
+  profile tick does not take part in it (the run's kind is the active connection's kind, never the profile
+  connection's). Resuming a run failed by B9-D8 or B9-D17 re-checks at the next tick.
+- **B9-D16 — Cost and identity.** The distill call is recorded like the LLM's (`CallSlotModel::distillation()`, phase
+  `distill`, no receipt columns: D25 writes them only for a call with a receipt) and `RecordedCall::bankUsage()` adds
+  its usage and cost to the run, so the run's totals include it. `ProviderUsage` (`stampProvider`) keeps the active
+  connection's host and model (`jev-latest`, D26): the run is a Jev run. The debug panel shows the distill row's
+  request (the LLM prompt) as for an LLM run.
+- **B9-D17 — A failed distillation falls back to the stored profile, else the run fails resumably (coordinator
+  ruling).** The LLM's `DistillationPhase` stays byte-identical: after `MAX_ATTEMPTS` unusable replies it degrades and
+  records a null profile on the run. A Jev run cannot score on guidance alone, so `Jev/JevProfileStep` (the Jev
+  engine's profile tick, which also owns the B9-D8 failure) checks after the distiller:
+  distilled with a null profile → the stored settings copy (`$tick->settings->profileText`, the last profile any
+  run distilled; `storeProfile()` writes it only on a usable reply, so a degrade never clears it) is recorded on the
+  run (`recordProfile()` is legal again while `running`); with no stored copy the run fails with
+  `JevProfileStep::NO_PROFILE` — "Jev could not build your profile: the profile connection gave no usable answer and
+  no earlier profile is stored. Check that connection, then resume this run." Guidance present or not. A resumed run
+  that is distilled with a null profile is "profile pending" again (`isPending()` = `distillPending ||
+  null === getProfileText()`), so resume re-runs the distillation (`resume()` resets the attempts). Progress reports
+  the distillation as done during that retry (`distillPending` reads `distilled`); accepted, it lasts one call.
+
+- **B9-D18 — The re-review minors ride along.** M5: a 2xx reply body reaches the run log raw
+  (`JevBatchWave::resolve()` → `finishUsable/finishUnusable($answered['reply']->body)`); an invalid byte from a gateway
+  makes the reply unusable *and* crashes the log write under MySQL strict utf8mb4 — C1's crash class on the success
+  path. The wave logs `ClippedText::of($body, self::LOGGED_BODY_CHARACTERS)` with `LOGGED_BODY_CHARACTERS = 1_048_576`,
+  the client's own `MAXIMUM_RESPONSE_BYTES` (a body the client let through has at most that many characters, so the
+  clip never bites; the scrub does the work). The parser still reads the raw body. M3: `infection.json5`'s shared
+  `MethodCallRemoval` comment says cancel() acts "on a landed response"; `HttpSystemOneClient::abandoned` cancels a
+  failed one — reworded "on a landed or failed response". M4: B9's rewritten `JevStateFactoryTest` asserts
+  `mb_check_encoding()`, which fails without the scrub, instead of the vacuous `assertJson(json_encode(…))`. M1:
+  B9-D11. M2 (the plan's own B1/B2 samples) is fixed in the plan text, not in B9.
+
+## Follow-ups (not in this plan)
+
+- Show the receipt (request id, answering model, cost) in the debug panel (D25).
+- A profile freshness window: skip the distillation while the stored profile is recent (a `profile_distilled_at`
+  column, for both engines) (B9-D1).
+- An oversized System One reply reads "That address did not answer.": the 1 MiB cap's reason sits only in the
+  exception's `previous`, so the run's error hides it; name the size in the message (re-review of the PR B fix wave).
+- From the PR B fix wave, skipped on purpose: the wave round machinery behind an engine interface, a shared HTTP
+  status table, the model descriptor carrying the engine kind, the packer reading the stored context window.
 
 ## Where the code contradicted the brief or the issue
 
@@ -160,9 +325,9 @@ A real call through OpenRouter (`.superpowers/sdd/2026-10-02-1345-jev-recommenda
 
 **PR A — modified:** `RecommendationEngineResolver`, `RecommendationEngineCapabilitiesModel`, `RecommendationRunAdvancer`, `TickContext`, `TickPhases`, `SnapshotPhase`, `RecommendationRun`, `RecommendationRunProgress`, `RecommendationRunReportModel`, `RecommendationEtaEstimator`, `PhaseDurationsModel`, `RateLimitedCompletion`, `CompletionOutcomeModel`, `CompletionBodyDecoder`, `CompletionStreamObserverInterface`, `NullCompletionStreamObserver`, `OpenAiCompatibleChatClient`, `RecommendationCallRepository`, `RecommendationBatchWave`, `RecommendationProviderCall`, `RecommendationProfileDistiller`, `RecommendationConsolidationResolver`, `BatchPhase`, `WaveContextLoader`, `RecommendationWinnerRanker`, `AiProviderSettings` (comment), `RecommendationCapabilitiesJson`, `ActiveAiJson`, `RecommendationSettingsJson`, `RecommendationSettingsController`, `RecommendationFeedJson`, `ForYouFeed`, `FeedAnnotationVisibilityModel`, `EffectiveRecommendationSettingsModel`, `RecommendationSettingsResolver`, `RecommendationSettingsWriter`, `RecommendationSettings`, `RecommendationSettingsValues`, `SaveRecommendationSettingsRequest`; the tests each task names; `docs/recommendations-runs.md`, `docs/architecture.md`. Frontend: `core/ai-availability.service.ts`, `testing/recommendation-capabilities.ts`, `settings/recommendations/recommendation-settings.service.ts`, `settings/recommendations/recommendation-settings-card.component.{ts,html}`, their specs, `settings/ai/ai-section.component.spec.ts`, `settings/ai/ai-settings.service.spec.ts`, `core/ai-availability.service.spec.ts`, `e2e/ai-config-rejected.spec.ts`, `public/i18n/{en,de}.json`.
 
-**PR B — created:** `backend/src/Service/Recommendation/Jev/` — `JevRecommendationEngine.php`, `JevBatchWave.php`, `JevBatchPacker.php`, `NoulReplyParser.php`, `SystemOneClient/{SystemOneClientInterface,HttpSystemOneClient}.php`, `Factory/{JevStateFactory,SystemOneRequestFactory}.php`, `Model/{SystemOneRequestModel,SystemOneReplyModel,SystemOneOutcomeModel,NoulParseResultModel}.php`, `Pass/JevWave.php`, `Support/{QuestionId,SystemOneReplyDecoder,JevArticle,ClippedText,JevTokenEstimate,NoulScore,RenderedSystemOneRequest}.php`; `backend/src/Service/Ai/ModelCatalog/{SystemOneCatalog,CompositeModelCatalog}.php`; `backend/src/Service/Ai/Model/ProviderCallReceiptModel.php`; `backend/src/Service/Recommendation/Run/RecommendationEngineSwitchFailure.php`; `backend/migrations/Version20261002150000.php`; tests under `backend/tests/Service/Recommendation/Jev/`, `backend/tests/Service/Ai/ModelCatalog/{SystemOneCatalogTest,CompositeModelCatalogTest,ModelCatalogWiringTest}.php`, `backend/tests/Support/StubSystemOneClient.php`.
+**PR B — created:** `backend/src/Service/Recommendation/Jev/` — `JevRecommendationEngine.php`, `JevBatchWave.php`, `JevBatchPacker.php`, `NoulReplyParser.php`, `SystemOneClient/{SystemOneClientInterface,HttpSystemOneClient}.php`, `Factory/{JevStateFactory,SystemOneRequestFactory}.php`, `Model/{SystemOneRequestModel,SystemOneReplyModel,SystemOneOutcomeModel,NoulParseResultModel}.php`, `Pass/JevWave.php`, `Support/{QuestionId,SystemOneReplyDecoder,JevArticle,ClippedText,JevTokenEstimate,NoulScore,RenderedSystemOneRequest}.php`; `backend/src/Service/Ai/ModelCatalog/{SystemOneCatalog,CompositeModelCatalog}.php`; `backend/src/Service/Ai/Model/ProviderCallReceiptModel.php`; `backend/src/Service/Recommendation/Run/RecommendationEngineSwitchFailure.php`; `backend/migrations/Version20261002150000.php`; tests under `backend/tests/Service/Recommendation/Jev/`, `backend/tests/Service/Ai/ModelCatalog/{SystemOneCatalogTest,CompositeModelCatalogTest,ModelCatalogWiringTest}.php`, `backend/tests/Support/StubSystemOneClient.php`. *Added (B9/B10):* `Service/Recommendation/Profile/{ProfileConnectionResolver,ProfileConnectionChooser}.php`, `Profile/ProfileDistiller/ProfileDistillerInterface.php`, `Recommendation/Exception/ProfileConnectionRejectedException.php`, `Engine/Model/RecommendationProfileSource.php`, `Run/TickLockTtl.php`, `Jev/JevProfileStep.php`, `Jev/Support/FittingPrefix.php`, `backend/migrations/Version20261002180000.php`, and their tests.
 
-**PR B — modified:** `backend/phpstan.dist.neon`, `backend/config/services.yaml`, `backend/config/services_test.yaml`, `App\Enum\RecommendationEngineKind`, `RecommendationEngineCapabilitiesModel`, `RecommendationEngineResolver`, `OpenAiCompatibleCatalog` (tag), `RecommendationRunLog`, `RecommendationCallRepository`, `RecordedCall`, `TickPhases`, `RecommendationRunFixtures`, `RecommendationCapabilitiesJsons`; the tests each task names; `docs/recommendations-runs.md`, `docs/architecture.md`.
+**PR B — modified:** `backend/phpstan.dist.neon`, `backend/config/services.yaml`, `backend/config/services_test.yaml`, `App\Enum\RecommendationEngineKind`, `RecommendationEngineCapabilitiesModel`, `RecommendationEngineResolver`, `OpenAiCompatibleCatalog` (tag), `RecommendationRunLog`, `RecommendationCallRepository`, `RecordedCall`, `TickPhases`, `RecommendationRunFixtures`, `RecommendationCapabilitiesJsons`; the tests each task names; `docs/recommendations-runs.md`, `docs/architecture.md`. *Added (B9/B10):* see the B9 and B10 "Files" lists (backend: the flag on `AiProviderSettings`, the tick, the advancer, the timing repository, the Jev engine/state/packer/wave, the JSON mappers, `AiSettingsController`; frontend: `ai-availability.service.ts`, `settings/ai/*`, the recommendation settings card, i18n).
 
 ---
 # PR A — prerequisites (`Refs #1345`)
@@ -3618,6 +3783,8 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 }
 ```
 
+*Amended (smoke test and PR B fix wave, B1/C1):* `refused()` handles 400 and 422 alike, takes the detail from `detail` (string or list) or `error.message` through `RefusalMessage`, scrubs and clips it with `ClippedText`, and never falls back to the raw body (a fixed sentence instead); the B1 test `testA422NamesTheFieldThatFailedValidation` sits beside 400-shape, non-JSON and invalid-UTF-8 rows. Settled design 9 and D18 record the same.
+
 `backend/src/Service/Recommendation/Jev/Pass/SystemOneWave.php`:
 
 ```php
@@ -4131,7 +4298,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
 
     public const array MODEL_IDS = ['jev-latest', 'jev-preview'];
 
-    private const float TIMEOUT_SECONDS = 10.0; // Amended (PR B fix wave): 5.0, so a dead host fails the settings check in ~15 s
+    private const float TIMEOUT_SECONDS = 5.0;
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -4185,6 +4352,8 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
     }
 }
 ```
+
+*Amended (PR B fix wave, D9):* the probe timeout is 5.0 s (was 10.0), so a dead host fails the settings check in about 15 s.
 
 `backend/src/Service/Ai/ModelCatalog/CompositeModelCatalog.php`:
 
@@ -4276,6 +4445,8 @@ Reviewer: yes.
 ---
 
 ### Task B3: The `Jev` kind: resolver table, capabilities row, phase plan
+
+> *Superseded in part by B9 (B9-D4, B9-D6, B9-D13):* the Jev phase row is `[Distill, Batch]`, not `[Batch]`; `testJevAsksInBatchesOnly`, `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases`, the Jev half of `testEachKindAveragesOnlyRunsWithExactlyItsPhases` and `testAJevRunIsPredictedFromJevRunsAlone` are rewritten in B9 Step 1d; deletion checks 3, 4, 5 and 10 are replaced by B9's checks 11 and 13 (the `$distillationDone` clause check 4 breaks is deleted by B9-D4); the capabilities row gains `profile: 'borrowed'`.
 
 **Files:**
 - Modify: `backend/src/Enum/RecommendationEngineKind.php`, `backend/src/Service/Recommendation/Engine/Model/RecommendationEngineCapabilitiesModel.php`, `backend/src/Service/Recommendation/Engine/RecommendationEngineResolver.php`
@@ -4830,6 +5001,8 @@ git commit -m "feat(#1345): the run log keeps each call's request id, answering 
 
 ### Task B5: State, questions and packing
 
+> *Superseded in part by B9 (B9-D10, B9-D11, B9-D12):* `JevStateFactory` (history lines, 24k budget, trimming), its tests and deletion checks 1, 2, 3 and 7, `JevArticle::of()`'s description parameter, `SystemOneRequestFactory::ARTICLE_DESCRIPTION_CHARACTERS` and `::QUESTION`'s text are replaced by B9 Step 5; the packer reads `JevStateFactory::STATE_TOKEN_BUDGET = 4_000`.
+
 **Files:**
 - Create: `backend/src/Service/Recommendation/Jev/Factory/{JevStateFactory,SystemOneRequestFactory}.php`, `backend/src/Service/Recommendation/Jev/JevBatchPacker.php`, `backend/src/Service/Recommendation/Jev/Support/{JevArticle,ClippedText,JevTokenEstimate}.php`
 - Create (tests): `backend/tests/Service/Recommendation/Jev/Factory/{JevStateFactoryTest,SystemOneRequestFactoryTest}.php`, `backend/tests/Service/Recommendation/Jev/JevBatchPackerTest.php`
@@ -5372,6 +5545,8 @@ Reviewer: yes.
 
 ---
 ### Task B6: The Jev batch wave and `JevRecommendationEngine`
+
+> *Superseded in part by B9 (B9-D4, B9-D10, B9-D17, B9-D18):* the engine's constructor drops `RecommendationHistoryLoader` and gains `JevProfileStep`; `waveOf()` builds the state from the run's profile; `JevPipelineTest` (the `'history'` key, no chat calls, one log row, `batchesTotal` 1) and `JevRecommendationEngineTest`'s warm-up change in B9 Step 1f; the wave logs reply bodies through `ClippedText`.
 
 **Files:**
 - Create: `backend/src/Service/Recommendation/Jev/{JevRecommendationEngine,JevBatchWave,NoulReplyParser}.php`, `backend/src/Service/Recommendation/Jev/Model/NoulParseResultModel.php`, `backend/src/Service/Recommendation/Jev/Pass/JevWave.php`, `backend/src/Service/Recommendation/Jev/Support/NoulScore.php`
@@ -6447,6 +6622,8 @@ Reviewer: yes (the core of the issue).
 
 ### Task B7: A run whose connection switched engines fails
 
+> *Amended (B9-D5, B9-D15):* the guard and its resume semantics are unchanged; `TickPhases` now strikes a transport failure against `TickContext::connectionInFlight()` (the profile connection while it distils for a Jev run).
+
 **Files:**
 - Create: `backend/src/Service/Recommendation/Run/RecommendationEngineSwitchFailure.php`
 - Modify: `backend/src/Service/Recommendation/Run/TickPhases.php`
@@ -6627,6 +6804,2035 @@ Reviewer: yes.
 
 ---
 
+### Task B9: Jev reads the distilled profile through a profile connection (backend)
+
+**Files:**
+- Create: `backend/src/Service/Recommendation/Profile/ProfileDistiller/ProfileDistillerInterface.php`,
+  `backend/src/Service/Recommendation/Profile/{ProfileConnectionResolver,ProfileConnectionChooser}.php`,
+  `backend/src/Service/Recommendation/Exception/ProfileConnectionRejectedException.php`,
+  `backend/src/Service/Recommendation/Engine/Model/RecommendationProfileSource.php`,
+  `backend/src/Service/Recommendation/Run/TickLockTtl.php`,
+  `backend/src/Service/Recommendation/Jev/JevProfileStep.php`,
+  `backend/src/Service/Recommendation/Jev/Support/FittingPrefix.php`,
+  `backend/migrations/Version20261002180000.php`
+- Create (tests): `backend/tests/Service/Recommendation/Profile/{ProfileConnectionResolverTest,ProfileConnectionChooserTest}.php`,
+  `backend/tests/Service/Recommendation/Jev/JevProfileStepTest.php` (only if the pipeline pins below leave a mutant; see Step 10),
+  `backend/tests/Service/Recommendation/Run/TickLockTtlTest.php`,
+  `backend/tests/Service/Recommendation/Jev/Support/FittingPrefixTest.php`
+- Modify: `AiProviderSettings`, `AiProviderSettingsRepository`, `App\Enum\RecommendationEngineKind`,
+  `RecommendationRunProgress`, `RecommendationEngineCapabilitiesModel`, `TickContext`, `TickContextFactory`,
+  `TickPhases`, `RecommendationRunAdvancer`, `RecommendationSettingsResolver`, `RecommendationRunTimingRepository`,
+  `RecommendationEtaEstimator`, `DistillationPhase`, `JevRecommendationEngine`, `JevStateFactory`, `JevArticle`,
+  `SystemOneRequestFactory`, `JevBatchPacker`, `JevBatchWave`, `backend/infection.json5`, `RecommendationCapabilitiesJson`,
+  `ActiveAiJson` (docblock), `AiSettingsJson`, `RecommendationSettingsJson`, `AiSettingsController`,
+  `RecommendationRunProblems`, `config/services.yaml`, `docs/recommendations-runs.md`
+- Modify (tests): `RecommendationRunFixtures`, `RecommendationCapabilitiesJsons`, `RecommendationEngineKindTest`,
+  `RecommendationRunProgressTest`, `PhaseDurationsModelTest`, `RecommendationEtaEstimatorTest`,
+  `RecommendationRunTimingRepositoryTest`, `RecommendationEngineResolverTest`, `RecommendationSettingsJsonTest`,
+  `RecommendationSettingsResolverTest`, `TickContextTest`, `TickContextFactoryTest`, `TickPhasesTest`,
+  `RecommendationRunAdvancerTest`, `AdvanceRecommendationRunsHandlerTest`, `AiSettingsControllerTest`,
+  `JevStateFactoryTest`, `SystemOneRequestFactoryTest` (only if it pins the question text literally),
+  `JevPipelineTest`, `JevRecommendationEngineTest`
+
+**Interfaces:**
+- Consumes: `DistillationPhase::advance(TickContext)` (Llm), `RecommendationRun::getProfileText()`,
+  `AiReadiness::of()`, `RecommendationEngineResolver::capabilitiesFor()`, `ProviderConnectionFactory::timeoutsFor()`,
+  `AiConfigurationForUser::require()`, `JevTokenEstimate::ofJson()`.
+- Produces:
+  - `ProfileDistillerInterface::advance(TickContext $tick): RecommendationRunReportModel` (implemented by `DistillationPhase`).
+  - `RecommendationProfileSource` (`Own = 'own'`, `Borrowed = 'borrowed'`); `RecommendationEngineCapabilitiesModel::$profileSource`; wire key `capabilities.profile`.
+  - `ProfileConnectionResolver::findUsableFor(User): ?AiProviderSettings`, `::canBuildProfiles(AiProviderSettings): bool`.
+  - `ProfileConnectionChooser::choose(AiProviderSettings): void` (throws `ProfileConnectionRejectedException`), `::clear(AiProviderSettings): void`.
+  - `AiProviderSettings::isProfileSource(): bool`, `::setProfileSource(bool): void`; `AiProviderSettingsRepository::findProfileSourceFor(User): ?AiProviderSettings`.
+  - `TickContext::$profileTick`, `::borrowingProfileFrom(TickContext): self`, `::connectionInFlight(): AiProviderSettings`.
+  - `RecommendationSettingsResolver::forConnection(AiProviderSettings): EffectiveRecommendationSettingsModel`.
+  - `TickLockTtl::secondsFor(User): float`, `TickLockTtl::MARGIN_SECONDS = 300.0`.
+  - `RecommendationRunTimingRepository::completedRunPhaseSpans(User, RecommendationEngineKind, int $limit)`.
+  - `JevStateFactory::create(string $profile, ?string $guidance): array<string, string>`; `FittingPrefix::of(string, \Closure(string): bool): string`.
+  - `JevProfileStep::isPending(RecommendationRun): bool`, `::advance(TickContext): RecommendationRunReportModel`, `::NO_PROFILE_CONNECTION`, `::NO_PROFILE`.
+  - HTTP: `PUT /api/me/ai/configs/{id}/profile` → 200 + the configuration JSON; `DELETE /api/me/ai/configs/{id}/profile` → 204 (idempotent); configuration JSON gains `profileSource: bool`.
+  - Fixture: `RecommendationRunFixtures::seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings`, `::PROFILE_MODEL = 'profile-llm'`, `::PROFILE_BASE_URL = 'https://profile.example.test/v1'`.
+
+- [ ] **Step 0: Preflight (read only)**
+
+```bash
+git status --short && git branch --show-current          # feature/1345-jev-engine, clean, the fix wave committed
+git log --oneline -3
+grep -n "STATE_TOKEN_BUDGET\|STATE_TOKENS\|CONTEXT_WINDOW_TOKENS" backend/src/Service/Recommendation/Jev/Factory/JevStateFactory.php backend/src/Service/Recommendation/Jev/JevBatchPacker.php backend/src/Service/Ai/ModelCatalog/SystemOneCatalog.php
+ls backend/migrations | tail -2                          # newest is Version20261002150000 (else pick a later stamp than the newest)
+```
+
+Expected (as of 24e84f0e4): `JevStateFactory::STATE_TOKEN_BUDGET = 24_000`, `JevBatchPacker::STATE_TOKENS = 4_000`,
+`CONTEXT_WINDOW_TOKENS = 32_000`. B9 leaves one constant, the factory's, at `4_000` (B9-D11).
+
+- [ ] **Step 1: Write the failing tests**
+
+**1a. Fixture** — `backend/tests/Support/RecommendationRunFixtures.php` (beside `seedReadyAiSettingsFor()`):
+
+```php
+    public const string PROFILE_MODEL = 'profile-llm';
+    public const string PROFILE_BASE_URL = 'https://profile.example.test/v1';
+
+    /** A second ready connection, not active, chosen to build the profile; its base URL tells its calls apart. */
+    public function seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings
+    {
+        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
+        $connection = new AiProviderSettings(
+            $user,
+            'Profile',
+            self::PROFILE_BASE_URL,
+            $this->cipher->seal($user->requireId(), 'sk-profile5678'),
+            '5678',
+            $now,
+        );
+        $this->entityManager->persist($connection);
+        $connection->chooseModel($model, $now, 32768);
+        $connection->setProfileSource(true);
+        $this->entityManager->flush();
+
+        return $connection;
+    }
+```
+
+`RecommendationCapabilitiesJsons`: `LLM` gains `'profile' => 'own'` after `'prompt'`; `JEV` becomes
+`['reasons' => false, 'prompt' => false, 'profile' => 'borrowed', 'tuningFields' => ['batchConcurrency']]`.
+`AiSettingsControllerTest::LLM_CAPABILITIES` gains `'profile' => 'own'` after `'prompt'`.
+
+**1b. Profile connection** — `backend/tests/Service/Recommendation/Profile/ProfileConnectionResolverTest.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation\Profile;
+
+use App\Entity\User;
+use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Profile\ProfileConnectionResolver;
+use App\Tests\DbTestCase;
+use App\Tests\Support\AiProviderSettingsFactory;
+use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
+
+final class ProfileConnectionResolverTest extends DbTestCase
+{
+    use SeedsUsers;
+
+    private User $owner;
+    private RecommendationRunFixtures $fixtures;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+        $this->owner = $this->user('profile-resolver@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+    }
+
+    public function testTheChosenReadyLlmConnectionBuildsTheProfile(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+
+        self::assertSame($profile, $this->resolver()->findUsableFor($this->owner));
+    }
+
+    public function testAnAccountThatChoseNoneHasNone(): void
+    {
+        self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    /** A connection whose model later became a Jev model cannot distil: it reads as no profile connection. */
+    public function testAChosenConnectionOnAJevModelIsNotUsable(): void
+    {
+        $this->fixtures->seedProfileConnectionFor($this->owner, 'jev-latest');
+
+        self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    public function testAChosenConnectionWithoutAModelIsNotUsable(): void
+    {
+        $connection = AiProviderSettingsFactory::build($this->owner, 'No model', 'https://none.example.test/v1');
+        $connection->setProfileSource(true);
+        $this->entityManager->persist($connection);
+        $this->entityManager->flush();
+
+        self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    public function testADeletedChoiceLeavesNone(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $this->entityManager->remove($profile);
+        $this->entityManager->flush();
+
+        self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    public function testAnotherAccountsChoiceIsNotThisOnes(): void
+    {
+        $stranger = $this->user('profile-resolver-stranger@example.test');
+        $this->fixtures->seedProfileConnectionFor($stranger);
+
+        self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    private function resolver(): ProfileConnectionResolver
+    {
+        /** @var ProfileConnectionResolver $resolver */
+        $resolver = self::getContainer()->get(ProfileConnectionResolver::class);
+
+        return $resolver;
+    }
+}
+```
+
+`backend/tests/Service/Recommendation/Profile/ProfileConnectionChooserTest.php` (same setUp; owner active on `gpt-4o`
+via `seedReadyAiSettingsFor($owner, 'gpt-4o')`):
+
+```php
+    public function testChoosingAConnectionMakesItTheOnlyProfileSource(): void
+    {
+        $first = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $second = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($second);
+
+        $this->chooser()->choose($second);
+
+        $this->entityManager->refresh($first);
+        $this->entityManager->refresh($second);
+        self::assertTrue($second->isProfileSource());
+        self::assertFalse($first->isProfileSource());
+    }
+
+    public function testAJevConnectionIsRefused(): void
+    {
+        $jev = $this->fixtures->seedProfileConnectionFor($this->owner, 'jev-latest');
+        $jev->setProfileSource(false);
+        $this->entityManager->flush();
+
+        try {
+            $this->chooser()->choose($jev);
+            self::fail('A Jev connection cannot build the profile.');
+        } catch (ProfileConnectionRejectedException $exception) {
+            self::assertSame(ProfileConnectionChooser::REJECTION, $exception->getMessage());
+        }
+        $this->entityManager->refresh($jev);
+        self::assertFalse($jev->isProfileSource());
+    }
+
+    public function testAConnectionWithoutAModelIsRefused(): void
+    {
+        $connection = AiProviderSettingsFactory::build($this->owner, 'No model', 'https://none.example.test/v1');
+        $this->entityManager->persist($connection);
+        $this->entityManager->flush();
+
+        $this->expectException(ProfileConnectionRejectedException::class);
+
+        $this->chooser()->choose($connection);
+    }
+
+    /** Clearing leaves the account without a profile connection; clearing again changes nothing. */
+    public function testClearingUnsetsTheChoiceAndIsIdempotent(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+
+        $this->chooser()->clear($profile);
+        $this->chooser()->clear($profile);
+
+        $this->entityManager->refresh($profile);
+        self::assertFalse($profile->isProfileSource());
+    }
+```
+
+`AiSettingsControllerTest` (catalog stub answering `['gpt-4o', 'gpt-4o-mini', 'jev-latest']`):
+
+```php
+    public function testChoosingAProfileConnectionMovesTheChoice(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-profile@example.test');
+        $first = $this->addAndReadyConfiguration($client, 'gpt-4o');
+        $second = $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/profile', $first), '{}');
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($client)['profileSource']);
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/profile', $second), '{}');
+
+        $client->request('GET', '/api/me/ai');
+        $flags = array_column($this->payload($client)['configs'], 'profileSource', 'id');
+        self::assertSame([$first => false, $second => true], $flags);
+    }
+
+    public function testAJevConnectionCannotBuildTheProfile(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'jev-latest']);
+        $this->accountOn($client, 'ai-profile-jev@example.test');
+        $jev = $this->addAndReadyConfiguration($client, 'jev-latest');
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/profile', $jev), '{}');
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame('profile_connection_rejected', $this->payload($client)['type']);
+    }
+
+    public function testClearingTheProfileConnectionAnswersNoContentEveryTime(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-profile-clear@example.test');
+        $id = $this->addAndReadyConfiguration($client, 'gpt-4o');
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/profile', $id), '{}');
+
+        $client->request('DELETE', sprintf('/api/me/ai/configs/%d/profile', $id));
+        self::assertResponseStatusCodeSame(204);
+        $client->request('DELETE', sprintf('/api/me/ai/configs/%d/profile', $id));
+        self::assertResponseStatusCodeSame(204);
+
+        $client->request('GET', '/api/me/ai');
+        self::assertSame([$id => false], array_column($this->payload($client)['configs'], 'profileSource', 'id'));
+    }
+
+    public function testAnotherAccountsConnectionIsNotFound(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-profile-owner@example.test');
+        $theirs = $this->addAndReadyConfiguration($client, 'gpt-4o');
+        $this->accountOn($client, 'ai-profile-stranger@example.test');
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/profile', $theirs), '{}');
+        self::assertResponseStatusCodeSame(404);
+        $client->request('DELETE', sprintf('/api/me/ai/configs/%d/profile', $theirs));
+        self::assertResponseStatusCodeSame(404);
+    }
+```
+
+**Assumption (verify):** a problem body's `type` is the bare slug (`profile_connection_rejected`) as other tests in
+this file read it; if they compare a URI, follow them. `array_column($configs, 'profileSource', 'id')` needs the ids
+as ints (they are, `assertIsInt` in `addAndReadyConfiguration`).
+
+**1c. Capabilities and the settings payload.** `RecommendationEngineResolverTest::testTheJevKindWritesNoReasons…`
+adds `self::assertSame(RecommendationProfileSource::Borrowed, $capabilities->profileSource);`, and a sibling for the
+LLM asserts `Own`. `RecommendationCapabilitiesJsonTest` needs no new test (it compares to `JEV`/`LLM`, now carrying
+`profile`). `RecommendationSettingsJsonTest`:
+
+```php
+    /** Every engine runs on a distilled profile; only the LLM's own prompt pieces depend on the prompt capability. */
+    public function testAnEngineWithoutAPromptShowsTheProfileButNoPromptPieces(): void
+    {
+        $state = RecommendationSettingsJson::state(
+            $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.'),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
+            workerAlive: true,
+        );
+
+        self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
+        self::assertNull($state['defaultGuidancePrompt']);
+        self::assertNull($state['fixedPrompt']);
+    }
+```
+
+(replaces `testAnEngineWithoutAPromptSendsNoneOfThePromptPieces` and its positional `new
+RecommendationEngineCapabilitiesModel(false, false, [])`.)
+
+**1d. Phase plan, progress, ETA.** `RecommendationEngineKindTest` — replace `testJevAsksInBatchesOnly`:
+
+```php
+    public function testJevDistilsThenAsksInBatches(): void
+    {
+        self::assertSame([CallPhase::Distill, CallPhase::Batch], RecommendationEngineKind::Jev->phases());
+        self::assertSame(1, RecommendationEngineKind::Jev->singleCallPhaseCount());
+        self::assertFalse(RecommendationEngineKind::Jev->runs(CallPhase::Consolidate));
+    }
+```
+
+`RecommendationRunProgressTest` — replace `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases`:
+
+```php
+    /** Three batches and the distillation before them; no consolidation to reach once they are done. */
+    public function testAJevPlanCountsItsDistillationAndHasNoConsolidation(): void
+    {
+        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, false, RecommendationEngineKind::Jev);
+        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, true, RecommendationEngineKind::Jev);
+
+        self::assertSame(4, $pending->batchesTotal);
+        self::assertTrue($pending->distillPending);
+        self::assertFalse($done->distillPending);
+        self::assertTrue($done->allBatchCallsDone);
+        self::assertFalse($done->isConsolidationPhase);
+    }
+```
+
+`PhaseDurationsModelTest::testEachKindAveragesOnlyRunsWithExactlyItsPhases` — run 1 becomes a Jev run with a
+distillation:
+
+```php
+        $spans = [
+            $this->span(1, CallPhase::Distill, 5.0, 0),
+            $this->span(1, CallPhase::Batch, 60.0, 3),
+            $this->span(2, CallPhase::Distill, 10.0, 0),
+            $this->span(2, CallPhase::Batch, 40.0, 4),
+            $this->span(2, CallPhase::Consolidate, 30.0, 0),
+        ];
+        …
+        self::assertSame(105.0, $jev->predictedTotalSeconds(5));   // 5 + 5 × 20
+        self::assertSame(70.0, $llm->predictedTotalSeconds(3));    // 10 + 3 × 10 + 30
+```
+
+`RecommendationEtaEstimatorTest` — `seedHistoricalJevRun(int $distill, int $batchWall, int $batches)` logs a Distill
+row (`$this->finishedLog($run, CallPhase::Distill, null, 0, $distill)`) before its batches; a new
+`seedHistoricalLlmRunWithoutConsolidation(int $distill, int $batchWall, int $batches)` is `seedHistoricalRun()` without
+the consolidate row (an LLM run whose pool was empty). The Jev test:
+
+```php
+    /**
+     * History: an LLM run (10 + 4 × 10 + 30), a Jev run (15 + 3 × 25) and an LLM run that skipped consolidation, whose
+     * phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
+     */
+    public function testAJevRunIsPredictedFromJevRunsAlone(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalJevRun(distill: 15, batchWall: 75, batches: 3);
+        $this->seedHistoricalLlmRunWithoutConsolidation(distill: 10, batchWall: 40, batches: 4);
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
+        $run->snapshot(RecommendationEngineKind::Jev, [[1], [2], [3], [4]]);
+        $run->markFirstBatchStarted();
+
+        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReportModel::fromRun($run), $this->user);
+
+        self::assertSame(95, $eta);
+    }
+```
+
+(With the third run counted: distill (15 + 10)/2, batch (25 + 10)/2 → 12.5 + 70 − 20 = 62.5 → 63 ≠ 95.)
+**Assumption (verify):** the LLM tests in this file still pass unchanged — the LLM-without-consolidation run carries
+neither LLM phase set, so the LLM estimate ignores it as before.
+
+`RecommendationRunTimingRepositoryTest` — every `completedRunPhaseSpans($this->user, N)` gains
+`RecommendationEngineKind::Llm` as its second argument, plus:
+
+```php
+    /** Each kind reads only its own runs; a run from before the kind column counts as the LLM's. */
+    public function testOnlyRunsOfTheAskedKindAreRead(): void
+    {
+        $llm = $this->completedRun();
+        $this->finishedLog($llm, CallPhase::Distill, null, '10:00:00', '10:00:10');
+        $legacy = $this->completedRun();
+        $this->finishedLog($legacy, CallPhase::Distill, null, '10:00:00', '10:00:20');
+        $jev = $this->fixtures->createRun($this->user);
+        $jev->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $jev->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
+        $this->finishedLog($jev, CallPhase::Distill, null, '10:00:00', '10:00:30');
+        $this->entityManager->flush();
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE recommendation_run SET engine_kind = NULL WHERE id = ?',
+            [$legacy->requireId()],
+        );
+
+        $llmRuns = array_column($this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10), 'runId');
+        $jevRuns = array_column($this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Jev, 10), 'runId');
+
+        self::assertEqualsCanonicalizing([$llm->requireId(), $legacy->requireId()], $llmRuns);
+        self::assertSame([$jev->requireId()], $jevRuns);
+    }
+```
+
+**1e. State and the fitting cut.** `backend/tests/Service/Recommendation/Jev/Support/FittingPrefixTest.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation\Jev\Support;
+
+use App\Service\Recommendation\Jev\Support\FittingPrefix;
+use PHPUnit\Framework\TestCase;
+
+final class FittingPrefixTest extends TestCase
+{
+    public function testATextThatFitsStaysWhole(): void
+    {
+        self::assertSame('abcdefgh', FittingPrefix::of('abcdefgh', static fn (string $prefix): bool => true));
+    }
+
+    public function testTheCutIsTheLongestPrefixThatFits(): void
+    {
+        $fits = static fn (string $prefix): bool => \strlen($prefix) <= 5;
+
+        self::assertSame('abcde', FittingPrefix::of('abcdefgh', $fits));
+    }
+
+    /** By characters, never inside one: 'äö' is 4 bytes, 'äöü' 6. */
+    public function testTheCutNeverSplitsAMultiByteCharacter(): void
+    {
+        $fits = static fn (string $prefix): bool => \strlen($prefix) <= 5;
+
+        self::assertSame('äö', FittingPrefix::of('äöüß', $fits));
+    }
+
+    public function testWhenOnlyTheEmptyPrefixFitsTheCutIsEmpty(): void
+    {
+        self::assertSame('', FittingPrefix::of('abc', static fn (string $prefix): bool => '' === $prefix));
+    }
+}
+```
+
+`backend/tests/Service/Recommendation/Jev/Factory/JevStateFactoryTest.php` — replaced whole:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation\Jev\Factory;
+
+use App\Service\Recommendation\Jev\Factory\JevStateFactory;
+use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+use PHPUnit\Framework\TestCase;
+
+final class JevStateFactoryTest extends TestCase
+{
+    public function testTheStateIsTheProfileThenTheGuidance(): void
+    {
+        $state = (new JevStateFactory())->create('Likes Rust and homelab posts.', 'More self-hosting, less crypto.');
+
+        self::assertSame(
+            ['profile' => 'Likes Rust and homelab posts.', 'guidance' => 'More self-hosting, less crypto.'],
+            $state,
+        );
+    }
+
+    public function testWithoutGuidanceTheStateIsTheProfileAlone(): void
+    {
+        self::assertSame(['profile' => 'Likes Rust.'], (new JevStateFactory())->create('Likes Rust.', null));
+    }
+
+    /** The guidance stays whole; the profile is cut to exactly what is left: one more character would not fit. */
+    public function testAnOverlongProfileIsCutToTheBudgetBesideTheWholeGuidance(): void
+    {
+        $state = (new JevStateFactory())->create(str_repeat('p', 20_000), 'More self-hosting.');
+
+        self::assertSame('More self-hosting.', $state['guidance']);
+        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, JevTokenEstimate::ofJson($state));
+        self::assertGreaterThan(
+            JevStateFactory::STATE_TOKEN_BUDGET,
+            JevTokenEstimate::ofJson(['profile' => $state['profile'] . 'p'] + $state),
+        );
+    }
+
+    /** 4-byte characters: 4 000 of them are 16 000 bytes, over the budget by themselves. The guidance is cut too. */
+    public function testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNothing(): void
+    {
+        $state = (new JevStateFactory())->create('Likes Rust.', str_repeat('😀', 4_000));
+
+        self::assertSame('', $state['profile']);
+        self::assertLessThan(4_000, mb_strlen($state['guidance']));
+        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, JevTokenEstimate::ofJson($state));
+    }
+
+    public function testInvalidByteSequencesAreScrubbedFromBoth(): void
+    {
+        $state = (new JevStateFactory())->create("Likes \xC3 Rust.", "More \xFF homelab.");
+
+        self::assertTrue(mb_check_encoding($state['profile'], 'UTF-8'));
+        self::assertTrue(mb_check_encoding($state['guidance'], 'UTF-8'));
+        self::assertStringStartsWith('Likes ', $state['profile']);
+    }
+}
+```
+
+**1f. The tick, the engine, the pipeline.** `TickContextTest` (unit; reuse its `tick()` builder, add a kind
+parameter or a sibling builder):
+
+```php
+    /** The profile connection answers for the tick while a borrowed distillation is pending, the tick's own after. */
+    public function testTheConnectionInFlightIsTheProfileConnectionUntilTheProfileIsRecorded(): void
+    {
+        $jev = $this->connection();
+        $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
+        $tick = $this->tick($jev, TickDriver::Worker);
+        $tick->run->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $borrowing = $tick->borrowingProfileFrom($this->tick($profile, TickDriver::Worker));
+
+        self::assertSame($profile, $borrowing->connectionInFlight());
+        $tick->run->recordProfile('Likes Rust.');
+        self::assertSame($jev, $borrowing->connectionInFlight());
+    }
+
+    public function testATickWithoutAProfileTickCallsItsOwnConnection(): void
+    {
+        $connection = $this->connection();
+        $tick = $this->tick($connection, TickDriver::Worker);
+        $tick->run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+
+        self::assertSame($connection, $tick->connectionInFlight());
+    }
+```
+
+**Assumption (verify):** both ticks of the first test share one `RecommendationRun` instance — `borrowingProfileFrom()`
+keeps `$this->run`, and `connectionInFlight()` reads `$this->run`; the profile tick's own run is irrelevant. If the
+builder creates a new run per call, build the profile tick from `$tick->run`.
+
+`TickContextFactoryTest`:
+
+```php
+    public function testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings(): void
+    {
+        $owner = $this->user('tick-context-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $profile = $this->fixtures->seedProfileConnectionFor($owner);
+        $profile->setMaxBatchSize(30);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        $tick = $this->factory()->create($run, TickDriver::Worker);
+
+        self::assertNotNull($tick->profileTick);
+        self::assertSame($profile, $tick->profileTick->connection);
+        self::assertSame(RecommendationEngineKind::Llm, $tick->profileTick->engineKind);
+        self::assertSame(30, $tick->profileTick->settings->packing->maximumBatchSize);
+        self::assertSame(TickDriver::Worker, $tick->profileTick->driver);
+        self::assertSame($run, $tick->profileTick->run);
+    }
+
+    public function testAJevTickWithoutAUsableProfileConnectionBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-no-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick);
+    }
+
+    /** The LLM distils on its own connection: a chosen profile connection is ignored. */
+    public function testAnLlmTickBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-llm-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedProfileConnectionFor($owner);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick);
+    }
+```
+
+`RecommendationSettingsResolverTest`:
+
+```php
+    /** A borrowed distillation sizes its history by the profile connection, not the active one. */
+    public function testForAConnectionTheWindowAndTheCeilingAreThatConnections(): void
+    {
+        $active = AiProviderSettingsFactory::build($this->user);
+        $active->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:00:00'), 32_000);
+        $profile = AiProviderSettingsFactory::build($this->user, 'Profile', 'https://profile.example.test/v1');
+        $profile->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
+        $profile->setMaxBatchSize(30);
+        $this->entityManager->persist($active);
+        $this->entityManager->persist($profile);
+        $this->user->setActiveAiProviderSettings($active);
+        $this->entityManager->flush();
+
+        $forProfile = $this->resolver()->forConnection($profile);
+
+        self::assertSame(128_000, $forProfile->packing->contextWindow);
+        self::assertSame(30, $forProfile->packing->maximumBatchSize);
+        self::assertSame(32_000, $this->resolver()->forUser($this->user)->packing->contextWindow);
+    }
+```
+
+(**Assumption (verify):** the test class's own accessor for the resolver and its `$this->user`; adapt the names.)
+
+`TickPhasesTest`:
+
+```php
+    /** The run's error names the address that failed: the profile connection's, while it distils for a Jev run. */
+    public function testABorrowedDistillationsFailureStrikesAgainstTheProfileConnection(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $engine = ScriptedRecommendationEngine::failingWith(new ProviderUnreachableException('It refused.'));
+        $run = $this->fixtures->createRun($this->owner);
+        $run->snapshot(RecommendationEngineKind::Jev, [[101, 102]]);
+        $this->entityManager->flush();
+        $profileTick = new TickContext($run, $profile, RecommendationEngineKind::Llm, $this->tick($run)->settings, TickDriver::Poll);
+        $tick = $this->tickOfKind($run, RecommendationEngineKind::Jev)->borrowingProfileFrom($profileTick);
+
+        for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
+            try {
+                $this->phases($engine)->advance($tick);
+            } catch (ProviderUnreachableException) {
+            }
+        }
+
+        self::assertSame(
+            'The AI provider at ' . RecommendationRunFixtures::PROFILE_BASE_URL . ' failed: It refused.',
+            $run->getError(),
+        );
+    }
+```
+
+(The empty catch is the test's point: each strike propagates; PHPStan/phpcs may want a body — use
+`self::addToAssertionCount(1);` if `Generic.CodeAnalysis.EmptyStatement` objects.)
+
+`TickLockTtlTest` (`backend/tests/Service/Recommendation/Run/TickLockTtlTest.php`, DbTestCase, fixtures as above):
+
+```php
+    public function testAnAccountWithoutAConnectionGetsTheStandardBound(): void
+    {
+        self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+    }
+
+    public function testAJevAccountCoversItsSlowProfileConnection(): void
+    {
+        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedProfileConnectionFor($this->owner)->setSlowModel(true);
+        $this->entityManager->flush();
+
+        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+    }
+
+    public function testASlowJevConnectionStillCountsBesideAStandardProfileConnection(): void
+    {
+        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->owner->getActiveAiProviderSettings()?->setSlowModel(true);
+        $this->fixtures->seedProfileConnectionFor($this->owner);
+
+        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+    }
+
+    /** The LLM never borrows, so a slow connection it merely flagged does not lengthen its lock. */
+    public function testAnLlmAccountIgnoresItsProfileConnection(): void
+    {
+        $this->fixtures->seedReadyAiSettings($this->owner);
+        $this->fixtures->seedProfileConnectionFor($this->owner)->setSlowModel(true);
+        $this->entityManager->flush();
+
+        self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+    }
+```
+
+Read the 180/900 from `ProviderTimeoutsModel::standard()->firstByteSeconds` / `::forSlowModel()` rather than
+literals if the reviewer prefers; the literals make the pins readable. `RecommendationRunAdvancerTest`'s TTL test reads
+`TickLockTtl::MARGIN_SECONDS` instead of `RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS` (mechanical).
+`AdvanceRecommendationRunsHandlerTest::advancerWithFlushFailingEntityManager()` drops the configurator and
+`$this->connectionFactory()` arguments and passes `self::getContainer()->get(TickLockTtl::class)` in their place
+(drop `connectionFactory()` if nothing else uses it).
+
+`JevPipelineTest` — `setUp()` adds `$this->fixtures->seedProfileConnectionFor($this->owner);`; a helper
+
+```php
+    private function queueProfile(string $profile): void
+    {
+        $this->chat()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
+    }
+```
+
+is called before every `runToCompletion()`. Changed assertions:
+
+- `testEveryCandidateIsScoredByItsNoulAndRankedWithoutAReason`: `self::assertSame(2, $run->getProgress()->batchesTotal);   // the distillation and one batch (the LLM: 3)` and `self::assertSame([RecommendationRunFixtures::PROFILE_MODEL], array_column($this->chat()->calls(), 'model'));`
+- `testTheRequestCarriesTheAliasTheStateAndOneQuestionPerCandidate`: `self::assertSame(['profile' => 'Likes Rust and homelab.'], $requests[0]->state);` (replaces `assertArrayHasKey('history', …)`).
+- `testTheRunLogKeepsTheCallWithItsReceiptAndTheRunItsCost`: `assertCount(2, $logs)`; `$logs[0]->getPhase()` is `Distill` with `getRequestId()` null; the receipt assertions move to `$logs[1]`.
+
+New:
+
+```php
+    public function testTheGuidanceRidesBesideTheProfile(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->queueProfile('Likes Rust and homelab.');
+
+        $this->runToCompletion();
+
+        self::assertSame(
+            ['profile' => 'Likes Rust and homelab.', 'guidance' => 'More self-hosting.'],
+            $this->systemOne()->requests()[0]->state,
+        );
+    }
+
+    /** No profile connection: the run fails before any call, says how to fix it, and resumes once one is chosen. */
+    public function testWithoutAProfileConnectionTheRunFailsThenResumesOnceOneIsChosen(): void
+    {
+        $this->profileConnection()->setProfileSource(false);
+        $this->entityManager->flush();
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+
+        $failed = $this->runToCompletion();
+
+        self::assertSame('failed', $failed->getStatus()->value);
+        self::assertSame(JevProfileStep::NO_PROFILE_CONNECTION, $failed->getError());
+        self::assertSame([], $this->chat()->calls());
+        self::assertSame([], $this->systemOne()->requests());
+
+        $this->profileConnection()->setProfileSource(true);
+        $this->entityManager->flush();
+        $this->queueProfile('Likes Rust and homelab.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->starter()->resume($this->owner);
+        $resumed = $this->tickUntilDone();
+
+        self::assertSame('completed', $resumed->getStatus()->value);
+        self::assertSame($failed->requireId(), $resumed->requireId());
+    }
+
+    /** The profile connection answers nothing usable: the run scores on the profile an earlier run stored. */
+    public function testAFailedDistillationFallsBackToTheStoredProfile(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->settingsWriter()->storeProfile($this->owner, 'Stored: likes Rust.');
+        $this->queueUnusableProfiles();
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+
+        $run = $this->runToCompletion();
+
+        self::assertSame('completed', $run->getStatus()->value);
+        self::assertSame('Stored: likes Rust.', $run->getProfileText());
+        self::assertSame(['profile' => 'Stored: likes Rust.'], $this->systemOne()->requests()[0]->state);
+    }
+
+    /** Guidance alone is not enough: with nothing stored the run fails, then a usable answer on resume completes it. */
+    public function testAFailedDistillationWithNothingStoredFailsEvenWithGuidanceThenResumes(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
+        $this->queueUnusableProfiles();
+
+        $failed = $this->runToCompletion();
+
+        self::assertSame('failed', $failed->getStatus()->value);
+        self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
+        self::assertSame([], $this->systemOne()->requests());
+
+        $this->queueProfile('Likes Rust and homelab.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->starter()->resume($this->owner);
+        $resumed = $this->tickUntilDone();
+
+        self::assertSame('completed', $resumed->getStatus()->value);
+        self::assertSame(
+            ['profile' => 'Likes Rust and homelab.', 'guidance' => 'More self-hosting.'],
+            $this->systemOne()->requests()[0]->state,
+        );
+    }
+
+    private function queueUnusableProfiles(): void
+    {
+        for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
+            $this->chat()->queueContent('not a profile');
+        }
+    }
+```
+
+**Assumption (verify):** `InvalidReplyRetry::retryOrDegrade()` degrades after exactly `RecommendationRun::MAX_ATTEMPTS`
+unusable replies and spends one tick per attempt, so `MAX_TICKS = 10` still covers start → snapshot → attempts →
+fallback → wave → finalise; raise `MAX_TICKS` if not. `settingsWriter()` fetches `RecommendationSettingsWriter` from
+the container (as in `JevRecommendationEngineTest` below).
+
+`runToCompletion()` splits into `start` + `tickUntilDone()`; `profileConnection()` returns the connection
+`setUp()` seeded (keep it in a field). `guidanceSettings(User, string)`: add to `RecommendationRunFixtures` beside
+`debugEnabledSettings()` if no guidance seeder exists (**Assumption (verify)**: `grep -n guidance
+tests/Support/RecommendationRunFixtures.php`).
+
+`JevRecommendationEngineTest` — `setUp()` adds `seedProfileConnectionFor()`; `startRunAfterTheWarmUp()` queues a
+profile and ticks once more after the snapshot tick (the distillation), before queueing the first wave. Add a
+`chat()` accessor like `JevPipelineTest`'s. **Assumption (verify):** assertions that count run-log rows or index
+`logs()` gain the distillation row at index 0 (`lastLog()` is unaffected). New:
+
+```php
+    /** A slow or absent profile connection is the account's to fix: the run fails with the message, never strikes. */
+    public function testWithoutAProfileConnectionTheFirstProviderTickFailsTheRun(): void
+    {
+        $this->profileConnection()->setProfileSource(false);
+        $this->entityManager->flush();
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->starter()->start($this->owner);
+        $this->advancer()->advance($this->owner);         // the snapshot: no provider call, no check
+
+        $report = $this->advancer()->advance($this->owner);
+
+        $run = $this->latestRun();
+        self::assertSame('failed', $report->status);
+        self::assertSame(JevProfileStep::NO_PROFILE_CONNECTION, $run->getError());
+        self::assertSame(0, $run->getTransportFailures());
+        self::assertSame([], $this->logs($run));
+    }
+
+    /** The profile is the run's frozen copy: a later wave sends what this run distilled, not the settings' copy. */
+    public function testEveryWaveSendsTheProfileThisRunDistilled(): void
+    {
+        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $this->settingsWriter()->storeProfile($this->owner, 'Rewritten elsewhere.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $requests = $this->systemOne()->requests();
+        self::assertSame(['profile' => self::PROFILE], end($requests)->state);
+    }
+```
+
+```php
+    /** A gateway's invalid byte: the reply is unusable, and the run log still holds valid UTF-8 (MySQL strict). */
+    public function testAnInvalidByteInAReplyNeverReachesTheRunLog(): void
+    {
+        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
+            $this->systemOne()->queueBody("{\"model\":\"jev-1.13.0\",\"answers\":{},\"note\":\"\xC3\"}");
+        }
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        foreach ($this->logs($this->latestRun()) as $log) {
+            self::assertTrue(mb_check_encoding($log->getResponseText(), 'UTF-8'), 'A log row holds invalid UTF-8.');
+        }
+    }
+```
+
+(`self::PROFILE` is the text the warm-up queued. **Assumption (verify):** `RecommendationSettingsWriter` is fetchable
+from the container in tests; else write the settings row through the fixtures.)
+
+- [ ] **Step 2: Run them to see them fail**
+
+Run: `php bin/phpunit tests/Service/Recommendation tests/Repository/RecommendationRunTimingRepositoryTest.php tests/Http tests/Controller/Api/AiSettingsControllerTest.php tests/Enum tests/Entity tests/Service/Worker/AdvanceRecommendationRunsHandlerTest.php`
+Expected: fatals on the missing classes (`RecommendationProfileSource`, `ProfileConnectionResolver`,
+`FittingPrefix`, `TickLockTtl`, `setProfileSource()`); fix by implementing.
+
+- [ ] **Step 3: The flag, the migration, the seam, the resolver and the chooser**
+
+`AiProviderSettings` (after `verifiedAt`):
+
+```php
+    /** The account's one connection that distils the profile for an engine that cannot; ProfileConnectionChooser keeps it one. */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $profileSource = false;
+    …
+    public function isProfileSource(): bool
+    {
+        return $this->profileSource;
+    }
+
+    public function setProfileSource(bool $profileSource): void
+    {
+        $this->profileSource = $profileSource;
+    }
+```
+
+`AiProviderSettingsRepository`:
+
+```php
+    public function findProfileSourceFor(User $user): ?AiProviderSettings
+    {
+        return $this->findOneBy(['user' => $user, 'profileSource' => true]);
+    }
+```
+
+`backend/migrations/Version20261002180000.php` — mirror `Version20260821140000` (its `mysql()` helper that refuses a
+third platform, the `hasColumn` guards, `TINYINT(1) DEFAULT 0 NOT NULL` / `BOOLEAN DEFAULT 0 NOT NULL`):
+
+```php
+final class Version20261002180000 extends AbstractMigration
+{
+    public function getDescription(): string
+    {
+        return 'Add user_ai_settings.profile_source: the connection that distils the profile for Jev (#1345).';
+    }
+
+    public function up(Schema $schema): void
+    {
+        if ($schema->getTable('user_ai_settings')->hasColumn('profile_source')) {
+            return;
+        }
+
+        $this->addSql($this->mysql()
+            ? 'ALTER TABLE user_ai_settings ADD profile_source TINYINT(1) DEFAULT 0 NOT NULL'
+            : 'ALTER TABLE user_ai_settings ADD COLUMN profile_source BOOLEAN DEFAULT 0 NOT NULL');
+    }
+
+    public function down(Schema $schema): void
+    {
+        if (!$schema->getTable('user_ai_settings')->hasColumn('profile_source')) {
+            return;
+        }
+
+        $this->addSql($this->mysql()
+            ? 'ALTER TABLE user_ai_settings DROP profile_source'
+            : 'ALTER TABLE user_ai_settings DROP COLUMN profile_source');
+    }
+
+    private function mysql(): bool
+    {
+        // copy Version20260821140000::mysql() verbatim
+    }
+}
+```
+
+**Assumption (verify):** SQLite ≥ 3.35 drops a column (`DROP COLUMN`); `Version20260821140000::down()` already relies
+on it.
+
+`backend/src/Service/Recommendation/Engine/Model/RecommendationProfileSource.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Engine\Model;
+
+/** Where an engine's reader profile comes from: its own connection distils it, or it borrows the profile connection. */
+enum RecommendationProfileSource: string
+{
+    case Own = 'own';
+    case Borrowed = 'borrowed';
+}
+```
+
+`RecommendationEngineCapabilitiesModel`: constructor `(bool $writesReasons, bool $sendsPrompt,
+RecommendationProfileSource $profileSource, array $tuningFields)`; `of()` adds `profileSource:
+RecommendationProfileSource::Own` (LLM) and `::Borrowed` (Jev). `RecommendationCapabilitiesJson::of()` adds
+`'profile' => $capabilities->profileSource->value,` after `'prompt'`, and its and `ActiveAiJson::of()`'s return
+shapes gain `profile: string`.
+
+`backend/src/Service/Recommendation/Profile/ProfileDistiller/ProfileDistillerInterface.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Profile\ProfileDistiller;
+
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
+
+/** One tick of a run's distillation: the reader's profile, recorded on the run; an engine that cannot distil borrows it. */
+interface ProfileDistillerInterface
+{
+    public function advance(TickContext $tick): RecommendationRunReportModel;
+}
+```
+
+`DistillationPhase implements ProviderPhaseInterface, ProfileDistillerInterface` (no other change).
+`config/services.yaml`, beside the aliases at lines 72–79:
+
+```yaml
+    App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface: '@App\Service\Recommendation\Llm\Run\ProviderPhase\DistillationPhase'
+```
+
+`backend/src/Service/Recommendation/Profile/ProfileConnectionResolver.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Profile;
+
+use App\Entity\AiProviderSettings;
+use App\Entity\User;
+use App\Repository\AiProviderSettingsRepository;
+use App\Service\Ai\Support\AiReadiness;
+use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+
+final readonly class ProfileConnectionResolver
+{
+    public function __construct(
+        private AiProviderSettingsRepository $aiProviderSettings,
+        private RecommendationEngineResolver $engines,
+    ) {
+    }
+
+    /** The connection the account chose to build its profile, while it still can; null when there is none. */
+    public function findUsableFor(User $user): ?AiProviderSettings
+    {
+        $connection = $this->aiProviderSettings->findProfileSourceFor($user);
+
+        return null !== $connection && $this->canBuildProfiles($connection) ? $connection : null;
+    }
+
+    public function canBuildProfiles(AiProviderSettings $connection): bool
+    {
+        return AiReadiness::of($connection)
+            && RecommendationProfileSource::Own === $this->engines->capabilitiesFor($connection)->profileSource;
+    }
+}
+```
+
+`backend/src/Service/Recommendation/Profile/ProfileConnectionChooser.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Profile;
+
+use App\Entity\AiProviderSettings;
+use App\Repository\AiProviderSettingsRepository;
+use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
+use Doctrine\ORM\EntityManagerInterface;
+
+final readonly class ProfileConnectionChooser
+{
+    public const string REJECTION = 'Only a ready LLM connection can build your profile.';
+
+    public function __construct(
+        private ProfileConnectionResolver $profileConnections,
+        private AiProviderSettingsRepository $aiProviderSettings,
+        private EntityManagerInterface $entityManager,
+    ) {
+    }
+
+    /** @throws ProfileConnectionRejectedException */
+    public function choose(AiProviderSettings $connection): void
+    {
+        if (!$this->profileConnections->canBuildProfiles($connection)) {
+            throw new ProfileConnectionRejectedException(self::REJECTION);
+        }
+
+        $chosenId = $connection->requireId();
+        foreach ($this->aiProviderSettings->findAllForUser($connection->getUser()) as $sibling) {
+            $sibling->setProfileSource($sibling->requireId() === $chosenId);
+        }
+        $this->entityManager->flush();
+    }
+
+    /** Idempotent: a connection that holds no choice stays as it is. */
+    public function clear(AiProviderSettings $connection): void
+    {
+        $connection->setProfileSource(false);
+        $this->entityManager->flush();
+    }
+}
+```
+
+`backend/src/Service/Recommendation/Exception/ProfileConnectionRejectedException.php`: `final class
+ProfileConnectionRejectedException extends \RuntimeException {}` (follow the folder's existing classes).
+`RecommendationRunProblems` gains:
+
+```php
+            $exception instanceof ProfileConnectionRejectedException => new ResolvedProblem(new ApiProblem(
+                'profile_connection_rejected',
+                'This connection cannot build the profile',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+```
+
+`AiSettingsController` — constructor gains `private ProfileConnectionChooser $profileConnections`; new action after
+`activate()`:
+
+```php
+    #[Route('/configs/{id}/profile', name: 'api_me_ai_choose_profile', requirements: ['id' => '\d+'], methods: ['PUT'])]
+    public function chooseProfile(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        $configuration = $this->configuration->require($user, $id);
+        $this->profileConnections->choose($configuration);
+
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
+    }
+```
+
+and after it:
+
+```php
+    #[Route('/configs/{id}/profile', name: 'api_me_ai_clear_profile', requirements: ['id' => '\d+'], methods: ['DELETE'])]
+    public function clearProfile(#[CurrentUser] User $user, int $id): JsonResponse
+    {
+        $this->profileConnections->clear($this->configuration->require($user, $id));
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+```
+
+(No rate limiter on either: no provider call, like `rename` and `delete`.) `AiSettingsJson::configuration()` adds `'profileSource' =>
+$settings->isProfileSource(),` after `'active'`. `RecommendationSettingsJson::state()` sends `'profileText' =>
+$effective->profileText` beside `guidancePrompt`; `promptPieces()` returns only `defaultGuidancePrompt` and
+`fixedPrompt` (shape and the `!sendsPrompt` early return updated).
+
+- [ ] **Step 4: The tick, the lock, the phase plan, the ETA filter**
+
+`RecommendationEngineKind::phases()`: `self::Jev => [CallPhase::Distill, CallPhase::Batch],`.
+`RecommendationRunProgress::forBatchPlan()`: delete `$distillationDone`; `distillPending: $hasPlan && !$distilled`,
+`isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone && $engineKind->runs(CallPhase::Consolidate)`.
+
+`RecommendationSettingsResolver`: `forUser(User $user)` returns `$this->resolve($user,
+$user->getActiveAiProviderSettings())`; new `forConnection(AiProviderSettings $connection)` returns
+`$this->resolve($connection->getUser(), $connection)`; the old body moves to `private function resolve(User $user,
+?AiProviderSettings $provider)`.
+
+`TickContext`:
+
+```php
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
+    public function __construct(
+        public RecommendationRun $run,
+        public AiProviderSettings $connection,
+        public RecommendationEngineKind $engineKind,
+        public EffectiveRecommendationSettingsModel $settings,
+        public TickDriver $driver,
+        public ?TickContext $profileTick = null,
+    ) {
+    }
+    …
+    public function borrowingProfileFrom(TickContext $profileTick): self
+    {
+        return new self($this->run, $this->connection, $this->engineKind, $this->settings, $this->driver, $profileTick);
+    }
+
+    /** The connection a provider failure this tick came from: the profile connection while it distils for the run. */
+    public function connectionInFlight(): AiProviderSettings
+    {
+        return null !== $this->profileTick && $this->run->getProgress()->distillPending
+            ? $this->profileTick->connection
+            : $this->connection;
+    }
+```
+
+`TickContextFactory` — constructor gains `private ProfileConnectionResolver $profileConnections`; `create()` builds the
+tick as today and returns `$this->withBorrowedProfile($tick)`:
+
+```php
+    private function withBorrowedProfile(TickContext $tick): TickContext
+    {
+        $borrows = RecommendationProfileSource::Borrowed
+            === RecommendationEngineCapabilitiesModel::of($tick->engineKind)->profileSource;
+        $profileConnection = $borrows ? $this->profileConnections->findUsableFor($tick->run->getUser()) : null;
+        if (null === $profileConnection) {
+            return $tick;
+        }
+
+        return $tick->borrowingProfileFrom(new TickContext(
+            $tick->run,
+            $profileConnection,
+            $this->engines->kindFor($profileConnection),
+            $this->settingsResolver->forConnection($profileConnection),
+            $tick->driver,
+        ));
+    }
+```
+
+`TickPhases::advanceWithinTheEnvelope()`: `$this->transportFailures->record($tick->run, $tick->connectionInFlight(),
+$exception->getMessage());`.
+
+`backend/src/Service/Recommendation/Run/TickLockTtl.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Run;
+
+use App\Entity\AiProviderSettings;
+use App\Entity\User;
+use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Recommendation\Profile\ProfileConnectionResolver;
+
+/**
+ * One first-byte wait of the slowest connection the tick may call, plus the margin, not the whole tick: the keepalive
+ * refreshes the lock on streamed chunks. Sizing: docs/recommendations-runs.md#the-tick-lock
+ */
+final readonly class TickLockTtl
+{
+    /**
+     * Headroom over the longest silence a live holder produces: loading and packing before a request, banking between
+     * waves, the whole snapshot tick. Public so the tests pin the TTL against its inputs.
+     */
+    public const float MARGIN_SECONDS = 300.0;
+
+    public function __construct(
+        private AiProviderConfigurator $configurator,
+        private ProviderConnectionFactory $connectionFactory,
+        private RecommendationEngineResolver $engines,
+        private ProfileConnectionResolver $profileConnections,
+    ) {
+    }
+
+    public function secondsFor(User $user): float
+    {
+        $active = $this->configurator->settingsFor($user);
+        if (null === $active) {
+            return ProviderTimeoutsModel::standard()->firstByteSeconds + self::MARGIN_SECONDS;
+        }
+
+        $profileConnection = $this->borrowedProfileConnection($user, $active);
+
+        return max(
+            $this->firstByteSeconds($active),
+            null === $profileConnection ? 0.0 : $this->firstByteSeconds($profileConnection),
+        ) + self::MARGIN_SECONDS;
+    }
+
+    private function borrowedProfileConnection(User $user, AiProviderSettings $active): ?AiProviderSettings
+    {
+        return RecommendationProfileSource::Borrowed === $this->engines->capabilitiesFor($active)->profileSource
+            ? $this->profileConnections->findUsableFor($user)
+            : null;
+    }
+
+    private function firstByteSeconds(AiProviderSettings $connection): float
+    {
+        return $this->connectionFactory->timeoutsFor($connection)->firstByteSeconds;
+    }
+}
+```
+
+`RecommendationRunAdvancer`: constructor drops `AiProviderConfigurator $configurator` and `ProviderConnectionFactory
+$connectionFactory`, takes `TickLockTtl $lockTtl` (8 parameters); `advance()` uses `$this->lockTtl->secondsFor($user)`;
+delete `LOCK_TTL_MARGIN_SECONDS` and `lockTtlFor()` (their docblocks moved above). `docs/recommendations-runs.md`
+§"the tick lock": "`RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS`" → "`TickLockTtl::MARGIN_SECONDS`", and after
+"Only a slow connection pays the longer TTL." add: "A Jev account's lock covers the slower of its connection and the
+profile connection that distils for it."
+
+`RecommendationRunTimingRepository::completedRunPhaseSpans(User $user, RecommendationEngineKind $engineKind, int
+$limit)` passes the kind to `newestCompletedRunIds()`, which adds:
+
+```php
+            ->andWhere(RecommendationEngineKind::Llm === $engineKind
+                ? '(r.engineKind = :kind OR r.engineKind IS NULL)'
+                : 'r.engineKind = :kind')
+            ->setParameter('kind', $engineKind)
+```
+
+and `RecommendationEtaEstimator` passes `$plan->engineKind`. The class docblock gains: "Runs of the asked kind only; a
+run from before the kind column is the LLM's, as `RecommendationRun::getEngineKind()` reads it."
+
+- [ ] **Step 5: The Jev state, the question, the engine**
+
+`backend/src/Service/Recommendation/Jev/Support/FittingPrefix.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev\Support;
+
+final class FittingPrefix
+{
+    /**
+     * The longest prefix of $text, in whole characters, that $fits accepts; $text itself when it fits. $fits must
+     * accept '' and never accept a prefix longer than one it refused.
+     *
+     * @param \Closure(string): bool $fits
+     */
+    public static function of(string $text, \Closure $fits): string
+    {
+        if ($fits($text)) {
+            return $text;
+        }
+
+        $fitting = 0;
+        $refused = mb_strlen($text);
+        while ($refused - $fitting > 1) {
+            $middle = intdiv($fitting + $refused, 2);
+            if ($fits(mb_substr($text, 0, $middle))) {
+                $fitting = $middle;
+            } else {
+                $refused = $middle;
+            }
+        }
+
+        return mb_substr($text, 0, $fitting);
+    }
+
+    private function __construct()
+    {
+    }
+}
+```
+
+`backend/src/Service/Recommendation/Jev/Factory/JevStateFactory.php` — replaced whole:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev\Factory;
+
+use App\Service\Recommendation\Jev\Support\FittingPrefix;
+use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+
+/** The reader as System One's `state`: the distilled profile, and the guidance when there is one. */
+final readonly class JevStateFactory
+{
+    /** What JevBatchPacker reserves for the state in every request; the guidance wins it, the profile gets the rest. */
+    public const int STATE_TOKEN_BUDGET = 4_000;
+
+    /** @return array<string, string> */
+    public function create(string $profile, ?string $guidance): array
+    {
+        $guidanceState = null === $guidance ? [] : self::fitted('guidance', mb_scrub($guidance, 'UTF-8'), []);
+
+        return self::fitted('profile', mb_scrub($profile, 'UTF-8'), $guidanceState) + $guidanceState;
+    }
+
+    /**
+     * @param array<string, string> $others
+     *
+     * @return array<string, string> $key and the longest prefix of $text that keeps the state within the budget
+     */
+    private static function fitted(string $key, string $text, array $others): array
+    {
+        $fits = static fn (string $prefix): bool
+            => JevTokenEstimate::ofJson([$key => $prefix] + $others) <= self::STATE_TOKEN_BUDGET;
+
+        return [$key => FittingPrefix::of($text, $fits)];
+    }
+}
+```
+
+`JevBatchPacker` (re-review M1): delete `private const int STATE_TOKENS = 4_000;`, compute
+`QUESTION_TOKEN_BUDGET = SystemOneCatalog::CONTEXT_WINDOW_TOKENS - self::FRAMING_TOKENS - JevStateFactory::STATE_TOKEN_BUDGET`
+(import `JevStateFactory`), and the class docblock reads "Packs the pool into System One requests by the token
+estimate. The state is budgeted at its ceiling, `JevStateFactory::STATE_TOKEN_BUDGET`, which the factory never
+exceeds." `JevBatchPackerTest`'s `[35, 35, 35, 15]` pin is unchanged.
+
+`JevBatchWave` (re-review M5):
+
+```php
+    /** The client's MAXIMUM_RESPONSE_BYTES: a body it let through never reaches this many characters. */
+    private const int LOGGED_BODY_CHARACTERS = 1_048_576;
+    …
+                if ($parsed->usable) {
+                    $answered['call']->finishUsable(self::logged($answered['reply']->body));
+    …
+                $answered['call']->finishUnusable(self::logged($answered['reply']->body));
+    …
+    /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */
+    private static function logged(string $body): string
+    {
+        return ClippedText::of($body, self::LOGGED_BODY_CHARACTERS);
+    }
+```
+
+`backend/infection.json5` (re-review M3): the comment over the shared `MethodCallRemoval` ignore list becomes
+"cancel() on a landed or failed response only frees the connection early: against MockHttpClient it has no
+observable effect, and a spy on it would test the mock." (Two lines, as today.)
+
+`JevArticle`: `of(ArticleLineModel $line): array` with `private const int DESCRIPTION_CHARACTERS = 600;` (the one
+caller's value); docblock "An article as System One sees it in a question: structured, every field capped."
+`SystemOneRequestFactory`: delete `ARTICLE_DESCRIPTION_CHARACTERS`, call `JevArticle::of($article)`, and
+
+```php
+    public const string QUESTION = 'Judging by the reader\'s profile and guidance in `state`, would this reader want '
+        . 'to read `article`?';
+```
+
+`JevRecommendationEngine`:
+
+```php
+    public function __construct(
+        private JevBatchPacker $packer,
+        private BatchWavePhase $batchWavePhase,
+        private JevStateFactory $stateFactory,
+        private JevBatchWave $wave,
+        private RecommendationWinnerRanker $ranker,
+        private RecommendationRunFinalizer $finalizer,
+        private JevProfileStep $profileStep,
+    ) {
+    }
+    …
+    public function advance(TickContext $tick): RecommendationRunReportModel
+    {
+        $run = $tick->run;
+        if ($this->profileStep->isPending($run)) {
+            return $this->profileStep->advance($tick);
+        }
+        if ($run->getProgress()->allBatchCallsDone) {
+            return $this->finalizer->finalize($run, $this->ranker->ranked($run->getWinners()));
+        }
+
+        return $this->batchWavePhase->advance(
+            $tick,
+            fn (array $batches): BatchWaveResultModel => $this->wave->resolve($this->waveOf($tick, $batches)),
+        );
+    }
+
+    /** @param list<WaveBatchModel> $batches */
+    private function waveOf(TickContext $tick, array $batches): JevWave
+    {
+        $profile = $tick->run->getProfileText()
+            ?? throw new \LogicException('A Jev wave runs only once the run holds a profile.');
+
+        return new JevWave($tick, $this->stateFactory->create($profile, $tick->settings->guidancePrompt), $batches);
+    }
+```
+
+Class docblock: "TypeSafe's System One: packs by its request budget, borrows an LLM connection to distil the reader's
+profile, asks one Noul per candidate in waves, ranks the answers. No reasons and no consolidation." `JevWave`'s
+`$state` docblock: "the reader as System One sees them: the run's profile and the guidance". Drop the
+`RecommendationHistoryLoader` import.
+
+`backend/src/Service/Recommendation/Jev/JevProfileStep.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev;
+
+use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Clock\ClockInterface;
+
+/**
+ * A Jev run's profile: distilled through the account's profile connection, else the last stored one, else the run
+ * fails. Failed, not cancelled, so a resume distils again once the account has fixed the cause.
+ */
+final readonly class JevProfileStep
+{
+    public const string NO_PROFILE_CONNECTION = 'Jev needs an LLM connection to build your profile — choose one '
+        . 'under Settings → AI, then resume this run.';
+
+    public const string NO_PROFILE = 'Jev could not build your profile: the profile connection gave no usable answer '
+        . 'and no earlier profile is stored. Check that connection, then resume this run.';
+
+    public function __construct(
+        private ProfileDistillerInterface $profileDistiller,
+        private RecommendationTickCheckpoint $checkpoint,
+        private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
+    ) {
+    }
+
+    /** Also after a resume of a run whose distillation degraded: it must distil again before any wave. */
+    public function isPending(RecommendationRun $run): bool
+    {
+        return $run->getProgress()->distillPending || null === $run->getProfileText();
+    }
+
+    public function advance(TickContext $tick): RecommendationRunReportModel
+    {
+        $run = $tick->run;
+        if (null === $tick->profileTick) {
+            return $this->fail($run, self::NO_PROFILE_CONNECTION);
+        }
+
+        $report = $this->profileDistiller->advance($tick->profileTick);
+        if (!$run->isDistilled() || null !== $run->getProfileText()) {
+            return $report;
+        }
+
+        return $this->fallBackToTheStoredProfile($tick);
+    }
+
+    private function fallBackToTheStoredProfile(TickContext $tick): RecommendationRunReportModel
+    {
+        $run = $tick->run;
+        $stored = $tick->settings->profileText;
+        if (null === $stored) {
+            return $this->fail($run, self::NO_PROFILE);
+        }
+
+        $this->checkpoint->guard($run);
+        $run->recordProfile($stored);
+        $this->entityManager->flush();
+
+        return RecommendationRunReportModel::fromRun($run);
+    }
+
+    private function fail(RecommendationRun $run, string $message): RecommendationRunReportModel
+    {
+        $this->checkpoint->guard($run);
+        $run->fail($message, $this->clock->now());
+        $this->entityManager->flush();
+
+        return RecommendationRunReportModel::fromRun($run);
+    }
+}
+```
+
+`$tick->settings` is the active tick's: `profileText` is the account's settings row either way. **Assumption
+(verify):** `DistillationPhase`'s degrade callback has flushed `recordProfile(null)` before `advance()` returns (it
+calls `recordProfile()` then `flush()`), so `isDistilled()` reads true here; and `RecommendationProfileDistiller`'s
+docblock sentence "cached on the settings row so a later run can skip it" becomes "stored on the settings row, which
+the card shows and a Jev run falls back to" (the one `Llm` line B9 edits besides `implements`).
+
+**Assumption (verify):** `recommendation_run.error` is `utf8mb4` on MySQL (the message carries `—` and `→`):
+`docker compose exec php bin/console dbal:run-sql "SHOW FULL COLUMNS FROM recommendation_run LIKE 'error'"`. If it is
+not, replace the two characters with `-` and `>` and say so.
+
+- [ ] **Step 6: Delete what became dead**
+
+```bash
+cd backend
+grep -rn "HISTORY_DESCRIPTION_CHARACTERS\|WEAKEST_SECTION_FIRST\|ARTICLE_DESCRIPTION_CHARACTERS\|LOCK_TTL_MARGIN_SECONDS\|lockTtlFor\|STATE_TOKENS\b" src tests   # expect nothing
+grep -rn "RecommendationHistoryModel\|RecommendationHistoryLoader\|ArticleLineModel" src/Service/Recommendation/Jev   # only SystemOneRequestFactory, JevBatchPacker, JevArticle (questions)
+grep -rn "runs(CallPhase::Distill)" src                                                                           # expect nothing
+grep -rn "history" src/Service/Recommendation/Jev                                                                 # expect nothing
+```
+
+- [ ] **Step 7: Run the tests** — the Step 2 command, then `composer test:parallel`; expected green.
+
+- [ ] **Step 8: Migrate**
+
+As A3 Step 7: scratch SQLite from empty + `doctrine:schema:validate`; then the live Docker MySQL: list →
+`doctrine:migrations:migrate --no-interaction` → `doctrine:schema:validate` → `cache:clear` → `restart worker`. Then
+the MySQL leg: `docker compose exec php composer test` (in parallel with the native leg is fine, memory).
+
+- [ ] **Step 9: Native-iOS checklist (architecture §6)**, one row per endpoint; record both in the report:
+  - `PUT /api/me/ai/configs/{id}/profile`: bearer auth (the `/api/me` firewall), stateless, `{}` in / configuration
+    JSON out, errors `application/problem+json` (404 another account's id, 422 `profile_connection_rejected`), no
+    browser input, no redirect, no link. All boxes checked.
+  - `DELETE /api/me/ai/configs/{id}/profile`: bearer auth, stateless, no body in, 204 with no body out (idempotent, so
+    a native client may retry it blindly), errors `application/problem+json` (404 another account's id), no browser
+    input, no redirect, no link. All boxes checked.
+The capability `profile` is a plain string enum a Swift client decodes as `String`.
+
+- [ ] **Step 10: Deletion checks** (quote each FAIL; restore by copy, never `git checkout --`)
+
+1. `ProfileConnectionResolver::canBuildProfiles()` drops `AiReadiness::of($connection) &&` → `testAChosenConnectionWithoutAModelIsNotUsable` and `testAConnectionWithoutAModelIsRefused` fail. Restore.
+2. `canBuildProfiles()` drops the `Own ===` clause → `testAChosenConnectionOnAJevModelIsNotUsable`, `testAJevConnectionIsRefused`, `testAJevConnectionCannotBuildTheProfile` fail. Restore.
+3. `findProfileSourceFor()` drops `'user' => $user` → `testAnotherAccountsChoiceIsNotThisOnes` fails. Restore.
+4. `ProfileConnectionChooser::choose()` sets `true` on every sibling → `testChoosingAConnectionMakesItTheOnlyProfileSource` and the controller test fail. Restore.
+5. `TickContextFactory::withBorrowedProfile()` ignores `$borrows` → `testAnLlmTickBorrowsNothing` fails. Restore.
+6. `withBorrowedProfile()` resolves the profile tick's settings with `forUser()` → `testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings` fails (null ≠ 30). Restore.
+7. `TickPhases` records against `$tick->connection` → `testABorrowedDistillationsFailureStrikesAgainstTheProfileConnection` fails (the active base URL). Restore.
+8. `connectionInFlight()` drops `&& $this->run->getProgress()->distillPending` → `testTheConnectionInFlightIsTheProfileConnectionUntilTheProfileIsRecorded` fails. Restore.
+9. `JevProfileStep::advance()` distils on `$tick` instead of `$tick->profileTick` → `JevPipelineTest::testEveryCandidateIsScoredByItsNoul…` fails (`jev-latest` ≠ `profile-llm` in the chat calls). Restore.
+10. Drop `JevProfileStep::advance()`'s `null === $tick->profileTick` guard (distil on `$tick->profileTick ?? $tick`) → `testWithoutAProfileConnectionTheFirstProviderTickFailsTheRun` fails. Restore.
+11. `phases()` Jev row back to `[CallPhase::Batch]` → `testJevDistilsThenAsksInBatches`, the progress pin and the pipeline's `batchesTotal` fail. Restore.
+12. `TickLockTtl::secondsFor()` returns the active connection's bound only → `testAJevAccountCoversItsSlowProfileConnection` fails (480 ≠ 1200). Restore. Drop `borrowedProfileConnection()`'s capability check → `testAnLlmAccountIgnoresItsProfileConnection` fails. Restore.
+13. Drop the kind filter in `newestCompletedRunIds()` → `testOnlyRunsOfTheAskedKindAreRead` and `testAJevRunIsPredictedFromJevRunsAlone` (63 ≠ 95) fail. Restore. Drop only `OR r.engineKind IS NULL` → the repository test fails (the legacy run is missing). Restore.
+14. `JevStateFactory::create()` fits the profile first and the guidance beside it → `testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNothing` fails. Restore.
+15. `FittingPrefix::of()` returns `mb_substr($text, 0, $refused)` → `testTheCutIsTheLongestPrefixThatFits` fails ('abcdef'). Restore. Swap `mb_substr` for `substr` → `testTheCutNeverSplitsAMultiByteCharacter` fails. Restore.
+16. `JevStateFactory` drops `mb_scrub` on the profile → `testInvalidByteSequencesAreScrubbedFromBoth` fails (`mb_check_encoding` false, or `JsonException` from the estimate). Restore.
+17. `waveOf()` reads `$tick->settings->profileText` instead of the run's → `testEveryWaveSendsTheProfileThisRunDistilled` fails. Restore.
+18. `RecommendationSettingsJson` gates `profileText` by `sendsPrompt` again → `testAnEngineWithoutAPromptShowsTheProfileButNoPromptPieces` fails. Restore.
+19. `RecommendationEngineCapabilitiesModel::of(Jev)` says `Own` → `RecommendationEngineResolverTest`'s Jev pin, the Jev capabilities JSON pin and `testAJevTickBorrowsTheProfileConnection…` fail. Restore.
+20. `fallBackToTheStoredProfile()` always fails (drop the stored-profile branch) → `testAFailedDistillationFallsBackToTheStoredProfile` fails. Restore.
+21. `fallBackToTheStoredProfile()` records the guidance when nothing is stored (`$stored ?? $tick->settings->guidancePrompt`) → `testAFailedDistillationWithNothingStoredFailsEvenWithGuidanceThenResumes` fails (completed ≠ failed). Restore.
+22. `isPending()` drops `|| null === $run->getProfileText()` → the resume half of check 21's test fails (`LogicException`: a wave without a profile). Restore.
+23. `ProfileConnectionChooser::clear()` does nothing → `testClearingUnsetsTheChoiceAndIsIdempotent` and `testClearingTheProfileConnectionAnswersNoContentEveryTime` fail. Restore.
+24. `JevBatchWave::logged()` returns `$body` unchanged → `testAnInvalidByteInAReplyNeverReachesTheRunLog` fails ("A log row holds invalid UTF-8."). Restore.
+25. `JevStateFactory::STATE_TOKEN_BUDGET = 8_000` → `JevBatchPackerTest`'s `[35, 35, 35, 15]` pin fails (the packer reads the factory's constant; with a private copy left behind it would pass). Restore.
+26. `JevStateFactory` drops `mb_scrub` on the guidance → `testInvalidByteSequencesAreScrubbedFromBoth` fails (`mb_check_encoding` false, or `JsonException` from the estimate). Restore.
+
+- [ ] **Step 11: Gates and commit**
+
+```bash
+cd backend
+bin/console cache:warmup
+composer check      # cs + stan (ServiceRoleRule, ServiceModuleCycleRule, ThinControllerRule) + tramp: report the warning count (expected unchanged)
+composer md         # AiProviderSettings 15 fields, RecommendationRunAdvancer 8 parameters, JevRecommendationEngine 8
+composer test:parallel & (cd .. && docker compose exec php composer test); wait
+composer infection:diff
+ls -t var/log/dev-*.log | head -1 | xargs tail -n 300 | jq -c 'select(.level >= 300)'   # nothing new
+git add -A backend docs/recommendations-runs.md
+git commit -m "feat(#1345): jev reads the distilled profile through the account's profile connection"
+```
+
+PhpStorm `lint_files` on every touched `src` file: block on ERROR/WARNING. Reviewer: yes.
+
+---
+
+### Task B10: The profile-connection picker and the profile on the card (frontend)
+
+**Files:**
+- Modify: `frontend/src/app/core/ai-availability.service.ts`, `frontend/src/testing/recommendation-capabilities.ts`,
+  `frontend/src/app/settings/ai/{ai-settings.service.ts,ai-failure.ts,ai-section.component.ts,ai-section.component.html}`,
+  `frontend/src/app/settings/recommendations/recommendation-settings-card.component.html`,
+  `frontend/public/i18n/{en,de}.json`, `frontend/e2e/ai-config-rejected.spec.ts` (fixture shape only)
+- Modify (specs): `ai-settings.service.spec.ts`, `ai-section.component.spec.ts`,
+  `recommendation-settings-card.component.spec.ts`, `core/ai-availability.service.spec.ts` (fixture shape)
+
+**Interfaces:**
+- Consumes (B9): `capabilities.profile: 'own' | 'borrowed'`, configuration `profileSource: boolean`,
+  `PUT /api/me/ai/configs/{id}/profile` → `AiConfig`, `DELETE /api/me/ai/configs/{id}/profile` → 204, problem
+  `profile_connection_rejected` (422).
+- Produces: `RecommendationCapabilities.profile`; `AiConfig.profileSource`; `AiSettingsService.chooseProfileSource(id)`,
+  `.clearProfileSource()`;
+  `AiFailureScope` `{ action: 'profile' }`; `AiSectionComponent.borrowsProfile`, `.profileCandidates`,
+  `.profileSourceId`, `.profileFailure`, `.chooseProfileSource(event)`.
+
+- [ ] **Step 1: Write the failing specs**
+
+`ai-settings.service.spec.ts`:
+
+```ts
+  it('chooses the profile connection and clears the flag on whichever row held it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: true }),
+      config({ id: 2, profileSource: false }),
+    ]);
+
+    service.chooseProfileSource(2);
+    const request = http.expectOne('/api/me/ai/configs/2/profile');
+    expect(request.request.method).toBe('PUT');
+    request.flush(config({ id: 2, profileSource: true }));
+
+    expect(service.configs().map((each) => [each.id, each.profileSource])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
+  it('scopes a refused profile choice to the picker', () => {
+    service.chooseProfileSource(3);
+    http
+      .expectOne('/api/me/ai/configs/3/profile')
+      .flush(
+        { type: 'profile_connection_rejected', detail: 'Only a ready LLM connection can build your profile.' },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+
+    expect(service.failure()?.scope).toEqual({ action: 'profile' });
+  });
+
+  it('clears the profile connection on whichever row holds it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: false }),
+      config({ id: 4, profileSource: true }),
+    ]);
+
+    service.clearProfileSource();
+    const request = http.expectOne('/api/me/ai/configs/4/profile');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.configs().map((each) => each.profileSource)).toEqual([false, false]);
+  });
+
+  it('sends nothing when no row holds the profile connection', () => {
+    service.configs.set([config({ id: 1, profileSource: false })]);
+
+    service.clearProfileSource();
+
+    http.expectNone((request) => request.method === 'DELETE');
+  });
+```
+
+(**Assumption (verify):** the spec's own `config()` builder, base URL and `http` names; adapt. Its `config()` gains
+`profileSource: false`.)
+
+`ai-section.component.spec.ts` — the `config()` builder gains `profileSource: false`; the stub gains
+`chooseProfileSource: jest.fn()` and `clearProfileSource: jest.fn()`; a `BORROWING` capability constant
+`{ ...EVERY_RECOMMENDATION_CAPABILITY, prompt: false, reasons: false, profile: 'borrowed', tuningFields: ['batchConcurrency'] }`:
+
+```ts
+  describe('the profile connection', () => {
+    const picker = (fixture: ComponentFixture<AiSectionComponent>): HTMLSelectElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector('.profile-connection select');
+
+    const jevActive = config({ id: 7, ready: true, active: true, model: 'jev-latest', capabilities: BORROWING });
+
+    it('is offered only when the active connection borrows its profile', () => {
+      const fixture = mountWithConfigs([config({ id: 7, ready: true, active: true, model: 'gpt-4o' })]);
+      expect(picker(fixture)).toBeNull();
+
+      ai.configs.set([jevActive]);
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection'),
+      ).not.toBeNull();
+    });
+
+    it('lists only the ready connections that build their own profile', () => {
+      const fixture = mountWithConfigs([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
+        config({ id: 9, name: 'No model', ready: false }),
+        config({ id: 10, name: 'Other Jev', ready: true, model: 'jev-latest', capabilities: BORROWING }),
+      ]);
+
+      const options = Array.from(picker(fixture)?.options ?? []).filter((option) => option.value !== '');
+      expect(options.map((option) => option.value)).toEqual(['8']);
+    });
+
+    it('selects the chosen connection and saves a new choice on change', () => {
+      const fixture = mountWithConfigs([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }),
+        config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
+      ]);
+      const select = picker(fixture) as HTMLSelectElement;
+      expect(select.value).toBe('8');
+
+      select.value = '11';
+      select.dispatchEvent(new Event('change'));
+
+      expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
+    });
+
+    it('offers "None", selected while nothing is chosen, and clears the choice with it', () => {
+      const fixture = mountWithConfigs([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
+      ]);
+      const select = picker(fixture) as HTMLSelectElement;
+      expect(select.value).toBe('');
+      expect(select.options[0].textContent?.trim()).toBe('None');
+
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+
+      expect(ai.clearProfileSource).toHaveBeenCalled();
+      expect(ai.chooseProfileSource).not.toHaveBeenCalled();
+    });
+
+    it('explains what to add when no connection can build the profile', () => {
+      const fixture = mountWithConfigs([jevActive]);
+
+      expect(picker(fixture)).toBeNull();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection')?.textContent,
+      ).toContain('Add a connection');
+    });
+
+    it('shows a refused choice beside the picker', () => {
+      const fixture = mountWithConfigs([jevActive, config({ id: 8, ready: true, model: 'qwen' })]);
+      ai.failure.set(
+        scoped(
+          { kind: 'unknown', detail: 'Only a ready LLM connection can build your profile.', fieldErrors: [] },
+          { action: 'profile' },
+        ),
+      );
+      fixture.detectChanges();
+
+      expect(banners((fixture.nativeElement as HTMLElement).querySelector('.profile-connection') as HTMLElement)).toEqual([
+        'Only a ready LLM connection can build your profile.',
+      ]);
+    });
+  });
+```
+
+(**Assumption (verify):** with a ready active connection the section folds to the summary (`!managing()`); the
+picker sits outside that `@if/@else`, so it renders in both states. `mountWithConfigs` expands row 0, which does not
+matter here. The `GET /api/me/ai/recommendations` the card fires when `activeReady()` must be flushed or ignored the
+way the file's existing card test does — follow it.)
+
+`recommendation-settings-card.component.spec.ts` — replace "shows no fixed prompt, distilled profile or guidance
+default to an engine that sends no prompt":
+
+```ts
+    it('shows the distilled profile but no fixed prompt or guidance default to an engine that sends no prompt', () => {
+      const fixture = mount(
+        { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
+        { ...NO_RECOMMENDATION_CAPABILITIES, profile: 'borrowed', tuningFields: ['batchConcurrency'] },
+      );
+      const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+      expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
+      expect(
+        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]')?.textContent,
+      ).toContain('Likes self-hosted tooling and Rust.');
+      expect(guidance.placeholder).toBe('');
+    });
+```
+
+Every capabilities literal in the specs and `e2e/ai-config-rejected.spec.ts` gains `profile: 'own'` (the type makes a
+missing one a compile error under `npm run check`).
+
+Run (one Jest process at a time, in the container):
+`docker compose exec -T frontend npx jest src/app/settings src/app/core --silent; echo "EXIT=$?"` → failures on the
+missing members.
+
+- [ ] **Step 2: Implement**
+
+`core/ai-availability.service.ts`:
+
+```ts
+/** Where the engine's reader profile comes from: its own connection, or the profile connection the account picks. */
+export type RecommendationProfileSource = 'own' | 'borrowed';
+
+export interface RecommendationCapabilities {
+  readonly reasons: boolean;
+  /** Whether the engine sends a prompt of its own: a fixed prompt and a guidance default. */
+  readonly prompt: boolean;
+  readonly profile: RecommendationProfileSource;
+  readonly tuningFields: readonly RecommendationTuningField[];
+}
+```
+
+`NO_RECOMMENDATION_CAPABILITIES` and `EVERY_RECOMMENDATION_CAPABILITY` gain `profile: 'own'`.
+
+`ai-failure.ts`: `AiFailureScope` gains `| { readonly action: 'profile' }`.
+
+`ai-settings.service.ts`: `AiConfig` gains `readonly profileSource: boolean;` (after `active`), and
+
+```ts
+  chooseProfileSource(id: number): void {
+    this.run(
+      { action: 'profile' },
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+      (config) => this.upsert(config),
+    );
+  }
+
+  /** Clears the choice on whichever row holds it, wherever its model went since; nothing to send when none does. */
+  clearProfileSource(): void {
+    const holder = this.configs().find((each) => each.profileSource);
+    if (!holder) return;
+
+    this.run(
+      { action: 'profile' },
+      this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+      () => this.upsert({ ...holder, profileSource: false }),
+    );
+  }
+```
+
+`upsert()` clears both one-per-account flags on the siblings (its docblock gains "… and likewise `profileSource`"):
+
+```ts
+    this.configs.set(
+      replaced.map((each) =>
+        each.id !== config.id && holdsAFlagNowTaken(each, config)
+          ? {
+              ...each,
+              active: each.active && !config.active,
+              profileSource: each.profileSource && !config.profileSource,
+            }
+          : each,
+      ),
+    );
+```
+
+with a module function
+
+```ts
+/** Whether `sibling` holds a one-per-account flag that `taken` now reports as its own. */
+function holdsAFlagNowTaken(sibling: AiConfig, taken: AiConfig): boolean {
+  return (taken.active && sibling.active) || (taken.profileSource && sibling.profileSource);
+}
+```
+
+(an untouched sibling keeps its identity, as before).
+
+`ai-section.component.ts`:
+
+```ts
+  /** The active engine cannot write the reader's profile itself and borrows one of the account's connections. */
+  readonly borrowsProfile = computed(() => this.activeConfig()?.capabilities.profile === 'borrowed');
+  readonly profileCandidates = computed(() =>
+    this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
+  );
+  readonly profileSourceId = computed(
+    () => this.profileCandidates().find((config) => config.profileSource)?.id ?? null,
+  );
+  readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
+
+  chooseProfileSource(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === '') {
+      this.ai.clearProfileSource();
+      return;
+    }
+    this.ai.chooseProfileSource(Number(value));
+  }
+```
+
+and `messageFor(action: 'load' | 'add' | 'profile')`.
+
+`ai-section.component.html` — inside the provider `app-settings-group`, after the closing `}` of the
+summary/manager `@if/@else`:
+
+```html
+    @if (activeReady() && borrowsProfile()) {
+      <div class="profile-connection">
+        @if (profileCandidates().length) {
+          <app-field
+            [label]="'settings.ai.profileConnection.label' | transloco"
+            [info]="'settings.ai.profileConnection.info' | transloco"
+          >
+            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
+              <option value="" [selected]="profileSourceId() === null">
+                {{ 'settings.ai.profileConnection.none' | transloco }}
+              </option>
+              @for (config of profileCandidates(); track config.id) {
+                <option [value]="config.id" [selected]="config.id === profileSourceId()">
+                  {{ label(config) }}
+                </option>
+              }
+            </select>
+          </app-field>
+        } @else {
+          <p class="hint">{{ 'settings.ai.profileConnection.empty' | transloco }}</p>
+        }
+        @if (profileFailure(); as message) {
+          <app-error-banner [message]="message" />
+        }
+      </div>
+    }
+```
+
+(**Assumption (verify):** `app-error-banner`'s input name and `.hint`'s existing style in `ai-section.component.scss`
+— follow how `rowFailure()` and `.hint` render today; add no new SCSS unless the layout needs a gap, and then only a
+spacing token, never a `px` literal.) A select saves on change (design-language "Save by control type").
+
+`recommendation-settings-card.component.html`: move the `@if (state.profileText; as profile) { … }` disclosure out of
+`@if (offersPrompt())`, directly before it; the fixed-prompt disclosure stays inside.
+
+`public/i18n/en.json` under `settings.ai`:
+
+```json
+      "profileConnection": {
+        "label": "Profile connection",
+        "info": "The active connection's engine cannot write your reading profile itself. This connection writes it at the start of every run.",
+        "none": "None",
+        "empty": "Add a connection with a text model above, then choose it here to build your profile."
+      },
+```
+
+`de.json`:
+
+```json
+      "profileConnection": {
+        "label": "Profilverbindung",
+        "info": "Die Engine der aktiven Verbindung kann dein Leseprofil nicht selbst schreiben. Diese Verbindung schreibt es zu Beginn jedes Durchlaufs.",
+        "none": "Keine",
+        "empty": "Füge oben eine Verbindung mit einem Textmodell hinzu und wähle sie hier aus, um dein Profil zu erstellen."
+      },
+```
+
+(Match the file's du/Sie form — **Assumption (verify):** `grep -n '"guidance"' frontend/public/i18n/de.json`.) The
+`settings.ai.info.profile` text ("What the model has distilled …") stays right for both engines.
+
+- [ ] **Step 3: Run** — the Step 1 command; expected green.
+
+- [ ] **Step 4: Deletion checks** (quote each FAIL)
+
+1. `borrowsProfile` always `true` → "is offered only when the active connection borrows its profile" fails. Restore.
+2. `profileCandidates` drops `config.ready &&` → "lists only the ready connections …" fails (`['8', '9']`). Restore. Drop the `profile === 'own'` clause → it fails with `'10'`. Restore.
+3. `upsert()` without `profileSource: each.profileSource && !config.profileSource` → "chooses the profile connection and clears the flag …" fails. Restore.
+4. `chooseProfileSource` scope `{ action: 'row', configId: id }` → "scopes a refused profile choice to the picker" and "shows a refused choice beside the picker" fail. Restore.
+5. The card's profile disclosure back inside `@if (offersPrompt())` → the card spec fails. Restore.
+6. Delete the `en.json` `empty` key → "explains what to add …" fails (the testing loader shows the key). Restore.
+7. `clearProfileSource()` without its `if (!holder) return;` → "sends nothing when no row holds …" fails (a DELETE to `undefined`, or a throw). Restore.
+8. `chooseProfileSource(event)` drops the `''` branch → "offers \"None\" … clears the choice with it" fails (`chooseProfileSource(0)`). Restore.
+
+- [ ] **Step 5: Gates and commit**
+
+```bash
+docker compose exec -T frontend npm run check; echo "EXIT=$?"     # EXIT=0 (ESLint, Prettier 100 cols, Stylelint, Jest)
+git add -A frontend
+git commit -m "feat(#1345): the ai settings choose the connection that builds jev's profile"
+```
+
+Then, in the browser on the dev stack (`:4200`, Mobile viewport per memory "built-in browser UA is bot-blocked"): with a
+Jev connection active the provider group shows the picker; choosing a connection persists across a reload; the
+For-you card shows the profile after a run. Reviewer: yes.
+
+---
+
 ### Task B8: Docs, gates, a real run, PR B
 
 **Files:**
@@ -6640,8 +8846,10 @@ Reviewer: yes.
 
 ```markdown
 The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
-OpenRouter) one yes/no question per candidate: would this reader, described by the guidance and the reading history in
-`state`, want to read this article? The probability is the score (× 1000); there are no reasons and no consolidation,
+OpenRouter) one yes/no question per candidate: would this reader, described by the profile an LLM distilled and the
+guidance in `state`, want to read this article? A Jev run distils first, through the profile connection the account
+picks in Settings → AI (falling back to the last stored profile when the distillation fails); without one the run fails
+with a message that says so. The probability is the score (× 1000); there are no reasons and no consolidation,
 so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
 the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
 records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with
@@ -6665,13 +8873,13 @@ git diff --stat origin/develop -- tests/Service/Recommendation/Run/Recommendatio
 
 PhpStorm `lint_files` on every `src` file the branch touched: block on ERROR/WARNING.
 
-- [ ] **Step 3: Frontend gate** — `docker compose exec -T frontend npm run check; echo "EXIT=$?"` → `EXIT=0` (PR B changes no frontend file; this proves it).
+- [ ] **Step 3: Frontend gate** — `docker compose exec -T frontend npm run check; echo "EXIT=$?"` → `EXIT=0` (*Amended (B10):* PR B changes the frontend, so this is a real gate).
 
 - [ ] **Step 4: The stack serves the branch**
 
 ```bash
 cd ..
-docker compose exec php bin/console doctrine:migrations:status | grep -i new    # Version20261002150000 already applied in B4
+docker compose exec php bin/console doctrine:migrations:status | grep -i new    # Version20261002150000 (B4) and Version20261002180000 (B9) already applied
 docker compose exec php bin/console cache:clear
 docker compose restart worker
 docker compose ps                                                               # worker healthy
@@ -6686,7 +8894,7 @@ docker compose exec php bin/console dbal:run-sql "SELECT s.id, s.user_id, s.name
 docker compose exec php bin/console dbal:run-sql "SELECT u.id, u.email, u.active_ai_config_id FROM app_user u JOIN user_ai_settings s ON s.user_id = u.id WHERE s.id = 8"
 ```
 
-Write down `model`, `model_context_window` and the account's `active_ai_config_id` (to restore). **Assumption (verify):** column names `model_context_window`, `active_ai_config_id` and table `app_user`; `DESCRIBE` the tables if a query fails.
+Write down `model`, `model_context_window` and the account's `active_ai_config_id` (to restore). *Added (B9):* also record which connection holds the profile flag, read only: `SELECT id, name, model, profile_source FROM user_ai_settings WHERE user_id = <id>` (the id with `profile_source = 1`, or "none"). **Assumption (verify):** column names `model_context_window`, `active_ai_config_id` and table `app_user`; `DESCRIBE` the tables if a query fails.
 
 2. Mint a token for that account and read the model list through the composite catalog:
 
@@ -6704,7 +8912,9 @@ curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/model -H "Authorizati
 curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/active -H "Authorization: Bearer $TOKEN" | jq '{active, capabilities}'   # only if 8 was not active
 ```
 
-Expected capabilities `{"reasons": false, "prompt": false, "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else; the For-you card shows "Show score and reasons", no fixed prompt, no profile. Turn the switch on if it is off (record that, to restore).
+Then choose the profile connection (*Added (B9):* an LLM connection of that account; ask Lars which if several): `curl -sk -X PUT https://localhost:8443/api/me/ai/configs/<llm id>/profile -H "Authorization: Bearer $TOKEN" | jq '{profileSource}'`.
+
+Expected capabilities `{"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else, and the provider group shows the profile-connection picker with that connection selected; the For-you card shows "Show score and reasons", no fixed prompt, and (after run 1) the profile. Turn the switch on if it is off (record that, to restore).
 
 4. First run: `curl -sk -X POST https://localhost:8443/api/recommendations/runs -H "Authorization: Bearer $TOKEN"`; poll `GET /api/recommendations/runs/current` once a minute (no loop in a background agent) until it leaves `pending`/`running`.
 
@@ -6718,9 +8928,9 @@ SELECT run_id, phase, batch_number, attempt, verdict, request_id, answering_mode
 SELECT COUNT(*) AS items, SUM(CASE WHEN reason = '' THEN 1 ELSE 0 END) AS without_reason, MIN(score), MAX(score) FROM recommendation_item WHERE recommendation_run_id = <id>;
 ```
 
-Expected: `completed`, `engine_kind = 'jev'`, every log row `phase = 'batch'` with a `request_id` (`gen-…`), an `answering_model` like `typesafe/jev-1.13-…` and a `cost_nano_credits`; `prompt_tokens > 0` on the run (else D28's assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the picks; the UI shows the score, no reason line.
+Expected: `completed`, `engine_kind = 'jev'`, *Amended (B9):* each run's first log row `phase = 'distill'` (no `request_id`; the profile connection's prompt), every other row `phase = 'batch'` with a `request_id` (`gen-…`), an `answering_model` like `typesafe/jev-1.13-…` and a `cost_nano_credits`; `prompt_tokens > 0` on the run (else D28's assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the picks; the UI shows the score, no reason line. The first System One request's `state` is `{"profile": …[, "guidance": …]}` (the debug panel's request body).
 
-7. Restore: `PUT /api/me/ai/configs/8/model` with the recorded model (a model no longer offered fails verification — then report it to Lars rather than forcing it), `PUT /api/me/ai/configs/<recorded active id>/active` if the active connection changed, and the "show score and reasons" switch to its recorded state. Re-run step 1's queries: the row matches what was recorded.
+7. Restore: `PUT /api/me/ai/configs/8/model` with the recorded model (a model no longer offered fails verification — then report it to Lars rather than forcing it), `PUT /api/me/ai/configs/<recorded active id>/active` if the active connection changed, and the "show score and reasons" switch to its recorded state. *Added (B9):* restore the profile flag through the API to what step 1 recorded: `PUT /api/me/ai/configs/<recorded id>/profile` when one held it (if that one is no longer an LLM connection the PUT is refused: report it, never write SQL), or `DELETE /api/me/ai/configs/<llm id>/profile` when none did. Re-run step 1's queries: the rows match what was recorded.
 
 8. Scan the dev log: `ls -t backend/var/log/dev-*.log | head -1 | xargs tail -n 600 | jq -c 'select(.level >= 300)'` → nothing new from these runs (a deprecation is a finding).
 
@@ -6737,17 +8947,18 @@ Closes #1345
 
 TypeSafe's Jev (System One) becomes the second recommendation engine: one Noul per candidate, the probability × 1000 is the score, no reasons. Builds on the prerequisites PR.
 
-- **Sub-module `Recommendation\Jev`**: the System One client (`POST {base}/systemone`, 401/403 → credentials, 429/529 → the shared rate-limit loop, 400/422 → a strike naming the field), the state (guidance + favourite/kept/viewed history, trimmed to a 24k-token budget, weakest section first), one structured Noul question per candidate (feed text only in fields), packing under the 32k request budget (≤ 100 questions), the wave and `JevRecommendationEngine`.
+- **Sub-module `Recommendation\Jev`**: the System One client (`POST {base}/systemone`, 401/403 → credentials, 429/529 → the shared rate-limit loop, 400/422 → a strike naming the field), the state (the profile an LLM connection distils, through the account's profile connection, plus the guidance, cut to a 4k-token budget), one structured Noul question per candidate (feed text only in fields), packing under the 32k request budget (≤ 100 questions), the wave and `JevRecommendationEngine`.
 - **Discovery**: `SystemOneCatalog` probes `{base}/systemone` with an empty body (a 4xx other than 401/403/404/405 means present; LM Studio's 200-for-everything does not) and offers `jev-latest`; the composite catalog unites it with the OpenAI catalog, whose failure still speaks for any address without System One.
-- **Resolver**: a model id starting with `jev-` is Jev (case-sensitive; `typesafe/jev-router` stays an LLM). Capabilities `{reasons: false, prompt: false, tuningFields: [batchConcurrency]}`.
+- **Resolver**: a model id starting with `jev-` is Jev (case-sensitive; `typesafe/jev-router` stays an LLM). Capabilities `{reasons: false, prompt: false, profile: borrowed, tuningFields: [batchConcurrency]}`.
+- **Profile connection**: a per-connection setting (`PUT`/`DELETE /api/me/ai/configs/{id}/profile`), picked in Settings → AI when the active engine borrows its profile; a Jev run without one, or whose distillation fails with no stored profile, fails with a message saying what to fix, and resumes once it is fixed.
 - **Run log**: each Jev call has its request id, answering model and cost (`recommendation_run_log.request_id`, `answering_model`, `cost_nano_credits`).
 - **Engine switch**: a tick that finds the run's connection on the other engine fails the run with an error that says so; switching back resumes it.
 
 Real run on the dev stack (OpenRouter connection "Jev", `jev-latest`, restored afterwards): <run ids, items, score range, cost, answering model, request ids, ETA on run 2>.
 
-Gates: composer check / md / tramp (<warnings>), both test legs, infection:diff, npm run check (no frontend change).
+Gates: composer check / md / tramp (<warnings>), both test legs, infection:diff, npm run check.
 
-Follow-up offer: show the receipt (request id, answering model, cost) in the debug panel.
+Follow-up offers: show the receipt (request id, answering model, cost) in the debug panel; a profile freshness window; name the size in the oversized-reply message.
 
 Plan: docs/superpowers/plans/2026-10-02-1345-jev-recommendation-engine.md
 EOF
