@@ -26,9 +26,9 @@ final class PhaseDurationsModelTest extends TestCase
         ], RecommendationEngineKind::Llm);
 
         self::assertNotNull($durations);
-        self::assertSame(15.0, $durations->distillSeconds);      // (10 + 20) / 2
-        self::assertSame(12.5, $durations->batchSeconds);        // (10 + 15) / 2
-        self::assertSame(40.0, $durations->consolidateSeconds);  // (30 + 50) / 2
+        self::assertSame(15.0, $durations->secondsByPhase[CallPhase::Distill->value]);     // (10 + 20) / 2
+        self::assertSame(12.5, $durations->secondsByPhase[CallPhase::Batch->value]);       // (10 + 15) / 2
+        self::assertSame(40.0, $durations->secondsByPhase[CallPhase::Consolidate->value]); // (30 + 50) / 2
     }
 
     public function testPredictedTotalWeightsEachRemainingBatch(): void
