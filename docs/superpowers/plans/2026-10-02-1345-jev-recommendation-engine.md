@@ -6425,6 +6425,13 @@ git commit -m "feat(#1345): the jev recommendation engine scores every candidate
 
 Reviewer: yes (the core of the issue).
 
+*Amended (B6 implementation):*
+- `NoulReplyParser` also rejects a Noul outside [0, 1], NaN or infinite (`isProbability()`: `null !== $noul && $noul >= 0.0 && $noul <= 1.0`), so an impossible Noul takes D19's unusable path; D23's clamp in `NoulScore` stays as the second line. `NoulReplyParserTest` gains `testANoulThatIsNoProbabilityMakesTheReplyUnusable` (1.2, -0.1, NAN, INF) and `testTheBoundsOfAProbabilityAreUsable` (0.0 → 0, 1.0 → 1000).
+- `JevRecommendationEngineTest` reads: `logs()` refreshes each row (the recorder settles rows by UPDATE behind the identity map, so the unrefreshed rows read `verdict: null`); `lastLog()` takes `end($logs)` with `assertInstanceOf` and `itemCount()` counts through the `RecommendationItem` repository (PHPStan max rejected the offset and the `(int)` cast of `fetchOne()`). `startTwoBatchRun()` became `startRunAfterTheWarmUp(int $candidateCount, TickDriver $driver)` (101 → `[100, 1]`, verified).
+- Pins added for mutants Infection found escaped: `testAnUnreadableKeySettlesTheRowItOpened` (the `sendAll()` catch; the refused-key test pins `guardWaveTransport()`, since the stub returns its failure as an outcome), `testAWorkerWaveBanksEveryBatchItSent` (301 candidates, a 3-request wave), `testAFailureAmidAWaveBanksNothingAndBillsEveryAnswer` (answer, failure, answer: every row carries the failure, the run bills 3 answers), `testARunCancelledDuringTheWaveBanksNothing` (the checkpoint), `NoulScoreTest`'s `0.0731 → 73` row (round, not ceil), and `tests/Service/Recommendation/Jev/Pass/JevWaveTest.php` (`model()` and its throw).
+- `JevWave`'s `@noinspection AutowireWrongClass` is dropped: PhpStorm reports it as a redundant suppression (WARNING).
+- PHPMD reports nothing on `JevBatchWave`; the `BatchWaveResultModel` fallback was not needed.
+
 ---
 
 ### Task B7: A run whose connection switched engines fails
