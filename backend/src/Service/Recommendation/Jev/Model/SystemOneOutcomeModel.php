@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev\Model;
 
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 
 /** One request's result in a wave: the reply, or the failure it hit. Returned, not thrown, so siblings keep theirs. */
-final readonly class SystemOneOutcomeModel implements RateLimitedOutcomeInterface
+final readonly class SystemOneOutcomeModel implements BatchCallOutcomeInterface
 {
     private function __construct(
         private ?SystemOneReplyModel $reply,
@@ -29,6 +29,11 @@ final readonly class SystemOneOutcomeModel implements RateLimitedOutcomeInterfac
     public function isFailure(): bool
     {
         return null !== $this->cause;
+    }
+
+    public function hasCause(): bool
+    {
+        return $this->isFailure();
     }
 
     public function reply(): SystemOneReplyModel

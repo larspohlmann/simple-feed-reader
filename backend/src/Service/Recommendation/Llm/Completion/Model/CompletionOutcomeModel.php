@@ -6,13 +6,13 @@ namespace App\Service\Recommendation\Llm\Completion\Model;
 
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\RateLimitedOutcome\RateLimitedOutcomeInterface;
+use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 
 /**
  * One call's result in a concurrent wave: an answer, a spoiled reply or the failure it hit. Returned, not thrown, so
  * the wave has every outcome in hand to bank it or re-run it.
  */
-final readonly class CompletionOutcomeModel implements RateLimitedOutcomeInterface
+final readonly class CompletionOutcomeModel implements BatchCallOutcomeInterface
 {
     private function __construct(
         private string $content,

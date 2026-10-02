@@ -9,6 +9,7 @@ use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineI
 use App\Service\Recommendation\Jev\Factory\JevStateFactory;
 use App\Service\Recommendation\Jev\Pass\JevWave;
 use App\Service\Recommendation\Run\BatchWavePhase;
+use App\Service\Recommendation\Run\BatchWaveRounds;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
@@ -25,6 +26,7 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
         private BatchWavePhase $batchWavePhase,
         private JevStateFactory $stateFactory,
         private JevBatchWave $wave,
+        private BatchWaveRounds $rounds,
         private RecommendationWinnerRanker $ranker,
         private RecommendationRunFinalizer $finalizer,
         private JevProfileStep $profileStep,
@@ -48,7 +50,10 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
 
         return $this->batchWavePhase->advance(
             $tick,
-            fn (array $batches): BatchWaveResultModel => $this->wave->resolve($this->waveOf($tick, $batches)),
+            fn (array $batches): BatchWaveResultModel => $this->rounds->resolve(
+                $this->wave,
+                $this->waveOf($tick, $batches),
+            ),
         );
     }
 

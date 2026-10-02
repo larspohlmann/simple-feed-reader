@@ -49,12 +49,12 @@ final class WaveContextLoaderTest extends DbTestCase
         $tick = $this->tick($run);
         $wave = $this->loader()->load($tick, $this->batchLoader()->next($tick, 2));
 
-        self::assertSame([1, 2], array_map(static fn (WaveBatchModel $batch): int => $batch->index, $wave->batches));
-        self::assertSame([$ids[2], $ids[3]], $wave->batches[0]->ids);
-        self::assertEqualsCanonicalizing([$ids[4], $ids[5]], $wave->batches[1]->validIds());
+        self::assertSame([1, 2], array_map(static fn (WaveBatchModel $batch): int => $batch->index, $wave->batches()));
+        self::assertSame([$ids[2], $ids[3]], $wave->batches()[0]->ids);
+        self::assertEqualsCanonicalizing([$ids[4], $ids[5]], $wave->batches()[1]->validIds());
         self::assertSame(6, $wave->poolSummary?->total);
         self::assertSame('Likes Rust.', $wave->prompt->profile);
-        self::assertSame($run, $wave->tick->run);
+        self::assertSame($run, $wave->tick()->run);
     }
 
     public function testAnEntryPrunedSinceTheSnapshotKeepsItsIdButLosesItsLineAndItsPlaceInThePool(): void
@@ -69,8 +69,8 @@ final class WaveContextLoaderTest extends DbTestCase
         $tick = $this->tick($run);
         $wave = $this->loader()->load($tick, $this->batchLoader()->next($tick, 1));
 
-        self::assertSame([$ids[0], $ids[1]], $wave->batches[0]->ids);
-        self::assertSame([$ids[0]], $wave->batches[0]->validIds());
+        self::assertSame([$ids[0], $ids[1]], $wave->batches()[0]->ids);
+        self::assertSame([$ids[0]], $wave->batches()[0]->validIds());
         self::assertSame(1, $wave->poolSummary?->total);
     }
 
