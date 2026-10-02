@@ -9,7 +9,10 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Recommendation\Profile\ProfileConnectionResolver;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -21,6 +24,7 @@ final readonly class TickContextFactory
         private AiProviderConfigurator $configurator,
         private RecommendationSettingsResolver $settingsResolver,
         private RecommendationEngineResolver $engines,
+        private ProfileConnectionResolver $profileConnections,
     ) {
     }
 
@@ -30,13 +34,31 @@ final readonly class TickContextFactory
         $user = $run->getUser();
         $connection = $this->activeConnection($user);
 
-        return new TickContext(
+        return $this->withBorrowedProfile(new TickContext(
             $run,
             $connection,
             $this->engines->kindFor($connection),
             $this->settingsResolver->forUser($user),
             $driver,
-        );
+        ));
+    }
+
+    private function withBorrowedProfile(TickContext $tick): TickContext
+    {
+        $borrows = RecommendationProfileSource::Borrowed
+            === RecommendationEngineCapabilitiesModel::of($tick->engineKind)->profileSource;
+        $profileConnection = $borrows ? $this->profileConnections->findUsableFor($tick->run->getUser()) : null;
+        if (null === $profileConnection) {
+            return $tick;
+        }
+
+        return $tick->borrowingProfileFrom(new TickContext(
+            $tick->run,
+            $profileConnection,
+            $this->engines->kindFor($profileConnection),
+            $this->settingsResolver->forConnection($profileConnection),
+            $tick->driver,
+        ));
     }
 
     private function activeConnection(User $user): AiProviderSettings

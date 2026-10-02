@@ -39,14 +39,13 @@ final readonly class RecommendationRunProgress
         $batchCount = count($candidateBatches ?? []);
         $hasPlan = $batchCount > 0;
         $allBatchCallsDone = $batchesDone === $batchCount;
-        $distillationDone = $distilled || !$engineKind->runs(CallPhase::Distill);
 
         return new self(
             batchesDone: $batchesDone,
             batchCount: $hasPlan ? $batchCount : null,
             batchesTotal: $hasPlan ? $batchCount + $engineKind->singleCallPhaseCount() : null,
-            distillPending: $hasPlan && !$distillationDone,
-            isConsolidationPhase: $hasPlan && $distillationDone && $allBatchCallsDone
+            distillPending: $hasPlan && !$distilled,
+            isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone
                 && $engineKind->runs(CallPhase::Consolidate),
             allBatchCallsDone: $allBatchCallsDone,
             nextBatchIndex: $batchesDone,

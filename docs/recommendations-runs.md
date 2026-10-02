@@ -105,8 +105,9 @@ every 30 seconds, so the TTL only has to outlast the longest stretch in which a 
 - candidate loading and prompt assembly before the first request;
 - ranking, banking and recording between calls and waves, and the whole snapshot tick.
 
-The TTL is therefore the connection's first-byte timeout plus `RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS`
-(300 s): 8 minutes on a standard connection, 20 on a slow one. Only a slow connection pays the longer TTL. Do not size
+The TTL is therefore the connection's first-byte timeout plus `TickLockTtl::MARGIN_SECONDS`
+(300 s): 8 minutes on a standard connection, 20 on a slow one. Only a slow connection pays the longer TTL. A Jev
+account's lock covers the slower of its connection and the profile connection that distils for it. Do not size
 it from the keepalive's 30-second interval: that interval is a ceiling on refreshes, not a promise of one, and a live
 slow-profile holder's lock would lapse mid-call for a second tick to take. Do not size it for the longest tick either
 (`RecommendationRun::MAX_ATTEMPTS` rounds of a one-hour call, about three hours on the slow profile): a worker that

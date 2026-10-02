@@ -103,11 +103,15 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         );
     }
 
-    /** History: an LLM run (60 here too) and a Jev run at 25 s a batch. 4 Jev batches, 20 s in: 4 × 25 − 20. */
+    /**
+     * History: an LLM run (10 + 4 × 10 + 30), a Jev run (15 + 3 × 25) and an LLM run that skipped consolidation, whose
+     * phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
+     */
     public function testAJevRunIsPredictedFromJevRunsAlone(): void
     {
         $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
-        $this->seedHistoricalJevRun(batchWall: 75, batches: 3);
+        $this->seedHistoricalJevRun(distill: 15, batchWall: 75, batches: 3);
+        $this->seedHistoricalLlmRunWithoutConsolidation(distill: 10, batchWall: 40, batches: 4);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(RecommendationEngineKind::Jev, [[1], [2], [3], [4]]);
         $run->markFirstBatchStarted();
@@ -117,7 +121,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
             $this->user,
         );
 
-        self::assertSame(80, $eta);
+        self::assertSame(95, $eta);
     }
 
     private function estimatorAt(string $offset): RecommendationEtaEstimator
@@ -145,27 +149,45 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
     private function seedHistoricalRun(int $distill, int $batchWall, int $batches, int $consolidate): void
     {
+        $run = $this->completedRunWithDistillationAndBatches(
+            RecommendationEngineKind::Llm,
+            $distill,
+            $batchWall,
+            $batches,
+        );
+        $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
+        $this->entityManager->flush();
+    }
+
+    /** An LLM run whose pool was empty at consolidation: no consolidate row, so its phases are Jev's. */
+    private function seedHistoricalLlmRunWithoutConsolidation(int $distill, int $batchWall, int $batches): void
+    {
+        $this->completedRunWithDistillationAndBatches(RecommendationEngineKind::Llm, $distill, $batchWall, $batches);
+        $this->entityManager->flush();
+    }
+
+    private function seedHistoricalJevRun(int $distill, int $batchWall, int $batches): void
+    {
+        $this->completedRunWithDistillationAndBatches(RecommendationEngineKind::Jev, $distill, $batchWall, $batches);
+        $this->entityManager->flush();
+    }
+
+    private function completedRunWithDistillationAndBatches(
+        RecommendationEngineKind $engineKind,
+        int $distill,
+        int $batchWall,
+        int $batches,
+    ): RecommendationRun {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot($engineKind, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
         $this->finishedLog($run, CallPhase::Distill, null, 0, $distill);
         for ($batch = 1; $batch <= $batches; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
         }
-        $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
-        $this->entityManager->flush();
-    }
 
-    private function seedHistoricalJevRun(int $batchWall, int $batches): void
-    {
-        $run = $this->fixtures->createRun($this->user);
-        $run->snapshot(RecommendationEngineKind::Jev, [[1]]);
-        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        for ($batch = 1; $batch <= $batches; $batch++) {
-            $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
-        }
-        $this->entityManager->flush();
+        return $run;
     }
 
     private function finishedLog(

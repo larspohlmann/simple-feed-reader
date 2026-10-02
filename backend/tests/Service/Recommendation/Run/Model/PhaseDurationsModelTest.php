@@ -64,6 +64,7 @@ final class PhaseDurationsModelTest extends TestCase
     public function testEachKindAveragesOnlyRunsWithExactlyItsPhases(): void
     {
         $spans = [
+            $this->span(1, CallPhase::Distill, 5.0, 0),
             $this->span(1, CallPhase::Batch, 60.0, 3),
             $this->span(2, CallPhase::Distill, 10.0, 0),
             $this->span(2, CallPhase::Batch, 40.0, 4),
@@ -74,7 +75,7 @@ final class PhaseDurationsModelTest extends TestCase
         $llm = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Llm);
 
         self::assertNotNull($jev);
-        self::assertSame(100.0, $jev->predictedTotalSeconds(5));   // 5 × 20 s, nothing around the batches
+        self::assertSame(105.0, $jev->predictedTotalSeconds(5));   // 5 + 5 × 20
         self::assertNotNull($llm);
         self::assertSame(70.0, $llm->predictedTotalSeconds(3));    // 10 + 3 × 10 + 30
     }

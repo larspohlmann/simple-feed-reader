@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -15,6 +16,8 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * Each phase's wall-clock span and batch count for the account's latest completed runs, which PhaseDurationsModel
  * averages into the time-left estimate. Spans are computed in PHP from MIN/MAX, so the query stays dialect-free.
+ * Runs of the asked kind only; a run from before the kind column is the LLM's, as `RecommendationRun::getEngineKind()`
+ * reads it.
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
@@ -28,9 +31,9 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
     /**
      * @return list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}>
      */
-    public function completedRunPhaseSpans(User $user, int $limit): array
+    public function completedRunPhaseSpans(User $user, RecommendationEngineKind $engineKind, int $limit): array
     {
-        $runIds = $this->newestCompletedRunIds($user, $limit);
+        $runIds = $this->newestCompletedRunIds($user, $engineKind, $limit);
         if ([] === $runIds) {
             return [];
         }
@@ -60,7 +63,7 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
     /**
      * @return list<int>
      */
-    private function newestCompletedRunIds(User $user, int $limit): array
+    private function newestCompletedRunIds(User $user, RecommendationEngineKind $engineKind, int $limit): array
     {
         /** @var list<array{id: int}> $rows */
         $rows = $this->getEntityManager()->createQueryBuilder()
@@ -69,6 +72,10 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
             ->andWhere('r.user = :user')->setParameter('user', $user)
             ->andWhere('r.status = :completed')
             ->setParameter('completed', RunStatus::Completed)
+            ->andWhere(RecommendationEngineKind::Llm === $engineKind
+                ? '(r.engineKind = :kind OR r.engineKind IS NULL)'
+                : 'r.engineKind = :kind')
+            ->setParameter('kind', $engineKind)
             ->orderBy('r.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()

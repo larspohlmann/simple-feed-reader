@@ -18,8 +18,8 @@ use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 
 /**
- * The distillation phase's one provider call: the reader's full history in, a short profile out, cached on the
- * settings row so a later run can skip it. It never touches the run's progress.
+ * The distillation phase's one provider call: the reader's full history in, a short profile out, stored on the
+ * settings row, which the card shows and a Jev run falls back to. It never touches the run's progress.
  */
 final readonly class RecommendationProfileDistiller
 {

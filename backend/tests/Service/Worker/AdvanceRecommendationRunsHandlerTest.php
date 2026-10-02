@@ -15,11 +15,9 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -27,6 +25,7 @@ use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Recommendation\Run\TickLockTtl;
 use App\Service\Recommendation\Run\TickPhases;
 use App\Service\Recommendation\Run\WorkerPresence;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
@@ -465,13 +464,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         return new RecommendationRunAdvancer(
             $this->runs(),
             self::getContainer()->get(LockFactory::class),
-            self::getContainer()->get(AiProviderConfigurator::class),
-            $this->connectionFactory(),
             self::getContainer()->get(ClockInterface::class),
             new FlushFailingEntityManager($this->entityManager),
             self::getContainer()->get(TickContextFactory::class),
             self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(TickPhases::class),
+            self::getContainer()->get(TickLockTtl::class),
         );
     }
 
@@ -687,16 +685,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         return $handler;
     }
+
     /** Writes only while a completion streams, and StubChatClient never streams: it cannot disturb the mark counts. */
     private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
     {
         return new SweepStreamHeartbeat($presence, new MockClock());
-    }
-    private function connectionFactory(): ProviderConnectionFactory
-    {
-        /** @var ProviderConnectionFactory $connections */
-        $connections = self::getContainer()->get(ProviderConnectionFactory::class);
-
-        return $connections;
     }
 }

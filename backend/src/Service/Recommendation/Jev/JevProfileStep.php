@@ -1,0 +1,79 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev;
+
+use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Clock\ClockInterface;
+
+/**
+ * A Jev run's profile: distilled through the account's profile connection, else the last stored one, else the run
+ * fails. Failed, not cancelled, so a resume distils again once the account has fixed the cause.
+ */
+final readonly class JevProfileStep
+{
+    public const string NO_PROFILE_CONNECTION = 'Jev needs an LLM connection to build your profile — choose one '
+        . 'under Settings → AI, then resume this run.';
+
+    public const string NO_PROFILE = 'Jev could not build your profile: the profile connection gave no usable answer '
+        . 'and no earlier profile is stored. Check that connection, then resume this run.';
+
+    public function __construct(
+        private ProfileDistillerInterface $profileDistiller,
+        private RecommendationTickCheckpoint $checkpoint,
+        private EntityManagerInterface $entityManager,
+        private ClockInterface $clock,
+    ) {
+    }
+
+    /** Also after a resume of a run whose distillation degraded: it must distil again before any wave. */
+    public function isPending(RecommendationRun $run): bool
+    {
+        return $run->getProgress()->distillPending || null === $run->getProfileText();
+    }
+
+    public function advance(TickContext $tick): RecommendationRunReportModel
+    {
+        $run = $tick->run;
+        if (null === $tick->profileTick) {
+            return $this->fail($run, self::NO_PROFILE_CONNECTION);
+        }
+
+        $report = $this->profileDistiller->advance($tick->profileTick);
+        if (!$run->isDistilled() || null !== $run->getProfileText()) {
+            return $report;
+        }
+
+        return $this->fallBackToTheStoredProfile($tick);
+    }
+
+    private function fallBackToTheStoredProfile(TickContext $tick): RecommendationRunReportModel
+    {
+        $run = $tick->run;
+        $stored = $tick->settings->profileText;
+        if (null === $stored) {
+            return $this->fail($run, self::NO_PROFILE);
+        }
+
+        $this->checkpoint->guard($run);
+        $run->recordProfile($stored);
+        $this->entityManager->flush();
+
+        return RecommendationRunReportModel::fromRun($run);
+    }
+
+    private function fail(RecommendationRun $run, string $message): RecommendationRunReportModel
+    {
+        $this->checkpoint->guard($run);
+        $run->fail($message, $this->clock->now());
+        $this->entityManager->flush();
+
+        return RecommendationRunReportModel::fromRun($run);
+    }
+}

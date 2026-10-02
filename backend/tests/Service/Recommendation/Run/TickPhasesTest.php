@@ -11,6 +11,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationEngineSwitchFailure;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
@@ -113,6 +114,37 @@ final class TickPhasesTest extends DbTestCase
             self::assertSame('The provider at api.example.test answered 502.', $exception->getMessage());
         }
         self::assertSame(1, $run->getTransportFailures());
+    }
+
+    /** The run's error names the address that failed: the profile connection's, while it distils for a Jev run. */
+    public function testABorrowedDistillationsFailureStrikesAgainstTheProfileConnection(): void
+    {
+        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $engine = ScriptedRecommendationEngine::failingWith(new ProviderUnreachableException('It refused.'));
+        $run = $this->fixtures->createRun($this->owner);
+        $run->snapshot(RecommendationEngineKind::Jev, [[101, 102]]);
+        $this->entityManager->flush();
+        $profileTick = new TickContext(
+            $run,
+            $profile,
+            RecommendationEngineKind::Llm,
+            $this->tick($run)->settings,
+            TickDriver::Poll,
+        );
+        $tick = $this->tickOfKind($run, RecommendationEngineKind::Jev)->borrowingProfileFrom($profileTick);
+
+        for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
+            try {
+                $this->phases($engine)->advance($tick);
+            } catch (ProviderUnreachableException) {
+                self::addToAssertionCount(1);
+            }
+        }
+
+        self::assertSame(
+            'The AI provider at ' . RecommendationRunFixtures::PROFILE_BASE_URL . ' failed: It refused.',
+            $run->getError(),
+        );
     }
 
     public function testARunPackedForAnotherEngineFailsWithoutBeingAdvanced(): void

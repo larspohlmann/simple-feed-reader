@@ -33,7 +33,7 @@ final readonly class RecommendationEtaEstimator
 
         $elapsed = $report->start->elapsedSecondsAt($this->clock->now());
         $durations = PhaseDurationsModel::fromCompletedRunSpans(
-            $this->timings->completedRunPhaseSpans($user, RunLogRetention::RUNS),
+            $this->timings->completedRunPhaseSpans($user, $plan->engineKind, RunLogRetention::RUNS),
             $plan->engineKind,
         );
         if (null === $elapsed || null === $durations) {

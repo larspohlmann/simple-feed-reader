@@ -28,6 +28,29 @@ final class TickContextTest extends TestCase
         self::assertFalse($this->tick($this->connection(), TickDriver::Sweep)->retryPlan()->blocks());
     }
 
+    /** The profile connection answers for the tick while a borrowed distillation is pending, the tick's own after. */
+    public function testTheConnectionInFlightIsTheProfileConnectionUntilTheProfileIsRecorded(): void
+    {
+        $jev = $this->connection();
+        $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
+        $tick = $this->tick($jev, TickDriver::Worker);
+        $tick->run->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $borrowing = $tick->borrowingProfileFrom($this->tick($profile, TickDriver::Worker));
+
+        self::assertSame($profile, $borrowing->connectionInFlight());
+        $tick->run->recordProfile('Likes Rust.');
+        self::assertSame($jev, $borrowing->connectionInFlight());
+    }
+
+    public function testATickWithoutAProfileTickCallsItsOwnConnection(): void
+    {
+        $connection = $this->connection();
+        $tick = $this->tick($connection, TickDriver::Worker);
+        $tick->run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+
+        self::assertSame($connection, $tick->connectionInFlight());
+    }
+
     private function tick(AiProviderSettings $connection, TickDriver $driver): TickContext
     {
         return new TickContext(

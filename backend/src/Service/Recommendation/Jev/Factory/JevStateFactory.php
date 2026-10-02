@@ -4,67 +4,36 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Jev\Factory;
 
-use App\Service\Recommendation\Jev\Support\JevArticle;
+use App\Service\Recommendation\Jev\Support\FittingPrefix;
 use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
-use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
 
-/**
- * The reader as System One's `state`: the guidance when set, then the weighted history, newest first. Over the budget
- * the history loses its oldest lines, viewed before kept before favorites, the weakest signal first.
- */
+/** The reader as System One's `state`: the distilled profile, and the guidance when there is one. */
 final readonly class JevStateFactory
 {
-    /** Leaves the questions over half of the 64k request; TypeSafe bounds state plus the longest question at 32k. */
-    public const int STATE_TOKEN_BUDGET = 24_000;
+    /** What JevBatchPacker reserves for the state in every request; the guidance wins it, the profile gets the rest. */
+    public const int STATE_TOKEN_BUDGET = 4_000;
 
-    private const int HISTORY_DESCRIPTION_CHARACTERS = 280;
-
-    private const array WEAKEST_SECTION_FIRST = ['viewed', 'kept', 'favorites'];
-
-    /** @return array<string, mixed> */
-    public function create(?string $guidance, RecommendationHistoryModel $history): array
+    /** @return array<string, string> */
+    public function create(string $profile, ?string $guidance): array
     {
-        $sections = [
-            'favorites' => self::articles($history->favorites),
-            'kept' => self::articles($history->kept),
-            'viewed' => self::articles($history->viewed),
-        ];
+        // Fitted beside an empty profile: the profile's key must still fit once the guidance has taken the budget.
+        $guidanceState = null === $guidance
+            ? []
+            : self::fitted('guidance', mb_scrub($guidance, 'UTF-8'), ['profile' => '']);
 
-        foreach (self::WEAKEST_SECTION_FIRST as $section) {
-            while (
-                [] !== $sections[$section]
-                && JevTokenEstimate::ofJson(self::stateOf($guidance, $sections)) > self::STATE_TOKEN_BUDGET
-            ) {
-                array_pop($sections[$section]);
-            }
-        }
-
-        return self::stateOf($guidance, $sections);
+        return self::fitted('profile', mb_scrub($profile, 'UTF-8'), $guidanceState) + $guidanceState;
     }
 
     /**
-     * @param list<ArticleLineModel> $lines
+     * @param array<string, string> $others
      *
-     * @return list<array<string, string>>
+     * @return array<string, string> $key and the longest prefix of $text that keeps the state within the budget
      */
-    private static function articles(array $lines): array
+    private static function fitted(string $key, string $text, array $others): array
     {
-        return array_map(
-            static fn (ArticleLineModel $line): array => JevArticle::of($line, self::HISTORY_DESCRIPTION_CHARACTERS),
-            $lines,
-        );
-    }
+        $fits = static fn (string $prefix): bool
+            => JevTokenEstimate::ofJson([$key => $prefix] + $others) <= self::STATE_TOKEN_BUDGET;
 
-    /**
-     * @param array<string, list<array<string, string>>> $sections
-     *
-     * @return array<string, mixed>
-     */
-    private static function stateOf(?string $guidance, array $sections): array
-    {
-        $history = ['history' => $sections];
-
-        return null === $guidance ? $history : ['guidance' => mb_scrub($guidance, 'UTF-8')] + $history;
+        return [$key => FittingPrefix::of($text, $fits)];
     }
 }

@@ -24,8 +24,8 @@
                 'App\\Service\\ClientError\\ClientErrorScrubber::redact',
             ],
         },
-        // cancel() on a landed response only frees the connection early: against MockHttpClient it has no
-        // observable effect, and a spy on it would test the mock.
+        // cancel() on a landed or failed response only frees the connection early: against MockHttpClient it has
+        // no observable effect, and a spy on it would test the mock.
         MethodCallRemoval: {
             ignore: [
                 'App\\Service\\Fetch\\RedirectFollower::redirectTarget',

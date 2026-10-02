@@ -26,8 +26,18 @@ final readonly class RecommendationSettingsResolver
 
     public function forUser(User $user): EffectiveRecommendationSettingsModel
     {
+        return $this->resolve($user, $user->getActiveAiProviderSettings());
+    }
+
+    /** The account's settings with the window and the batch ceiling of a connection that need not be the active one. */
+    public function forConnection(AiProviderSettings $connection): EffectiveRecommendationSettingsModel
+    {
+        return $this->resolve($connection->getUser(), $connection);
+    }
+
+    private function resolve(User $user, ?AiProviderSettings $provider): EffectiveRecommendationSettingsModel
+    {
         $row = $this->settings->findForUser($user);
-        $provider = $user->getActiveAiProviderSettings();
         $providerWindow = $provider?->getModelContextWindow();
 
         [$window, $source] = match (true) {

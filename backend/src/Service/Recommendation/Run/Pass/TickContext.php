@@ -20,7 +20,21 @@ final readonly class TickContext
         public RecommendationEngineKind $engineKind,
         public EffectiveRecommendationSettingsModel $settings,
         public TickDriver $driver,
+        public ?TickContext $profileTick = null,
     ) {
+    }
+
+    public function borrowingProfileFrom(TickContext $profileTick): self
+    {
+        return new self($this->run, $this->connection, $this->engineKind, $this->settings, $this->driver, $profileTick);
+    }
+
+    /** The connection a provider failure this tick came from: the profile connection while it distils for the run. */
+    public function connectionInFlight(): AiProviderSettings
+    {
+        return null !== $this->profileTick && null === $this->run->getProfileText()
+            ? $this->profileTick->connection
+            : $this->connection;
     }
 
     public function userId(): int

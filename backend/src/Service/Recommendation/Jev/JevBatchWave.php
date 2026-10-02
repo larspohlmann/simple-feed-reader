@@ -14,6 +14,7 @@ use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneReplyModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Pass\JevWave;
+use App\Service\Recommendation\Jev\Support\ClippedText;
 use App\Service\Recommendation\Jev\Support\RenderedSystemOneRequest;
 use App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
@@ -31,6 +32,9 @@ use App\Service\Recommendation\Run\Support\BatchWaveWinners;
  */
 final readonly class JevBatchWave
 {
+    /** The client's MAXIMUM_RESPONSE_BYTES: a body it let through never reaches this many characters. */
+    private const int LOGGED_BODY_CHARACTERS = 1_048_576;
+
     public function __construct(
         private RateLimitedCalls $rateLimitedCalls,
         private SystemOneClientInterface $client,
@@ -54,12 +58,12 @@ final readonly class JevBatchWave
             foreach ($roundResult['replies'] as $position => $answered) {
                 $parsed = $this->parser->parse($answered['reply'], self::idsOf($wave->batches[$position]));
                 if ($parsed->usable) {
-                    $answered['call']->finishUsable($answered['reply']->body);
+                    $answered['call']->finishUsable(self::logged($answered['reply']->body));
                     $winners[$position] = $parsed->winners;
 
                     continue;
                 }
-                $answered['call']->finishUnusable($answered['reply']->body);
+                $answered['call']->finishUnusable(self::logged($answered['reply']->body));
                 $pending[] = $position;
             }
 
@@ -231,6 +235,12 @@ final readonly class JevBatchWave
         }
 
         return $replies;
+    }
+
+    /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */
+    private static function logged(string $body): string
+    {
+        return ClippedText::of($body, self::LOGGED_BODY_CHARACTERS);
     }
 
     /** @return list<int> */

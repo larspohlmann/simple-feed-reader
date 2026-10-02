@@ -36,6 +36,7 @@ final readonly class AiSettingsJson
             'maxBatchSize' => $settings->maxBatchSize(),
             'ready' => AiReadiness::of($settings),
             'active' => $settings->getId() === $activeId,
+            'profileSource' => $settings->isProfileSource(),
             'capabilities' => $this->capabilities->of($settings),
         ];
     }

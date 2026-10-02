@@ -13,10 +13,8 @@ use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 final readonly class SystemOneRequestFactory
 {
     /** Points at the structured fields by backtick path, as TypeSafe asks; no feed text is ever part of it. */
-    public const string QUESTION = 'Judging by the reading history and guidance in `state`, would this reader want '
+    public const string QUESTION = 'Judging by the reader\'s profile and guidance in `state`, would this reader want '
         . 'to read `article`?';
-
-    private const int ARTICLE_DESCRIPTION_CHARACTERS = 600;
 
     /**
      * @param array<string, mixed>   $state
@@ -38,7 +36,7 @@ final readonly class SystemOneRequestFactory
         return [
             'type' => 'noul',
             'instructions' => [
-                'article' => JevArticle::of($article, self::ARTICLE_DESCRIPTION_CHARACTERS),
+                'article' => JevArticle::of($article),
                 'question' => self::QUESTION,
             ],
         ];

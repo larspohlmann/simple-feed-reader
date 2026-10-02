@@ -15,6 +15,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -139,6 +140,26 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
         );
+    }
+
+    /** A borrowed distillation sizes its history by the profile connection, not the active one. */
+    public function testForAConnectionTheWindowAndTheCeilingAreThatConnections(): void
+    {
+        $active = AiProviderSettingsFactory::build($this->user);
+        $active->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:00:00'), 32_000);
+        $profile = AiProviderSettingsFactory::build($this->user, 'Profile', 'https://profile.example.test/v1');
+        $profile->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
+        $profile->setMaxBatchSize(30);
+        $this->entityManager->persist($active);
+        $this->entityManager->persist($profile);
+        $this->user->setActiveAiProviderSettings($active);
+        $this->entityManager->flush();
+
+        $forProfile = $this->resolver()->forConnection($profile);
+
+        self::assertSame(128_000, $forProfile->packing->contextWindow);
+        self::assertSame(30, $forProfile->packing->maximumBatchSize);
+        self::assertSame(32_000, $this->resolver()->forUser($this->user)->packing->contextWindow);
     }
 
     public function testProfileTextDefaultsToNullWhenNoRowExists(): void

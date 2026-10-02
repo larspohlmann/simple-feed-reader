@@ -13,6 +13,7 @@ final class RecommendationCapabilitiesJsons
     public const array LLM = [
         'reasons' => true,
         'prompt' => true,
+        'profile' => 'own',
         'tuningFields' => [
             'contextWindow',
             'batchSize',
@@ -23,7 +24,12 @@ final class RecommendationCapabilitiesJsons
         ],
     ];
 
-    public const array JEV = ['reasons' => false, 'prompt' => false, 'tuningFields' => ['batchConcurrency']];
+    public const array JEV = [
+        'reasons' => false,
+        'prompt' => false,
+        'profile' => 'borrowed',
+        'tuningFields' => ['batchConcurrency'],
+    ];
 
     /** Over an empty engine locator: the capabilities come from the kind, never from an engine. */
     public static function ofTheKind(): RecommendationCapabilitiesJson

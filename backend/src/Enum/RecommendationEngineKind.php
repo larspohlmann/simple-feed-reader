@@ -15,7 +15,7 @@ enum RecommendationEngineKind: string
     {
         return match ($this) {
             self::Llm => [CallPhase::Distill, CallPhase::Batch, CallPhase::Consolidate],
-            self::Jev => [CallPhase::Batch],
+            self::Jev => [CallPhase::Distill, CallPhase::Batch],
         };
     }
 

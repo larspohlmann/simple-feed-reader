@@ -40,6 +40,7 @@ use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Recommendation\Run\TickLockTtl;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\BeatDuringReleaseLockFactory;
@@ -385,7 +386,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $ttl = $lockFactory->lastTtlFor('ai-recommendations-' . $this->user->getId());
         self::assertSame(
-            $firstByteSeconds + RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS,
+            $firstByteSeconds + TickLockTtl::MARGIN_SECONDS,
             $ttl,
             'The TTL is one first-byte silence plus the margin, and nothing else.',
         );

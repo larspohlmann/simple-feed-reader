@@ -70,6 +70,47 @@ final class TickContextFactoryTest extends DbTestCase
         $this->factory()->create($run, TickDriver::Poll);
     }
 
+    public function testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings(): void
+    {
+        $owner = $this->user('tick-context-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $profile = $this->fixtures->seedProfileConnectionFor($owner);
+        $profile->setMaxBatchSize(30);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        $tick = $this->factory()->create($run, TickDriver::Worker);
+
+        self::assertNotNull($tick->profileTick);
+        self::assertSame($profile, $tick->profileTick->connection);
+        self::assertSame(RecommendationEngineKind::Llm, $tick->profileTick->engineKind);
+        self::assertSame(30, $tick->profileTick->settings->packing->maximumBatchSize);
+        self::assertSame(TickDriver::Worker, $tick->profileTick->driver);
+        self::assertSame($run, $tick->profileTick->run);
+    }
+
+    public function testAJevTickWithoutAUsableProfileConnectionBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-no-profile@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick);
+    }
+
+    /** The LLM distils on its own connection: a chosen profile connection is ignored. */
+    public function testAnLlmTickBorrowsNothing(): void
+    {
+        $owner = $this->user('tick-context-llm-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedProfileConnectionFor($owner);
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertNull($this->factory()->create($run, TickDriver::Poll)->profileTick);
+    }
+
     private function factory(): TickContextFactory
     {
         /** @var TickContextFactory $factory */

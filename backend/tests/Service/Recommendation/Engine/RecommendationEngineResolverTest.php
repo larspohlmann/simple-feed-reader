@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
+use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -52,6 +53,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertFalse($capabilities->writesReasons);
         self::assertFalse($capabilities->sendsPrompt);
+        self::assertSame(RecommendationProfileSource::Borrowed, $capabilities->profileSource);
         self::assertSame([RecommendationTuningField::BatchConcurrency], $capabilities->tuningFields);
     }
 
@@ -73,6 +75,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertTrue($capabilities->writesReasons);
         self::assertTrue($capabilities->sendsPrompt);
+        self::assertSame(RecommendationProfileSource::Own, $capabilities->profileSource);
         self::assertSame(
             [
                 RecommendationTuningField::ContextWindow,
