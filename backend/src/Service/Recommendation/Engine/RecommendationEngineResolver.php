@@ -16,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 /** The one place that decides which engine runs a connection's recommendations. */
 final readonly class RecommendationEngineResolver
 {
+    private const RecommendationEngineKind DEFAULT_KIND = RecommendationEngineKind::Llm;
+
     public function __construct(
         #[AutowireLocator('app.recommendation_engine')]
         private ContainerInterface $engines,
@@ -24,7 +26,7 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return RecommendationEngineKind::Llm;
+        return self::DEFAULT_KIND;
     }
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
@@ -32,13 +34,13 @@ final readonly class RecommendationEngineResolver
         return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
     }
 
-    /** An account without an active connection reads as the LLM, the kind a connection without a model resolves to. */
+    /** An account with no active connection reads as the default kind, as a model-less connection does. */
     public function capabilitiesForAccount(User $user): RecommendationEngineCapabilitiesModel
     {
         $connection = $user->getActiveAiProviderSettings();
 
         return null === $connection
-            ? RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm)
+            ? RecommendationEngineCapabilitiesModel::of(self::DEFAULT_KIND)
             : $this->capabilitiesFor($connection);
     }
 
