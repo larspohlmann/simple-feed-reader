@@ -70,14 +70,16 @@
 - **Persistence knows no service** (`PersistenceKnowsNoServiceRule`): an enum stored on an entity lives in `App\Enum`.
 - **CLAUDE.md house style:** `final readonly class`, intent-revealing names (no abbreviations, no single letters), guard clauses, no boolean flag parameters, comments only for non-obvious invariants (one line, three at most), interfaces in a folder named after them, `…Model` in `Model/`, `…Factory` in `Factory/`, per-call objects in `Pass/`, static helpers in `Support/`.
 - **PHPMD is at its limits in two places:** `RecommendationRunAdvancer::__construct` has 9 parameters (`ExcessiveParameterList` reports at 10) and `RecommendationRun` has 10 non-accessor public methods (`TooManyPublicMethods` reports above 10). Neither may grow (D4, D3).
-- **Deletion checks are binding** for every new pin in a task that adds a test: break the covered code, run the test, quote the FAIL verbatim in the task report, restore. Restore by copying aside first (`cp <file> "$TMPDIR/<name>.orig"` … `mv` back), **never** `git checkout -- <file>`. A pin whose expected value equals a default (null, 0, '', [], `Llm`) cannot fail: pick another value or drop the pin.
+- **Deletion checks are binding** for every new pin in a task that adds a test: break the covered code, run the test, quote the FAIL verbatim in the task report, restore. Restore by copying aside first (`cp <file> "$TMPDIR/<name>.orig"` … `mv` back), **never** `git checkout -- <file>`. A pin whose expected value equals a default (null, 0, '', [], `Llm`) cannot fail: pick another value or drop the pin, unless a later task in this plan makes it breakable and the task report names that task. *Amended (preflight F8):* A2's `Llm` kind pin and A8's `'prompt' => true` pin are such deferred pins; B3's deletion checks 7 and 8 make them breakable.
 - **Lean gates for pure moves/renames** (memory "renames get lean testing"): the move script's survey, `composer check`, phpunit on the touched tests. New logic and new tests get a reviewer and deletion checks.
 - **Migrations** get their own verification (CI migrates from empty on SQLite and MySQL, then `doctrine:schema:validate`), and are applied to the live Docker MySQL the moment they land (memory "apply new migrations to the live Docker DB").
 - **Native-iOS rule** (architecture §6): new JSON is plain camelCase, no browser coupling, no new endpoint.
 - **Frontend:** standalone components and signals; Jest only inside the Docker `frontend` container, one Jest process at a time; Prettier 100 columns.
 - Commands: backend commands run from `backend/`; `docker compose …` from the repository root; `git` from either (paths below are repository-relative unless prefixed with `backend/`).
-- Commits: `refactor(#1345): …` (PR A), `feat(#1345): …` (PR B), lower-case summary, no attribution lines. PR A's body contains no "close/fix/resolve #1345" in any form (run `grep -iE '(close|fix|resolve)[sd]? #1345'` on it before `gh pr create`).
+- Commits: `refactor(#1345): …` (PR A), `feat(#1345): …` (PR B), lower-case summary, no attribution lines. PR A's body contains no "close/fix/resolve #1345" in any form (run `grep -iE '(close[sd]?|fix(e[sd])?|resolve[sd]?) #1345'` on it before `gh pr create`).
 - Another Claude session may share this checkout: check `git status` and the branch before any `switch`, `reset` or `stash`.
+- *Amended (preflight F15):* PSR-12's 120-column limit fails `composer cs`. Code lines in this plan that exceed 120 columns (plan lines 2124, 2821, 3374, 3779, 3780, 3803, 4175, 4268, 4327, 4668, 6210 at the time of the scan) are wrapped by the implementer when transcribing; they are not rewritten here. phptramp's baseline is 0 warnings (A0 recorded none), not 1: wherever a task expects the #1344 3-hop warning, the expected count is 0, and A2's `$driver` 3-hop warning is the only one anticipated.
+- *Amended (preflight F13):* the no-close grep above also matches "fixes" and "fixed".
 - An implementer reports to the planner, who amends this plan in-branch. Every **Assumption (verify):** is cheap to check; check it and report the outcome.
 
 ## Settled design (Lars; not up for re-litigation)
@@ -337,7 +339,7 @@ Expected: `php`, `worker` (healthy), `nginx`, `frontend`, `mysql` up. If `APP_CA
 ```bash
 cd backend
 bin/console cache:warmup
-composer check                 # expect green; record phptramp's warning count (#1344 left one 3-hop warning, D15 there)
+composer check                 # expect green; record phptramp's warning count (*Amended (preflight F15):* the baseline is 0, not the one 3-hop warning #1344 left)
 composer md                    # expect no output
 composer test:parallel         # expect green; record the test count
 cd .. && docker compose exec -T frontend npm run check; echo "EXIT=$?"   # alone; expect EXIT=0, record "Tests:"
@@ -544,6 +546,8 @@ final class TickContextFactoryTest extends DbTestCase
 ```
 
 The kind pin's value is the only kind there is, so it cannot fail yet; B3 adds the Jev row that can.
+
+*Amended (preflight F8):* accepted as a deferred pin; name it in the A2 report. B3's deletion check 7 makes it breakable.
 
 - [ ] **Step 2: Run it to see it fail**
 
@@ -1085,6 +1089,8 @@ In `RecommendationRunProgressTest`, append `, engineKind: RecommendationEngineKi
 
 - [ ] **Step 5: The report carries the kind; the estimate reads it**
 
+*Amended (preflight F1):* `RecommendationRunReportModel::__construct` already has 9 parameters and PHPMD `ExcessiveParameterList` reports at 10, so the new `$engineKind` parameter below must not make it 10. Keep the constructor at 9 or fewer: group cohesive parameters into one value in `Recommendation/Run/Model` (for example `startedAt` and `firstBatchStarted`, the two ETA-only inputs), or hold the kind with `batchesTotal` in a plan value. The A4 implementer chooses the grouping and amends this step to match; `fromRun()`'s callers and B3's ETA test read through `fromRun()` and are unaffected. `composer md` at Step 8 is the gate.
+
 `RecommendationRunReportModel` (import the enum): add the constructor parameter last, `public ?RecommendationEngineKind $engineKind = null,`; `fromRun()` passes `engineKind: $run->getEngineKind(),`; `inBackground()` and `waitingForLock()` pass `engineKind: $this->engineKind,`. `none()` and `busy()` stay as they are (null: no run).
 
 `RecommendationEtaEstimator` — drop `TAIL_PHASE_COUNT` and its docblock; `estimateSeconds()` becomes:
@@ -1342,7 +1348,7 @@ final class RateLimitedCallsTest extends TestCase
         $send = static function (array $calls) use (&$sends): array {
             ++$sends;
 
-            return [ScriptedRateLimitedOutcome::limited('one', 11), ScriptedRateLimitedOutcome::limited('two', 4)];
+            return [ScriptedRateLimitedOutcome::limited('one', 4), ScriptedRateLimitedOutcome::limited('two', 11)];
         };
 
         $result = (new RateLimitedCalls(new MockClock()))->send(['a', 'b'], $send, RetryPlanModel::deferring());
@@ -1623,7 +1629,7 @@ Expected: green; `RateLimitedCompletionTest` and the advancer's 429 tests assert
 
 - [ ] **Step 7: Deletion checks** (quote each FAIL)
 
-1. In `retryAfterAcross()` keep the first hint instead of `max()` → the blocking test waits 3 s (`09:00:03`) and fails; the deferring test defers 11 s still (first is the larger) — the blocking test is the pin. Restore.
+1. In `retryAfterAcross()` keep the first hint instead of `max()` → the blocking test waits 3 s (`09:00:03`) and fails; the deferring test fails too (it defers 4 s, the first hint, not 11) — *Amended (preflight F14):* the deferring test lists hint 4 before 11, so both tests pin `max()`. Restore.
 2. In `resent()` call `$send($calls)` (all calls) → `$sent` is `[['a','b','c'],['a','b','c']]` and the test fails. Restore.
 
 - [ ] **Step 8: Gates and commit**
@@ -1712,6 +1718,8 @@ In the moved `RecommendationRunLogFactoryTest`: delete `testTheRequestIsRendered
 ```
 
 In the moved `RecommendationCallRecorderTest`, `request(array $messages)` returns `string`: `return RenderedCompletionRequest::of(new CompletionRequestModel(…as before…));` (import it). Every assertion stays.
+
+*Amended (preflight F5):* in the moved `RecommendationCallRecorderTest` also rename `$call->streamProgressed(` to `$call->progressed(` at all 8 call sites on the returned `RecordedCall` (around lines 93, 101, 111, 125, 142, 165, 184, 189 before the move); `RecordedCall` no longer implements the observer, so they break otherwise. `RecordedCallTest`'s docblock that mentions `streamProgressed()'s ??` becomes `progressed()'s`.
 
 In the moved `RecordedCallTest`: `streamProgressed(` → `progressed(` throughout; in `testACallTheProviderEndedWithAnErrorWasCutByTheProvider` and `testACallThatStoppedOnItsOwnWasNotCutByTheProvider`, `$call->providerCutTheAnswer()` → `CompletionFinishReason::cutByProvider($call->finishReason())` (import `App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason`). Assertions unchanged.
 
@@ -1868,6 +1876,8 @@ git commit -m "refactor(#1345): the run-log recorder is engine-neutral"
 ---
 
 ### Task A7: The neutral batch-wave skeleton
+
+*Amended (preflight F6):* also lift `splitByPruned()` and `degradeUnresolved()` from `RecommendationBatchWave` into `Recommendation/Run` (static helpers in `Run/Support`, or named constructors on `BatchWaveResultModel`; the implementer picks), taking the neutral `WaveBatchModel` and winners types. The LLM wave calls them there, with LLM behaviour byte-identical. D30 covers only the engine-specific duplicates (the round loop and `repliesByPosition`).
 
 **Files:**
 - Move (script): `Llm/Run/Model/WaveBatchModel` → `Run/Model/WaveBatchModel`, `Llm/Run/Model/BatchWaveResultModel` → `Run/Model/BatchWaveResultModel`, `WaveBatchModelTest`.
@@ -2320,6 +2330,7 @@ Expected: green. `RecommendationSettingsControllerTest::testAnUnconfiguredAccoun
 1. Delete the `if (!$capabilities->sendsPrompt)` guard → `testAnEngineWithoutAPromptSendsNoneOfThePromptPieces` fails ("'Likes Rust…' is null"). Restore.
 2. `of(Llm)` with `sendsPrompt: false` → the resolver's LLM test and `testFixedPromptIsTheBatchPromptTheRunnerActuallySends` fail. Restore.
 3. `'prompt' => true` hard-coded in `RecommendationCapabilitiesJson` passes today (only the LLM exists); B3's Jev row is its pin. Note it in the report.
+   *Amended (preflight F8):* accepted as a deferred pin; name it in the A8 report. B3's deletion check 8 makes it breakable.
 
 - [ ] **Step 6: Frontend — the type and the fixtures**
 
@@ -2527,7 +2538,9 @@ Doc comments: in `recommendation-settings.service.ts` the state field's comment 
 
 - [ ] **Step 3: Write the failing ungating test**
 
-In the card spec, the four tests of `describe("rendering from the engine's capabilities", …)` become (the helper is now `showScoreAndReasonsToggle`):
+*Amended (preflight F7):* replace only the four pre-existing tests of that describe (lines 206-240 on develop); A8's prompt-gating test stays in it, with its `{ reasons: false, prompt: false, … }` literal unchanged, as A8's only frontend pin.
+
+In the card spec, the four pre-existing tests of `describe("rendering from the engine's capabilities", …)` become (the helper is now `showScoreAndReasonsToggle`):
 
 ```ts
     it('offers the score-and-reasons switch, the batch size and the context window to an engine that reads them all', () => {
@@ -2683,7 +2696,7 @@ Gates: composer check / md / tramp (<warnings>), both test legs, infection:diff,
 
 Plan: docs/superpowers/plans/2026-10-02-1345-jev-recommendation-engine.md
 EOF
-grep -iE '(close|fix|resolve)[sd]? #1345' "$TMPDIR/pr-a-body.md" && echo "STOP: closing keyword in a Refs-only body"
+grep -iE '(close[sd]?|fix(e[sd])?|resolve[sd]?) #1345' "$TMPDIR/pr-a-body.md" && echo "STOP: closing keyword in a Refs-only body"
 gh pr create --base develop --title "refactor(#1345): engine prerequisites for jev" --body-file "$TMPDIR/pr-a-body.md"
 ```
 
@@ -4012,6 +4025,8 @@ final readonly class CompositeModelCatalog implements ModelCatalogInterface
 }
 ```
 
+*Amended (preflight F12):* the `ModelCatalogInterface` alias already exists at `backend/config/services.yaml` line 150 (pointing at `OpenAiCompatibleCatalog`); the line below replaces it, it is not added (a duplicate YAML key fails the container build).
+
 `OpenAiCompatibleCatalog` gains `#[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 10])]` (import `AutoconfigureTag`). `backend/config/services.yaml`: `App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\CompositeModelCatalog'`.
 
 **Assumption (verify):** `#[AutoconfigureTag]` on a class (not an interface) tags that class, and its `priority` attribute orders `#[AutowireIterator]`. `ModelCatalogWiringTest` proves both; if the order comes out reversed, use `#[AsTaggedItem(priority: …)]` instead and report it. `AiSettingsControllerTest`/`AiProviderConfiguratorTest` still replace `ModelCatalogInterface` in the container with a `StubModelCatalog`.
@@ -4287,7 +4302,7 @@ Reviewer: yes.
     }
 ```
 
-with `seedProviderModel(User $user, string $model)` extracted from `seedProviderContextWindow()` (which then calls it with `'m'` and its window).
+with `seedProviderModel(User $user, string $model)` extracted from `seedProviderContextWindow()` (which then calls it with `'m'` and its window). *Amended (preflight F11):* as written `seedProviderModel` has no window parameter. Either give it `?int $contextWindow` as a third parameter, or seed the Jev account through `RecommendationRunFixtures::seedReadyAiSettingsFor()` and skip the extraction; the implementer picks.
 
 - [ ] **Step 2: Run them to see them fail**
 
@@ -4341,9 +4356,9 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
 
 1. `str_contains` for `str_starts_with` → the `typesafe/jev-router` row fails. Restore.
 2. `stripos(…) === 0` (case-insensitive) → the `JEV-latest` row fails. Restore.
-3. `singleCallPhaseCount()` hard-coded 2 → `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases` (5 ≠ 3) and `testAJevRunIsPredictedFromJevRunsAlone` fail. Restore.
+3. `singleCallPhaseCount()` hard-coded 2 → only the progress pin `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases` (5 ≠ 3) fails; `testAJevRunIsPredictedFromJevRunsAlone` still passes, because the estimator subtracts the same constant and the batch count stays 4. *Amended (preflight F9):* expect only the progress pin to fail. Restore.
 4. In `forBatchPlan()`, `$distillationDone = $distilled` → the Jev progress pin fails (`distillPending` true). Restore.
-5. Drop `!self::carriesExactly(…) ||` in `PhaseDurationsModel` → the Jev average takes the LLM run (15 s a batch, 75 ≠ 100). Restore.
+5. Drop `!self::carriesExactly(…) ||` in `PhaseDurationsModel` → the Jev average takes the LLM run (distill 5, batch 15, consolidate 15, so `predictedTotalSeconds(5)` is 95 ≠ 100; the LLM half fails too). *Amended (preflight F10):* the expected figure is 95, not 75. Restore.
 6. `SnapshotPhase`'s empty-pool path snapshots with `RecommendationEngineKind::Llm` → `testAJevTickRecordsTheJevKindForAnEmptyPool` fails. Restore.
 7. `TickContextFactory` passes `RecommendationEngineKind::Llm` → `testAJevConnectionTicksWithTheJevKind` fails. Restore.
 8. `RecommendationCapabilitiesJson` hard-codes `'prompt' => true` → the Jev JSON pin fails (A8's open pin). Restore.
@@ -4352,7 +4367,7 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
 - [ ] **Step 6: Gates and commit**
 
 ```bash
-composer check      # the #1344 D15 3-hop warning on kindFor()'s unread connection is gone: report the count
+composer check      # *Amended (preflight F15):* the baseline is already 0 warnings (A0), so the #1344 3-hop warning was not there to disappear; expect 0 and report the count
 composer md
 git add -A backend
 git commit -m "feat(#1345): the jev kind, its capabilities and its phase plan"
@@ -4418,6 +4433,8 @@ Run: `php bin/phpunit tests/Service/Recommendation/Run/Pass/RecordedCallTest.php
 Expected: "Call to undefined method …received()".
 
 - [ ] **Step 2: The columns**
+
+*Amended (preflight F2):* `RecommendationRunLog` has 13 fields and PHPMD `TooManyFields` reports above 15, so three more plain fields fail `composer md`. Hold `requestId`, `answeringModel` and `costNanoCredits` in an `#[ORM\Embeddable]` in `App\Entity` (for example `CallReceipt`), embedded with `columnPrefix: false` (precedent: `RunBatchProgress` on `RecommendationRun`). Column names, the migration and the repository's DBAL `update()` stay as below; the getters delegate or one `getReceipt()` replaces them. B4's tests are unchanged apart from that. The field list below describes the columns, not properties of `RecommendationRunLog`.
 
 `RecommendationRunLog`, after `$finishReason`:
 
@@ -4938,10 +4955,12 @@ final readonly class JevStateFactory
             'viewed' => self::articles($history->viewed),
         ];
 
-        $overflow = JevTokenEstimate::ofJson(self::stateOf($guidance, $sections)) - self::STATE_TOKEN_BUDGET;
         foreach (self::WEAKEST_SECTION_FIRST as $section) {
-            while ($overflow > 0 && [] !== $sections[$section]) {
-                $overflow -= JevTokenEstimate::ofJson(array_pop($sections[$section]));
+            while (
+                [] !== $sections[$section]
+                && JevTokenEstimate::ofJson(self::stateOf($guidance, $sections)) > self::STATE_TOKEN_BUDGET
+            ) {
+                array_pop($sections[$section]);
             }
         }
 
@@ -4975,7 +4994,7 @@ final readonly class JevStateFactory
 }
 ```
 
-(Each popped line's own estimate is subtracted, not the separator between lines, so the loop removes slightly more than needed, never less. A Factory builds and never persists.)
+*Amended (preflight F3):* the loop above subtracted each popped line's own estimate, which is always at least the real drop in the whole state's estimate, so it stopped while still over budget (the test's final `assertLessThanOrEqual` failed). Trimming now loops on the rebuilt state's real estimate; re-check deletion checks 1 and 2 afterwards. A Factory builds and never persists.
 
 `backend/src/Service/Recommendation/Jev/Factory/SystemOneRequestFactory.php`:
 
@@ -6067,6 +6086,8 @@ final readonly class JevBatchWave
 }
 ```
 
+*Amended (preflight F6):* `JevBatchWave` does not carry its own `splitByPruned()`/`degradeUnresolved()`; it calls the shared ones in `Recommendation/Run` (lifted in A7), which the LLM wave also calls. Delete the copies in the code above; the fallback below is already done.
+
 **Assumption (verify):** PHPMD may count this class's methods or its NPath against codesize; if `composer md` reports it, move `splitByPruned()`/`degradeUnresolved()` onto `BatchWaveResultModel` as named constructors shared with the LLM wave (a third occurrence would then be gone too) and report the change to the planner.
 
 - [ ] **Step 5: The engine**
@@ -6497,4 +6518,4 @@ Do not merge: Lars merges. After the merge, verify #1345 closed on its own.
 
 - Spec coverage: every row of the Scope table names a task; the brief's twelve settled points map to A1–A9 and B1–B8; the two places the brief and the code disagreed are D1/D2 and the contradiction list.
 - Names are consistent across tasks: `RecommendationEngineKind::{phases,runs,singleCallPhaseCount}`, `RecommendationEngineCapabilitiesModel::{of,$writesReasons,$sendsPrompt,$tuningFields}`, `RecommendationEngineResolver::{kindFor,capabilitiesFor,capabilitiesForAccount,engineOf}`, `TickContext::$engineKind`, `TickContextFactory::create`, `RecommendationRun::{snapshot(kind, batches),getEngineKind}`, `RateLimitedCalls::send`, `RecommendationCallRecorder::begin(run, slot, string)`, `RecordedCall::{progressed,received,finishReason,finishUsable,finishUnusable,abortAfterTransportFailure}`, `BatchWavePhase::advance(tick, closure)`, `WaveBatchLoader::next`, `SystemOneClientInterface::evaluateMany(credentials, requests)`, `StubSystemOneClient::{queueNouls,queueBody,queueFailure,requests}`, wire `showScoreAndReasons` and `capabilities.prompt`.
-- Test values chosen to fail under a named change: `0.0737 → 74` (floor gives 73), 3 s/7 s hints (first-wins waits 3 s), `jev-1.13.0`/`typesafe/jev-router`/`JEV-latest` (prefix, contains, case), a Jev ETA of 60 (a fixed tail of 2 gives 20; the LLM run's batches give 75 ≠ 100 in the durations test), `[100, 100, 50]` and the 3-byte budget case, the LLM-first duplicate at 1 000 vs 64 000, a raw `engine_kind` read where `getEngineKind()` would mask a null.
+- Test values chosen to fail under a named change: `0.0737 → 74` (floor gives 73), 3 s/7 s hints (first-wins waits 3 s), `jev-1.13.0`/`typesafe/jev-router`/`JEV-latest` (prefix, contains, case), a Jev ETA of 60 (a fixed tail of 2 gives 20; the LLM run's batches give 95 ≠ 100 in the durations test (*Amended (preflight F10)*)), `[100, 100, 50]` and the 3-byte budget case, the LLM-first duplicate at 1 000 vs 64 000, a raw `engine_kind` read where `getEngineKind()` would mask a null.
