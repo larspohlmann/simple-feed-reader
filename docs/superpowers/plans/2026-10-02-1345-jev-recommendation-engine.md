@@ -1321,24 +1321,28 @@ final class RateLimitedCallsTest extends TestCase
     public function testABlockingPlanWaitsTheLongestHintAndResendsOnlyTheLimitedCalls(): void
     {
         $clock = new MockClock('2026-10-02 09:00:00');
-        $sent = [];
-        $replies = [
-            [
-                ScriptedRateLimitedOutcome::answered('first'),
-                ScriptedRateLimitedOutcome::limited('second', 3),
-                ScriptedRateLimitedOutcome::limited('third', 7),
-            ],
-            [ScriptedRateLimitedOutcome::answered('second again'), ScriptedRateLimitedOutcome::answered('third again')],
-        ];
-        $send = static function (array $calls) use (&$sent, &$replies): array {
+        /** @var \ArrayObject<int, mixed> $sent */
+        $sent = new \ArrayObject();
+        /** @var \SplQueue<list<ScriptedRateLimitedOutcome>> $replies */
+        $replies = new \SplQueue();
+        $replies->enqueue([
+            ScriptedRateLimitedOutcome::answered('first'),
+            ScriptedRateLimitedOutcome::limited('second', 3),
+            ScriptedRateLimitedOutcome::limited('third', 7),
+        ]);
+        $replies->enqueue([
+            ScriptedRateLimitedOutcome::answered('second again'),
+            ScriptedRateLimitedOutcome::answered('third again'),
+        ]);
+        $send = static function ($calls) use ($sent, $replies) {
             $sent[] = $calls;
 
-            return array_shift($replies) ?? [];
+            return $replies->dequeue();
         };
 
         $result = (new RateLimitedCalls($clock))->send(['a', 'b', 'c'], $send, RetryPlanModel::blocking());
 
-        self::assertSame([['a', 'b', 'c'], ['b', 'c']], $sent);
+        self::assertSame([['a', 'b', 'c'], ['b', 'c']], $sent->getArrayCopy());
         self::assertEquals(new \DateTimeImmutable('2026-10-02 09:00:07'), $clock->now());
         self::assertSame(
             ['first', 'second again', 'third again'],
@@ -1350,7 +1354,7 @@ final class RateLimitedCallsTest extends TestCase
     public function testADeferringPlanHandsTheLongestWaitBackWithoutResending(): void
     {
         $sends = 0;
-        $send = static function (array $calls) use (&$sends): array {
+        $send = static function ($calls) use (&$sends) {
             ++$sends;
 
             return [ScriptedRateLimitedOutcome::limited('one', 4), ScriptedRateLimitedOutcome::limited('two', 11)];
@@ -1365,7 +1369,7 @@ final class RateLimitedCallsTest extends TestCase
 }
 ```
 
-**Assumption (verify):** `MockClock::sleep()` advances `now()` by the slept seconds (it does in Symfony 7.4) and accepts a float. PHPStan at level max may want `@var` annotations on the by-reference `$sent`/`$replies` in the test; annotate, never ignore.
+**Assumption (verify):** `MockClock::sleep()` advances `now()` by the slept seconds (it does in Symfony 7.4) and accepts a float. *Amended (A5):* PHPStan erases the type of by-reference captured variables (`mixed`), so the test closure captures an `ArrayObject`/`SplQueue` by value and leaves its parameter and return untyped.
 
 - [ ] **Step 3: Run it to see it fail**
 
