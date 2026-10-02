@@ -4603,7 +4603,7 @@ Reviewer: yes.
 
 **Interfaces:**
 - Consumes: `ProviderCallReceiptModel` (B1).
-- Produces: `RecordedCall::received(ProviderCallReceiptModel $receipt, int $wireBytes): void`; `RecommendationCallRepository::recordReceipt(int $logId, ProviderCallReceiptModel $receipt): void`; `RecommendationRunLog::getRequestId(): ?string`, `getAnsweringModel(): ?string`, `getCostNanoCredits(): ?int`; columns `recommendation_run_log.request_id VARCHAR(255) NULL`, `answering_model VARCHAR(255) NULL`, `cost_nano_credits BIGINT NULL`.
+- Produces: `RecordedCall::received(ProviderCallReceiptModel $receipt, int $wireBytes): void`; `CallSettlement::$receipt` (*amended at B4, F6:* replaces `RecommendationCallRepository::recordReceipt()`); `RecommendationRunLog::getRequestId(): ?string`, `getAnsweringModel(): ?string`, `getCostNanoCredits(): ?int`; columns `recommendation_run_log.request_id VARCHAR(255) NULL`, `answering_model VARCHAR(255) NULL`, `cost_nano_credits BIGINT NULL`.
 
 - [ ] **Step 1: Write the failing tests** — in `RecordedCallTest` (imports `ProviderCallReceiptModel`, `ProviderCallUsageModel`):
 
@@ -4747,6 +4747,9 @@ final class Version20261002150000 extends AbstractMigration
 ```
 
 - [ ] **Step 3: The writes**
+
+*Amended at B4 (altitude review F6):* the receipt rides on the settlement instead of a second UPDATE. `CallSettlement` gains `public ?ProviderCallReceiptModel $receipt = null`; `RecordedCall::settlement()` passes `$this->receipt`; `settleAnswered()` and `settleTransportFailure()` spread `...self::receiptColumns($settlement->receipt)` into their existing `update()`, where `receiptColumns()` returns `[]` for a null receipt. One settle-time write serves both engines; a streamed (LLM) call carries no receipt, so its UPDATE is byte-identical to `develop`, and a Jev row gets its verdict and receipt in one statement. There is no public `recordReceipt()` and no private `RecordedCall::recordReceipt()`; the code below is superseded where it differs. Deletion checks (1) and (4) become: delete the spread in `settleAnswered()` / `settleTransportFailure()`.
+
 
 `RecommendationCallRepository` (import `ProviderCallReceiptModel`):
 
