@@ -1887,11 +1887,12 @@ git commit -m "refactor(#1345): the run-log recorder is engine-neutral"
 ### Task A7: The neutral batch-wave skeleton
 
 *Amended (preflight F6):* also lift `splitByPruned()` and `degradeUnresolved()` from `RecommendationBatchWave` into `Recommendation/Run` (static helpers in `Run/Support`, or named constructors on `BatchWaveResultModel`; the implementer picks), taking the neutral `WaveBatchModel` and winners types. The LLM wave calls them there, with LLM behaviour byte-identical. D30 covers only the engine-specific duplicates (the round loop and `repliesByPosition`).
+*Amended (A7 implementation):* picked static helpers: `App\Service\Recommendation\Run\Support\BatchWaveWinners::splitByPruned(list<WaveBatchModel>)` and `::degradeUnresolved(array $winners, list<int> $stillUnresolved)`, a `final readonly` class with a private constructor (`ServiceRoleRule`'s `supportShape`). `RunTuning`'s docblock names `BatchPhase::effectiveCap()` too; it becomes `BatchWavePhase::effectiveCap()`.
 
 **Files:**
 - Move (script): `Llm/Run/Model/WaveBatchModel` → `Run/Model/WaveBatchModel`, `Llm/Run/Model/BatchWaveResultModel` → `Run/Model/BatchWaveResultModel`, `WaveBatchModelTest`.
-- Create: `backend/src/Service/Recommendation/Run/BatchWavePhase.php`, `backend/src/Service/Recommendation/Run/WaveBatchLoader.php`
-- Modify: `backend/src/Service/Recommendation/Llm/Run/ProviderPhase/BatchPhase.php`, `backend/src/Service/Recommendation/Llm/Run/WaveContextLoader.php`, `backend/src/Entity/AiProviderSettings.php` (comment)
+- Create: `backend/src/Service/Recommendation/Run/BatchWavePhase.php`, `backend/src/Service/Recommendation/Run/WaveBatchLoader.php`, `backend/src/Service/Recommendation/Run/Support/BatchWaveWinners.php`
+- Modify: `backend/src/Service/Recommendation/Llm/Run/ProviderPhase/BatchPhase.php`, `backend/src/Service/Recommendation/Llm/Run/WaveContextLoader.php`, `backend/src/Service/Recommendation/Llm/Run/RecommendationBatchWave.php`, `backend/src/Entity/AiProviderSettings.php` and `backend/src/Entity/RunTuning.php` (comments)
 - Modify (test, call shape only): `backend/tests/Service/Recommendation/Llm/Run/WaveContextLoaderTest.php`
 
 **Interfaces:**
@@ -6096,6 +6097,7 @@ final readonly class JevBatchWave
 ```
 
 *Amended (preflight F6):* `JevBatchWave` does not carry its own `splitByPruned()`/`degradeUnresolved()`; it calls the shared ones in `Recommendation/Run` (lifted in A7), which the LLM wave also calls. Delete the copies in the code above; the fallback below is already done.
+*Amended (A7 implementation):* the shared helpers are `BatchWaveWinners::splitByPruned()` and `BatchWaveWinners::degradeUnresolved()` (`use App\Service\Recommendation\Run\Support\BatchWaveWinners;`); replace `self::splitByPruned(` and `self::degradeUnresolved(` above with those calls.
 
 **Assumption (verify):** PHPMD may count this class's methods or its NPath against codesize; if `composer md` reports it, move `splitByPruned()`/`degradeUnresolved()` onto `BatchWaveResultModel` as named constructors shared with the LLM wave (a third occurrence would then be gone too) and report the change to the planner.
 
