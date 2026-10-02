@@ -5,7 +5,10 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
-import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
+import {
+  EVERY_RECOMMENDATION_CAPABILITY,
+  JEV_RECOMMENDATION_CAPABILITIES,
+} from '../../../testing/recommendation-capabilities';
 import { NO_RECOMMENDATION_CAPABILITIES } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
@@ -55,14 +58,6 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
 });
-
-const BORROWING = {
-  ...EVERY_RECOMMENDATION_CAPABILITY,
-  prompt: false,
-  reasons: false,
-  profile: 'borrowed',
-  tuningFields: ['batchConcurrency'],
-} as const;
 
 const offered = (
   id: string,
@@ -370,7 +365,7 @@ describe('AiSectionComponent', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1 })]);
     ai.choosingModelFor.set(1);
-    ai.models.set([offered('gpt-4o'), offered('jev-latest', BORROWING)]);
+    ai.models.set([offered('gpt-4o'), offered('jev-latest', JEV_RECOMMENDATION_CAPABILITIES)]);
     fixture.detectChanges();
 
     expandRow(fixture, 0);
@@ -387,7 +382,10 @@ describe('AiSectionComponent', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1 })]);
     ai.choosingModelFor.set(1);
-    ai.models.set([offered('gpt-4o'), offered('jev-latest', BORROWING, 'Jev')]);
+    ai.models.set([
+      offered('gpt-4o'),
+      offered('jev-latest', JEV_RECOMMENDATION_CAPABILITIES, 'Jev'),
+    ]);
     fixture.detectChanges();
     expandRow(fixture, 0);
     const picker = row(fixture, 0).querySelector('.model-picker') as HTMLElement;
@@ -1132,7 +1130,7 @@ describe('AiSectionComponent', () => {
       ready: true,
       active: true,
       model: 'jev-latest',
-      capabilities: BORROWING,
+      capabilities: JEV_RECOMMENDATION_CAPABILITIES,
     });
 
     it('renders inside the configuration area of a borrowed connection that is not active', () => {
@@ -1188,7 +1186,7 @@ describe('AiSectionComponent', () => {
           name: 'Other Jev',
           ready: true,
           model: 'jev-latest',
-          capabilities: BORROWING,
+          capabilities: JEV_RECOMMENDATION_CAPABILITIES,
         }),
       ]);
 

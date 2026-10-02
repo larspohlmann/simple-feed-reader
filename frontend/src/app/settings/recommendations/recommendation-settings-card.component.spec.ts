@@ -9,7 +9,10 @@ import {
   RecommendationCapabilities,
 } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
-import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
+import {
+  EVERY_RECOMMENDATION_CAPABILITY,
+  JEV_RECOMMENDATION_CAPABILITIES,
+} from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
@@ -259,11 +262,7 @@ describe('RecommendationSettingsCardComponent', () => {
     it('shows the distilled profile but no fixed prompt or guidance default to an engine that sends no prompt', () => {
       const fixture = mount(
         { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
-        {
-          ...NO_RECOMMENDATION_CAPABILITIES,
-          profile: 'borrowed',
-          tuningFields: ['batchConcurrency'],
-        },
+        JEV_RECOMMENDATION_CAPABILITIES,
       );
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
