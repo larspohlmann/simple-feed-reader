@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
@@ -425,7 +426,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     private function runWithWinners(array $winners): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot([array_column($winners, 'id')]);
+        $run->snapshot(RecommendationEngineKind::Llm, [array_column($winners, 'id')]);
         $run->recordBatchWinners($winners);
         $this->entityManager->flush();
 

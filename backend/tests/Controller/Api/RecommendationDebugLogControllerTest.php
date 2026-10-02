@@ -8,6 +8,7 @@ use App\Entity\CallOutcome;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -163,7 +164,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-run-summary@example.test');
         $run = $this->fixtures()->createRun($user);
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('bad reply');
         $run->fail('The model did not return a usable ranking.', new \DateTimeImmutable('2026-08-08T10:05:00Z'));
         $this->entityManager()->flush();

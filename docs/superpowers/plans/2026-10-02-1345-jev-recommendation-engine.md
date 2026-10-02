@@ -460,6 +460,7 @@ git commit -m "refactor(#1345): the engine kind moves to App\\Enum; capabilities
 - Modify: `backend/src/Service/Recommendation/Run/Pass/TickContext.php`, `backend/src/Service/Recommendation/Run/RecommendationRunAdvancer.php`, `backend/src/Service/Recommendation/Run/TickPhases.php`, `backend/src/Service/Recommendation/Run/SnapshotPhase.php`, `backend/src/Service/Recommendation/Engine/RecommendationEngineResolver.php`
 - Modify (tests): `backend/tests/Support/BuildsTickContexts.php`, `backend/tests/Service/Recommendation/Run/Pass/TickContextTest.php`, `backend/tests/Service/Recommendation/Engine/{RecommendationEngineResolverTest,RecommendationEngineWiringTest}.php`, `backend/tests/Service/Worker/AdvanceRecommendationRunsHandlerTest.php`
 - Create (test): `backend/tests/Service/Recommendation/Run/Factory/TickContextFactoryTest.php`
+- *Amended (A3 report):* A2 also modified `backend/tests/Service/Recommendation/Run/RecommendationRunAdvancerTest.php` (its detached-user fixture needed the active pointer on the reloaded user).
 
 **Interfaces:**
 - Consumes: `App\Enum\RecommendationEngineKind` (A1).

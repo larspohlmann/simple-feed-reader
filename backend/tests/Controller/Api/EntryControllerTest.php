@@ -17,6 +17,7 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -540,7 +541,7 @@ final class EntryControllerTest extends WebTestCase
         $entry->setContentHtml('<p>For-you body text.</p>');
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 77));
@@ -579,7 +580,7 @@ final class EntryControllerTest extends WebTestCase
             ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
@@ -620,7 +621,7 @@ final class EntryControllerTest extends WebTestCase
         // Only the first entry is recommended: the second proves the action
         // stays inside the for-you list instead of clearing the whole feed.
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entries[0], 1, 'reason', 50));
@@ -673,7 +674,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
@@ -705,7 +706,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
@@ -737,7 +738,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertCount(3, $entries);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
@@ -775,7 +776,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'reason'));

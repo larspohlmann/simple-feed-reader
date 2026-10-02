@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
 use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
@@ -41,7 +42,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
     public function testReportsWhetherTheFirstBatchHasStarted(): void
     {
         $run = new RecommendationRun($this->user(), new \DateTimeImmutable('2026-08-09T10:00:00'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->markFirstBatchStarted();
 
         $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
@@ -57,7 +58,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
     public function testTreatsCompletedBatchesAsAStartedFirstBatchForExistingRuns(): void
     {
         $run = new RecommendationRun($this->user(), new \DateTimeImmutable('2026-08-09T10:00:00'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->recordBatchWinners([]);
 
         $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
@@ -145,7 +146,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
     {
         $startedAt = new \DateTimeImmutable('2026-08-09T10:00:00');
         $run = new RecommendationRun($this->user(), $startedAt);
-        $run->snapshot([[1], [2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
         $run->recordBatchWinners([]);
         $run->fail('boom', $startedAt);
 

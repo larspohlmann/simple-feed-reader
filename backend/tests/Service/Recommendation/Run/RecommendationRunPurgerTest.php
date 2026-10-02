@@ -12,6 +12,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
@@ -81,7 +82,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
     public function testPurgeRemovesTheUsersRunsItemsAndLogsButLeavesAnotherUsersAlone(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $item = new RecommendationItem($run, $this->entry('mine'), 1, 'reason');
         $this->entityManager->persist($item);
         $log = $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'req');
@@ -95,7 +96,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
         self::assertNotNull($logId);
 
         $otherRun = $this->fixtures->createRun($this->otherUser);
-        $otherRun->snapshot([[1]]);
+        $otherRun->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $otherItem = new RecommendationItem($otherRun, $this->entry('theirs'), 1, 'reason');
         $this->entityManager->persist($otherItem);
         $otherLog = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'req');

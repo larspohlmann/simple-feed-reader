@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -147,7 +148,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08 09:00:00'));
-        $run->snapshot([[1, 2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1, 2], [3]]);
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $run->fail('provider unreachable', new \DateTimeImmutable('2026-08-08 09:05:00'));
         $entityManager->persist($run);

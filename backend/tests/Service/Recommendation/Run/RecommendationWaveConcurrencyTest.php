@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Run\RecommendationWaveConcurrency;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
@@ -39,7 +40,7 @@ final class RecommendationWaveConcurrencyTest extends TestCase
     private function runningRun(): RecommendationRun
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
 
         return $run;
     }

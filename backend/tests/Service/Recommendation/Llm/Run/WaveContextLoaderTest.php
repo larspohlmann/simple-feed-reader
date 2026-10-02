@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Llm\Run;
 use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Llm\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Llm\Run\WaveContextLoader;
@@ -83,7 +84,7 @@ final class WaveContextLoaderTest extends DbTestCase
     private function runWithPlan(array $plan): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
-        $run->snapshot($plan);
+        $run->snapshot(RecommendationEngineKind::Llm, $plan);
         $this->entityManager->flush();
 
         return $run;

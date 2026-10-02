@@ -14,6 +14,7 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
@@ -48,7 +49,7 @@ final class ForYouFeedTest extends DbTestCase
         );
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $this->entityManager->persist($run);
 

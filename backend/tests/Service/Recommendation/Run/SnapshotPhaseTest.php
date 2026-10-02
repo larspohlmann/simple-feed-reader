@@ -74,6 +74,34 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertSame([], $engine->packedCandidates);
     }
 
+    /** The raw column, not getEngineKind(): that reads a missing kind as the LLM too. */
+    public function testThePlanRecordsTheKindItWasPackedFor(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 2);
+        $run = $this->pendingRun();
+
+        $this->snapshot(ScriptedRecommendationEngine::packing([[1]]))->advance($this->tick($run));
+
+        self::assertSame('llm', $this->storedEngineKind($run));
+    }
+
+    public function testAnEmptyPoolRecordsTheKindToo(): void
+    {
+        $run = $this->pendingRun();
+
+        $this->snapshot(ScriptedRecommendationEngine::packing([[999]]))->advance($this->tick($run));
+
+        self::assertSame('llm', $this->storedEngineKind($run));
+    }
+
+    private function storedEngineKind(RecommendationRun $run): mixed
+    {
+        return $this->entityManager->getConnection()->fetchOne(
+            'SELECT engine_kind FROM recommendation_run WHERE id = ?',
+            [$run->requireId()],
+        );
+    }
+
     private function pendingRun(): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);

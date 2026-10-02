@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Entity\Exception\InvalidRunStatusException;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use Doctrine\DBAL\Types\Types;
@@ -56,6 +57,10 @@ final class RecommendationRun
      */
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $candidateBatches = null;
+
+    /** The engine the frozen plan was packed for; null on runs from before the column. */
+    #[ORM\Column(length: 16, nullable: true, enumType: RecommendationEngineKind::class)]
+    private ?RecommendationEngineKind $engineKind = null;
 
     /** @var list<list<array{id: int, score?: int, reason: string}>> */
     #[ORM\Column(type: Types::JSON)]
@@ -128,10 +133,11 @@ final class RecommendationRun
     /**
      * @param list<list<int>> $candidateBatches
      */
-    public function snapshot(array $candidateBatches): void
+    public function snapshot(RecommendationEngineKind $engineKind, array $candidateBatches): void
     {
         $this->guardStatus(RunStatus::Pending, 'snapshot');
 
+        $this->engineKind = $engineKind;
         $this->candidateBatches = $candidateBatches;
         $this->status = RunStatus::Running;
     }
@@ -142,6 +148,12 @@ final class RecommendationRun
     public function getCandidateBatches(): array
     {
         return $this->candidateBatches ?? [];
+    }
+
+    /** A run without a recorded kind predates the column and ran on the LLM, the only engine there was. */
+    public function getEngineKind(): RecommendationEngineKind
+    {
+        return $this->engineKind ?? RecommendationEngineKind::Llm;
     }
 
     public function getProgress(): RecommendationRunProgress

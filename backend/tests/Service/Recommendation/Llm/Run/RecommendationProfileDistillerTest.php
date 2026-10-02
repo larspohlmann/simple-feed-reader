@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -167,7 +168,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
     private function runInRunningState(): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $this->entityManager->flush();
 
         return $run;

@@ -33,14 +33,17 @@ final readonly class SnapshotPhase
         $candidates = $this->candidatesFor($tick);
 
         if ([] === $candidates) {
-            $run->snapshot([]);
+            $run->snapshot($tick->engineKind, []);
             $run->complete($this->clock->now());
             $this->entityManager->flush();
 
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        $run->snapshot($this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick));
+        $run->snapshot(
+            $tick->engineKind,
+            $this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick),
+        );
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($run);

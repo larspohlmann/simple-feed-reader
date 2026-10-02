@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -115,7 +116,7 @@ final class TickPhasesTest extends DbTestCase
     private function runningRun(): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
-        $run->snapshot([[101, 102]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[101, 102]]);
         $this->entityManager->flush();
 
         return $run;
