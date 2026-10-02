@@ -4382,18 +4382,18 @@ Reviewer: yes.
 `RecommendationEtaEstimatorTest` add (the seed helpers exist; this adds a Jev history run and a Jev live run):
 
 ```php
-    /** History: an LLM run and a Jev run at 20 s a batch. A live Jev run of 4 batches, 20 s in: 4 × 20 − 20. */
+    /** History: an LLM run (60 here too) and a Jev run at 25 s a batch. 4 Jev batches, 20 s in: 4 × 25 − 20. */
     public function testAJevRunIsPredictedFromJevRunsAlone(): void
     {
         $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
-        $this->seedHistoricalJevRun(batchWall: 60, batches: 3);
+        $this->seedHistoricalJevRun(batchWall: 75, batches: 3);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(RecommendationEngineKind::Jev, [[1], [2], [3], [4]]);
         $run->markFirstBatchStarted();
 
         $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReportModel::fromRun($run), $this->user);
 
-        self::assertSame(60, $eta);
+        self::assertSame(80, $eta);
     }
 
     private function seedHistoricalJevRun(int $batchWall, int $batches): void
@@ -4408,7 +4408,7 @@ Reviewer: yes.
     }
 ```
 
-**Assumption (verify):** `finishedLog()` gives every batch row the same `createdAt` base and a `finishedAt` of base + span, so the batch phase's span is `$batchWall` (60 s) over 3 distinct batch numbers = 20 s a batch, as `seedHistoricalRun()` relies on. If the helper differs, recompute the expected 60 from what it writes and say so.
+**Assumption (verify):** `finishedLog()` gives every batch row the same `createdAt` base and a `finishedAt` of base + span, so the batch phase's span is `$batchWall` (60 s) over 3 distinct batch numbers = 20 s a batch, as `seedHistoricalRun()` relies on. If the helper differs, recompute the expected 60 from what it writes and say so. *Amended (B3 implementer):* the helper is as assumed, but with a 60 s Jev history the pin could not fail: the LLM run predicts 10 + 4 × 10 + 30 − 20 = 60 too, so an estimator that ignored the plan's kind passed it. The Jev history is now 75 s over 3 batches (25 s a batch) and the expected ETA 80.
 
 `RecommendationRunFixtures` — `seedReadyAiSettings()` delegates to a new method:
 
@@ -4506,7 +4506,7 @@ Reviewer: yes.
     }
 ```
 
-with `seedProviderModel(User $user, string $model)` extracted from `seedProviderContextWindow()` (which then calls it with `'m'` and its window). *Amended (preflight F11):* as written `seedProviderModel` has no window parameter. Either give it `?int $contextWindow` as a third parameter, or seed the Jev account through `RecommendationRunFixtures::seedReadyAiSettingsFor()` and skip the extraction; the implementer picks.
+with `seedProviderModel(User $user, string $model)` extracted from `seedProviderContextWindow()` (which then calls it with `'m'` and its window). *Amended (preflight F11):* as written `seedProviderModel` has no window parameter. Either give it `?int $contextWindow` as a third parameter, or seed the Jev account through `RecommendationRunFixtures::seedReadyAiSettingsFor()` and skip the extraction; the implementer picks. *B3 implementer:* seeded through `seedReadyAiSettingsFor()`; no extraction.
 
 - [ ] **Step 2: Run them to see them fail**
 
@@ -4572,13 +4572,15 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
 
 1. `str_contains` for `str_starts_with` → the `typesafe/jev-router` row fails. Restore.
 2. `stripos(…) === 0` (case-insensitive) → the `JEV-latest` row fails. Restore.
-3. `singleCallPhaseCount()` hard-coded 2 → only the progress pin `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases` (5 ≠ 3) fails; `testAJevRunIsPredictedFromJevRunsAlone` still passes, because the estimator subtracts the same constant and the batch count stays 4. *Amended (preflight F9):* expect only the progress pin to fail. *Amended (PR-A fix wave, item 13):* the estimator no longer reads `singleCallPhaseCount()` at all (it reads `RunPlanModel::$batchCount`), so the ETA pin passes because nothing it reads changed; still only the progress pin fails. Restore.
+3. `singleCallPhaseCount()` hard-coded 2 → only the progress pin `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases` (5 ≠ 3) fails; `testAJevRunIsPredictedFromJevRunsAlone` still passes, because the estimator subtracts the same constant and the batch count stays 4. *Amended (preflight F9):* expect only the progress pin to fail. *Amended (PR-A fix wave, item 13):* the estimator no longer reads `singleCallPhaseCount()` at all (it reads `RunPlanModel::$batchCount`), so the ETA pin passes because nothing it reads changed; still only the progress pin fails. Restore. *Amended (B3 implementer):* `testJevAsksInBatchesOnly` asserts `singleCallPhaseCount()` is 0 and fails too (2 ≠ 0).
 4. In `forBatchPlan()`, `$distillationDone = $distilled` → the Jev progress pin fails (`distillPending` true). Restore.
 5. Drop `|| !self::carriesExactly(…)` in `PhaseDurationsModel` → the Jev average takes the LLM run (distill 5, batch 15, consolidate 15, so `predictedTotalSeconds(5)` is 95 ≠ 100; the LLM half fails too). *Amended (preflight F10):* the expected figure is 95, not 75. *Amended (PR-A fix wave, item 12):* the durations are now a map over the kind's own phases, so the Jev average reads only the LLM run's batch span (10 s/batch, averaged with Jev's 20 s → 15 s): `predictedTotalSeconds(5)` is 75 ≠ 100; the LLM half fails too, with "Undefined array key" warnings for run 1's missing phases (checked by a probe in the fix wave). Restore.
 6. `SnapshotPhase`'s empty-pool path snapshots with `RecommendationEngineKind::Llm` → `testAJevTickRecordsTheJevKindForAnEmptyPool` fails. Restore.
 7. `TickContextFactory` passes `RecommendationEngineKind::Llm` → `testAJevConnectionTicksWithTheJevKind` fails. Restore.
 8. `RecommendationCapabilitiesJson` hard-codes `'prompt' => true` → the Jev JSON pin fails (A8's open pin). Restore.
 9. `capabilitiesForAccount()` always returns the LLM's → `testAnAccountsCapabilitiesAreItsActiveConnections` and `testAJevAccountGetsNoneOfTheLlmsPromptPieces` fail. Restore.
+10. *Added (B3 implementer):* the estimator passes `RecommendationEngineKind::Llm` instead of `$plan->engineKind` → `testAJevRunIsPredictedFromJevRunsAlone` fails (60 ≠ 80). Restore.
+11. *Added (B3 implementer):* the deferred pins themselves: `TickContextFactory` passes `RecommendationEngineKind::Jev` → A2's `testTheTickCarriesTheRunTheActiveConnectionItsKindAndTheDriver` fails; `RecommendationCapabilitiesJson` hard-codes `'prompt' => false` → A8's `testItNamesTheKindsTuningFieldsByTheirWireNamesInTheKindsOrder` fails. Checks 7 and 8 above break the Jev pins, not the deferred ones. Restore.
 
 - [ ] **Step 6: Gates and commit**
 
