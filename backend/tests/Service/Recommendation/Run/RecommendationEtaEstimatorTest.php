@@ -119,8 +119,8 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     }
 
     /**
-     * The dev run 146 → 147 pair: 16 s of pickup, a 5 s distill, a 5 s wait, 11 s of batch waves over 5 batches and a
-     * 9 s finalize tick make 46 s. 28 s into the next 5-batch run, 18 s remain, not the 0 the call time alone left.
+     * 16 s of pickup, a 5 s distill, a 5 s wait, 11 s of batch waves over 5 batches and a 9 s finalize tick make 46 s.
+     * 28 s into the next 5-batch run, 18 s remain, not the 0 the call time alone leaves.
      */
     public function testPredictsTheTimeBetweenCallsOnTheClockElapsedRunsOn(): void
     {

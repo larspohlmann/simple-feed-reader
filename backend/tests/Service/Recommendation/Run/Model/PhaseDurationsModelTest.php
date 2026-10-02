@@ -98,6 +98,24 @@ final class PhaseDurationsModelTest extends TestCase
     }
 
     /**
+     * Run 1, resumed after 3 h, spends 10 800 s between calls; three others spend 34, 30 and 32 s. The median, 33 s,
+     * keeps the prediction among the normal runs (45–49 s for 5 batches at 2 s and a 5 s distill); a mean would not.
+     */
+    public function testOneLongIdleRunDoesNotInflateTheTimeBetweenCalls(): void
+    {
+        $spans = [];
+        foreach ([1 => 10800.0, 2 => 34.0, 3 => 30.0, 4 => 32.0] as $runId => $betweenCalls) {
+            $spans[] = $this->span($runId, CallPhase::Distill, 5.0, 0, 15.0 + $betweenCalls);
+            $spans[] = $this->span($runId, CallPhase::Batch, 10.0, 5, 15.0 + $betweenCalls);
+        }
+
+        $durations = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Jev);
+
+        self::assertNotNull($durations);
+        self::assertSame(48.0, $durations->predictedTotalSeconds(5));
+    }
+
+    /**
      * @return array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int, runSeconds: float}
      */
     private function span(int $runId, CallPhase $phase, float $spanSeconds, int $batchCount, float $runSeconds): array

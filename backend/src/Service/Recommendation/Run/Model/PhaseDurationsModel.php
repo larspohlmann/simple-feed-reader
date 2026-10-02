@@ -9,13 +9,13 @@ use App\Enum\RecommendationEngineKind;
 
 /**
  * Each phase's average wall-clock cost over the account's recent completed runs, keyed by CallPhase value, plus the
- * time between calls (pickup, tick waits), so the prediction runs on the clock elapsed counts on. The batch phase is
- * per batch: its span already folds in concurrency, so dividing by the batch count gives one more batch's cost.
+ * median time between calls (pickup, tick waits), so the prediction runs on the clock elapsed counts on. The batch
+ * phase is per batch: its span folds in concurrency, so dividing by the batch count gives one more batch's cost.
  */
 final readonly class PhaseDurationsModel
 {
     /** @param array<string, float> $secondsByPhase */
-    private function __construct(public array $secondsByPhase, public float $betweenCallSeconds)
+    private function __construct(public array $secondsByPhase, private float $betweenCallSeconds)
     {
     }
 
@@ -28,8 +28,7 @@ final readonly class PhaseDurationsModel
     public static function fromCompletedRunSpans(array $spans, RecommendationEngineKind $engineKind): ?self
     {
         $sums = [];
-        $betweenCallSum = 0.0;
-        $runCount = 0;
+        $betweenCalls = [];
 
         foreach (self::groupByRun($spans) as $run) {
             $durations = self::runDurations($run['phases'], $engineKind);
@@ -40,17 +39,17 @@ final readonly class PhaseDurationsModel
             foreach ($durations as $phase => $seconds) {
                 $sums[$phase] = ($sums[$phase] ?? 0.0) + $seconds;
             }
-            $betweenCallSum += self::betweenCallSeconds($run);
-            ++$runCount;
+            $betweenCalls[] = self::betweenCallSeconds($run);
         }
 
-        if (0 === $runCount) {
+        if ([] === $betweenCalls) {
             return null;
         }
+        $runCount = \count($betweenCalls);
 
         return new self(
             array_map(static fn (float $sum): float => $sum / $runCount, $sums),
-            $betweenCallSum / $runCount,
+            self::median($betweenCalls),
         );
     }
 
@@ -94,6 +93,19 @@ final readonly class PhaseDurationsModel
     private static function betweenCallSeconds(array $run): float
     {
         return $run['runSeconds'] - array_sum(array_column($run['phases'], 'spanSeconds'));
+    }
+
+    /**
+     * A median, not a mean: a run resumed hours after it failed is completed too, and its idle would swamp the rest.
+     *
+     * @param non-empty-list<float> $values
+     */
+    private static function median(array $values): float
+    {
+        sort($values);
+        $middle = intdiv(\count($values), 2);
+
+        return 0 === \count($values) % 2 ? ($values[$middle - 1] + $values[$middle]) / 2 : $values[$middle];
     }
 
     /** @param array<string, array{spanSeconds: float, batchCount: int}> $phases */
