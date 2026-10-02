@@ -28,6 +28,8 @@ final class StubSystemOneClient implements SystemOneClientInterface
     /** @var list<SystemOneRequestModel> */
     private array $requests = [];
 
+    private ?\Closure $duringNextCall = null;
+
     /** @param \Closure(int): float $nouls each question's Noul, by the candidate's entry id */
     public function queueNouls(\Closure $nouls): void
     {
@@ -48,6 +50,12 @@ final class StubSystemOneClient implements SystemOneClientInterface
         $this->queue[] = static fn (): SystemOneOutcomeModel => SystemOneOutcomeModel::failed($failure);
     }
 
+    /** Runs inside the next evaluateMany(), before it answers: the provider call is where a tick can change underneath. */
+    public function duringNextCall(\Closure $hook): void
+    {
+        $this->duringNextCall = $hook;
+    }
+
     /** @return list<SystemOneRequestModel> */
     public function requests(): array
     {
@@ -56,6 +64,12 @@ final class StubSystemOneClient implements SystemOneClientInterface
 
     public function evaluateMany(ProviderCredentialsModel $credentials, array $requests): array
     {
+        $hook = $this->duringNextCall;
+        $this->duringNextCall = null;
+        if (null !== $hook) {
+            $hook();
+        }
+
         return array_map(function (SystemOneRequestModel $request): SystemOneOutcomeModel {
             $this->requests[] = $request;
             $script = array_shift($this->queue) ?? throw new \LogicException('No System One reply is queued.');

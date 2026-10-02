@@ -15,18 +15,14 @@ use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
-use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Feed\ForYouFeed;
 use App\Service\Recommendation\Jev\JevProfileStep;
 use App\Service\Recommendation\Jev\Support\QuestionId;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
+use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
-use App\Tests\Support\StubChatClient;
 use App\Tests\Support\StubSystemOneClient;
 
 /**
@@ -35,9 +31,8 @@ use App\Tests\Support\StubSystemOneClient;
  */
 final class JevPipelineTest extends DbTestCase
 {
+    use DrivesRecommendationRuns;
     use SeedsUsers;
-
-    private const int MAX_TICKS = 10;
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
@@ -62,7 +57,7 @@ final class JevPipelineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => $nouls[$entryId]);
         $this->queueProfile('Likes Rust and homelab.');
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->owner);
 
         $items = $this->items($run);
         self::assertSame([$ids[1], $ids[4], $ids[2], $ids[0], $ids[3]], array_map(
@@ -88,7 +83,7 @@ final class JevPipelineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->queueProfile('Likes Rust and homelab.');
 
-        $this->runToCompletion();
+        $this->runToCompletion($this->owner);
 
         $requests = $this->systemOne()->requests();
         self::assertCount(1, $requests);
@@ -106,7 +101,7 @@ final class JevPipelineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->queueProfile('Likes Rust and homelab.');
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->owner);
 
         $this->entityManager->clear();
         $logs = $this->entityManager->getRepository(RecommendationRunLog::class)
@@ -134,7 +129,7 @@ final class JevPipelineTest extends DbTestCase
         $ids = $this->entryIds($this->fixtures->seedFeedWithEntries($this->owner, 5));
         $this->systemOne()->queueNouls(static fn (int $entryId): float => $entryId === $ids[2] ? 0.97 : 0.1);
         $this->queueProfile('Likes Rust and homelab.');
-        $this->runToCompletion();
+        $this->runToCompletion($this->owner);
 
         /** @var ForYouFeed $feed */
         $feed = self::getContainer()->get(ForYouFeed::class);
@@ -152,7 +147,7 @@ final class JevPipelineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->queueProfile('Likes Rust and homelab.');
 
-        $this->runToCompletion();
+        $this->runToCompletion($this->owner);
 
         self::assertSame(
             ['profile' => 'Likes Rust and homelab.', 'guidance' => 'More self-hosting.'],
@@ -167,7 +162,7 @@ final class JevPipelineTest extends DbTestCase
         $this->entityManager->flush();
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
 
-        $failed = $this->runToCompletion();
+        $failed = $this->runToCompletion($this->owner);
 
         self::assertSame('failed', $failed->getStatus()->value);
         self::assertSame(JevProfileStep::NO_PROFILE_CONNECTION, $failed->getError());
@@ -179,7 +174,7 @@ final class JevPipelineTest extends DbTestCase
         $this->queueProfile('Likes Rust and homelab.');
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone();
+        $resumed = $this->tickUntilDone($this->owner);
 
         self::assertSame('completed', $resumed->getStatus()->value);
         self::assertSame($failed->requireId(), $resumed->requireId());
@@ -195,7 +190,7 @@ final class JevPipelineTest extends DbTestCase
 
         $this->entityManager->remove($this->profileConnection);
         $this->entityManager->flush();
-        $run = $this->tickUntilDone();
+        $run = $this->tickUntilDone($this->owner);
 
         self::assertSame('completed', $run->getStatus()->value);
         self::assertCount(1, $this->systemOne()->requests());
@@ -209,7 +204,7 @@ final class JevPipelineTest extends DbTestCase
         $this->queueUnusableProfiles();
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
 
-        $run = $this->runToCompletion();
+        $run = $this->runToCompletion($this->owner);
 
         self::assertSame('completed', $run->getStatus()->value);
         self::assertSame('Stored: likes Rust.', $run->getProfileText());
@@ -223,7 +218,7 @@ final class JevPipelineTest extends DbTestCase
         $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
         $this->queueUnusableProfiles();
 
-        $failed = $this->runToCompletion();
+        $failed = $this->runToCompletion($this->owner);
 
         self::assertSame('failed', $failed->getStatus()->value);
         self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
@@ -232,7 +227,7 @@ final class JevPipelineTest extends DbTestCase
         $this->queueProfile('Likes Rust and homelab.');
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone();
+        $resumed = $this->tickUntilDone($this->owner);
 
         self::assertSame('completed', $resumed->getStatus()->value);
         self::assertSame(
@@ -246,14 +241,14 @@ final class JevPipelineTest extends DbTestCase
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->queueUnusableProfiles();
-        $failed = $this->runToCompletion();
+        $failed = $this->runToCompletion($this->owner);
         self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
 
         $this->chat()->queueContent('not a profile');
         $this->queueProfile('Likes Rust and homelab.');
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
         $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone();
+        $resumed = $this->tickUntilDone($this->owner);
 
         self::assertSame('completed', $resumed->getStatus()->value);
         self::assertSame('Likes Rust and homelab.', $resumed->getProfileText());
@@ -271,37 +266,6 @@ final class JevPipelineTest extends DbTestCase
         }
     }
 
-    private function settingsWriter(): RecommendationSettingsWriter
-    {
-        /** @var RecommendationSettingsWriter $writer */
-        $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
-
-        return $writer;
-    }
-
-    private function runToCompletion(): RecommendationRun
-    {
-        $this->starter()->start($this->owner);
-
-        return $this->tickUntilDone();
-    }
-
-    private function tickUntilDone(): RecommendationRun
-    {
-        for ($tick = 0; $tick < self::MAX_TICKS; $tick++) {
-            if (null === $this->runs()->findActiveForUser($this->owner)) {
-                break;
-            }
-            $this->advancer()->advance($this->owner);
-        }
-        self::assertNull($this->runs()->findActiveForUser($this->owner), 'The run did not end within the tick budget.');
-
-        $run = $this->runs()->findLatestForUser($this->owner);
-        self::assertNotNull($run);
-
-        return $run;
-    }
-
     private function tickUntilTheProfileIsRecorded(): void
     {
         for ($tick = 0; $tick < self::MAX_TICKS; $tick++) {
@@ -313,18 +277,6 @@ final class JevPipelineTest extends DbTestCase
         self::fail('The profile was not recorded within the tick budget.');
     }
 
-    /** @return list<RecommendationItem> */
-    private function items(RecommendationRun $run): array
-    {
-        $this->entityManager->clear();
-
-        /** @var list<RecommendationItem> $items */
-        $items = $this->entityManager->getRepository(RecommendationItem::class)
-            ->findBy(['run' => $run->requireId()], ['position' => 'ASC']);
-
-        return $items;
-    }
-
     /**
      * @param list<Entry> $entries
      *
@@ -333,45 +285,5 @@ final class JevPipelineTest extends DbTestCase
     private function entryIds(array $entries): array
     {
         return array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
-    }
-
-    private function runs(): RecommendationRunRepository
-    {
-        /** @var RecommendationRunRepository $runs */
-        $runs = $this->entityManager->getRepository(RecommendationRun::class);
-
-        return $runs;
-    }
-
-    private function starter(): RecommendationRunStarter
-    {
-        /** @var RecommendationRunStarter $starter */
-        $starter = self::getContainer()->get(RecommendationRunStarter::class);
-
-        return $starter;
-    }
-
-    private function advancer(): RecommendationRunAdvancer
-    {
-        /** @var RecommendationRunAdvancer $advancer */
-        $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
-
-        return $advancer;
-    }
-
-    private function systemOne(): StubSystemOneClient
-    {
-        /** @var StubSystemOneClient $client */
-        $client = self::getContainer()->get(StubSystemOneClient::class);
-
-        return $client;
-    }
-
-    private function chat(): StubChatClient
-    {
-        /** @var StubChatClient $client */
-        $client = self::getContainer()->get(StubChatClient::class);
-
-        return $client;
     }
 }

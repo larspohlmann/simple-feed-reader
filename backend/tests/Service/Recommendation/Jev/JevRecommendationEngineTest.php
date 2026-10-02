@@ -10,8 +10,6 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
-use App\Enum\RunStatus;
-use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -19,18 +17,16 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Jev\JevProfileStep;
 use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\TickPhases;
-use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
+use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
-use App\Tests\Support\StubChatClient;
 use App\Tests\Support\StubSystemOneClient;
 
 final class JevRecommendationEngineTest extends DbTestCase
 {
+    use DrivesRecommendationRuns;
     use SeedsUsers;
 
     private const string PROFILE = 'Likes Rust and homelab.';
@@ -146,16 +142,12 @@ final class JevRecommendationEngineTest extends DbTestCase
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->startAndDistil(TickDriver::Poll);
-        $runId = $this->activeRun()->requireId();
-        $connection = $this->entityManager->getConnection();
-        $this->systemOne()->queueNouls(static function (int $entryId) use ($connection, $runId): float {
-            $connection->executeStatement(
-                'UPDATE recommendation_run SET status = ? WHERE id = ?',
-                [RunStatus::Cancelled->value, $runId],
-            );
-
-            return 0.9;
+        $run = $this->activeRun();
+        $this->systemOne()->duringNextCall(function () use ($run): void {
+            $run->cancel(new \DateTimeImmutable('2026-10-02 09:00:00'));
+            $this->entityManager->flush();
         });
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.9);
 
         $this->advancer()->advance($this->owner);
 
@@ -398,53 +390,5 @@ final class JevRecommendationEngineTest extends DbTestCase
     private function itemCount(RecommendationRun $run): int
     {
         return $this->entityManager->getRepository(RecommendationItem::class)->count(['run' => $run->requireId()]);
-    }
-
-    private function runs(): RecommendationRunRepository
-    {
-        /** @var RecommendationRunRepository $runs */
-        $runs = $this->entityManager->getRepository(RecommendationRun::class);
-
-        return $runs;
-    }
-
-    private function starter(): RecommendationRunStarter
-    {
-        /** @var RecommendationRunStarter $starter */
-        $starter = self::getContainer()->get(RecommendationRunStarter::class);
-
-        return $starter;
-    }
-
-    private function advancer(): RecommendationRunAdvancer
-    {
-        /** @var RecommendationRunAdvancer $advancer */
-        $advancer = self::getContainer()->get(RecommendationRunAdvancer::class);
-
-        return $advancer;
-    }
-
-    private function settingsWriter(): RecommendationSettingsWriter
-    {
-        /** @var RecommendationSettingsWriter $writer */
-        $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
-
-        return $writer;
-    }
-
-    private function chat(): StubChatClient
-    {
-        /** @var StubChatClient $client */
-        $client = self::getContainer()->get(StubChatClient::class);
-
-        return $client;
-    }
-
-    private function systemOne(): StubSystemOneClient
-    {
-        /** @var StubSystemOneClient $client */
-        $client = self::getContainer()->get(StubSystemOneClient::class);
-
-        return $client;
     }
 }

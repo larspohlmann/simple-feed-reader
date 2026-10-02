@@ -11,7 +11,6 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
-use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
@@ -200,13 +199,6 @@ final class TickPhasesTest extends DbTestCase
         self::assertSame('failed', $report->status);
         self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertCount(1, $engine->advancedTicks);
-    }
-
-    private function tickOfKind(RecommendationRun $run, RecommendationEngineKind $kind): TickContext
-    {
-        $tick = $this->tick($run);
-
-        return new TickContext($run, $tick->connection, $kind, $tick->settings, $tick->driver);
     }
 
     private function runningRun(): RecommendationRun

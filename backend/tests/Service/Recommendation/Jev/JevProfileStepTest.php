@@ -72,13 +72,13 @@ final class JevProfileStepTest extends DbTestCase
     public function testARunCancelledMeanwhileIsNotFailedOverForWantOfAProfileConnection(): void
     {
         $run = $this->runningJevRun();
-        $this->cancelBehindTheEntityManager($run);
+        $this->cancel($run);
 
         try {
             $this->step($this->degradingDistiller())->advance($this->tick($run));
             self::fail('A cancelled run must stop the tick.');
         } catch (RecommendationRunCancelledException) {
-            self::assertSame(RunStatus::Running, $run->getStatus());
+            self::assertSame(RunStatus::Cancelled, $run->getStatus());
         }
     }
 
@@ -108,8 +108,7 @@ final class JevProfileStepTest extends DbTestCase
     private function degradingDistillerCancelling(RecommendationRun $run): ProfileDistillerInterface
     {
         return $this->distillerRecordingNoProfileThen(function () use ($run): void {
-            $this->entityManager->flush();
-            $this->cancelBehindTheEntityManager($run);
+            $this->cancel($run);
         });
     }
 
@@ -136,12 +135,10 @@ final class JevProfileStepTest extends DbTestCase
         };
     }
 
-    private function cancelBehindTheEntityManager(RecommendationRun $run): void
+    private function cancel(RecommendationRun $run): void
     {
-        $this->entityManager->getConnection()->executeStatement(
-            'UPDATE recommendation_run SET status = ? WHERE id = ?',
-            [RunStatus::Cancelled->value, $run->requireId()],
-        );
+        $run->cancel(new \DateTimeImmutable('2026-10-02 09:00:00'));
+        $this->entityManager->flush();
     }
 
     private function step(ProfileDistillerInterface $distiller): JevProfileStep

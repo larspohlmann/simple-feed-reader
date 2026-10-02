@@ -22,19 +22,6 @@ final class AiSettingsControllerTest extends ApiTestCase
 
     /** Must match framework.rate_limiter.ai_provider.limit in rate_limiter.yaml. */
     private const int PROVIDER_BUDGET = 30;
-    private const array LLM_CAPABILITIES = [
-        'reasons' => true,
-        'prompt' => true,
-        'profile' => 'own',
-        'tuningFields' => [
-            'contextWindow',
-            'batchSize',
-            'suppressReasoning',
-            'slowModel',
-            'maxBatchSize',
-            'batchConcurrency',
-        ],
-    ];
 
     protected function setUp(): void
     {
@@ -189,12 +176,12 @@ final class AiSettingsControllerTest extends ApiTestCase
         $payload = $this->payload($client);
         self::assertIsArray($payload['configs']);
         self::assertIsArray($payload['configs'][0]);
-        self::assertSame(self::LLM_CAPABILITIES, $payload['configs'][0]['capabilities']);
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $payload['configs'][0]['capabilities']);
 
         $client->request('GET', '/api/me');
         $me = $this->payload($client);
         self::assertIsArray($me['ai']);
-        self::assertSame(self::LLM_CAPABILITIES, $me['ai']['capabilities']);
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $me['ai']['capabilities']);
     }
 
     public function testAnAccountWithoutAnActiveConfigurationReportsNoCapabilities(): void
