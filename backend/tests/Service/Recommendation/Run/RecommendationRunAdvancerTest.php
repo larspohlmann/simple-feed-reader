@@ -2582,6 +2582,26 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($log->getFinishedAt());
     }
 
+    public function testABatchCallsStreamReportsReachItsLogRow(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+
+        $this->stubChatClient()->queueStreamedReply(new CallProgressModel(
+            json_encode([
+                'recommendations' => [['id' => $run->getCandidateBatches()[0][0], 'score' => 50, 'reason' => 'r']],
+            ], \JSON_THROW_ON_ERROR),
+            512,
+            'stop',
+        ));
+        $this->advancer()->advance($this->user);
+
+        $rows = $this->batchLogRowsOfLatestRun();
+        self::assertSame([CallVerdict::Usable], array_column($rows, 'verdict'));
+        self::assertSame(['stop'], array_column($rows, 'finishReason'));
+        self::assertSame([512], array_column($rows, 'wireBytes'));
+    }
+
     public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
     {
         $this->seedMultiBatchFixture();
