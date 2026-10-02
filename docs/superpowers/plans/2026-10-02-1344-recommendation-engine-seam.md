@@ -73,7 +73,7 @@
 - **D6 — `Recommendation/Pool/`** holds `RecommendationCandidateLoader`, `RecommendationHistoryLoader`, `ArticleLineModel` (was `PromptLineModel`), `CandidatePoolRequestModel`, `CandidatePoolSummaryModel`, `RecommendationHistoryModel`. `CandidatePoolSummaryModel` is neutral data (pool size and date span) that the neutral loader returns; only its docblock spoke of prompts. `RecommendationPickModel` goes to `Ai/Llm/Prompt/Model/`: only the parsers, the salvager, the batch wave and the consolidation resolver use it.
 - **D7 — `RecommendationWinnerRanker` stays in `Recommendation` unchanged**, as the brief says. Flag: its `cutForConsolidation()` is named for, and used only by, the LLM consolidation resolver; `ranked()` is neutral. Not changed here (a no-behaviour-change PR); raise with the planner if a reviewer objects.
 - **D8 — `RecommendationEtaEstimator` and `PhaseDurationsModel` stay in `Recommendation`.** Flag: they encode the distill/batch/consolidate shape (`TAIL_PHASE_COUNT = 2`, "runs that carry all three phases"), as `RecommendationRun`'s progress model does; the entity is shared persistence and out of scope, and the estimator only mirrors it. #1345's Jev runs (batch phase only) will get no ETA from `PhaseDurationsModel::fromCompletedRunSpans()` as written; noted for #1345.
-- **D9 — Registration follows `FeedBodyParser`:** `#[AutoconfigureTag('app.recommendation_engine')]` on the interface, `#[AsTaggedItem(index: RecommendationEngineKind::Llm->value)]` on the engine, `#[AutowireLocator('app.recommendation_engine')]` on the resolver. The tag string appears twice, like `app.feed_body_parser`. **Assumption (verify):** `AsTaggedItem`'s index keys an autoconfigured tag's locator, and `RecommendationEngineKind::Llm->value` is a valid attribute argument (PHP ≥ 8.2 allows enum property fetch in constant expressions). `RecommendationEngineWiringTest` proves both.
+- **D9 — Registration is tag-based like `FeedBodyParser`, but keyed with `AsTaggedItem(index: …)`** (`FeedBodyParser` keys its locator with `defaultIndexMethod`, which an engine does not need): `#[AutoconfigureTag('app.recommendation_engine')]` on the interface, `#[AsTaggedItem(index: RecommendationEngineKind::Llm->value)]` on the engine, `#[AutowireLocator('app.recommendation_engine')]` on the resolver. The tag string appears twice, like `app.feed_body_parser`. **Assumption (verify):** `AsTaggedItem`'s index keys an autoconfigured tag's locator, and `RecommendationEngineKind::Llm->value` is a valid attribute argument (PHP ≥ 8.2 allows enum property fetch in constant expressions). `RecommendationEngineWiringTest` proves both.
 - **D10 — Task 2 puts `LlmRecommendationEngine` in `Recommendation/Engine/RecommendationEngine/`** (the interface folder, as `InterfacePlacement` demands for a same-module implementation); Task 3 moves it to `Ai/Llm/`.
 - **D11 — `TickPhases` keeps the provider-failure envelope** (429 → deferral, transport failure → strike): the exceptions live in `Ai/Exception` and mean the same for any engine that calls a provider. Only the phase choice moves into the engine.
 - **D12 — Wire shape.** `capabilities: {"reasons": bool, "tuningFields": [string]}` on every configuration of `/api/me/ai` (and its write answers), and in `/api/me`'s `ai` block; `null` there when no connection is active. Field values are the JSON names the settings already use: `contextWindow`, `batchSize` (`RecommendationSettingsJson`), `suppressReasoning`, `slowModel`, `maxBatchSize`, `batchConcurrency` (`AiSettingsJson`).
@@ -611,7 +611,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Engine\Model;
 
-/** A setting only some engines read; the value is that setting's field name in the settings responses. */
 enum RecommendationTuningField: string
 {
     case ContextWindow = 'contextWindow';
@@ -1465,7 +1464,7 @@ Copy each file to `$TMPDIR` before breaking it.
 3. Engine: remove `#[AsTaggedItem(…)]` → `RecommendationEngineWiringTest` FAILS with `No recommendation engine is wired for "llm".`
 4. Engine: `capabilities()` returns `new RecommendationEngineCapabilitiesModel(false, …)` → the capabilities test FAILS; then `cases()` → `[]` → FAILS.
 5. Engine: `packBatches()` returns `[array_map(static fn ($line) => $line->entryId, $candidates)]` → the packing test FAILS.
-6. Engine: swap the `distillPending` and `isConsolidationPhase` arms → `php bin/phpunit tests/Service/Recommendation/Run/RecommendationRunAdvancerTest.php` FAILS (the existing suite pins the phase order).
+6. Engine: make the `distillPending` arm return `$this->batch` (swapping it with the `isConsolidationPhase` arm cannot fail: the flags are mutually exclusive) → `php bin/phpunit tests/Service/Recommendation/Run/RecommendationRunAdvancerTest.php` FAILS (the existing suite pins the phase order).
 7. `TickPhases`: delete the `isRetryDeferredAt` guard → `testARunWaitingOutARateLimit…` FAILS.
 8. `TickPhases`: delete the `ProviderRateLimitedException` catch → `testARateLimitedEngineDefers…` errors with the exception.
 9. `TickPhases`: delete the `$this->transportFailures->record(…)` line → `testAnUnreachableProviderStrikes…` FAILS (`0` vs `1`).

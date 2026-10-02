@@ -4,23 +4,24 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Prompt\Model\CandidatePoolRequestModel;
 use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
-use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
-/** Freezes a pending run's candidate pool into batches without a provider call; an empty pool completes at once. */
+/**
+ * Freezes a pending run's candidate pool into its engine's batches without a provider call; an empty pool completes
+ * at once.
+ */
 final readonly class SnapshotPhase
 {
     public function __construct(
         private RecommendationCandidateLoader $candidateLoader,
-        private RecommendationHistoryLoader $historyLoader,
-        private RecommendationPromptBuilder $promptBuilder,
+        private RecommendationEngineResolver $engines,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
@@ -39,8 +40,7 @@ final readonly class SnapshotPhase
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        $history = $this->historyLoader->load($tick->userId(), $tick->settings);
-        $run->snapshot($this->promptBuilder->packBatches($candidates, $history, $tick->settings));
+        $run->snapshot($this->engines->engineFor($tick->connection)->packBatches($candidates, $tick));
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($run);

@@ -4,27 +4,22 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\ProviderPhase\BatchPhase;
-use App\Service\Recommendation\Run\ProviderPhase\ConsolidationPhase;
-use App\Service\Recommendation\Run\ProviderPhase\DistillationPhase;
-use App\Service\Recommendation\Run\ProviderPhase\ProviderPhaseInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
 {
     public function __construct(
         private SnapshotPhase $snapshot,
-        private DistillationPhase $distillation,
-        private BatchPhase $batch,
-        private ConsolidationPhase $consolidation,
+        private RecommendationEngineResolver $engines,
         private RecommendationRunDeferral $deferral,
         private RecommendationTransportFailureRecorder $transportFailures,
         private ClockInterface $clock,
@@ -42,26 +37,15 @@ final readonly class TickPhases
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        return $this->advanceWithinTheEnvelope($this->providerPhaseFor($run), $tick);
-    }
-
-    private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface
-    {
-        $progress = $run->getProgress();
-
-        return match (true) {
-            $progress->distillPending => $this->distillation,
-            $progress->isConsolidationPhase => $this->consolidation,
-            default => $this->batch,
-        };
+        return $this->advanceWithinTheEnvelope($this->engines->engineFor($tick->connection), $tick);
     }
 
     private function advanceWithinTheEnvelope(
-        ProviderPhaseInterface $phase,
+        RecommendationEngineInterface $engine,
         TickContext $tick,
     ): RecommendationRunReportModel {
         try {
-            return $phase->advance($tick);
+            return $engine->advance($tick);
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {

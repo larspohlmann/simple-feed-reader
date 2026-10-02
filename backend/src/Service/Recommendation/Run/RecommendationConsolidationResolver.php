@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
@@ -48,7 +49,7 @@ final readonly class RecommendationConsolidationResolver
             $tick->settings,
             $run->getProfileText(),
         );
-        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, $tick->reasoning());
+        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, Reasoning::preferredBy($tick->connection));
         $pool = $this->ranker->cutForConsolidation($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
