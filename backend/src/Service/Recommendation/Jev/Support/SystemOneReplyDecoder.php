@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev\Support;
+
+use App\Service\Ai\Model\ProviderCallReceiptModel;
+use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Ai\Support\ReportedCost;
+use App\Service\Recommendation\Jev\Model\SystemOneReplyModel;
+
+/**
+ * Never throws: a body that is not the documented shape decodes to no Nouls, which the parser rejects as unusable.
+ * The request id is TypeSafe's header when sent, else the body's `id` (OpenRouter's generation id).
+ */
+final class SystemOneReplyDecoder
+{
+    public static function decode(string $body, ?string $requestIdHeader): SystemOneReplyModel
+    {
+        $root = json_decode($body, true);
+        $root = \is_array($root) ? $root : [];
+
+        return new SystemOneReplyModel(
+            $body,
+            self::noulsIn($root['answers'] ?? null),
+            new ProviderCallReceiptModel(
+                $requestIdHeader ?? self::textIn($root['id'] ?? null),
+                self::textIn($root['model'] ?? null),
+                self::usageIn($root['usage'] ?? null),
+            ),
+        );
+    }
+
+    /** @return array<string, float> */
+    private static function noulsIn(mixed $answers): array
+    {
+        if (!\is_array($answers)) {
+            return [];
+        }
+
+        $nouls = [];
+        foreach ($answers as $questionId => $answer) {
+            $noul = \is_array($answer) ? ($answer['noul'] ?? null) : null;
+            if (\is_string($questionId) && (\is_float($noul) || \is_int($noul))) {
+                $nouls[$questionId] = (float) $noul;
+            }
+        }
+
+        return $nouls;
+    }
+
+    /** TypeSafe documents `input_tokens`/`output_tokens`; an OpenAI-style gateway may say prompt/completion. */
+    private static function usageIn(mixed $usage): ?ProviderCallUsageModel
+    {
+        if (!\is_array($usage)) {
+            return null;
+        }
+
+        return new ProviderCallUsageModel(
+            promptTokens: self::countIn($usage, 'input_tokens', 'prompt_tokens'),
+            completionTokens: self::countIn($usage, 'output_tokens', 'completion_tokens'),
+            reasoningTokens: 0,
+            cachedTokens: 0,
+            costNanoCredits: ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
+        );
+    }
+
+    /**
+     * The first of the keys the reply carries; absent, non-integer or negative reads 0.
+     *
+     * @param array<mixed> $usage
+     */
+    private static function countIn(array $usage, string $documentedKey, string $gatewayKey): int
+    {
+        $value = $usage[$documentedKey] ?? $usage[$gatewayKey] ?? null;
+
+        return \is_int($value) && $value >= 0 ? $value : 0;
+    }
+
+    private static function textIn(mixed $value): ?string
+    {
+        return \is_string($value) && '' !== $value ? $value : null;
+    }
+
+    private function __construct()
+    {
+    }
+}

@@ -21,6 +21,13 @@ services:
     App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
 
+    App\Tests\Support\StubSystemOneClient:
+        autowire: true
+
+    # Every test talks to StubSystemOneClient, never to a real System One endpoint.
+    App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface:
+        alias: App\Tests\Support\StubSystemOneClient
+
     # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
