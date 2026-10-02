@@ -17,12 +17,19 @@ use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
 {
+    /**
+     * A run belongs to the engine whose batches it froze. Failed, not cancelled: the error says why, and switching back
+     * to that connection makes the run resumable where it stopped.
+     */
+    public const string ENGINE_SWITCH = 'This run was started with a different recommendation engine than the active '
+        . 'AI connection uses. Start a new run, or switch back to that connection to resume this one.';
+
     public function __construct(
         private SnapshotPhase $snapshot,
         private RecommendationEngineResolver $engines,
         private RecommendationRunDeferral $deferral,
         private RecommendationTransportFailureRecorder $transportFailures,
-        private RecommendationEngineSwitchFailure $engineSwitch,
+        private RecommendationRunFailure $runFailure,
         private ClockInterface $clock,
     ) {
     }
@@ -35,7 +42,7 @@ final readonly class TickPhases
         }
 
         if ($run->getEngineKind() !== $tick->engineKind) {
-            return $this->engineSwitch->fail($run);
+            return $this->runFailure->fail($run, self::ENGINE_SWITCH);
         }
 
         if ($run->isRetryDeferredAt($this->clock->now())) {

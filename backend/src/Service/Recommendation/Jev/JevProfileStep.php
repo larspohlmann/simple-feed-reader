@@ -8,9 +8,9 @@ use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Clock\ClockInterface;
 
 /**
  * A Jev run's profile: distilled through the account's profile connection, else the last stored one, else the run
@@ -26,9 +26,9 @@ final readonly class JevProfileStep
 
     public function __construct(
         private ProfileDistillerInterface $profileDistiller,
+        private RecommendationRunFailure $runFailure,
         private RecommendationTickCheckpoint $checkpoint,
         private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
     ) {
     }
 
@@ -43,7 +43,7 @@ final readonly class JevProfileStep
         $run = $tick->run;
         $profileTick = $tick->profileTick();
         if (null === $profileTick) {
-            return $this->fail($run, self::NO_PROFILE_CONNECTION);
+            return $this->runFailure->fail($run, self::NO_PROFILE_CONNECTION);
         }
 
         $report = $this->profileDistiller->advance($profileTick);
@@ -60,20 +60,11 @@ final readonly class JevProfileStep
         $run = $tick->run;
         $stored = $tick->settings->profileText;
         if (null === $stored) {
-            return $this->fail($run, self::NO_PROFILE);
+            return $this->runFailure->fail($run, self::NO_PROFILE);
         }
 
         $this->checkpoint->guard($run);
         $run->recordProfile($stored);
-        $this->entityManager->flush();
-
-        return RecommendationRunReportModel::fromRun($run);
-    }
-
-    private function fail(RecommendationRun $run, string $message): RecommendationRunReportModel
-    {
-        $this->checkpoint->guard($run);
-        $run->fail($message, $this->clock->now());
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($run);

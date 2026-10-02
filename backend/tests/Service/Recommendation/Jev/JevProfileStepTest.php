@@ -14,6 +14,7 @@ use App\Service\Recommendation\Jev\JevProfileStep;
 use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
@@ -150,9 +151,9 @@ final class JevProfileStepTest extends DbTestCase
 
         return new JevProfileStep(
             $distiller,
+            new RecommendationRunFailure($checkpoint, $this->entityManager, new MockClock('2026-10-02 09:00:00')),
             $checkpoint,
             $this->entityManager,
-            new MockClock('2026-10-02 09:00:00'),
         );
     }
 

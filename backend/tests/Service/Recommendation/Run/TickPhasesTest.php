@@ -12,8 +12,8 @@ use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationEngineSwitchFailure;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
 use App\Service\Recommendation\Run\SnapshotPhase;
@@ -148,7 +148,7 @@ final class TickPhasesTest extends DbTestCase
         $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
 
         self::assertSame('failed', $report->status);
-        self::assertSame(RecommendationEngineSwitchFailure::MESSAGE, $run->getError());
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertSame([], $engine->advancedTicks);
     }
 
@@ -198,7 +198,7 @@ final class TickPhasesTest extends DbTestCase
 
         $report = $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
         self::assertSame('failed', $report->status);
-        self::assertSame(RecommendationEngineSwitchFailure::MESSAGE, $run->getError());
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertCount(1, $engine->advancedTicks);
     }
 
@@ -231,7 +231,7 @@ final class TickPhasesTest extends DbTestCase
             $resolver,
             new RecommendationRunDeferral($checkpoint, $this->entityManager, $this->clock),
             new RecommendationTransportFailureRecorder($checkpoint, $this->entityManager, $this->clock),
-            new RecommendationEngineSwitchFailure($checkpoint, $this->entityManager, $this->clock),
+            new RecommendationRunFailure($checkpoint, $this->entityManager, $this->clock),
             $this->clock,
         );
     }

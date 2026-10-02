@@ -19,9 +19,9 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Jev\JevProfileStep;
 use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\RecommendationEngineSwitchFailure;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
+use App\Service\Recommendation\Run\TickPhases;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -259,7 +259,7 @@ final class JevRecommendationEngineTest extends DbTestCase
 
         $run = $this->latestRun();
         self::assertSame('failed', $run->getStatus()->value);
-        self::assertSame(RecommendationEngineSwitchFailure::MESSAGE, $run->getError());
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertSame([], $this->systemOne()->requests());
     }
 
