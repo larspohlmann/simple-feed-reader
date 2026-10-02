@@ -17,10 +17,10 @@ use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\Completio
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use App\Tests\Support\NullProviderCallHeartbeat;
@@ -1030,14 +1030,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return $decoded;
     }
 
-    /** @return CompletionStreamObserverInterface&object{reports: list<CompletionStreamProgressModel>} */
+    /** @return CompletionStreamObserverInterface&object{reports: list<CallProgressModel>} */
     private function recordingObserver(): CompletionStreamObserverInterface
     {
         return new class implements CompletionStreamObserverInterface {
-            /** @var list<CompletionStreamProgressModel> */
+            /** @var list<CallProgressModel> */
             public array $reports = [];
 
-            public function streamProgressed(CompletionStreamProgressModel $progress): void
+            public function streamProgressed(CallProgressModel $progress): void
             {
                 $this->reports[] = $progress;
             }

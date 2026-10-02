@@ -23,7 +23,7 @@ final readonly class EffectiveRecommendationSettingsModel
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours,
         public ?string $profileText,
-        public bool $showReasons,
+        public bool $showScoreAndReasons,
     ) {
     }
 }

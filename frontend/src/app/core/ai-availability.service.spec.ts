@@ -60,8 +60,12 @@ describe('AiAvailabilityService', () => {
 
   it("adopts the active connection's capabilities", () => {
     const ai = service();
-    ai.adopt(user(true, 'gpt-4o', { reasons: true, tuningFields: ['slowModel'] }));
-    expect(ai.capabilities()).toEqual({ reasons: true, tuningFields: ['slowModel'] });
+    ai.adopt(user(true, 'gpt-4o', { reasons: true, prompt: true, tuningFields: ['slowModel'] }));
+    expect(ai.capabilities()).toEqual({
+      reasons: true,
+      prompt: true,
+      tuningFields: ['slowModel'],
+    });
   });
 
   it('drops the capabilities with the signed-out account', () => {

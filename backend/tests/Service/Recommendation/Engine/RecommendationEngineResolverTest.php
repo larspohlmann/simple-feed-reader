@@ -6,7 +6,8 @@ namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
+use App\Enum\RecommendationEngineKind;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -27,11 +28,12 @@ final class RecommendationEngineResolverTest extends TestCase
         self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('typesafe/jev-router')));
     }
 
-    public function testTheLlmKindWritesReasonsAndReadsEveryTuningFieldInTheirOrder(): void
+    public function testTheLlmKindWritesReasonsSendsAPromptAndReadsEveryTuningFieldInTheirOrder(): void
     {
-        $capabilities = RecommendationEngineKind::Llm->capabilities();
+        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
 
         self::assertTrue($capabilities->writesReasons);
+        self::assertTrue($capabilities->sendsPrompt);
         self::assertSame(
             [
                 RecommendationTuningField::ContextWindow,
@@ -53,8 +55,20 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver($locator);
 
         self::assertEquals(
-            RecommendationEngineKind::Llm->capabilities(),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
             $resolver->capabilitiesFor($this->connection('gpt-4o-mini')),
+        );
+    }
+
+    /** Reads as the LLM, the kind a connection without a model resolves to: the unconfigured payload stays as it was. */
+    public function testAnAccountWithoutAnActiveConnectionReadsAsTheLlm(): void
+    {
+        $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
+        $account = new User('no-connection@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
+
+        self::assertEquals(
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
+            $resolver->capabilitiesForAccount($account),
         );
     }
 
@@ -63,7 +77,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $resolver = new RecommendationEngineResolver(new ServiceLocator(['llm' => static fn () => $engine]));
 
-        self::assertSame($engine, $resolver->engineFor($this->connection('gpt-4o-mini')));
+        self::assertSame($engine, $resolver->engineOf(RecommendationEngineKind::Llm));
     }
 
     public function testAKindWithoutAnEngineIsAWiringError(): void
@@ -71,7 +85,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
 
         try {
-            $resolver->engineFor($this->connection('gpt-4o-mini'));
+            $resolver->engineOf(RecommendationEngineKind::Llm);
             self::fail('A missing engine must not resolve.');
         } catch (\LogicException $exception) {
             self::assertSame('No recommendation engine is wired for "llm".', $exception->getMessage());

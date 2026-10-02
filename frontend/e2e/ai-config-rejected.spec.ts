@@ -30,6 +30,7 @@ const EXISTING = {
   batchConcurrency: 1,
   capabilities: {
     reasons: true,
+    prompt: true,
     tuningFields: [
       'contextWindow',
       'batchSize',

@@ -12,7 +12,8 @@ final class RecommendationFeedJson
 {
     /**
      * A page of the for-you feed. `runId` and `runGeneratedAt` ride on every entry for the run divider; the reason and
-     * the score only when the reader asked why, and always together (FeedAnnotationVisibilityModel).
+     * the score only when the reader turned on "show score and reasons", and always together
+     * (FeedAnnotationVisibilityModel).
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
@@ -37,7 +38,7 @@ final class RecommendationFeedJson
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),
             ];
-            if (!$visibility->showExplanation) {
+            if (!$visibility->showScoreAndReasons) {
                 return $entry;
             }
 

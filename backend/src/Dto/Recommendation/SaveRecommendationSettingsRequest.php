@@ -57,7 +57,7 @@ final readonly class SaveRecommendationSettingsRequest
         public bool $debugEnabled,
         #[Assert\Choice(choices: [null, 1, 3, 6, 12, 24])]
         public ?int $autoGenerateIntervalHours,
-        public bool $showReasons = false,
+        public bool $showScoreAndReasons = false,
     ) {
     }
 
@@ -71,7 +71,7 @@ final readonly class SaveRecommendationSettingsRequest
             batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
-            showReasons: $this->showReasons,
+            showScoreAndReasons: $this->showScoreAndReasons,
         );
     }
 }

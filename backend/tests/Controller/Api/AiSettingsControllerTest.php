@@ -31,6 +31,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     private const int PROVIDER_BUDGET = 30;
     private const array LLM_CAPABILITIES = [
         'reasons' => true,
+        'prompt' => true,
         'tuningFields' => [
             'contextWindow',
             'batchSize',

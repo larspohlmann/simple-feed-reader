@@ -17,6 +17,7 @@ use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -137,14 +138,14 @@ final class EntryControllerTest extends WebTestCase
         (new RecommendationRunFixtures($entityManager, $cipher))->debugEnabledSettings($user);
     }
 
-    private function seedShowReasonsSettings(User $user): void
+    private function seedShowScoreAndReasonsSettings(User $user): void
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        (new RecommendationRunFixtures($entityManager, $cipher))->showReasonsEnabledSettings($user);
+        (new RecommendationRunFixtures($entityManager, $cipher))->showScoreAndReasonsEnabledSettings($user);
     }
 
     private function seedSavedSearchMembership(User $user, string $term, Entry $entry): SavedSearch
@@ -540,7 +541,7 @@ final class EntryControllerTest extends WebTestCase
         $entry->setContentHtml('<p>For-you body text.</p>');
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 77));
@@ -579,7 +580,7 @@ final class EntryControllerTest extends WebTestCase
             ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
@@ -620,7 +621,7 @@ final class EntryControllerTest extends WebTestCase
         // Only the first entry is recommended: the second proves the action
         // stays inside the for-you list instead of clearing the whole feed.
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entries[0], 1, 'reason', 50));
@@ -673,7 +674,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
@@ -692,7 +693,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testForYouViewIncludesTheReasonAndItsScoreWhenShowReasonsIsEnabled(): void
+    public function testForYouViewIncludesTheReasonAndItsScoreWhenShowScoreAndReasonsIsEnabled(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
@@ -705,11 +706,11 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
-        $this->seedShowReasonsSettings($user);
+        $this->seedShowScoreAndReasonsSettings($user);
         $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
@@ -719,7 +720,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        // showReasons on, debug off: the reason and the score beside it both show, one explanation, one switch.
+        // showScoreAndReasons on, debug off: the reason and the score beside it both show, one explanation, one switch.
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
         self::assertSame(42, $first['recommendationScore']);
     }
@@ -737,7 +738,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertCount(3, $entries);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
@@ -775,7 +776,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'reason'));

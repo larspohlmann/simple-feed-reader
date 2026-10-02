@@ -15,13 +15,14 @@ final readonly class RecommendationCapabilitiesJson
     {
     }
 
-    /** @return array{reasons: bool, tuningFields: list<string>} */
+    /** @return array{reasons: bool, prompt: bool, tuningFields: list<string>} */
     public function of(AiProviderSettings $connection): array
     {
         $capabilities = $this->engines->capabilitiesFor($connection);
 
         return [
             'reasons' => $capabilities->writesReasons,
+            'prompt' => $capabilities->sendsPrompt,
             'tuningFields' => array_map(
                 static fn (RecommendationTuningField $field): string => $field->value,
                 $capabilities->tuningFields,

@@ -89,7 +89,7 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   autoGenerateIntervalHours: null,
   workerAlive: true,
   profileText: null,
-  showReasons: false,
+  showScoreAndReasons: false,
 };
 
 function createStub(): AiSettingsStub {
@@ -438,7 +438,10 @@ describe('AiSectionComponent', () => {
       config({
         id: 7,
         slowModel: false,
-        capabilities: { reasons: false, tuningFields: ['slowModel', 'batchConcurrency'] },
+        capabilities: {
+          ...NO_RECOMMENDATION_CAPABILITIES,
+          tuningFields: ['slowModel', 'batchConcurrency'],
+        },
       }),
     ]);
     const setSlowModel = jest.spyOn(ai, 'setSlowModel').mockImplementation(() => undefined);

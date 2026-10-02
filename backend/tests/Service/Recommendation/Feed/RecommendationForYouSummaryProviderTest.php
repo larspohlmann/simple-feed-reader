@@ -10,6 +10,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
@@ -61,7 +62,7 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
     private function seedRun(RunStatus $status, string $completedAt): RecommendationRun
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         if ($status === RunStatus::Completed) {
             $run->complete(new \DateTimeImmutable($completedAt));

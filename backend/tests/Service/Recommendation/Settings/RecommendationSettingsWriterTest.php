@@ -88,9 +88,9 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
     /**
      * save() rebuilds the values twice, to normalise the guidance and to re-attach the stored profile: both rebuilds
-     * must carry showReasons, or the toggle silently resets to its default.
+     * must carry showScoreAndReasons, or the toggle silently resets to its default.
      */
-    public function testSavingSettingsPersistsShowReasons(): void
+    public function testSavingSettingsPersistsShowScoreAndReasons(): void
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
@@ -99,12 +99,12 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
-            showReasons: true,
+            showScoreAndReasons: true,
         ));
 
         $reloaded = $this->recommendationSettings->findForUser($this->user);
         self::assertNotNull($reloaded);
-        self::assertTrue($reloaded->values()->showReasons);
+        self::assertTrue($reloaded->values()->showScoreAndReasons);
     }
 
     /**

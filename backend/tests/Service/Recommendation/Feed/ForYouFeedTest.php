@@ -14,6 +14,7 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
@@ -48,7 +49,7 @@ final class ForYouFeedTest extends DbTestCase
         );
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $this->entityManager->persist($run);
 
@@ -59,7 +60,7 @@ final class ForYouFeedTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    public function testOmitsBothAnnotationsWhenShowReasonsIsOff(): void
+    public function testOmitsBothAnnotationsWhenShowScoreAndReasonsIsOff(): void
     {
         $first = $this->firstEntry();
 
@@ -67,9 +68,9 @@ final class ForYouFeedTest extends DbTestCase
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testShowsTheReasonAndItsScoreWhenShowReasonsIsOn(): void
+    public function testShowsTheReasonAndItsScoreWhenShowScoreAndReasonsIsOn(): void
     {
-        $this->fixtures->showReasonsEnabledSettings($this->user);
+        $this->fixtures->showScoreAndReasonsEnabledSettings($this->user);
 
         $first = $this->firstEntry();
 
@@ -90,9 +91,9 @@ final class ForYouFeedTest extends DbTestCase
 
     /** Debug does not take anything away either: with reasons on, the pair is
      *  shown whether or not the reader is also collecting call logs. */
-    public function testDebugDoesNotChangeWhatShowReasonsReveals(): void
+    public function testDebugDoesNotChangeWhatShowScoreAndReasonsReveals(): void
     {
-        $this->fixtures->showReasonsAndDebugEnabledSettings($this->user);
+        $this->fixtures->showScoreAndReasonsAndDebugEnabledSettings($this->user);
 
         $first = $this->firstEntry();
 

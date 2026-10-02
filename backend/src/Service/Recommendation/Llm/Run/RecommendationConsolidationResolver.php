@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Run;
 
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
@@ -14,11 +15,12 @@ use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Llm\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Llm\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Recommendation\Llm\Run\Support\ConsolidationShortlist;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
@@ -35,7 +37,7 @@ final readonly class RecommendationConsolidationResolver
         private RecommendationCandidateLoader $candidateLoader,
         private RecommendationHistoryLoader $historyLoader,
         private RecommendationPromptBuilder $promptBuilder,
-        private RecommendationCallRecorder $callRecorder,
+        private CompletionCallRecorder $callRecorder,
         private RecommendationCompletionRequestFactory $requestFactory,
         private RecommendationProviderCall $providerCall,
         private RecommendationConsolidationParser $consolidationParser,
@@ -52,7 +54,7 @@ final readonly class RecommendationConsolidationResolver
             $run->getProfileText(),
         );
         $inputSize = $this->promptBuilder->consolidationInputSize($prompt, Reasoning::preferredBy($tick->connection));
-        $pool = $this->ranker->cutForConsolidation($this->ranker->ranked($run->getWinners()), $inputSize);
+        $pool = ConsolidationShortlist::of($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
 
@@ -80,7 +82,9 @@ final readonly class RecommendationConsolidationResolver
 
             return ConsolidationOutcomeModel::unusable(
                 $content,
-                $recordedCall->providerCutTheAnswer() ? $this->salvagedRankingOrPool($content, $pool) : $pool,
+                CompletionFinishReason::cutByProvider($recordedCall->finishReason())
+                    ? $this->salvagedRankingOrPool($content, $pool)
+                    : $pool,
             );
         }
 

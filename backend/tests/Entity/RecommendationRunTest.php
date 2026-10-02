@@ -7,6 +7,7 @@ namespace App\Tests\Entity;
 use App\Entity\Exception\InvalidRunStatusException;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -26,11 +27,22 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(0, $progress->nextBatchIndex);
     }
 
+    /** Runs from before the column hold null and ran on the only engine there was. */
+    public function testARunWithoutARecordedKindReadsAsTheLlm(): void
+    {
+        $run = new RecommendationRun(
+            new User('legacy-kind@example.test', new \DateTimeImmutable('2026-10-02T09:00:00Z')),
+            new \DateTimeImmutable('2026-10-02T09:00:00Z'),
+        );
+
+        self::assertSame(RecommendationEngineKind::Llm, $run->getEngineKind());
+    }
+
     public function testSnapshotMovesPendingToRunningAndFixesTheBatchPlan(): void
     {
         $run = $this->makeRun();
 
-        $run->snapshot([[1, 2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1, 2], [3]]);
 
         self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
@@ -40,7 +52,7 @@ final class RecommendationRunTest extends TestCase
     public function testASingleBatchPlanTotalsThreeStages(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1, 2, 3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1, 2, 3]]);
 
         self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
     }
@@ -48,7 +60,7 @@ final class RecommendationRunTest extends TestCase
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1, 2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1, 2], [3]]);
         $run->getRunningCallAttempts()->recordInvalidReply('garbage');
 
         $run->recordBatchWinners([['id' => 2, 'score' => 50, 'reason' => 'fresh']]);
@@ -63,7 +75,7 @@ final class RecommendationRunTest extends TestCase
     public function testAWinnerRowStoredWithoutAScoreReadsBackAsZero(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1, 2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1, 2]]);
 
         (new \ReflectionProperty(RecommendationRun::class, 'batchWinners'))
             ->setValue($run, [[['id' => 1, 'reason' => 'written before scores existed']]]);
@@ -77,7 +89,7 @@ final class RecommendationRunTest extends TestCase
     public function testThirdInvalidReplyExhaustsAttempts(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('a');
         $run->getRunningCallAttempts()->recordInvalidReply('b');
         self::assertFalse($run->getProgress()->attemptsExhausted);
@@ -91,7 +103,7 @@ final class RecommendationRunTest extends TestCase
     public function testAllBatchCallsDoneIsFalseUntilEveryBatchReportedWinners(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
 
         self::assertFalse($run->getProgress()->allBatchCallsDone);
 
@@ -105,7 +117,7 @@ final class RecommendationRunTest extends TestCase
     public function testRecordBatchWinnersResetsAttemptsToExactlyZero(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $run->getRunningCallAttempts()->recordInvalidReply('a');
         $run->getRunningCallAttempts()->recordInvalidReply('b');
 
@@ -121,7 +133,7 @@ final class RecommendationRunTest extends TestCase
     public function testResumeResetsAttemptsToExactlyZero(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordInvalidReply('a');
         $run->getRunningCallAttempts()->recordInvalidReply('b');
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
@@ -143,7 +155,7 @@ final class RecommendationRunTest extends TestCase
     public function testThirdTransportFailureExhaustsTheSeparateCeiling(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
@@ -156,7 +168,7 @@ final class RecommendationRunTest extends TestCase
     public function testTransportFailuresAndAttemptsCountIndependently(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         $run->getRunningCallAttempts()->recordInvalidReply('garbage');
         $run->getRunningCallAttempts()->recordInvalidReply('garbage');
@@ -169,7 +181,7 @@ final class RecommendationRunTest extends TestCase
     public function testRecordBatchWinnersResetsTransportFailuresToExactlyZero(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
 
@@ -185,7 +197,7 @@ final class RecommendationRunTest extends TestCase
     public function testCompleteClearsExhaustedTransportRetries(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
@@ -200,7 +212,7 @@ final class RecommendationRunTest extends TestCase
     public function testResumeResetsTransportFailuresToExactlyZero(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
@@ -217,7 +229,7 @@ final class RecommendationRunTest extends TestCase
     public function testResumeIsOnlyLegalFromFailed(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         $run->resume();
@@ -233,7 +245,7 @@ final class RecommendationRunTest extends TestCase
     public function testCompleteStampsAndFillsProgress(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $when = new \DateTimeImmutable('2026-08-07T10:00:00Z');
 
         $run->complete($when);
@@ -246,10 +258,10 @@ final class RecommendationRunTest extends TestCase
     public function testSnapshotAgainAfterAlreadyRunningThrows(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         $this->expectException(\LogicException::class);
-        $run->snapshot([[2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[2]]);
     }
 
     public function testCompleteBeforeSnapshotThrows(): void
@@ -363,7 +375,7 @@ final class RecommendationRunTest extends TestCase
     public function testCancelAfterAlreadyCompletedThrows(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         $this->expectException(\LogicException::class);
@@ -518,7 +530,7 @@ final class RecommendationRunTest extends TestCase
     public function testRecordBatchWinnersClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1], [2]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $run->getRunningThrottle()->reduceConcurrency(8);
         $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
@@ -543,7 +555,7 @@ final class RecommendationRunTest extends TestCase
     public function testCompleteClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningThrottle()->reduceConcurrency(8);
         $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
@@ -556,7 +568,7 @@ final class RecommendationRunTest extends TestCase
     public function testResumeClearsBothTheDeferralAndTheReducedCap(): void
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->getRunningThrottle()->reduceConcurrency(8);
         $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
@@ -577,7 +589,7 @@ final class RecommendationRunTest extends TestCase
     private function runInRunningState(): RecommendationRun
     {
         $run = $this->makeRun();
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         return $run;
     }

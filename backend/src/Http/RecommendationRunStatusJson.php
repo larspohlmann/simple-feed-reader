@@ -26,8 +26,8 @@ final class RecommendationRunStatusJson
             'background' => $report->background,
             'waitingForLock' => $report->waitingForLock,
             'streamedChars' => $report->streamedChars,
-            'firstBatchStarted' => $report->firstBatchStarted,
-            'elapsedSeconds' => $report->elapsedSecondsAt($status->observedAt),
+            'firstBatchStarted' => $report->start->firstBatchStarted,
+            'elapsedSeconds' => $report->start->elapsedSecondsAt($status->observedAt),
             'etaSeconds' => $status->etaSeconds,
             'forYou' => [
                 // The count of unread surviving picks; the field name

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Model;
+namespace App\Service\Recommendation\Run\Model;
 
 use App\Enum\CallPhase;
 

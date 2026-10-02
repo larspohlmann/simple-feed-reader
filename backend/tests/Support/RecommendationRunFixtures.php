@@ -191,21 +191,21 @@ final readonly class RecommendationRunFixtures
     }
 
     /** Reasons on, debug off: proves the reason and its score ride on the reader's own preference alone. */
-    public function showReasonsEnabledSettings(User $user): RecommendationSettings
+    public function showScoreAndReasonsEnabledSettings(User $user): RecommendationSettings
     {
-        return $this->recommendationSettings($user, false, showReasons: true);
+        return $this->recommendationSettings($user, false, showScoreAndReasons: true);
     }
 
-    /** Both on: the flags are independent, so the pair is exercised to prove debug takes nothing from showReasons. */
-    public function showReasonsAndDebugEnabledSettings(User $user): RecommendationSettings
+    /** Both on: the flags are independent, so the pair is exercised to prove debug takes nothing from showScoreAndReasons. */
+    public function showScoreAndReasonsAndDebugEnabledSettings(User $user): RecommendationSettings
     {
-        return $this->recommendationSettings($user, true, showReasons: true);
+        return $this->recommendationSettings($user, true, showScoreAndReasons: true);
     }
 
     private function recommendationSettings(
         User $user,
         bool $debugEnabled,
-        bool $showReasons = false,
+        bool $showScoreAndReasons = false,
     ): RecommendationSettings {
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
@@ -215,7 +215,7 @@ final readonly class RecommendationRunFixtures
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: $debugEnabled,
-            showReasons: $showReasons,
+            showScoreAndReasons: $showScoreAndReasons,
         ));
         $this->entityManager->persist($settings);
         $this->entityManager->flush();

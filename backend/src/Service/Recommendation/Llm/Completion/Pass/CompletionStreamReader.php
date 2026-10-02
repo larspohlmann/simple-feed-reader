@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Completion\Pass;
 
+use App\Service\Ai\Model\ProviderCallUsageModel;
 use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionUsageModel;
 
 /**
  * Reads one /chat/completions response as it arrives and keeps only the answer: each event is dropped once decoded,
@@ -32,7 +32,7 @@ final class CompletionStreamReader
      * $finishReason is: it arrives in one late message and every event after
      * it carries none, so a later null must never erase it.
      */
-    private ?CompletionUsageModel $usage = null;
+    private ?ProviderCallUsageModel $usage = null;
 
     /**
      * Counts buffer changes (only consume() makes them), keying the shared envelope decode. Length is no stand-in: a
@@ -43,7 +43,7 @@ final class CompletionStreamReader
     /**
      * The last blocking-envelope decode and the generation it was taken at.
      *
-     * @var array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}|null
+     * @var array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?ProviderCallUsageModel}|null
      */
     private ?array $envelopeFields = null;
     private int $envelopeFieldsGeneration = -1;
@@ -97,7 +97,7 @@ final class CompletionStreamReader
      * What the provider says this call consumed, null until it says so. No salvage from an unterminated last event:
      * that costs a decode per chunk, and the usage message is always followed by `data: [DONE]`.
      */
-    public function usage(): ?CompletionUsageModel
+    public function usage(): ?ProviderCallUsageModel
     {
         if (!$this->sawStreamEvent) {
             return $this->envelopeFields()['usage'];
@@ -154,7 +154,7 @@ final class CompletionStreamReader
      * The blocking envelope's fields, decoded at most once per buffer generation: the client reads the answer and the
      * usage on every chunk, and a decode per field would re-parse the whole body each time.
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?ProviderCallUsageModel}
      */
     private function envelopeFields(): array
     {

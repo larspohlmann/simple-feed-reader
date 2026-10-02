@@ -21,7 +21,7 @@ final readonly class RecommendationSettingsValues
         public ?int $autoGenerateIntervalHours = null,
         /** Written only by RecommendationSettingsWriter::storeProfile(); read-only everywhere else. */
         public ?string $profileText = null,
-        public bool $showReasons = false,
+        public bool $showScoreAndReasons = false,
     ) {
     }
 }

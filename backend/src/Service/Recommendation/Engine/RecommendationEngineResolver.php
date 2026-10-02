@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -15,6 +16,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 /** The one place that decides which engine runs a connection's recommendations. */
 final readonly class RecommendationEngineResolver
 {
+    private const RecommendationEngineKind DEFAULT_KIND = RecommendationEngineKind::Llm;
+
     public function __construct(
         #[AutowireLocator('app.recommendation_engine')]
         private ContainerInterface $engines,
@@ -23,17 +26,26 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return RecommendationEngineKind::Llm;
+        return self::DEFAULT_KIND;
     }
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
-        return $this->kindFor($connection)->capabilities();
+        return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
     }
 
-    public function engineFor(AiProviderSettings $connection): RecommendationEngineInterface
+    /** An account with no active connection reads as the default kind, as a model-less connection does. */
+    public function capabilitiesForAccount(User $user): RecommendationEngineCapabilitiesModel
     {
-        $kind = $this->kindFor($connection);
+        $connection = $user->getActiveAiProviderSettings();
+
+        return null === $connection
+            ? RecommendationEngineCapabilitiesModel::of(self::DEFAULT_KIND)
+            : $this->capabilitiesFor($connection);
+    }
+
+    public function engineOf(RecommendationEngineKind $kind): RecommendationEngineInterface
+    {
         try {
             $engine = $this->engines->get($kind->value);
         } catch (ContainerExceptionInterface $exception) {

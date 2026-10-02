@@ -22,7 +22,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibilityModel(showExplanation: true),
+            new FeedAnnotationVisibilityModel(showScoreAndReasons: true),
         ));
 
         self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
@@ -37,7 +37,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibilityModel(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
         ));
 
         self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
@@ -49,7 +49,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibilityModel(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
         ));
 
         // Present even with both annotations hidden: the divider is a
@@ -63,7 +63,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->rowWithoutGenerationTime()],
             null,
-            new FeedAnnotationVisibilityModel(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showScoreAndReasons: false),
         ));
 
         // Defensive: the field is nullable, so a row lacking a completion time
@@ -77,7 +77,7 @@ final class RecommendationFeedJsonTest extends TestCase
         $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row(null)],
             null,
-            new FeedAnnotationVisibilityModel(showExplanation: true),
+            new FeedAnnotationVisibilityModel(showScoreAndReasons: true),
         ));
 
         self::assertArrayHasKey('recommendationScore', $result['entries'][0]);

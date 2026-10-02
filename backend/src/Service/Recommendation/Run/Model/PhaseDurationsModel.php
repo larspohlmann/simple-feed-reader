@@ -5,44 +5,40 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run\Model;
 
 use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
 
 /**
- * Each phase's average wall-clock cost over the account's recent completed runs; distill and consolidate are one heavy
- * call each. `batchSeconds` is per batch: the phase span already folds in concurrency, so dividing by the batch count
- * gives one more batch's marginal cost.
+ * Each phase's average wall-clock cost over the account's recent completed runs, keyed by CallPhase value. A
+ * single-call phase costs its span; the batch phase is per batch: its span already folds in concurrency, so dividing
+ * by the batch count gives one more batch's marginal cost.
  */
 final readonly class PhaseDurationsModel
 {
-    public function __construct(
-        public float $distillSeconds,
-        public float $batchSeconds,
-        public float $consolidateSeconds,
-    ) {
+    /** @param array<string, float> $secondsByPhase */
+    private function __construct(public array $secondsByPhase)
+    {
     }
 
     /**
-     * Averages only runs that carry all three phases: a total from two understates by the third. Null when no run
-     * qualifies; the caller then shows no estimate, never a made-up one.
+     * Averages only runs that carry exactly the kind's phases: a total from fewer understates, and another kind's run
+     * times another engine. Null when no run qualifies; the caller then shows no estimate, never a made-up one.
      *
      * @param list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}> $spans
      */
-    public static function fromCompletedRunSpans(array $spans): ?self
+    public static function fromCompletedRunSpans(array $spans, RecommendationEngineKind $engineKind): ?self
     {
-        $distillSum = 0.0;
-        $batchSum = 0.0;
-        $consolidateSum = 0.0;
+        $sums = [];
         $runCount = 0;
 
         foreach (self::groupByRun($spans) as $phases) {
-            $durations = self::runDurations($phases);
+            $durations = self::runDurations($phases, $engineKind);
             if (null === $durations) {
                 continue;
             }
 
-            [$distill, $perBatch, $consolidate] = $durations;
-            $distillSum += $distill;
-            $batchSum += $perBatch;
-            $consolidateSum += $consolidate;
+            foreach ($durations as $phase => $seconds) {
+                $sums[$phase] = ($sums[$phase] ?? 0.0) + $seconds;
+            }
             ++$runCount;
         }
 
@@ -50,31 +46,54 @@ final readonly class PhaseDurationsModel
             return null;
         }
 
-        return new self($distillSum / $runCount, $batchSum / $runCount, $consolidateSum / $runCount);
+        return new self(array_map(static fn (float $sum): float => $sum / $runCount, $sums));
     }
 
     public function predictedTotalSeconds(int $batchCount): float
     {
-        return $this->distillSeconds + $batchCount * $this->batchSeconds + $this->consolidateSeconds;
+        $total = 0.0;
+        foreach ($this->secondsByPhase as $phase => $seconds) {
+            $total += CallPhase::Batch->value === $phase ? $batchCount * $seconds : $seconds;
+        }
+
+        return $total;
     }
 
     /**
-     * One run's three durations, the batch phase per batch; null when a phase is missing.
+     * One run's duration per phase, in the kind's order, the batch phase per batch; null when the run does not carry
+     * exactly the kind's phases.
      *
      * @param array<string, array{spanSeconds: float, batchCount: int}> $phases
      *
-     * @return array{float, float, float}|null
+     * @return array<string, float>|null
      */
-    private static function runDurations(array $phases): ?array
+    private static function runDurations(array $phases, RecommendationEngineKind $engineKind): ?array
     {
-        $distill = $phases[CallPhase::Distill->value] ?? null;
         $batch = $phases[CallPhase::Batch->value] ?? null;
-        $consolidate = $phases[CallPhase::Consolidate->value] ?? null;
-        if (null === $distill || null === $batch || null === $consolidate || $batch['batchCount'] < 1) {
+        if (null === $batch || $batch['batchCount'] < 1 || !self::carriesExactly($phases, $engineKind)) {
             return null;
         }
 
-        return [$distill['spanSeconds'], $batch['spanSeconds'] / $batch['batchCount'], $consolidate['spanSeconds']];
+        $durations = [];
+        foreach ($engineKind->phases() as $phase) {
+            $span = $phases[$phase->value];
+            $durations[$phase->value] = CallPhase::Batch === $phase
+                ? $span['spanSeconds'] / $span['batchCount']
+                : $span['spanSeconds'];
+        }
+
+        return $durations;
+    }
+
+    /** @param array<string, array{spanSeconds: float, batchCount: int}> $phases */
+    private static function carriesExactly(array $phases, RecommendationEngineKind $engineKind): bool
+    {
+        $expected = array_map(static fn (CallPhase $phase): string => $phase->value, $engineKind->phases());
+        $carried = array_keys($phases);
+        sort($expected);
+        sort($carried);
+
+        return $expected === $carried;
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -19,6 +20,15 @@ trait BuildsTickContexts
         $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
         self::assertInstanceOf(RecommendationSettingsResolver::class, $resolver);
 
-        return new TickContext($run, $connection, $resolver->forUser($user), TickDriver::Poll);
+        $engines = self::getContainer()->get(RecommendationEngineResolver::class);
+        self::assertInstanceOf(RecommendationEngineResolver::class, $engines);
+
+        return new TickContext(
+            $run,
+            $connection,
+            $engines->kindFor($connection),
+            $resolver->forUser($user),
+            TickDriver::Poll,
+        );
     }
 }

@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
@@ -72,7 +73,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     {
         // A running run of this user: no completed status, so excluded.
         $running = $this->fixtures->createRun($this->user);
-        $running->snapshot([[1]]);
+        $running->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $this->finishedLog($running, CallPhase::Distill, null, '10:00:00', '10:00:05');
 
         // Another user's completed run.
@@ -146,7 +147,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     private function completedRun(?User $user = null): RecommendationRun
     {
         $run = $this->fixtures->createRun($user ?? $this->user);
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
 
         return $run;

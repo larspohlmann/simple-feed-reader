@@ -77,7 +77,7 @@ describe('AiSettingsService', () => {
 
   it("hands the active configuration's capabilities to the availability, and none once it is gone", () => {
     const capabilities: RecommendationCapabilities = {
-      reasons: false,
+      ...NO_RECOMMENDATION_CAPABILITIES,
       tuningFields: ['batchSize'],
     };
     service.load();

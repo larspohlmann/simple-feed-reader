@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Completion;
 
-use App\Service\Recommendation\Llm\Completion\Model\CompletionUsageModel;
+use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Ai\Support\ReportedCost;
 
 /**
  * Finds a /chat/completions answer in the provider's JSON, a blocking envelope or one SSE event; the framing is
@@ -16,7 +17,7 @@ final readonly class CompletionBodyDecoder
      * Every field of one blocking envelope from a single decode: a provider that ignores `stream: true` has its whole
      * buffer re-read on every chunk, so the fields must cost one decode, not one apiece.
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?ProviderCallUsageModel}
      */
     public function envelope(string $body): array
     {
@@ -46,7 +47,7 @@ final readonly class CompletionBodyDecoder
      * Every field of one stream event from a single decode, over a reasoning model's thousands of thinking events.
      * `usage` arrives at the root of the stream's last message, the one whose `choices` is empty.
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?ProviderCallUsageModel}
      */
     public function streamEvent(string $payload): array
     {
@@ -161,7 +162,7 @@ final readonly class CompletionBodyDecoder
     /**
      * @param array<mixed>|null $root
      */
-    private function usageIn(?array $root): ?CompletionUsageModel
+    private function usageIn(?array $root): ?ProviderCallUsageModel
     {
         $usage = null === $root ? null : ($root['usage'] ?? null);
 
@@ -169,12 +170,12 @@ final readonly class CompletionBodyDecoder
             return null;
         }
 
-        return new CompletionUsageModel(
+        return new ProviderCallUsageModel(
             $this->intField($usage, 'prompt_tokens'),
             $this->intField($usage, 'completion_tokens'),
             $this->intField($this->detailsOf($usage, 'completion_tokens_details'), 'reasoning_tokens'),
             $this->intField($this->detailsOf($usage, 'prompt_tokens_details'), 'cached_tokens'),
-            $this->nanoCreditsIn($usage),
+            ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
         );
     }
 
@@ -205,30 +206,5 @@ final readonly class CompletionBodyDecoder
         $value = $fields[$key] ?? null;
 
         return \is_int($value) && $value >= 0 ? $value : 0;
-    }
-
-    /**
-     * The price in integer nano-credits; null, not zero (a claim of "free"), when unpriced. A negative, non-finite or
-     * out-of-range cost is refused as null, never clamped: it would corrupt the all-time spend or overflow the cast.
-     *
-     * @param array<mixed> $usage
-     */
-    private function nanoCreditsIn(array $usage): ?int
-    {
-        $cost = $usage['cost'] ?? null;
-
-        if (!\is_float($cost) && !\is_int($cost)) {
-            return null;
-        }
-
-        if ($cost < 0 || !is_finite((float) $cost)) {
-            return null;
-        }
-
-        $nanoCredits = round((float) $cost * 1_000_000_000);
-
-        // Compared as a float, and with >=, because (float) PHP_INT_MAX rounds
-        // up to 2**63 — one past the largest int there is.
-        return $nanoCredits >= (float) \PHP_INT_MAX ? null : (int) $nanoCredits;
     }
 }

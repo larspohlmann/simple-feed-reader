@@ -21,7 +21,7 @@ final class RecommendationSettingsTest extends TestCase
         $this->user = new User('reader@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
     }
 
-    public function testUpdateAndValuesRoundTripShowReasons(): void
+    public function testUpdateAndValuesRoundTripShowScoreAndReasons(): void
     {
         $settings = new RecommendationSettings($this->user);
 
@@ -34,18 +34,18 @@ final class RecommendationSettingsTest extends TestCase
             debugEnabled: false,
             autoGenerateIntervalHours: 12,
             profileText: 'reads about databases',
-            showReasons: true,
+            showScoreAndReasons: true,
         ));
 
-        self::assertTrue($settings->values()->showReasons);
+        self::assertTrue($settings->values()->showScoreAndReasons);
         self::assertSame(RecommendationBatchSize::Large, $settings->values()->batchSize);
     }
 
-    public function testANewRowDoesNotShowReasonsByDefault(): void
+    public function testANewRowDoesNotShowScoreAndReasonsByDefault(): void
     {
         $settings = new RecommendationSettings($this->user);
 
-        self::assertFalse($settings->values()->showReasons);
+        self::assertFalse($settings->values()->showScoreAndReasons);
     }
 
     public function testANewRowUsesTheMediumBatchSizeByDefault(): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run\Model;
 
 use App\Enum\CallPhase;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
 use PHPUnit\Framework\TestCase;
 
@@ -22,12 +23,12 @@ final class PhaseDurationsModelTest extends TestCase
             $this->span(2, CallPhase::Distill, 20.0, 0),
             $this->span(2, CallPhase::Batch, 30.0, 2),
             $this->span(2, CallPhase::Consolidate, 50.0, 0),
-        ]);
+        ], RecommendationEngineKind::Llm);
 
         self::assertNotNull($durations);
-        self::assertSame(15.0, $durations->distillSeconds);      // (10 + 20) / 2
-        self::assertSame(12.5, $durations->batchSeconds);        // (10 + 15) / 2
-        self::assertSame(40.0, $durations->consolidateSeconds);  // (30 + 50) / 2
+        self::assertSame(15.0, $durations->secondsByPhase[CallPhase::Distill->value]);     // (10 + 20) / 2
+        self::assertSame(12.5, $durations->secondsByPhase[CallPhase::Batch->value]);       // (10 + 15) / 2
+        self::assertSame(40.0, $durations->secondsByPhase[CallPhase::Consolidate->value]); // (30 + 50) / 2
     }
 
     public function testPredictedTotalWeightsEachRemainingBatch(): void
@@ -36,7 +37,7 @@ final class PhaseDurationsModelTest extends TestCase
             $this->span(1, CallPhase::Distill, 10.0, 0),
             $this->span(1, CallPhase::Batch, 40.0, 4),
             $this->span(1, CallPhase::Consolidate, 30.0, 0),
-        ]);
+        ], RecommendationEngineKind::Llm);
 
         self::assertNotNull($durations);
         // 10 distill + 3 batches × 10 + 30 consolidate
@@ -49,14 +50,14 @@ final class PhaseDurationsModelTest extends TestCase
         $durations = PhaseDurationsModel::fromCompletedRunSpans([
             $this->span(1, CallPhase::Distill, 10.0, 0),
             $this->span(1, CallPhase::Batch, 40.0, 4),
-        ]);
+        ], RecommendationEngineKind::Llm);
 
         self::assertNull($durations);
     }
 
     public function testNoRunsAtAllYieldsNull(): void
     {
-        self::assertNull(PhaseDurationsModel::fromCompletedRunSpans([]));
+        self::assertNull(PhaseDurationsModel::fromCompletedRunSpans([], RecommendationEngineKind::Llm));
     }
 
     /**

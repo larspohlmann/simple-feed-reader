@@ -10,6 +10,7 @@ use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
@@ -32,6 +33,7 @@ final class TickContextTest extends TestCase
         return new TickContext(
             new RecommendationRun($connection->getUser(), new \DateTimeImmutable(self::AT)),
             $connection,
+            RecommendationEngineKind::Llm,
             new EffectiveRecommendationSettingsModel(
                 guidancePrompt: null,
                 historyCaps: RecommendationHistoryCaps::defaults(),
@@ -45,7 +47,7 @@ final class TickContextTest extends TestCase
                 debugEnabled: false,
                 autoGenerateIntervalHours: null,
                 profileText: null,
-                showReasons: false,
+                showScoreAndReasons: false,
             ),
             $driver,
         );

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Tests\DbTestCase;
@@ -29,7 +30,7 @@ final class RecommendationTickCheckpointTest extends DbTestCase
         $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $this->entityManager->persist($run);
         $this->entityManager->flush();
 
@@ -56,7 +57,7 @@ final class RecommendationTickCheckpointTest extends DbTestCase
         $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->cancel(new \DateTimeImmutable('2026-08-16T09:05:00Z'));
         $this->entityManager->persist($run);
         $this->entityManager->flush();

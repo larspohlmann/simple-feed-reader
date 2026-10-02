@@ -23,17 +23,4 @@ final readonly class RecommendationWinnerRanker
 
         return $pool;
     }
-
-    /**
-     * The best entries the consolidation call re-scores and dedupes. How many is what the connection's context window
-     * holds, not a multiple of the final list.
-     *
-     * @param list<array{id: int, score: int, reason: string}> $ranked
-     *
-     * @return list<array{id: int, score: int, reason: string}>
-     */
-    public function cutForConsolidation(array $ranked, int $inputSize): array
-    {
-        return \array_slice($ranked, 0, $inputSize);
-    }
 }

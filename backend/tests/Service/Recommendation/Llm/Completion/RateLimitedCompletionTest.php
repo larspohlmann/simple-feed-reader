@@ -10,6 +10,7 @@ use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Ai\Model\RetryPlanModel;
+use App\Service\Ai\RateLimitedCalls;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
@@ -75,7 +76,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueContent('{"ok":1}');
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertFalse($result->isDeferred());
@@ -93,7 +94,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueContent('{"ok":1}');                          // retry 3 (after 4 s)
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertSame('{"ok":1}', $result->outcomes[0]->content());
@@ -107,7 +108,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueContent('{"ok":1}');
         $clock = $this->newClock();
 
-        (new RateLimitedCompletion($chat, $clock))
+        (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertSame(5, $this->elapsedSeconds($clock));
@@ -119,7 +120,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueFailure(new RetryableProviderException(429, 200));
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertTrue($result->isDeferred());
@@ -139,7 +140,7 @@ final class RateLimitedCompletionTest extends TestCase
         }
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertTrue($result->isDeferred());
@@ -155,7 +156,7 @@ final class RateLimitedCompletionTest extends TestCase
         }
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertFalse($result->isDeferred());
@@ -170,7 +171,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueFailure(new RetryableProviderException(429, 15));
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::deferring());
 
         self::assertTrue($result->isDeferred());
@@ -186,7 +187,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueContent('{"b":2}');                           // call 1 on retry
         $clock = $this->newClock();
 
-        $result = (new RateLimitedCompletion($chat, $clock))
+        $result = (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))
             ->completeMany($this->connection(), $this->calls(2), RetryPlanModel::blocking());
 
         self::assertSame('{"a":1}', $result->outcomes[0]->content());
@@ -203,7 +204,7 @@ final class RateLimitedCompletionTest extends TestCase
 
         $this->expectException(ProviderRateLimitedException::class);
 
-        (new RateLimitedCompletion($chat, $clock))->complete(
+        (new RateLimitedCompletion($chat, new RateLimitedCalls($clock)))->complete(
             $this->connection(),
             $this->request(),
             new NullCompletionStreamObserver(),

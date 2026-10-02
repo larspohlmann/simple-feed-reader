@@ -31,11 +31,11 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
+use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
@@ -2370,7 +2370,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $cutReply = new CompletionStreamProgressModel(
+        $cutReply = new CallProgressModel(
             sprintf(
                 '{"recommendations": [{"id": %d, "score": 640, "reason": "Finished."}, {"id": %d, "sc',
                 $firstBatch[0],
@@ -2594,6 +2594,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // the entity manager, which detaches $this->user, so a database-only write would never reach it.
         $moved = (new AiSettingsRowMover($this->entityManager))->moveOwnership($keyDonor, $this->user);
         $this->user->setActiveAiProviderSettings($moved);
+        // The tick reads the run's own user, which the advance reloads from this identity map.
+        $reloadedUser = $this->entityManager->find(User::class, $this->user->requireId());
+        self::assertNotNull($reloadedUser);
+        $reloadedUser->setActiveAiProviderSettings($moved);
 
         try {
             $this->advancer()->advance($this->user);

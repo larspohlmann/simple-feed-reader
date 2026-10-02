@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * How a run drives this connection: `slowModel` picks the timeout profile and the lock TTL, `batchConcurrency`
- * sizes a tick's wave (BatchPhase::effectiveCap()), `maxBatchSize` caps a batch (null keeps the default).
+ * sizes a tick's wave (BatchWavePhase::effectiveCap()), `maxBatchSize` caps a batch (null keeps the default).
  */
 #[ORM\Embeddable]
 final class RunTuning

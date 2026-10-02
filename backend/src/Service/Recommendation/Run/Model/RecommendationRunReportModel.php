@@ -26,19 +26,9 @@ final readonly class RecommendationRunReportModel
         public bool $background = false,
         public bool $waitingForLock = false,
         public int $streamedChars = 0,
-        public ?\DateTimeImmutable $startedAt = null,
-        public bool $firstBatchStarted = false,
+        public RunStartModel $start = new RunStartModel(),
+        public ?RunPlanModel $plan = null,
     ) {
-    }
-
-    /** Null before the run has a start (the none and busy reports); the status payload and the ETA both read this. */
-    public function elapsedSecondsAt(\DateTimeImmutable $now): ?int
-    {
-        if (null === $this->startedAt) {
-            return null;
-        }
-
-        return max(0, $now->getTimestamp() - $this->startedAt->getTimestamp());
     }
 
     public static function none(): self
@@ -54,6 +44,7 @@ final readonly class RecommendationRunReportModel
     public static function fromRun(RecommendationRun $run): self
     {
         $progress = $run->getProgress();
+        $batchCount = $progress->batchCount;
 
         return new self(
             $run->getStatus()->value,
@@ -61,8 +52,8 @@ final readonly class RecommendationRunReportModel
             $progress->batchesDone,
             $run->getError(),
             streamedChars: $run->getStreamedChars(),
-            startedAt: $run->getCreatedAt(),
-            firstBatchStarted: $run->hasFirstBatchStarted(),
+            start: new RunStartModel($run->getCreatedAt(), $run->hasFirstBatchStarted()),
+            plan: null === $batchCount ? null : new RunPlanModel($run->getEngineKind(), $batchCount),
         );
     }
 
@@ -77,8 +68,8 @@ final readonly class RecommendationRunReportModel
             background: true,
             waitingForLock: $this->waitingForLock,
             streamedChars: $this->streamedChars,
-            startedAt: $this->startedAt,
-            firstBatchStarted: $this->firstBatchStarted,
+            start: $this->start,
+            plan: $this->plan,
         );
     }
 
@@ -96,8 +87,8 @@ final readonly class RecommendationRunReportModel
             background: $this->background,
             waitingForLock: true,
             streamedChars: $this->streamedChars,
-            startedAt: $this->startedAt,
-            firstBatchStarted: $this->firstBatchStarted,
+            start: $this->start,
+            plan: $this->plan,
         );
     }
 }

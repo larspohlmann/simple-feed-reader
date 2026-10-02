@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
@@ -62,6 +63,16 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         self::assertSame(0, $eta);
     }
 
+    /** 40 s over 3 batches is 13.3 s a batch: one batch leaves 33.3 s, two leave 46.7 s, 20 s in. */
+    public function testRoundsTheRemainingSecondsToTheNearest(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 3, consolidate: 30);
+        $estimator = $this->estimatorAt('+20 seconds');
+
+        self::assertSame(33, $estimator->estimateSeconds($this->liveReportWithBatches(1), $this->user));
+        self::assertSame(47, $estimator->estimateSeconds($this->liveReportWithBatches(2), $this->user));
+    }
+
     public function testReturnsNullWithoutAnyCompletedHistory(): void
     {
         $report = $this->liveReportWithBatches(3);
@@ -73,7 +84,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     {
         $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
-        $run->snapshot([[1], [2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
 
         $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(
             RecommendationRunReportModel::fromRun($run),
@@ -106,7 +117,10 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     private function liveReportWithBatches(int $batches): RecommendationRunReportModel
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
-        $run->snapshot(array_map(static fn (int $index): array => [$index], range(1, $batches)));
+        $run->snapshot(
+            RecommendationEngineKind::Llm,
+            array_map(static fn (int $index): array => [$index], range(1, $batches)),
+        );
         $run->markFirstBatchStarted();
 
         return RecommendationRunReportModel::fromRun($run);
@@ -115,7 +129,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     private function seedHistoricalRun(int $distill, int $batchWall, int $batches, int $consolidate): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot([[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
         $this->finishedLog($run, CallPhase::Distill, null, 0, $distill);

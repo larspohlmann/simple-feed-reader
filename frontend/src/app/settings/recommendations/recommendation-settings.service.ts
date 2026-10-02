@@ -33,11 +33,13 @@ export type RecommendationExpertField =
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
   readonly guidancePrompt: string | null;
-  readonly defaultGuidancePrompt: string;
+  /** The guidance the engine falls back to; null when the engine sends no prompt of its own. */
+  readonly defaultGuidancePrompt: string | null;
+  /** The batch call's fixed layers; null when the engine sends no prompt of its own. */
   readonly fixedPrompt: {
     readonly role: string;
     readonly outputContract: string;
-  };
+  } | null;
   readonly expertDefaults: RecommendationExpertDefaults;
   readonly expertBounds: Readonly<Record<RecommendationExpertField, RecommendationSettingBounds>>;
   readonly favoritesCap: number;
@@ -62,12 +64,12 @@ export interface RecommendationSettingsState {
   /** The persisted, distilled preference profile the pipeline writes; read-only
    *  here, null until a run has generated one. */
   readonly profileText: string | null;
-  /** Shows each pick's reason and the score beside it (#541) — one switch for
-   *  the whole explanation; debug mode reaches neither (#576). */
-  readonly showReasons: boolean;
+  /** Shows each pick's score and, where the engine writes one, its reason — one
+   *  switch for both; debug mode reaches neither (#576). */
+  readonly showScoreAndReasons: boolean;
 }
 
-/** The writable fields of the PUT body. `showReasons` is the twelfth field;
+/** The writable fields of the PUT body. `showScoreAndReasons` is the twelfth field;
  *  every write built through this service (`bodyFromState`, `saveInstant`,
  *  `save`) always sends it. */
 export interface SaveRecommendationSettings {
@@ -82,7 +84,7 @@ export interface SaveRecommendationSettings {
   readonly contextWindow: number | null;
   readonly debugEnabled: boolean;
   readonly autoGenerateIntervalHours: number | null;
-  readonly showReasons: boolean;
+  readonly showScoreAndReasons: boolean;
 }
 
 /** The typed text/number fields the explicit Save persists; the toggles and
@@ -134,7 +136,7 @@ export class RecommendationSettingsService extends DraftSettingsService<
       contextWindow: state.contextWindowOverride,
       debugEnabled: state.debugEnabled,
       autoGenerateIntervalHours: state.autoGenerateIntervalHours,
-      showReasons: state.showReasons,
+      showScoreAndReasons: state.showScoreAndReasons,
     };
   }
 

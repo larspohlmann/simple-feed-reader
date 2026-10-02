@@ -20,6 +20,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
@@ -28,7 +29,6 @@ use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\TickPhases;
 use App\Service\Recommendation\Run\WorkerPresence;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\WorkerRunSweep;
@@ -469,7 +469,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             $this->connectionFactory(),
             self::getContainer()->get(ClockInterface::class),
             new FlushFailingEntityManager($this->entityManager),
-            self::getContainer()->get(RecommendationSettingsResolver::class),
+            self::getContainer()->get(TickContextFactory::class),
             self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(TickPhases::class),
         );

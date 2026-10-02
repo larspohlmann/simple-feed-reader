@@ -39,7 +39,7 @@ import {
 import { typedSeed } from './recommendation-typed-seed';
 
 /** The "For You" tuning card, rebuilt on the settings primitives (#541). The
- *  "show reasons" switch, auto-generate cadence, and look-back window (#386)
+ *  "show score and reasons" switch, auto-generate cadence, and look-back window (#386)
  *  persist instantly through `saveInstant`. Everything typed (guidance prompt,
  *  six caps, context window, batch count) folds into one "Expert settings"
  *  drill-in, held as a pending draft until the save bar's Save; Reset drops it
@@ -78,8 +78,8 @@ export class RecommendationSettingsCardComponent {
   private readonly language = inject(LanguageService);
   private readonly availability = inject(AiAvailabilityService);
 
-  /** Only an engine that writes reasons offers the switch that shows them. */
-  readonly offersReasons = computed(() => this.availability.capabilities().reasons);
+  /** Only an engine that sends a prompt has a fixed prompt, a guidance default and a distilled profile to show. */
+  readonly offersPrompt = computed(() => this.availability.capabilities().prompt);
 
   // Typed fields: displayed here, held as a pending draft in the service until
   // the explicit Save. Each seeds from server truth and recomputes when the
@@ -107,7 +107,9 @@ export class RecommendationSettingsCardComponent {
   );
 
   // Instant fields: persisted the moment they change, never held in the draft.
-  readonly showReasons = linkedSignal<boolean>(() => this.svc.state()?.showReasons ?? false);
+  readonly showScoreAndReasons = linkedSignal<boolean>(
+    () => this.svc.state()?.showScoreAndReasons ?? false,
+  );
   readonly debugEnabled = linkedSignal<boolean>(() => this.svc.state()?.debugEnabled ?? false);
   readonly autoGenerateIntervalHours = linkedSignal<number | null>(
     () => this.svc.state()?.autoGenerateIntervalHours ?? null,
@@ -227,9 +229,9 @@ export class RecommendationSettingsCardComponent {
     this.svc.setTypedField('contextWindow', value);
   }
 
-  onShowReasons(value: boolean): void {
-    this.showReasons.set(value);
-    this.svc.saveInstant({ showReasons: value });
+  onShowScoreAndReasons(value: boolean): void {
+    this.showScoreAndReasons.set(value);
+    this.svc.saveInstant({ showScoreAndReasons: value });
   }
 
   onDebug(value: boolean): void {

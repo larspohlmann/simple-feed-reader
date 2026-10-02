@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
@@ -15,11 +14,10 @@ use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -45,7 +43,7 @@ final readonly class RecommendationRunAdvancer
         private ProviderConnectionFactory $connectionFactory,
         private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
-        private RecommendationSettingsResolver $settingsResolver,
+        private TickContextFactory $tickContexts,
         private TickLockKeepalive $keepalive,
         private TickPhases $phases,
     ) {
@@ -115,12 +113,7 @@ final readonly class RecommendationRunAdvancer
         }
 
         try {
-            return $this->phases->advance(new TickContext(
-                $run,
-                $this->activeConnection($user),
-                $this->settingsResolver->forUser($user),
-                $driver,
-            ));
+            return $this->phases->advance($this->tickContexts->create($run, $driver));
         } catch (RecommendationRunCancelledException | RecommendationTickLockLostException) {
             // Stopped by the user or by a lost lock: drop this tick's work, re-read the row its owner wrote.
             $this->entityManager->refresh($run);
@@ -133,16 +126,6 @@ final readonly class RecommendationRunAdvancer
 
             throw $exception;
         }
-    }
-
-    private function activeConnection(User $user): AiProviderSettings
-    {
-        $connection = $this->configurator->requireConfiguration($user);
-        if (!$connection->hasModel()) {
-            throw new AiNotConfiguredException('No model is chosen.');
-        }
-
-        return $connection;
     }
 
     private function failPermanently(RecommendationRun $run, string $message): void

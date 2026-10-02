@@ -2,20 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Pass;
+namespace App\Service\Recommendation\Run\Pass;
 
 use App\Entity\CallOutcome;
 use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionUsageModel;
-use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
+use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Recommendation\Run\Model\CallProgressModel;
 use Symfony\Component\Clock\ClockInterface;
 
-/** The stream observer for one recorded provider call: checkpoints its transcript and settles its run-log row. */
-final class RecordedCall implements CompletionStreamObserverInterface
+/** One recorded provider call: checkpoints its transcript while it runs and settles its run-log row. */
+final class RecordedCall
 {
     private const int CHECKPOINT_SECONDS = 2;
 
@@ -32,7 +30,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
     private ?string $finishReason = null;
 
     /** Sticky: the usage arrives in one late message, so a later report without it must not erase it. */
-    private ?CompletionUsageModel $usage = null;
+    private ?ProviderCallUsageModel $usage = null;
 
     /** Billed once across every settle path; set only when bankUsage() writes, so a later path can still bank. */
     private bool $usageBanked = false;
@@ -47,7 +45,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
         $this->lastCheckpointAt = $clock->now();
     }
 
-    public function streamProgressed(CompletionStreamProgressModel $progress): void
+    public function progressed(CallProgressModel $progress): void
     {
         $this->wireBytes = $progress->wireBytes;
         $this->finishReason = $progress->finishReason ?? $this->finishReason;
@@ -73,9 +71,10 @@ final class RecordedCall implements CompletionStreamObserverInterface
         $this->finish($content, CallVerdict::Unusable);
     }
 
-    public function providerCutTheAnswer(): bool
+    /** Why the provider stopped, once it said so; null until then. */
+    public function finishReason(): ?string
     {
-        return CompletionFinishReason::cutByProvider($this->finishReason);
+        return $this->finishReason;
     }
 
     /** Settles the row as a transport failure; its checkpoints stay, stamped with the byte count and the error. */

@@ -7,7 +7,8 @@ namespace App\Service\Recommendation\Llm\Run;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
-use App\Service\Recommendation\Llm\Run\Pass\RecordedCall;
+use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
 use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
@@ -28,7 +29,7 @@ final readonly class RecommendationProviderCall
             return $this->completion->complete(
                 $this->connectionFactory->forSettings($tick->connection),
                 $request,
-                $recordedCall,
+                new RecordedCallObserver($recordedCall),
                 $tick->retryPlan(),
             );
         } catch (\Throwable $exception) {

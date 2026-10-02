@@ -2,20 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Completion\Model;
+namespace App\Service\Recommendation\Run\Model;
+
+use App\Service\Ai\Model\ProviderCallUsageModel;
 
 /**
- * One progress report of a streamed call. `wireBytes` is kept beside `answerSoFar` because a reasoning model sends
+ * One progress report of a provider call. `wireBytes` is kept beside `answerSoFar` because a reasoning model sends
  * megabytes while its answer stays empty. `finishReason` (`length`: `max_tokens` cut the answer) and `usage` stay
  * null until the provider sends them.
  */
-final readonly class CompletionStreamProgressModel
+final readonly class CallProgressModel
 {
     public function __construct(
         public string $answerSoFar,
         public int $wireBytes,
         public ?string $finishReason = null,
-        public ?CompletionUsageModel $usage = null,
+        public ?ProviderCallUsageModel $usage = null,
     ) {
     }
 }

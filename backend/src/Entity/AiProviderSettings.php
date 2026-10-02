@@ -20,7 +20,7 @@ final class AiProviderSettings
 
     /**
      * The hard ceiling on one tick's wave of provider calls; the default stays 1. Only the worker reaches it:
-     * a poll or sweep tick clamps to BatchPhase::POLL_MAX_CONCURRENCY.
+     * a poll or sweep tick clamps to BatchWavePhase::POLL_MAX_CONCURRENCY.
      */
     public const int MAX_BATCH_CONCURRENCY = 8;
 

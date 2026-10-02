@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\Recommendation\Llm\Completion\Model\CompletionUsageModel;
+use App\Service\Ai\Model\ProviderCallUsageModel;
 use Doctrine\DBAL\Connection;
 
 /**
@@ -60,7 +60,7 @@ final readonly class RecommendationCallRepository
     }
 
     /** SQL arithmetic, not read-modify-write: one batch wave settles several calls against the same run. */
-    public function addUsage(int $runId, CompletionUsageModel $usage): void
+    public function addUsage(int $runId, ProviderCallUsageModel $usage): void
     {
         $this->connection->executeStatement(
             'UPDATE recommendation_run SET'

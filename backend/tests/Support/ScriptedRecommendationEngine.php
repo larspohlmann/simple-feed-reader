@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
