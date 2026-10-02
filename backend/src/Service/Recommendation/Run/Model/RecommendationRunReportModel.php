@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run\Model;
 
 use App\Entity\RecommendationRun;
-use App\Enum\RecommendationEngineKind;
 
 /**
  * The poll-facing view of a run, without its checkpoint internals. `status` also takes the two values below, which
@@ -28,7 +27,7 @@ final readonly class RecommendationRunReportModel
         public bool $waitingForLock = false,
         public int $streamedChars = 0,
         public RunStartModel $start = new RunStartModel(),
-        public ?RecommendationEngineKind $engineKind = null,
+        public ?RunPlanModel $plan = null,
     ) {
     }
 
@@ -45,6 +44,7 @@ final readonly class RecommendationRunReportModel
     public static function fromRun(RecommendationRun $run): self
     {
         $progress = $run->getProgress();
+        $batchCount = $progress->batchCount;
 
         return new self(
             $run->getStatus()->value,
@@ -53,7 +53,7 @@ final readonly class RecommendationRunReportModel
             $run->getError(),
             streamedChars: $run->getStreamedChars(),
             start: new RunStartModel($run->getCreatedAt(), $run->hasFirstBatchStarted()),
-            engineKind: $run->getEngineKind(),
+            plan: null === $batchCount ? null : new RunPlanModel($run->getEngineKind(), $batchCount),
         );
     }
 
@@ -69,7 +69,7 @@ final readonly class RecommendationRunReportModel
             waitingForLock: $this->waitingForLock,
             streamedChars: $this->streamedChars,
             start: $this->start,
-            engineKind: $this->engineKind,
+            plan: $this->plan,
         );
     }
 
@@ -88,7 +88,7 @@ final readonly class RecommendationRunReportModel
             waitingForLock: true,
             streamedChars: $this->streamedChars,
             start: $this->start,
-            engineKind: $this->engineKind,
+            plan: $this->plan,
         );
     }
 }

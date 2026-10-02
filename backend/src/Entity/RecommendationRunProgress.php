@@ -15,6 +15,7 @@ final readonly class RecommendationRunProgress
 {
     public function __construct(
         public int $batchesDone,
+        public ?int $batchCount,
         public ?int $batchesTotal,
         public bool $distillPending,
         public bool $isConsolidationPhase,
@@ -42,6 +43,7 @@ final readonly class RecommendationRunProgress
 
         return new self(
             batchesDone: $batchesDone,
+            batchCount: $hasPlan ? $batchCount : null,
             batchesTotal: $hasPlan ? $batchCount + $engineKind->singleCallPhaseCount() : null,
             distillPending: $hasPlan && !$distillationDone,
             isConsolidationPhase: $hasPlan && $distillationDone && $allBatchCallsDone

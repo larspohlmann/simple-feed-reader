@@ -26,28 +26,21 @@ final readonly class RecommendationEtaEstimator
 
     public function estimateSeconds(RecommendationRunReportModel $report, User $user): ?int
     {
-        $engineKind = $report->engineKind;
-        if (
-            null === $engineKind
-            || null === $report->batchesTotal
-            || !$report->start->firstBatchStarted
-            || !$this->isInFlight($report)
-        ) {
+        $plan = $report->plan;
+        if (null === $plan || !$report->start->firstBatchStarted || !$this->isInFlight($report)) {
             return null;
         }
 
         $elapsed = $report->start->elapsedSecondsAt($this->clock->now());
         $durations = PhaseDurationsModel::fromCompletedRunSpans(
             $this->timings->completedRunPhaseSpans($user, RunLogRetention::RUNS),
-            $engineKind,
+            $plan->engineKind,
         );
         if (null === $elapsed || null === $durations) {
             return null;
         }
 
-        $batchCount = $report->batchesTotal - $engineKind->singleCallPhaseCount();
-
-        return max(0, (int) round($durations->predictedTotalSeconds($batchCount) - $elapsed));
+        return max(0, (int) round($durations->predictedTotalSeconds($plan->batchCount) - $elapsed));
     }
 
     private function isInFlight(RecommendationRunReportModel $report): bool

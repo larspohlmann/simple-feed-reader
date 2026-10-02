@@ -77,4 +77,13 @@ final class RecommendationRunProgressTest extends TestCase
 
         self::assertSame(4, $progress->batchesTotal);
     }
+
+    public function testThePlanCountsItsBatchesAloneAndARunWithoutOneCountsNone(): void
+    {
+        $planned = RecommendationRunProgress::forBatchPlan([[1], [2]], 0, 0, true, RecommendationEngineKind::Llm);
+        $unplanned = RecommendationRunProgress::forBatchPlan(null, 0, 0, true, RecommendationEngineKind::Llm);
+
+        self::assertSame(2, $planned->batchCount);
+        self::assertNull($unplanned->batchCount);
+    }
 }
