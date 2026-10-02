@@ -24,10 +24,7 @@ use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\Support\BatchWaveWinners;
 
-/**
- * One System One request per batch, each a run-log row. An unusable reply retries its batch alone up to MAX_ATTEMPTS
- * rounds; an endpoint failure settles every call and banks nothing (the atomic-wave rule).
- */
+/** One System One request per batch, each a run-log row; an unusable reply retries its batch alone. */
 final readonly class JevBatchWave
 {
     public function __construct(

@@ -14,11 +14,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * Each phase's wall-clock span and batch count for the account's latest completed runs, each with its run's own
- * created-to-completed seconds, which PhaseDurationsModel averages into the time-left estimate. Spans are computed in
- * PHP from MIN/MAX, so the query stays dialect-free.
- * Runs of the asked kind only; a run from before the kind column is the LLM's, as `RecommendationRun::getEngineKind()`
- * reads it.
+ * Phase spans and batch counts of the latest completed runs of one kind, a kind-less run counting as the LLM's, for
+ * PhaseDurationsModel. Spans are computed in PHP from MIN/MAX, so the query stays dialect-free.
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */

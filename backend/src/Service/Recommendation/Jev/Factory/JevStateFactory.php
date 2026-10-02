@@ -8,7 +8,6 @@ use App\Service\Recommendation\Jev\Support\FittingPrefix;
 use App\Service\Recommendation\Jev\Support\SystemOneJson;
 use App\Service\Recommendation\Support\TokenEstimate;
 
-/** The reader as System One's `state`: the distilled profile, and the guidance when there is one. */
 final readonly class JevStateFactory
 {
     /** What JevBatchPacker reserves for the state in every request; the guidance wins it, the profile gets the rest. */

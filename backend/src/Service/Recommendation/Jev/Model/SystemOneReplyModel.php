@@ -6,7 +6,6 @@ namespace App\Service\Recommendation\Jev\Model;
 
 use App\Service\Ai\Model\ProviderCallReceiptModel;
 
-/** A System One answer as received: the raw body for the run log, each question's Noul, and the call's receipt. */
 final readonly class SystemOneReplyModel
 {
     /** @param array<string, float> $nouls question id => P(yes), only the answers that carry a number */

@@ -64,7 +64,7 @@ final class RecordedCall
         $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
     }
 
-    /** A reply that arrives whole rather than streamed: its size, its usage and what the provider said about it. */
+    /** A reply that arrives whole rather than streamed. */
     public function received(ProviderCallReceiptModel $receipt, int $wireBytes): void
     {
         $this->receipt = $receipt;

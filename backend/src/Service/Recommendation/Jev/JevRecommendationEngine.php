@@ -17,10 +17,6 @@ use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/**
- * TypeSafe's System One: packs by its request budget, borrows an LLM connection to distil the reader's profile, asks
- * one Noul per candidate in waves, ranks the answers. No reasons and no consolidation.
- */
 #[AsTaggedItem(index: RecommendationEngineKind::Jev->value)]
 final readonly class JevRecommendationEngine implements RecommendationEngineInterface
 {

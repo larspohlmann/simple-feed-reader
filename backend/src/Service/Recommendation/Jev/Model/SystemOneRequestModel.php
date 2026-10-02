@@ -6,7 +6,6 @@ namespace App\Service\Recommendation\Jev\Model;
 
 use App\Service\Recommendation\Jev\Support\SystemOneJson;
 
-/** One `POST {base}/systemone`: the model alias, the reader as `state`, one Noul question per candidate. */
 final readonly class SystemOneRequestModel
 {
     /**

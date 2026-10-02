@@ -10,7 +10,6 @@ use App\Service\Recommendation\Jev\Support\JevArticle;
 use App\Service\Recommendation\Jev\Support\QuestionId;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 
-/** One batch's System One request: the reader as `state`, a Noul question per article, articles only as data. */
 final readonly class SystemOneRequestFactory
 {
     /** Points at the structured fields by backtick path, as TypeSafe asks; no feed text is ever part of it. */

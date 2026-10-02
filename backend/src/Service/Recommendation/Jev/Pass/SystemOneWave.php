@@ -9,7 +9,6 @@ use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
-/** One evaluateMany() call's responses: each one's request position, its outcome once settled, when it last spoke. */
 final class SystemOneWave
 {
     /** @var \SplObjectStorage<ResponseInterface, int> */
