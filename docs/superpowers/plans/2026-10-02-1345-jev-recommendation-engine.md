@@ -8860,6 +8860,24 @@ For-you card shows the profile after a run. Reviewer: yes.
 
 ---
 
+### Task B11: the profile picker lives in the Jev connection's configuration
+
+**Decision (Lars):** the profile-connection dropdown belongs to the borrowing connection's own configuration area
+(where its model and tuning fields are edited), not to the provider group.
+
+**Done** (`ai-section.component.{ts,html,scss}`):
+- The `.profile-connection` block moved into each connection row's `.config-body`, rendered when that row's
+  `capabilities.profile === 'borrowed'`, active or not; the provider-group copy and `borrowsProfile` are gone.
+  Options, the account-wide PUT/DELETE, i18n keys and the failure banner (beside its picker) are unchanged.
+- One shared `profilePicker` FormControl serves every rendered select. Defect found: a view-driven change does not
+  write sibling accessors (`emitModelToViewChange: false`), so a second borrowed row's select stayed on the old
+  holder. `chooseProfileSource()` now writes the value back with `setValue`, reaching all selects; refusals and
+  404 reloads still land through the existing effect.
+- Specs: B10 pins kept (the manager is opened first); "offered only when the active connection borrows" replaced by
+  renders-in-an-inactive-borrowed-row, absent-from-an-own-row, and two-borrowed-rows-follow-one-change.
+
+---
+
 ### Task B8: Docs, gates, a real run, PR B
 
 **Files:**
