@@ -107,7 +107,6 @@ final readonly class JevBatchWave
             throw new ProviderRateLimitedException($result->deferSeconds);
         }
 
-        self::receiveAnswers($recordedCalls, $result->outcomes);
         self::guardWaveTransport($recordedCalls, $result->outcomes);
 
         return [
@@ -129,10 +128,15 @@ final readonly class JevBatchWave
     {
         try {
             $credentials = $this->configurator->credentials($wave->tick->connection);
+            $callsByRequest = self::callsByRequest($requests, $recordedCalls);
 
             return $this->rateLimitedCalls->send(
                 $requests,
-                fn (array $subset): array => $this->client->evaluateMany($credentials, $subset),
+                fn (array $subset): array => self::receiveAnswers(
+                    $callsByRequest,
+                    $subset,
+                    $this->client->evaluateMany($credentials, $subset),
+                ),
                 $wave->tick->retryPlan(),
             );
         } catch (\Throwable $exception) {
@@ -145,20 +149,43 @@ final readonly class JevBatchWave
     }
 
     /**
-     * Every answered call books its receipt before the wave is judged, so a sibling's failure still bills what it cost.
+     * @param non-empty-list<SystemOneRequestModel> $requests
+     * @param list<RecordedCall>                    $recordedCalls aligned to $requests
      *
-     * @param list<RecordedCall>          $recordedCalls
-     * @param list<SystemOneOutcomeModel> $outcomes
+     * @return \SplObjectStorage<SystemOneRequestModel, RecordedCall>
      */
-    private static function receiveAnswers(array $recordedCalls, array $outcomes): void
+    private static function callsByRequest(array $requests, array $recordedCalls): \SplObjectStorage
     {
-        foreach ($outcomes as $position => $outcome) {
+        /** @var \SplObjectStorage<SystemOneRequestModel, RecordedCall> $callsByRequest */
+        $callsByRequest = new \SplObjectStorage();
+        foreach ($requests as $index => $request) {
+            $callsByRequest[$request] = $recordedCalls[$index];
+        }
+
+        return $callsByRequest;
+    }
+
+    /**
+     * Books each paid answer the moment it arrives, so a sibling's failure or a deferral still bills what it cost. Only
+     * a limited request is re-sent, so no answer is booked twice.
+     *
+     * @param \SplObjectStorage<SystemOneRequestModel, RecordedCall> $callsByRequest
+     * @param non-empty-list<SystemOneRequestModel>                  $subset
+     * @param list<SystemOneOutcomeModel>                            $outcomes       aligned to $subset
+     *
+     * @return list<SystemOneOutcomeModel>
+     */
+    private static function receiveAnswers(\SplObjectStorage $callsByRequest, array $subset, array $outcomes): array
+    {
+        foreach ($outcomes as $index => $outcome) {
             if ($outcome->isFailure()) {
                 continue;
             }
             $reply = $outcome->reply();
-            $recordedCalls[$position]->received($reply->receipt, \strlen($reply->body));
+            $callsByRequest[$subset[$index]]->received($reply->receipt, \strlen($reply->body));
         }
+
+        return $outcomes;
     }
 
     /**
@@ -202,8 +229,6 @@ final readonly class JevBatchWave
 
         return $replies;
     }
-
-
 
     /** @return list<int> */
     private static function idsOf(WaveBatchModel $batch): array

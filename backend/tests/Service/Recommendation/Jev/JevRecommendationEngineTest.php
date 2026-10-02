@@ -59,6 +59,23 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame('Provider rate limited; deferring.', $this->lastLog()->getErrorDetail());
     }
 
+    /** A deferral settles the wave unbanked, yet the sibling that already answered bills its paid reply. */
+    public function testAPollWaveThatDefersStillBillsTheAnswerItGot(): void
+    {
+        $this->startRunAfterTheWarmUp(301, TickDriver::Poll);
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.7);
+        $this->systemOne()->queueFailure(new RetryableProviderException(429, 20));
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->activeRun();
+        self::assertSame(1, $run->getProgress()->batchesDone);
+        self::assertSame(2 * StubSystemOneClient::COST_NANO_CREDITS, $run->getCostNanoCredits());
+        $answered = $this->logs($run)[1];
+        self::assertSame(StubSystemOneClient::REQUEST_ID, $answered->getRequestId());
+        self::assertSame('Provider rate limited; deferring.', $answered->getErrorDetail());
+    }
+
     /** A worker tick waits a 529 out, re-sends only the limited request, and banks the wave. */
     public function testAWorkerWaveWaitsOutA529AndBanksTheRetry(): void
     {
@@ -73,6 +90,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame(0, $run->getTransportFailures());
         self::assertSame(2, $run->getWaveConcurrencyCap(4));
         self::assertCount(3, $this->systemOne()->requests());   // warm-up, the limited one, its re-send
+        self::assertSame(2 * StubSystemOneClient::COST_NANO_CREDITS, $run->getCostNanoCredits());
     }
 
     /** Three batches in one worker wave: every reply is judged, not only the first usable one. */
