@@ -1024,6 +1024,14 @@ describe('AiSectionComponent', () => {
       return fixture;
     };
 
+    const shown = (select: HTMLSelectElement): string =>
+      (select.selectedOptions[0]?.textContent ?? '').trim();
+
+    const pick = (select: HTMLSelectElement, index: number): void => {
+      select.selectedIndex = index;
+      select.dispatchEvent(new Event('change'));
+    };
+
     const jevActive = config({
       id: 7,
       ready: true,
@@ -1059,10 +1067,8 @@ describe('AiSectionComponent', () => {
         }),
       ]);
 
-      const options = Array.from(picker(fixture)?.options ?? []).filter(
-        (option) => option.value !== '',
-      );
-      expect(options.map((option) => option.value)).toEqual(['8']);
+      const options = Array.from(picker(fixture)?.options ?? []).slice(1);
+      expect(options.map((option) => option.textContent?.trim())).toEqual(['Local']);
     });
 
     it('selects the chosen connection and saves a new choice on change', () => {
@@ -1072,10 +1078,9 @@ describe('AiSectionComponent', () => {
         config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
       ]);
       const select = picker(fixture) as HTMLSelectElement;
-      expect(select.value).toBe('8');
+      expect(shown(select)).toBe('Local');
 
-      select.value = '11';
-      select.dispatchEvent(new Event('change'));
+      pick(select, 2);
 
       expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
     });
@@ -1086,11 +1091,10 @@ describe('AiSectionComponent', () => {
         config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
       ]);
       const select = picker(fixture) as HTMLSelectElement;
-      expect(select.value).toBe('');
+      expect(shown(select)).toBe('None');
       expect(select.options[0].textContent?.trim()).toBe('None');
 
-      select.value = '';
-      select.dispatchEvent(new Event('change'));
+      pick(select, 0);
 
       expect(ai.clearProfileSource).toHaveBeenCalled();
       expect(ai.chooseProfileSource).not.toHaveBeenCalled();
@@ -1135,8 +1139,7 @@ describe('AiSectionComponent', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
 
-        select.value = '8';
-        select.dispatchEvent(new Event('change'));
+        pick(select, 1);
         fixture.detectChanges();
         http
           .expectOne('/api/me/ai/configs/8/profile')
@@ -1152,15 +1155,35 @@ describe('AiSectionComponent', () => {
         });
         fixture.detectChanges();
 
-        expect((picker(fixture) as HTMLSelectElement).value).toBe('9');
+        expect(shown(picker(fixture) as HTMLSelectElement)).toBe('Other');
+      });
+
+      it('puts the select back on the holder after two refusals in a row', () => {
+        const fixture = mountWithRealService();
+        const select = picker(fixture) as HTMLSelectElement;
+        const refuse = (): void => {
+          pick(select, 1);
+          fixture.detectChanges();
+          http
+            .expectOne('/api/me/ai/configs/8/profile')
+            .flush(
+              { type: 'profile_connection_rejected', detail: 'Refused.' },
+              { status: 422, statusText: 'Unprocessable Entity' },
+            );
+          fixture.detectChanges();
+        };
+
+        refuse();
+        refuse();
+
+        expect(select.selectedIndex).toBe(0);
       });
 
       it('shows a refused choice beside the picker and puts the select back on the holder', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
 
-        select.value = '8';
-        select.dispatchEvent(new Event('change'));
+        pick(select, 1);
         fixture.detectChanges();
         http.expectOne('/api/me/ai/configs/8/profile').flush(
           {
@@ -1178,7 +1201,7 @@ describe('AiSectionComponent', () => {
             ) as HTMLElement,
           ),
         ).toEqual(['Only a ready LLM connection can build your profile.']);
-        expect(select.value).toBe('');
+        expect(shown(select)).toBe('None');
       });
     });
   });

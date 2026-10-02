@@ -4,9 +4,11 @@ import {
   Signal,
   computed,
   inject,
+  effect,
   linkedSignal,
   signal,
 } from '@angular/core';
+import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
 import { ButtonComponent } from '../../shared/button/button.component';
@@ -24,7 +26,7 @@ import {
 } from '../../shared/searchable-select/searchable-select.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
-import { AiFailure, ScopedAiFailure, SERVER_TEXT_KINDS } from './ai-failure';
+import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
@@ -53,6 +55,7 @@ import { RecommendationSettingsCardComponent } from '../recommendations/recommen
     SearchableSelectComponent,
     SettingsGroupComponent,
     SettingsStackComponent,
+    ReactiveFormsModule,
     TranslocoPipe,
   ],
   providers: [AiSettingsService],
@@ -131,23 +134,16 @@ export class AiSectionComponent {
   );
   readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
 
-  /** What the picker shows: the pick while it is in flight, the holder again after any load or refusal. */
-  readonly pickedProfileSourceId = linkedSignal<
-    { holder: number | null; failure: ScopedAiFailure | null },
-    number | null
-  >({
-    source: () => ({ holder: this.profileSourceId(), failure: this.ai.failure() }),
-    computation: (source) => source.holder,
-  });
+  /** Angular writes the select's value, so a refused pick lands back on the holder every time. */
+  readonly profilePicker = new FormControl<number | null>(null);
 
-  chooseProfileSource(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    this.pickedProfileSourceId.set(value === '' ? null : Number(value));
-    if (value === '') {
+  chooseProfileSource(): void {
+    const id = this.profilePicker.value;
+    if (id === null) {
       this.ai.clearProfileSource();
       return;
     }
-    this.ai.chooseProfileSource(Number(value));
+    this.ai.chooseProfileSource(id);
   }
 
   rowFailure(configId: number): string | null {
@@ -197,6 +193,14 @@ export class AiSectionComponent {
 
   constructor() {
     this.ai.load();
+    effect(() => {
+      this.ai.failure();
+      this.profilePicker.setValue(this.profileSourceId());
+    });
+    effect(() => {
+      if (this.ai.busy()) this.profilePicker.disable();
+      else this.profilePicker.enable();
+    });
   }
 
   value(event: Event): string {

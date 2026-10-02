@@ -337,12 +337,12 @@
             [label]="'settings.ai.profileConnection.label' | transloco"
             [info]="'settings.ai.profileConnection.info' | transloco"
           >
-            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
-              <option value="" [selected]="pickedProfileSourceId() === null">
+            <select [formControl]="profilePicker" (change)="chooseProfileSource()">
+              <option [ngValue]="null">
                 {{ 'settings.ai.profileConnection.none' | transloco }}
               </option>
               @for (config of profileCandidates(); track config.id) {
-                <option [value]="config.id" [selected]="config.id === pickedProfileSourceId()">
+                <option [ngValue]="config.id">
                   {{ label(config) }}
                 </option>
               }
