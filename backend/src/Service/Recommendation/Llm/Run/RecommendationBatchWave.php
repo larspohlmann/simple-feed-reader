@@ -7,8 +7,8 @@ namespace App\Service\Recommendation\Llm\Run;
 use App\Entity\RecommendationRun;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Ai\Model\RateLimitedResultModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
-use App\Service\Recommendation\Llm\Completion\Model\RateLimitedResultModel;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
 use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
@@ -169,6 +169,8 @@ final readonly class RecommendationBatchWave
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      * @param list<RecordedCall>                   $recordedCalls
+     *
+     * @return RateLimitedResultModel<CompletionOutcomeModel>
      */
     private function completeRound(TickContext $tick, array $calls, array $recordedCalls): RateLimitedResultModel
     {
