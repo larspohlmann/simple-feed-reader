@@ -8864,10 +8864,19 @@ For-you card shows the profile after a run. Reviewer: yes.
 
 **Files:**
 - Modify: `docs/recommendations-runs.md`, `docs/architecture.md`
+- Test: `backend/tests/Service/Recommendation/Jev/JevPipelineTest.php` (*Amended (final review M4):* one pin)
+
+- [ ] **Step 0: Pin** (*Added (final review M4)*) — one `JevPipelineTest` case: tick until the run holds its profile,
+remove the profile connection, tick to the end, expect `completed` and one System One request. Commit
+`feat(#1345): …`; the deletion check widens `JevRecommendationEngine::advance()`'s pending test to
+`isPending($run) || null === $tick->profileTick` and quotes the FAIL.
 
 - [ ] **Step 1: Document**
 
-`docs/architecture.md` §9: "(#1344; today `Recommendation\Llm`)" → "(#1344; today `Recommendation\Llm` and `Recommendation\Jev`)", and after the sentence "So `Service/Recommendation/Llm` holds the LLM engine, …" add: "`Service/Recommendation/Jev` holds the System One engine the same way (`Recommendation\Jev → Recommendation → Ai`); the two sub-modules never name each other."
+`docs/architecture.md` §9: "(#1344; today `Recommendation\Llm`)" → "(#1344; today `Recommendation\Llm` and `Recommendation\Jev`)", and after the sentence "So `Service/Recommendation/Llm` holds the LLM engine, …" add: "`Service/Recommendation/Jev` holds the System One engine the same way (`Recommendation\Jev → Recommendation → Ai`); the two sub-modules never name each other." *Amended (final review M3):* the "lower side owns an interface" bullet
+also names `Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface`, implemented by `Recommendation\Llm`'s
+`DistillationPhase` (aliased in `config/services.yaml`), the only way `Recommendation\Jev` reaches the LLM's
+distillation.
 
 `docs/recommendations-runs.md`, "Engines" subsection — first paragraph's "(today every connection is an LLM connection)" becomes "(a model id starting with `jev-` is TypeSafe's System One, any other an LLM)"; append:
 
@@ -8939,7 +8948,10 @@ curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/model -H "Authorizati
 curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/active -H "Authorization: Bearer $TOKEN" | jq '{active, capabilities}'   # only if 8 was not active
 ```
 
-Then choose the profile connection (*Added (B9):* an LLM connection of that account; ask Lars which if several): `curl -sk -X PUT https://localhost:8443/api/me/ai/configs/<llm id>/profile -H "Authorization: Bearer $TOKEN" | jq '{profileSource}'`.
+Then choose the profile connection (*Added (B9):* an LLM connection of that account; *Amended (final review M2):*
+the account's most recently used non-Jev, ready LLM connection, found read only — e.g. the connection of its latest
+non-Jev run, or the most recently updated LLM connection — named in the report with how it was chosen. If the account
+has none: stop and report BLOCKED; adding a connection is a write outside this step): `curl -sk -X PUT https://localhost:8443/api/me/ai/configs/<llm id>/profile -H "Authorization: Bearer $TOKEN" | jq '{profileSource}'`.
 
 Expected capabilities `{"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else, and the provider group shows the profile-connection picker with that connection selected; the For-you card shows "Show score and reasons", no fixed prompt, and (after run 1) the profile. Turn the switch on if it is off (record that, to restore).
 
@@ -8955,13 +8967,18 @@ SELECT run_id, phase, batch_number, attempt, verdict, request_id, answering_mode
 SELECT COUNT(*) AS items, SUM(CASE WHEN reason = '' THEN 1 ELSE 0 END) AS without_reason, MIN(score), MAX(score) FROM recommendation_item WHERE recommendation_run_id = <id>;
 ```
 
-Expected: `completed`, `engine_kind = 'jev'`, *Amended (B9):* each run's first log row `phase = 'distill'` (no `request_id`; the profile connection's prompt), every other row `phase = 'batch'` with a `request_id` (`gen-…`), an `answering_model` like `typesafe/jev-1.13-…` and a `cost_nano_credits`; `prompt_tokens > 0` on the run (else D28's assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the picks; the UI shows the score, no reason line. The first System One request's `state` is `{"profile": …[, "guidance": …]}` (the debug panel's request body).
+Expected: `completed`, `engine_kind = 'jev'`, *Amended (B9):* each run's distill rows come first (`phase = 'distill'`, several when the distillation retried; no `request_id`;
+the profile connection's prompt), every other row `phase = 'batch'` with a `request_id` (`gen-…`), an `answering_model` like `typesafe/jev-1.13-…` and a `cost_nano_credits`; *Amended (final review I1):* D28 is verified from one batch row's stored reply, not the run's `prompt_tokens` (the
+distill call's usage is banked on the run too): `SELECT response_text FROM recommendation_run_log WHERE run_id = <id>
+AND phase = 'batch' LIMIT 1` through `jq '.usage | keys'` names `input_tokens` or `prompt_tokens` (else D28's
+assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the picks; the UI shows the score, no reason line. The first System One request's `state` is `{"profile": …[, "guidance": …]}` (the debug panel's request body).
 
 7. Restore: `PUT /api/me/ai/configs/8/model` with the recorded model (a model no longer offered fails verification — then report it to Lars rather than forcing it), `PUT /api/me/ai/configs/<recorded active id>/active` if the active connection changed, and the "show score and reasons" switch to its recorded state. *Added (B9):* restore the profile flag through the API to what step 1 recorded: `PUT /api/me/ai/configs/<recorded id>/profile` when one held it (if that one is no longer an LLM connection the PUT is refused: report it, never write SQL), or `DELETE /api/me/ai/configs/<llm id>/profile` when none did. Re-run step 1's queries: the rows match what was recorded.
 
 8. Scan the dev log: `ls -t backend/var/log/dev-*.log | head -1 | xargs tail -n 600 | jq -c 'select(.level >= 300)'` → nothing new from these runs (a deprecation is a finding).
 
-Record for the PR: both run ids, items, the score range, the request ids' shape, the cost per run, the answering model, the ETA seen on run 2, the probe's result on OpenRouter.
+Record for the PR: both run ids, items, the score range, the request ids' shape, the cost per run (*Amended (final
+review I1):* the distillation included — the distill row's own cost is NULL), the answering model, the ETA seen on run 2, the probe's result on OpenRouter.
 
 - [ ] **Step 6: Commit, push, PR**
 
@@ -8981,11 +8998,11 @@ TypeSafe's Jev (System One) becomes the second recommendation engine: one Noul p
 - **Run log**: each Jev call has its request id, answering model and cost (`recommendation_run_log.request_id`, `answering_model`, `cost_nano_credits`).
 - **Engine switch**: a tick that finds the run's connection on the other engine fails the run with an error that says so; switching back resumes it.
 
-Real run on the dev stack (OpenRouter connection "Jev", `jev-latest`, restored afterwards): <run ids, items, score range, cost, answering model, request ids, ETA on run 2>.
+Real run on the dev stack (OpenRouter connection "Jev", `jev-latest`, restored afterwards): <run ids, items, score range, cost per run (distillation included), answering model, request ids, ETA on run 2>.
 
 Gates: composer check / md / tramp (<warnings>), both test legs, infection:diff, npm run check.
 
-Follow-up offers: show the receipt (request id, answering model, cost) in the debug panel; a profile freshness window; name the size in the oversized-reply message.
+Follow-up offers: show the receipt (request id, answering model, cost) in the debug panel; a profile freshness window; name the size in the oversized-reply message; name the connection in the unreadable-key message; the account's hidden context-window override sizes the Jev distillation (resolve the profile tick's window from the connection, or show the field while the profile is borrowed).
 
 Plan: docs/superpowers/plans/2026-10-02-1345-jev-recommendation-engine.md
 EOF

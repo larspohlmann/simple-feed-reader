@@ -78,7 +78,7 @@ How the fast path is provided depends on the deployment:
 ### Engines
 
 A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
-an engine (today every connection is an LLM connection); `SnapshotPhase` asks that engine to pack the candidate pool
+an engine (a model id starting with `jev-` is TypeSafe's System One, any other an LLM); `SnapshotPhase` asks that engine to pack the candidate pool
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
@@ -90,6 +90,17 @@ skeleton (`BatchWavePhase`) loads each wave's batches and hands them to the engi
 (`Ai\RateLimitedCalls`) and the run-log recorder are shared, so an engine supplies only its own wave. Each kind also
 declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply.
+
+The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
+OpenRouter) one yes/no question per candidate: would this reader, described by the profile an LLM distilled and the
+guidance in `state`, want to read this article? A Jev run distils first, through the profile connection the account
+picks in Settings → AI (falling back to the last stored profile when the distillation fails); without one the run fails
+with a message that says so. The probability is the score (× 1000); there are no reasons and no consolidation,
+so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
+the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
+records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with
+an error that says so (switch back to resume it). The model catalog offers `jev-latest` wherever
+`{base}/systemone` answers.
 
 ### The tick lock
 
