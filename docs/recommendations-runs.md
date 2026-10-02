@@ -85,7 +85,9 @@ the transport-failure strikes, cancelling and finalising stay with the run and a
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile,
 scores the batches in waves and consolidates the best of them into the final list with reasons. Each engine kind
 declares the phases it runs; a run records the kind it was packed for, and its progress (`batchesTotal`) and the
-time-left estimate follow that kind's phases, learning only from completed runs of the same kind. The batch-wave
+time-left estimate follow that kind's phases, learning only from completed runs of the same kind; the estimate also
+adds those runs' median time between calls (worker pickup, tick waits), since elapsed counts from the run's
+creation. The batch-wave
 skeleton (`BatchWavePhase`) loads each wave's batches and hands them to the engine's wave; it, the rate-limit loop
 (`Ai\RateLimitedCalls`) and the run-log recorder are shared, so an engine supplies only its own wave. Each kind also
 declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,

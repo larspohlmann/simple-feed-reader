@@ -8898,6 +8898,13 @@ used to complete a day before), with calls back to back, so their asserted value
 (`RecommendationEtaEstimatorTest`, 18 s), the averaging (`PhaseDurationsModelTest`, 43 s) and `runSeconds` per span
 (`RecommendationRunTimingRepositoryTest`, 46 s). `RecommendationPipelineTest` is untouched.
 
+**Fix round 1 (review I1, coordinator ruling (b)):** the between-call time is the history runs' **median**, not
+their mean. A run that failed and was resumed hours later is `completed` too, and its idle time would otherwise inflate the
+next ten predictions of its kind. There is no migration. Pin: `PhaseDurationsModelTest` with three normal runs (30/32/34 s)
+and one 3 h run predicts 48 s (a mean: 2739 s). `betweenCallSeconds` is private. `docs/recommendations-runs.md`
+names the median between-call time. With run 148 in the dev history, 5 batches predict ≈ 48 s, so B8 5.5's
+15–25 s window still holds.
+
 ### Task B13: the ai settings say jev is supported
 
 **Request (Lars):** Settings → AI shows that Jev models are supported, in the model picker, the step-by-step guide and
