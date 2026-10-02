@@ -195,7 +195,7 @@
       },
       "profileConnection": {
         "label": "Profile connection",
-        "info": "The active connection's engine cannot write your reading profile itself. This connection writes it at the start of every run.",
+        "info": "This connection's engine cannot write your reading profile itself. The connection chosen here writes it at the start of every run on this connection.",
         "none": "None",
         "empty": "Add a connection with a text model above, then choose it here to build your profile."
       },

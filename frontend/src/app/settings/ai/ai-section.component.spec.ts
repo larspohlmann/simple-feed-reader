@@ -38,8 +38,8 @@ interface AiSettingsStub {
   setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
-  chooseProfileSource: jest.Mock;
-  clearProfileSource: jest.Mock;
+  chooseProfileConnection: jest.Mock;
+  clearProfileConnection: jest.Mock;
 }
 
 const config = (over: Partial<AiConfig> = {}): AiConfig => ({
@@ -50,7 +50,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
-  profileSource: false,
+  profileConnectionId: null,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
@@ -126,8 +126,8 @@ function createStub(): AiSettingsStub {
     setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
-    chooseProfileSource: jest.fn(),
-    clearProfileSource: jest.fn(),
+    chooseProfileConnection: jest.fn(),
+    clearProfileConnection: jest.fn(),
   };
 }
 
@@ -1154,11 +1154,11 @@ describe('AiSectionComponent', () => {
       ).toHaveLength(1);
     });
 
-    it('shows the same account-wide choice in every borrowed connection and follows one change', () => {
+    it('shows each borrowed connection its own choice and saves a change for that row only', () => {
       const fixture = mountManaging([
-        { ...jevActive, id: 12, name: 'row-12', active: false },
-        { ...jevActive, id: 13, name: 'row-13', active: false },
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }),
+        { ...jevActive, id: 12, name: 'row-12', active: false, profileConnectionId: 8 },
+        { ...jevActive, id: 13, name: 'row-13', active: false, profileConnectionId: 11 },
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
         config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
       ]);
       const selects = Array.from(
@@ -1166,14 +1166,14 @@ describe('AiSectionComponent', () => {
           '.profile-connection select',
         ),
       );
-      expect(selects.map(shown)).toEqual(['Local', 'Local']);
+      expect(selects.map(shown)).toEqual(['Local', 'Cloud']);
 
-      pick(selects[1], 2);
+      pick(selects[1], 1);
       fixture.detectChanges();
 
-      expect(ai.chooseProfileSource).toHaveBeenCalledTimes(1);
-      expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
-      expect(selects.map(shown)).toEqual(['Cloud', 'Cloud']);
+      expect(ai.chooseProfileConnection).toHaveBeenCalledTimes(1);
+      expect(ai.chooseProfileConnection).toHaveBeenCalledWith(13, 8);
+      expect(selects.map(shown)).toEqual(['Local', 'Local']);
     });
 
     it('lists only the ready connections that build their own profile', () => {
@@ -1196,8 +1196,8 @@ describe('AiSectionComponent', () => {
 
     it('selects the chosen connection and saves a new choice on change', () => {
       const fixture = mountReady([
-        jevActive,
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }),
+        { ...jevActive, profileConnectionId: 8 },
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
         config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
       ]);
       const select = picker(fixture) as HTMLSelectElement;
@@ -1205,7 +1205,7 @@ describe('AiSectionComponent', () => {
 
       pick(select, 2);
 
-      expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
+      expect(ai.chooseProfileConnection).toHaveBeenCalledWith(7, 11);
     });
 
     it('offers "None", selected while nothing is chosen, and clears the choice with it', () => {
@@ -1219,8 +1219,8 @@ describe('AiSectionComponent', () => {
 
       pick(select, 0);
 
-      expect(ai.clearProfileSource).toHaveBeenCalled();
-      expect(ai.chooseProfileSource).not.toHaveBeenCalled();
+      expect(ai.clearProfileConnection).toHaveBeenCalledWith(7);
+      expect(ai.chooseProfileConnection).not.toHaveBeenCalled();
     });
 
     it('explains what to add when no connection can build the profile', () => {
@@ -1265,20 +1265,20 @@ describe('AiSectionComponent', () => {
         return fixture;
       };
 
-      it('shows the actual holder after a 404 reload names a different row', () => {
+      it('shows the stored choice after a 404 reload', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
 
         pick(select, 1);
         fixture.detectChanges();
         http
-          .expectOne('/api/me/ai/configs/8/profile')
+          .expectOne('/api/me/ai/configs/7/profile')
           .flush(null, { status: 404, statusText: 'Not Found' });
         http.expectOne('/api/me/ai').flush({
           configs: [
-            jevActive,
+            { ...jevActive, profileConnectionId: 9 },
             config({ id: 8, name: 'Gone', ready: false }),
-            config({ id: 9, name: 'Other', ready: true, model: 'qwen', profileSource: true }),
+            config({ id: 9, name: 'Other', ready: true, model: 'qwen' }),
           ],
           activeId: 7,
           defaultMaxBatchSize: 50,
@@ -1298,23 +1298,23 @@ describe('AiSectionComponent', () => {
         expect(shown(select)).toBe('Local');
         expect(select.disabled).toBe(true);
 
-        http
-          .expectOne('/api/me/ai/configs/8/profile')
-          .flush(config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }));
+        const request = http.expectOne('/api/me/ai/configs/7/profile');
+        expect(request.request.body).toEqual({ connectionId: 8 });
+        request.flush({ ...jevActive, profileConnectionId: 8 });
         fixture.detectChanges();
 
         expect(shown(select)).toBe('Local');
         expect(select.disabled).toBe(false);
       });
 
-      it('puts the select back on the holder after two refusals in a row', () => {
+      it('puts the select back on the stored choice after two refusals in a row', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
         const refuse = (): void => {
           pick(select, 1);
           fixture.detectChanges();
           http
-            .expectOne('/api/me/ai/configs/8/profile')
+            .expectOne('/api/me/ai/configs/7/profile')
             .flush(
               { type: 'profile_connection_rejected', detail: 'Refused.' },
               { status: 422, statusText: 'Unprocessable Entity' },
@@ -1328,7 +1328,7 @@ describe('AiSectionComponent', () => {
         expect(select.selectedIndex).toBe(0);
       });
 
-      it('puts every select back on the holder when a refusal follows a pick in the second row', () => {
+      it("saves the second row's pick without touching the first", () => {
         const fixture = mountWithRealService([
           { ...jevActive, id: 13, name: 'second', active: false },
         ]);
@@ -1341,24 +1341,27 @@ describe('AiSectionComponent', () => {
         pick(selects[1], 1);
         fixture.detectChanges();
         http
-          .expectOne('/api/me/ai/configs/8/profile')
-          .flush(
-            { type: 'profile_connection_rejected', detail: 'Refused.' },
-            { status: 422, statusText: 'Unprocessable Entity' },
-          );
+          .expectOne('/api/me/ai/configs/13/profile')
+          .flush({ ...jevActive, id: 13, name: 'second', active: false, profileConnectionId: 8 });
         fixture.detectChanges();
 
-        expect(selects).toHaveLength(2);
-        expect(selects.map(shown)).toEqual(['None', 'None']);
+        expect(selects.map(shown)).toEqual(['None', 'Local']);
       });
 
-      it('shows a refused choice beside the picker and puts the select back on the holder', () => {
-        const fixture = mountWithRealService();
-        const select = picker(fixture) as HTMLSelectElement;
+      it('shows a refusal under the row that was refused and puts its select back', () => {
+        const fixture = mountWithRealService([
+          { ...jevActive, id: 13, name: 'second', active: false },
+        ]);
+        const areas = Array.from(
+          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+            '.profile-connection',
+          ),
+        );
+        const selects = areas.map((area) => area.querySelector('select') as HTMLSelectElement);
 
-        pick(select, 1);
+        pick(selects[1], 1);
         fixture.detectChanges();
-        http.expectOne('/api/me/ai/configs/8/profile').flush(
+        http.expectOne('/api/me/ai/configs/13/profile').flush(
           {
             type: 'profile_connection_rejected',
             detail: 'Only a ready LLM connection can build your profile.',
@@ -1367,14 +1370,9 @@ describe('AiSectionComponent', () => {
         );
         fixture.detectChanges();
 
-        expect(
-          banners(
-            (fixture.nativeElement as HTMLElement).querySelector(
-              '.profile-connection',
-            ) as HTMLElement,
-          ),
-        ).toEqual(['Only a ready LLM connection can build your profile.']);
-        expect(shown(select)).toBe('None');
+        expect(banners(areas[0])).toEqual([]);
+        expect(banners(areas[1])).toEqual(['Only a ready LLM connection can build your profile.']);
+        expect(selects.map(shown)).toEqual(['None', 'None']);
       });
     });
   });

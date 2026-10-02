@@ -162,14 +162,20 @@
                             [label]="'settings.ai.profileConnection.label' | transloco"
                             [info]="'settings.ai.profileConnection.info' | transloco"
                           >
-                            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
-                              <option value="" [selected]="shownProfileSourceId() === null">
+                            <select
+                              [disabled]="ai.busy()"
+                              (change)="chooseProfileConnection(config, $event)"
+                            >
+                              <option
+                                value=""
+                                [selected]="shownProfileConnectionId(config) === null"
+                              >
                                 {{ 'settings.ai.profileConnection.none' | transloco }}
                               </option>
                               @for (candidate of profileCandidates(); track candidate.id) {
                                 <option
                                   [value]="candidate.id"
-                                  [selected]="shownProfileSourceId() === candidate.id"
+                                  [selected]="shownProfileConnectionId(config) === candidate.id"
                                 >
                                   {{ label(candidate) }}
                                 </option>
@@ -181,7 +187,7 @@
                             {{ 'settings.ai.profileConnection.empty' | transloco }}
                           </p>
                         }
-                        @if (profileFailure(); as message) {
+                        @if (profileFailure(config.id); as message) {
                           <app-error-banner [message]="message" />
                         }
                       </div>

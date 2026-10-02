@@ -21,7 +21,7 @@ export interface AiConfig {
   readonly model: string | null;
   readonly ready: boolean;
   readonly active: boolean;
-  readonly profileSource: boolean;
+  readonly profileConnectionId: number | null;
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
@@ -199,31 +199,29 @@ export class AiSettingsService {
     );
   }
 
-  chooseProfileSource(id: number): void {
+  chooseProfileConnection(borrowerId: number, connectionId: number): void {
     this.run(
-      { action: 'profile' },
+      { action: 'profile', configId: borrowerId },
       this.reloadWhenGone(
-        this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+        this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${borrowerId}/profile`, {
+          connectionId,
+        }),
       ),
       (config) => this.upsert(config),
     );
   }
 
-  /** Clears the choice on whichever row holds it, wherever its model went since; nothing to send when none does. */
-  clearProfileSource(): void {
-    const holder = this.configs().find((each) => each.profileSource);
-    if (!holder) return;
-
+  clearProfileConnection(borrowerId: number): void {
     this.run(
-      { action: 'profile' },
+      { action: 'profile', configId: borrowerId },
       this.reloadWhenGone(
-        this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+        this.http.delete<void>(`${this.base}/api/me/ai/configs/${borrowerId}/profile`),
       ),
-      () => this.upsert({ ...holder, profileSource: false }),
+      () => this.forgetProfileConnection(borrowerId),
     );
   }
 
-  /** A 404 means the row the choice names is gone: reload instead of failing. Completing empty
+  /** A 404 means the borrowing row or the connection it names is gone: reload instead of failing. Completing empty
    *  leaves `busy` to the reload's own request. */
   private reloadWhenGone<T>(request: Observable<T>): Observable<T> {
     return request.pipe(
@@ -234,6 +232,11 @@ export class AiSettingsService {
         return EMPTY;
       }),
     );
+  }
+
+  private forgetProfileConnection(borrowerId: number): void {
+    const borrower = this.configs().find((each) => each.id === borrowerId);
+    if (borrower) this.upsert({ ...borrower, profileConnectionId: null });
   }
 
   activate(id: number): void {
@@ -263,8 +266,7 @@ export class AiSettingsService {
   /** Replaces the row by id when it exists, so a sibling row's write never
    *  reorders the list; otherwise appends (what `add` needs). A row reported
    *  `active` clears the flag on whichever row held it before -- mirroring the
-   *  server's own guarantee of at most one active configuration per account,
-   *  and likewise `profileSource`. */
+   *  server's own guarantee of at most one active configuration per account. */
   private upsert(config: AiConfig): void {
     const current = this.configs();
     const index = current.findIndex((each) => each.id === config.id);
@@ -275,20 +277,21 @@ export class AiSettingsService {
 
     this.configs.set(
       replaced.map((each) =>
-        each.id !== config.id && holdsAFlagNowTaken(each, config)
-          ? {
-              ...each,
-              active: each.active && !config.active,
-              profileSource: each.profileSource && !config.profileSource,
-            }
-          : each,
+        each.id !== config.id && each.active && config.active ? { ...each, active: false } : each,
       ),
     );
     this.applyAvailability();
   }
 
+  /** Removes the row and, as the server does, every profile pointer to it. */
   private drop(id: number): void {
-    this.configs.set(this.configs().filter((each) => each.id !== id));
+    this.configs.set(
+      this.configs()
+        .filter((each) => each.id !== id)
+        .map((each) =>
+          each.profileConnectionId === id ? { ...each, profileConnectionId: null } : each,
+        ),
+    );
     this.applyAvailability();
   }
 
@@ -320,9 +323,4 @@ export class AiSettingsService {
       },
     });
   }
-}
-
-/** Whether `sibling` holds a one-per-account flag that `taken` now reports as its own. */
-function holdsAFlagNowTaken(sibling: AiConfig, taken: AiConfig): boolean {
-  return (taken.active && sibling.active) || (taken.profileSource && sibling.profileSource);
 }

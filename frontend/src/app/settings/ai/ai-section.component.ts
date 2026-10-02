@@ -34,6 +34,11 @@ import { RecommendationDebugLogComponent } from '../recommendations/recommendati
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
 import { RecommendationSettingsCardComponent } from '../recommendations/recommendation-settings-card.component';
 
+interface ProfilePick {
+  readonly borrowerId: number;
+  readonly connectionId: number | null;
+}
+
 /** The AI provider list: every saved configuration, one row each, plus the
  *  add form below. Each row carries its own model and readiness, at most
  *  one active; this component only reflects that (activation is decided
@@ -134,30 +139,32 @@ export class AiSectionComponent {
   readonly profileCandidates = computed(() =>
     this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
   );
-  readonly profileSourceId = computed(
-    () => this.profileCandidates().find((config) => config.profileSource)?.id ?? null,
-  );
-  readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
-
-  /** The pick while its write is in flight, the stored choice once it settles: the select keeps
-   *  the user's pick through the request, and a refused one falls back to what the server holds. */
-  readonly shownProfileSourceId = linkedSignal<
-    { stored: number | null; busy: boolean },
-    number | null
-  >({
-    source: () => ({ stored: this.profileSourceId(), busy: this.ai.busy() }),
-    computation: (source, previous) => (source.busy && previous ? previous.value : source.stored),
+  /** The pick while its write is in flight, then null: the borrowing row's select keeps the user's pick through the
+   *  request and shows what the server holds once it settles. The source is an object so a busy flip that ends where
+   *  it began, unread in between, still recomputes. */
+  readonly profilePick = linkedSignal<{ busy: boolean }, ProfilePick | null>({
+    source: () => ({ busy: this.ai.busy() }),
+    computation: (source, previous) => (source.busy && previous ? previous.value : null),
   });
 
-  chooseProfileSource(event: Event): void {
+  shownProfileConnectionId(config: AiConfig): number | null {
+    const pick = this.profilePick();
+    return pick?.borrowerId === config.id ? pick.connectionId : config.profileConnectionId;
+  }
+
+  chooseProfileConnection(config: AiConfig, event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    const id = value === '' ? null : Number(value);
-    this.shownProfileSourceId.set(id);
-    if (id === null) {
-      this.ai.clearProfileSource();
+    const connectionId = value === '' ? null : Number(value);
+    this.profilePick.set({ borrowerId: config.id, connectionId });
+    if (connectionId === null) {
+      this.ai.clearProfileConnection(config.id);
       return;
     }
-    this.ai.chooseProfileSource(id);
+    this.ai.chooseProfileConnection(config.id, connectionId);
+  }
+
+  profileFailure(configId: number): string | null {
+    return this.failureFor('profile', configId);
   }
 
   private modelHint(capabilities: RecommendationCapabilities): string | undefined {
@@ -170,14 +177,18 @@ export class AiSectionComponent {
   }
 
   rowFailure(configId: number): string | null {
+    return this.failureFor('row', configId);
+  }
+
+  private failureFor(action: 'row' | 'profile', configId: number): string | null {
     const scoped = this.ai.failure();
-    if (!scoped || scoped.scope.action !== 'row') return null;
-    if (scoped.scope.configId !== configId) return null;
+    if (!scoped || scoped.scope.action !== action) return null;
+    if (!('configId' in scoped.scope) || scoped.scope.configId !== configId) return null;
 
     return this.message(scoped.failure);
   }
 
-  private messageFor(action: 'load' | 'add' | 'profile'): string | null {
+  private messageFor(action: 'load' | 'add'): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== action) return null;
 
