@@ -103,6 +103,23 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         );
     }
 
+    /** History: an LLM run (60 here too) and a Jev run at 25 s a batch. 4 Jev batches, 20 s in: 4 × 25 − 20. */
+    public function testAJevRunIsPredictedFromJevRunsAlone(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalJevRun(batchWall: 75, batches: 3);
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
+        $run->snapshot(RecommendationEngineKind::Jev, [[1], [2], [3], [4]]);
+        $run->markFirstBatchStarted();
+
+        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(
+            RecommendationRunReportModel::fromRun($run),
+            $this->user,
+        );
+
+        self::assertSame(80, $eta);
+    }
+
     private function estimatorAt(string $offset): RecommendationEtaEstimator
     {
         /** @var RecommendationRunTimingRepository $timings */
@@ -137,6 +154,17 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
             $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
         }
         $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
+        $this->entityManager->flush();
+    }
+
+    private function seedHistoricalJevRun(int $batchWall, int $batches): void
+    {
+        $run = $this->fixtures->createRun($this->user);
+        $run->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
+        for ($batch = 1; $batch <= $batches; $batch++) {
+            $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
+        }
         $this->entityManager->flush();
     }
 

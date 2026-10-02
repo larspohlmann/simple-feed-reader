@@ -45,6 +45,16 @@ final class TickContextFactoryTest extends DbTestCase
         self::assertSame(TickDriver::Worker, $tick->driver);
     }
 
+    public function testAJevConnectionTicksWithTheJevKind(): void
+    {
+        $owner = $this->user('tick-context-jev@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $run = $this->fixtures->createRun($owner);
+        $this->entityManager->flush();
+
+        self::assertSame(RecommendationEngineKind::Jev, $this->factory()->create($run, TickDriver::Poll)->engineKind);
+    }
+
     public function testAConnectionWithoutAModelCannotTick(): void
     {
         $owner = $this->user('tick-context-no-model@example.test');

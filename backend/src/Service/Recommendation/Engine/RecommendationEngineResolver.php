@@ -18,6 +18,9 @@ final readonly class RecommendationEngineResolver
 {
     private const RecommendationEngineKind DEFAULT_KIND = RecommendationEngineKind::Llm;
 
+    /** TypeSafe names its decision models `jev-…`; its chat router `typesafe/jev-router` is an LLM. Case-sensitive. */
+    private const string JEV_MODEL_PREFIX = 'jev-';
+
     public function __construct(
         #[AutowireLocator('app.recommendation_engine')]
         private ContainerInterface $engines,
@@ -26,7 +29,9 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return self::DEFAULT_KIND;
+        return str_starts_with($connection->getModel() ?? '', self::JEV_MODEL_PREFIX)
+            ? RecommendationEngineKind::Jev
+            : self::DEFAULT_KIND;
     }
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel

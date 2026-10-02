@@ -60,6 +60,25 @@ final class PhaseDurationsModelTest extends TestCase
         self::assertNull(PhaseDurationsModel::fromCompletedRunSpans([], RecommendationEngineKind::Llm));
     }
 
+    /** Run 1 is a Jev run (60 s over 3 batches), run 2 an LLM run: each kind learns from its own runs only. */
+    public function testEachKindAveragesOnlyRunsWithExactlyItsPhases(): void
+    {
+        $spans = [
+            $this->span(1, CallPhase::Batch, 60.0, 3),
+            $this->span(2, CallPhase::Distill, 10.0, 0),
+            $this->span(2, CallPhase::Batch, 40.0, 4),
+            $this->span(2, CallPhase::Consolidate, 30.0, 0),
+        ];
+
+        $jev = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Jev);
+        $llm = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Llm);
+
+        self::assertNotNull($jev);
+        self::assertSame(100.0, $jev->predictedTotalSeconds(5));   // 5 × 20 s, nothing around the batches
+        self::assertNotNull($llm);
+        self::assertSame(70.0, $llm->predictedTotalSeconds(3));    // 10 + 3 × 10 + 30
+    }
+
     /**
      * @return array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}
      */

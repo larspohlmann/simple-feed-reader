@@ -37,13 +37,18 @@ final readonly class RecommendationRunFixtures
 
     public function seedReadyAiSettings(User $user): void
     {
+        $this->seedReadyAiSettingsFor($user, 'm');
+    }
+
+    public function seedReadyAiSettingsFor(User $user, string $model): void
+    {
         $userId = $user->requireId();
         $sealed = $this->cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->entityManager->persist($settings);
-        $settings->chooseModel('m', $now, 32768);
+        $settings->chooseModel($model, $now, 32768);
         $user->setActiveAiProviderSettings($settings);
         $this->entityManager->flush();
     }

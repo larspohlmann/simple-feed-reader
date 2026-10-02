@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -123,6 +124,24 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertSame('fallback', $payload['contextWindowSource']);
         self::assertSame('medium', $payload['batchSize']);
         self::assertFalse($payload['debugEnabled']);
+    }
+
+    public function testAJevAccountGetsNoneOfTheLlmsPromptPieces(): void
+    {
+        $client = static::createClient();
+        [$headers, $user] = $this->auth('recsettings-jev@example.test');
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        self::assertInstanceOf(ApiKeyCipher::class, $cipher);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        (new RecommendationRunFixtures($entityManager, $cipher))->seedReadyAiSettingsFor($user, 'jev-latest');
+
+        $client->request('GET', self::URI, server: $headers);
+
+        $payload = $this->payload($client);
+        self::assertNull($payload['fixedPrompt']);
+        self::assertNull($payload['defaultGuidancePrompt']);
+        self::assertArrayHasKey('guidancePrompt', $payload);
     }
 
     public function testAProviderContextWindowIsReportedAsTheEffectiveValueWithNoOverride(): void

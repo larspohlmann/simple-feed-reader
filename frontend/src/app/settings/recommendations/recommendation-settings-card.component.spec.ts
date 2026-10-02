@@ -63,6 +63,12 @@ describe('RecommendationSettingsCardComponent', () => {
     showScoreAndReasons: false,
   };
 
+  function guidanceInfo(fixture: ComponentFixture<RecommendationSettingsCardComponent>): string {
+    return (
+      fixture.nativeElement.querySelector('[data-testid="guidance-info"]') as HTMLElement
+    ).textContent!.trim();
+  }
+
   function mount(
     initial: RecommendationSettingsState = STATE,
     capabilities: RecommendationCapabilities = EVERY_RECOMMENDATION_CAPABILITY,
@@ -254,6 +260,22 @@ describe('RecommendationSettingsCardComponent', () => {
         fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
       ).toBeNull();
       expect(guidance.placeholder).toBe('');
+    });
+
+    it('explains the guidance against the fixed prompt to an engine that sends one', () => {
+      const fixture = mount();
+
+      expect(guidanceInfo(fixture)).toContain('fixed prompt');
+    });
+
+    it('explains the guidance against the reading history to an engine that sends no prompt', () => {
+      const fixture = mount(STATE, {
+        ...NO_RECOMMENDATION_CAPABILITIES,
+        tuningFields: ['batchConcurrency'],
+      });
+
+      expect(guidanceInfo(fixture)).toContain('reading history');
+      expect(guidanceInfo(fixture)).not.toContain('fixed prompt');
     });
   });
 

@@ -222,7 +222,14 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
           <div class="reference-refs">
             <div class="group">
               <app-field [label]="'settings.ai.recommendations.guidance' | transloco">
-                <p class="prompt-info">{{ 'settings.ai.info.guidance' | transloco }}</p>
+                <p class="prompt-info" data-testid="guidance-info">
+                  {{
+                    (offersPrompt()
+                      ? 'settings.ai.info.guidance'
+                      : 'settings.ai.info.guidanceWithoutPrompt'
+                    ) | transloco
+                  }}
+                </p>
                 <textarea
                   [placeholder]="offersPrompt() ? (state.defaultGuidancePrompt ?? '') : ''"
                   [value]="guidance()"

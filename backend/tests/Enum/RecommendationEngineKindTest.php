@@ -28,4 +28,11 @@ final class RecommendationEngineKindTest extends TestCase
     {
         self::assertTrue(RecommendationEngineKind::Llm->runs(CallPhase::Consolidate));
     }
+
+    public function testJevAsksInBatchesOnly(): void
+    {
+        self::assertSame([CallPhase::Batch], RecommendationEngineKind::Jev->phases());
+        self::assertSame(0, RecommendationEngineKind::Jev->singleCallPhaseCount());
+        self::assertFalse(RecommendationEngineKind::Jev->runs(CallPhase::Distill));
+    }
 }

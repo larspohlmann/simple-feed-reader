@@ -26,6 +26,11 @@ final readonly class RecommendationEngineCapabilitiesModel
                 sendsPrompt: true,
                 tuningFields: RecommendationTuningField::cases(),
             ),
+            RecommendationEngineKind::Jev => new self(
+                writesReasons: false,
+                sendsPrompt: false,
+                tuningFields: [RecommendationTuningField::BatchConcurrency],
+            ),
         };
     }
 }

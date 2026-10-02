@@ -12,6 +12,7 @@ use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ScriptedRecommendationEngine;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -19,13 +20,51 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class RecommendationEngineResolverTest extends TestCase
 {
-    /** `typesafe/jev-router` is a chat-completions router, so it stays an LLM connection after #1345 too. */
-    public function testEveryConnectionIsAnLlmConnection(): void
+    /** @return iterable<string, array{?string, RecommendationEngineKind}> */
+    public static function models(): iterable
+    {
+        yield 'the Jev alias' => ['jev-latest', RecommendationEngineKind::Jev];
+        yield 'the preview alias' => ['jev-preview', RecommendationEngineKind::Jev];
+        yield 'a pinned Jev version' => ['jev-1.13.0', RecommendationEngineKind::Jev];
+        yield 'the TypeSafe chat router' => ['typesafe/jev-router', RecommendationEngineKind::Llm];
+        yield 'a chat model' => ['gpt-4o', RecommendationEngineKind::Llm];
+        yield 'another case, another id' => ['JEV-latest', RecommendationEngineKind::Llm];
+        yield 'no model yet' => [null, RecommendationEngineKind::Llm];
+    }
+
+    #[DataProvider('models')]
+    public function testTheModelIdDecidesTheKind(?string $model, RecommendationEngineKind $kind): void
     {
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
+        $connection = AiProviderSettingsFactory::build(
+            new User('engine-resolver@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
+        );
+        if (null !== $model) {
+            $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'), null);
+        }
 
-        self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('gpt-4o-mini')));
-        self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('typesafe/jev-router')));
+        self::assertSame($kind, $resolver->kindFor($connection));
+    }
+
+    public function testTheJevKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
+    {
+        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev);
+
+        self::assertFalse($capabilities->writesReasons);
+        self::assertFalse($capabilities->sendsPrompt);
+        self::assertSame([RecommendationTuningField::BatchConcurrency], $capabilities->tuningFields);
+    }
+
+    public function testAnAccountsCapabilitiesAreItsActiveConnections(): void
+    {
+        $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
+        $account = new User('jev-account@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
+        $account->setActiveAiProviderSettings($this->connection('jev-latest'));
+
+        self::assertEquals(
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
+            $resolver->capabilitiesForAccount($account),
+        );
     }
 
     public function testTheLlmKindWritesReasonsSendsAPromptAndReadsEveryTuningFieldInTheirOrder(): void
