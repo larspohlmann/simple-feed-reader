@@ -79,6 +79,8 @@ final class SystemOneCatalogTest extends TestCase
         self::assertSame('{}', $options['body']);
         self::assertIsArray($options['headers']);
         self::assertContains('Authorization: Bearer sk-or', $options['headers']);
+        self::assertSame(5.0, $options['timeout']);
+        self::assertSame(5.0, $options['max_duration']);
     }
 
     public function testAnAddressThatDoesNotAnswerIsUnreachable(): void

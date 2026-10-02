@@ -25,7 +25,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
     /** OpenRouter refuses `jev-preview`, and TypeSafe documents only `jev-latest`. */
     private const array MODEL_IDS = ['jev-latest'];
 
-    private const float TIMEOUT_SECONDS = 10.0;
+    private const float TIMEOUT_SECONDS = 5.0;
 
     public function __construct(
         private HttpClientInterface $httpClient,
