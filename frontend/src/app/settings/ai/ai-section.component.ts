@@ -213,7 +213,6 @@ export class AiSectionComponent {
     this.ai.setSlowModel(config.id, (event.target as HTMLInputElement).checked);
   }
 
-  /** Whether this connection's engine reads the setting; one it ignores is not offered. */
   offersTuning(config: AiConfig, field: RecommendationTuningField): boolean {
     return offersTuning(config.capabilities, field);
   }

@@ -250,7 +250,6 @@ export class RecommendationSettingsCardComponent {
     this.svc.saveInstant({ lookbackDays: value });
   }
 
-  /** Whether the active engine reads this setting; one it ignores is not offered. */
   offersTuning(field: RecommendationTuningField): boolean {
     return offersTuning(this.availability.capabilities(), field);
   }
