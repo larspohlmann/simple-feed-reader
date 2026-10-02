@@ -1020,9 +1020,25 @@ describe('AiSectionComponent', () => {
       ai.configs.set(configs);
       fixture.detectChanges();
       flushReady();
+      fixture.componentInstance.managing.set(true);
       fixture.detectChanges();
       return fixture;
     };
+
+    const mountManaging = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
+      const fixture = mount();
+      ai.configs.set(configs);
+      fixture.detectChanges();
+      if (configs.some((each) => each.active && each.ready)) flushReady();
+      fixture.componentInstance.managing.set(true);
+      fixture.detectChanges();
+      return fixture;
+    };
+
+    const areaOf = (fixture: ComponentFixture<AiSectionComponent>, id: number): HTMLElement =>
+      Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.config-row'),
+      ).find((row) => row.textContent?.includes(`row-${id}`)) as HTMLElement;
 
     const shown = (select: HTMLSelectElement): string =>
       (select.selectedOptions[0]?.textContent ?? '').trim();
@@ -1040,17 +1056,47 @@ describe('AiSectionComponent', () => {
       capabilities: BORROWING,
     });
 
-    it('is offered only when the active connection borrows its profile', () => {
-      const fixture = mountReady([config({ id: 7, ready: true, active: true, model: 'gpt-4o' })]);
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection'),
-      ).toBeNull();
+    it('renders inside the configuration area of a borrowed connection that is not active', () => {
+      const fixture = mountManaging([
+        config({ id: 7, name: 'row-7', ready: true, active: true, model: 'gpt-4o' }),
+        { ...jevActive, id: 12, name: 'row-12', active: false },
+      ]);
 
-      ai.configs.set([jevActive]);
-      fixture.detectChanges();
+      expect(areaOf(fixture, 12).querySelector('.config-body .profile-connection')).not.toBeNull();
+    });
+
+    it('is absent from the configuration area of a connection that builds its own profile', () => {
+      const fixture = mountManaging([
+        config({ id: 7, name: 'row-7', ready: true, active: true, model: 'gpt-4o' }),
+        { ...jevActive, id: 12, name: 'row-12', active: false },
+      ]);
+
+      expect(areaOf(fixture, 7).querySelector('.profile-connection')).toBeNull();
       expect(
-        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection'),
-      ).not.toBeNull();
+        (fixture.nativeElement as HTMLElement).querySelectorAll('.profile-connection'),
+      ).toHaveLength(1);
+    });
+
+    it('shows the same account-wide choice in every borrowed connection and follows one change', () => {
+      const fixture = mountManaging([
+        { ...jevActive, id: 12, name: 'row-12', active: false },
+        { ...jevActive, id: 13, name: 'row-13', active: false },
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }),
+        config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
+      ]);
+      const selects = Array.from(
+        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLSelectElement>(
+          '.profile-connection select',
+        ),
+      );
+      expect(selects.map(shown)).toEqual(['Local', 'Local']);
+
+      pick(selects[1], 2);
+      fixture.detectChanges();
+
+      expect(ai.chooseProfileSource).toHaveBeenCalledTimes(1);
+      expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
+      expect(selects.map(shown)).toEqual(['Cloud', 'Cloud']);
     });
 
     it('lists only the ready connections that build their own profile', () => {
@@ -1131,6 +1177,7 @@ describe('AiSectionComponent', () => {
         });
         fixture.detectChanges();
         flushReady();
+        fixture.componentInstance.managing.set(true);
         fixture.detectChanges();
         return fixture;
       };

@@ -51,9 +51,8 @@ app-searchable-select {
 .profile-connection {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: var(--space-3);
-  padding: var(--space-3) var(--panel-inset-x) var(--panel-inset-y);
-  border-top: 1px solid var(--border);
 }
 
 .manage {

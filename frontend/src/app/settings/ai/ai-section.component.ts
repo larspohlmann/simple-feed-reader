@@ -122,10 +122,6 @@ export class AiSectionComponent {
   readonly listFailure: Signal<string | null> = computed(() => this.messageFor('load'));
   readonly addFailure: Signal<string | null> = computed(() => this.messageFor('add'));
 
-  /** The active engine cannot write the reader's profile itself and borrows one of the account's connections. */
-  readonly borrowsProfile = computed(
-    () => this.activeConfig()?.capabilities.profile === 'borrowed',
-  );
   readonly profileCandidates = computed(() =>
     this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
   );
@@ -134,11 +130,13 @@ export class AiSectionComponent {
   );
   readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
 
-  /** Angular writes the select's value, so a refused pick lands back on the holder every time. */
+  /** One control for every borrowed row's select: the choice is account-wide. A view-driven change
+   *  skips the sibling selects, so `chooseProfileSource` writes the value back to reach them. */
   readonly profilePicker = new FormControl<number | null>(null);
 
   chooseProfileSource(): void {
     const id = this.profilePicker.value;
+    this.profilePicker.setValue(id);
     if (id === null) {
       this.ai.clearProfileSource();
       return;
