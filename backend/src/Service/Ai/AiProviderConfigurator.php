@@ -27,7 +27,7 @@ use Psr\Clock\ClockInterface;
 /**
  * Creates, verifies and removes provider connections. Every write is preceded by a live call, and a failed one
  * persists nothing; only duplicateConfiguration() skips it, reusing a verified row's key. The active configuration
- * is a single pointer on User, not a per-row flag.
+ * is a single pointer on User, not a per-row flag; a borrowing row's profile connection is a pointer on that row.
  */
 final readonly class AiProviderConfigurator
 {
@@ -156,12 +156,7 @@ final readonly class AiProviderConfigurator
 
     public function deleteConfiguration(AiProviderSettings $settings): void
     {
-        $user = $settings->getUser();
-
-        if ($settings === $user->getActiveAiProviderSettings()) {
-            $user->setActiveAiProviderSettings(null);
-        }
-
+        $this->releasePointersTo($settings);
         $this->entityManager->remove($settings);
         $this->entityManager->flush();
     }
@@ -181,6 +176,18 @@ final readonly class AiProviderConfigurator
         }
 
         return ProviderCredentialsModel::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);
+    }
+
+    private function releasePointersTo(AiProviderSettings $settings): void
+    {
+        $user = $settings->getUser();
+        if ($settings === $user->getActiveAiProviderSettings()) {
+            $user->setActiveAiProviderSettings(null);
+        }
+
+        foreach ($this->aiProviderSettings->findBorrowersOf($settings) as $borrower) {
+            $borrower->setProfileConnection(null);
+        }
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void

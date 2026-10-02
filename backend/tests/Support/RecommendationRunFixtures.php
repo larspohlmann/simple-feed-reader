@@ -43,34 +43,55 @@ final readonly class RecommendationRunFixtures
         $this->seedReadyAiSettingsFor($user, 'm');
     }
 
-    public function seedReadyAiSettingsFor(User $user, string $model): void
+    public function seedReadyAiSettingsFor(User $user, string $model): AiProviderSettings
     {
-        $userId = $user->requireId();
-        $sealed = $this->cipher->seal($userId, 'sk-throwaway1234');
-        $now = new \DateTimeImmutable('2026-08-07 09:00:00');
-
-        $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $this->entityManager->persist($settings);
-        $settings->chooseModel($model, $now, 32768);
+        $settings = $this->seedInactiveAiSettingsFor($user, $model);
         $user->setActiveAiProviderSettings($settings);
         $this->entityManager->flush();
+
+        return $settings;
     }
 
-    /** A second ready connection, not active, chosen to build the profile; its base URL tells its calls apart. */
+    /** A ready connection on the default endpoint that the account has not activated. */
+    public function seedInactiveAiSettingsFor(User $user, string $model): AiProviderSettings
+    {
+        return $this->seedConnection($user, null, 'https://api.example.test/v1', $model);
+    }
+
+    /** A ready connection, not active, that the active connection borrows its profile from. */
     public function seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings
+    {
+        $borrower = $user->getActiveAiProviderSettings()
+            ?? throw new \LogicException('Cannot seed a profile connection before a provider is seeded.');
+
+        return $this->seedProfileConnectionBorrowedBy($borrower, $model);
+    }
+
+    /** A ready connection, not active, that $borrower borrows its profile from; its base URL tells its calls apart. */
+    public function seedProfileConnectionBorrowedBy(
+        AiProviderSettings $borrower,
+        string $model = self::PROFILE_MODEL,
+    ): AiProviderSettings {
+        $connection = $this->seedConnection($borrower->getUser(), 'Profile', self::PROFILE_BASE_URL, $model);
+        $borrower->setProfileConnection($connection);
+        $this->entityManager->flush();
+
+        return $connection;
+    }
+
+    private function seedConnection(User $owner, ?string $name, string $baseUrl, string $model): AiProviderSettings
     {
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
         $connection = new AiProviderSettings(
-            $user,
-            'Profile',
-            self::PROFILE_BASE_URL,
-            $this->cipher->seal($user->requireId(), 'sk-profile5678'),
-            '5678',
+            $owner,
+            $name,
+            $baseUrl,
+            $this->cipher->seal($owner->requireId(), 'sk-throwaway1234'),
+            '1234',
             $now,
         );
         $this->entityManager->persist($connection);
         $connection->chooseModel($model, $now, 32768);
-        $connection->setProfileSource(true);
         $this->entityManager->flush();
 
         return $connection;

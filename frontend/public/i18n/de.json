@@ -195,7 +195,7 @@
       },
       "profileConnection": {
         "label": "Profilverbindung",
-        "info": "Die Engine der aktiven Verbindung kann dein Leseprofil nicht selbst schreiben. Diese Verbindung schreibt es zu Beginn jedes Durchlaufs.",
+        "info": "Die Engine dieser Verbindung kann dein Leseprofil nicht selbst schreiben. Die hier gewählte Verbindung schreibt es zu Beginn jedes Durchlaufs mit dieser Verbindung.",
         "none": "Keine",
         "empty": "Füge oben eine Verbindung mit einem Textmodell hinzu und wähle sie hier aus, um dein Profil zu erstellen."
       },

@@ -31,9 +31,10 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
         return array_values($this->findBy(['user' => $user], ['id' => 'ASC']));
     }
 
-    public function findProfileSourceFor(User $user): ?AiProviderSettings
+    /** @return list<AiProviderSettings> */
+    public function findBorrowersOf(AiProviderSettings $connection): array
     {
-        return $this->findOneBy(['user' => $user, 'profileSource' => true], ['id' => 'DESC']);
+        return $this->findBy(['profileConnection' => $connection]);
     }
 
     public function countForUser(User $user): int

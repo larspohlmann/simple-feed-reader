@@ -13,6 +13,7 @@ use App\Exception\ValidationException;
 use App\Service\Account\AccountDeleter;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 
 final class AccountDeleterTest extends DbTestCase
@@ -21,12 +22,17 @@ final class AccountDeleterTest extends DbTestCase
 
     private AccountDeleter $deleter;
     private UserFactory $userFactory;
+    private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->deleter = self::getContainer()->get(AccountDeleter::class);
+        $this->fixtures = new RecommendationRunFixtures(
+            $this->entityManager,
+            self::getContainer()->get(ApiKeyCipher::class),
+        );
         $this->userFactory = new UserFactory(
             $this->entityManager,
             self::getContainer()->get('security.user_password_hasher'),
@@ -87,20 +93,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai@example.com');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway1234');
-        $configuration = new AiProviderSettings(
-            $target,
-            'Work OpenAI',
-            'https://api.example.test/v1',
-            $sealed,
-            '1234',
-            new \DateTimeImmutable(self::NOW),
-        );
-        $this->entityManager->persist($configuration);
-        $this->entityManager->flush();
-        $configurationId = $configuration->requireId();
+        $configurationId = $this->fixtures->seedInactiveAiSettingsFor($target, 'gpt-4o')->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -116,19 +109,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai-2@example.com');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway5678');
-        $configuration = new AiProviderSettings(
-            $target,
-            'Active OpenAI',
-            'https://api.example.test/v1',
-            $sealed,
-            '5678',
-            new \DateTimeImmutable(self::NOW),
-        );
-        $this->entityManager->persist($configuration);
-        $this->entityManager->flush();
+        $configuration = $this->fixtures->seedInactiveAiSettingsFor($target, 'gpt-4o');
         $target->setActiveAiProviderSettings($configuration);
         $this->entityManager->flush();
         $targetId = $target->requireId();
@@ -142,6 +123,26 @@ final class AccountDeleterTest extends DbTestCase
         $count = $this->entityManager->getConnection()->executeQuery(
             'SELECT COUNT(*) FROM user_ai_settings WHERE id = ?',
             [$configurationId],
+        )->fetchOne();
+        self::assertSame(0, is_numeric($count) ? (int) $count : -1);
+    }
+
+    /** profile_connection_id points at a sibling (ON DELETE SET NULL) that the same cascade removes. */
+    public function testDeletionTakesABorrowingConnectionAndTheSiblingItBorrowsFrom(): void
+    {
+        $admin = $this->userFactory->create('admin-ai-3@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-ai-3@example.com');
+        $borrower = $this->fixtures->seedInactiveAiSettingsFor($target, 'jev-latest');
+        $this->fixtures->seedProfileConnectionBorrowedBy($borrower);
+        $target->setActiveAiProviderSettings($borrower);
+        $this->entityManager->flush();
+        $targetId = $target->requireId();
+
+        $this->deleter->deleteAsAdmin($target, $admin);
+
+        $count = $this->entityManager->getConnection()->executeQuery(
+            'SELECT COUNT(*) FROM user_ai_settings WHERE user_id = ?',
+            [$targetId],
         )->fetchOne();
         self::assertSame(0, is_numeric($count) ? (int) $count : -1);
     }

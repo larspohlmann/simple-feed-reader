@@ -72,7 +72,8 @@ More in the [screenshot gallery](docs/screenshots.md).
   models via LM Studio or Ollama — your data can stay on your own machine.
 - Or let TypeSafe's Jev (System One, directly or through OpenRouter) score
   every unread article: one yes/no judgement per article, ranked by
-  probability, built on the reading profile an LLM connection distils.
+  probability, built on the reading profile distilled by the LLM connection
+  you pick for that Jev connection.
 - A free-text guidance prompt steers the picks (topics to prefer or avoid);
   runs start manually or on a schedule.
 - Runs execute on the server: close the tab and come back later, stop a run,

@@ -13,8 +13,8 @@ use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * A Jev run's profile: distilled through the account's profile connection, else the last stored one, else the run
- * fails. Failed, not cancelled, so a resume distils again once the account has fixed the cause.
+ * A Jev run's profile: distilled through the profile connection the active connection borrows, else the last stored
+ * one, else the run fails. Failed, not cancelled, so a resume distils again once the account has fixed the cause.
  */
 final readonly class JevProfileStep
 {

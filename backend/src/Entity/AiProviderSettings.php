@@ -90,9 +90,10 @@ final class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
-    /** The connection that distils the profile for an engine that cannot; ProfileConnectionChooser keeps it one. */
-    #[ORM\Column(options: ['default' => false])]
-    private bool $profileSource = false;
+    /** Cleared on delete before the row goes; ON DELETE SET NULL is only the database floor. */
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
+    private ?self $profileConnection = null;
 
     /**
      * The caller passes $verifiedAt: a row is normally born of a successful live call, but a duplicate
@@ -223,14 +224,14 @@ final class AiProviderSettings
         $this->runTuning->copyFrom($source->runTuning);
     }
 
-    public function isProfileSource(): bool
+    public function getProfileConnection(): ?self
     {
-        return $this->profileSource;
+        return $this->profileConnection;
     }
 
-    public function setProfileSource(bool $profileSource): void
+    public function setProfileConnection(?self $profileConnection): void
     {
-        $this->profileSource = $profileSource;
+        $this->profileConnection = $profileConnection;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

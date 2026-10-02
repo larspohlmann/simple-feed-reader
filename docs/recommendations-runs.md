@@ -103,14 +103,14 @@ marks a Jev model without the client parsing its id; no client logic branches on
 
 The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
 OpenRouter) one yes/no question per candidate: would this reader, described by the profile an LLM distilled and the
-guidance in `state`, want to read this article? A Jev run distils first, through the profile connection the account
-picks in Settings → AI (falling back to the last stored profile when the distillation fails); without one the run fails
-with a message that says so. The probability is the score (× 1000); there are no reasons and no consolidation,
-so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
-the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
-records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with
-an error that says so (switch back to resume it). The model catalog offers `jev-latest` wherever
-`{base}/systemone` answers.
+guidance in `state`, want to read this article? A Jev run distils first, through the profile connection picked for the
+active Jev connection in Settings → AI (each Jev connection keeps its own pick). When the distillation fails, it falls
+back to the last stored profile; without a profile connection the run fails with a message that says so. The probability
+is the score (× 1000); there are no reasons and no consolidation, so the list is the best-scored picks once every batch
+is in. It packs by its own 32k-token request budget, reads only the batch-concurrency setting, and records each call's
+request id, answering model and cost in the run log. A run records the engine it was packed for; a tick that finds the
+active connection on the other engine fails the run with an error that says so (switch back to resume it). The model
+catalog offers `jev-latest` wherever `{base}/systemone` answers.
 
 ### The tick lock
 
