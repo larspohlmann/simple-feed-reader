@@ -7,8 +7,9 @@ namespace App\Service\Recommendation\Jev;
 use App\Service\Ai\ModelCatalog\SystemOneCatalog;
 use App\Service\Recommendation\Jev\Factory\JevStateFactory;
 use App\Service\Recommendation\Jev\Factory\SystemOneRequestFactory;
-use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+use App\Service\Recommendation\Jev\Support\SystemOneJson;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Support\TokenEstimate;
 
 /**
  * Packs the pool into System One requests by the token estimate. The state is budgeted at its ceiling,
@@ -41,7 +42,7 @@ final readonly class JevBatchPacker
         $used = 0;
 
         foreach ($candidates as $candidate) {
-            $tokens = JevTokenEstimate::ofJson($this->requestFactory->question($candidate));
+            $tokens = TokenEstimate::of(SystemOneJson::encode($this->requestFactory->question($candidate)));
             if (
                 [] !== $current
                 && (

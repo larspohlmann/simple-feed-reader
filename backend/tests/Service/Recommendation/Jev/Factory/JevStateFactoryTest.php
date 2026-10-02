@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev\Factory;
 
 use App\Service\Recommendation\Jev\Factory\JevStateFactory;
-use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+use App\Service\Recommendation\Jev\Support\SystemOneJson;
+use App\Service\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
 final class JevStateFactoryTest extends TestCase
@@ -31,10 +32,10 @@ final class JevStateFactoryTest extends TestCase
         $state = (new JevStateFactory())->create(str_repeat('p', 20_000), 'More self-hosting.');
 
         self::assertSame('More self-hosting.', $state['guidance']);
-        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, JevTokenEstimate::ofJson($state));
+        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, self::tokensOf($state));
         self::assertGreaterThan(
             JevStateFactory::STATE_TOKEN_BUDGET,
-            JevTokenEstimate::ofJson(['profile' => $state['profile'] . 'p'] + $state),
+            self::tokensOf(['profile' => $state['profile'] . 'p'] + $state),
         );
     }
 
@@ -49,7 +50,7 @@ final class JevStateFactoryTest extends TestCase
         self::assertTrue(str_starts_with('Likes Rust.', $state['profile']));
         self::assertLessThan(4, \strlen($state['profile']));
         self::assertLessThan(4_000, mb_strlen($state['guidance']));
-        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, JevTokenEstimate::ofJson($state));
+        self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, self::tokensOf($state));
     }
 
     public function testInvalidByteSequencesAreScrubbedFromBoth(): void
@@ -59,5 +60,11 @@ final class JevStateFactoryTest extends TestCase
         self::assertTrue(mb_check_encoding($state['profile'], 'UTF-8'));
         self::assertTrue(mb_check_encoding($state['guidance'], 'UTF-8'));
         self::assertStringStartsWith('Likes ', $state['profile']);
+    }
+
+    /** @param array<string, string> $state */
+    private static function tokensOf(array $state): int
+    {
+        return TokenEstimate::of(SystemOneJson::encode($state));
     }
 }

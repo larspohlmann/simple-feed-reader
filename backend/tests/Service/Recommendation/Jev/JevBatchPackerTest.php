@@ -6,8 +6,9 @@ namespace App\Tests\Service\Recommendation\Jev;
 
 use App\Service\Recommendation\Jev\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Jev\JevBatchPacker;
-use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+use App\Service\Recommendation\Jev\Support\SystemOneJson;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
 final class JevBatchPackerTest extends TestCase
@@ -39,7 +40,7 @@ final class JevBatchPackerTest extends TestCase
         foreach ($batches as $batch) {
             $tokens = 0;
             foreach ($batch as $entryId) {
-                $tokens += JevTokenEstimate::ofJson($factory->question($candidates[$entryId - 1]));
+                $tokens += TokenEstimate::of(SystemOneJson::encode($factory->question($candidates[$entryId - 1])));
             }
             self::assertLessThanOrEqual(26_000, $tokens);
         }

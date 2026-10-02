@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev\Support;
 
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Support\ClippedText;
 
 /** An article as System One sees it in a question: structured, every field capped. */
 final class JevArticle
@@ -17,14 +18,14 @@ final class JevArticle
     public static function of(ArticleLineModel $line): array
     {
         $article = [
-            'title' => ClippedText::of($line->title, self::TITLE_CHARACTERS),
-            'feedName' => ClippedText::of($line->feedName, self::FEED_NAME_CHARACTERS),
+            'title' => ClippedText::ofScrubbed($line->title, self::TITLE_CHARACTERS),
+            'feedName' => ClippedText::ofScrubbed($line->feedName, self::FEED_NAME_CHARACTERS),
             'date' => $line->date,
         ];
 
         return null === $line->description
             ? $article
-            : $article + ['description' => ClippedText::of($line->description, self::DESCRIPTION_CHARACTERS)];
+            : $article + ['description' => ClippedText::ofScrubbed($line->description, self::DESCRIPTION_CHARACTERS)];
     }
 
     private function __construct()

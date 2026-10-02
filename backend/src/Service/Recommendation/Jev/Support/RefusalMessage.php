@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Jev\Support;
 
+use App\Service\Recommendation\Support\ClippedText;
+
 /**
  * A refused request's failure, naming what the provider objected to: TypeSafe's `detail` or OpenRouter's
  * `error.message`. Never the raw body, which on OpenRouter carries the account's `user_id`.
@@ -22,7 +24,7 @@ final class RefusalMessage
         return sprintf(
             'That provider refused the request (status %d): %s',
             $status,
-            ClippedText::of($detail, self::DETAIL_CHARACTERS),
+            ClippedText::ofScrubbed($detail, self::DETAIL_CHARACTERS),
         );
     }
 

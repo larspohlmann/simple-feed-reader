@@ -47,7 +47,13 @@ final readonly class TickContext
             return null;
         }
 
-        return new self($this->run, $borrowed->connection, RecommendationEngineKind::Llm, $borrowed->settings, $this->driver);
+        return new self(
+            $this->run,
+            $borrowed->connection,
+            RecommendationEngineKind::Llm,
+            $borrowed->settings,
+            $this->driver,
+        );
     }
 
     /** The connection a provider failure this tick came from: the profile connection while it distils for the run. */

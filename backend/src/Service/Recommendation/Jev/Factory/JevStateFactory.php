@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev\Factory;
 
 use App\Service\Recommendation\Jev\Support\FittingPrefix;
-use App\Service\Recommendation\Jev\Support\JevTokenEstimate;
+use App\Service\Recommendation\Jev\Support\SystemOneJson;
+use App\Service\Recommendation\Support\TokenEstimate;
 
 /** The reader as System One's `state`: the distilled profile, and the guidance when there is one. */
 final readonly class JevStateFactory
@@ -32,7 +33,7 @@ final readonly class JevStateFactory
     private static function fitted(string $key, string $text, array $others): array
     {
         $fits = static fn (string $prefix): bool
-            => JevTokenEstimate::ofJson([$key => $prefix] + $others) <= self::STATE_TOKEN_BUDGET;
+            => TokenEstimate::of(SystemOneJson::encode([$key => $prefix] + $others)) <= self::STATE_TOKEN_BUDGET;
 
         return [$key => FittingPrefix::of($text, $fits)];
     }
