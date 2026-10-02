@@ -15,6 +15,7 @@ use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -210,8 +211,44 @@ final class HttpSystemOneClientTest extends TestCase
             $this->request('entry-9'),
         );
 
+        self::assertCount(2, $outcomes);
         self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
         self::assertSame(['entry-9' => 0.3], $outcomes[1]->reply()->nouls);
+    }
+
+    public function testARequestThatCannotEvenBeSentIsItsOwnCallsOutcomeAndSparesItsSibling(): void
+    {
+        $outcomes = $this->evaluate(
+            [
+                new MockResponse('{"answers":{"entry-7":{"type":"noul","noul":0.7}}}'),
+                static fn (): never => throw new TransportException('Could not resolve host: api.typesafe.test'),
+            ],
+            $this->request('entry-7'),
+            $this->request('entry-9'),
+        );
+
+        self::assertSame(['entry-7' => 0.7], $outcomes[0]->reply()->nouls);
+        self::assertSame('That address did not answer.', $outcomes[1]->cause()->getMessage());
+        self::assertSame(
+            'Could not resolve host: api.typesafe.test',
+            $outcomes[1]->cause()->getPrevious()?->getMessage(),
+        );
+    }
+
+    /** The sweep goes on past a response that is still speaking: a silent one behind it fails all the same. */
+    public function testASilentResponseBehindOneStillSpeakingFails(): void
+    {
+        $outcomes = $this->evaluateWhileTheClockRuns(
+            [
+                new MockResponse(['{"answers":', ' ', ' ', ' ', ' ', '{"entry-7":{"type":"noul","noul":0.6}}}']),
+                new MockResponse(['', '', '', '', '{"answers":{"entry-9":{"type":"noul","noul":0.3}}}']),
+            ],
+            $this->request('entry-7'),
+            $this->request('entry-9'),
+        );
+
+        self::assertSame(['entry-7' => 0.6], $outcomes[0]->reply()->nouls);
+        self::assertSame('That provider sent nothing for more than 120 seconds.', $outcomes[1]->cause()->getMessage());
     }
 
     public function testTheWaitBeatsTheTicksHeartbeat(): void
@@ -284,7 +321,7 @@ final class HttpSystemOneClientTest extends TestCase
     }
 
     /**
-     * @param list<MockResponse> $responses
+     * @param list<MockResponse|\Closure(): never> $responses
      *
      * @return list<SystemOneOutcomeModel>
      */

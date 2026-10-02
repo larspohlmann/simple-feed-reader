@@ -39,7 +39,8 @@ final class SystemOneCatalogTest extends TestCase
         yield 'no such route (Ollama, OpenAI)' => [404];
         yield 'no such method' => [405];
         yield 'answers every path (LM Studio)' => [200];
-        yield 'server error' => [502];
+        yield 'server error' => [500];
+        yield 'gateway error' => [502];
     }
 
     #[DataProvider('absentStatuses')]
@@ -51,11 +52,19 @@ final class SystemOneCatalogTest extends TestCase
         $this->catalogAnswering(new MockResponse('{}', ['http_code' => $status]))->listModels($this->credentials());
     }
 
-    public function testARefusedKeyIsACredentialsFailure(): void
+    /** @return iterable<string, array{int}> */
+    public static function refusedKeyStatuses(): iterable
+    {
+        yield 'unknown key' => [401];
+        yield 'forbidden key' => [403];
+    }
+
+    #[DataProvider('refusedKeyStatuses')]
+    public function testARefusedKeyIsACredentialsFailure(int $status): void
     {
         $this->expectException(CredentialsRejectedException::class);
 
-        $this->catalogAnswering(new MockResponse('{}', ['http_code' => 401]))->listModels($this->credentials());
+        $this->catalogAnswering(new MockResponse('{}', ['http_code' => $status]))->listModels($this->credentials());
     }
 
     public function testTheProbePostsAnEmptyObjectWithTheConnectionsKey(): void

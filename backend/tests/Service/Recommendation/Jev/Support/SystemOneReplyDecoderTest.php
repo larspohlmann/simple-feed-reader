@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev\Support;
 
 use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneReplyDecoderTest extends TestCase
@@ -40,6 +41,32 @@ final class SystemOneReplyDecoderTest extends TestCase
         $reply = SystemOneReplyDecoder::decode('{"id":"gen-from-body","answers":{}}', '');
 
         self::assertSame('gen-from-body', $reply->receipt->requestId);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unusableIds(): iterable
+    {
+        yield 'empty' => ['{"id":"","answers":{}}'];
+        yield 'a number' => ['{"id":17,"answers":{}}'];
+    }
+
+    #[DataProvider('unusableIds')]
+    public function testAnEmptyOrNonStringBodyIdIsNoRequestId(string $body): void
+    {
+        self::assertNull(SystemOneReplyDecoder::decode($body, null)->receipt->requestId);
+    }
+
+    public function testTypeSafesDocumentedUsageKeysWinOverAGatewaysWhenBothArePresent(): void
+    {
+        $reply = SystemOneReplyDecoder::decode(
+            '{"usage":{"input_tokens":610,"prompt_tokens":9,"output_tokens":44,"completion_tokens":3}}',
+            null,
+        );
+
+        $usage = $reply->receipt->usage;
+        self::assertNotNull($usage);
+        self::assertSame(610, $usage->promptTokens);
+        self::assertSame(44, $usage->completionTokens);
     }
 
     /** Only a string question id with a numeric Noul is an answer; the parser rejects a batch missing one. */

@@ -55,6 +55,16 @@ final class CompositeModelCatalogTest extends TestCase
         );
     }
 
+    public function testAMembersRefusedKeyIsIgnoredWhenAnotherMemberListsModels(): void
+    {
+        $catalog = new CompositeModelCatalog([
+            new StubModelCatalog(new CredentialsRejectedException('That provider refused the API key.')),
+            new StubModelCatalog(['jev-latest']),
+        ]);
+
+        self::assertCount(1, $catalog->listModels($this->credentials()));
+    }
+
     /** A bad key on TypeSafe direct: both members fail, and the first member's verdict is the answer. */
     public function testWhenNoMemberRecognisesTheProviderTheFirstMembersFailureIsTheAnswer(): void
     {
