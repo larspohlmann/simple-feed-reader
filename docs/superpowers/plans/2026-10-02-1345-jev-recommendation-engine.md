@@ -7734,7 +7734,7 @@ Expected: fatals on the missing classes (`RecommendationProfileSource`, `Profile
 ```php
     public function findProfileSourceFor(User $user): ?AiProviderSettings
     {
-        return $this->findOneBy(['user' => $user, 'profileSource' => true]);
+        return $this->findOneBy(['user' => $user, 'profileSource' => true], ['id' => 'DESC']);
     }
 ```
 
@@ -7934,8 +7934,11 @@ ProfileConnectionRejectedException extends \RuntimeException {}` (follow the fol
 *Amended (B9 implementer):* the two actions live in their own `Controller/Api/AiProfileConnectionController`
 (`#[Route('/api/me/ai/configs/{id}/profile', requirements: ['id' => '\d+'])]`, actions `choose()` and `clear()`,
 constructor `AiConfigurationForUser`, `ProfileConnectionChooser`, `AiSettingsJson`): in `AiSettingsController` PHPMD
-`TooManyPublicMethods` reports 11. Same routes, names and responses; the controller tests stay in
-`AiSettingsControllerTest`, whose helpers they share. The original text:
+`TooManyPublicMethods` reports 11. Same routes, names and responses. *Amended (B9 review M1):* its tests live in
+`tests/Controller/Api/AiProfileConnectionControllerTest`; the helpers it shares with `AiSettingsControllerTest` moved to
+the `tests/Support/AiConfigurationRequests` trait. *Amended (B9 review I1):* `JevProfileStep` reads a degrade from the
+attempts (`recordProfile()` resets them), not from the sticky `isDistilled()`: a resumed run is already distilled, so
+the old check fell back after its first unusable reply instead of retrying `MAX_ATTEMPTS` times. The original text:
 
 `AiSettingsController` — constructor gains `private ProfileConnectionChooser $profileConnections`; new action after
 `activate()`:
@@ -8348,7 +8351,8 @@ final readonly class JevProfileStep
         }
 
         $report = $this->profileDistiller->advance($tick->profileTick);
-        if (!$run->isDistilled() || null !== $run->getProfileText()) {
+        // A degrade records no profile and resets the attempts; a retry still pending leaves them above zero.
+        if (null !== $run->getProfileText() || $run->getAttempts() > 0) {
             return $report;
         }
 
