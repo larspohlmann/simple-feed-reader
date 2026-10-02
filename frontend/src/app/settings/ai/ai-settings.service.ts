@@ -221,8 +221,8 @@ export class AiSettingsService {
     );
   }
 
-  /** A 404 means the borrowing row or the connection it names is gone: reload instead of failing. Completing empty
-   *  leaves `busy` to the reload's own request. */
+  /** A 404 means the row or the connection it names is gone: reload instead of failing. Completing
+   *  empty leaves `busy` to the reload's own request. */
   private reloadWhenGone<T>(request: Observable<T>): Observable<T> {
     return request.pipe(
       catchError((error: HttpErrorResponse) => {
@@ -283,7 +283,6 @@ export class AiSettingsService {
     this.applyAvailability();
   }
 
-  /** Removes the row and, as the server does, every profile pointer to it. */
   private drop(id: number): void {
     this.configs.set(
       this.configs()

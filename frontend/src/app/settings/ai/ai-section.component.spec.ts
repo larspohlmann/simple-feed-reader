@@ -1288,7 +1288,7 @@ describe('AiSectionComponent', () => {
         expect(shown(picker(fixture) as HTMLSelectElement)).toBe('Other');
       });
 
-      it('keeps the pick and locks the select while the choice is being saved', () => {
+      it('locks the select and sends the pick while the choice is being saved', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
 
@@ -1340,6 +1340,9 @@ describe('AiSectionComponent', () => {
 
         pick(selects[1], 1);
         fixture.detectChanges();
+
+        expect(selects.map(shown)).toEqual(['None', 'Local']);
+
         http
           .expectOne('/api/me/ai/configs/13/profile')
           .flush({ ...jevActive, id: 13, name: 'second', active: false, profileConnectionId: 8 });

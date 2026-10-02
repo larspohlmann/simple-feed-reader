@@ -139,9 +139,8 @@ export class AiSectionComponent {
   readonly profileCandidates = computed(() =>
     this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
   );
-  /** The pick while its write is in flight, then null: the borrowing row's select keeps the user's pick through the
-   *  request and shows what the server holds once it settles. The source is an object so a busy flip that ends where
-   *  it began, unread in between, still recomputes. */
+  /** The pick while its write is in flight, then null. The source is an object so a busy flip back
+   *  to false, unread in between, still recomputes. */
   readonly profilePick = linkedSignal<{ busy: boolean }, ProfilePick | null>({
     source: () => ({ busy: this.ai.busy() }),
     computation: (source, previous) => (source.busy && previous ? previous.value : null),
