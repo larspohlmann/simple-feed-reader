@@ -14,9 +14,9 @@ final class TokenEstimate
         return self::ofLength(\strlen($text));
     }
 
-    public static function ofLength(int $bytes): int
+    public static function ofLength(int $length): int
     {
-        return intdiv($bytes, self::BYTES_PER_TOKEN) + 1;
+        return intdiv($length, self::BYTES_PER_TOKEN) + 1;
     }
 
     private function __construct()
