@@ -256,17 +256,21 @@ describe('RecommendationSettingsCardComponent', () => {
   });
 
   describe("the prompt capability's read-only pieces", () => {
-    it('shows no fixed prompt, distilled profile or guidance default to an engine that sends no prompt', () => {
+    it('shows the distilled profile but no fixed prompt or guidance default to an engine that sends no prompt', () => {
       const fixture = mount(
         { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
-        { ...NO_RECOMMENDATION_CAPABILITIES, tuningFields: ['batchConcurrency'] },
+        {
+          ...NO_RECOMMENDATION_CAPABILITIES,
+          profile: 'borrowed',
+          tuningFields: ['batchConcurrency'],
+        },
       );
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
       expect(
-        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
-      ).toBeNull();
+        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]')?.textContent,
+      ).toContain('Likes self-hosted tooling and Rust.');
       expect(guidance.placeholder).toBe('');
     });
 

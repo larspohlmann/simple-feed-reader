@@ -14,11 +14,15 @@ export const RECOMMENDATION_TUNING_FIELDS = [
 
 export type RecommendationTuningField = (typeof RECOMMENDATION_TUNING_FIELDS)[number];
 
+/** Where the engine's reader profile comes from: its own connection, or the profile connection the account picks. */
+export type RecommendationProfileSource = 'own' | 'borrowed';
+
 /** What a connection's recommendation engine can do; the client renders from it and never learns the engine. */
 export interface RecommendationCapabilities {
   readonly reasons: boolean;
-  /** Whether the engine sends a prompt of its own: a fixed prompt, a guidance default and a distilled profile. */
+  /** Whether the engine sends a prompt of its own: a fixed prompt and a guidance default. */
   readonly prompt: boolean;
+  readonly profile: RecommendationProfileSource;
   readonly tuningFields: readonly RecommendationTuningField[];
 }
 
@@ -33,6 +37,7 @@ export function offersTuning(
 export const NO_RECOMMENDATION_CAPABILITIES: RecommendationCapabilities = {
   reasons: false,
   prompt: false,
+  profile: 'own',
   tuningFields: [],
 };
 

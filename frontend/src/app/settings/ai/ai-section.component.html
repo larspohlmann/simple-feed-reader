@@ -329,6 +329,33 @@
         </div>
       }
     }
+
+    @if (activeReady() && borrowsProfile()) {
+      <div class="profile-connection">
+        @if (profileCandidates().length) {
+          <app-field
+            [label]="'settings.ai.profileConnection.label' | transloco"
+            [info]="'settings.ai.profileConnection.info' | transloco"
+          >
+            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
+              <option value="" [selected]="profileSourceId() === null">
+                {{ 'settings.ai.profileConnection.none' | transloco }}
+              </option>
+              @for (config of profileCandidates(); track config.id) {
+                <option [value]="config.id" [selected]="config.id === profileSourceId()">
+                  {{ label(config) }}
+                </option>
+              }
+            </select>
+          </app-field>
+        } @else {
+          <p class="hint">{{ 'settings.ai.profileConnection.empty' | transloco }}</p>
+        }
+        @if (profileFailure(); as message) {
+          <app-error-banner [message]="message" />
+        }
+      </div>
+    }
   </app-settings-group>
 
   <!-- The card owns its own "For You" and "Clear recommendations" groups, so it

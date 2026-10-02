@@ -35,6 +35,8 @@ interface AiSettingsStub {
   setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
+  chooseProfileSource: jest.Mock;
+  clearProfileSource: jest.Mock;
 }
 
 const config = (over: Partial<AiConfig> = {}): AiConfig => ({
@@ -45,6 +47,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
+  profileSource: false,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
@@ -52,6 +55,14 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
 });
+
+const BORROWING = {
+  ...EVERY_RECOMMENDATION_CAPABILITY,
+  prompt: false,
+  reasons: false,
+  profile: 'borrowed',
+  tuningFields: ['batchConcurrency'],
+} as const;
 
 const RECOMMENDATIONS: RecommendationSettingsState = {
   guidancePrompt: null,
@@ -114,6 +125,8 @@ function createStub(): AiSettingsStub {
     setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
+    chooseProfileSource: jest.fn(),
+    clearProfileSource: jest.fn(),
   };
 }
 
@@ -996,5 +1009,123 @@ describe('AiSectionComponent', () => {
       'Maximum batch size',
     ]);
     expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
+  });
+
+  describe('the profile connection', () => {
+    const picker = (fixture: ComponentFixture<AiSectionComponent>): HTMLSelectElement | null =>
+      (fixture.nativeElement as HTMLElement).querySelector('.profile-connection select');
+
+    const mountReady = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
+      const fixture = mount();
+      ai.configs.set(configs);
+      fixture.detectChanges();
+      flushReady();
+      fixture.detectChanges();
+      return fixture;
+    };
+
+    const jevActive = config({
+      id: 7,
+      ready: true,
+      active: true,
+      model: 'jev-latest',
+      capabilities: BORROWING,
+    });
+
+    it('is offered only when the active connection borrows its profile', () => {
+      const fixture = mountReady([config({ id: 7, ready: true, active: true, model: 'gpt-4o' })]);
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection'),
+      ).toBeNull();
+
+      ai.configs.set([jevActive]);
+      fixture.detectChanges();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection'),
+      ).not.toBeNull();
+    });
+
+    it('lists only the ready connections that build their own profile', () => {
+      const fixture = mountReady([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
+        config({ id: 9, name: 'No model', ready: false }),
+        config({
+          id: 10,
+          name: 'Other Jev',
+          ready: true,
+          model: 'jev-latest',
+          capabilities: BORROWING,
+        }),
+      ]);
+
+      const options = Array.from(picker(fixture)?.options ?? []).filter(
+        (option) => option.value !== '',
+      );
+      expect(options.map((option) => option.value)).toEqual(['8']);
+    });
+
+    it('selects the chosen connection and saves a new choice on change', () => {
+      const fixture = mountReady([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }),
+        config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
+      ]);
+      const select = picker(fixture) as HTMLSelectElement;
+      expect(select.value).toBe('8');
+
+      select.value = '11';
+      select.dispatchEvent(new Event('change'));
+
+      expect(ai.chooseProfileSource).toHaveBeenCalledWith(11);
+    });
+
+    it('offers "None", selected while nothing is chosen, and clears the choice with it', () => {
+      const fixture = mountReady([
+        jevActive,
+        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
+      ]);
+      const select = picker(fixture) as HTMLSelectElement;
+      expect(select.value).toBe('');
+      expect(select.options[0].textContent?.trim()).toBe('None');
+
+      select.value = '';
+      select.dispatchEvent(new Event('change'));
+
+      expect(ai.clearProfileSource).toHaveBeenCalled();
+      expect(ai.chooseProfileSource).not.toHaveBeenCalled();
+    });
+
+    it('explains what to add when no connection can build the profile', () => {
+      const fixture = mountReady([jevActive]);
+
+      expect(picker(fixture)).toBeNull();
+      expect(
+        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection')?.textContent,
+      ).toContain('Add a connection');
+    });
+
+    it('shows a refused choice beside the picker', () => {
+      const fixture = mountReady([jevActive, config({ id: 8, ready: true, model: 'qwen' })]);
+      ai.failure.set(
+        scoped(
+          {
+            kind: 'unknown',
+            detail: 'Only a ready LLM connection can build your profile.',
+            fieldErrors: [],
+          },
+          { action: 'profile' },
+        ),
+      );
+      fixture.detectChanges();
+
+      expect(
+        banners(
+          (fixture.nativeElement as HTMLElement).querySelector(
+            '.profile-connection',
+          ) as HTMLElement,
+        ),
+      ).toEqual(['Only a ready LLM connection can build your profile.']);
+    });
   });
 });

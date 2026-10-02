@@ -21,6 +21,7 @@ export interface AiConfig {
   readonly model: string | null;
   readonly ready: boolean;
   readonly active: boolean;
+  readonly profileSource: boolean;
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
@@ -190,6 +191,26 @@ export class AiSettingsService {
     );
   }
 
+  chooseProfileSource(id: number): void {
+    this.run(
+      { action: 'profile' },
+      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+      (config) => this.upsert(config),
+    );
+  }
+
+  /** Clears the choice on whichever row holds it, wherever its model went since; nothing to send when none does. */
+  clearProfileSource(): void {
+    const holder = this.configs().find((each) => each.profileSource);
+    if (!holder) return;
+
+    this.run(
+      { action: 'profile' },
+      this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+      () => this.upsert({ ...holder, profileSource: false }),
+    );
+  }
+
   activate(id: number): void {
     this.run(
       { action: 'row', configId: id },
@@ -217,7 +238,8 @@ export class AiSettingsService {
   /** Replaces the row by id when it exists, so a sibling row's write never
    *  reorders the list; otherwise appends (what `add` needs). A row reported
    *  `active` clears the flag on whichever row held it before -- mirroring the
-   *  server's own guarantee of at most one active configuration per account. */
+   *  server's own guarantee of at most one active configuration per account,
+   *  and likewise `profileSource`. */
   private upsert(config: AiConfig): void {
     const current = this.configs();
     const index = current.findIndex((each) => each.id === config.id);
@@ -227,11 +249,15 @@ export class AiSettingsService {
         : current.map((each, position) => (position === index ? config : each));
 
     this.configs.set(
-      config.active
-        ? replaced.map((each) =>
-            each.id !== config.id && each.active ? { ...each, active: false } : each,
-          )
-        : replaced,
+      replaced.map((each) =>
+        each.id !== config.id && holdsAFlagNowTaken(each, config)
+          ? {
+              ...each,
+              active: each.active && !config.active,
+              profileSource: each.profileSource && !config.profileSource,
+            }
+          : each,
+      ),
     );
     this.applyAvailability();
   }
@@ -269,4 +295,9 @@ export class AiSettingsService {
       },
     });
   }
+}
+
+/** Whether `sibling` holds a one-per-account flag that `taken` now reports as its own. */
+function holdsAFlagNowTaken(sibling: AiConfig, taken: AiConfig): boolean {
+  return (taken.active && sibling.active) || (taken.profileSource && sibling.profileSource);
 }

@@ -7,5 +7,6 @@ import {
 export const EVERY_RECOMMENDATION_CAPABILITY: RecommendationCapabilities = {
   reasons: true,
   prompt: true,
+  profile: 'own',
   tuningFields: RECOMMENDATION_TUNING_FIELDS,
 };

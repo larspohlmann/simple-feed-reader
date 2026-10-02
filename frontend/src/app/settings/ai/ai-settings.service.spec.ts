@@ -24,6 +24,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
+  profileSource: false,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
@@ -54,6 +55,58 @@ describe('AiSettingsService', () => {
   afterEach(() => {
     ctrl.verify();
     jest.useRealTimers();
+  });
+
+  it('chooses the profile connection and clears the flag on whichever row held it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: true }),
+      config({ id: 2, profileSource: false }),
+    ]);
+
+    service.chooseProfileSource(2);
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/2/profile`);
+    expect(request.request.method).toBe('PUT');
+    request.flush(config({ id: 2, profileSource: true }));
+
+    expect(service.configs().map((each) => [each.id, each.profileSource])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
+  });
+
+  it('scopes a refused profile choice to the picker', () => {
+    service.chooseProfileSource(3);
+    ctrl.expectOne(`${base}/api/me/ai/configs/3/profile`).flush(
+      {
+        type: 'profile_connection_rejected',
+        detail: 'Only a ready LLM connection can build your profile.',
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+
+    expect(service.failure()?.scope).toEqual({ action: 'profile' });
+  });
+
+  it('clears the profile connection on whichever row holds it', () => {
+    service.configs.set([
+      config({ id: 1, profileSource: false }),
+      config({ id: 4, profileSource: true }),
+    ]);
+
+    service.clearProfileSource();
+    const request = ctrl.expectOne(`${base}/api/me/ai/configs/4/profile`);
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.configs().map((each) => each.profileSource)).toEqual([false, false]);
+  });
+
+  it('sends nothing when no row holds the profile connection', () => {
+    service.configs.set([config({ id: 1, profileSource: false })]);
+
+    service.clearProfileSource();
+
+    ctrl.expectNone((request) => request.method === 'DELETE');
   });
 
   it('loads the list and follows the active configuration', () => {

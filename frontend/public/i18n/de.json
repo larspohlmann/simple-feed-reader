@@ -188,6 +188,12 @@
         "validation": "Prüfe die eingegebenen Werte.",
         "unknown": "Etwas ist schiefgelaufen. Versuche es erneut."
       },
+      "profileConnection": {
+        "label": "Profilverbindung",
+        "info": "Die Engine der aktiven Verbindung kann dein Leseprofil nicht selbst schreiben. Diese Verbindung schreibt es zu Beginn jedes Durchlaufs.",
+        "none": "Keine",
+        "empty": "Füge oben eine Verbindung mit einem Textmodell hinzu und wähle sie hier aus, um dein Profil zu erstellen."
+      },
       "fields": {
         "name": "Optionaler Name",
         "baseUrl": "Endpunkt",

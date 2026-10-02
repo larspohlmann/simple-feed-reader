@@ -119,6 +119,27 @@ export class AiSectionComponent {
   readonly listFailure: Signal<string | null> = computed(() => this.messageFor('load'));
   readonly addFailure: Signal<string | null> = computed(() => this.messageFor('add'));
 
+  /** The active engine cannot write the reader's profile itself and borrows one of the account's connections. */
+  readonly borrowsProfile = computed(
+    () => this.activeConfig()?.capabilities.profile === 'borrowed',
+  );
+  readonly profileCandidates = computed(() =>
+    this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
+  );
+  readonly profileSourceId = computed(
+    () => this.profileCandidates().find((config) => config.profileSource)?.id ?? null,
+  );
+  readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
+
+  chooseProfileSource(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    if (value === '') {
+      this.ai.clearProfileSource();
+      return;
+    }
+    this.ai.chooseProfileSource(Number(value));
+  }
+
   rowFailure(configId: number): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== 'row') return null;
@@ -127,7 +148,7 @@ export class AiSectionComponent {
     return this.message(scoped.failure);
   }
 
-  private messageFor(action: 'load' | 'add'): string | null {
+  private messageFor(action: 'load' | 'add' | 'profile'): string | null {
     const scoped = this.ai.failure();
     if (!scoped || scoped.scope.action !== action) return null;
 

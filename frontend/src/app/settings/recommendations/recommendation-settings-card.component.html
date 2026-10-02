@@ -246,20 +246,20 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
               </app-button>
             </div>
 
-            @if (offersPrompt()) {
-              @if (state.profileText; as profile) {
-                <app-disclosure
-                  appearance="drill-in"
-                  data-testid="recommendation-profile"
-                  [label]="'settings.ai.recommendations.profileLabel' | transloco"
-                >
-                  <div class="prompt-body">
-                    <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
-                    <p class="expert-profile-text">{{ profile }}</p>
-                  </div>
-                </app-disclosure>
-              }
+            @if (state.profileText; as profile) {
+              <app-disclosure
+                appearance="drill-in"
+                data-testid="recommendation-profile"
+                [label]="'settings.ai.recommendations.profileLabel' | transloco"
+              >
+                <div class="prompt-body">
+                  <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
+                  <p class="expert-profile-text">{{ profile }}</p>
+                </div>
+              </app-disclosure>
+            }
 
+            @if (offersPrompt()) {
               @if (state.fixedPrompt; as fixedPrompt) {
                 <app-disclosure
                   appearance="drill-in"
