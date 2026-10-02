@@ -30,6 +30,9 @@ final class ScriptedBatchWaveEngine implements BatchWaveEngineInterface
     /** @var list<list<int>> */
     private array $sentRounds = [];
 
+    /** @var array<int, \Throwable> batch index => what opening it throws */
+    private array $openFailures = [];
+
     public function __construct(private readonly RecommendationCallRecorder $callRecorder)
     {
     }
@@ -38,6 +41,11 @@ final class ScriptedBatchWaveEngine implements BatchWaveEngineInterface
     public function queueRound(RateLimitedResultModel|\Throwable $round): void
     {
         $this->rounds[] = $round;
+    }
+
+    public function failOpening(int $batchIndex, \Throwable $failure): void
+    {
+        $this->openFailures[$batchIndex] = $failure;
     }
 
     /** @return list<list<int>> the batch indexes each send carried */
@@ -54,6 +62,9 @@ final class ScriptedBatchWaveEngine implements BatchWaveEngineInterface
     public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
         $waveBatch = $wave->batches()[$position];
+        if (isset($this->openFailures[$waveBatch->index])) {
+            throw $this->openFailures[$waveBatch->index];
+        }
         $recordedCall = $this->callRecorder->begin(
             $wave->tick()->run,
             CallSlotModel::batch($waveBatch->index + 1),

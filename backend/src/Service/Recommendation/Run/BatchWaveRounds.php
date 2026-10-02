@@ -83,7 +83,7 @@ final readonly class BatchWaveRounds
      */
     private function sendRound(BatchWaveEngineInterface $engine, BatchWaveInterface $wave, array $pending): array
     {
-        $calls = array_map(static fn (int $position) => $engine->open($wave, $position), $pending);
+        $calls = self::openAll($engine, $wave, $pending);
 
         $result = self::sendAll($engine, $wave, $calls);
         if ($result->isDeferred()) {
@@ -98,6 +98,35 @@ final readonly class BatchWaveRounds
             'replies' => self::repliesByPosition($pending, $calls, $result->outcomes),
             'observed' => $result->rateLimitObserved,
         ];
+    }
+
+    /**
+     * A throw while opening settles the rows opened before it, so none reads as "still running".
+     *
+     * @template TWave of BatchWaveInterface
+     * @template TRequest of object
+     * @template TOutcome of BatchCallOutcomeInterface
+     *
+     * @param BatchWaveEngineInterface<TWave, TRequest, TOutcome> $engine
+     * @param TWave                                               $wave
+     * @param non-empty-list<int>                                 $pending
+     *
+     * @return non-empty-list<BatchCall<TRequest>>
+     */
+    private static function openAll(BatchWaveEngineInterface $engine, BatchWaveInterface $wave, array $pending): array
+    {
+        $calls = [];
+        try {
+            foreach ($pending as $position) {
+                $calls[] = $engine->open($wave, $position);
+            }
+        } catch (\Throwable $exception) {
+            self::abortEvery($calls, $exception->getMessage());
+
+            throw $exception;
+        }
+
+        return $calls;
     }
 
     /**

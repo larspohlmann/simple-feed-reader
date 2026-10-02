@@ -138,6 +138,23 @@ final class BatchWaveRoundsTest extends DbTestCase
         self::assertSame(array_fill(0, 2, 'The stored API key cannot be opened.'), $this->errorDetails());
     }
 
+    public function testAnOpenThatThrowsSettlesTheRowsOpenedBeforeItAndSendsNothing(): void
+    {
+        $unrenderable = new \JsonException('Malformed UTF-8 characters');
+        $this->engine->failOpening(2, $unrenderable);
+
+        try {
+            $this->resolve(self::batch(0, 10), self::batch(1, 20), self::batch(2, 30));
+            self::fail('The open error must propagate.');
+        } catch (\JsonException $exception) {
+            self::assertSame($unrenderable, $exception);
+        }
+
+        self::assertSame([], $this->engine->sentRounds());
+        self::assertSame(array_fill(0, 2, CallVerdict::TransportFailed), $this->verdicts());
+        self::assertSame(array_fill(0, 2, 'Malformed UTF-8 characters'), $this->errorDetails());
+    }
+
     /** A bystander borrows the wave's failure; a spoiled reply names its own cause. */
     public function testOneEndpointFailureSettlesTheWholeRoundAndBanksNothing(): void
     {
