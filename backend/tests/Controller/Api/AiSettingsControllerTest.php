@@ -86,8 +86,8 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertFalse($added['active']);
         self::assertSame(
             [
-                ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                ['id' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
             ],
             $added['models'],
         );
@@ -106,8 +106,8 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame(
             [
                 'models' => [
-                    ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                    ['id' => 'jev-latest', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                    ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
                 ],
             ],
             $this->payload($client),

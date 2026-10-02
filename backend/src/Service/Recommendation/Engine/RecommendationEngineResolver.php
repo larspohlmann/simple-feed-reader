@@ -39,6 +39,15 @@ final readonly class RecommendationEngineResolver
             : self::DEFAULT_KIND;
     }
 
+    /** What a model list shows beside a model's id; an LLM, the default, shows nothing. */
+    public function labelForModel(string $model): ?string
+    {
+        return match ($this->kindForModel($model)) {
+            RecommendationEngineKind::Jev => 'Jev',
+            RecommendationEngineKind::Llm => null,
+        };
+    }
+
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
         return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));

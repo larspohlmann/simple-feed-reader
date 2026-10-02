@@ -250,8 +250,8 @@
         "jevTitle": "Jev verwenden (TypeSafe System One)",
         "jevStep1": "Jev bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. Für dein Leseprofil braucht es eine LLM-Verbindung — richte also zuerst wie oben eine ein.",
         "jevStep2": "Öffne „Konfiguration hinzufügen“ und trage https://openrouter.ai/api/v1 mit deinem OpenRouter-Schlüssel ein oder den eigenen Endpunkt von TypeSafe mit einem TypeSafe-Schlüssel.",
-        "jevStep3": "Drücke „Konfiguration hinzufügen“ und speichere jev-latest als Modell. Die Modellliste kennzeichnet es mit „braucht eine Profilverbindung“.",
-        "jevStep4": "Wähle in der neuen Konfiguration unter „Profilverbindung“ deine LLM-Verbindung.",
+        "jevStep3": "Drücke „Konfiguration hinzufügen“, wähle dann in der Modellliste, die sich öffnet, „jev-latest · Jev“ und speichere es.",
+        "jevStep4": "Klappe die Zeile der neuen Konfiguration auf und wähle unter „Profilverbindung“ deine LLM-Verbindung.",
         "jevStep5": "Drücke „Diesen verwenden“. Jevs Empfehlungen tragen dann eine Bewertung, aber keine Begründung."
       },
       "recommendations": {

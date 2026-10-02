@@ -103,9 +103,13 @@ export class AiSectionComponent {
   readonly modelOptions = computed<SelectOption[]>(() =>
     this.ai.models().map((model) => ({
       value: model.id,
-      label: model.id,
+      label: [model.id, model.label].filter(Boolean).join(' · '),
       hint: this.modelHint(model.capabilities),
     })),
+  );
+
+  readonly chosenModelHint = computed(
+    () => this.modelOptions().find((option) => option.value === this.chosenModel())?.hint ?? null,
   );
 
   /** The key is optional — a local model server needs none — so only the

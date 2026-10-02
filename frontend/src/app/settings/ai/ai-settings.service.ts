@@ -32,6 +32,8 @@ export interface AiConfig {
 /** A model the provider offers, with what a connection could do once it saves that model. */
 export interface AiModel {
   readonly id: string;
+  /** Shown beside the id as the server words it; null for an LLM. */
+  readonly label: string | null;
   readonly capabilities: RecommendationCapabilities;
 }
 

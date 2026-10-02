@@ -64,10 +64,11 @@ const BORROWING = {
   tuningFields: ['batchConcurrency'],
 } as const;
 
-const offered = (id: string, capabilities = EVERY_RECOMMENDATION_CAPABILITY): AiModel => ({
-  id,
-  capabilities,
-});
+const offered = (
+  id: string,
+  capabilities = EVERY_RECOMMENDATION_CAPABILITY,
+  label: string | null = null,
+): AiModel => ({ id, label, capabilities });
 
 const RECOMMENDATIONS: RecommendationSettingsState = {
   guidancePrompt: null,
@@ -380,6 +381,35 @@ describe('AiSectionComponent', () => {
     expect(
       options.map((option) => option.querySelector('.option-hint')?.textContent?.trim()),
     ).toEqual([undefined, 'scores articles, writes no reasons · needs a profile connection']);
+  });
+
+  it("shows the server's label beside a model's id, and keeps it and the hint once chosen", () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    ai.choosingModelFor.set(1);
+    ai.models.set([offered('gpt-4o'), offered('jev-latest', BORROWING, 'Jev')]);
+    fixture.detectChanges();
+    expandRow(fixture, 0);
+    const picker = row(fixture, 0).querySelector('.model-picker') as HTMLElement;
+
+    (picker.querySelector('app-searchable-select .trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    (picker.querySelectorAll('[role="option"]')[1] as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect(picker.querySelector('app-searchable-select .current')?.textContent?.trim()).toBe(
+      'jev-latest · Jev',
+    );
+    expect(picker.querySelector('app-field .hint')?.textContent?.trim()).toBe(
+      'scores articles, writes no reasons · needs a profile connection',
+    );
+
+    fixture.componentInstance.chosenModel.set('gpt-4o');
+    fixture.detectChanges();
+    expect(picker.querySelector('app-searchable-select .current')?.textContent?.trim()).toBe(
+      'gpt-4o',
+    );
+    expect(picker.querySelector('app-field .hint')).toBeNull();
   });
 
   it('resets the picked model whenever a different row starts choosing', () => {
@@ -1023,6 +1053,7 @@ describe('AiSectionComponent', () => {
     expect(jevSteps).toHaveLength(5);
     expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
     expect(jevSteps[2]).toContain('jev-latest');
+    expect(jevSteps[3]).toContain('Expand the new configuration’s row');
     expect(jevSteps[3]).toContain('“Profile connection”');
   });
 

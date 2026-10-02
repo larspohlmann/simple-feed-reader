@@ -47,6 +47,14 @@ final class RecommendationEngineResolverTest extends TestCase
         self::assertSame($kind, $resolver->kindFor($connection));
     }
 
+    public function testAJevModelIsLabelledJevAndAnLlmModelCarriesNoLabel(): void
+    {
+        $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
+
+        self::assertSame('Jev', $resolver->labelForModel('jev-latest'));
+        self::assertNull($resolver->labelForModel('typesafe/jev-router'));
+    }
+
     public function testTheJevKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
     {
         $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev);

@@ -33,7 +33,11 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ...over,
 });
 
-const offered = (id: string): AiModel => ({ id, capabilities: EVERY_RECOMMENDATION_CAPABILITY });
+const offered = (id: string): AiModel => ({
+  id,
+  label: null,
+  capabilities: EVERY_RECOMMENDATION_CAPABILITY,
+});
 
 describe('AiSettingsService', () => {
   let service: AiSettingsService;

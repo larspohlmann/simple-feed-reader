@@ -8,10 +8,12 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class AiSettingsJsonTest extends TestCase
 {
@@ -19,7 +21,10 @@ final class AiSettingsJsonTest extends TestCase
 
     private function json(): AiSettingsJson
     {
-        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
+        return new AiSettingsJson(
+            RecommendationCapabilitiesJsons::ofTheKind(),
+            new RecommendationEngineResolver(new ServiceLocator([])),
+        );
     }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
@@ -156,8 +161,8 @@ final class AiSettingsJsonTest extends TestCase
 
         self::assertSame(
             [
-                ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                ['id' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
             ],
             $shape['models'],
         );
@@ -170,8 +175,8 @@ final class AiSettingsJsonTest extends TestCase
         self::assertSame(
             [
                 'models' => [
-                    ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                    ['id' => 'jev-latest', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                    ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
                 ],
             ],
             $this->json()->models(['gpt-4o', 'jev-latest']),

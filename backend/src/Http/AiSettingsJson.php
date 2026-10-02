@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Support\AiReadiness;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
@@ -15,8 +16,10 @@ use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel
  */
 final readonly class AiSettingsJson
 {
-    public function __construct(private RecommendationCapabilitiesJson $capabilities)
-    {
+    public function __construct(
+        private RecommendationCapabilitiesJson $capabilities,
+        private RecommendationEngineResolver $engines,
+    ) {
     }
 
     /**
@@ -80,13 +83,17 @@ final readonly class AiSettingsJson
     /**
      * @param list<string> $models
      *
-     * @return array{models: list<array{id: string, capabilities: array<string, mixed>}>}
+     * @return array{models: list<array{id: string, label: ?string, capabilities: array<string, mixed>}>}
      */
     public function models(array $models): array
     {
         return [
             'models' => array_map(
-                fn (string $model): array => ['id' => $model, 'capabilities' => $this->capabilities->ofModel($model)],
+                fn (string $model): array => [
+                    'id' => $model,
+                    'label' => $this->engines->labelForModel($model),
+                    'capabilities' => $this->capabilities->ofModel($model),
+                ],
                 $models,
             ),
         ];

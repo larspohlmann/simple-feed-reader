@@ -250,8 +250,8 @@
         "jevTitle": "Use Jev (TypeSafe System One)",
         "jevStep1": "Jev scores every article for you instead of writing a list with reasons. It needs an LLM connection for your reading profile, so set one up first as above.",
         "jevStep2": "Open “Add a configuration” and enter https://openrouter.ai/api/v1 with your OpenRouter key, or TypeSafe's own endpoint with a TypeSafe key.",
-        "jevStep3": "Press “Add configuration” and save jev-latest as its model. The model list marks it with “needs a profile connection”.",
-        "jevStep4": "In the new configuration, choose your LLM connection under “Profile connection”.",
+        "jevStep3": "Press “Add configuration”, then pick “jev-latest · Jev” in the model list that opens and save it.",
+        "jevStep4": "Expand the new configuration’s row and choose your LLM connection under “Profile connection”.",
         "jevStep5": "Press “Use this one”. Jev's picks then carry a score but no reasons."
       },
       "recommendations": {

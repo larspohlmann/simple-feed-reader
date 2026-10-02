@@ -91,8 +91,15 @@ creation. The batch-wave
 skeleton (`BatchWavePhase`) loads each wave's batches and hands them to the engine's wave; it, the rate-limit loop
 (`Ai\RateLimitedCalls`) and the run-log recorder are shared, so an engine supplies only its own wave. Each kind also
 declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
-which shows only the settings that apply. Each model in a connection's model list carries the capabilities it would
-give, so the picker marks a Jev model without the client parsing its id.
+which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
+`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
+label beside its id (`RecommendationEngineResolver::labelForModel`: `"Jev"`, or `null` for an LLM), so the picker
+marks a Jev model without the client parsing its id; no client logic branches on the label:
+
+```json
+{"models": [{"id": "jev-latest", "label": "Jev",
+  "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
+```
 
 The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
 OpenRouter) one yes/no question per candidate: would this reader, described by the profile an LLM distilled and the
