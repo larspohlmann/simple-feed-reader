@@ -11,6 +11,7 @@ use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Profile\ProfileConnectionResolver;
+use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -44,7 +45,11 @@ final readonly class TickContextFactory
 
         return null === $profileConnection
             ? $tick
-            : $tick->borrowingProfileFrom($profileConnection, $settings->forConnection($profileConnection));
+            : $tick->borrowingProfileFrom(new BorrowedProfileModel(
+                $profileConnection,
+                $this->engines->kindFor($profileConnection),
+                $settings->forConnection($profileConnection),
+            ));
     }
 
     private function activeConnection(User $user): AiProviderSettings

@@ -11,6 +11,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
+use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
@@ -35,21 +36,25 @@ final class TickContextTest extends TestCase
         $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
         $tick = $this->tick($jev, TickDriver::Worker);
         $tick->run->snapshot(RecommendationEngineKind::Jev, [[1]]);
-        $borrowing = $tick->borrowingProfileFrom($profile, $tick->settings);
+        $borrowing = $tick->borrowingProfileFrom(
+            new BorrowedProfileModel($profile, RecommendationEngineKind::Llm, $tick->settings),
+        );
 
         self::assertSame($profile, $borrowing->connectionInFlight());
         $tick->run->recordProfile('Likes Rust.');
         self::assertSame($jev, $borrowing->connectionInFlight());
     }
 
-    public function testTheProfileTickRunsTheProfileConnectionAsAnLlmWithItsOwnSettings(): void
+    public function testTheProfileTickRunsTheProfileConnectionWithItsOwnEngineAndSettings(): void
     {
         $jev = $this->connection();
         $profile = AiProviderSettingsFactory::build($jev->getUser(), 'Profile', 'https://profile.example.test/v1');
         $tick = $this->tick($jev, TickDriver::Sweep);
         $profileSettings = $this->tick($profile, TickDriver::Sweep)->settings;
 
-        $profileTick = $tick->borrowingProfileFrom($profile, $profileSettings)->profileTick();
+        $profileTick = $tick->borrowingProfileFrom(
+            new BorrowedProfileModel($profile, RecommendationEngineKind::Llm, $profileSettings),
+        )->profileTick();
 
         self::assertNotNull($profileTick);
         self::assertSame($tick->run, $profileTick->run);

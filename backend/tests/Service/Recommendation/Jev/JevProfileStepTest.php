@@ -12,6 +12,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Jev\JevProfileStep;
 use App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface;
+use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
@@ -95,7 +96,9 @@ final class JevProfileStepTest extends DbTestCase
     {
         $tick = $this->tick($run);
 
-        return $tick->borrowingProfileFrom($tick->connection, $tick->settings);
+        return $tick->borrowingProfileFrom(
+            new BorrowedProfileModel($tick->connection, RecommendationEngineKind::Llm, $tick->settings),
+        );
     }
 
     private function degradingDistiller(): ProfileDistillerInterface

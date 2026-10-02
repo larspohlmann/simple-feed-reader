@@ -25,21 +25,12 @@ final readonly class TickContext
     ) {
     }
 
-    public function borrowingProfileFrom(
-        AiProviderSettings $connection,
-        EffectiveRecommendationSettingsModel $settings,
-    ): self {
-        return new self(
-            $this->run,
-            $this->connection,
-            $this->engineKind,
-            $this->settings,
-            $this->driver,
-            new BorrowedProfileModel($connection, $settings),
-        );
+    public function borrowingProfileFrom(BorrowedProfileModel $borrowed): self
+    {
+        return new self($this->run, $this->connection, $this->engineKind, $this->settings, $this->driver, $borrowed);
     }
 
-    /** The tick a borrowed distillation runs on: the profile connection, which only an LLM can be. */
+    /** The tick a borrowed distillation runs on: the profile connection's own. */
     public function profileTick(): ?self
     {
         $borrowed = $this->borrowedProfile;
@@ -50,7 +41,7 @@ final readonly class TickContext
         return new self(
             $this->run,
             $borrowed->connection,
-            RecommendationEngineKind::Llm,
+            $borrowed->engineKind,
             $borrowed->settings,
             $this->driver,
         );
