@@ -6,7 +6,6 @@ namespace App\Tests\Http;
 
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
-use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationSettingsJson;

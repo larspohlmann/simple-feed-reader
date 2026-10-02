@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run\Model;
 
-/** When a run began and whether its first batch call has; the status payload and the ETA read both. */
+/** When a run began and whether its first batch call has started. */
 final readonly class RunStartModel
 {
     public function __construct(

@@ -64,7 +64,8 @@ export interface RecommendationSettingsState {
   /** The persisted, distilled preference profile the pipeline writes; read-only
    *  here, null until a run has generated one. */
   readonly profileText: string | null;
-  /** Shows each pick's score and, where the engine writes one, its reason — one switch for both; debug mode reaches neither (#576). */
+  /** Shows each pick's score and, where the engine writes one, its reason — one
+   *  switch for both; debug mode reaches neither (#576). */
   readonly showScoreAndReasons: boolean;
 }
 

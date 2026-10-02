@@ -15,7 +15,10 @@ use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
 
-/** The chat client's calls through the shared rate-limit loop: complete() throws a deferral as ProviderRateLimitedException. */
+/**
+ * The chat client's calls through the shared rate-limit loop: complete() throws a deferral as
+ * ProviderRateLimitedException.
+ */
 final readonly class RateLimitedCompletion
 {
     public function __construct(
