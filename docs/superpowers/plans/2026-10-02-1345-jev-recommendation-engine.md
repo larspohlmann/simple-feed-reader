@@ -6814,7 +6814,9 @@ Reviewer: yes.
   `backend/src/Service/Recommendation/Run/TickLockTtl.php`,
   `backend/src/Service/Recommendation/Jev/JevProfileStep.php`,
   `backend/src/Service/Recommendation/Jev/Support/FittingPrefix.php`,
-  `backend/migrations/Version20261002180000.php`
+  `backend/migrations/Version20261002180000.php`,
+  `backend/src/Controller/Api/AiProfileConnectionController.php` (*amended (B9 implementer):* PHPMD
+  `TooManyPublicMethods` reports `AiSettingsController` at 11 with the two actions in it)
 - Create (tests): `backend/tests/Service/Recommendation/Profile/{ProfileConnectionResolverTest,ProfileConnectionChooserTest}.php`,
   `backend/tests/Service/Recommendation/Jev/JevProfileStepTest.php` (only if the pipeline pins below leave a mutant; see Step 10),
   `backend/tests/Service/Recommendation/Run/TickLockTtlTest.php`,
@@ -7324,12 +7326,16 @@ final class JevStateFactoryTest extends TestCase
         );
     }
 
-    /** 4-byte characters: 4 000 of them are 16 000 bytes, over the budget by themselves. The guidance is cut too. */
-    public function testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNothing(): void
+    /**
+     * 4-byte characters: 4 000 of them are 16 000 bytes, over the budget by themselves. The guidance is cut too, and
+     * the profile keeps only the bytes the estimate's rounding leaves, less than one token.
+     */
+    public function testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNoWholeToken(): void
     {
         $state = (new JevStateFactory())->create('Likes Rust.', str_repeat('😀', 4_000));
 
-        self::assertSame('', $state['profile']);
+        self::assertTrue(str_starts_with('Likes Rust.', $state['profile']));
+        self::assertLessThan(4, \strlen($state['profile']));
         self::assertLessThan(4_000, mb_strlen($state['guidance']));
         self::assertLessThanOrEqual(JevStateFactory::STATE_TOKEN_BUDGET, JevTokenEstimate::ofJson($state));
     }
@@ -7925,6 +7931,12 @@ ProfileConnectionRejectedException extends \RuntimeException {}` (follow the fol
             )),
 ```
 
+*Amended (B9 implementer):* the two actions live in their own `Controller/Api/AiProfileConnectionController`
+(`#[Route('/api/me/ai/configs/{id}/profile', requirements: ['id' => '\d+'])]`, actions `choose()` and `clear()`,
+constructor `AiConfigurationForUser`, `ProfileConnectionChooser`, `AiSettingsJson`): in `AiSettingsController` PHPMD
+`TooManyPublicMethods` reports 11. Same routes, names and responses; the controller tests stay in
+`AiSettingsControllerTest`, whose helpers they share. The original text:
+
 `AiSettingsController` — constructor gains `private ProfileConnectionChooser $profileConnections`; new action after
 `activate()`:
 
@@ -7989,11 +8001,16 @@ $user->getActiveAiProviderSettings())`; new `forConnection(AiProviderSettings $c
     /** The connection a provider failure this tick came from: the profile connection while it distils for the run. */
     public function connectionInFlight(): AiProviderSettings
     {
-        return null !== $this->profileTick && $this->run->getProgress()->distillPending
+        return null !== $this->profileTick && null === $this->run->getProfileText()
             ? $this->profileTick->connection
             : $this->connection;
     }
 ```
+
+*Amended (B9 implementer):* `null === getProfileText()`, not `distillPending`: a resumed run whose distillation
+degraded is distilled with a null profile, so `distillPending` reads false while `JevProfileStep` distils again, and
+a transport failure of that retry would strike against the Jev connection. For a borrowing run the two agree
+everywhere else.
 
 `TickContextFactory` — constructor gains `private ProfileConnectionResolver $profileConnections`; `create()` builds the
 tick as today and returns `$this->withBorrowedProfile($tick)`:
@@ -8067,11 +8084,9 @@ final readonly class TickLockTtl
         }
 
         $profileConnection = $this->borrowedProfileConnection($user, $active);
+        $calledConnections = null === $profileConnection ? [$active] : [$active, $profileConnection];
 
-        return max(
-            $this->firstByteSeconds($active),
-            null === $profileConnection ? 0.0 : $this->firstByteSeconds($profileConnection),
-        ) + self::MARGIN_SECONDS;
+        return max(array_map($this->firstByteSeconds(...), $calledConnections)) + self::MARGIN_SECONDS;
     }
 
     private function borrowedProfileConnection(User $user, AiProviderSettings $active): ?AiProviderSettings
@@ -8087,6 +8102,9 @@ final readonly class TickLockTtl
     }
 }
 ```
+
+*Amended (B9 implementer):* the max runs over the connections the tick may call; the plan's `0.0` placeholder for
+"no profile connection" left an equivalent mutant (`1.0` changes nothing beside a first byte of at least 180 s).
 
 `RecommendationRunAdvancer`: constructor drops `AiProviderConfigurator $configurator` and `ProviderConnectionFactory
 $connectionFactory`, takes `TickLockTtl $lockTtl` (8 parameters); `advance()` uses `$this->lockTtl->secondsFor($user)`;
@@ -8174,7 +8192,10 @@ final readonly class JevStateFactory
     /** @return array<string, string> */
     public function create(string $profile, ?string $guidance): array
     {
-        $guidanceState = null === $guidance ? [] : self::fitted('guidance', mb_scrub($guidance, 'UTF-8'), []);
+        // Fitted beside an empty profile: the profile's key must still fit once the guidance has taken the budget.
+        $guidanceState = null === $guidance
+            ? []
+            : self::fitted('guidance', mb_scrub($guidance, 'UTF-8'), ['profile' => '']);
 
         return self::fitted('profile', mb_scrub($profile, 'UTF-8'), $guidanceState) + $guidanceState;
     }
@@ -8404,22 +8425,22 @@ The capability `profile` is a plain string enum a Swift client decodes as `Strin
 3. `findProfileSourceFor()` drops `'user' => $user` → `testAnotherAccountsChoiceIsNotThisOnes` fails. Restore.
 4. `ProfileConnectionChooser::choose()` sets `true` on every sibling → `testChoosingAConnectionMakesItTheOnlyProfileSource` and the controller test fail. Restore.
 5. `TickContextFactory::withBorrowedProfile()` ignores `$borrows` → `testAnLlmTickBorrowsNothing` fails. Restore.
-6. `withBorrowedProfile()` resolves the profile tick's settings with `forUser()` → `testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings` fails (null ≠ 30). Restore.
+6. `withBorrowedProfile()` resolves the profile tick's settings with `forUser()` → `testAJevTickBorrowsTheProfileConnectionWithItsOwnSettings` fails (100 ≠ 30, the default ceiling). Restore.
 7. `TickPhases` records against `$tick->connection` → `testABorrowedDistillationsFailureStrikesAgainstTheProfileConnection` fails (the active base URL). Restore.
-8. `connectionInFlight()` drops `&& $this->run->getProgress()->distillPending` → `testTheConnectionInFlightIsTheProfileConnectionUntilTheProfileIsRecorded` fails. Restore.
+8. `connectionInFlight()` drops `&& null === $this->run->getProfileText()` → `testTheConnectionInFlightIsTheProfileConnectionUntilTheProfileIsRecorded` fails. Restore.
 9. `JevProfileStep::advance()` distils on `$tick` instead of `$tick->profileTick` → `JevPipelineTest::testEveryCandidateIsScoredByItsNoul…` fails (`jev-latest` ≠ `profile-llm` in the chat calls). Restore.
 10. Drop `JevProfileStep::advance()`'s `null === $tick->profileTick` guard (distil on `$tick->profileTick ?? $tick`) → `testWithoutAProfileConnectionTheFirstProviderTickFailsTheRun` fails. Restore.
 11. `phases()` Jev row back to `[CallPhase::Batch]` → `testJevDistilsThenAsksInBatches`, the progress pin and the pipeline's `batchesTotal` fail. Restore.
 12. `TickLockTtl::secondsFor()` returns the active connection's bound only → `testAJevAccountCoversItsSlowProfileConnection` fails (480 ≠ 1200). Restore. Drop `borrowedProfileConnection()`'s capability check → `testAnLlmAccountIgnoresItsProfileConnection` fails. Restore.
 13. Drop the kind filter in `newestCompletedRunIds()` → `testOnlyRunsOfTheAskedKindAreRead` and `testAJevRunIsPredictedFromJevRunsAlone` (63 ≠ 95) fail. Restore. Drop only `OR r.engineKind IS NULL` → the repository test fails (the legacy run is missing). Restore.
-14. `JevStateFactory::create()` fits the profile first and the guidance beside it → `testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNothing` fails. Restore.
+14. `JevStateFactory::create()` fits the profile first and the guidance beside it → `testAGuidanceOverTheBudgetByItselfIsCutAndLeavesTheProfileNoWholeToken` fails. Restore. *Amended:* the guidance fitted against `[]` instead of `['profile' => '']` → the same test fails (4004 > 4000: the profile's key does not fit beside a full guidance). Restore.
 15. `FittingPrefix::of()` returns `mb_substr($text, 0, $refused)` → `testTheCutIsTheLongestPrefixThatFits` fails ('abcdef'). Restore. Swap `mb_substr` for `substr` → `testTheCutNeverSplitsAMultiByteCharacter` fails. Restore.
 16. `JevStateFactory` drops `mb_scrub` on the profile → `testInvalidByteSequencesAreScrubbedFromBoth` fails (`mb_check_encoding` false, or `JsonException` from the estimate). Restore.
 17. `waveOf()` reads `$tick->settings->profileText` instead of the run's → `testEveryWaveSendsTheProfileThisRunDistilled` fails. Restore.
 18. `RecommendationSettingsJson` gates `profileText` by `sendsPrompt` again → `testAnEngineWithoutAPromptShowsTheProfileButNoPromptPieces` fails. Restore.
 19. `RecommendationEngineCapabilitiesModel::of(Jev)` says `Own` → `RecommendationEngineResolverTest`'s Jev pin, the Jev capabilities JSON pin and `testAJevTickBorrowsTheProfileConnection…` fail. Restore.
 20. `fallBackToTheStoredProfile()` always fails (drop the stored-profile branch) → `testAFailedDistillationFallsBackToTheStoredProfile` fails. Restore.
-21. `fallBackToTheStoredProfile()` records the guidance when nothing is stored (`$stored ?? $tick->settings->guidancePrompt`) → `testAFailedDistillationWithNothingStoredFailsEvenWithGuidanceThenResumes` fails (completed ≠ failed). Restore.
+21. `fallBackToTheStoredProfile()` records the guidance when nothing is stored (`$stored ?? $tick->settings->guidancePrompt`) → `testAFailedDistillationWithNothingStoredFailsEvenWithGuidanceThenResumes` fails (a `LogicException`: the wave runs and finds no queued System One reply). Restore.
 22. `isPending()` drops `|| null === $run->getProfileText()` → the resume half of check 21's test fails (`LogicException`: a wave without a profile). Restore.
 23. `ProfileConnectionChooser::clear()` does nothing → `testClearingUnsetsTheChoiceAndIsIdempotent` and `testClearingTheProfileConnectionAnswersNoContentEveryTime` fail. Restore.
 24. `JevBatchWave::logged()` returns `$body` unchanged → `testAnInvalidByteInAReplyNeverReachesTheRunLog` fails ("A log row holds invalid UTF-8."). Restore.
