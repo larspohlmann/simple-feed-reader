@@ -1105,27 +1105,56 @@ describe('AiSectionComponent', () => {
       ).toContain('Add a connection');
     });
 
-    it('shows a refused choice beside the picker', () => {
-      const fixture = mountReady([jevActive, config({ id: 8, ready: true, model: 'qwen' })]);
-      ai.failure.set(
-        scoped(
-          {
-            kind: 'unknown',
-            detail: 'Only a ready LLM connection can build your profile.',
-            fieldErrors: [],
-          },
-          { action: 'profile' },
-        ),
-      );
-      fixture.detectChanges();
+    describe('against the real service', () => {
+      const mountWithRealService = (): ComponentFixture<AiSectionComponent> => {
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          imports: [provideTranslocoTesting()],
+          providers: [
+            provideHttpClient(),
+            provideHttpClientTesting(),
+            { provide: API_BASE_URL, useValue: '' },
+            { provide: Dialog, useValue: dialogStub },
+          ],
+        });
+        http = TestBed.inject(HttpTestingController);
+        const fixture = TestBed.createComponent(AiSectionComponent);
+        fixture.detectChanges();
+        http.expectOne('/api/me/ai').flush({
+          configs: [jevActive, config({ id: 8, name: 'Local', ready: true, model: 'qwen' })],
+          activeId: 7,
+          defaultMaxBatchSize: 50,
+        });
+        fixture.detectChanges();
+        flushReady();
+        fixture.detectChanges();
+        return fixture;
+      };
 
-      expect(
-        banners(
-          (fixture.nativeElement as HTMLElement).querySelector(
-            '.profile-connection',
-          ) as HTMLElement,
-        ),
-      ).toEqual(['Only a ready LLM connection can build your profile.']);
+      it('shows a refused choice beside the picker and puts the select back on the holder', () => {
+        const fixture = mountWithRealService();
+        const select = picker(fixture) as HTMLSelectElement;
+
+        select.value = '8';
+        select.dispatchEvent(new Event('change'));
+        http.expectOne('/api/me/ai/configs/8/profile').flush(
+          {
+            type: 'profile_connection_rejected',
+            detail: 'Only a ready LLM connection can build your profile.',
+          },
+          { status: 422, statusText: 'Unprocessable Entity' },
+        );
+        fixture.detectChanges();
+
+        expect(
+          banners(
+            (fixture.nativeElement as HTMLElement).querySelector(
+              '.profile-connection',
+            ) as HTMLElement,
+          ),
+        ).toEqual(['Only a ready LLM connection can build your profile.']);
+        expect(select.value).toBe('');
+      });
     });
   });
 });

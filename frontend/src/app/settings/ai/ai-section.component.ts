@@ -1,11 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   Signal,
   computed,
+  effect,
   inject,
   linkedSignal,
   signal,
+  viewChild,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
@@ -131,6 +134,8 @@ export class AiSectionComponent {
   );
   readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
 
+  private readonly profilePicker = viewChild<ElementRef<HTMLSelectElement>>('profilePicker');
+
   chooseProfileSource(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
     if (value === '') {
@@ -187,6 +192,12 @@ export class AiSectionComponent {
 
   constructor() {
     this.ai.load();
+    effect(() => {
+      const picker = this.profilePicker();
+      if (this.profileFailure() && picker) {
+        picker.nativeElement.value = String(this.profileSourceId() ?? '');
+      }
+    });
   }
 
   value(event: Event): string {

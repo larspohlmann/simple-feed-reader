@@ -291,6 +291,10 @@ export class AiSettingsService {
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
+        if (scope.action === 'profile' && error.status === 404) {
+          this.load();
+          return;
+        }
         this.failure.set({ failure: aiFailure(error), scope });
       },
     });

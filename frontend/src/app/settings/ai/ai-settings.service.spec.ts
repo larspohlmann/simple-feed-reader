@@ -85,6 +85,25 @@ describe('AiSettingsService', () => {
     );
 
     expect(service.failure()?.scope).toEqual({ action: 'profile' });
+    expect(service.failure()?.failure).toMatchObject({
+      kind: 'unknown',
+      detail: 'Only a ready LLM connection can build your profile.',
+    });
+  });
+
+  it('reloads the settings when the profile connection it names is gone', () => {
+    service.configs.set([config({ id: 4, profileSource: true })]);
+
+    service.clearProfileSource();
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/4/profile`)
+      .flush(null, { status: 404, statusText: 'Not Found' });
+
+    ctrl
+      .expectOne(`${base}/api/me/ai`)
+      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
+    expect(service.configs().map((each) => each.id)).toEqual([5]);
+    expect(service.failure()).toBeNull();
   });
 
   it('clears the profile connection on whichever row holds it', () => {

@@ -337,7 +337,7 @@
             [label]="'settings.ai.profileConnection.label' | transloco"
             [info]="'settings.ai.profileConnection.info' | transloco"
           >
-            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
+            <select #profilePicker [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
               <option value="" [selected]="profileSourceId() === null">
                 {{ 'settings.ai.profileConnection.none' | transloco }}
               </option>
