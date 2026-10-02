@@ -34,8 +34,6 @@ final readonly class RateLimitedCalls
         $observed = false;
         $waited = 0.0;
 
-        // $retry === 0 is the first retry after the initial send above; the wait
-        // it uses is BACKOFF[0], the "1 s" step.
         for ($retry = 0;; $retry++) {
             $pending = self::retryablePositions($outcomes);
             if ([] === $pending) {
