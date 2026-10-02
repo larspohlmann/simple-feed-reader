@@ -236,8 +236,13 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
                   (input)="onGuidanceInput($event)"
                 ></textarea>
               </app-field>
-              <app-button size="sm" (click)="resetGuidance()">
-                {{ 'settings.ai.recommendations.guidanceReset' | transloco }}
+              <app-button size="sm" data-testid="guidance-reset" (click)="resetGuidance()">
+                {{
+                  (offersPrompt()
+                    ? 'settings.ai.recommendations.guidanceReset'
+                    : 'settings.ai.recommendations.guidanceClear'
+                  ) | transloco
+                }}
               </app-button>
             </div>
 

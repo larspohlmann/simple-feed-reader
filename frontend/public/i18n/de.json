@@ -263,6 +263,7 @@
         "lookback7": "Letzte 7 Tage",
         "guidance": "Leitprompt",
         "guidanceReset": "Prompt auf Standard zurücksetzen",
+        "guidanceClear": "Steuertext leeren",
         "factoryDefaultsReset": "Auf Werkseinstellungen zurücksetzen",
         "fixedShow": "Festen Prompt anzeigen",
         "expertTitle": "Experteneinstellungen",

@@ -69,6 +69,14 @@ describe('RecommendationSettingsCardComponent', () => {
     ).textContent!.trim();
   }
 
+  function guidanceResetLabel(
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): string {
+    return (
+      fixture.nativeElement.querySelector('[data-testid="guidance-reset"]') as HTMLElement
+    ).textContent!.trim();
+  }
+
   function mount(
     initial: RecommendationSettingsState = STATE,
     capabilities: RecommendationCapabilities = EVERY_RECOMMENDATION_CAPABILITY,
@@ -276,6 +284,21 @@ describe('RecommendationSettingsCardComponent', () => {
 
       expect(guidanceInfo(fixture)).toContain('reading history');
       expect(guidanceInfo(fixture)).not.toContain('fixed prompt');
+    });
+
+    it('offers to reset the guidance to the default prompt of an engine that has one', () => {
+      const fixture = mount();
+
+      expect(guidanceResetLabel(fixture)).toBe('Reset the prompt to default');
+    });
+
+    it('offers only to clear the guidance of an engine without a default prompt', () => {
+      const fixture = mount(STATE, {
+        ...NO_RECOMMENDATION_CAPABILITIES,
+        tuningFields: ['batchConcurrency'],
+      });
+
+      expect(guidanceResetLabel(fixture)).toBe('Clear the guidance');
     });
   });
 
