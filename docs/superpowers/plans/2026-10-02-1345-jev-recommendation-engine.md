@@ -4360,6 +4360,8 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
     }
 ```
 
+*Amended (PR-A fix wave, item 10):* PR A gave the resolver `private const RecommendationEngineKind DEFAULT_KIND = RecommendationEngineKind::Llm;`, which both `kindFor()` and `capabilitiesForAccount()`'s no-connection branch return. Keep it: the `else` arm above is `self::DEFAULT_KIND`, not a second `RecommendationEngineKind::Llm` literal, and `capabilitiesForAccount()` needs no change.
+
 - [ ] **Step 4: Run the tests** — same command as Step 2; expected green. (`engineOf(Jev)` would still throw "No recommendation engine is wired for "jev"" — nothing calls it until B6.)
 
 - [ ] **Step 5: Deletion checks** (quote each FAIL)
