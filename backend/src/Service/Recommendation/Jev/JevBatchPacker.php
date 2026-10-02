@@ -45,7 +45,10 @@ final readonly class JevBatchPacker
             $tokens = JevTokenEstimate::ofJson($this->requestFactory->question($candidate));
             if (
                 [] !== $current
-                && (\count($current) >= self::MAX_QUESTIONS_PER_REQUEST || $used + $tokens > self::QUESTION_TOKEN_BUDGET)
+                && (
+                    \count($current) >= self::MAX_QUESTIONS_PER_REQUEST
+                    || $used + $tokens > self::QUESTION_TOKEN_BUDGET
+                )
             ) {
                 $batches[] = $current;
                 $current = [];
