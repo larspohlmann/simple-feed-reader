@@ -5217,6 +5217,8 @@ final readonly class JevStateFactory
 
 *Amended (preflight F3):* the loop above subtracted each popped line's own estimate, which is always at least the real drop in the whole state's estimate, so it stopped while still over budget (the test's final `assertLessThanOrEqual` failed). Trimming now loops on the rebuilt state's real estimate; re-check deletion checks 1 and 2 afterwards. A Factory builds and never persists.
 
+*Amended (B5, controller ruling from B1):* the System One client's `json_encode` throws on invalid UTF-8, so the payload builders emit only valid UTF-8: `ClippedText::of()` runs `mb_scrub($text, 'UTF-8')` before the character clip (title, feedName, description), and `stateOf()` scrubs the unclipped guidance the same way. B5 adds three pins: `testGuidanceWithAnInvalidByteSequenceStillEncodes`, `testAClipNeverCutsInsideAMultiByteCharacter` and `testInvalidByteSequencesAreScrubbedFromEveryArticleField`. Rebuilding the state per pop is quadratic: measured ~0.1 s for a 100/200/500 Latin history, ~6.7 s for 500/500/500 lines of maximal CJK text.
+
 `backend/src/Service/Recommendation/Jev/Factory/SystemOneRequestFactory.php`:
 
 ```php
