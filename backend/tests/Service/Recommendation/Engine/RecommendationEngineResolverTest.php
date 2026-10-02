@@ -6,7 +6,8 @@ namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
+use App\Enum\RecommendationEngineKind;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -29,7 +30,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
     public function testTheLlmKindWritesReasonsAndReadsEveryTuningFieldInTheirOrder(): void
     {
-        $capabilities = RecommendationEngineKind::Llm->capabilities();
+        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
 
         self::assertTrue($capabilities->writesReasons);
         self::assertSame(
@@ -53,7 +54,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver($locator);
 
         self::assertEquals(
-            RecommendationEngineKind::Llm->capabilities(),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
             $resolver->capabilitiesFor($this->connection('gpt-4o-mini')),
         );
     }

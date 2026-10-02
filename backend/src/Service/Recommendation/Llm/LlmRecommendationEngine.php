@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm;
 
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Run\ProviderPhase\BatchPhase;
