@@ -84,8 +84,8 @@ the transport-failure strikes, cancelling and finalising stay with the run and a
 
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile,
 scores the batches in waves and consolidates the best of them into the final list with reasons. Each engine kind
-declares its capabilities (`reasons`, and which tuning fields it reads); the API passes them to the client, which shows only the
-settings that apply.
+declares its capabilities (`reasons`, and which tuning fields it reads); the API passes them to the client, which
+shows only the settings that apply.
 
 ### The tick lock
 
