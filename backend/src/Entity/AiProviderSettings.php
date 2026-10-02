@@ -95,6 +95,14 @@ final class AiProviderSettings
     private bool $profileSource = false;
 
     /**
+     * The connection that distils the profile for this one when its engine cannot. AiProviderConfigurator clears it
+     * before removing that row; ON DELETE SET NULL is only the database floor.
+     */
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
+    private ?self $profileConnection = null;
+
+    /**
      * The caller passes $verifiedAt: a row is normally born of a successful live call, but a duplicate
      * (AiProviderConfigurator::duplicateConfiguration) carries its sibling's. Delegates to replaceConnection().
      */
@@ -231,6 +239,16 @@ final class AiProviderSettings
     public function setProfileSource(bool $profileSource): void
     {
         $this->profileSource = $profileSource;
+    }
+
+    public function getProfileConnection(): ?self
+    {
+        return $this->profileConnection;
+    }
+
+    public function setProfileConnection(?self $profileConnection): void
+    {
+        $this->profileConnection = $profileConnection;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

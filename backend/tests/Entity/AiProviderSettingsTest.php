@@ -231,4 +231,29 @@ final class AiProviderSettingsTest extends TestCase
 
         self::assertSame(25, $settings->maxBatchSize());
     }
+
+    public function testANewRowBorrowsNoProfileConnection(): void
+    {
+        self::assertNull($this->settings()->getProfileConnection());
+    }
+
+    public function testPointingAtAProfileConnectionRoundTrips(): void
+    {
+        $jev = $this->settings('Jev');
+        $profile = $this->settings('Profile');
+
+        $jev->setProfileConnection($profile);
+
+        self::assertSame($profile, $jev->getProfileConnection());
+    }
+
+    public function testClearingTheProfileConnectionLeavesNone(): void
+    {
+        $jev = $this->settings('Jev');
+        $jev->setProfileConnection($this->settings('Profile'));
+
+        $jev->setProfileConnection(null);
+
+        self::assertNull($jev->getProfileConnection());
+    }
 }
