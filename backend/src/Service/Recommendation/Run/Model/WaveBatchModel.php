@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run\Model;
+namespace App\Service\Recommendation\Run\Model;
 
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 
 /**
- * One batch of the frozen plan in a wave: its plan position, its snapshot-order ids, and the prompt lines those ids
+ * One batch of the frozen plan in a wave: its plan position, its snapshot-order ids, and the article lines those ids
  * still resolve to. A batch pruned to nothing resolves to no winners without a provider call.
  */
 final readonly class WaveBatchModel

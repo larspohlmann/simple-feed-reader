@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Run\Pass;
 
 use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Llm\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 
 final readonly class WaveContext

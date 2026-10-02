@@ -18,16 +18,17 @@ use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPickParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Llm\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Llm\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
 use App\Service\Recommendation\Llm\Run\Pass\WaveContext;
 use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
+use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\RecordedCall;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
+use App\Service\Recommendation\Run\Support\BatchWaveWinners;
 
 /**
  * The batch phase's concurrent fan-out: an unusable batch retries alone up to MAX_ATTEMPTS rounds, then yields no
@@ -57,7 +58,7 @@ final readonly class RecommendationBatchWave
     {
         $correctiveReply = [];
         $rateLimitObserved = false;
-        [$winners, $pending] = $this->splitByPruned($wave->batches);
+        [$winners, $pending] = BatchWaveWinners::splitByPruned($wave->batches);
 
         for ($round = 1; [] !== $pending; $round++) {
             $roundResult = $this->sendRound($wave, $pending, $correctiveReply);
@@ -82,44 +83,7 @@ final readonly class RecommendationBatchWave
             }
         }
 
-        return new BatchWaveResultModel($this->degradeUnresolved($winners, $pending), $rateLimitObserved);
-    }
-
-    /**
-     * @param list<WaveBatchModel> $waveBatches
-     *
-     * @return array{0: array<int, list<array{id: int, score: int, reason: string}>>, 1: list<int>}
-     */
-    private function splitByPruned(array $waveBatches): array
-    {
-        $winners = [];
-        $pending = [];
-        foreach ($waveBatches as $position => $waveBatch) {
-            if ($waveBatch->isFullyPruned()) {
-                $winners[$position] = [];
-
-                continue;
-            }
-            $pending[] = $position;
-        }
-
-        return [$winners, $pending];
-    }
-
-    /**
-     * @param array<int, list<array{id: int, score: int, reason: string}>> $winners
-     * @param list<int>                                                    $stillUnresolved
-     *
-     * @return list<list<array{id: int, score: int, reason: string}>>
-     */
-    private function degradeUnresolved(array $winners, array $stillUnresolved): array
-    {
-        foreach ($stillUnresolved as $position) {
-            $winners[$position] = [];
-        }
-        ksort($winners);
-
-        return array_values($winners);
+        return new BatchWaveResultModel(BatchWaveWinners::degradeUnresolved($winners, $pending), $rateLimitObserved);
     }
 
     /**

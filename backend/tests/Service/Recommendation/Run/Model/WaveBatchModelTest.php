@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run\Model;
+namespace App\Tests\Service\Recommendation\Run\Model;
 
-use App\Service\Recommendation\Llm\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use PHPUnit\Framework\TestCase;
 
 final class WaveBatchModelTest extends TestCase
