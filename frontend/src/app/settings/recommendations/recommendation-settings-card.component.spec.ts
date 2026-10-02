@@ -223,8 +223,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
     it('offers each tuning control by its own field', () => {
       const fixture = mount(STATE, {
-        reasons: false,
-        prompt: false,
+        ...NO_RECOMMENDATION_CAPABILITIES,
         tuningFields: ['contextWindow'],
       });
 
@@ -234,8 +233,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
     it('offers the score-and-reasons switch to an engine that writes no reasons, for its score', () => {
       const fixture = mount(STATE, {
-        reasons: false,
-        prompt: false,
+        ...NO_RECOMMENDATION_CAPABILITIES,
         tuningFields: ['batchConcurrency'],
       });
 
@@ -247,7 +245,7 @@ describe('RecommendationSettingsCardComponent', () => {
     it('shows no fixed prompt, distilled profile or guidance default to an engine that sends no prompt', () => {
       const fixture = mount(
         { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
-        { reasons: false, prompt: false, tuningFields: ['batchConcurrency'] },
+        { ...NO_RECOMMENDATION_CAPABILITIES, tuningFields: ['batchConcurrency'] },
       );
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 

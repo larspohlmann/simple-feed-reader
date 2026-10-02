@@ -439,8 +439,7 @@ describe('AiSectionComponent', () => {
         id: 7,
         slowModel: false,
         capabilities: {
-          reasons: false,
-          prompt: false,
+          ...NO_RECOMMENDATION_CAPABILITIES,
           tuningFields: ['slowModel', 'batchConcurrency'],
         },
       }),
