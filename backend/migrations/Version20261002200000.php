@@ -9,7 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** Each jev-* row inherits its account's flagged row (the newest of two), as findProfileSourceFor() read it. */
+/** Each account's jev-* rows inherit its newest profile_source row. */
 final class Version20261002200000 extends AbstractMigration
 {
     public function getDescription(): string
