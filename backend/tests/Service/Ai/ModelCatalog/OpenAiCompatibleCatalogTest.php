@@ -170,6 +170,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         $catalog = $this->catalogAnswering(new MockResponse('', ['http_code' => 500]));
 
         $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That provider answered with status 500.');
         $catalog->listModels($this->credentials());
     }
 
@@ -180,6 +181,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         });
 
         $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage('That address did not answer.');
         (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
     }
 
