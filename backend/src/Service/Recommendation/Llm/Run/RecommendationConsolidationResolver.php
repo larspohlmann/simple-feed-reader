@@ -17,13 +17,11 @@ use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Recommendation\Llm\Run\Support\ConsolidationShortlist;
-use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
 
@@ -39,7 +37,7 @@ final readonly class RecommendationConsolidationResolver
         private RecommendationCandidateLoader $candidateLoader,
         private RecommendationHistoryLoader $historyLoader,
         private RecommendationPromptBuilder $promptBuilder,
-        private RecommendationCallRecorder $callRecorder,
+        private CompletionCallRecorder $callRecorder,
         private RecommendationCompletionRequestFactory $requestFactory,
         private RecommendationProviderCall $providerCall,
         private RecommendationConsolidationParser $consolidationParser,
@@ -74,11 +72,7 @@ final readonly class RecommendationConsolidationResolver
             $tick->connection,
             new CallPromptModel($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            CallSlotModel::consolidation(),
-            RenderedCompletionRequest::of($request),
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlotModel::consolidation(), $request);
         $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));

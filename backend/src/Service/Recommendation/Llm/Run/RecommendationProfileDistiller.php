@@ -11,11 +11,9 @@ use App\Service\Recommendation\Llm\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Llm\Run\Model\ProfileDistillationOutcomeModel;
-use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 
@@ -28,7 +26,7 @@ final readonly class RecommendationProfileDistiller
     public function __construct(
         private RecommendationHistoryLoader $historyLoader,
         private RecommendationPromptBuilder $promptBuilder,
-        private RecommendationCallRecorder $callRecorder,
+        private CompletionCallRecorder $callRecorder,
         private RecommendationCompletionRequestFactory $requestFactory,
         private RecommendationProviderCall $providerCall,
         private RecommendationProfileParser $profileParser,
@@ -51,11 +49,7 @@ final readonly class RecommendationProfileDistiller
             $tick->connection,
             new CallPromptModel($messages, 1, RecommendationResponseSchema::Distillation),
         );
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            CallSlotModel::distillation(),
-            RenderedCompletionRequest::of($request),
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlotModel::distillation(), $request);
         $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->profileParser->parse($content);
