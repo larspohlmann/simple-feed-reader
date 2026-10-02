@@ -8927,6 +8927,14 @@ names the median between-call time. With run 148 in the dev history, 5 batches p
   `RecommendationCapabilitiesJsonTest` (`ofModel`, Jev and `typesafe/jev-router`), the searchable-select hint spec,
   and three `AiSectionComponent` specs (picker hint, guide section, add-form hint).
 
+**Fix round 1 (review I1, M1–M3; coordinator ruling: B9-D6 governs behaviour, not display):** each model entry is
+`{id, label, capabilities}`. `label` comes from `RecommendationEngineResolver::labelForModel` beside `kindFor`
+(`"Jev"` for Jev, `null` for an LLM); the picker renders it verbatim beside the id ("jev-latest · Jev") and nothing
+branches on it. The chosen model's hint stays under the closed picker (the field's hint line), and the trigger keeps
+the label. The guide's step 3 follows the real order (the list opens after the add) and step 4 says to expand the
+row. `docs/recommendations-runs.md` documents the exact models-list shape. Pins: the resolver label, the json and
+controller shapes, and one `AiSectionComponent` spec for the label and the closed hint; the guide spec covers step 4.
+
 ---
 
 ### Task B8: Docs, gates, a real run, PR B
