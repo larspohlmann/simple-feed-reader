@@ -109,6 +109,7 @@
 - **D7 — The generic loop lives in `Service/Ai`.** `Ai\RateLimitedCalls::send(array $calls, \Closure $send, RetryPlanModel $plan)` applies the plan to any "send these calls" closure; `Ai\RateLimitedOutcome\RateLimitedOutcomeInterface` (`isRetryable()`, `retryAfterSeconds()`) is what it asks of an outcome; `RateLimitedResultModel` moves to `Ai/Model` as a covariant template. `Ai` already owns `RetryPlanModel` and the provider exceptions the loop reads, and both sub-modules depend on `Ai`. `Llm`'s `RateLimitedCompletion` keeps its API and delegates.
 - **D8 — Neutral recorder.** `RecordedCall`, `RecommendationCallRecorder`, `RecommendationRunLogFactory`, `CallSlotModel` move to `Recommendation/Run`; `CompletionStreamProgressModel` becomes `Run/Model/CallProgressModel`; `CompletionUsageModel` becomes `Ai/Model/ProviderCallUsageModel` (both engines' transports produce it; #1344 D4 left that call to #1345). `begin()` takes the request already rendered (`string`). `Llm` keeps `Run/Pass/RecordedCallObserver` (the one-method stream adapter implementing `CompletionStreamObserverInterface`) and `Run/Support/RenderedCompletionRequest`. `RecordedCall::providerCutTheAnswer()` becomes `CompletionFinishReason::cutByProvider($recordedCall->finishReason())` at its one LLM call site: "cut by the provider" is the chat client's `length` vocabulary. The nano-credit conversion moves to `Ai/Support/ReportedCost` so Jev prices calls the same way.
 - **D9 — The batch-wave skeleton is neutral (not in the issue).** `Run/BatchWavePhase::advance(TickContext $tick, \Closure $resolveWave)` holds what the LLM's `BatchPhase` did besides its wave (first-batch mark, wave size, 429 halving, banking); `Run/WaveBatchLoader::next()` loads the plan's next batches; `WaveBatchModel` and `BatchWaveResultModel` move to `Run/Model`. Without it Jev would copy ~70 lines of `BatchPhase` it may not import. The closure follows `InvalidReplyRetry`'s precedent.
+  *Amended (PR-A fix wave, item 14):* `BatchWavePhase` takes `WaveBatchLoader` and loads the wave itself (`next($tick, $this->waveSize($tick))`, after the first-batch mark, before the 429 try); the closure is `\Closure(list<WaveBatchModel>): BatchWaveResultModel`. `WaveBatchLoader` has one consumer, so an engine cannot load a slice other than the one the skeleton sized and banks. The LLM's `WaveContextLoader::load(TickContext, list<WaveBatchModel>)` takes the batches and no longer injects the loader.
 - **D10 — `prompt` capability.** Model field `sendsPrompt`, wire key `prompt`. `RecommendationSettingsJson::state()` takes the capabilities and sends `profileText`, `defaultGuidancePrompt`, `fixedPrompt` as `null` for an engine without a prompt (keys stay, for a typed client). `RecommendationEngineResolver::capabilitiesForAccount(User)` reads an account without an active connection as the LLM, the kind a model-less connection already resolves to, so the unconfigured account's payload stays as today (`RecommendationSettingsControllerTest::testAnUnconfiguredAccountReportsAllDefaults`). The settings card also gates by `capabilities().prompt`: switching the active connection updates the capabilities at once but does not reload the card's settings state.
 - **D11 — `cutForConsolidation()` becomes `Llm/Run/Support/ConsolidationShortlist::of()`.** A one-line static helper; `RecommendationWinnerRanker::ranked()` stays neutral (Jev ranks with it).
 - **D12 — The toggle is `showScoreAndReasons` everywhere: PHP models, entity property, DTO, wire key, SPA, i18n keys; the column stays `show_reasons`** (explicit `#[ORM\Column(name: 'show_reasons')]`). The column's meaning, "show the reasons and their scores where they exist", still holds, so it is not misleading enough for a migration. Label "Show score and reasons", shown for every engine; the `reasons` capability stays on the wire (data for a native client) though the SPA no longer reads it. Risk accepted: a browser tab still running the old SPA after the deploy would PUT `showReasons`, which the new DTO ignores (its `false` default turns the toggle off) — the same release ships the SPA.
@@ -5171,7 +5172,7 @@ Reviewer: yes.
 - Modify (test): `backend/tests/Service/Recommendation/Engine/RecommendationEngineWiringTest.php`
 
 **Interfaces:**
-- Consumes: everything from A5–A7 and B1–B5: `RateLimitedCalls::send()`, `RecommendationCallRecorder::begin()`, `RecordedCall::received()/finishUsable()/finishUnusable()/abortAfterTransportFailure()`, `BatchWavePhase::advance()`, `WaveBatchLoader::next()`, `WaveBatchModel`, `BatchWaveResultModel`, `RecommendationWinnerRanker::ranked()`, `RecommendationRunFinalizer::finalize()`, `SystemOneClientInterface`, `SystemOneRequestFactory`, `JevStateFactory`, `JevBatchPacker`, `RenderedSystemOneRequest`, `QuestionId`.
+- Consumes: everything from A5–A7 and B1–B5: `RateLimitedCalls::send()`, `RecommendationCallRecorder::begin()`, `RecordedCall::received()/finishUsable()/finishUnusable()/abortAfterTransportFailure()`, `BatchWavePhase::advance()` (closure over `list<WaveBatchModel>`, *amended PR-A fix wave*), `WaveBatchModel`, `BatchWaveResultModel`, `RecommendationWinnerRanker::ranked()`, `RecommendationRunFinalizer::finalize()`, `SystemOneClientInterface`, `SystemOneRequestFactory`, `JevStateFactory`, `JevBatchPacker`, `RenderedSystemOneRequest`, `QuestionId`.
 - Produces: `JevRecommendationEngine` registered under `RecommendationEngineKind::Jev->value`; `JevWave(TickContext $tick, array $state, list<WaveBatchModel> $batches)` with `model(): string`; `JevBatchWave::resolve(JevWave $wave): BatchWaveResultModel`; `NoulReplyParser::parse(SystemOneReplyModel $reply, list<int> $entryIds): NoulParseResultModel`; `NoulParseResultModel::{usable(list<winner>), unusable()}`, `$usable`, `$winners`; `NoulScore::of(float $noul): int`.
 
 - [ ] **Step 1: Write the failing unit tests**
@@ -6137,8 +6138,8 @@ use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
-use App\Service\Recommendation\Run\WaveBatchLoader;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -6151,7 +6152,6 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
     public function __construct(
         private JevBatchPacker $packer,
         private BatchWavePhase $batchWavePhase,
-        private WaveBatchLoader $batches,
         private RecommendationHistoryLoader $historyLoader,
         private JevStateFactory $stateFactory,
         private JevBatchWave $wave,
@@ -6174,11 +6174,12 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
 
         return $this->batchWavePhase->advance(
             $tick,
-            fn (int $waveSize): BatchWaveResultModel => $this->wave->resolve($this->waveOf($tick, $waveSize)),
+            fn (array $batches): BatchWaveResultModel => $this->wave->resolve($this->waveOf($tick, $batches)),
         );
     }
 
-    private function waveOf(TickContext $tick, int $waveSize): JevWave
+    /** @param list<WaveBatchModel> $batches */
+    private function waveOf(TickContext $tick, array $batches): JevWave
     {
         return new JevWave(
             $tick,
@@ -6186,11 +6187,13 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
                 $tick->settings->guidancePrompt,
                 $this->historyLoader->load($tick->userId(), $tick->settings),
             ),
-            $this->batches->next($tick, $waveSize),
+            $batches,
         );
     }
 }
 ```
+
+*Amended (PR-A fix wave, item 14):* `BatchWavePhase` now loads the wave's batches and hands them to the closure (D9), so the engine takes no `WaveBatchLoader` (7 constructor arguments) and `waveOf()` takes the batches.
 
 - [ ] **Step 6: Run the tests**
 
