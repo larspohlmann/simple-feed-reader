@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Jev\Support;
 
 final class ClippedText
 {
-    /** At most $characters characters of valid UTF-8, an ellipsis marking a cut: feed text may hold invalid bytes. */
+    /** Valid UTF-8, as feed text may hold invalid bytes; longer than $characters, its first $characters and an ellipsis. */
     public static function of(string $text, int $characters): string
     {
         $valid = mb_scrub($text, 'UTF-8');

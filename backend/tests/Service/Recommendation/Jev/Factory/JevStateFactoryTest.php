@@ -53,7 +53,7 @@ final class JevStateFactoryTest extends TestCase
         $state = (new JevStateFactory())->create("Mehr \xC3 Rust", new RecommendationHistoryModel([], [], []));
 
         self::assertSame('Mehr ? Rust', $state['guidance']);
-        self::assertGreaterThan(0, JevTokenEstimate::ofJson($state));
+        self::assertJson(json_encode($state, \JSON_THROW_ON_ERROR));
     }
 
     /** 400 long viewed lines are far over budget: the oldest viewed lines go, favorites and kept stay whole. */
