@@ -21,7 +21,11 @@ final readonly class RecommendationEngineCapabilitiesModel
     public static function of(RecommendationEngineKind $kind): self
     {
         return match ($kind) {
-            RecommendationEngineKind::Llm => new self(true, true, RecommendationTuningField::cases()),
+            RecommendationEngineKind::Llm => new self(
+                writesReasons: true,
+                sendsPrompt: true,
+                tuningFields: RecommendationTuningField::cases(),
+            ),
         };
     }
 }
