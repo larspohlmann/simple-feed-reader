@@ -12,7 +12,7 @@ import {
 } from '../../core/ai-availability.service';
 import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
 import { API_BASE_URL } from '../../core/api';
-import { AiConfig, AiConfigList, AiSettingsService } from './ai-settings.service';
+import { AiConfig, AiConfigList, AiModel, AiSettingsService } from './ai-settings.service';
 
 const base = 'https://api.test';
 
@@ -32,6 +32,8 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
 });
+
+const offered = (id: string): AiModel => ({ id, capabilities: EVERY_RECOMMENDATION_CAPABILITY });
 
 describe('AiSettingsService', () => {
   let service: AiSettingsService;
@@ -185,10 +187,13 @@ describe('AiSettingsService', () => {
       apiKey: 'sk-secret',
     });
 
-    request.flush({ ...config({ id: 7, name: 'My provider' }), models: ['gpt-4o', 'gpt-4o-mini'] });
+    request.flush({
+      ...config({ id: 7, name: 'My provider' }),
+      models: [offered('gpt-4o'), offered('gpt-4o-mini')],
+    });
 
     expect(service.configs()).toEqual([config({ id: 7, name: 'My provider' })]);
-    expect(service.models()).toEqual(['gpt-4o', 'gpt-4o-mini']);
+    expect(service.models()).toEqual([offered('gpt-4o'), offered('gpt-4o-mini')]);
     expect(service.choosingModelFor()).toBe(7);
   });
 
@@ -202,7 +207,9 @@ describe('AiSettingsService', () => {
     });
 
     service.add({ name: null, baseUrl: 'https://other.test/v1', apiKey: 'sk-other' }, jest.fn());
-    ctrl.expectOne(`${base}/api/me/ai/configs`).flush({ ...config({ id: 2 }), models: ['claude'] });
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs`)
+      .flush({ ...config({ id: 2 }), models: [offered('claude')] });
 
     expect(availability.ready()).toBe(true);
     expect(availability.model()).toBe('gpt-4o');
@@ -214,9 +221,9 @@ describe('AiSettingsService', () => {
     const request = ctrl.expectOne(`${base}/api/me/ai/configs/3/models`);
     expect(request.request.method).toBe('GET');
 
-    request.flush({ models: ['gpt-4o'] });
+    request.flush({ models: [offered('gpt-4o')] });
 
-    expect(service.models()).toEqual(['gpt-4o']);
+    expect(service.models()).toEqual([offered('gpt-4o')]);
     expect(service.choosingModelFor()).toBe(3);
   });
 
@@ -512,7 +519,9 @@ describe('AiSettingsService', () => {
     const onAdded = jest.fn();
     service.add(DRAFT, onAdded);
 
-    ctrl.expectOne(`${base}/api/me/ai/configs`).flush({ ...config({ id: 4 }), models: ['gpt-4o'] });
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs`)
+      .flush({ ...config({ id: 4 }), models: [offered('gpt-4o')] });
 
     expect(onAdded).toHaveBeenCalledTimes(1);
     expect(service.failure()).toBeNull();

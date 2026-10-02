@@ -154,9 +154,28 @@ final class AiSettingsJsonTest extends TestCase
     {
         $shape = $this->json()->added($this->settings(null, 'Work OpenAI'), ['gpt-4o', 'gpt-4o-mini']);
 
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $shape['models']);
+        self::assertSame(
+            [
+                ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+            ],
+            $shape['models'],
+        );
         self::assertSame('Work OpenAI', $shape['name']);
         self::assertFalse($shape['ready']);
+    }
+
+    public function testEachOfferedModelCarriesTheCapabilitiesItWouldGiveTheConnection(): void
+    {
+        self::assertSame(
+            [
+                'models' => [
+                    ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                ],
+            ],
+            $this->json()->models(['gpt-4o', 'jev-latest']),
+        );
     }
 
     public function testConfigurationForIsActiveWhenItIsTheOwnersActiveConfiguration(): void

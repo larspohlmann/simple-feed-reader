@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 
@@ -18,8 +19,18 @@ final readonly class RecommendationCapabilitiesJson
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
     public function of(AiProviderSettings $connection): array
     {
-        $capabilities = $this->engines->capabilitiesFor($connection);
+        return self::shape($this->engines->capabilitiesFor($connection));
+    }
 
+    /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
+    public function ofModel(string $model): array
+    {
+        return self::shape($this->engines->capabilitiesForModel($model));
+    }
+
+    /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
+    private static function shape(RecommendationEngineCapabilitiesModel $capabilities): array
+    {
         return [
             'reasons' => $capabilities->writesReasons,
             'prompt' => $capabilities->sendsPrompt,

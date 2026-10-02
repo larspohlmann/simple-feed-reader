@@ -35,4 +35,20 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
             RecommendationCapabilitiesJsons::ofTheKind()->of($connection),
         );
     }
+
+    public function testAnOfferedJevModelReportsTheCapabilitiesAJevConnectionHas(): void
+    {
+        self::assertSame(
+            RecommendationCapabilitiesJsons::JEV,
+            RecommendationCapabilitiesJsons::ofTheKind()->ofModel('jev-latest'),
+        );
+    }
+
+    public function testAnOfferedChatModelReportsTheLlmCapabilities(): void
+    {
+        self::assertSame(
+            RecommendationCapabilitiesJsons::LLM,
+            RecommendationCapabilitiesJsons::ofTheKind()->ofModel('typesafe/jev-router'),
+        );
+    }
 }

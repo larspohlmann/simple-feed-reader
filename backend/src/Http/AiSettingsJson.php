@@ -74,16 +74,21 @@ final readonly class AiSettingsJson
      */
     public function added(AiProviderSettings $settings, array $models): array
     {
-        return $this->configuration($settings, null) + ['models' => $models];
+        return $this->configuration($settings, null) + $this->models($models);
     }
 
     /**
      * @param list<string> $models
      *
-     * @return array<string, mixed>
+     * @return array{models: list<array{id: string, capabilities: array<string, mixed>}>}
      */
     public function models(array $models): array
     {
-        return ['models' => $models];
+        return [
+            'models' => array_map(
+                fn (string $model): array => ['id' => $model, 'capabilities' => $this->capabilities->ofModel($model)],
+                $models,
+            ),
+        ];
     }
 }

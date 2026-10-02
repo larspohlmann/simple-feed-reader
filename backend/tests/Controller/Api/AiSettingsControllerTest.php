@@ -11,6 +11,7 @@ use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel
 use App\Tests\Support\AiConfigurationRequests;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\RecommendationCapabilitiesJsons;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -83,7 +84,34 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame('1234', $added['apiKeyHint']);
         self::assertFalse($added['ready']);
         self::assertFalse($added['active']);
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added['models']);
+        self::assertSame(
+            [
+                ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                ['id' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+            ],
+            $added['models'],
+        );
+    }
+
+    public function testListingModelsMarksAJevModelByTheCapabilitiesItWouldGive(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'jev-latest']);
+        $this->accountOn($client, 'ai-models-jev@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $client->request('GET', sprintf('/api/me/ai/configs/%d/models', $id));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            [
+                'models' => [
+                    ['id' => 'gpt-4o', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    ['id' => 'jev-latest', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                ],
+            ],
+            $this->payload($client),
+        );
     }
 
     /**

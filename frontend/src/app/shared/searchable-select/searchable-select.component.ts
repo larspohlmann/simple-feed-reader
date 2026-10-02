@@ -14,6 +14,8 @@ import { IconComponent } from '../icon/icon.component';
 export interface SelectOption {
   readonly value: string;
   readonly label: string;
+  /** A muted line under the label in the open list; the filter and the closed trigger ignore it. */
+  readonly hint?: string;
 }
 
 /**

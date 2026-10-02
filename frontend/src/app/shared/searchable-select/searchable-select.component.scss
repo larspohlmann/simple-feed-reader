@@ -86,6 +86,12 @@
   cursor: pointer;
 }
 
+.option-hint {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
 .option.active,
 .option:hover {
   background: var(--surface-1);

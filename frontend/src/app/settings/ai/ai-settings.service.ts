@@ -29,6 +29,12 @@ export interface AiConfig {
   readonly capabilities: RecommendationCapabilities;
 }
 
+/** A model the provider offers, with what a connection could do once it saves that model. */
+export interface AiModel {
+  readonly id: string;
+  readonly capabilities: RecommendationCapabilities;
+}
+
 export interface AiConfigList {
   readonly configs: AiConfig[];
   readonly activeId: number | null;
@@ -71,7 +77,7 @@ export class AiSettingsService {
   readonly activeId = computed<number | null>(
     () => this.configs().find((each) => each.active)?.id ?? null,
   );
-  readonly models = signal<readonly string[]>([]);
+  readonly models = signal<readonly AiModel[]>([]);
   /** The default batch-cap the backend reports, shown as the empty field's
    *  placeholder. Null until the list has loaded. */
   readonly defaultMaxBatchSize = signal<number | null>(null);
@@ -102,7 +108,7 @@ export class AiSettingsService {
   add(draft: AiDraft, onAdded: () => void): void {
     this.run(
       { action: 'add' },
-      this.http.post<AiConfig & { models: string[] }>(`${this.base}/api/me/ai/configs`, {
+      this.http.post<AiConfig & { models: AiModel[] }>(`${this.base}/api/me/ai/configs`, {
         name: draft.name,
         baseUrl: draft.baseUrl,
         apiKey: draft.apiKey,
@@ -120,7 +126,7 @@ export class AiSettingsService {
   loadModels(id: number): void {
     this.run(
       { action: 'row', configId: id },
-      this.http.get<{ models: string[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
+      this.http.get<{ models: AiModel[] }>(`${this.base}/api/me/ai/configs/${id}/models`),
       (answer) => {
         this.models.set(answer.models);
         this.choosingModelFor.set(id);

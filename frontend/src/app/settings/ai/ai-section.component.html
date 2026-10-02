@@ -269,6 +269,8 @@
 
       <app-disclosure appearance="drill-in" [label]="'settings.ai.addTitle' | transloco">
         <div class="add-group">
+          <p class="hint add-intro">{{ 'settings.ai.addIntro' | transloco }}</p>
+
           <app-field
             [label]="'settings.ai.configs.namePlaceholder' | transloco"
             [info]="'settings.ai.info.name' | transloco"
@@ -346,6 +348,15 @@
             <li>{{ 'settings.ai.guide.recommendationsStep3' | transloco }}</li>
             <li>{{ 'settings.ai.guide.recommendationsStep4' | transloco }}</li>
             <li>{{ 'settings.ai.guide.recommendationsStep5' | transloco }}</li>
+          </ol>
+
+          <h3>{{ 'settings.ai.guide.jevTitle' | transloco }}</h3>
+          <ol class="guide-jev">
+            <li>{{ 'settings.ai.guide.jevStep1' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.jevStep2' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.jevStep3' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.jevStep4' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.jevStep5' | transloco }}</li>
           </ol>
         </div>
       </app-disclosure>

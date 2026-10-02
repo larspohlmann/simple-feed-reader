@@ -29,7 +29,12 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return str_starts_with($connection->getModel() ?? '', self::JEV_MODEL_PREFIX)
+        return $this->kindForModel($connection->getModel() ?? '');
+    }
+
+    private function kindForModel(string $model): RecommendationEngineKind
+    {
+        return str_starts_with($model, self::JEV_MODEL_PREFIX)
             ? RecommendationEngineKind::Jev
             : self::DEFAULT_KIND;
     }
@@ -37,6 +42,11 @@ final readonly class RecommendationEngineResolver
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
         return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
+    }
+
+    public function capabilitiesForModel(string $model): RecommendationEngineCapabilitiesModel
+    {
+        return RecommendationEngineCapabilitiesModel::of($this->kindForModel($model));
     }
 
     /** An account with no active connection reads as the default kind, as a model-less connection does. */

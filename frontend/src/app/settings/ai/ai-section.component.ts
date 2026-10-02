@@ -10,7 +10,11 @@ import {
 } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
+import {
+  offersTuning,
+  RecommendationCapabilities,
+  RecommendationTuningField,
+} from '../../core/ai-availability.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
@@ -97,7 +101,11 @@ export class AiSectionComponent {
   });
 
   readonly modelOptions = computed<SelectOption[]>(() =>
-    this.ai.models().map((model) => ({ value: model, label: model })),
+    this.ai.models().map((model) => ({
+      value: model.id,
+      label: model.id,
+      hint: this.modelHint(model.capabilities),
+    })),
   );
 
   /** The key is optional — a local model server needs none — so only the
@@ -142,6 +150,15 @@ export class AiSectionComponent {
       return;
     }
     this.ai.chooseProfileSource(id);
+  }
+
+  private modelHint(capabilities: RecommendationCapabilities): string | undefined {
+    const differences = [
+      capabilities.reasons ? null : 'settings.ai.modelHint.noReasons',
+      capabilities.profile === 'borrowed' ? 'settings.ai.modelHint.borrowedProfile' : null,
+    ].filter((key) => key !== null);
+
+    return differences.map((key) => this.i18n.translate(key)).join(' · ') || undefined;
   }
 
   rowFailure(configId: number): string | null {

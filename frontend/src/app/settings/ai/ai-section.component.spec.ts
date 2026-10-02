@@ -11,13 +11,13 @@ import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AiFailure, ScopedAiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
-import { AiConfig, AiSettingsService } from './ai-settings.service';
+import { AiConfig, AiModel, AiSettingsService } from './ai-settings.service';
 import { RecommendationSettingsState } from '../recommendations/recommendation-settings.service';
 
 interface AiSettingsStub {
   configs: WritableSignal<readonly AiConfig[]>;
   activeId: WritableSignal<number | null>;
-  models: WritableSignal<readonly string[]>;
+  models: WritableSignal<readonly AiModel[]>;
   defaultMaxBatchSize: WritableSignal<number | null>;
   choosingModelFor: WritableSignal<number | null>;
   busy: WritableSignal<boolean>;
@@ -64,6 +64,11 @@ const BORROWING = {
   tuningFields: ['batchConcurrency'],
 } as const;
 
+const offered = (id: string, capabilities = EVERY_RECOMMENDATION_CAPABILITY): AiModel => ({
+  id,
+  capabilities,
+});
+
 const RECOMMENDATIONS: RecommendationSettingsState = {
   guidancePrompt: null,
   defaultGuidancePrompt: 'Prefer long-form articles.',
@@ -107,7 +112,7 @@ function createStub(): AiSettingsStub {
   return {
     configs: signal<readonly AiConfig[]>([]),
     activeId: signal<number | null>(null),
-    models: signal<readonly string[]>([]),
+    models: signal<readonly AiModel[]>([]),
     defaultMaxBatchSize: signal<number | null>(null),
     choosingModelFor: signal<number | null>(null),
     busy: signal(false),
@@ -348,7 +353,7 @@ describe('AiSectionComponent', () => {
     expect(ai.loadModels).toHaveBeenCalledWith(1);
 
     ai.choosingModelFor.set(1);
-    ai.models.set(['gpt-4o', 'gpt-4o-mini']);
+    ai.models.set([offered('gpt-4o'), offered('gpt-4o-mini')]);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-searchable-select')).not.toBeNull();
@@ -360,11 +365,28 @@ describe('AiSectionComponent', () => {
     expect(ai.chooseModel).toHaveBeenCalledWith(1, 'gpt-4o');
   });
 
+  it('marks a model that would borrow its profile and write no reasons, and leaves an LLM bare', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1 })]);
+    ai.choosingModelFor.set(1);
+    ai.models.set([offered('gpt-4o'), offered('jev-latest', BORROWING)]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+    (row(fixture, 0).querySelector('app-searchable-select .trigger') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const options = Array.from(row(fixture, 0).querySelectorAll('[role="option"]'));
+    expect(
+      options.map((option) => option.querySelector('.option-hint')?.textContent?.trim()),
+    ).toEqual([undefined, 'scores articles, writes no reasons · needs a profile connection']);
+  });
+
   it('resets the picked model whenever a different row starts choosing', () => {
     const fixture = mount();
     ai.configs.set([config({ id: 1 }), config({ id: 2 })]);
     ai.choosingModelFor.set(1);
-    ai.models.set(['gpt-4o']);
+    ai.models.set([offered('gpt-4o')]);
     fixture.detectChanges();
     fixture.componentInstance.chosenModel.set('gpt-4o');
 
@@ -983,7 +1005,33 @@ describe('AiSectionComponent', () => {
     expect(guideDetails.open).toBe(false);
 
     const steps = guideDetails.querySelectorAll('.guide ol li');
-    expect(steps.length).toBe(10);
+    expect(steps.length).toBe(15);
+  });
+
+  it('walks through setting up Jev in the guide', () => {
+    const fixture = mountWithConfigs([]);
+
+    const guide = fixture.nativeElement.querySelector('.guide') as HTMLElement;
+    const titles = Array.from(guide.querySelectorAll('h3')).map((title) =>
+      title.textContent?.trim(),
+    );
+    expect(titles).toContain('Use Jev (TypeSafe System One)');
+
+    const jevSteps = Array.from(guide.querySelectorAll('.guide-jev li')).map((step) =>
+      step.textContent?.trim(),
+    );
+    expect(jevSteps).toHaveLength(5);
+    expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
+    expect(jevSteps[2]).toContain('jev-latest');
+    expect(jevSteps[3]).toContain('“Profile connection”');
+  });
+
+  it('says in the add form that Jev models are supported alongside LLMs', () => {
+    const fixture = mountWithConfigs([]);
+
+    const intro = fixture.nativeElement.querySelector('.add-group .add-intro') as HTMLElement;
+    expect(intro.textContent).toContain('OpenAI-compatible LLM endpoint and with Jev');
+    expect(intro.textContent).toContain('jev-latest');
   });
 
   it('explains the row actions with one tip and each connection checkbox with its own', () => {
