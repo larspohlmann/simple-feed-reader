@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `Service/Recommendation` engine-neutral and move every LLM-specific class into a new module `Service/Ai/Llm`, behind a `RecommendationEngineInterface` that one resolver picks, with the engine's capabilities reported to the client. No behaviour change.
+**Goal:** Make `Service/Recommendation` engine-neutral and move every LLM-specific class into a new module `Service/Recommendation/Llm` (D0), behind a `RecommendationEngineInterface` that one resolver picks, with the engine's capabilities reported to the client. No behaviour change.
 
-**Architecture:** `Recommendation` owns the seam (`Engine/`: interface, kind, capabilities, resolver over a keyed locator) and the engine-neutral run lifecycle; `TickPhases` and `SnapshotPhase` reach the engine only through `RecommendationEngineResolver`. `Ai/Llm` (a module of its own by a scoped amendment to the #1161 module rule) holds the chat-completion transport, the prompts and parsers, the distill/batch/consolidate phases, the call recorder and `LlmRecommendationEngine`. Dependencies point `Ai\Llm → Recommendation → Ai`. The API reports `capabilities` (`reasons`, `tuningFields`) per configuration and for the active connection; the Angular settings render from them.
+**Architecture:** `Recommendation` owns the seam (`Engine/`: interface, kind, capabilities, resolver over a keyed locator) and the engine-neutral run lifecycle; `TickPhases` and `SnapshotPhase` reach the engine only through `RecommendationEngineResolver`. `Recommendation/Llm` (a module of its own by a scoped amendment to the #1161 module rule, D0) holds the chat-completion transport, the prompts and parsers, the distill/batch/consolidate phases, the call recorder and `LlmRecommendationEngine`. Dependencies point `Recommendation\Llm → Recommendation → Ai` (and `Recommendation\Llm → Ai`). The API reports `capabilities` (`reasons`, `tuningFields`) per configuration and for the active connection; the Angular settings render from them.
 
 **Tech Stack:** PHP 8.4, Symfony 7.4 (DI attributes `AutoconfigureTag`, `AsTaggedItem`, `AutowireLocator`), PHPStan level max with the custom rules in `backend/tests/PhpStan/`, PHPUnit 12, Infection; Angular 20 (standalone, signals), Jest in the Docker `frontend` container.
 
@@ -15,9 +15,10 @@
 | Task | Title | Status | Commit |
 |---|---|---|---|
 | 0 | Preflight: branch, stack current, baselines | ☐ | — |
-| 1 | `Ai\Llm` is a module of its own (rule amendment) | ☐ | — |
+| 1 | `Ai\Llm` is a module of its own (rule amendment; relocated to `Recommendation\Llm` in 3b) | ☐ | — |
 | 2 | The engine seam inside `Recommendation` | ☐ | — |
 | 3 | The scripted move into `Ai/Llm`, `Recommendation/Pool`, `ProviderCallHeartbeat` | ☐ | — |
+| 3b | Relocate the sub-module to `Recommendation/Llm`; the catalog back to `Ai/ModelCatalog` (D0) | ☐ | — |
 | 4 | Capabilities in `/api/me` and `/api/me/ai` | ☐ | — |
 | 5 | The frontend renders from capabilities | ☐ | — |
 | 6 | Docs, full gates, a real run, the PR | ☐ | — |
@@ -26,25 +27,25 @@
 
 | Issue bullet | Where |
 |---|---|
-| `Service/Ai` keeps connections, `ModelCatalogInterface`, provider exceptions | Task 3 (nothing of these moves; `RetryPlanModel` joins `Ai/Model`) |
+| `Service/Ai` keeps connections, `ModelCatalogInterface` and `OpenAiCompatibleCatalog`, provider exceptions | Task 3 (nothing of these moves; `RetryPlanModel` joins `Ai/Model`), Task 3b (the catalog back to `Ai/ModelCatalog`) |
 | `Service/Ai` gets "a composite catalog over a tagged iterator" | **Deferred to #1345** (deviation from the issue text, settled by the planner): one catalog exists today, so a composite over one member is ceremony; #1345 adds the second catalog and the composite together. `ModelCatalogInterface` stays bound to `OpenAiCompatibleCatalog`. |
-| `Service/Ai/Llm` its own module: transport, OpenAI-shaped catalog, `Recommendation/Prompt/*`, the three phases, the call recorder, `LlmRecommendationEngine` | Task 2 (engine), Task 3 (move) |
+| `Service/Recommendation/Llm` its own module (D0; the issue said `Service/Ai/Llm`): transport, `Recommendation/Prompt/*`, the three phases, the call recorder, `LlmRecommendationEngine` | Task 2 (engine), Task 3 (move), Task 3b (relocation) |
 | `Service/Recommendation` engine-neutral; owns `RecommendationEngineInterface`, the heartbeat interface, the resolver | Task 2 (interface, resolver), Task 3 (heartbeat, neutral loaders into `Pool/`) |
-| Dependencies one way, keyed locator, `Recommendation` never names `Ai/Llm` | Task 2 (locator), Task 3 (cycle rule green on the real tree, plus a deliberate break) |
+| Dependencies one way, keyed locator, `Recommendation` never names `Recommendation/Llm` | Task 2 (locator), Task 3 and 3b (cycle rule green on the real tree, plus a deliberate break) |
 | Module rule amendment, one sentence in architecture §9 | Task 1 |
 | §9 heartbeat example updated | Task 3 |
 | Capabilities in the API (`reasons`, tuning fields), native-iOS friendly, no migration | Task 4 |
 | Frontend renders settings from capabilities, never learns the engine name | Task 5 |
 | Done when: `composer check`, `md`, `tramp`, both test legs, `infection:diff`, `npm run check` | Task 6 |
-| Done when: cycle rule passes with `Ai/Llm`, a deliberate `Recommendation → Ai/Llm` fails it | Task 1 (fixtures), Task 3 Step 9 (real tree) |
+| Done when: cycle rule passes with `Recommendation/Llm`, a deliberate `Recommendation → Recommendation/Llm` fails it | Task 1 and 3b (fixtures), Task 3 Step 9 and Task 3b (real tree) |
 | Done when: a real LLM run on the dev stack yields a list with reasons | Task 6 |
 | Out of scope: Jev; moving LLM-only columns off `RecommendationRun`/`RecommendationSettings`; recording the engine on a run | not planned |
 
 ## Global Constraints
 
 - **No behaviour change.** `RecommendationPipelineTest` stays byte-identical (it imports no moved class; verify with `git diff --stat origin/develop -- backend/tests/Service/Recommendation/Run/RecommendationPipelineTest.php` printing nothing at the end).
-- Rule: every class is either model-specific or knows nothing about the model; **one** place (`RecommendationEngineResolver`) decides the engine. `App\Service\Recommendation` never names `App\Service\Ai\Llm` (comments are not names, but keep them clean too).
-- Module rule: `App\Service\Ai\Llm` is module `Ai\Llm` through an explicit constant list (`['Ai\\Llm']`); everything else under `Ai` stays module `Ai`. No general nesting mechanism.
+- Rule: every class is either model-specific or knows nothing about the model; **one** place (`RecommendationEngineResolver`) decides the engine. `App\Service\Recommendation` outside its `Llm` sub-module never names `App\Service\Recommendation\Llm` (comments are not names, but keep them clean too).
+- Module rule: `App\Service\Recommendation\Llm` is module `Recommendation\Llm` through an explicit constant list (`['Recommendation\\Llm']`, D0; was `['Ai\\Llm']` until Task 3b); everything else under `Recommendation` stays module `Recommendation`. No general nesting mechanism.
 - CLAUDE.md house style: `final readonly class`, no abbreviations, no comment that restates code, comments one line where possible (three at most), guard clauses, interfaces in a folder named after them, `…Model` in `Model/`.
 - Native-iOS rule (architecture §6): the new JSON is plain JSON, camelCase, no browser coupling, no new endpoint.
 - Frontend: standalone components and signals, styles stay in sibling `.scss` (none needed here), Jest runs only inside the Docker `frontend` container, one Jest process at a time (OOM otherwise).
@@ -56,7 +57,7 @@
 ## Settled design (from the planner; not up for re-litigation)
 
 1. Module rule amendment as above; the collector and every other place that derives a module agree.
-2. Target layout: `Service/Ai` (shared: connections, catalog interface, provider exceptions and models, `RetryPlanModel`); `Service/Ai/Llm` (`Completion/`, `Prompt/`, `Run/`, the engine and the OpenAI catalog); `Service/Recommendation` (run lifecycle, `Pool/`, `Engine/`, `Feed`, `Settings`).
+2. Target layout (amended by D0): `Service/Ai` (shared: connections, the catalog interface and `OpenAiCompatibleCatalog` in `ModelCatalog/`, provider exceptions and models, `RetryPlanModel`); `Service/Recommendation/Llm` (`Completion/`, `Prompt/`, `Run/`, the engine); `Service/Recommendation` (run lifecycle, `Pool/`, `Engine/`, `Feed`, `Settings`).
 3. Seam in `Recommendation/Engine/`: `RecommendationEngine/RecommendationEngineInterface` (`packBatches`, `advance`, `capabilities`), `Model/RecommendationEngineKind`, `Model/RecommendationEngineCapabilitiesModel`, `Model/RecommendationTuningField`, `RecommendationEngineResolver` (`kindFor`, `engineFor`) over a keyed locator. `TickContext::reasoning()` goes.
 4. Heartbeat moves to `Recommendation/Run/ProviderCallHeartbeat/`, renamed `ProviderCallHeartbeatInterface` / `CompositeProviderCallHeartbeat`.
 5. Capabilities in `/api/me` (`ai` block) and per configuration in `/api/me/ai`.
@@ -65,37 +66,38 @@
 
 ## Decisions (judgement calls made while planning, with the reason)
 
-- **D1 — One home for the sub-module list.** A new `tests/PhpStan/ServiceModules.php` holds `SUB_MODULES = ['Ai\\Llm']` and `of(string $className): string`. `ServiceModuleDependencyCollector::moduleOf()` and `ServiceRoleNames::moduleOf()` both call it. Why `ServiceRoleNames` too: `InterfacePlacement` asks "same module?" through it; left at "first segment", it would call `Ai\Llm\OpenAiCompatibleCatalog` a same-module implementation of `Ai\ModelCatalog\ModelCatalogInterface` and demand it sit in `Ai/ModelCatalog/`, and it would treat every `Ai\Llm` class implementing an `Ai` interface the same way. `ServiceModuleBoundaryRule` and `ServiceModuleGraph` derive no module (they take prefixes and the collector's names), so they need no change.
-- **D2 — The sub-module match needs the separator** (`Ai\LlmTools\X` stays module `Ai`), and an exact `Ai\Llm` (a namespace alias import) is the sub-module. Each has a fixture.
+- **D0 — Lars, mid-run: sub-module is Recommendation/Llm; catalog stays in Ai/ModelCatalog; transport moves with it.** After Task 5, Lars moved the LLM sub-module from `Service/Ai/Llm` to `Service/Recommendation/Llm` (`SUB_MODULES = ['Recommendation\\Llm']`). `OpenAiCompatibleCatalog` goes back to its `develop` home `Ai/ModelCatalog/`, beside `ModelCatalogInterface` (against `develop` its move is a no-op); the chat-completion transport (`Completion/`) stays with the engine; `RetryPlanModel` stays in `Ai/Model`. Task 3b relocates the tree. Tasks 1 and 3 below describe what was executed then; D1, D2, D5, D10 and D18 read as amended.
+- **D1 — One home for the sub-module list.** A new `tests/PhpStan/ServiceModules.php` holds `SUB_MODULES = ['Recommendation\\Llm']` (D0; `['Ai\\Llm']` until Task 3b) and `of(string $className): string`. `ServiceModuleDependencyCollector::moduleOf()` and `ServiceRoleNames::moduleOf()` both call it. Why `ServiceRoleNames` too: `InterfacePlacement` asks "same module?" through it; left at "first segment", it would treat every `Recommendation\Llm` class implementing a `Recommendation` interface (`LlmRecommendationEngine` implements `RecommendationEngineInterface`) as a same-module implementation and demand it sit in that interface's folder. `ServiceModuleBoundaryRule` and `ServiceModuleGraph` derive no module (they take prefixes and the collector's names), so they need no change; since D0 the boundary prefix `App\Service\Recommendation\` covers the sub-module too, so `Recommendation → Reader` also forbids `Recommendation\Llm → Reader` and `Reading → Recommendation` also forbids `Reading → Recommendation\Llm`, which is what both boundaries mean.
+- **D2 — The sub-module match needs the separator** (`Recommendation\LlmTools\X` stays module `Recommendation`), and an exact `Recommendation\Llm` (a namespace alias import) is the sub-module. Each has a fixture.
 - **D3 — `TickLockKeepalive` and `SweepStreamHeartbeat` move into `Recommendation/Run/ProviderCallHeartbeat/` with the interface.** *Contradicts the brief, which kept them in `Run/`:* once the interface is in the same module, `InterfacePlacement` requires same-module implementations to sit in the interface's folder (`ServiceRoleRule` would fail). Names unchanged.
-- **D4 — Only `RetryPlanModel` leaves `Ai/Completion` for the `Ai` root (`Ai/Model/`).** It is the only `Ai/Completion` class the neutral side needs (`TickDriver::retryPlan()`, `TickContext::retryPlan()`). Every other `Ai/Completion` class encodes chat completions, streaming, reasoning or JSON schema and goes to `Ai/Llm/Completion/`. `CompletionUsageModel` goes too (its users are `RecordedCall`, the transport, and `RecommendationCallRepository`, which may name any `Model/`); whether Jev shares a usage model is #1345's call.
-- **D5 — `OpenAiCompatibleCatalog` lands in the `Ai/Llm` root.** It implements another module's interface; §10 says such an implementation stays in its own module, and no `ModelCatalog/` interface folder exists in `Ai/Llm` to put it in.
-- **D6 — `Recommendation/Pool/`** holds `RecommendationCandidateLoader`, `RecommendationHistoryLoader`, `ArticleLineModel` (was `PromptLineModel`), `CandidatePoolRequestModel`, `CandidatePoolSummaryModel`, `RecommendationHistoryModel`. `CandidatePoolSummaryModel` is neutral data (pool size and date span) that the neutral loader returns; only its docblock spoke of prompts. `RecommendationPickModel` goes to `Ai/Llm/Prompt/Model/`: only the parsers, the salvager, the batch wave and the consolidation resolver use it.
+- **D4 — Only `RetryPlanModel` leaves `Ai/Completion` for the `Ai` root (`Ai/Model/`).** It is the only `Ai/Completion` class the neutral side needs (`TickDriver::retryPlan()`, `TickContext::retryPlan()`). Every other `Ai/Completion` class encodes chat completions, streaming, reasoning or JSON schema and goes to `Ai/Llm/Completion/` (since D0 `Recommendation/Llm/Completion/`). `CompletionUsageModel` goes too (its users are `RecordedCall`, the transport, and `RecommendationCallRepository`, which may name any `Model/`); whether Jev shares a usage model is #1345's call.
+- **D5 — `OpenAiCompatibleCatalog` stays in `Ai/ModelCatalog/`** (amended by D0; Task 3 had moved it to the `Ai/Llm` root, Task 3b moves it back). It is `Ai`'s own implementation of `Ai`'s `ModelCatalogInterface`, so `InterfacePlacement` keeps it in the interface's folder, as on `develop`.
+- **D6 — `Recommendation/Pool/`** holds `RecommendationCandidateLoader`, `RecommendationHistoryLoader`, `ArticleLineModel` (was `PromptLineModel`), `CandidatePoolRequestModel`, `CandidatePoolSummaryModel`, `RecommendationHistoryModel`. `CandidatePoolSummaryModel` is neutral data (pool size and date span) that the neutral loader returns; only its docblock spoke of prompts. `RecommendationPickModel` goes to `Ai/Llm/Prompt/Model/` (since D0 `Recommendation/Llm/Prompt/Model/`): only the parsers, the salvager, the batch wave and the consolidation resolver use it.
 - **D7 — `RecommendationWinnerRanker` stays in `Recommendation` unchanged**, as the brief says. Flag: its `cutForConsolidation()` is named for, and used only by, the LLM consolidation resolver; `ranked()` is neutral. Not changed here (a no-behaviour-change PR); raise with the planner if a reviewer objects.
 - **D8 — `RecommendationEtaEstimator` and `PhaseDurationsModel` stay in `Recommendation`.** Flag: they encode the distill/batch/consolidate shape (`TAIL_PHASE_COUNT = 2`, "runs that carry all three phases"), as `RecommendationRun`'s progress model does; the entity is shared persistence and out of scope, and the estimator only mirrors it. #1345's Jev runs (batch phase only) will get no ETA from `PhaseDurationsModel::fromCompletedRunSpans()` as written; noted for #1345.
 - **D9 — Registration is tag-based like `FeedBodyParser`, but keyed with `AsTaggedItem(index: …)`** (`FeedBodyParser` keys its locator with `defaultIndexMethod`, which an engine does not need): `#[AutoconfigureTag('app.recommendation_engine')]` on the interface, `#[AsTaggedItem(index: RecommendationEngineKind::Llm->value)]` on the engine, `#[AutowireLocator('app.recommendation_engine')]` on the resolver. The tag string appears twice, like `app.feed_body_parser`. **Assumption (verify):** `AsTaggedItem`'s index keys an autoconfigured tag's locator, and `RecommendationEngineKind::Llm->value` is a valid attribute argument (PHP ≥ 8.2 allows enum property fetch in constant expressions). `RecommendationEngineWiringTest` proves both.
-- **D10 — Task 2 puts `LlmRecommendationEngine` in `Recommendation/Engine/RecommendationEngine/`** (the interface folder, as `InterfacePlacement` demands for a same-module implementation); Task 3 moves it to `Ai/Llm/`.
+- **D10 — Task 2 puts `LlmRecommendationEngine` in `Recommendation/Engine/RecommendationEngine/`** (the interface folder, as `InterfacePlacement` demands for a same-module implementation); Task 3 moves it to `Ai/Llm/`, Task 3b to `Recommendation/Llm/`.
 - **D11 — `TickPhases` keeps the provider-failure envelope** (429 → deferral, transport failure → strike): the exceptions live in `Ai/Exception` and mean the same for any engine that calls a provider. Only the phase choice moves into the engine.
 - **D12 — Wire shape.** `capabilities: {"reasons": bool, "tuningFields": [string]}` on every configuration of `/api/me/ai` (and its write answers), and in `/api/me`'s `ai` block; `null` there when no connection is active. Field values are the JSON names the settings already use: `contextWindow`, `batchSize` (`RecommendationSettingsJson`), `suppressReasoning`, `slowModel`, `maxBatchSize`, `batchConcurrency` (`AiSettingsJson`).
 - **D13 — Mappers.** The resolver is a service, the mappers are static. So: a new injected `Http/RecommendationCapabilitiesJson` (calls the resolver); `AiSettingsJson` becomes an injected `final readonly` service (instance methods, every one, so the controller has one calling style); `MeJson::profile()` keeps its three parameters and loses its `ai` block to a new injected `Http/ActiveAiJson`, which `MeProfileJson` appends. The `/api/me` wire shape is unchanged apart from the new key (`JwtAccessTest`'s key list stays green). *Deviation in letter from "in MeJson's `ai` block":* a fourth `MeJson::profile()` parameter would break the three-parameter rule.
 - **D14 — Frontend source of capabilities.** `AiAvailabilityService` gains a `capabilities` signal fed by `/api/me` and by every AI-settings write (as `ready`/`model` are); the recommendation card reads it. Each connection row reads its own `config.capabilities`. Types are required, not optional; spec fixtures gain `capabilities: null`. The recommendation strip needs no change: it already renders score and reason under separate conditions.
 - **D15 — `kindFor()` ignores its argument in this PR** (always `Llm`). phptramp will warn (3 hops: `RecommendationCapabilitiesJson::of → engineFor → kindFor` forwarding a connection none reads). 3 hops warn and do not fail the build; #1345 reads the model there. Do not "fix" the warning. **Assumption (verify):** PhpStorm's unused-parameter inspection on `kindFor()` is a weak warning; if `lint_files` reports it as WARNING, add `/** @noinspection PhpUnusedParameterInspection #1345 reads the model id */` above the method and say so in the report.
-- **D16 — Docblocks of neutral classes that spoke of prompts are reworded in Task 3** (comment-only, so `compare-moves.php` still reads "0 differ"): `ArticleLineModel` (docblock dropped), `CandidatePoolSummaryModel`, `RecommendationHistoryModel`, both loaders, `ProviderCallHeartbeatInterface`, the `services.yaml` heartbeat comment, and three neutral `Recommendation` comments that name `Ai\Llm` classes after the move (`RecommendationPackingSettingsModel`, `RecommendationWaveConcurrency`, `RecommendationWinnerRanker`); `src/Service/Recommendation` comments name no `Ai\Llm` class.
+- **D16 — Docblocks of neutral classes that spoke of prompts are reworded in Task 3** (comment-only, so `compare-moves.php` still reads "0 differ"): `ArticleLineModel` (docblock dropped), `CandidatePoolSummaryModel`, `RecommendationHistoryModel`, both loaders, `ProviderCallHeartbeatInterface`, the `services.yaml` heartbeat comment, and three neutral `Recommendation` comments that name `Ai\Llm` classes after the move (`RecommendationPackingSettingsModel`, `RecommendationWaveConcurrency`, `RecommendationWinnerRanker`); `src/Service/Recommendation` comments name no `Ai\Llm` (since D0: `Recommendation\Llm`) class.
 - **D17 — The move tooling is copied unchanged** from `docs/superpowers/plans/2026-09-28-1202-scripts/` (`class-names.php`, `move-classes.php`, `compare-moves.php`, `stale-names.php`) into `docs/superpowers/plans/2026-10-02-1344-scripts/`, with this plan's `moves.php` map and a new `psr4-namespaces.php` sweep (the #1202 hazard: a namespace corruption the comparison script once skipped). `compare-moves.php` already checks every moved file's namespace; the sweep covers every file in `src` and `tests`.
-- **D18 — CLAUDE.md's module sentence** ("A module is the first directory under `src/Service`" is no longer the whole truth) is proposed in the PR body for Lars; not edited in-branch.
-- **D19 — `RecommendationSettingsJson` keeps exposing the LLM's fixed prompt** (`RecommendationPromptText`), and the card keeps showing it and the distilled profile. `Http` may name `Ai\Llm`; whether a non-LLM engine hides them is #1345's decision.
+- **D18 — CLAUDE.md's module sentence** ("A module is the first directory under `src/Service`" is no longer the whole truth) is proposed in the PR body for Lars; not edited in-branch. The proposed sentence: "A module is the first directory under `src/Service` (`Service/Recommendation/Llm` is a module of its own, #1344), and every service belongs to one."
+- **D19 — `RecommendationSettingsJson` keeps exposing the LLM's fixed prompt** (`RecommendationPromptText`), and the card keeps showing it and the distilled profile. `Http` may name `Recommendation\Llm`; whether a non-LLM engine hides them is #1345's decision.
 - **D20 — Test double `tests/Support/ScriptedRecommendationEngine`** stands in for "an engine that is not the LLM" in `TickPhasesTest`, `SnapshotPhaseTest` and the Http tests. It registers under `llm` because `kindFor()` maps every connection there today.
 - **D21 — New unit tests for `TickPhases` and `SnapshotPhase`.** *The brief said "updated"; none exist today* (both are covered only through `RecommendationRunAdvancerTest`). They are new, DB-backed, and drive the seam with the scripted engine.
 
 ## File map
 
-Created (src): `Service/Recommendation/Engine/RecommendationEngine/RecommendationEngineInterface.php`, `Service/Recommendation/Engine/RecommendationEngineResolver.php`, `Service/Recommendation/Engine/Model/{RecommendationEngineKind,RecommendationEngineCapabilitiesModel,RecommendationTuningField}.php`, `Service/Recommendation/Engine/RecommendationEngine/LlmRecommendationEngine.php` (moves to `Service/Ai/Llm/` in Task 3), `Http/RecommendationCapabilitiesJson.php`, `Http/ActiveAiJson.php`.
+Created (src): `Service/Recommendation/Engine/RecommendationEngine/RecommendationEngineInterface.php`, `Service/Recommendation/Engine/RecommendationEngineResolver.php`, `Service/Recommendation/Engine/Model/{RecommendationEngineKind,RecommendationEngineCapabilitiesModel,RecommendationTuningField}.php`, `Service/Recommendation/Engine/RecommendationEngine/LlmRecommendationEngine.php` (moves to `Service/Ai/Llm/` in Task 3, to `Service/Recommendation/Llm/` in Task 3b), `Http/RecommendationCapabilitiesJson.php`, `Http/ActiveAiJson.php`.
 
 Created (tests): `tests/PhpStan/ServiceModules.php`, four cycle fixtures and one role fixture under `tests/PhpStan/data/`, `tests/Support/ScriptedRecommendationEngine.php`, `tests/Service/Recommendation/Engine/{RecommendationEngineResolverTest,RecommendationEngineWiringTest}.php`, `tests/Service/Recommendation/Engine/RecommendationEngine/LlmRecommendationEngineTest.php` (moves), `tests/Service/Recommendation/Run/{TickPhasesTest,SnapshotPhaseTest}.php`, `tests/Http/{RecommendationCapabilitiesJsonTest,ActiveAiJsonTest}.php`.
 
-Moved: 66 src classes and 37 test classes (Task 3 map).
+Moved: 66 src classes and 37 test classes (Task 3 map); Task 3b moves the 55 src and 28 test classes under `Ai/Llm` to `Recommendation/Llm` (the catalog and its test to `Ai/ModelCatalog`), map `moves-relocate.php`.
 
-Modified: `TickPhases`, `SnapshotPhase`, `TickContext`, `RecommendationConsolidationResolver`, `AiSettingsJson`, `MeJson`, `MeProfileJson`, `AiSettingsController`, `config/services.yaml` (comment), the two `ServiceModule*`/`ServiceRole*` helpers, `docs/architecture.md` §9, `docs/recommendations-runs.md`, `CLAUDE.md`; frontend: `core/ai-availability.service.ts`, `core/auth/auth.service.ts`, `settings/ai/ai-settings.service.ts`, `settings/ai/ai-section.component.{ts,html}`, `settings/recommendations/recommendation-settings-card.component.{ts,html}`, their specs, ten spec fixtures, `e2e/ai-config-rejected.spec.ts`, new `src/testing/recommendation-capabilities.ts`.
+Modified: `TickPhases`, `SnapshotPhase`, `TickContext`, `RecommendationConsolidationResolver`, `AiSettingsJson`, `MeJson`, `MeProfileJson`, `AiSettingsController`, `config/services.yaml` (comment), the two `ServiceModule*`/`ServiceRole*` helpers, `docs/architecture.md` §9, `docs/recommendations-runs.md` (`CLAUDE.md` only proposed, D18); frontend: `core/ai-availability.service.ts`, `core/auth/auth.service.ts`, `settings/ai/ai-settings.service.ts`, `settings/ai/ai-section.component.{ts,html}`, `settings/recommendations/recommendation-settings-card.component.{ts,html}`, their specs, ten spec fixtures, `e2e/ai-config-rejected.spec.ts`, new `src/testing/recommendation-capabilities.ts`.
 
 ---
 
@@ -191,6 +193,8 @@ If any baseline is red, stop and report: a red baseline must be proven pre-exist
 ---
 
 ### Task 1: `Ai\Llm` is a module of its own
+
+> **Amended by D0 (Task 3b).** Executed as written below, with `Ai\Llm`. Task 3b re-points the rule to `Recommendation\Llm`: the constant reads `['Recommendation\\Llm']`, the four cycle fixtures are renamed `recommendation-sub-module-acyclic`, `recommendation-sub-module-cycle`, `recommendation-sibling-of-sub-module`, `recommendation-sub-module-alias` and the role fixture's classes move to `App\Service\Recommendation\…`. The fixtures, expectations and deletion-check quotes below are the Task 1 originals; Task 3b lists the current ones.
 
 The rule changes before anything moves into the sub-module; with no `Ai\Llm` class in the tree yet, `composer stan` is unaffected.
 
@@ -545,7 +549,7 @@ is a module of its own, so the LLM engine there may depend on `Recommendation` w
 rest of `Ai` (#1344).
 ```
 
-`CLAUDE.md` is not edited in this branch: the replacement sentence (`A module is the first directory under \`src/Service\` (\`Service/Ai/Llm\` is a module of its own, #1344), and every service belongs to one.`) is proposed in the PR body for Lars.
+`CLAUDE.md` is not edited in this branch: the replacement sentence (`A module is the first directory under \`src/Service\` (\`Service/Recommendation/Llm\` is a module of its own, #1344), and every service belongs to one.`, as amended by D0) is proposed in the PR body for Lars.
 
 - [ ] **Step 11: Gates and commit**
 
@@ -1486,6 +1490,8 @@ Reviewer: yes. The reviewer re-runs checks 3 and 10 and hunts for default-valued
 
 ### Task 3: The scripted move
 
+> **Amended by D0 (Task 3b).** Executed as written below, into `Ai/Llm`. Task 3b then relocates every `Ai/Llm` class to `Recommendation/Llm` and the catalog back to `Ai/ModelCatalog`; the map, counts and the Step 9 message below are the Task 3 originals (Step 9 now reads `Recommendation -> Recommendation\Llm -> Recommendation`).
+
 Pure move plus the comment rewording of D16. Lean testing (survey count, namespace checks, `composer check`, the suite), but the cycle rule must end green here and the deliberate break must fail it.
 
 **Files:** every class in the map below (src and tests), `config/services.yaml` (comment), `docs/architecture.md` §9 example. The script rewrites `config/services.yaml` and `config/services_test.yaml` FQCNs itself.
@@ -1781,6 +1787,22 @@ git commit -m "refactor(#1344): move the llm engine into service/ai/llm"
 ```
 
 Reviewer: none per the lean-move rule; the planner checks Steps 4, 6 and 9's quoted output.
+
+---
+
+### Task 3b: The sub-module lives under `Recommendation` (D0)
+
+Lars's mid-run decision. A scripted relocation, no behaviour change.
+
+**Files:** `tests/PhpStan/ServiceModules.php` (constant), the four cycle fixtures (renamed `recommendation-*`) and `service-role-sub-module-fixture.php`, `ServiceModuleCycleRuleTest`, `ServiceRoleRuleTest`; every class under `src/Service/Ai/Llm` and `tests/Service/Ai/Llm` (to `Recommendation/Llm`, same relative path; `OpenAiCompatibleCatalog` and its test to `Ai/ModelCatalog`); `config/services.yaml`, `config/services_test.yaml`, the `Http`/`Repository`/test importers; `docs/architecture.md` §9; the map `docs/superpowers/plans/2026-10-02-1344-scripts/moves-relocate.php`.
+
+- [ ] **Step 1: Fixtures (RED).** Acyclic: `Recommendation\Llm → Recommendation → Ai`, `Recommendation\Llm → Ai`, and `Recommendation\Llm → Digest → Recommendation` (the last hop makes "first segment only" read a false `Digest -> Recommendation -> Digest`). Cycle: `Recommendation → Recommendation\Llm → Recommendation`, reported at line 31 (the walk starts at `Recommendation`, so the closing edge is the sub-module's import of it). Sibling: `Recommendation\LlmTools\X` is module `Recommendation`. Alias: `Schedule` imports `App\Service\Recommendation\Llm as LlmModule` (line 9); a cycle `Recommendation\Llm -> Schedule -> Recommendation\Llm` closes there (the alias sits in a module sorting after the sub-module, so its edge is the closing one). Role: `Recommendation\Llm\LlmProbeCatalog` implements `Recommendation\Probe\ProbeCatalog\ProbeCatalogInterface` and stays put.
+- [ ] **Step 2: `SUB_MODULES = ['Recommendation\\Llm']` (GREEN)**, then the four deletion checks of Task 1 Step 9 against the new fixtures.
+- [ ] **Step 3: Move** with `move-classes.php` over `moves-relocate.php` (83 classes, 0 renamed); `compare-moves.php … HEAD` → `0 of 83 … differ`; `psr4-namespaces.php` → 0; delete the empty `Ai/Llm` directories; `stale-names.php moves-relocate.php` grep and `git grep -E 'Ai\\{1,2}Llm|Ai/Llm' -- backend docs/architecture.md` → nothing.
+- [ ] **Step 4: Docs.** §9: `Service/Recommendation/Llm` is a module of its own, `Recommendation\Llm → Recommendation → Ai`; the interface examples name `Recommendation\Llm`. `docs/recommendations-runs.md` "Engines" says `Service/Recommendation/Llm`.
+- [ ] **Step 5: Gates.** Caches (dev, test, Docker `php`, restart `worker`); `composer check`, `composer md`, `composer test:parallel` (6787, unchanged: tests renamed, none added); grep `src/Service/Recommendation` outside `Llm/` for any `Llm` class name → only `RecommendationEngineKind::Llm`.
+- [ ] **Step 6: Deliberate break.** Import `LlmRecommendationEngine` into `TickPhases` → `composer stan` FAILS with `Recommendation -> Recommendation\Llm -> Recommendation` (reported on the closing edge, in the first `Recommendation\Llm` file by name); restore, caches, green.
+- [ ] **Step 7: Commit** `refactor(#1344): the llm sub-module lives under recommendation`.
 
 ---
 
@@ -2813,7 +2835,7 @@ an engine (today every connection is an LLM connection); `SnapshotPhase` asks th
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
-The LLM engine (`Service/Ai/Llm`) packs by the connection's context window, then distills a profile, scores the
+The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile, scores the
 batches in waves and consolidates the best of them into the final list with reasons. Each engine reports its
 capabilities (`reasons`, and which tuning fields it reads); the API passes them to the client, which shows only the
 settings that apply.
@@ -2876,13 +2898,14 @@ git push -u origin refactor/1344-recommendation-engine-seam
 gh pr create --base develop --title "refactor(#1344): recommendation engine seam" --body "$(cat <<'EOF'
 Closes #1344
 
-Recommendations become engine-neutral; every LLM-specific class moves to the new module `Service/Ai/Llm`.
+Recommendations become engine-neutral; every LLM-specific class moves to the new module `Service/Recommendation/Llm`.
 
-- `Ai\Llm` is a module of its own (`ServiceModules::SUB_MODULES`, #1161 amendment); `Ai\Llm → Recommendation → Ai`.
+- `Recommendation\Llm` is a module of its own (`ServiceModules::SUB_MODULES`, #1161 amendment); `Recommendation\Llm → Recommendation → Ai`.
 - `Recommendation/Engine`: `RecommendationEngineInterface`, `RecommendationEngineResolver` (the one place that picks the engine, keyed locator), kind, capabilities, tuning fields. `TickPhases` and `SnapshotPhase` reach the engine only through it.
-- Moved: the chat-completion transport, the OpenAI catalog, prompts and parsers, the distill/batch/consolidate phases and the call recorder into `Ai/Llm`; the candidate and history loaders into `Recommendation/Pool` (`PromptLineModel` → `ArticleLineModel`); the heartbeat into `Recommendation/Run/ProviderCallHeartbeat`; `RetryPlanModel` into `Ai/Model`.
+- Moved: the chat-completion transport, prompts and parsers, the distill/batch/consolidate phases and the call recorder into `Recommendation/Llm` (the OpenAI catalog stays in `Ai/ModelCatalog`); the candidate and history loaders into `Recommendation/Pool` (`PromptLineModel` → `ArticleLineModel`); the heartbeat into `Recommendation/Run/ProviderCallHeartbeat`; `RetryPlanModel` into `Ai/Model`.
 - `/api/me` (`ai.capabilities`) and `/api/me/ai` (per configuration) report `{reasons, tuningFields}`; the settings render from them. Nothing visible changes for the LLM.
 - Deferred to #1345: the composite model catalog (one catalog exists today).
+- Proposed for `CLAUDE.md` (not edited here; Lars to apply or veto): "A module is the first directory under `src/Service` (`Service/Recommendation/Llm` is a module of its own, #1344), and every service belongs to one."
 
 Gates: composer check / md / tramp (one expected 3-hop warning, see plan D15), both test legs, infection:diff, npm run check. Real run on the dev stack: <run id, items, reasons>.
 
