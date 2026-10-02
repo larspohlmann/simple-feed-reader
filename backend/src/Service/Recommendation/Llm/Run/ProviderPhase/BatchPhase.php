@@ -24,7 +24,7 @@ final readonly class BatchPhase implements ProviderPhaseInterface
     {
         return $this->batchWavePhase->advance(
             $tick,
-            fn (int $waveSize): BatchWaveResultModel => $this->batchWave->resolve($this->waves->load($tick, $waveSize)),
+            fn (array $batches): BatchWaveResultModel => $this->batchWave->resolve($this->waves->load($tick, $batches)),
         );
     }
 }

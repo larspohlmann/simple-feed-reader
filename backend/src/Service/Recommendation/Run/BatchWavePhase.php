@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -21,11 +22,12 @@ final readonly class BatchWavePhase
 
     public function __construct(
         private RecommendationWaveConcurrency $waveConcurrency,
+        private WaveBatchLoader $batches,
         private EntityManagerInterface $entityManager,
     ) {
     }
 
-    /** @param \Closure(int): BatchWaveResultModel $resolveWave the engine's wave over the next $waveSize batches */
+    /** @param \Closure(list<WaveBatchModel>): BatchWaveResultModel $resolveWave the engine's wave over these batches */
     public function advance(TickContext $tick, \Closure $resolveWave): RecommendationRunReportModel
     {
         $run = $tick->run;
@@ -42,12 +44,14 @@ final readonly class BatchWavePhase
     /**
      * A 429 anywhere in the wave halves the run's concurrency, whether the plan recovered or defers.
      *
-     * @param \Closure(int): BatchWaveResultModel $resolveWave
+     * @param \Closure(list<WaveBatchModel>): BatchWaveResultModel $resolveWave
      */
     private function resolveWave(TickContext $tick, \Closure $resolveWave): BatchWaveResultModel
     {
+        $batches = $this->batches->next($tick, $this->waveSize($tick));
+
         try {
-            $result = $resolveWave($this->waveSize($tick));
+            $result = $resolveWave($batches);
         } catch (ProviderRateLimitedException | RetryableProviderException $exception) {
             $this->waveConcurrency->halve($tick->run, $tick->connection);
 

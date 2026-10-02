@@ -46,7 +46,8 @@ final class WaveContextLoaderTest extends DbTestCase
         $run->recordBatchWinners([]);
         $this->entityManager->flush();
 
-        $wave = $this->loader()->load($this->tick($run), 2);
+        $tick = $this->tick($run);
+        $wave = $this->loader()->load($tick, $this->batchLoader()->next($tick, 2));
 
         self::assertSame([1, 2], array_map(static fn (WaveBatchModel $batch): int => $batch->index, $wave->batches));
         self::assertSame([$ids[2], $ids[3]], $wave->batches[0]->ids);
@@ -65,7 +66,8 @@ final class WaveContextLoaderTest extends DbTestCase
         $this->entityManager->remove($pruned);
         $this->entityManager->flush();
 
-        $wave = $this->loader()->load($this->tick($run), 1);
+        $tick = $this->tick($run);
+        $wave = $this->loader()->load($tick, $this->batchLoader()->next($tick, 1));
 
         self::assertSame([$ids[0], $ids[1]], $wave->batches[0]->ids);
         self::assertSame([$ids[0]], $wave->batches[0]->validIds());
@@ -98,6 +100,14 @@ final class WaveContextLoaderTest extends DbTestCase
         /** @var RecommendationHistoryLoader $history */
         $history = self::getContainer()->get(RecommendationHistoryLoader::class);
 
-        return new WaveContextLoader($candidates, $history, new WaveBatchLoader($candidates));
+        return new WaveContextLoader($candidates, $history);
+    }
+
+    private function batchLoader(): WaveBatchLoader
+    {
+        /** @var RecommendationCandidateLoader $candidates */
+        $candidates = self::getContainer()->get(RecommendationCandidateLoader::class);
+
+        return new WaveBatchLoader($candidates);
     }
 }
