@@ -16,7 +16,7 @@ use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 final readonly class JevBatchPacker
 {
     /** No documented limit; keeps one request's answer, and what a failed one costs, small. */
-    public const int MAX_QUESTIONS_PER_REQUEST = 100;
+    private const int MAX_QUESTIONS_PER_REQUEST = 100;
 
     /** The request's own framing and the estimate's error. */
     private const int FRAMING_TOKENS = 2_000;
@@ -43,8 +43,10 @@ final readonly class JevBatchPacker
 
         foreach ($candidates as $candidate) {
             $tokens = JevTokenEstimate::ofJson($this->requestFactory->question($candidate));
-            $full = \count($current) >= self::MAX_QUESTIONS_PER_REQUEST;
-            if ([] !== $current && ($full || $used + $tokens > self::QUESTION_TOKEN_BUDGET)) {
+            if (
+                [] !== $current
+                && (\count($current) >= self::MAX_QUESTIONS_PER_REQUEST || $used + $tokens > self::QUESTION_TOKEN_BUDGET)
+            ) {
                 $batches[] = $current;
                 $current = [];
                 $used = 0;

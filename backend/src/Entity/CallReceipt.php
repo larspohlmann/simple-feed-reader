@@ -11,7 +11,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Embeddable]
 final class CallReceipt
 {
-    /** The provider's id for the call, from its header or its reply body; null when it sent none. */
     #[ORM\Column(length: 255, nullable: true)]
     // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?string $requestId = null;
@@ -21,7 +20,6 @@ final class CallReceipt
     // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?string $answeringModel = null;
 
-    /** This call's own price in nano-credits; null when unpriced, as on the run. */
     #[ORM\Column(type: Types::BIGINT, nullable: true)]
     // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?int $costNanoCredits = null;

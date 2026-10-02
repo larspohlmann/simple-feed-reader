@@ -26,9 +26,8 @@ use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\Support\BatchWaveWinners;
 
 /**
- * One System One request per batch, every one a run-log row. An unusable reply retries its batch alone up to
- * MAX_ATTEMPTS rounds, then yields no winners. An endpoint failure settles every call and banks nothing, the
- * atomic-wave rule; a deferring plan's 429 throws ProviderRateLimitedException instead.
+ * One System One request per batch, each a run-log row. An unusable reply retries its batch alone up to MAX_ATTEMPTS
+ * rounds; an endpoint failure settles every call and banks nothing (the atomic-wave rule).
  */
 final readonly class JevBatchWave
 {
