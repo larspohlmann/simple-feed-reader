@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Enum\RunStatus;

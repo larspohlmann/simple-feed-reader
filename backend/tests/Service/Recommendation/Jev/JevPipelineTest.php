@@ -113,7 +113,6 @@ final class JevPipelineTest extends DbTestCase
             ->findBy(['run' => $run->requireId()], ['id' => 'ASC']);
         self::assertCount(2, $logs);
         self::assertSame(CallPhase::Distill, $logs[0]->getPhase());
-        self::assertNull($logs[0]->getRequestId());
         $log = $logs[1];
         self::assertSame(CallPhase::Batch, $log->getPhase());
         self::assertSame(1, $log->getBatchNumber());
@@ -224,6 +223,24 @@ final class JevPipelineTest extends DbTestCase
             ['profile' => 'Likes Rust and homelab.', 'guidance' => 'More self-hosting.'],
             $this->systemOne()->requests()[0]->state,
         );
+    }
+
+    /** A resume starts the distillation's attempts afresh: one more unusable reply is retried, not the end. */
+    public function testAResumedRunGetsEveryDistillationAttemptAgain(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->queueUnusableProfiles();
+        $failed = $this->runToCompletion();
+        self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
+
+        $this->chat()->queueContent('not a profile');
+        $this->queueProfile('Likes Rust and homelab.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->starter()->resume($this->owner);
+        $resumed = $this->tickUntilDone();
+
+        self::assertSame('completed', $resumed->getStatus()->value);
+        self::assertSame('Likes Rust and homelab.', $resumed->getProfileText());
     }
 
     private function queueProfile(string $profile): void

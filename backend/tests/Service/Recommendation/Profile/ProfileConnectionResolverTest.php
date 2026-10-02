@@ -37,9 +37,13 @@ final class ProfileConnectionResolverTest extends DbTestCase
         self::assertSame($profile, $this->resolver()->findUsableFor($this->owner));
     }
 
-    public function testAnAccountThatChoseNoneHasNone(): void
+    /** A ready LLM connection the account never chose is not the profile connection: its history stays home. */
+    public function testAnAccountThatChoseNoneHasNoneEvenWithAReadyLlmConnection(): void
     {
-        self::assertNull($this->resolver()->findUsableFor($this->owner));
+        $unchosen = $this->user('profile-resolver-unchosen@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($unchosen, 'gpt-4o');
+
+        self::assertNull($this->resolver()->findUsableFor($unchosen));
     }
 
     /** A connection whose model later became a Jev model cannot distil: it reads as no profile connection. */
@@ -60,13 +64,23 @@ final class ProfileConnectionResolverTest extends DbTestCase
         self::assertNull($this->resolver()->findUsableFor($this->owner));
     }
 
-    public function testADeletedChoiceLeavesNone(): void
+    public function testADeletedChoiceLeavesNoneBesideAnUnchosenLlmConnection(): void
     {
         $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $this->fixtures->seedProfileConnectionFor($this->owner, 'gpt-4o')->setProfileSource(false);
         $this->entityManager->remove($profile);
         $this->entityManager->flush();
 
         self::assertNull($this->resolver()->findUsableFor($this->owner));
+    }
+
+    /** Two flags only after a racing double choice; the newest one wins until the next choice repairs it. */
+    public function testOfTwoChosenConnectionsTheNewestBuildsTheProfile(): void
+    {
+        $this->fixtures->seedProfileConnectionFor($this->owner);
+        $newest = $this->fixtures->seedProfileConnectionFor($this->owner, 'gpt-4o');
+
+        self::assertSame($newest, $this->resolver()->findUsableFor($this->owner));
     }
 
     public function testAnotherAccountsChoiceIsNotThisOnes(): void

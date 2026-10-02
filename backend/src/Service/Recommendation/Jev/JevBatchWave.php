@@ -32,9 +32,6 @@ use App\Service\Recommendation\Run\Support\BatchWaveWinners;
  */
 final readonly class JevBatchWave
 {
-    /** The client's MAXIMUM_RESPONSE_BYTES: a body it let through never reaches this many characters. */
-    private const int LOGGED_BODY_CHARACTERS = 1_048_576;
-
     public function __construct(
         private RateLimitedCalls $rateLimitedCalls,
         private SystemOneClientInterface $client,
@@ -240,7 +237,7 @@ final readonly class JevBatchWave
     /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */
     private static function logged(string $body): string
     {
-        return ClippedText::of($body, self::LOGGED_BODY_CHARACTERS);
+        return ClippedText::of($body, SystemOneClientInterface::MAXIMUM_RESPONSE_BYTES);
     }
 
     /** @return list<int> */

@@ -34,7 +34,6 @@ final readonly class ProfileConnectionChooser
         $this->entityManager->flush();
     }
 
-    /** Idempotent: a connection that holds no choice stays as it is. */
     public function clear(AiProviderSettings $connection): void
     {
         $connection->setProfileSource(false);

@@ -46,7 +46,8 @@ final readonly class JevProfileStep
         }
 
         $report = $this->profileDistiller->advance($tick->profileTick);
-        if (!$run->isDistilled() || null !== $run->getProfileText()) {
+        // A degrade records no profile and resets the attempts; a retry still pending leaves them above zero.
+        if (null !== $run->getProfileText() || $run->getAttempts() > 0) {
             return $report;
         }
 

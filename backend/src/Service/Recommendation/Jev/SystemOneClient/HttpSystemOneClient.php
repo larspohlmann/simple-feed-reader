@@ -34,8 +34,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     /** The longest the wave waits without beating the tick's heartbeat, which keeps the per-user lock alive. */
     private const float HEARTBEAT_SECONDS = 10.0;
 
-    private const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
-
     private const array RETRYABLE_STATUSES = [429, 529];
 
     public function __construct(

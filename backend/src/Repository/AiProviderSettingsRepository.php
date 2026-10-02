@@ -33,7 +33,7 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
 
     public function findProfileSourceFor(User $user): ?AiProviderSettings
     {
-        return $this->findOneBy(['user' => $user, 'profileSource' => true]);
+        return $this->findOneBy(['user' => $user, 'profileSource' => true], ['id' => 'DESC']);
     }
 
     public function countForUser(User $user): int

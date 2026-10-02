@@ -13,10 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/**
- * Which saved connection distils the profile for an engine that cannot. No provider call, so no rate limit; another
- * account's `{id}` answers 404 through AiConfigurationForUser.
- */
+/** Which saved connection distils the profile for an engine that cannot. No provider call, so no rate limit. */
 #[Route('/api/me/ai/configs/{id}/profile', requirements: ['id' => '\d+'])]
 final readonly class AiProfileConnectionController
 {
