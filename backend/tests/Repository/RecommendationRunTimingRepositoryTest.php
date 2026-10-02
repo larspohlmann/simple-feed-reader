@@ -63,10 +63,31 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         $runId = $run->getId();
         self::assertEqualsCanonicalizing([
-            ['runId' => $runId, 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0],
-            ['runId' => $runId, 'phase' => 'batch', 'spanSeconds' => 30.0, 'batchCount' => 2],
-            ['runId' => $runId, 'phase' => 'consolidate', 'spanSeconds' => 30.0, 'batchCount' => 0],
+            ['runId' => $runId, 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0, 'runSeconds' => 3600.0],
+            ['runId' => $runId, 'phase' => 'batch', 'spanSeconds' => 30.0, 'batchCount' => 2, 'runSeconds' => 3600.0],
+            [
+                'runId' => $runId,
+                'phase' => 'consolidate',
+                'spanSeconds' => 30.0,
+                'batchCount' => 0,
+                'runSeconds' => 3600.0,
+            ],
         ], $spans);
+    }
+
+    /** Each run's own clock, created to completed, rides on every one of its spans: 10:00:00 → 10:00:46. */
+    public function testEachSpanCarriesItsRunsWallClock(): void
+    {
+        $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-08T10:00:46Z'));
+        $this->finishedLog($run, CallPhase::Distill, null, '10:00:16', '10:00:21');
+        $this->finishedLog($run, CallPhase::Batch, 1, '10:00:26', '10:00:37');
+        $this->entityManager->flush();
+
+        $spans = $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10);
+
+        self::assertSame([46.0, 46.0], array_column($spans, 'runSeconds'));
     }
 
     public function testIgnoresRunningRunsOtherUsersAndRunsBeyondTheLimit(): void
@@ -139,7 +160,13 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         );
 
         self::assertSame(
-            [['runId' => $run->getId(), 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0]],
+            [[
+                'runId' => $run->getId(),
+                'phase' => 'distill',
+                'spanSeconds' => 10.0,
+                'batchCount' => 0,
+                'runSeconds' => 3600.0,
+            ]],
             $spans,
         );
     }
