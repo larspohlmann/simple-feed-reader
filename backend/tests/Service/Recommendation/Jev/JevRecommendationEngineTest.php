@@ -191,7 +191,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame('The stored API key cannot be opened.', $this->lastLog()->getErrorDetail());
     }
 
-    /** A 422 repeats, so the run fails after its strikes with the field System One named. */
+    /** A refused request repeats, so the run fails after its strikes with what the provider objected to. */
     public function testARejectedRequestFailsTheRunWithTheProvidersDetail(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
@@ -199,7 +199,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         $this->advancer()->advance($this->owner);
         for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
             $this->systemOne()->queueFailure(new ProviderUnreachableException(
-                'That provider refused the request (status 422): [{"msg":"state too long"}]',
+                'That provider refused the request (status 400): Model typesafe/jev-preview does not exist',
             ));
             try {
                 $this->advancer()->advance($this->owner);
@@ -209,8 +209,8 @@ final class JevRecommendationEngineTest extends DbTestCase
 
         $run = $this->latestRun();
         self::assertSame('failed', $run->getStatus()->value);
-        self::assertStringContainsString('status 422', (string) $run->getError());
-        self::assertStringContainsString('state too long', (string) $run->getError());
+        self::assertStringContainsString('status 400', (string) $run->getError());
+        self::assertStringContainsString('jev-preview does not exist', (string) $run->getError());
     }
 
     /** A reply missing a candidate's Noul is retried in the tick; after MAX_ATTEMPTS the batch yields no winners. */

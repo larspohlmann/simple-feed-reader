@@ -12,6 +12,7 @@ use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Pass\SystemOneWave;
+use App\Service\Recommendation\Jev\Support\RefusalMessage;
 use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -33,9 +34,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     private const float HEARTBEAT_SECONDS = 10.0;
 
     private const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
-
-    /** Enough of a refused request's `detail` to name the field, never the whole body. */
-    private const int REFUSAL_DETAIL_CHARS = 500;
 
     private const array RETRYABLE_STATUSES = [429, 529];
 
@@ -130,7 +128,9 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             \in_array($status, self::RETRYABLE_STATUSES, true) => SystemOneOutcomeModel::failed(
                 new RetryableProviderException($status, self::retryAfterSeconds($response)),
             ),
-            422 === $status => SystemOneOutcomeModel::failed(self::refused($body)),
+            400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
+                new ProviderUnreachableException(RefusalMessage::of($status, $body)),
+            ),
             $status >= 300 => SystemOneOutcomeModel::failed(
                 new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status)),
             ),
@@ -138,20 +138,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 SystemOneReplyDecoder::decode($body, ResponseHeader::first($response, 'x-typesafe-request-id')),
             ),
         };
-    }
-
-    /** A 422 is our request failing validation: it repeats, so the run's failure names the field. */
-    private static function refused(string $body): ProviderUnreachableException
-    {
-        $decoded = json_decode($body, true);
-        $detail = \is_array($decoded) && \array_key_exists('detail', $decoded)
-            ? json_encode($decoded['detail'], \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR)
-            : $body;
-
-        return new ProviderUnreachableException(sprintf(
-            'That provider refused the request (status 422): %s',
-            mb_substr($detail, 0, self::REFUSAL_DETAIL_CHARS),
-        ));
     }
 
     /** Integer seconds only, as the chat client reads it; a date form falls back to the plan's backoff. */

@@ -101,22 +101,102 @@ final class HttpSystemOneClientTest extends TestCase
         self::assertNull($outcome->retryAfterSeconds());
     }
 
-    public function testA422NamesTheFieldThatFailedValidation(): void
+    /** @return iterable<string, array{int, string, string}> */
+    public static function refusedRequests(): iterable
     {
+        yield 'OpenRouter, an unknown model' => [
+            400,
+            '{"error":{"message":"Model typesafe/jev-preview does not exist","code":400},"user_id":"user_2xYz"}',
+            'That provider refused the request (status 400): Model typesafe/jev-preview does not exist',
+        ];
+        yield 'OpenRouter, a malformed question' => [
+            400,
+            '{"error":{"message":"[{\\"code\\":\\"invalid_union\\",\\"path\\":[\\"questions\\",\\"entry-1\\",'
+            . '\\"instructions\\"]}]","code":400},"user_id":"user_2xYz"}',
+            'That provider refused the request (status 400): [{"code":"invalid_union","path":["questions","entry-1",'
+            . '"instructions"]}]',
+        ];
+        yield 'TypeSafe, a field list' => [
+            422,
+            '{"detail":[{"loc":["body","questions","entry-7","type"],"msg":"Input should be \'noul\'"}]}',
+            'That provider refused the request (status 422): [{"loc":["body","questions","entry-7","type"],'
+            . '"msg":"Input should be \'noul\'"}]',
+        ];
+        yield 'a detail string' => [
+            422,
+            '{"detail":"state too long"}',
+            'That provider refused the request (status 422): state too long',
+        ];
+        yield 'a proxy page, never echoed' => [
+            400,
+            '<html><body>Bad Request: user_2xYz</body></html>',
+            'That provider refused the request (status 400).',
+        ];
+        yield 'an error without a message' => [
+            400,
+            '{"error":"Bad Request","user_id":"user_2xYz"}',
+            'That provider refused the request (status 400).',
+        ];
+    }
+
+    #[DataProvider('refusedRequests')]
+    public function testARefusedRequestNamesWhatTheProviderObjectedToAndNeverEchoesTheBody(
+        int $status,
+        string $body,
+        string $message,
+    ): void {
         $outcome = $this->evaluate(
-            [new MockResponse(
-                '{"detail":[{"loc":["body","questions","entry-7","type"],"msg":"Input should be \'noul\'"}]}',
-                ['http_code' => 422],
-            )],
+            [new MockResponse($body, ['http_code' => $status])],
             $this->request('entry-7'),
         )[0];
 
         self::assertInstanceOf(ProviderUnreachableException::class, $outcome->cause());
-        self::assertStringStartsWith(
-            'That provider refused the request (status 422): [{"loc":["body","questions","entry-7","type"]',
+        self::assertSame($message, $outcome->cause()->getMessage());
+        self::assertFalse($outcome->isRetryable());
+    }
+
+    /** The error lands in a utf8mb4 column under MySQL strict mode, where an invalid byte fails the whole tick. */
+    public function testAnInvalidByteInARefusalStillYieldsValidText(): void
+    {
+        $outcome = $this->evaluate(
+            [new MockResponse("{\"detail\":\"Feld \xC3 fehlt\"}", ['http_code' => 422])],
+            $this->request('entry-7'),
+        )[0];
+
+        self::assertSame(
+            "That provider refused the request (status 422): Feld \u{FFFD} fehlt",
             $outcome->cause()->getMessage(),
         );
-        self::assertFalse($outcome->isRetryable());
+    }
+
+    public function testALongRefusalIsClippedToFiveHundredCharactersWithoutSplittingOne(): void
+    {
+        $outcome = $this->evaluate(
+            [new MockResponse(
+                '{"error":{"message":"' . str_repeat('ä', 600) . '","code":400}}',
+                ['http_code' => 400],
+            )],
+            $this->request('entry-7'),
+        )[0];
+
+        self::assertSame(
+            'That provider refused the request (status 400): ' . str_repeat('ä', 500) . '…',
+            $outcome->cause()->getMessage(),
+        );
+    }
+
+    public function testAnAnswerOverOneMebibyteIsThatCallsFailure(): void
+    {
+        $outcome = $this->evaluate(
+            [new MockResponse(str_repeat(' ', 1_048_577) . '{"answers":{}}')],
+            $this->request('entry-7'),
+        )[0];
+
+        self::assertSame('That address did not answer.', $outcome->cause()->getMessage());
+        self::assertSame(
+            'That provider answered with more than 1048576 bytes.',
+            $outcome->cause()->getPrevious()?->getMessage(),
+        );
     }
 
     public function testATransportFailureIsItsOwnCallsOutcomeAndSparesItsSibling(): void
