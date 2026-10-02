@@ -63,7 +63,7 @@ describe('AuthService', () => {
         digest: { enabled: false, cadence: 'daily', sendHour: 8, weekday: 1, timezone: 'UTC' },
         ...preferences,
       },
-      ai: { ready: false, model: null },
+      ai: { ready: false, model: null, capabilities: null },
       mail: { enabled: true },
       emailVerified: true,
     };
@@ -97,7 +97,7 @@ describe('AuthService', () => {
         },
         passkeyOfferAnswered: true,
       },
-      ai: { ready: true, model: 'gpt-4o' },
+      ai: { ready: true, model: 'gpt-4o', capabilities: null },
       mail: { enabled: true },
       emailVerified: true,
     });

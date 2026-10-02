@@ -5,21 +5,24 @@
       [title]="'settings.ai.recommendations.forYouTitle' | transloco"
       [caption]="'settings.ai.recommendations.forYouCaption' | transloco"
     >
-      <app-settings-row
-        [title]="'settings.ai.recommendations.showReasons' | transloco"
-        [description]="'settings.ai.recommendations.showReasonsDesc' | transloco"
-      >
-        <app-info-tip
-          rowTitleTip
-          [text]="'settings.ai.info.showReasons' | transloco"
-          [label]="'settings.ai.recommendations.showReasons' | transloco"
-        />
-        <app-toggle
-          [label]="'settings.ai.recommendations.showReasons' | transloco"
-          [checked]="showReasons()"
-          (toggled)="onShowReasons($event)"
-        />
-      </app-settings-row>
+      @if (offersReasons()) {
+        <app-settings-row
+          data-testid="show-reasons"
+          [title]="'settings.ai.recommendations.showReasons' | transloco"
+          [description]="'settings.ai.recommendations.showReasonsDesc' | transloco"
+        >
+          <app-info-tip
+            rowTitleTip
+            [text]="'settings.ai.info.showReasons' | transloco"
+            [label]="'settings.ai.recommendations.showReasons' | transloco"
+          />
+          <app-toggle
+            [label]="'settings.ai.recommendations.showReasons' | transloco"
+            [checked]="showReasons()"
+            (toggled)="onShowReasons($event)"
+          />
+        </app-settings-row>
+      }
 
       <app-settings-row
         [stackable]="true"
@@ -166,41 +169,46 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
               />
             </app-field>
 
-            <app-field
-              [label]="'settings.ai.recommendations.batchSize' | transloco"
-              [info]="'settings.ai.info.batchSize' | transloco"
-            >
-              <!-- Reserves the numeric fields' range-line height so the select
+            @if (offersTuning('batchSize')) {
+              <app-field
+                [label]="'settings.ai.recommendations.batchSize' | transloco"
+                [info]="'settings.ai.info.batchSize' | transloco"
+              >
+                <!-- Reserves the numeric fields' range-line height so the select
                    lines up with their inputs across the grid row. The shared
                    field's own label sits in a separate style scope, so the row
                    is matched from projected content here. -->
-              <p class="numeric-range" aria-hidden="true">&nbsp;</p>
-              <select data-testid="batch-size" (change)="onBatchSizeChange($event)">
-                @for (opt of batchSizeOptions; track opt.value) {
-                  <option [value]="opt.value" [selected]="batchSize() === opt.value">
-                    {{ opt.key | transloco }}
-                  </option>
-                }
-              </select>
-            </app-field>
+                <p class="numeric-range" aria-hidden="true">&nbsp;</p>
+                <select data-testid="batch-size" (change)="onBatchSizeChange($event)">
+                  @for (opt of batchSizeOptions; track opt.value) {
+                    <option [value]="opt.value" [selected]="batchSize() === opt.value">
+                      {{ opt.key | transloco }}
+                    </option>
+                  }
+                </select>
+              </app-field>
+            }
           </div>
 
-          <app-field
-            [label]="'settings.ai.recommendations.contextWindow' | transloco"
-            [hint]="contextWindowHint()"
-            [info]="'settings.ai.info.contextWindow' | transloco"
-            [error]="fieldError('contextWindow')"
-          >
-            <p class="numeric-range">{{ rangeLabel('contextWindow') }}</p>
-            <input
-              type="number"
-              [min]="range('contextWindow').min"
-              [max]="range('contextWindow').max"
-              [attr.aria-invalid]="isFieldInvalid('contextWindow')"
-              [value]="contextWindow() ?? ''"
-              (input)="onContextWindowInput($event)"
-            />
-          </app-field>
+          @if (offersTuning('contextWindow')) {
+            <app-field
+              [label]="'settings.ai.recommendations.contextWindow' | transloco"
+              [hint]="contextWindowHint()"
+              [info]="'settings.ai.info.contextWindow' | transloco"
+              [error]="fieldError('contextWindow')"
+            >
+              <p class="numeric-range">{{ rangeLabel('contextWindow') }}</p>
+              <input
+                data-testid="context-window"
+                type="number"
+                [min]="range('contextWindow').min"
+                [max]="range('contextWindow').max"
+                [attr.aria-invalid]="isFieldInvalid('contextWindow')"
+                [value]="contextWindow() ?? ''"
+                (input)="onContextWindowInput($event)"
+              />
+            </app-field>
+          }
 
           <div class="factory-reset">
             <app-button

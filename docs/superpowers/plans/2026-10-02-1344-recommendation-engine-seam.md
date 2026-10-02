@@ -2503,6 +2503,8 @@ In `recommendation-settings-card.component.html`:
 
 Then format: `docker compose exec -T frontend npx prettier --write src/app/settings/recommendations/recommendation-settings-card.component.html src/app/settings/recommendations/recommendation-settings-card.component.ts`.
 
+The component sat at 296 of ESLint's 300 `max-lines` code lines, so the additions fail `npm run check`: move the module-level `typedSeed()` function unchanged into a sibling `recommendation-typed-seed.ts` (exported, importing `RecommendationExpertDefaults` and `RecommendationSettingsState` from the service) and import it. Run Prettier (`--write`) on every file this task touches, specs included.
+
 - [ ] **Step 5: The card spec**
 
 In `recommendation-settings-card.component.spec.ts`:
@@ -2746,7 +2748,7 @@ Each of these builds a `CurrentUser` or an `AiAvailability` and must now name `c
 - `src/app/core/auth/auth.service.spec.ts:66` and `:100`
 - `src/app/reader/shell/reader-shell.component.spec.ts:2025` (`apply({ ready: true, model: 'gpt', capabilities: null })`)
 
-Survey after: `grep -rn "ai: { ready" frontend/src | grep -v capabilities` → expect no output. The `as CurrentUser` casts in `auth.interceptor.spec.ts:152` and `auth.service.spec.ts:185` compile unchanged.
+Survey after: `grep -rn "ai: { ready" frontend/src | grep -v capabilities` → expect exactly two lines, `auth.interceptor.spec.ts:152` and `auth.service.spec.ts:185` (`as CurrentUser` casts that compile unchanged and stay as they are).
 
 In `frontend/e2e/ai-config-rejected.spec.ts`, `EXISTING` gains
 

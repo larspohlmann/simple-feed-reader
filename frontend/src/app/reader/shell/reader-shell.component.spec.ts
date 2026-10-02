@@ -2022,7 +2022,7 @@ describe('ReaderShellComponent', () => {
   // view marks readiness before it expects the button.
   function bootForYou() {
     const fixture = boot();
-    TestBed.inject(AiAvailabilityService).apply({ ready: true, model: 'gpt' });
+    TestBed.inject(AiAvailabilityService).apply({ ready: true, model: 'gpt', capabilities: null });
     qp.next(convertToParamMap({ view: 'for-you' }));
     fixture.detectChanges();
     ctrl

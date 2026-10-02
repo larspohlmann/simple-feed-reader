@@ -28,6 +28,17 @@ const EXISTING = {
   active: true,
   suppressReasoning: true,
   batchConcurrency: 1,
+  capabilities: {
+    reasons: true,
+    tuningFields: [
+      'contextWindow',
+      'batchSize',
+      'suppressReasoning',
+      'slowModel',
+      'maxBatchSize',
+      'batchConcurrency',
+    ],
+  },
 };
 
 async function stubAi(page: Page): Promise<void> {

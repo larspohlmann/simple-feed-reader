@@ -35,7 +35,7 @@ const user = (digest: DigestConfig, timezone = 'UTC'): CurrentUser => ({
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
   },
-  ai: { ready: false, model: null },
+  ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
   emailVerified: true,
 });

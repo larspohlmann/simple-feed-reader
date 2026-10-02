@@ -5,7 +5,12 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { AiAvailabilityService } from '../../core/ai-availability.service';
+import {
+  AiAvailabilityService,
+  NO_RECOMMENDATION_CAPABILITIES,
+  RecommendationCapabilities,
+} from '../../core/ai-availability.service';
+import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
 import { API_BASE_URL } from '../../core/api';
 import { AiConfig, AiConfigList, AiSettingsService } from './ai-settings.service';
 
@@ -23,6 +28,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   batchConcurrency: 1,
   slowModel: false,
   maxBatchSize: null,
+  capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
 });
 
@@ -67,6 +73,24 @@ describe('AiSettingsService', () => {
     expect(service.defaultMaxBatchSize()).toBe(140);
     expect(availability.ready()).toBe(true);
     expect(availability.model()).toBe('gpt-4o');
+  });
+
+  it("hands the active configuration's capabilities to the availability, and none once it is gone", () => {
+    const capabilities: RecommendationCapabilities = {
+      reasons: false,
+      tuningFields: ['batchSize'],
+    };
+    service.load();
+    ctrl.expectOne(`${base}/api/me/ai`).flush({
+      configs: [config({ id: 1, active: true, ready: true, model: 'gpt-4o', capabilities })],
+      activeId: 1,
+      defaultMaxBatchSize: 140,
+    });
+    expect(availability.capabilities()).toEqual(capabilities);
+
+    service.remove(1);
+    ctrl.expectOne(`${base}/api/me/ai/configs/1`).flush(null);
+    expect(availability.capabilities()).toEqual(NO_RECOMMENDATION_CAPABILITIES);
   });
 
   it('reports no availability when nothing is active', () => {

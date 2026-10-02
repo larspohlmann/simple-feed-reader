@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { RecommendationTuningField } from '../../core/ai-availability.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
@@ -210,6 +211,11 @@ export class AiSectionComponent {
 
   toggleSlowModel(config: AiConfig, event: Event): void {
     this.ai.setSlowModel(config.id, (event.target as HTMLInputElement).checked);
+  }
+
+  /** Whether this connection's engine reads the setting; one it ignores is not offered. */
+  offersTuning(config: AiConfig, field: RecommendationTuningField): boolean {
+    return config.capabilities.tuningFields.includes(field);
   }
 
   /** An empty field means "no claim, the default stands" — never `NaN`. */

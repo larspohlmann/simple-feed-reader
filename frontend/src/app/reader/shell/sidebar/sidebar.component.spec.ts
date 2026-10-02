@@ -58,7 +58,7 @@ const account = (trialEndsAt: string | null): CurrentUser => ({
     passkeyOfferAnswered: true,
     magazineStyle: 'boxed',
   },
-  ai: { ready: false, model: null },
+  ai: { ready: false, model: null, capabilities: null },
   mail: { enabled: true },
   emailVerified: true,
 });

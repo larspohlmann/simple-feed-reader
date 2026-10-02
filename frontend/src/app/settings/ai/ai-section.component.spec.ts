@@ -5,6 +5,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
+import { NO_RECOMMENDATION_CAPABILITIES } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { AiFailure, ScopedAiFailure } from './ai-failure';
@@ -47,6 +49,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   batchConcurrency: 1,
   slowModel: false,
   maxBatchSize: null,
+  capabilities: EVERY_RECOMMENDATION_CAPABILITY,
   ...over,
 });
 
@@ -417,6 +420,36 @@ describe('AiSectionComponent', () => {
     checkbox.checked = true;
     checkbox.dispatchEvent(new Event('change'));
 
+    expect(setSlowModel).toHaveBeenCalledWith(7, true);
+  });
+
+  it('offers a row no tuning control when its engine reads none, and keeps its actions', () => {
+    const fixture = mountWithConfigs([
+      config({ id: 7, capabilities: NO_RECOMMENDATION_CAPABILITIES }),
+    ]);
+
+    expect(row(fixture, 0).querySelector('.reasoning-toggle')).toBeNull();
+    expect(row(fixture, 0).querySelector('app-field select')).toBeNull();
+    expect(row(fixture, 0).querySelector('.activate')).not.toBeNull();
+  });
+
+  it('offers each row control by its own field', () => {
+    const fixture = mountWithConfigs([
+      config({
+        id: 7,
+        slowModel: false,
+        capabilities: { reasons: false, tuningFields: ['slowModel', 'batchConcurrency'] },
+      }),
+    ]);
+    const setSlowModel = jest.spyOn(ai, 'setSlowModel').mockImplementation(() => undefined);
+
+    const boxes = row(fixture, 0).querySelectorAll('.reasoning-toggle input[type=checkbox]');
+    expect(boxes).toHaveLength(1);
+    expect(row(fixture, 0).querySelector('.reasoning-toggle input[type="number"]')).toBeNull();
+    expect(row(fixture, 0).querySelector('app-field select')).not.toBeNull();
+
+    (boxes[0] as HTMLInputElement).checked = true;
+    boxes[0].dispatchEvent(new Event('change'));
     expect(setSlowModel).toHaveBeenCalledWith(7, true);
   });
 

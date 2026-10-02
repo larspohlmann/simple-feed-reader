@@ -2,13 +2,35 @@ import { Injectable, signal } from '@angular/core';
 import { CurrentUser } from './auth/auth.service';
 import { onIdentityChange } from './auth/session-identity';
 
+/** A recommendation setting only some engines read; each value is that setting's field name on the wire. */
+export type RecommendationTuningField =
+  | 'contextWindow'
+  | 'batchSize'
+  | 'suppressReasoning'
+  | 'slowModel'
+  | 'maxBatchSize'
+  | 'batchConcurrency';
+
+/** What a connection's recommendation engine can do; the client renders from it and never learns the engine. */
+export interface RecommendationCapabilities {
+  readonly reasons: boolean;
+  readonly tuningFields: readonly RecommendationTuningField[];
+}
+
+export const NO_RECOMMENDATION_CAPABILITIES: RecommendationCapabilities = {
+  reasons: false,
+  tuningFields: [],
+};
+
 /**
  * The whole of what this service tracks — and so the whole of what any caller
- * has to hand it. `/api/me` reports exactly these two fields under `ai`.
+ * has to hand it. `/api/me` reports exactly these fields under `ai`;
+ * `capabilities` is null while no connection is active.
  */
 export interface AiAvailability {
   readonly model: string | null;
   readonly ready: boolean;
+  readonly capabilities: RecommendationCapabilities | null;
 }
 
 /**
@@ -24,9 +46,13 @@ export interface AiAvailability {
 export class AiAvailabilityService {
   private readonly readySignal = signal(false);
   private readonly modelSignal = signal<string | null>(null);
+  private readonly capabilitiesSignal = signal<RecommendationCapabilities>(
+    NO_RECOMMENDATION_CAPABILITIES,
+  );
 
   readonly ready = this.readySignal.asReadonly();
   readonly model = this.modelSignal.asReadonly();
+  readonly capabilities = this.capabilitiesSignal.asReadonly();
 
   constructor() {
     // The token is the trigger, not `logout()`. The interceptor's 401 path
@@ -53,11 +79,12 @@ export class AiAvailabilityService {
    * belt-and-braces — the identity binding above covers that path as well.
    */
   reset(): void {
-    this.set({ ready: false, model: null });
+    this.set({ ready: false, model: null, capabilities: null });
   }
 
   private set(availability: AiAvailability): void {
     this.readySignal.set(availability.ready);
     this.modelSignal.set(availability.model);
+    this.capabilitiesSignal.set(availability.capabilities ?? NO_RECOMMENDATION_CAPABILITIES);
   }
 }
