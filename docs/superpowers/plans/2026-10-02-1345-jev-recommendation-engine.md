@@ -958,7 +958,8 @@ git commit -m "refactor(#1345): the run records the engine kind it was packed fo
 ### Task A4: Phase plan per kind
 
 **Files:**
-- Modify: `backend/src/Enum/RecommendationEngineKind.php`, `backend/src/Entity/RecommendationRunProgress.php`, `backend/src/Entity/RecommendationRun.php` (`getProgress()`), `backend/src/Service/Recommendation/Run/Model/RecommendationRunReportModel.php`, `backend/src/Service/Recommendation/Run/RecommendationEtaEstimator.php`, `backend/src/Service/Recommendation/Run/Model/PhaseDurationsModel.php`
+- Modify: `backend/src/Enum/RecommendationEngineKind.php`, `backend/src/Entity/RecommendationRunProgress.php`, `backend/src/Entity/RecommendationRun.php` (`getProgress()`), `backend/src/Service/Recommendation/Run/Model/RecommendationRunReportModel.php`, `backend/src/Service/Recommendation/Run/RecommendationEtaEstimator.php`, `backend/src/Service/Recommendation/Run/Model/PhaseDurationsModel.php`, `backend/src/Http/RecommendationRunStatusJson.php` (reads through `start`; *amended, A4*)
+- Create: `backend/src/Service/Recommendation/Run/Model/RunStartModel.php` (*amended, A4*)
 - Create (test): `backend/tests/Enum/RecommendationEngineKindTest.php`
 - Modify (tests, call shape only): `backend/tests/Entity/RecommendationRunProgressTest.php`, `backend/tests/Service/Recommendation/Run/Model/PhaseDurationsModelTest.php`
 
@@ -968,6 +969,7 @@ git commit -m "refactor(#1345): the run records the engine kind it was packed fo
   - `RecommendationEngineKind::phases(): list<CallPhase>`, `::runs(CallPhase $phase): bool`, `::singleCallPhaseCount(): int`.
   - `RecommendationRunProgress::forBatchPlan(?array $candidateBatches, int $batchesDone, int $attempts, bool $distilled, RecommendationEngineKind $engineKind): self`.
   - `RecommendationRunReportModel::$engineKind` (`?RecommendationEngineKind`, null on `none()`/`busy()`).
+  - *Amended (A4):* `RunStartModel(?\DateTimeImmutable $startedAt = null, bool $firstBatchStarted = false)` with `elapsedSecondsAt(\DateTimeImmutable $now): ?int`; `RecommendationRunReportModel::$start` replaces `$startedAt`, `$firstBatchStarted` and `elapsedSecondsAt()`.
   - `PhaseDurationsModel::fromCompletedRunSpans(array $spans, RecommendationEngineKind $engineKind): ?self`.
 
 - [ ] **Step 1: Write the failing enum test**
@@ -1092,6 +1094,8 @@ In `RecommendationRunProgressTest`, append `, engineKind: RecommendationEngineKi
 
 *Amended (preflight F1):* `RecommendationRunReportModel::__construct` already has 9 parameters and PHPMD `ExcessiveParameterList` reports at 10, so the new `$engineKind` parameter below must not make it 10. Keep the constructor at 9 or fewer: group cohesive parameters into one value in `Recommendation/Run/Model` (for example `startedAt` and `firstBatchStarted`, the two ETA-only inputs), or hold the kind with `batchesTotal` in a plan value. The A4 implementer chooses the grouping and amends this step to match; `fromRun()`'s callers and B3's ETA test read through `fromRun()` and are unaffected. `composer md` at Step 8 is the gate.
 
+*Amended (A4, the grouping chosen):* `startedAt` and `firstBatchStarted` move into a new `Run/Model/RunStartModel` (`public ?\DateTimeImmutable $startedAt = null`, `public bool $firstBatchStarted = false`), which also takes over `elapsedSecondsAt()`. The report's constructor replaces the two parameters with `public RunStartModel $start = new RunStartModel(),`, so it stays at 8 parameters with the kind. `fromRun()` passes `start: new RunStartModel($run->getCreatedAt(), $run->hasFirstBatchStarted()),`; `inBackground()` and `waitingForLock()` pass `start: $this->start,`. `RecommendationRunStatusJson` reads `$report->start->firstBatchStarted` and `$report->start->elapsedSecondsAt(…)`; the JSON keys and values are unchanged.
+
 `RecommendationRunReportModel` (import the enum): add the constructor parameter last, `public ?RecommendationEngineKind $engineKind = null,`; `fromRun()` passes `engineKind: $run->getEngineKind(),`; `inBackground()` and `waitingForLock()` pass `engineKind: $this->engineKind,`. `none()` and `busy()` stay as they are (null: no run).
 
 `RecommendationEtaEstimator` — drop `TAIL_PHASE_COUNT` and its docblock; `estimateSeconds()` becomes:
@@ -1103,13 +1107,13 @@ In `RecommendationRunProgressTest`, append `, engineKind: RecommendationEngineKi
         if (
             null === $engineKind
             || null === $report->batchesTotal
-            || !$report->firstBatchStarted
+            || !$report->start->firstBatchStarted
             || !$this->isInFlight($report)
         ) {
             return null;
         }
 
-        $elapsed = $report->elapsedSecondsAt($this->clock->now());
+        $elapsed = $report->start->elapsedSecondsAt($this->clock->now());
         $durations = PhaseDurationsModel::fromCompletedRunSpans(
             $this->timings->completedRunPhaseSpans($user, RunLogRetention::RUNS),
             $engineKind,
@@ -1175,7 +1179,7 @@ and `runDurations()` plus a new helper:
     private static function runDurations(array $phases, RecommendationEngineKind $engineKind): ?array
     {
         $batch = $phases[CallPhase::Batch->value] ?? null;
-        if (!self::carriesExactly($phases, $engineKind) || null === $batch || $batch['batchCount'] < 1) {
+        if (null === $batch || $batch['batchCount'] < 1 || !self::carriesExactly($phases, $engineKind)) {
             return null;
         }
 
@@ -4359,7 +4363,7 @@ Expected: `RecommendationEngineKind::Jev` undefined (fatal); fix by implementing
 2. `stripos(…) === 0` (case-insensitive) → the `JEV-latest` row fails. Restore.
 3. `singleCallPhaseCount()` hard-coded 2 → only the progress pin `testAJevPlanCountsOnlyItsBatchesAndHasNoTailPhases` (5 ≠ 3) fails; `testAJevRunIsPredictedFromJevRunsAlone` still passes, because the estimator subtracts the same constant and the batch count stays 4. *Amended (preflight F9):* expect only the progress pin to fail. Restore.
 4. In `forBatchPlan()`, `$distillationDone = $distilled` → the Jev progress pin fails (`distillPending` true). Restore.
-5. Drop `!self::carriesExactly(…) ||` in `PhaseDurationsModel` → the Jev average takes the LLM run (distill 5, batch 15, consolidate 15, so `predictedTotalSeconds(5)` is 95 ≠ 100; the LLM half fails too). *Amended (preflight F10):* the expected figure is 95, not 75. Restore.
+5. Drop `|| !self::carriesExactly(…)` in `PhaseDurationsModel` → the Jev average takes the LLM run (distill 5, batch 15, consolidate 15, so `predictedTotalSeconds(5)` is 95 ≠ 100; the LLM half fails too). *Amended (preflight F10):* the expected figure is 95, not 75. Restore.
 6. `SnapshotPhase`'s empty-pool path snapshots with `RecommendationEngineKind::Llm` → `testAJevTickRecordsTheJevKindForAnEmptyPool` fails. Restore.
 7. `TickContextFactory` passes `RecommendationEngineKind::Llm` → `testAJevConnectionTicksWithTheJevKind` fails. Restore.
 8. `RecommendationCapabilitiesJson` hard-codes `'prompt' => true` → the Jev JSON pin fails (A8's open pin). Restore.
