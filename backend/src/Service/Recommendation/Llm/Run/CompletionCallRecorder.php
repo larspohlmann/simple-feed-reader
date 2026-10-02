@@ -11,7 +11,6 @@ use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Pass\RecordedCall;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
 
-/** Opens the run-log row for one chat completion, recording the request as the debug view renders it. */
 final readonly class CompletionCallRecorder
 {
     public function __construct(private RecommendationCallRecorder $callRecorder)
