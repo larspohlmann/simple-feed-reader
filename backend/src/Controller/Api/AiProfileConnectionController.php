@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Ai\ChooseProfileConnectionRequest;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Recommendation\Profile\ProfileConnectionChooser;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** Which saved connection distils the profile for an engine that cannot. No provider call, so no rate limit. */
+/**
+ * Which saved connection distils the profile for the connection `{id}`, whose engine cannot. No provider call, so no
+ * rate limit.
+ */
 #[Route('/api/me/ai/configs/{id}/profile', requirements: ['id' => '\d+'])]
 final readonly class AiProfileConnectionController
 {
@@ -25,12 +30,15 @@ final readonly class AiProfileConnectionController
     }
 
     #[Route('', name: 'api_me_ai_choose_profile', methods: ['PUT'])]
-    public function choose(#[CurrentUser] User $user, int $id): JsonResponse
-    {
-        $configuration = $this->configuration->require($user, $id);
-        $this->profileConnections->choose($configuration);
+    public function choose(
+        #[CurrentUser] User $user,
+        int $id,
+        #[MapRequestPayload] ChooseProfileConnectionRequest $request,
+    ): JsonResponse {
+        $borrower = $this->configuration->require($user, $id);
+        $this->profileConnections->choose($borrower, $this->configuration->require($user, $request->connectionId));
 
-        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($borrower, $user));
     }
 
     #[Route('', name: 'api_me_ai_clear_profile', methods: ['DELETE'])]

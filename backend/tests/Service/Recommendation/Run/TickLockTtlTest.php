@@ -51,7 +51,7 @@ final class TickLockTtlTest extends DbTestCase
         self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
     }
 
-    /** The LLM never borrows, so a slow connection it merely flagged does not lengthen its lock. */
+    /** The LLM never borrows, so a slow connection its row points at does not lengthen its lock. */
     public function testAnLlmAccountIgnoresItsProfileConnection(): void
     {
         $this->fixtures->seedReadyAiSettings($this->owner);

@@ -90,10 +90,6 @@ final class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
-    /** The connection that distils the profile for an engine that cannot; ProfileConnectionChooser keeps it one. */
-    #[ORM\Column(options: ['default' => false])]
-    private bool $profileSource = false;
-
     /**
      * The connection that distils the profile for this one when its engine cannot. AiProviderConfigurator clears it
      * before removing that row; ON DELETE SET NULL is only the database floor.
@@ -229,16 +225,6 @@ final class AiProviderSettings
     public function copyRunTuningFrom(self $source): void
     {
         $this->runTuning->copyFrom($source->runTuning);
-    }
-
-    public function isProfileSource(): bool
-    {
-        return $this->profileSource;
-    }
-
-    public function setProfileSource(bool $profileSource): void
-    {
-        $this->profileSource = $profileSource;
     }
 
     public function getProfileConnection(): ?self

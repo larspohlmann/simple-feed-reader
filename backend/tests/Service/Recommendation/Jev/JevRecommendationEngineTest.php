@@ -33,7 +33,7 @@ final class JevRecommendationEngineTest extends DbTestCase
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
-    private AiProviderSettings $profileConnection;
+    private AiProviderSettings $jevConnection;
 
     protected function setUp(): void
     {
@@ -43,8 +43,8 @@ final class JevRecommendationEngineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-engine@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
-        $this->profileConnection = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $this->jevConnection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedProfileConnectionFor($this->owner);
     }
 
     /** A poll tick never waits: the 429 defers the run, halves its concurrency and strikes nothing. */
@@ -258,7 +258,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     /** An absent profile connection is the account's to fix: the run fails with the message, never strikes. */
     public function testWithoutAProfileConnectionTheFirstProviderTickFailsTheRun(): void
     {
-        $this->profileConnection->setProfileSource(false);
+        $this->jevConnection->setProfileConnection(null);
         $this->entityManager->flush();
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->starter()->start($this->owner);

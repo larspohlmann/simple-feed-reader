@@ -5,33 +5,33 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Profile;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\User;
-use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 
 final readonly class ProfileConnectionResolver
 {
-    public function __construct(
-        private AiProviderSettingsRepository $aiProviderSettings,
-        private RecommendationEngineResolver $engines,
-    ) {
+    public function __construct(private RecommendationEngineResolver $engines)
+    {
     }
 
-    /** The profile connection an active connection's engine borrows; null when it distils its own or has none. */
+    /**
+     * The connection the active one borrows its profile from: null when it builds its own, chose none, or chose one
+     * that can no longer build profiles.
+     */
     public function borrowedFor(AiProviderSettings $active): ?AiProviderSettings
     {
-        return RecommendationProfileSource::Borrowed === $this->engines->capabilitiesFor($active)->profileSource
-            ? $this->findUsableFor($active->getUser())
-            : null;
+        $connection = $active->getProfileConnection();
+        if (null === $connection || !$this->borrows($active)) {
+            return null;
+        }
+
+        return $this->canBuildProfiles($connection) ? $connection : null;
     }
 
-    public function findUsableFor(User $user): ?AiProviderSettings
+    public function borrows(AiProviderSettings $connection): bool
     {
-        $connection = $this->aiProviderSettings->findProfileSourceFor($user);
-
-        return null !== $connection && $this->canBuildProfiles($connection) ? $connection : null;
+        return RecommendationProfileSource::Borrowed === $this->engines->capabilitiesFor($connection)->profileSource;
     }
 
     public function canBuildProfiles(AiProviderSettings $connection): bool

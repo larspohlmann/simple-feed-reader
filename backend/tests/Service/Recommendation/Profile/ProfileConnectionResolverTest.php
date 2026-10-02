@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Profile;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Profile\ProfileConnectionResolver;
@@ -18,6 +19,7 @@ final class ProfileConnectionResolverTest extends DbTestCase
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
+    private AiProviderSettings $jev;
 
     protected function setUp(): void
     {
@@ -27,85 +29,59 @@ final class ProfileConnectionResolverTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('profile-resolver@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->jev = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
     }
 
-    public function testTheChosenReadyLlmConnectionBuildsTheProfile(): void
+    public function testAJevConnectionBorrowsTheConnectionItPointsAt(): void
     {
         $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
 
-        self::assertSame($profile, $this->resolver()->findUsableFor($this->owner));
+        self::assertSame($profile, $this->resolver()->borrowedFor($this->jev));
     }
 
-    /** A ready LLM connection the account never chose is not the profile connection: its history stays home. */
-    public function testAnAccountThatChoseNoneHasNoneEvenWithAReadyLlmConnection(): void
+    public function testEachJevConnectionBorrowsItsOwnChoice(): void
     {
-        $unchosen = $this->user('profile-resolver-unchosen@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($unchosen, 'gpt-4o');
+        $first = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $other = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest');
+        $second = $this->fixtures->seedProfileConnectionBorrowedBy($other, 'gpt-4o');
 
-        self::assertNull($this->resolver()->findUsableFor($unchosen));
+        self::assertSame($first, $this->resolver()->borrowedFor($this->jev));
+        self::assertSame($second, $this->resolver()->borrowedFor($other));
     }
 
     /** A connection whose model later became a Jev model cannot distil: it reads as no profile connection. */
-    public function testAChosenConnectionOnAJevModelIsNotUsable(): void
+    public function testAChosenConnectionOnAJevModelIsNotBorrowed(): void
     {
         $this->fixtures->seedProfileConnectionFor($this->owner, 'jev-latest');
 
-        self::assertNull($this->resolver()->findUsableFor($this->owner));
+        self::assertNull($this->resolver()->borrowedFor($this->jev));
     }
 
-    public function testAChosenConnectionWithoutAModelIsNotUsable(): void
+    public function testAChosenConnectionWithoutAModelIsNotBorrowed(): void
     {
         $connection = AiProviderSettingsFactory::build($this->owner, 'No model', 'https://none.example.test/v1');
-        $connection->setProfileSource(true);
         $this->entityManager->persist($connection);
+        $this->jev->setProfileConnection($connection);
         $this->entityManager->flush();
 
-        self::assertNull($this->resolver()->findUsableFor($this->owner));
+        self::assertNull($this->resolver()->borrowedFor($this->jev));
     }
 
-    public function testADeletedChoiceLeavesNoneBesideAnUnchosenLlmConnection(): void
-    {
-        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
-        $this->fixtures->seedProfileConnectionFor($this->owner, 'gpt-4o')->setProfileSource(false);
-        $this->entityManager->remove($profile);
-        $this->entityManager->flush();
-
-        self::assertNull($this->resolver()->findUsableFor($this->owner));
-    }
-
-    /** Two flags only after a racing double choice; the newest one wins until the next choice repairs it. */
-    public function testOfTwoChosenConnectionsTheNewestBuildsTheProfile(): void
-    {
-        $this->fixtures->seedProfileConnectionFor($this->owner);
-        $newest = $this->fixtures->seedProfileConnectionFor($this->owner, 'gpt-4o');
-
-        self::assertSame($newest, $this->resolver()->findUsableFor($this->owner));
-    }
-
-    public function testAnotherAccountsChoiceIsNotThisOnes(): void
-    {
-        $stranger = $this->user('profile-resolver-stranger@example.test');
-        $this->fixtures->seedProfileConnectionFor($stranger);
-
-        self::assertNull($this->resolver()->findUsableFor($this->owner));
-    }
-
-    public function testAJevConnectionBorrowsTheProfileConnection(): void
-    {
-        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
-        $active = $this->owner->getActiveAiProviderSettings();
-        self::assertNotNull($active);
-
-        self::assertSame($profile, $this->resolver()->borrowedFor($active));
-    }
-
-    /** The LLM distils on its own connection, whatever the account chose. */
+    /** The LLM distils on its own connection, whatever its row points at. */
     public function testAnLlmConnectionBorrowsNothing(): void
     {
-        $profile = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $llm = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
+        $this->fixtures->seedProfileConnectionBorrowedBy($llm);
 
-        self::assertNull($this->resolver()->borrowedFor($profile));
+        self::assertNull($this->resolver()->borrowedFor($llm));
+    }
+
+    public function testOnlyAConnectionWhoseEngineCannotDistilBorrows(): void
+    {
+        $llm = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
+
+        self::assertTrue($this->resolver()->borrows($this->jev));
+        self::assertFalse($this->resolver()->borrows($llm));
     }
 
     private function resolver(): ProfileConnectionResolver

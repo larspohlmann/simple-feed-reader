@@ -15,6 +15,7 @@ use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
+use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Feed\ForYouFeed;
 use App\Service\Recommendation\Jev\JevProfileStep;
@@ -36,6 +37,7 @@ final class JevPipelineTest extends DbTestCase
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
+    private AiProviderSettings $jevConnection;
     private AiProviderSettings $profileConnection;
 
     protected function setUp(): void
@@ -46,7 +48,7 @@ final class JevPipelineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-pipeline@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->jevConnection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
         $this->profileConnection = $this->fixtures->seedProfileConnectionFor($this->owner);
     }
 
@@ -158,7 +160,7 @@ final class JevPipelineTest extends DbTestCase
     /** No profile connection: the run fails before any call, says how to fix it, and resumes once one is chosen. */
     public function testWithoutAProfileConnectionTheRunFailsThenResumesOnceOneIsChosen(): void
     {
-        $this->profileConnection->setProfileSource(false);
+        $this->jevConnection->setProfileConnection(null);
         $this->entityManager->flush();
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
 
@@ -169,7 +171,7 @@ final class JevPipelineTest extends DbTestCase
         self::assertSame([], $this->chat()->calls());
         self::assertSame([], $this->systemOne()->requests());
 
-        $this->profileConnection->setProfileSource(true);
+        $this->jevConnection->setProfileConnection($this->profileConnection);
         $this->entityManager->flush();
         $this->queueProfile('Likes Rust and homelab.');
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
@@ -180,7 +182,7 @@ final class JevPipelineTest extends DbTestCase
         self::assertSame($failed->requireId(), $resumed->requireId());
     }
 
-    public function testTheWavesCompleteWhenTheProfileConnectionIsRemovedAfterTheProfileIsRecorded(): void
+    public function testTheWavesCompleteWhenTheProfileConnectionIsDeletedAfterTheProfileIsRecorded(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->queueProfile('Likes Rust and homelab.');
@@ -188,12 +190,29 @@ final class JevPipelineTest extends DbTestCase
         $this->starter()->start($this->owner);
         $this->tickUntilTheProfileIsRecorded();
 
-        $this->entityManager->remove($this->profileConnection);
-        $this->entityManager->flush();
+        $this->configurator()->deleteConfiguration($this->profileConnection);
         $run = $this->tickUntilDone($this->owner);
 
         self::assertSame('completed', $run->getStatus()->value);
         self::assertCount(1, $this->systemOne()->requests());
+        self::assertNull($this->jevConnection->getProfileConnection());
+    }
+
+    public function testAJevConnectionDistilsThroughItsOwnProfileConnection(): void
+    {
+        $other = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedProfileConnectionBorrowedBy($other, 'gpt-4o');
+        $this->owner->setActiveAiProviderSettings($other);
+        $this->entityManager->flush();
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->queueProfile('Likes Rust and homelab.');
+
+        $run = $this->runToCompletion($this->owner);
+
+        self::assertSame('completed', $run->getStatus()->value);
+        self::assertSame(['gpt-4o'], array_column($this->chat()->calls(), 'model'));
+        self::assertSame($this->profileConnection, $this->jevConnection->getProfileConnection());
     }
 
     /** The profile connection answers nothing usable: the run scores on the profile an earlier run stored. */
@@ -285,5 +304,13 @@ final class JevPipelineTest extends DbTestCase
     private function entryIds(array $entries): array
     {
         return array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
+    }
+
+    private function configurator(): AiProviderConfigurator
+    {
+        /** @var AiProviderConfigurator $configurator */
+        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
+
+        return $configurator;
     }
 }
