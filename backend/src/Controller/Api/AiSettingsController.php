@@ -39,13 +39,14 @@ final readonly class AiSettingsController
         private AiConfigurationForUser $configuration,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiProviderLimiter,
+        private AiSettingsJson $settingsJson,
     ) {
     }
 
     #[Route('', name: 'api_me_ai_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(AiSettingsJson::list(
+        return new JsonResponse($this->settingsJson->list(
             $this->configurator->listConfigurations($user),
             $user->getActiveAiProviderSettings()?->getId(),
         ));
@@ -60,7 +61,7 @@ final readonly class AiSettingsController
         $added = $this->configurator->addConfiguration($user, $request->name, $request->baseUrl, $request->apiKey);
 
         return new JsonResponse(
-            AiSettingsJson::added($added->configuration, $added->modelIds),
+            $this->settingsJson->added($added->configuration, $added->modelIds),
             Response::HTTP_CREATED,
         );
     }
@@ -73,7 +74,7 @@ final readonly class AiSettingsController
         $copy = $this->configurator->duplicateConfiguration($source);
 
         return new JsonResponse(
-            AiSettingsJson::configurationFor($copy, $user),
+            $this->settingsJson->configurationFor($copy, $user),
             Response::HTTP_CREATED,
         );
     }
@@ -84,7 +85,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
 
-        return new JsonResponse(AiSettingsJson::models($this->configurator->listModels($configuration)));
+        return new JsonResponse($this->settingsJson->models($this->configurator->listModels($configuration)));
     }
 
     #[Route('/configs/{id}/model', name: 'api_me_ai_save_model', requirements: ['id' => '\d+'], methods: ['PUT'])]
@@ -97,7 +98,7 @@ final readonly class AiSettingsController
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
         $this->configurator->chooseModel($configuration, $request->model);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route('/configs/{id}/name', name: 'api_me_ai_rename', requirements: ['id' => '\d+'], methods: ['PUT'])]
@@ -109,7 +110,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->editor->rename($configuration, $request->name);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route(
@@ -126,7 +127,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route(
@@ -143,7 +144,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->editor->setSlowModel($configuration, $request->slowModel);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route(
@@ -160,7 +161,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route(
@@ -182,7 +183,7 @@ final readonly class AiSettingsController
         $configuration = $this->configuration->require($user, $id);
         $this->editor->setMaxBatchSize($configuration, $request->maxBatchSize);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route('/configs/{id}/active', name: 'api_me_ai_activate', requirements: ['id' => '\d+'], methods: ['PUT'])]
@@ -192,7 +193,7 @@ final readonly class AiSettingsController
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
         $this->configurator->activate($configuration);
 
-        return new JsonResponse(AiSettingsJson::configurationFor($configuration, $user));
+        return new JsonResponse($this->settingsJson->configurationFor($configuration, $user));
     }
 
     #[Route('/configs/{id}', name: 'api_me_ai_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]

@@ -29,6 +29,17 @@ final class AiSettingsControllerTest extends ApiTestCase
     private const string API_KEY = 'sk-abcdef1234';
     /** Must match framework.rate_limiter.ai_provider.limit in rate_limiter.yaml. */
     private const int PROVIDER_BUDGET = 30;
+    private const array LLM_CAPABILITIES = [
+        'reasons' => true,
+        'tuningFields' => [
+            'contextWindow',
+            'batchSize',
+            'suppressReasoning',
+            'slowModel',
+            'maxBatchSize',
+            'batchConcurrency',
+        ],
+    ];
 
     protected function setUp(): void
     {
@@ -225,6 +236,36 @@ final class AiSettingsControllerTest extends ApiTestCase
         $me = $this->payload($client);
         self::assertIsArray($me['ai']);
         self::assertSame('gpt-4o-mini', $me['ai']['model']);
+    }
+
+    public function testEveryConfigurationAndTheProfileReportTheLlmEnginesCapabilities(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o', 'gpt-4o-mini']);
+        $this->accountOn($client, 'ai-capabilities@example.test');
+        $this->addAndReadyConfiguration($client, 'gpt-4o-mini');
+
+        $client->request('GET', '/api/me/ai');
+        $payload = $this->payload($client);
+        self::assertIsArray($payload['configs']);
+        self::assertIsArray($payload['configs'][0]);
+        self::assertSame(self::LLM_CAPABILITIES, $payload['configs'][0]['capabilities']);
+
+        $client->request('GET', '/api/me');
+        $me = $this->payload($client);
+        self::assertIsArray($me['ai']);
+        self::assertSame(self::LLM_CAPABILITIES, $me['ai']['capabilities']);
+    }
+
+    public function testAnAccountWithoutAnActiveConfigurationReportsNoCapabilities(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-no-capabilities@example.test');
+
+        $client->request('GET', '/api/me');
+        $me = $this->payload($client);
+        self::assertIsArray($me['ai']);
+        self::assertArrayHasKey('capabilities', $me['ai']);
+        self::assertNull($me['ai']['capabilities']);
     }
 
     public function testRenamingAConfigurationChangesItsName(): void

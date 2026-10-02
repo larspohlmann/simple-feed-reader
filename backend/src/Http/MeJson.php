@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
-use App\Service\Ai\Support\AiReadiness;
 
 /**
  * The client's view of its own account. Deliberately hand-built rather than
@@ -19,7 +18,6 @@ final class MeJson
      */
     public static function profile(User $user, bool $mailEnabled, string $instanceTimezone): array
     {
-        $aiSettings = $user->getActiveAiProviderSettings();
         $preferences = $user->getPreferences();
 
         return [
@@ -44,10 +42,6 @@ final class MeJson
                     'weekday' => $preferences->getDigestWeekday(),
                     'timezone' => $instanceTimezone,
                 ],
-            ],
-            'ai' => [
-                'ready' => AiReadiness::of($aiSettings),
-                'model' => $aiSettings?->getModel(),
             ],
         ];
     }

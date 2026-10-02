@@ -13,12 +13,16 @@ use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel
  * The client's view of the account's AI provider configurations. Hand-built,
  * not serialised, so a sealed key never reaches the wire.
  */
-final class AiSettingsJson
+final readonly class AiSettingsJson
 {
+    public function __construct(private RecommendationCapabilitiesJson $capabilities)
+    {
+    }
+
     /**
      * @return array<string, mixed>
      */
-    public static function configuration(AiProviderSettings $settings, ?int $activeId): array
+    public function configuration(AiProviderSettings $settings, ?int $activeId): array
     {
         return [
             'id' => $settings->getId(),
@@ -32,13 +36,14 @@ final class AiSettingsJson
             'maxBatchSize' => $settings->maxBatchSize(),
             'ready' => AiReadiness::of($settings),
             'active' => $settings->getId() === $activeId,
+            'capabilities' => $this->capabilities->of($settings),
         ];
     }
 
     /** @return array<string, mixed> */
-    public static function configurationFor(AiProviderSettings $settings, User $owner): array
+    public function configurationFor(AiProviderSettings $settings, User $owner): array
     {
-        return self::configuration($settings, $owner->getActiveAiProviderSettings()?->getId());
+        return $this->configuration($settings, $owner->getActiveAiProviderSettings()?->getId());
     }
 
     /**
@@ -46,11 +51,11 @@ final class AiSettingsJson
      *
      * @return array<string, mixed>
      */
-    public static function list(array $configurations, ?int $activeId): array
+    public function list(array $configurations, ?int $activeId): array
     {
         return [
             'configs' => array_map(
-                static fn (AiProviderSettings $each): array => self::configuration($each, $activeId),
+                fn (AiProviderSettings $each): array => $this->configuration($each, $activeId),
                 $configurations,
             ),
             'activeId' => $activeId,
@@ -66,9 +71,9 @@ final class AiSettingsJson
      *
      * @return array<string, mixed>
      */
-    public static function added(AiProviderSettings $settings, array $models): array
+    public function added(AiProviderSettings $settings, array $models): array
     {
-        return self::configuration($settings, null) + ['models' => $models];
+        return $this->configuration($settings, null) + ['models' => $models];
     }
 
     /**
@@ -76,7 +81,7 @@ final class AiSettingsJson
      *
      * @return array<string, mixed>
      */
-    public static function models(array $models): array
+    public function models(array $models): array
     {
         return ['models' => $models];
     }

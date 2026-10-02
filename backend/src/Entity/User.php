@@ -278,8 +278,8 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * For AiProviderConfigurator only, which owns every write to the pointer and must also set it here: MeJson and
-     * other readers use the User the request already loaded, not a fresh query.
+     * For AiProviderConfigurator only, which owns every write to the pointer and must also set it here:
+     * ActiveAiJson and other readers use the User the request already loaded, not a fresh query.
      */
     public function setActiveAiProviderSettings(?AiProviderSettings $settings): void
     {

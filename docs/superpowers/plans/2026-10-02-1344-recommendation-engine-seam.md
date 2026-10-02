@@ -1788,8 +1788,8 @@ Reviewer: none per the lean-move rule; the planner checks Steps 4, 6 and 9's quo
 
 **Files:**
 - Create: `src/Http/RecommendationCapabilitiesJson.php`, `src/Http/ActiveAiJson.php`
-- Modify: `src/Http/AiSettingsJson.php` (instance service), `src/Http/MeJson.php` (loses `ai`), `src/Http/MeProfileJson.php` (appends `ai`), `src/Controller/Api/AiSettingsController.php`
-- Create: `tests/Http/RecommendationCapabilitiesJsonTest.php`, `tests/Http/ActiveAiJsonTest.php`
+- Modify: `src/Entity/User.php` (docblock), `src/Http/AiSettingsJson.php` (instance service), `src/Http/MeJson.php` (loses `ai`), `src/Http/MeProfileJson.php` (appends `ai`), `src/Controller/Api/AiSettingsController.php`
+- Create: `tests/Http/RecommendationCapabilitiesJsonTest.php`, `tests/Http/ActiveAiJsonTest.php`, `tests/Support/RecommendationCapabilitiesJsons.php` (shared setup: `reporting($capabilities)` builds the capabilities mapper over a scripted engine; the three Http tests use it instead of copying the line)
 - Modify: `tests/Http/AiSettingsJsonTest.php`, `tests/Http/MeJsonTest.php`, `tests/Http/MeProfileJsonTest.php`, `tests/Controller/Api/AiSettingsControllerTest.php`
 
 **Interfaces:**
@@ -2184,7 +2184,7 @@ final readonly class MeProfileJson
 }
 ```
 
-In `src/Entity/User.php`'s `setActiveAiProviderSettings()` docblock, replace `MeJson and other readers` with `ActiveAiJson and other readers`.
+In `src/Entity/User.php`'s `setActiveAiProviderSettings()` docblock, replace `MeJson and other readers` with `ActiveAiJson and other readers` (rewrap the comment under 120 columns; the phrase straddles a line break).
 
 In `tests/Http/MeJsonTest.php`: delete the three `ai` tests, the `configuration()` helper, the now-unused imports (`AiProviderSettings`, `AiProviderSettingsFactory`), and the class docblock (it moved to `ActiveAiJsonTest`).
 
@@ -2202,7 +2202,11 @@ In `tests/Http/MeProfileJsonTest.php`:
         $engines = self::getContainer()->get(RecommendationEngineResolver::class);
         self::assertInstanceOf(RecommendationEngineResolver::class, $engines);
 
-        return new MeProfileJson($mail, new ActiveAiJson(new RecommendationCapabilitiesJson($engines)), $instanceTimezone);
+        return new MeProfileJson(
+            $mail,
+            new ActiveAiJson(new RecommendationCapabilitiesJson($engines)),
+            $instanceTimezone,
+        );
     }
 ```
 
