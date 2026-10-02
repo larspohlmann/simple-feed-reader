@@ -13,15 +13,19 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * Service modules depend on each other without a cycle (docs/architecture.md §9). In name order, each module that no
- * reported cycle covers yet reports the shortest cycle through it, where that cycle's last module names it.
+ * reported cycle covers yet reports the shortest cycle through it, at ServiceModuleCycle::reportedSite().
  *
  * @implements Rule<CollectedDataNode>
  */
 final readonly class ServiceModuleCycleRule implements Rule
 {
     private const string MESSAGE = 'Service modules must not depend on each other in a cycle: %s. '
-        . 'Move the class that closes it into the module that owns it, '
+        . 'Break it at the reported dependency: move the class it names into the module that owns it, '
         . 'or let the lower module own an interface the higher one implements (docs/architecture.md §9).';
+
+    public function __construct(private ServiceModules $modules)
+    {
+    }
 
     public function getNodeType(): string
     {
@@ -32,15 +36,36 @@ final readonly class ServiceModuleCycleRule implements Rule
     {
         $graph = ServiceModuleGraph::fromCollected($node->get(ServiceModuleDependencyCollector::class));
 
-        return array_map(self::error(...), $graph->cycles());
+        return array_map($this->error(...), $graph->cycles());
     }
 
-    private static function error(ServiceModuleCycle $cycle): IdentifierRuleError
+    private function error(ServiceModuleCycle $cycle): IdentifierRuleError
     {
-        return RuleErrorBuilder::message(sprintf(self::MESSAGE, implode(' -> ', $cycle->modules)))
+        $site = $cycle->reportedSite($this->modules);
+
+        return RuleErrorBuilder::message(sprintf(self::MESSAGE, self::path($cycle)))
             ->identifier('simpleFeedReader.serviceModuleCycle')
-            ->file($cycle->closedInFile)
-            ->line($cycle->closedOnLine)
+            ->file($site->file)
+            ->line($site->line)
             ->build();
+    }
+
+    /** `A -> B (A/X.php:3) -> A (B/Y.php:9)`: each hop names the first site where the module before it names it. */
+    private static function path(ServiceModuleCycle $cycle): string
+    {
+        $path = $cycle->modules[0];
+        foreach ($cycle->sites as $hop => $site) {
+            $path .= sprintf(' -> %s (%s:%d)', $cycle->modules[$hop + 1], self::shortPath($site->file), $site->line);
+        }
+
+        return $path;
+    }
+
+    /** Below src/Service for a real class, the file name for a rule fixture. */
+    private static function shortPath(string $file): string
+    {
+        $serviceRoot = strrpos($file, '/src/Service/');
+
+        return false === $serviceRoot ? basename($file) : substr($file, $serviceRoot + \strlen('/src/Service/'));
     }
 }

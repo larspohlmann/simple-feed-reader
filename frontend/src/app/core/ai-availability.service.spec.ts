@@ -1,5 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { AiAvailability, AiAvailabilityService } from './ai-availability.service';
+import { EVERY_RECOMMENDATION_CAPABILITY } from '../../testing/recommendation-capabilities';
+import {
+  AiAvailability,
+  AiAvailabilityService,
+  NO_RECOMMENDATION_CAPABILITIES,
+  RecommendationCapabilities,
+} from './ai-availability.service';
 import { CurrentUser } from './auth/auth.service';
 
 describe('AiAvailabilityService', () => {
@@ -9,12 +15,16 @@ describe('AiAvailabilityService', () => {
     return TestBed.inject(AiAvailabilityService);
   }
 
-  const user = (ready: boolean, model: string | null): CurrentUser =>
-    ({ ai: { ready, model } }) as CurrentUser;
+  const user = (
+    ready: boolean,
+    model: string | null,
+    capabilities: RecommendationCapabilities | null = null,
+  ): CurrentUser => ({ ai: { ready, model, capabilities } }) as CurrentUser;
 
   const availability = (over: Partial<AiAvailability>): AiAvailability => ({
     model: null,
     ready: false,
+    capabilities: null,
     ...over,
   });
 
@@ -42,5 +52,22 @@ describe('AiAvailabilityService', () => {
     ai.reset();
     expect(ai.ready()).toBe(false);
     expect(ai.model()).toBeNull();
+  });
+
+  it('offers no recommendation capability before an account is adopted', () => {
+    expect(service().capabilities()).toEqual(NO_RECOMMENDATION_CAPABILITIES);
+  });
+
+  it("adopts the active connection's capabilities", () => {
+    const ai = service();
+    ai.adopt(user(true, 'gpt-4o', { reasons: true, tuningFields: ['slowModel'] }));
+    expect(ai.capabilities()).toEqual({ reasons: true, tuningFields: ['slowModel'] });
+  });
+
+  it('drops the capabilities with the signed-out account', () => {
+    const ai = service();
+    ai.adopt(user(true, 'gpt-4o', EVERY_RECOMMENDATION_CAPABILITY));
+    ai.reset();
+    expect(ai.capabilities()).toEqual(NO_RECOMMENDATION_CAPABILITIES);
   });
 });

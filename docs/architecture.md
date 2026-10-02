@@ -206,13 +206,26 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with all its
-subdirectories is one module. Every service belongs to a module, and the modules depend on each other without a
-cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+A `Service/*` module is the first directory under `backend/src/Service`: `Reader` with all its feature folders
+(`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and the modules depend
+on each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+
+A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
+`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm`). A sub-module is a module of
+its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in it implementing its
+parent's interface is another module's implementation (§10). It may depend on its parent; the reverse closes a cycle,
+and when a cycle runs through a parent's import of its own sub-module, that import is the one reported; a cycle between
+peers is reported where it closes. Each hop of the reported cycle names its first site. The longest declared directory
+wins, so a sub-module may declare one of its own. The boundaries below are prefixes, so they cover a module's
+sub-modules too.
+So `Service/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
+`Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
-  (`Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface`, implemented in `Recommendation\Run`).
+  (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Recommendation\Llm`;
+  and `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the `Recommendation\Llm`
+  transport calls).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.

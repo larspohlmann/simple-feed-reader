@@ -1,0 +1,152 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation\Run\ProviderCallHeartbeat;
+
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
+use App\Service\Recommendation\Run\WorkerPresence;
+use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
+use Symfony\Component\Clock\MockClock;
+
+final class SweepStreamHeartbeatTest extends DbTestCase
+{
+    use ProvidesWorkerHeartbeats;
+
+    public function testItWritesNothingUntilASweepArmsIt(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+
+        $heartbeat->beat();
+
+        self::assertNull($this->touchedAt(RecommendationDriverKind::PersistentWorker));
+    }
+
+    public function testItMarksTheSweepingKindOnTheFirstBeat(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:00:00'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+        );
+    }
+
+    public function testAResetBetweenMessagesDisarmsIt(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+
+        $heartbeat->reset();
+        $heartbeat->beat();
+
+        self::assertNull($this->touchedAt(RecommendationDriverKind::PersistentWorker));
+    }
+
+    /**
+     * A streamed answer delivers deltas many times a second and each write is
+     * a row update, so the beats are throttled. The throttle has to stay far
+     * below FRESH_SECONDS, which the interval between these two beats is.
+     */
+    public function testItThrottlesWritesAndResumesOnceTheIntervalHasPassed(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+
+        $heartbeat->beat();
+        $clock->sleep(5);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:00:00'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+            'A beat five seconds after the last write must not cost a second one.',
+        );
+
+        $clock->sleep(60);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:01:05'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+        );
+    }
+
+    /**
+     * A beat exactly on the interval writes: `>` instead of `>=` would add a whole interval of silence that nothing
+     * else notices.
+     */
+    public function testABeatExactlyOnTheIntervalWrites(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+
+        $heartbeat->beat();
+        $clock->sleep(30);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:00:30'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+        );
+    }
+
+    /**
+     * A sweep that has ended is no longer evidence of anything. The drain
+     * command surrenders its liveness key when it exits, and a heartbeat left
+     * armed would write that key straight back.
+     */
+    public function testItStopsWritingOnceTheSweepEnds(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+        $heartbeat->beat();
+        $heartbeat->sweepEnded();
+        $clock->sleep(600);
+        $heartbeat->beat();
+
+        self::assertEquals(
+            new \DateTimeImmutable('2026-08-16 12:00:00'),
+            $this->touchedAt(RecommendationDriverKind::PersistentWorker),
+        );
+    }
+
+    /**
+     * The drainer and the persistent worker keep separate keys on purpose —
+     * only one of them answers "does this install run a worker?" — so a beat
+     * must mark the kind that armed it and no other.
+     */
+    public function testItMarksOnlyTheKindThatArmedIt(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+
+        $heartbeat->sweepStarted(RecommendationDriverKind::OnDemandDrainer);
+        $heartbeat->beat();
+
+        self::assertNotNull($this->touchedAt(RecommendationDriverKind::OnDemandDrainer));
+        self::assertNull($this->touchedAt(RecommendationDriverKind::PersistentWorker));
+    }
+
+    private function presence(MockClock $clock): WorkerPresence
+    {
+        return new WorkerPresence($this->heartbeats(), $clock);
+    }
+
+    private function touchedAt(RecommendationDriverKind $kind): ?\DateTimeImmutable
+    {
+        return $this->heartbeats()->findTouchedAt($kind->heartbeatName());
+    }
+}

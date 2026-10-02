@@ -10,11 +10,17 @@ use App\Entity\User;
 use App\Http\AiSettingsJson;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
+use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase
 {
     use AssignsEntityIds;
+
+    private function json(): AiSettingsJson
+    {
+        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
+    }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
     {
@@ -38,7 +44,7 @@ final class AiSettingsJsonTest extends TestCase
     {
         $settings = self::withId($this->settings('gpt-4o', 'Work OpenAI'), 1);
 
-        $shape = AiSettingsJson::configuration($settings, null);
+        $shape = $this->json()->configuration($settings, null);
 
         self::assertSame(1, $shape['id']);
         self::assertSame('Work OpenAI', $shape['name']);
@@ -48,11 +54,18 @@ final class AiSettingsJsonTest extends TestCase
         self::assertTrue($shape['ready']);
     }
 
+    public function testTheConfigurationShapeCarriesItsKindsCapabilities(): void
+    {
+        $shape = $this->json()->configuration($this->settings('gpt-4o'), null);
+
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $shape['capabilities']);
+    }
+
     public function testConfigurationIsActiveWhenItsIdMatchesTheActiveId(): void
     {
         $settings = self::withId($this->settings(null), 7);
 
-        $shape = AiSettingsJson::configuration($settings, 7);
+        $shape = $this->json()->configuration($settings, 7);
 
         self::assertTrue($shape['active']);
     }
@@ -61,7 +74,7 @@ final class AiSettingsJsonTest extends TestCase
     {
         $settings = self::withId($this->settings(null), 7);
 
-        $shape = AiSettingsJson::configuration($settings, 42);
+        $shape = $this->json()->configuration($settings, 42);
 
         self::assertFalse($shape['active']);
     }
@@ -70,7 +83,7 @@ final class AiSettingsJsonTest extends TestCase
     {
         $settings = self::withId($this->settings(null), 7);
 
-        $shape = AiSettingsJson::configuration($settings, null);
+        $shape = $this->json()->configuration($settings, null);
 
         self::assertFalse($shape['active']);
     }
@@ -80,7 +93,7 @@ final class AiSettingsJsonTest extends TestCase
         $settings = $this->settings('gpt-4o');
         $settings->setSuppressReasoning(false);
 
-        $shape = AiSettingsJson::configuration($settings, null);
+        $shape = $this->json()->configuration($settings, null);
 
         self::assertFalse($shape['suppressReasoning']);
     }
@@ -90,14 +103,14 @@ final class AiSettingsJsonTest extends TestCase
         $settings = $this->settings('gpt-4o');
         $settings->setBatchConcurrency(3);
 
-        $shape = AiSettingsJson::configuration($settings, null);
+        $shape = $this->json()->configuration($settings, null);
 
         self::assertSame(3, $shape['batchConcurrency']);
     }
 
     public function testConfigurationNeverCarriesKeyMaterial(): void
     {
-        $encoded = json_encode(AiSettingsJson::configuration($this->settings('gpt-4o'), null));
+        $encoded = json_encode($this->json()->configuration($this->settings('gpt-4o'), null));
 
         self::assertIsString($encoded);
         self::assertStringNotContainsString('Y2lwaGVy', $encoded);
@@ -110,7 +123,7 @@ final class AiSettingsJsonTest extends TestCase
         $first = self::withId($this->settings('gpt-4o', 'First'), 1);
         $second = self::withId($this->settings(null, 'Second'), 2);
 
-        $shape = AiSettingsJson::list([$first, $second], 1);
+        $shape = $this->json()->list([$first, $second], 1);
 
         self::assertIsArray($shape['configs']);
         self::assertCount(2, $shape['configs']);
@@ -129,7 +142,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testListReportsANullActiveIdWhenNothingIsActive(): void
     {
-        $shape = AiSettingsJson::list([self::withId($this->settings(null), 1)], null);
+        $shape = $this->json()->list([self::withId($this->settings(null), 1)], null);
 
         self::assertNull($shape['activeId']);
         self::assertIsArray($shape['configs']);
@@ -139,7 +152,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testAddedCarriesTheOfferedModelsAlongsideTheConfiguration(): void
     {
-        $shape = AiSettingsJson::added($this->settings(null, 'Work OpenAI'), ['gpt-4o', 'gpt-4o-mini']);
+        $shape = $this->json()->added($this->settings(null, 'Work OpenAI'), ['gpt-4o', 'gpt-4o-mini']);
 
         self::assertSame(['gpt-4o', 'gpt-4o-mini'], $shape['models']);
         self::assertSame('Work OpenAI', $shape['name']);
@@ -152,7 +165,7 @@ final class AiSettingsJsonTest extends TestCase
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
         $owner->setActiveAiProviderSettings($settings);
 
-        self::assertTrue(AiSettingsJson::configurationFor($settings, $owner)['active']);
+        self::assertTrue($this->json()->configurationFor($settings, $owner)['active']);
     }
 
     public function testConfigurationForIsNotActiveWhenTheOwnerHasAnotherOneActive(): void
@@ -161,7 +174,7 @@ final class AiSettingsJsonTest extends TestCase
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
         $owner->setActiveAiProviderSettings(self::withId($this->settings(null), 42));
 
-        self::assertFalse(AiSettingsJson::configurationFor($settings, $owner)['active']);
+        self::assertFalse($this->json()->configurationFor($settings, $owner)['active']);
     }
 
     public function testConfigurationForIsNotActiveWhenTheOwnerHasNoneActive(): void
@@ -170,8 +183,8 @@ final class AiSettingsJsonTest extends TestCase
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
 
         self::assertSame(
-            AiSettingsJson::configuration($settings, null),
-            AiSettingsJson::configurationFor($settings, $owner),
+            $this->json()->configuration($settings, null),
+            $this->json()->configurationFor($settings, $owner),
         );
     }
 }

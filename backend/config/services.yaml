@@ -148,15 +148,15 @@ services:
         arguments:
             $gitHubRepository: '%github_release_repository%'
     App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog'
-    App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Ai\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
-    # The transport pings one heartbeat per chunk and must not know who listens: a composite of the run-lock
+    App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
+    # A provider call pings one heartbeat while it runs and must not know who listens: a composite of the run-lock
     # keepalive and the sweep's liveness beat. Both stay injectable by class, as the advancer and the sweep arm them
-    # by name. Which beats first is CompositeCompletionStreamHeartbeat::beat()'s rule.
-    App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface: '@App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat'
-    App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat:
+    # by name. Which beats first is CompositeProviderCallHeartbeat::beat()'s rule.
+    App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat'
+    App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat:
         arguments:
-            $lockKeepalive: '@App\Service\Recommendation\Run\TickLockKeepalive'
-            $workerLiveness: '@App\Service\Recommendation\Run\SweepStreamHeartbeat'
+            $lockKeepalive: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive'
+            $workerLiveness: '@App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Process\ShellCommandRunner\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher'
 

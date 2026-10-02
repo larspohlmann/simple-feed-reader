@@ -16,6 +16,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string INSTANCE_PROPERTY_FIXTURE = __DIR__ . '/data/service-role-instance-property-fixture.php';
     private const string SHOP = 'App\Service\Shop\\';
     private const string TILL = 'App\Service\Till\Support\\';
+    private const string SUB_MODULE_FIXTURE = __DIR__ . '/data/service-role-sub-module-fixture.php';
     private const string PROBE = 'App\Service\Probe\\';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
@@ -37,7 +38,10 @@ final class ServiceRoleRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class));
+        return new ServiceRoleRule(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            self::serviceModules(),
+        );
     }
 
     protected function getCollectors(): array
@@ -357,10 +361,18 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $this->analyse([self::INSTANCE_PROPERTY_FIXTURE], []);
     }
 
+    public function testASubModuleClassImplementingItsParentsInterfaceIsAnotherModulesAndStaysPut(): void
+    {
+        require_once self::SUB_MODULE_FIXTURE;
+
+        $this->analyse([self::SUB_MODULE_FIXTURE], []);
+    }
+
     public function testAClassReflectionCannotResolveIsReportedNotDropped(): void
     {
         $map = ServiceRoleMap::fromCollectedData(
             self::getContainer()->getByType(ReflectionProvider::class),
+            self::serviceModules(),
             [self::FIXTURES => [['App\Service\Ghost\Phantom', 7, []]]],
             [],
         );
@@ -440,5 +452,10 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $message = sprintf('Service role "%s": %s %s.', $check, $class, $problem);
 
         return null === $home ? $message : $message . sprintf(' Its home is %s.', $home);
+    }
+
+    private static function serviceModules(): ServiceModules
+    {
+        return new ServiceModules(['Recommendation\\Llm', 'Atlas\\Maps']);
     }
 }

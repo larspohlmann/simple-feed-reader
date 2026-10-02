@@ -1,7 +1,10 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AiAvailabilityService } from '../../core/ai-availability.service';
+import {
+  AiAvailabilityService,
+  RecommendationCapabilities,
+} from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
 import { AiFailureScope, ScopedAiFailure, aiFailure } from './ai-failure';
 
@@ -22,6 +25,7 @@ export interface AiConfig {
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
   readonly maxBatchSize: number | null;
+  readonly capabilities: RecommendationCapabilities;
 }
 
 export interface AiConfigList {
@@ -239,7 +243,11 @@ export class AiSettingsService {
 
   private applyAvailability(): void {
     const active = this.configs().find((each) => each.active);
-    this.availability.apply({ ready: active?.ready ?? false, model: active?.model ?? null });
+    this.availability.apply({
+      ready: active?.ready ?? false,
+      model: active?.model ?? null,
+      capabilities: active?.capabilities ?? null,
+    });
   }
 
   private run<T>(

@@ -18,7 +18,7 @@ services:
         autowire: true
 
     # Every test talks to StubChatClient, never to a real provider.
-    App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface:
+    App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
 
     # No container-wired code path may exec() a real drainer process against the test database.
@@ -28,8 +28,8 @@ services:
         alias: App\Tests\Support\NullShellCommandRunner
 
     # Public: nothing here takes it, as StubChatClient replaces its one consumer, OpenAiCompatibleChatClient.
-    App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface:
-        alias: App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat
+    App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface:
+        alias: App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat
         public: true
 
     # Public: ImageProxyControllerTest replaces it, and its one consumer would otherwise inline it away.

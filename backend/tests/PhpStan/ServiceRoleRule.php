@@ -22,7 +22,7 @@ final readonly class ServiceRoleRule implements Rule
     /** @var list<ServiceRoleChecker> */
     private array $checkers;
 
-    public function __construct(private ReflectionProvider $reflectionProvider)
+    public function __construct(private ReflectionProvider $reflectionProvider, private ServiceModules $modules)
     {
         $this->checkers = [
             new InterfacePlacement(),
@@ -44,7 +44,7 @@ final readonly class ServiceRoleRule implements Rule
     /** @return list<IdentifierRuleError> */
     public function processNode(Node $node, Scope $scope): array
     {
-        $map = ServiceRoleMap::fromCollected($this->reflectionProvider, $node);
+        $map = ServiceRoleMap::fromCollected($this->reflectionProvider, $this->modules, $node);
         $errors = array_map(
             static fn (UnresolvedServiceRoleClass $class): IdentifierRuleError => $class->toError(),
             $map->unresolvedClasses(),

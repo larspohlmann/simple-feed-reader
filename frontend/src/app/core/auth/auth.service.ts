@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-import { AiAvailabilityService } from '../ai-availability.service';
+import { AiAvailability, AiAvailabilityService } from '../ai-availability.service';
 import { API_BASE_URL } from '../api';
 import { DigestService } from '../preferences/digest.service';
 import { DigestConfig } from '../preferences/digest-writer';
@@ -36,7 +36,7 @@ export interface CurrentUser {
   locale: string;
   trialEndsAt: string | null;
   preferences: UserPreferences;
-  ai: { ready: boolean; model: string | null };
+  ai: AiAvailability;
   mail: { enabled: boolean };
   emailVerified: boolean;
 }

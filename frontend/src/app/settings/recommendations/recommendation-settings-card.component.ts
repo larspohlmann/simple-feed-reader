@@ -21,6 +21,11 @@ import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-ba
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { ToggleComponent } from '../../shared/toggle/toggle.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
+import {
+  AiAvailabilityService,
+  offersTuning,
+  RecommendationTuningField,
+} from '../../core/ai-availability.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatInteger } from '../../reader/format';
 import {
@@ -29,26 +34,9 @@ import {
   RecommendationExpertDefaults,
   RecommendationExpertField,
   RecommendationSettingBounds,
-  RecommendationSettingsState,
   TypedRecommendationEdits,
 } from './recommendation-settings.service';
-
-function typedSeed(state: RecommendationSettingsState | null): RecommendationExpertDefaults {
-  const pick = <Key extends keyof RecommendationSettingsState, Fallback>(
-    key: Key,
-    fallback: Fallback,
-  ): NonNullable<RecommendationSettingsState[Key]> | Fallback => state?.[key] ?? fallback;
-  return {
-    guidancePrompt: pick('guidancePrompt', ''),
-    favoritesCap: pick('favoritesCap', 0),
-    keptCap: pick('keptCap', 0),
-    viewedCap: pick('viewedCap', 0),
-    candidatePoolSize: pick('candidatePoolSize', 0),
-    picksLimit: pick('picksLimit', 0),
-    batchSize: pick('batchSize', 'medium' as const),
-    contextWindow: pick('contextWindowOverride', null),
-  };
-}
+import { typedSeed } from './recommendation-typed-seed';
 
 /** The "For You" tuning card, rebuilt on the settings primitives (#541). The
  *  "show reasons" switch, auto-generate cadence, and look-back window (#386)
@@ -88,6 +76,10 @@ export class RecommendationSettingsCardComponent {
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
+  private readonly availability = inject(AiAvailabilityService);
+
+  /** Only an engine that writes reasons offers the switch that shows them. */
+  readonly offersReasons = computed(() => this.availability.capabilities().reasons);
 
   // Typed fields: displayed here, held as a pending draft in the service until
   // the explicit Save. Each seeds from server truth and recomputes when the
@@ -256,6 +248,10 @@ export class RecommendationSettingsCardComponent {
     const value = +(event.target as HTMLSelectElement).value;
     this.lookbackDays.set(value);
     this.svc.saveInstant({ lookbackDays: value });
+  }
+
+  offersTuning(field: RecommendationTuningField): boolean {
+    return offersTuning(this.availability.capabilities(), field);
   }
 
   private nullableNumberValue(event: Event): number | null {

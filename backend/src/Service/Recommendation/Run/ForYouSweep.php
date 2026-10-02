@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

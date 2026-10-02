@@ -23,9 +23,6 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
-use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
-use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -34,10 +31,13 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
-use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
+use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Recommendation\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Tests\DbTestCase;
@@ -425,7 +425,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // refresh's bump is lost in it and the comparison below is a coin-flip.
             usleep(250_000);
             $lifetimes[] = $lock->getRemainingLifetime();
-            $this->streamHeartbeat()->beat();
+            $this->providerCallHeartbeat()->beat();
             $lifetimes[] = $lock->getRemainingLifetime();
         });
         $this->stubChatClient()->queueContent(json_encode([
@@ -453,7 +453,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $lock = $this->tickLock($lockFactory);
         $lifetimeAfterTheTick = $lock->getRemainingLifetime();
-        $this->streamHeartbeat()->beat();
+        $this->providerCallHeartbeat()->beat();
 
         self::assertLessThanOrEqual(
             $lifetimeAfterTheTick,
@@ -470,7 +470,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $lockFactory = new BeatDuringReleaseLockFactory(
             new DoctrineDbalStore($this->entityManager->getConnection()),
-            $this->streamHeartbeat(),
+            $this->providerCallHeartbeat(),
         );
         self::getContainer()->set(LockFactory::class, $lockFactory);
         $this->seedMultiBatchFixture();
@@ -505,7 +505,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
             $thief = $this->stealTheTickLock();
-            $this->streamHeartbeat()->beat();
+            $this->providerCallHeartbeat()->beat();
         });
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
@@ -540,7 +540,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
             $thief = $this->stealTheTickLock();
-            $this->streamHeartbeat()->beat();
+            $this->providerCallHeartbeat()->beat();
         });
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
 
@@ -585,7 +585,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
             $thief = $this->stealTheTickLock();
-            $this->streamHeartbeat()->beat();
+            $this->providerCallHeartbeat()->beat();
         });
         $this->queueConsolidationReply(
             [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'from batch two']],
@@ -634,13 +634,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         return $lock;
     }
 
-    /**
-     * What the transport pings once per streamed chunk.
-     */
-    private function streamHeartbeat(): CompletionStreamHeartbeatInterface
+    private function providerCallHeartbeat(): ProviderCallHeartbeatInterface
     {
-        /** @var CompletionStreamHeartbeatInterface $heartbeat */
-        $heartbeat = self::getContainer()->get(CompletionStreamHeartbeatInterface::class);
+        /** @var ProviderCallHeartbeatInterface $heartbeat */
+        $heartbeat = self::getContainer()->get(ProviderCallHeartbeatInterface::class);
 
         return $heartbeat;
     }

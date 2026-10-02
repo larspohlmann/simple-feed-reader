@@ -3,7 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Dialog } from '@angular/cdk/dialog';
 import { of } from 'rxjs';
+import {
+  AiAvailabilityService,
+  NO_RECOMMENDATION_CAPABILITIES,
+  RecommendationCapabilities,
+} from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
+import { EVERY_RECOMMENDATION_CAPABILITY } from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { RecommendationsService } from '../../reader/state/recommendations.service';
@@ -59,6 +65,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
   function mount(
     initial: RecommendationSettingsState = STATE,
+    capabilities: RecommendationCapabilities = EVERY_RECOMMENDATION_CAPABILITY,
   ): ComponentFixture<RecommendationSettingsCardComponent> {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -71,6 +78,7 @@ describe('RecommendationSettingsCardComponent', () => {
         { provide: ToastService, useValue: toastStub },
       ],
     });
+    TestBed.inject(AiAvailabilityService).apply({ ready: true, model: 'gpt-4o', capabilities });
     http = TestBed.inject(HttpTestingController);
     const fixture = TestBed.createComponent(RecommendationSettingsCardComponent);
     fixture.detectChanges();
@@ -96,7 +104,19 @@ describe('RecommendationSettingsCardComponent', () => {
   const showReasonsToggle = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLInputElement =>
-    fixture.nativeElement.querySelector('app-settings-row app-toggle input[type="checkbox"]');
+    fixture.nativeElement.querySelector(
+      '[data-testid="show-reasons"] app-toggle input[type="checkbox"]',
+    );
+
+  const batchSizeSelect = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLSelectElement | null =>
+    fixture.nativeElement.querySelector('select[data-testid="batch-size"]');
+
+  const contextWindowInput = (
+    fixture: ComponentFixture<RecommendationSettingsCardComponent>,
+  ): HTMLInputElement | null =>
+    fixture.nativeElement.querySelector('input[data-testid="context-window"]');
 
   const debugToggle = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
@@ -180,6 +200,43 @@ describe('RecommendationSettingsCardComponent', () => {
       expect.arrayContaining(['0–500', '10–5,000', '1–500', '4,096–2,097,152']),
     );
     expect(ranges.filter((range) => range === '0–500')).toHaveLength(3);
+  });
+
+  describe("rendering from the engine's capabilities", () => {
+    it('offers the reasons switch, the batch size and the context window to an engine that reads them all', () => {
+      const fixture = mount();
+
+      expect(showReasonsToggle(fixture)).not.toBeNull();
+      expect(batchSizeSelect(fixture)).not.toBeNull();
+      expect(contextWindowInput(fixture)).not.toBeNull();
+    });
+
+    it('offers none of them to an engine without reasons or tuning, and keeps the shared settings', () => {
+      const fixture = mount(STATE, NO_RECOMMENDATION_CAPABILITIES);
+
+      expect(showReasonsToggle(fixture)).toBeNull();
+      expect(batchSizeSelect(fixture)).toBeNull();
+      expect(contextWindowInput(fixture)).toBeNull();
+      expect(picksInput(fixture)).not.toBeNull();
+      expect(cadenceSelect(fixture)).not.toBeNull();
+      expect(debugToggle(fixture)).not.toBeNull();
+    });
+
+    it('offers each tuning control by its own field', () => {
+      const fixture = mount(STATE, { reasons: false, tuningFields: ['contextWindow'] });
+
+      expect(contextWindowInput(fixture)).not.toBeNull();
+      expect(batchSizeSelect(fixture)).toBeNull();
+      expect(showReasonsToggle(fixture)).toBeNull();
+    });
+
+    it('offers the reasons switch to an engine that writes reasons but reads no tuning', () => {
+      const fixture = mount(STATE, { reasons: true, tuningFields: [] });
+
+      expect(showReasonsToggle(fixture)).not.toBeNull();
+      expect(batchSizeSelect(fixture)).toBeNull();
+      expect(contextWindowInput(fixture)).toBeNull();
+    });
   });
 
   describe('the show-reasons switch (instant)', () => {
