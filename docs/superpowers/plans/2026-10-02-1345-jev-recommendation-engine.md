@@ -2805,14 +2805,16 @@ final class HttpSystemOneClientTest extends TestCase
 
         self::assertSame('POST', $response->getRequestMethod());
         self::assertSame('https://api.typesafe.test/v1/systemone', $response->getRequestUrl());
-        self::assertContains('Authorization: Bearer sk-jev', $response->getRequestOptions()['headers']);
+        /** @var array{headers: list<string>, body: string} $options */
+        $options = $response->getRequestOptions();
+        self::assertContains('Authorization: Bearer sk-jev', $options['headers']);
         self::assertSame(
             [
                 'model' => 'jev-latest',
                 'state' => ['guidance' => 'Rüstzeug für Rust'],
                 'questions' => ['entry-7' => ['type' => 'noul', 'instructions' => ['question' => 'Read `article`?']]],
             ],
-            json_decode((string) $response->getRequestOptions()['body'], true),
+            json_decode($options['body'], true),
         );
     }
 
@@ -2845,8 +2847,11 @@ final class HttpSystemOneClientTest extends TestCase
 
     /** @param class-string<\RuntimeException> $failure */
     #[DataProvider('failedStatuses')]
-    public function testAFailedStatusIsThatCallsOutcomeAndNotRetried(int $status, string $failure, string $message): void
-    {
+    public function testAFailedStatusIsThatCallsOutcomeAndNotRetried(
+        int $status,
+        string $failure,
+        string $message,
+    ): void {
         $outcome = $this->evaluate([new MockResponse('{}', ['http_code' => $status])], $this->request('entry-7'))[0];
 
         self::assertInstanceOf($failure, $outcome->cause());
@@ -2925,15 +2930,18 @@ final class HttpSystemOneClientTest extends TestCase
      *
      * @return list<SystemOneOutcomeModel>
      */
-    private function evaluate(array $responses, SystemOneRequestModel ...$requests): array
-    {
+    private function evaluate(
+        array $responses,
+        SystemOneRequestModel $request,
+        SystemOneRequestModel ...$siblings,
+    ): array {
         $client = new HttpSystemOneClient(
             new MockHttpClient($responses),
             new CountingProviderCallHeartbeat(),
             'SimpleFeedReader/1.0',
         );
 
-        return $client->evaluateMany($this->credentials(), array_values($requests));
+        return $client->evaluateMany($this->credentials(), [$request, ...array_values($siblings)]);
     }
 
     private function request(string ...$questionIds): SystemOneRequestModel
@@ -2981,9 +2989,11 @@ final class SystemOneReplyDecoderTest extends TestCase
 
         self::assertSame('gen-1759400000-abc', $reply->receipt->requestId);
         self::assertSame('typesafe/jev-1.13-20260917', $reply->receipt->answeringModel);
-        self::assertSame(420_000, $reply->receipt->usage?->costNanoCredits);
-        self::assertSame(410, $reply->receipt->usage?->promptTokens);
-        self::assertSame(12, $reply->receipt->usage?->completionTokens);
+        $usage = $reply->receipt->usage;
+        self::assertNotNull($usage);
+        self::assertSame(420_000, $usage->costNanoCredits);
+        self::assertSame(410, $usage->promptTokens);
+        self::assertSame(12, $usage->completionTokens);
     }
 
     public function testTypeSafesHeaderIdWinsOverTheBodysId(): void
@@ -3011,8 +3021,10 @@ final class SystemOneReplyDecoderTest extends TestCase
     {
         $reply = SystemOneReplyDecoder::decode('{"usage":{"input_tokens":-5,"output_tokens":7}}', null);
 
-        self::assertSame(0, $reply->receipt->usage?->promptTokens);
-        self::assertSame(7, $reply->receipt->usage?->completionTokens);
+        $usage = $reply->receipt->usage;
+        self::assertNotNull($usage);
+        self::assertSame(0, $usage->promptTokens);
+        self::assertSame(7, $usage->completionTokens);
     }
 }
 ```
@@ -3398,7 +3410,8 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             }
         }
 
-        foreach ($this->httpClient->stream(iterator_to_array($positions, false), self::HEARTBEAT_SECONDS) as $response => $chunk) {
+        $stream = $this->httpClient->stream(iterator_to_array($positions, false), self::HEARTBEAT_SECONDS);
+        foreach ($stream as $response => $chunk) {
             $this->heartbeat->beat();
             $position = $positions[$response];
             if (isset($outcomes[$position])) {
@@ -3417,7 +3430,14 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     private function outcomeAfter(ResponseInterface $response, ChunkInterface $chunk): ?SystemOneOutcomeModel
     {
         try {
-            if ($chunk->isTimeout() || !$chunk->isLast()) {
+            if ($chunk->isTimeout()) {
+                return null;
+            }
+            if ($chunk->isFirst()) {
+                // Unread at the first chunk, stream() throws a 4xx/5xx status outside this call's outcome.
+                $response->getStatusCode();
+            }
+            if (!$chunk->isLast()) {
                 return null;
             }
 
@@ -3526,7 +3546,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 }
 ```
 
-Notes for the implementer: the `stream()` line exceeds 120 columns — wrap it as phpcs demands. `$positions[$response]` on an `SplObjectStorage` returns `int` for a stored response (every streamed response is one). The `HEARTBEAT_SECONDS` stream timeout only yields a timeout chunk to beat on; the request's own `timeout`/`max_duration` end a dead call.
+*Amended (B1):* Symfony's `stream()` checks a response's status right after yielding its first chunk unless the caller has already read it, and that check throws a 4xx/5xx outside `outcomeAfter()`'s `try`. That would end `evaluateMany()` and lose every sibling's outcome. `outcomeAfter()` therefore reads `getStatusCode()` on `isFirst()`, and deletion check 9 pins it. The tests above also carry the PHPStan fixes that `composer stan` required: a `@var` on `getRequestOptions()`, a non-empty `evaluate()` signature, and `assertNotNull($usage)` in place of `?->`. Notes for the implementer: `$positions[$response]` on an `SplObjectStorage` returns `int` for a stored response (every streamed response is one). The `HEARTBEAT_SECONDS` stream timeout only yields a timeout chunk to beat on; the request's own `timeout`/`max_duration` end a dead call.
 
 - [ ] **Step 6: The stub and the wiring**
 
@@ -3657,6 +3677,7 @@ Expected: green.
 6. In the decoder, drop `\is_string($questionId) &&` → the listed-answers pin fails. Restore.
 7. Drop `&& $value >= 0` → `testANegativeTokenCountReadsAsZero` fails. Restore.
 8. Swap the header and body precedence → `testTypeSafesHeaderIdWinsOverTheBodysId` fails. Restore.
+9. *Amended (B1):* Delete the first-chunk `$response->getStatusCode();` → every 401/403/500/503 case throws `ClientException`/`ServerException` out of `evaluateMany()`. Restore.
 
 - [ ] **Step 9: Gates and commit**
 
