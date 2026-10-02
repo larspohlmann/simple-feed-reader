@@ -19,10 +19,4 @@ final readonly class JevWave
         public array $batches,
     ) {
     }
-
-    public function model(): string
-    {
-        return $this->tick->connection->getModel()
-            ?? throw new \LogicException('A connection ticks only once it has a model.');
-    }
 }

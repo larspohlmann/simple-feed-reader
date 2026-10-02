@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Jev\Factory;
 
+use App\Entity\AiProviderSettings;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Support\JevArticle;
 use App\Service\Recommendation\Jev\Support\QuestionId;
@@ -20,14 +21,14 @@ final readonly class SystemOneRequestFactory
      * @param array<string, mixed>   $state
      * @param list<ArticleLineModel> $articles
      */
-    public function create(string $model, array $state, array $articles): SystemOneRequestModel
+    public function create(AiProviderSettings $connection, array $state, array $articles): SystemOneRequestModel
     {
         $questions = [];
         foreach ($articles as $article) {
             $questions[QuestionId::of($article->entryId)] = $this->question($article);
         }
 
-        return new SystemOneRequestModel($model, $state, $questions);
+        return new SystemOneRequestModel($connection->getModel() ?? '', $state, $questions);
     }
 
     /** @return array{type: string, instructions: array{article: array<string, string>, question: string}} */

@@ -4,21 +4,28 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev\Factory;
 
+use App\Entity\AiProviderSettings;
+use App\Entity\User;
 use App\Service\Recommendation\Jev\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestFactoryTest extends TestCase
 {
+    private const string AT = '2026-10-02 09:00:00';
+
+    private const array STATE = ['profile' => 'Likes Rust.', 'guidance' => 'More kernel news.'];
+
     public function testOneNoulQuestionPerArticleKeyedByItsEntry(): void
     {
-        $request = (new SystemOneRequestFactory())->create('jev-latest', ['history' => []], [
+        $request = (new SystemOneRequestFactory())->create($this->connection('jev-latest'), self::STATE, [
             new ArticleLineModel(41, 'Kernel 6.18', 'LWN', '2026-10-01', 'Merge window notes.'),
             new ArticleLineModel(7, 'Rust 1.90', 'heise', '2026-09-30', null),
         ]);
 
         self::assertSame('jev-latest', $request->model);
-        self::assertSame(['history' => []], $request->state);
+        self::assertSame(self::STATE, $request->state);
         self::assertSame(['entry-41', 'entry-7'], array_keys($request->questions));
         self::assertSame(
             [
@@ -79,6 +86,22 @@ final class SystemOneRequestFactoryTest extends TestCase
             ['title' => 'Caf? au lait', 'feedName' => 'Feed?', 'date' => '2026-10-01', 'description' => '? ok'],
             $factory->question($article)['instructions']['article'],
         );
-        self::assertJson(json_encode($factory->create('jev-latest', [], [$article])->payload(), \JSON_THROW_ON_ERROR));
+        self::assertJson($factory->create($this->connection('jev-latest'), self::STATE, [$article])->toRequestBody());
+    }
+
+    public function testTheRequestAsksTheConnectionsModel(): void
+    {
+        $request = (new SystemOneRequestFactory())->create($this->connection('jev-1.13'), self::STATE, []);
+
+        self::assertSame('jev-1.13', $request->model);
+    }
+
+    private function connection(string $model): AiProviderSettings
+    {
+        $owner = new User('system-one-request@example.test', new \DateTimeImmutable(self::AT));
+        $connection = AiProviderSettingsFactory::build($owner);
+        $connection->chooseModel($model, new \DateTimeImmutable(self::AT), 32_000);
+
+        return $connection;
     }
 }

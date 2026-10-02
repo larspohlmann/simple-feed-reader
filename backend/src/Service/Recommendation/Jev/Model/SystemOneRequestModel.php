@@ -20,14 +20,23 @@ final readonly class SystemOneRequestModel
     ) {
     }
 
-    /** @return array{model: string, state: array<string, mixed>, questions: array<string, array<string, mixed>>} */
-    public function payload(): array
-    {
-        return ['model' => $this->model, 'state' => $this->state, 'questions' => $this->questions];
-    }
-
     public function toRequestBody(): string
     {
         return SystemOneJson::encode($this->payload());
+    }
+
+    /** Pretty-printed for the human the debug view exists for: the body as sent, minus transport framing. */
+    public function toRenderedRequest(): string
+    {
+        return json_encode(
+            $this->payload(),
+            \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR,
+        );
+    }
+
+    /** @return array{model: string, state: array<string, mixed>, questions: array<string, array<string, mixed>>} */
+    private function payload(): array
+    {
+        return ['model' => $this->model, 'state' => $this->state, 'questions' => $this->questions];
     }
 }

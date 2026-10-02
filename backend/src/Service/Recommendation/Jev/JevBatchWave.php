@@ -14,7 +14,6 @@ use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneReplyModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Pass\JevWave;
-use App\Service\Recommendation\Jev\Support\RenderedSystemOneRequest;
 use App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
@@ -81,7 +80,7 @@ final readonly class JevBatchWave
     {
         $requests = array_map(
             fn (int $position): SystemOneRequestModel => $this->requestFactory->create(
-                $wave->model(),
+                $wave->tick->connection,
                 $wave->state,
                 $wave->batches[$position]->linesInSnapshotOrder(),
             ),
@@ -91,7 +90,7 @@ final readonly class JevBatchWave
             fn (int $position, SystemOneRequestModel $request): RecordedCall => $this->callRecorder->begin(
                 $wave->tick->run,
                 CallSlotModel::batch($wave->batches[$position]->index + 1),
-                RenderedSystemOneRequest::of($request),
+                $request->toRenderedRequest(),
             ),
             $pending,
             $requests,
