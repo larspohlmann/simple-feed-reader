@@ -11,8 +11,10 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Jev\Pass\SystemOneWave;
 use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -40,47 +42,66 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     public function __construct(
         private HttpClientInterface $httpClient,
         private ProviderCallHeartbeatInterface $heartbeat,
+        private ClockInterface $clock,
         private string $userAgent,
     ) {
     }
 
     public function evaluateMany(ProviderCredentialsModel $credentials, array $requests): array
     {
-        /** @var \SplObjectStorage<ResponseInterface, int> $positions */
-        $positions = new \SplObjectStorage();
-        /** @var array<int, SystemOneOutcomeModel> $outcomes */
-        $outcomes = [];
+        $wave = new SystemOneWave($this->clock);
         foreach ($requests as $position => $request) {
             try {
-                $positions[$this->send($credentials, $request)] = $position;
+                $wave->await($position, $this->send($credentials, $request));
             } catch (ExceptionInterface $exception) {
-                $outcomes[$position] = SystemOneOutcomeModel::failed(self::unanswered($exception));
+                $wave->settleAt($position, SystemOneOutcomeModel::failed(self::unanswered($exception)));
             }
         }
 
-        $stream = $this->httpClient->stream(iterator_to_array($positions, false), self::HEARTBEAT_SECONDS);
-        foreach ($stream as $response => $chunk) {
+        while ([] !== $open = $wave->openResponses()) {
+            $this->streamRound($wave, $open);
+        }
+
+        return $wave->outcomes(\count($requests));
+    }
+
+    /**
+     * stream() drops a response after its timeout chunk, so each round re-streams the open ones; the round's timeout
+     * only paces the heartbeat, and failSilentFor() is the idle bound.
+     *
+     * @param non-empty-list<ResponseInterface> $open
+     */
+    private function streamRound(SystemOneWave $wave, array $open): void
+    {
+        foreach ($this->httpClient->stream($open, self::HEARTBEAT_SECONDS) as $response => $chunk) {
             $this->heartbeat->beat();
-            $position = $positions[$response];
-            if (isset($outcomes[$position])) {
-                continue;
-            }
-            $outcome = $this->outcomeAfter($response, $chunk);
-            if (null !== $outcome) {
-                $outcomes[$position] = $outcome;
-            }
+            $this->read($wave, $response, $chunk);
+            $wave->failSilentFor(self::IDLE_TIMEOUT_SECONDS);
         }
+    }
 
-        return self::oneOutcomePerRequest($outcomes, \count($requests));
+    private function read(SystemOneWave $wave, ResponseInterface $response, ChunkInterface $chunk): void
+    {
+        if ($wave->isSettled($response)) {
+            return;
+        }
+        $outcome = $this->outcomeAfter($wave, $response, $chunk);
+        if (null !== $outcome) {
+            $wave->settle($response, $outcome);
+        }
     }
 
     /** Null while the response is still arriving; a transport failure becomes this call's outcome. */
-    private function outcomeAfter(ResponseInterface $response, ChunkInterface $chunk): ?SystemOneOutcomeModel
-    {
+    private function outcomeAfter(
+        SystemOneWave $wave,
+        ResponseInterface $response,
+        ChunkInterface $chunk,
+    ): ?SystemOneOutcomeModel {
         try {
             if ($chunk->isTimeout()) {
                 return null;
             }
+            $wave->heardFrom($response);
             if ($chunk->isFirst()) {
                 // Unread at the first chunk, stream() throws a 4xx/5xx status outside this call's outcome.
                 $response->getStatusCode();
@@ -144,23 +165,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     private static function unanswered(ExceptionInterface $exception): ProviderUnreachableException
     {
         return new ProviderUnreachableException('That address did not answer.', 0, $exception);
-    }
-
-    /**
-     * @param array<int, SystemOneOutcomeModel> $outcomes
-     *
-     * @return list<SystemOneOutcomeModel>
-     */
-    private static function oneOutcomePerRequest(array $outcomes, int $requestCount): array
-    {
-        $aligned = [];
-        for ($position = 0; $position < $requestCount; $position++) {
-            $aligned[] = $outcomes[$position] ?? SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException('That provider answered without a reply.'),
-            );
-        }
-
-        return $aligned;
     }
 
     private function send(ProviderCredentialsModel $credentials, SystemOneRequestModel $request): ResponseInterface

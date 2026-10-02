@@ -10,9 +10,11 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\SystemOneClient\HttpSystemOneClient;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -138,12 +140,67 @@ final class HttpSystemOneClientTest extends TestCase
         $client = new HttpSystemOneClient(
             new MockHttpClient([new MockResponse('{"answers":{}}')]),
             $heartbeat,
+            new MockClock(),
             'SimpleFeedReader/1.0',
         );
 
         $client->evaluateMany($this->credentials(), [$this->request('entry-7')]);
 
         self::assertGreaterThan(0, $heartbeat->beats());
+    }
+
+    /** Each beat passes 61 s: the third chunk after the headers lands 122 s after the provider last spoke. */
+    public function testAResponseSilentForLongerThanTheIdleBoundFailsAndSparesItsSibling(): void
+    {
+        $outcomes = $this->evaluateWhileTheClockRuns(
+            [
+                new MockResponse(['', '', '{"answers":{"entry-7":{"type":"noul","noul":0.6}}}']),
+                new MockResponse('{"answers":{"entry-9":{"type":"noul","noul":0.3}}}'),
+            ],
+            $this->request('entry-7'),
+            $this->request('entry-9'),
+        );
+
+        self::assertSame('That provider sent nothing for more than 120 seconds.', $outcomes[0]->cause()->getMessage());
+        self::assertFalse($outcomes[0]->isRetryable());
+        self::assertSame(['entry-9' => 0.3], $outcomes[1]->reply()->nouls);
+    }
+
+    /** 305 s in all, yet never 120 s without a chunk: every chunk the provider sends restarts the idle bound. */
+    public function testAProviderThatKeepsSendingIsNeverIdle(): void
+    {
+        $outcomes = $this->evaluateWhileTheClockRuns(
+            [new MockResponse(['{"answers":', '', '{"entry-7":{"type":"noul","noul":0.6}}}'])],
+            $this->request('entry-7'),
+        );
+
+        self::assertSame(['entry-7' => 0.6], $outcomes[0]->reply()->nouls);
+    }
+
+    /**
+     * @param list<MockResponse> $responses
+     *
+     * @return list<SystemOneOutcomeModel>
+     */
+    private function evaluateWhileTheClockRuns(
+        array $responses,
+        SystemOneRequestModel $request,
+        SystemOneRequestModel ...$siblings,
+    ): array {
+        $clock = new MockClock();
+        $heartbeat = new readonly class ($clock) implements ProviderCallHeartbeatInterface {
+            public function __construct(private MockClock $clock)
+            {
+            }
+
+            public function beat(): void
+            {
+                $this->clock->sleep(61);
+            }
+        };
+        $client = new HttpSystemOneClient(new MockHttpClient($responses), $heartbeat, $clock, 'SimpleFeedReader/1.0');
+
+        return $client->evaluateMany($this->credentials(), [$request, ...array_values($siblings)]);
     }
 
     /**
@@ -159,6 +216,7 @@ final class HttpSystemOneClientTest extends TestCase
         $client = new HttpSystemOneClient(
             new MockHttpClient($responses),
             new CountingProviderCallHeartbeat(),
+            new MockClock(),
             'SimpleFeedReader/1.0',
         );
 
