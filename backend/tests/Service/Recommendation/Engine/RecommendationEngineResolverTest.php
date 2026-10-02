@@ -64,7 +64,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $resolver = new RecommendationEngineResolver(new ServiceLocator(['llm' => static fn () => $engine]));
 
-        self::assertSame($engine, $resolver->engineFor($this->connection('gpt-4o-mini')));
+        self::assertSame($engine, $resolver->engineOf(RecommendationEngineKind::Llm));
     }
 
     public function testAKindWithoutAnEngineIsAWiringError(): void
@@ -72,7 +72,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
 
         try {
-            $resolver->engineFor($this->connection('gpt-4o-mini'));
+            $resolver->engineOf(RecommendationEngineKind::Llm);
             self::fail('A missing engine must not resolve.');
         } catch (\LogicException $exception) {
             self::assertSame('No recommendation engine is wired for "llm".', $exception->getMessage());

@@ -2594,6 +2594,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // the entity manager, which detaches $this->user, so a database-only write would never reach it.
         $moved = (new AiSettingsRowMover($this->entityManager))->moveOwnership($keyDonor, $this->user);
         $this->user->setActiveAiProviderSettings($moved);
+        // The tick reads the run's own user, which the advance reloads from this identity map.
+        $reloadedUser = $this->entityManager->find(User::class, $this->user->requireId());
+        self::assertNotNull($reloadedUser);
+        $reloadedUser->setActiveAiProviderSettings($moved);
 
         try {
             $this->advancer()->advance($this->user);

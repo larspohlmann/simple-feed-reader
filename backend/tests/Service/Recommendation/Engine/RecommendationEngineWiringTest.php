@@ -23,6 +23,6 @@ final class RecommendationEngineWiringTest extends KernelTestCase
         );
         $connection->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-10-02 09:05:00'), null);
 
-        self::assertInstanceOf(LlmRecommendationEngine::class, $resolver->engineFor($connection));
+        self::assertInstanceOf(LlmRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
     }
 }

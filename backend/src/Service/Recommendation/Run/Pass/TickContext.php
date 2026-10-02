@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
@@ -16,6 +17,7 @@ final readonly class TickContext
     public function __construct(
         public RecommendationRun $run,
         public AiProviderSettings $connection,
+        public RecommendationEngineKind $engineKind,
         public EffectiveRecommendationSettingsModel $settings,
         public TickDriver $driver,
     ) {

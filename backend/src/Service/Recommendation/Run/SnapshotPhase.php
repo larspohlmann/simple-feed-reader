@@ -40,7 +40,7 @@ final readonly class SnapshotPhase
             return RecommendationRunReportModel::fromRun($run);
         }
 
-        $run->snapshot($this->engines->engineFor($tick->connection)->packBatches($candidates, $tick));
+        $run->snapshot($this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick));
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($run);

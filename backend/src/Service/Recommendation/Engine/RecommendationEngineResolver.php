@@ -31,9 +31,8 @@ final readonly class RecommendationEngineResolver
         return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
     }
 
-    public function engineFor(AiProviderSettings $connection): RecommendationEngineInterface
+    public function engineOf(RecommendationEngineKind $kind): RecommendationEngineInterface
     {
-        $kind = $this->kindFor($connection);
         try {
             $engine = $this->engines->get($kind->value);
         } catch (ContainerExceptionInterface $exception) {
