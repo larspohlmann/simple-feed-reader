@@ -185,6 +185,22 @@ final class JevPipelineTest extends DbTestCase
         self::assertSame($failed->requireId(), $resumed->requireId());
     }
 
+    public function testTheWavesCompleteWhenTheProfileConnectionIsRemovedAfterTheProfileIsRecorded(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->queueProfile('Likes Rust and homelab.');
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+        $this->starter()->start($this->owner);
+        $this->tickUntilTheProfileIsRecorded();
+
+        $this->entityManager->remove($this->profileConnection);
+        $this->entityManager->flush();
+        $run = $this->tickUntilDone();
+
+        self::assertSame('completed', $run->getStatus()->value);
+        self::assertCount(1, $this->systemOne()->requests());
+    }
+
     /** The profile connection answers nothing usable: the run scores on the profile an earlier run stored. */
     public function testAFailedDistillationFallsBackToTheStoredProfile(): void
     {
@@ -284,6 +300,17 @@ final class JevPipelineTest extends DbTestCase
         self::assertNotNull($run);
 
         return $run;
+    }
+
+    private function tickUntilTheProfileIsRecorded(): void
+    {
+        for ($tick = 0; $tick < self::MAX_TICKS; $tick++) {
+            if (null !== $this->runs()->findActiveForUser($this->owner)?->getProfileText()) {
+                return;
+            }
+            $this->advancer()->advance($this->owner);
+        }
+        self::fail('The profile was not recorded within the tick budget.');
     }
 
     /** @return list<RecommendationItem> */
