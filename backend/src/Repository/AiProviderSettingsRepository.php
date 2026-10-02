@@ -34,8 +34,7 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
     /** @return list<AiProviderSettings> */
     public function findBorrowersOf(AiProviderSettings $connection): array
     {
-        // @phpstan-ignore arrayValues.list (deliberate: findBy() promises a list only in its @phpstan-return)
-        return array_values($this->findBy(['profileConnection' => $connection]));
+        return $this->findBy(['profileConnection' => $connection]);
     }
 
     public function countForUser(User $user): int
