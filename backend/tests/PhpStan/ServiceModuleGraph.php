@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 final readonly class ServiceModuleGraph
 {
-    /** @param array<string, array<string, array{file: string, line: int}>> $sites [module][dependency] => first site */
+    /** @param array<string, array<string, ServiceModuleDependencySite>> $sites [module][dependency] => first site */
     private function __construct(private array $sites)
     {
     }
@@ -18,7 +18,7 @@ final readonly class ServiceModuleGraph
         $sites = [];
         foreach ($collected as $file => $findings) {
             foreach (array_merge(...$findings) as [$module, $dependency, $line]) {
-                $sites[$module][$dependency] ??= ['file' => $file, 'line' => $line];
+                $sites[$module][$dependency] ??= new ServiceModuleDependencySite($file, $line);
             }
         }
         ksort($sites);
@@ -69,13 +69,14 @@ final readonly class ServiceModuleGraph
     /** @param array<string, string> $cameFrom */
     private function cycleClosedBy(string $last, string $start, array $cameFrom): ServiceModuleCycle
     {
-        $site = $this->sites[$last][$start];
-
-        return new ServiceModuleCycle(
-            [...self::pathBack($last, $start, $cameFrom), $start],
-            $site['file'],
-            $site['line'],
+        $path = self::pathBack($last, $start, $cameFrom);
+        $pathSites = array_map(
+            fn (string $module, string $dependency): ServiceModuleDependencySite => $this->sites[$module][$dependency],
+            \array_slice($path, 0, -1),
+            \array_slice($path, 1),
         );
+
+        return new ServiceModuleCycle([...$path, $start], [...$pathSites, $this->sites[$last][$start]]);
     }
 
     /**

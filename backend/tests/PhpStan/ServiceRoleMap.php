@@ -30,6 +30,7 @@ final readonly class ServiceRoleMap
      */
     public function __construct(
         private ReflectionProvider $reflectionProvider,
+        private ServiceModules $modules,
         private array $classes,
         private array $builtPerCall,
         private array $builtInConstructor,
@@ -46,10 +47,14 @@ final readonly class ServiceRoleMap
         ));
     }
 
-    public static function fromCollected(ReflectionProvider $reflectionProvider, CollectedDataNode $node): self
-    {
+    public static function fromCollected(
+        ReflectionProvider $reflectionProvider,
+        ServiceModules $modules,
+        CollectedDataNode $node,
+    ): self {
         return self::fromCollectedData(
             $reflectionProvider,
+            $modules,
             $node->get(ServiceRoleClassCollector::class),
             $node->get(ServiceRoleInstantiationCollector::class),
         );
@@ -61,6 +66,7 @@ final readonly class ServiceRoleMap
      */
     public static function fromCollectedData(
         ReflectionProvider $reflectionProvider,
+        ServiceModules $modules,
         array $collectedClasses,
         array $collectedInstantiations,
     ): self {
@@ -91,7 +97,7 @@ final readonly class ServiceRoleMap
         ksort($classes);
         ksort($unresolved);
 
-        return new self($reflectionProvider, $classes, $perCall, $inConstructor, array_values($unresolved));
+        return new self($reflectionProvider, $modules, $classes, $perCall, $inConstructor, array_values($unresolved));
     }
 
     /** @return list<UnresolvedServiceRoleClass> */
@@ -161,10 +167,10 @@ final readonly class ServiceRoleMap
     /** @return list<string> the interfaces of its own module it implements, outside Factory/, Model/, Exception/ */
     public function sameModuleInterfaces(ServiceRoleClass $class): array
     {
-        $module = ServiceRoleNames::moduleOf($class->name());
+        $module = $this->modules->namespaceOf($class->name());
         $interfaces = array_filter(
             $class->interfaceNames(),
-            static fn (string $interface): bool => ServiceRoleNames::moduleOf($interface) === $module
+            fn (string $interface): bool => $this->modules->namespaceOf($interface) === $module
                 && ServiceRoleNames::isServiceOrHttp($interface)
                 && null === ServiceRoleNames::roleOfClass($interface),
         );
@@ -184,7 +190,7 @@ final readonly class ServiceRoleMap
         if (ServiceRoleNames::shortNameOf($namespace) === $base) {
             return $namespace;
         }
-        if ($namespace !== ServiceRoleNames::moduleOf($interface) && $this->holdsOnlyTheFamilyOf($interface)) {
+        if ($namespace !== $this->modules->namespaceOf($interface) && $this->holdsOnlyTheFamilyOf($interface)) {
             return ServiceRoleNames::namespaceOf($namespace) . '\\' . $base;
         }
 

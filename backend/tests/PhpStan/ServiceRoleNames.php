@@ -59,16 +59,6 @@ final class ServiceRoleNames
         return false === $separator ? $name : substr($name, $separator + 1);
     }
 
-    /** `App\Service\<Module>` for a service, a sub-module included (ServiceModules), `App\<Layer>` for anything else. */
-    public static function moduleOf(string $name): string
-    {
-        if (self::isService($name)) {
-            return ServiceModules::SERVICE_NAMESPACE . ServiceModules::of($name);
-        }
-
-        return implode('\\', \array_slice(explode('\\', $name), 0, 2));
-    }
-
     public static function roleOfClass(string $name): ?string
     {
         return self::roleOf(self::namespaceOf($name));

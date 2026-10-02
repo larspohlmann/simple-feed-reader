@@ -206,13 +206,19 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Reading` with all its
-subdirectories is one module.
-The one exception is a directory listed in `ServiceModules::SUB_MODULES` (`backend/tests/PhpStan/`):
-`Service/Recommendation/Llm` is a module of its own, so the LLM engine there depends on `Recommendation` and `Ai`
-while `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai` (#1344). Every service belongs to
-a module, and the modules depend on each other without a cycle, so each one can be read, tested and moved without
-the others. Decided in #1161.
+A `Service/*` module is the first directory under `backend/src/Service`: `Reader` with all its feature folders
+(`ArticleExtractor/`, `Paywall/`, `Media/`, …) is one module. Every service belongs to a module, and the modules depend
+on each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+
+A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
+`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm`). A sub-module is a module of
+its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in it implementing its
+parent's interface is another module's implementation (§10). It may depend on its parent, never the reverse: when a
+cycle runs through a parent's import of its own sub-module, that import is the one reported; a cycle between peers is
+reported where it closes. Each hop of the reported cycle names its first site. The longest declared directory wins, so
+a sub-module may declare one of its own. The boundaries below are prefixes, so they cover a module's sub-modules too.
+So `Service/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
+`Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements

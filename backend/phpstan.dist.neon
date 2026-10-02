@@ -16,8 +16,18 @@ parameters:
         - tests/PhpStan/data/*
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+    # Directories below a src/Service module that are modules of their own (docs/architecture.md §9).
+    serviceSubModules:
+        - Recommendation\Llm
+
+parametersSchema:
+    serviceSubModules: listOf(string())
 
 services:
+    -
+        class: App\Tests\PhpStan\ServiceModules
+        arguments:
+            subModules: %serviceSubModules%
     -
         class: App\Tests\PhpStan\ChainedNullCoalescingRule
         tags:

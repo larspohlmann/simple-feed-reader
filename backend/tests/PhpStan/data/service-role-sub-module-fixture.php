@@ -25,3 +25,24 @@ namespace App\Service\Recommendation\Llm {
         }
     }
 }
+
+namespace App\Service\Atlas\Projection {
+    /** @noinspection AutoloadingIssuesInspection */
+    interface ProjectionInterface
+    {
+        public function name(): string;
+    }
+}
+
+namespace App\Service\Atlas\Maps {
+    use App\Service\Atlas\Projection\ProjectionInterface;
+
+    /** @noinspection AutoloadingIssuesInspection */
+    final readonly class MercatorProjection implements ProjectionInterface
+    {
+        public function name(): string
+        {
+            return 'mercator';
+        }
+    }
+}

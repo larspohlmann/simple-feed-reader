@@ -20,7 +20,7 @@ final readonly class ServiceModuleDependencyCollector implements Collector
 {
     private ClassNameReferences $references;
 
-    public function __construct(NodeFinder $finder)
+    public function __construct(NodeFinder $finder, private ServiceModules $modules)
     {
         $this->references = new ClassNameReferences($finder, [ServiceModules::SERVICE_NAMESPACE]);
     }
@@ -40,18 +40,13 @@ final readonly class ServiceModuleDependencyCollector implements Collector
         $fileClassName = basename($scope->getFile(), '.php');
         $dependencies = [];
         foreach ($this->references->forbiddenInFile($node, [ServiceModules::SERVICE_NAMESPACE]) as $reference) {
-            $module = self::moduleOf($reference->inNamespace . '\\' . $fileClassName);
-            $dependency = self::moduleOf($reference->name);
+            $module = $this->modules->of($reference->inNamespace . '\\' . $fileClassName);
+            $dependency = $this->modules->of($reference->name);
             if ('' !== $dependency && $dependency !== $module) {
                 $dependencies[] = [$module, $dependency, $reference->line];
             }
         }
 
         return [] === $dependencies ? null : $dependencies;
-    }
-
-    private static function moduleOf(string $className): string
-    {
-        return ServiceModules::of($className);
     }
 }

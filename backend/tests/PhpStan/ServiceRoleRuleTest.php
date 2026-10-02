@@ -38,7 +38,10 @@ final class ServiceRoleRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class));
+        return new ServiceRoleRule(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            self::serviceModules(),
+        );
     }
 
     protected function getCollectors(): array
@@ -358,7 +361,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $this->analyse([self::INSTANCE_PROPERTY_FIXTURE], []);
     }
 
-    public function testAnLlmSubModuleClassImplementingARecommendationInterfaceIsAnotherModulesAndStaysPut(): void
+    public function testASubModuleClassImplementingItsParentsInterfaceIsAnotherModulesAndStaysPut(): void
     {
         require_once self::SUB_MODULE_FIXTURE;
 
@@ -369,6 +372,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
     {
         $map = ServiceRoleMap::fromCollectedData(
             self::getContainer()->getByType(ReflectionProvider::class),
+            self::serviceModules(),
             [self::FIXTURES => [['App\Service\Ghost\Phantom', 7, []]]],
             [],
         );
@@ -448,5 +452,10 @@ final class ServiceRoleRuleTest extends RuleTestCase
         $message = sprintf('Service role "%s": %s %s.', $check, $class, $problem);
 
         return null === $home ? $message : $message . sprintf(' Its home is %s.', $home);
+    }
+
+    private static function serviceModules(): ServiceModules
+    {
+        return new ServiceModules(['Recommendation\\Llm', 'Atlas\\Maps']);
     }
 }
