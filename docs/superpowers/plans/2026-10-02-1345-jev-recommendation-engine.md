@@ -117,7 +117,7 @@
 - **D14 — The probe.** `SystemOneCatalog` sends `POST {base}/systemone` with body `{}` and the connection's auth. 401/403 → `CredentialsRejectedException`; 404, 405, any 2xx and any 5xx → absent (`ProviderUnreachableException('That address offers no System One endpoint.')`); any other 4xx (400, 422, 429) → present. *Refines* the issue's "404 = absent, anything else = present": LM Studio answers unknown routes with 200 ("Returning 200 anyway"), and a real endpoint never accepts an empty request, so a 2xx means "not System One"; a refused key must not read as "present". An empty request bills nothing. It offers the two aliases only, never TypeSafe's `/models` list (`{"models":[{"name":…}]}`): the issue settles "aliases only — no version pinning", and one probe serves OpenRouter and TypeSafe alike.
 - **D15 — Composite.** `CompositeModelCatalog` iterates the members tagged `app.model_catalog` by priority (`OpenAiCompatibleCatalog` 10, `SystemOneCatalog` 0), unions their lists (the first member wins a duplicate id), sorts by id. A member failure is ignored when another member offers models; when none does, the first member's failure is rethrown. So every provider without `/systemone` reads exactly as today (the OpenAI catalog's own messages), TypeSafe direct verifies through the probe although its `/models` "answered, but not with a model list", and a bad key on TypeSafe direct still says "That provider refused the API key." (first member, 401). `AiProviderConfigurator` needs no change: `listModels()`, `chooseModel()` (which stores the descriptor's 64 000 as the connection's context window) and `activate()` (which re-verifies, so it probes again) all read the composite through `ModelCatalogInterface`.
 - **D16 — 64k = 64 000 tokens** (`SystemOneCatalog::CONTEXT_WINDOW_TOKENS`), the conservative reading of "64k". It is the context window stored on a Jev connection and the packer's request budget.
-- **D17 — The System One client keeps its own timeouts** (idle 120 s, wall clock 300 s) and beats the tick heartbeat at least every 10 s while waiting. It ignores the connection's slow-model flag, so `slowModel` is not a Jev tuning field; Jev reads `batchConcurrency` only (`contextWindow`, `batchSize`, `maxBatchSize`: own budget and question cap; `suppressReasoning`: no reasoning parameter). Retryable statuses are exactly 429 and 529 (settled design 9). *Flag:* the chat client also retries 502/503/504; Jev treats those as unreachable (a transport strike). Raise with Lars if a real run meets a 503.
+- **D17 — The System One client keeps its own timeouts** (idle 120 s, wall clock 300 s) and beats the tick heartbeat at least every 10 s while waiting. *Amended (B1 review):* Symfony enforces a request's `timeout` only as `stream()`'s default, and `stream()` drops a response after its timeout chunk. So the client streams in 10 s rounds that pace the heartbeat, re-streams the responses still open, and enforces the 120 s idle bound itself: `Pass/SystemOneWave` records each response's last chunk on the injected clock and cancels one silent for longer. It ignores the connection's slow-model flag, so `slowModel` is not a Jev tuning field; Jev reads `batchConcurrency` only (`contextWindow`, `batchSize`, `maxBatchSize`: own budget and question cap; `suppressReasoning`: no reasoning parameter). Retryable statuses are exactly 429 and 529 (settled design 9). *Flag:* the chat client also retries 502/503/504; Jev treats those as unreachable (a transport strike). Raise with Lars if a real run meets a 503.
 - **D18 — 422 is an endpoint failure, not an unusable reply.** `ProviderUnreachableException('That provider refused the request (status 422): <detail, clipped to 500 chars>')` takes the transport-failure path: one strike per tick, the run fails after `MAX_TRANSPORT_FAILURES` with the detail in its error. A 422 is our request failing validation and repeats deterministically; the unusable-reply path would spend three calls per batch per tick and then silently bank no winners.
 - **D19 — An unusable 2xx reply** (any batch candidate without a numeric Noul) is retried alone in-tick up to `RecommendationRun::MAX_ATTEMPTS` rounds, then the batch yields no winners — the LLM batch phase's rule.
 - **D20 — State.** `{"guidance": …?, "history": {"favorites": […], "kept": […], "viewed": […]}}`; `guidance` is omitted when the account has none (the LLM's `DEFAULT_GUIDANCE` is an instruction to a chat model and stays LLM-only). History lines are `{title, feedName, date, description?}` with title 300, feedName 120, description 280 characters. Over `STATE_TOKEN_BUDGET = 24 000` tokens the history loses its oldest lines, viewed before kept before favorites (weakest signal first): the history caps go up to 500 per section, which no request could hold. The guidance (≤ 4000 characters by the DTO) is never clipped.
@@ -2748,7 +2748,7 @@ git switch -c feature/1345-jev-engine origin/develop
 
 **Files:**
 - Modify: `backend/phpstan.dist.neon`, `backend/config/services.yaml`, `backend/config/services_test.yaml`
-- Create: `backend/src/Service/Ai/Model/ProviderCallReceiptModel.php`, `backend/src/Service/Recommendation/Jev/SystemOneClient/{SystemOneClientInterface,HttpSystemOneClient}.php`, `backend/src/Service/Recommendation/Jev/Model/{SystemOneRequestModel,SystemOneReplyModel,SystemOneOutcomeModel}.php`, `backend/src/Service/Recommendation/Jev/Support/{QuestionId,SystemOneReplyDecoder,RenderedSystemOneRequest}.php`
+- Create: `backend/src/Service/Ai/Model/ProviderCallReceiptModel.php`, `backend/src/Service/Recommendation/Jev/SystemOneClient/{SystemOneClientInterface,HttpSystemOneClient}.php`, `backend/src/Service/Recommendation/Jev/Pass/SystemOneWave.php`, `backend/src/Service/Recommendation/Jev/Model/{SystemOneRequestModel,SystemOneReplyModel,SystemOneOutcomeModel}.php`, `backend/src/Service/Recommendation/Jev/Support/{QuestionId,SystemOneReplyDecoder,RenderedSystemOneRequest}.php`
 - Create (tests): `backend/tests/Support/StubSystemOneClient.php`, `backend/tests/Service/Recommendation/Jev/SystemOneClient/HttpSystemOneClientTest.php`, `backend/tests/Service/Recommendation/Jev/Support/SystemOneReplyDecoderTest.php`
 
 **Interfaces:**
@@ -2789,9 +2789,11 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\SystemOneClient\HttpSystemOneClient;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -2917,12 +2919,67 @@ final class HttpSystemOneClientTest extends TestCase
         $client = new HttpSystemOneClient(
             new MockHttpClient([new MockResponse('{"answers":{}}')]),
             $heartbeat,
+            new MockClock(),
             'SimpleFeedReader/1.0',
         );
 
         $client->evaluateMany($this->credentials(), [$this->request('entry-7')]);
 
         self::assertGreaterThan(0, $heartbeat->beats());
+    }
+
+    /** Each beat passes 61 s: the third chunk after the headers lands 122 s after the provider last spoke. */
+    public function testAResponseSilentForLongerThanTheIdleBoundFailsAndSparesItsSibling(): void
+    {
+        $outcomes = $this->evaluateWhileTheClockRuns(
+            [
+                new MockResponse(['', '', '{"answers":{"entry-7":{"type":"noul","noul":0.6}}}']),
+                new MockResponse('{"answers":{"entry-9":{"type":"noul","noul":0.3}}}'),
+            ],
+            $this->request('entry-7'),
+            $this->request('entry-9'),
+        );
+
+        self::assertSame('That provider sent nothing for more than 120 seconds.', $outcomes[0]->cause()->getMessage());
+        self::assertFalse($outcomes[0]->isRetryable());
+        self::assertSame(['entry-9' => 0.3], $outcomes[1]->reply()->nouls);
+    }
+
+    /** 305 s in all, yet never 120 s without a chunk: every chunk the provider sends restarts the idle bound. */
+    public function testAProviderThatKeepsSendingIsNeverIdle(): void
+    {
+        $outcomes = $this->evaluateWhileTheClockRuns(
+            [new MockResponse(['{"answers":', '', '{"entry-7":{"type":"noul","noul":0.6}}}'])],
+            $this->request('entry-7'),
+        );
+
+        self::assertSame(['entry-7' => 0.6], $outcomes[0]->reply()->nouls);
+    }
+
+    /**
+     * @param list<MockResponse> $responses
+     *
+     * @return list<SystemOneOutcomeModel>
+     */
+    private function evaluateWhileTheClockRuns(
+        array $responses,
+        SystemOneRequestModel $request,
+        SystemOneRequestModel ...$siblings,
+    ): array {
+        $clock = new MockClock();
+        $heartbeat = new readonly class ($clock) implements ProviderCallHeartbeatInterface {
+            public function __construct(private MockClock $clock)
+            {
+            }
+
+            public function beat(): void
+            {
+                $this->clock->sleep(61);
+            }
+        };
+        $client = new HttpSystemOneClient(new MockHttpClient($responses), $heartbeat, $clock, 'SimpleFeedReader/1.0');
+
+        return $client->evaluateMany($this->credentials(), [$request, ...array_values($siblings)]);
     }
 
     /**
@@ -2938,6 +2995,7 @@ final class HttpSystemOneClientTest extends TestCase
         $client = new HttpSystemOneClient(
             new MockHttpClient($responses),
             new CountingProviderCallHeartbeat(),
+            new MockClock(),
             'SimpleFeedReader/1.0',
         );
 
@@ -3363,8 +3421,10 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Jev\Pass\SystemOneWave;
 use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -3392,47 +3452,66 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     public function __construct(
         private HttpClientInterface $httpClient,
         private ProviderCallHeartbeatInterface $heartbeat,
+        private ClockInterface $clock,
         private string $userAgent,
     ) {
     }
 
     public function evaluateMany(ProviderCredentialsModel $credentials, array $requests): array
     {
-        /** @var \SplObjectStorage<ResponseInterface, int> $positions */
-        $positions = new \SplObjectStorage();
-        /** @var array<int, SystemOneOutcomeModel> $outcomes */
-        $outcomes = [];
+        $wave = new SystemOneWave($this->clock);
         foreach ($requests as $position => $request) {
             try {
-                $positions[$this->send($credentials, $request)] = $position;
+                $wave->await($position, $this->send($credentials, $request));
             } catch (ExceptionInterface $exception) {
-                $outcomes[$position] = SystemOneOutcomeModel::failed(self::unanswered($exception));
+                $wave->settleAt($position, SystemOneOutcomeModel::failed(self::unanswered($exception)));
             }
         }
 
-        $stream = $this->httpClient->stream(iterator_to_array($positions, false), self::HEARTBEAT_SECONDS);
-        foreach ($stream as $response => $chunk) {
+        while ([] !== $open = $wave->openResponses()) {
+            $this->streamRound($wave, $open);
+        }
+
+        return $wave->outcomes(\count($requests));
+    }
+
+    /**
+     * stream() drops a response after its timeout chunk, so each round re-streams the open ones; the round's timeout
+     * only paces the heartbeat, and failSilentFor() is the idle bound.
+     *
+     * @param non-empty-list<ResponseInterface> $open
+     */
+    private function streamRound(SystemOneWave $wave, array $open): void
+    {
+        foreach ($this->httpClient->stream($open, self::HEARTBEAT_SECONDS) as $response => $chunk) {
             $this->heartbeat->beat();
-            $position = $positions[$response];
-            if (isset($outcomes[$position])) {
-                continue;
-            }
-            $outcome = $this->outcomeAfter($response, $chunk);
-            if (null !== $outcome) {
-                $outcomes[$position] = $outcome;
-            }
+            $this->read($wave, $response, $chunk);
+            $wave->failSilentFor(self::IDLE_TIMEOUT_SECONDS);
         }
+    }
 
-        return self::oneOutcomePerRequest($outcomes, \count($requests));
+    private function read(SystemOneWave $wave, ResponseInterface $response, ChunkInterface $chunk): void
+    {
+        if ($wave->isSettled($response)) {
+            return;
+        }
+        $outcome = $this->outcomeAfter($wave, $response, $chunk);
+        if (null !== $outcome) {
+            $wave->settle($response, $outcome);
+        }
     }
 
     /** Null while the response is still arriving; a transport failure becomes this call's outcome. */
-    private function outcomeAfter(ResponseInterface $response, ChunkInterface $chunk): ?SystemOneOutcomeModel
-    {
+    private function outcomeAfter(
+        SystemOneWave $wave,
+        ResponseInterface $response,
+        ChunkInterface $chunk,
+    ): ?SystemOneOutcomeModel {
         try {
             if ($chunk->isTimeout()) {
                 return null;
             }
+            $wave->heardFrom($response);
             if ($chunk->isFirst()) {
                 // Unread at the first chunk, stream() throws a 4xx/5xx status outside this call's outcome.
                 $response->getStatusCode();
@@ -3498,23 +3577,6 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
         return new ProviderUnreachableException('That address did not answer.', 0, $exception);
     }
 
-    /**
-     * @param array<int, SystemOneOutcomeModel> $outcomes
-     *
-     * @return list<SystemOneOutcomeModel>
-     */
-    private static function oneOutcomePerRequest(array $outcomes, int $requestCount): array
-    {
-        $aligned = [];
-        for ($position = 0; $position < $requestCount; $position++) {
-            $aligned[] = $outcomes[$position] ?? SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException('That provider answered without a reply.'),
-            );
-        }
-
-        return $aligned;
-    }
-
     private function send(ProviderCredentialsModel $credentials, SystemOneRequestModel $request): ResponseInterface
     {
         return $this->httpClient->request('POST', $credentials->baseUrl . '/systemone', [
@@ -3546,7 +3608,111 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 }
 ```
 
-*Amended (B1):* Symfony's `stream()` checks a response's status right after yielding its first chunk unless the caller has already read it, and that check throws a 4xx/5xx outside `outcomeAfter()`'s `try`. That would end `evaluateMany()` and lose every sibling's outcome. `outcomeAfter()` therefore reads `getStatusCode()` on `isFirst()`, and deletion check 9 pins it. The tests above also carry the PHPStan fixes that `composer stan` required: a `@var` on `getRequestOptions()`, a non-empty `evaluate()` signature, and `assertNotNull($usage)` in place of `?->`. Notes for the implementer: `$positions[$response]` on an `SplObjectStorage` returns `int` for a stored response (every streamed response is one). The `HEARTBEAT_SECONDS` stream timeout only yields a timeout chunk to beat on; the request's own `timeout`/`max_duration` end a dead call.
+`backend/src/Service/Recommendation/Jev/Pass/SystemOneWave.php`:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Jev\Pass;
+
+use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
+use Symfony\Component\Clock\ClockInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+
+/** One evaluateMany() call's responses: each one's request position, its outcome once settled, when it last spoke. */
+final class SystemOneWave
+{
+    /** @var \SplObjectStorage<ResponseInterface, int> */
+    private \SplObjectStorage $positions;
+
+    /** @var array<int, SystemOneOutcomeModel> */
+    private array $outcomes = [];
+
+    /** @var array<int, float> */
+    private array $lastHeardAt = [];
+
+    public function __construct(private readonly ClockInterface $clock)
+    {
+        $this->positions = new \SplObjectStorage();
+    }
+
+    public function await(int $position, ResponseInterface $response): void
+    {
+        $this->positions[$response] = $position;
+        $this->heardFrom($response);
+    }
+
+    public function heardFrom(ResponseInterface $response): void
+    {
+        $this->lastHeardAt[$this->positions[$response]] = $this->now();
+    }
+
+    public function isSettled(ResponseInterface $response): bool
+    {
+        return isset($this->outcomes[$this->positions[$response]]);
+    }
+
+    public function settle(ResponseInterface $response, SystemOneOutcomeModel $outcome): void
+    {
+        $this->settleAt($this->positions[$response], $outcome);
+    }
+
+    public function settleAt(int $position, SystemOneOutcomeModel $outcome): void
+    {
+        $this->outcomes[$position] = $outcome;
+    }
+
+    public function failSilentFor(float $idleSeconds): void
+    {
+        foreach ($this->positions as $response) {
+            $position = $this->positions[$response];
+            if (isset($this->outcomes[$position]) || $this->now() - $this->lastHeardAt[$position] <= $idleSeconds) {
+                continue;
+            }
+            $response->cancel();
+            $this->outcomes[$position] = SystemOneOutcomeModel::failed(new ProviderUnreachableException(
+                sprintf('That provider sent nothing for more than %s seconds.', $idleSeconds),
+            ));
+        }
+    }
+
+    /** @return list<ResponseInterface> the responses still without an outcome */
+    public function openResponses(): array
+    {
+        $open = [];
+        foreach ($this->positions as $response) {
+            if (!$this->isSettled($response)) {
+                $open[] = $response;
+            }
+        }
+
+        return $open;
+    }
+
+    /** @return list<SystemOneOutcomeModel> */
+    public function outcomes(int $requestCount): array
+    {
+        $aligned = [];
+        for ($position = 0; $position < $requestCount; $position++) {
+            $aligned[] = $this->outcomes[$position] ?? SystemOneOutcomeModel::failed(
+                new ProviderUnreachableException('That provider answered without a reply.'),
+            );
+        }
+
+        return $aligned;
+    }
+
+    private function now(): float
+    {
+        return (float) $this->clock->now()->format('U.u');
+    }
+}
+```
+
+*Amended (B1):* Symfony's `stream()` checks a response's status right after yielding its first chunk unless the caller has already read it, and that check throws a 4xx/5xx outside `outcomeAfter()`'s `try`. That would end `evaluateMany()` and lose every sibling's outcome. `outcomeAfter()` therefore reads `getStatusCode()` on `isFirst()`, and deletion check 9 pins it. The tests above also carry the PHPStan fixes that `composer stan` required: a `@var` on `getRequestOptions()`, a non-empty `evaluate()` signature, and `assertNotNull($usage)` in place of `?->`. Notes for the implementer: `$positions[$response]` on an `SplObjectStorage` returns `int` for a stored response (every streamed response is one). *Amended (B1 review):* the request's `timeout` does not end a silent call. Symfony applies it only as `stream()`'s default timeout, which the explicit 10 s overrides. A timeout chunk also drops its response from that `stream()` call, so the first version gave up on a provider after 10 s of silence and answered "without a reply". `evaluateMany()` now streams in rounds over `SystemOneWave::openResponses()`. Every non-timeout chunk marks its response heard, on the injected `ClockInterface`. After every chunk, `failSilentFor(120)` cancels and fails each open response that has been silent for longer than that. `max_duration` (300 s) is still the wall clock. The tests pin this with `MockClock` and a heartbeat that advances it 61 s per beat; a `''` in a `MockResponse` body is a timeout chunk.
 
 - [ ] **Step 6: The stub and the wiring**
 
@@ -3678,6 +3844,9 @@ Expected: green.
 7. Drop `&& $value >= 0` → `testANegativeTokenCountReadsAsZero` fails. Restore.
 8. Swap the header and body precedence → `testTypeSafesHeaderIdWinsOverTheBodysId` fails. Restore.
 9. *Amended (B1):* Delete the first-chunk `$response->getStatusCode();` → every 401/403/500/503 case throws `ClientException`/`ServerException` out of `evaluateMany()`. Restore.
+10. *Amended (B1 review):* Drop the `failSilentFor()` call → `testAResponseSilentForLongerThanTheIdleBoundFailsAndSparesItsSibling` gets a reply. Restore.
+11. *Amended (B1 review):* Drop `$wave->heardFrom($response);` in `outcomeAfter()` → `testAProviderThatKeepsSendingIsNeverIdle` fails as idle. Restore.
+12. *Amended (B1 review):* Change the rounds' `while` to `if` (one `stream()` only) → `testAProviderThatKeepsSendingIsNeverIdle` fails, "answered without a reply". Restore.
 
 - [ ] **Step 9: Gates and commit**
 
