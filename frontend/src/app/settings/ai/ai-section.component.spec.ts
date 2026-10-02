@@ -1131,12 +1131,37 @@ describe('AiSectionComponent', () => {
         return fixture;
       };
 
+      it('shows the actual holder after a 404 reload names a different row', () => {
+        const fixture = mountWithRealService();
+        const select = picker(fixture) as HTMLSelectElement;
+
+        select.value = '8';
+        select.dispatchEvent(new Event('change'));
+        fixture.detectChanges();
+        http
+          .expectOne('/api/me/ai/configs/8/profile')
+          .flush(null, { status: 404, statusText: 'Not Found' });
+        http.expectOne('/api/me/ai').flush({
+          configs: [
+            jevActive,
+            config({ id: 8, name: 'Gone', ready: false }),
+            config({ id: 9, name: 'Other', ready: true, model: 'qwen', profileSource: true }),
+          ],
+          activeId: 7,
+          defaultMaxBatchSize: 50,
+        });
+        fixture.detectChanges();
+
+        expect((picker(fixture) as HTMLSelectElement).value).toBe('9');
+      });
+
       it('shows a refused choice beside the picker and puts the select back on the holder', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;
 
         select.value = '8';
         select.dispatchEvent(new Event('change'));
+        fixture.detectChanges();
         http.expectOne('/api/me/ai/configs/8/profile').flush(
           {
             type: 'profile_connection_rejected',

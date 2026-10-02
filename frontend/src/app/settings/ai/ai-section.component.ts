@@ -1,14 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   Signal,
   computed,
-  effect,
   inject,
   linkedSignal,
   signal,
-  viewChild,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
@@ -27,7 +24,7 @@ import {
 } from '../../shared/searchable-select/searchable-select.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
-import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
+import { AiFailure, ScopedAiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
@@ -134,10 +131,18 @@ export class AiSectionComponent {
   );
   readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
 
-  private readonly profilePicker = viewChild<ElementRef<HTMLSelectElement>>('profilePicker');
+  /** What the picker shows: the pick while it is in flight, the holder again after any load or refusal. */
+  readonly pickedProfileSourceId = linkedSignal<
+    { holder: number | null; failure: ScopedAiFailure | null },
+    number | null
+  >({
+    source: () => ({ holder: this.profileSourceId(), failure: this.ai.failure() }),
+    computation: (source) => source.holder,
+  });
 
   chooseProfileSource(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
+    this.pickedProfileSourceId.set(value === '' ? null : Number(value));
     if (value === '') {
       this.ai.clearProfileSource();
       return;
@@ -192,12 +197,6 @@ export class AiSectionComponent {
 
   constructor() {
     this.ai.load();
-    effect(() => {
-      const picker = this.profilePicker();
-      if (this.profileFailure() && picker) {
-        picker.nativeElement.value = String(this.profileSourceId() ?? '');
-      }
-    });
   }
 
   value(event: Event): string {
