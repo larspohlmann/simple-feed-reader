@@ -1156,7 +1156,9 @@ describe('AiSectionComponent', () => {
     });
 
     describe('against the real service', () => {
-      const mountWithRealService = (): ComponentFixture<AiSectionComponent> => {
+      const mountWithRealService = (
+        extra: readonly AiConfig[] = [],
+      ): ComponentFixture<AiSectionComponent> => {
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({
           imports: [provideTranslocoTesting()],
@@ -1171,7 +1173,11 @@ describe('AiSectionComponent', () => {
         const fixture = TestBed.createComponent(AiSectionComponent);
         fixture.detectChanges();
         http.expectOne('/api/me/ai').flush({
-          configs: [jevActive, config({ id: 8, name: 'Local', ready: true, model: 'qwen' })],
+          configs: [
+            jevActive,
+            ...extra,
+            config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
+          ],
           activeId: 7,
           defaultMaxBatchSize: 50,
         });
@@ -1224,6 +1230,30 @@ describe('AiSectionComponent', () => {
         refuse();
 
         expect(select.selectedIndex).toBe(0);
+      });
+
+      it('puts every select back on the holder when a refusal follows a pick in the second row', () => {
+        const fixture = mountWithRealService([
+          { ...jevActive, id: 13, name: 'second', active: false },
+        ]);
+        const selects = Array.from(
+          (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLSelectElement>(
+            '.profile-connection select',
+          ),
+        );
+
+        pick(selects[1], 1);
+        fixture.detectChanges();
+        http
+          .expectOne('/api/me/ai/configs/8/profile')
+          .flush(
+            { type: 'profile_connection_rejected', detail: 'Refused.' },
+            { status: 422, statusText: 'Unprocessable Entity' },
+          );
+        fixture.detectChanges();
+
+        expect(selects).toHaveLength(2);
+        expect(selects.map(shown)).toEqual(['None', 'None']);
       });
 
       it('shows a refused choice beside the picker and puts the select back on the holder', () => {
