@@ -8640,8 +8640,10 @@ PhpStorm `lint_files` on every touched `src` file: block on ERROR/WARNING. Revie
 ```
 
 (**Assumption (verify):** with a ready active connection the section folds to the summary (`!managing()`); the
-picker sits outside that `@if/@else`, so it renders in both states. `mountWithConfigs` expands row 0, which does not
-matter here. The `GET /api/me/ai/recommendations` the card fires when `activeReady()` must be flushed or ignored the
+picker sits outside that `@if/@else`, so it renders in both states. `mountWithConfigs` clicks row 0's summary, which the
+fold removes, so it throws: B10's specs use a local `mountReady` (set configs, `detectChanges`, drain the card's three
+requests with the file's `flushReady`). The refused-choice banner and the select reverting to the holder are pinned
+through the real service (HTTP 422), not a stubbed `failure`; a 404 on PUT/DELETE reloads the settings. The `GET /api/me/ai/recommendations` the card fires when `activeReady()` must be flushed or ignored the
 way the file's existing card test does — follow it.)
 
 `recommendation-settings-card.component.spec.ts` — replace "shows no fixed prompt, distilled profile or guidance
