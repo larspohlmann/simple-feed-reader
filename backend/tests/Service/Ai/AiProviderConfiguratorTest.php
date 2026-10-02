@@ -318,6 +318,32 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertCount(1, $configurator->listConfigurations($user));
     }
 
+    public function testDeletingAProfileConnectionClearsOnlyThePointersToIt(): void
+    {
+        $configurator = $this->configurator(['gpt-4o', 'jev-latest']);
+        $user = $this->user('cfg-delete-profile@example.test');
+        $deleted = $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $kept = $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $borrower = $this->readyConfiguration($configurator, $user, 'jev-latest');
+        $otherBorrower = $this->readyConfiguration($configurator, $user, 'jev-latest');
+        $borrower->setProfileConnection($deleted);
+        $otherBorrower->setProfileConnection($kept);
+        $this->entityManager->flush();
+
+        $configurator->deleteConfiguration($deleted);
+
+        self::assertNull($borrower->getProfileConnection());
+        self::assertSame($kept, $otherBorrower->getProfileConnection());
+        $this->entityManager->clear();
+        self::assertSame(
+            [null, null, 'gpt-4o'],
+            array_map(
+                static fn (AiProviderSettings $each): ?string => $each->getProfileConnection()?->getModel(),
+                $configurator->listConfigurations($this->reload('cfg-delete-profile@example.test')),
+            ),
+        );
+    }
+
     public function testDuplicateReusesTheKeyAndStartsWithoutAModel(): void
     {
         $configurator = $this->configurator(['gpt-4o', 'gpt-4o-mini']);
@@ -434,6 +460,19 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame(120, mb_strlen($name));
         self::assertSame($name, mb_convert_encoding($name, 'UTF-8', 'UTF-8'));
         self::assertStringStartsWith('Copy of ', $name);
+    }
+
+    private function readyConfiguration(
+        AiProviderConfigurator $configurator,
+        User $user,
+        string $model,
+    ): AiProviderSettings {
+        $configuration = $configurator
+            ->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234')
+            ->configuration;
+        $configurator->chooseModel($configuration, $model);
+
+        return $configuration;
     }
 
     /**

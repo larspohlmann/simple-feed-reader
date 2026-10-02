@@ -87,20 +87,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai@example.com');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway1234');
-        $configuration = new AiProviderSettings(
-            $target,
-            'Work OpenAI',
-            'https://api.example.test/v1',
-            $sealed,
-            '1234',
-            new \DateTimeImmutable(self::NOW),
-        );
-        $this->entityManager->persist($configuration);
-        $this->entityManager->flush();
-        $configurationId = $configuration->requireId();
+        $configurationId = $this->persistedConfigurationOf($target)->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -116,19 +103,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->userFactory->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai-2@example.com');
-        /** @var ApiKeyCipher $cipher */
-        $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway5678');
-        $configuration = new AiProviderSettings(
-            $target,
-            'Active OpenAI',
-            'https://api.example.test/v1',
-            $sealed,
-            '5678',
-            new \DateTimeImmutable(self::NOW),
-        );
-        $this->entityManager->persist($configuration);
-        $this->entityManager->flush();
+        $configuration = $this->persistedConfigurationOf($target);
         $target->setActiveAiProviderSettings($configuration);
         $this->entityManager->flush();
         $targetId = $target->requireId();
@@ -144,6 +119,45 @@ final class AccountDeleterTest extends DbTestCase
             [$configurationId],
         )->fetchOne();
         self::assertSame(0, is_numeric($count) ? (int) $count : -1);
+    }
+
+    /** profile_connection_id points at a sibling (ON DELETE SET NULL) that the same cascade removes. */
+    public function testDeletionTakesABorrowingConnectionAndTheSiblingItBorrowsFrom(): void
+    {
+        $admin = $this->userFactory->create('admin-ai-3@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-ai-3@example.com');
+        $profileConnection = $this->persistedConfigurationOf($target);
+        $borrower = $this->persistedConfigurationOf($target);
+        $borrower->setProfileConnection($profileConnection);
+        $target->setActiveAiProviderSettings($borrower);
+        $this->entityManager->flush();
+        $targetId = $target->requireId();
+
+        $this->deleter->deleteAsAdmin($target, $admin);
+
+        $count = $this->entityManager->getConnection()->executeQuery(
+            'SELECT COUNT(*) FROM user_ai_settings WHERE user_id = ?',
+            [$targetId],
+        )->fetchOne();
+        self::assertSame(0, is_numeric($count) ? (int) $count : -1);
+    }
+
+    private function persistedConfigurationOf(User $owner): AiProviderSettings
+    {
+        /** @var ApiKeyCipher $cipher */
+        $cipher = self::getContainer()->get(ApiKeyCipher::class);
+        $configuration = new AiProviderSettings(
+            $owner,
+            null,
+            'https://api.example.test/v1',
+            $cipher->seal($owner->requireId(), 'sk-throwaway1234'),
+            '1234',
+            new \DateTimeImmutable(self::NOW),
+        );
+        $this->entityManager->persist($configuration);
+        $this->entityManager->flush();
+
+        return $configuration;
     }
 
     public function testAnAdminCannotDeleteThemselves(): void
