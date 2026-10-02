@@ -162,12 +162,15 @@
                             [label]="'settings.ai.profileConnection.label' | transloco"
                             [info]="'settings.ai.profileConnection.info' | transloco"
                           >
-                            <select [formControl]="profilePicker" (change)="chooseProfileSource()">
-                              <option [ngValue]="null">
+                            <select [disabled]="ai.busy()" (change)="chooseProfileSource($event)">
+                              <option value="" [selected]="shownProfileSourceId() === null">
                                 {{ 'settings.ai.profileConnection.none' | transloco }}
                               </option>
                               @for (candidate of profileCandidates(); track candidate.id) {
-                                <option [ngValue]="candidate.id">
+                                <option
+                                  [value]="candidate.id"
+                                  [selected]="shownProfileSourceId() === candidate.id"
+                                >
                                   {{ label(candidate) }}
                                 </option>
                               }

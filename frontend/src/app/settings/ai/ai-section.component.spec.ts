@@ -1290,6 +1290,25 @@ describe('AiSectionComponent', () => {
         expect(shown(picker(fixture) as HTMLSelectElement)).toBe('Other');
       });
 
+      it('keeps the pick and locks the select while the choice is being saved', () => {
+        const fixture = mountWithRealService();
+        const select = picker(fixture) as HTMLSelectElement;
+
+        pick(select, 1);
+        fixture.detectChanges();
+
+        expect(shown(select)).toBe('Local');
+        expect(select.disabled).toBe(true);
+
+        http
+          .expectOne('/api/me/ai/configs/8/profile')
+          .flush(config({ id: 8, name: 'Local', ready: true, model: 'qwen', profileSource: true }));
+        fixture.detectChanges();
+
+        expect(shown(select)).toBe('Local');
+        expect(select.disabled).toBe(false);
+      });
+
       it('puts the select back on the holder after two refusals in a row', () => {
         const fixture = mountWithRealService();
         const select = picker(fixture) as HTMLSelectElement;

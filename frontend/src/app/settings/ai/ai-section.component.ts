@@ -4,11 +4,9 @@ import {
   Signal,
   computed,
   inject,
-  effect,
   linkedSignal,
   signal,
 } from '@angular/core';
-import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import {
   offersTuning,
@@ -59,7 +57,6 @@ import { RecommendationSettingsCardComponent } from '../recommendations/recommen
     SearchableSelectComponent,
     SettingsGroupComponent,
     SettingsStackComponent,
-    ReactiveFormsModule,
     TranslocoPipe,
   ],
   providers: [AiSettingsService],
@@ -142,13 +139,20 @@ export class AiSectionComponent {
   );
   readonly profileFailure: Signal<string | null> = computed(() => this.messageFor('profile'));
 
-  /** One control for every borrowed row's select: the choice is account-wide. A view-driven change
-   *  skips the sibling selects, so `chooseProfileSource` writes the value back to reach them. */
-  readonly profilePicker = new FormControl<number | null>(null);
+  /** The pick while its write is in flight, the stored choice once it settles: the select keeps
+   *  the user's pick through the request, and a refused one falls back to what the server holds. */
+  readonly shownProfileSourceId = linkedSignal<
+    { stored: number | null; busy: boolean },
+    number | null
+  >({
+    source: () => ({ stored: this.profileSourceId(), busy: this.ai.busy() }),
+    computation: (source, previous) => (source.busy && previous ? previous.value : source.stored),
+  });
 
-  chooseProfileSource(): void {
-    const id = this.profilePicker.value;
-    this.profilePicker.setValue(id);
+  chooseProfileSource(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    const id = value === '' ? null : Number(value);
+    this.shownProfileSourceId.set(id);
     if (id === null) {
       this.ai.clearProfileSource();
       return;
@@ -212,14 +216,6 @@ export class AiSectionComponent {
 
   constructor() {
     this.ai.load();
-    effect(() => {
-      this.ai.failure();
-      this.profilePicker.setValue(this.profileSourceId());
-    });
-    effect(() => {
-      if (this.ai.busy()) this.profilePicker.disable();
-      else this.profilePicker.enable();
-    });
   }
 
   value(event: Event): string {
