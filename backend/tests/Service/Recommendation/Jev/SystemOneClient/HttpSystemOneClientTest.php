@@ -64,6 +64,11 @@ final class HttpSystemOneClientTest extends TestCase
         yield 'forbidden key' => [403, CredentialsRejectedException::class, 'That provider refused the API key.'];
         yield 'server error' => [500, ProviderUnreachableException::class, 'That provider answered with status 500.'];
         yield 'gateway' => [503, ProviderUnreachableException::class, 'That provider answered with status 503.'];
+        yield 'a redirect, never followed' => [
+            300,
+            ProviderUnreachableException::class,
+            'That provider answered with status 300.',
+        ];
     }
 
     /** @param class-string<\RuntimeException> $failure */
