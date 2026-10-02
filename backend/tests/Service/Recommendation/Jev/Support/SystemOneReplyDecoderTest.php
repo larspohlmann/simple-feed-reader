@@ -35,6 +35,13 @@ final class SystemOneReplyDecoderTest extends TestCase
         self::assertSame('req-from-header', $reply->receipt->requestId);
     }
 
+    public function testAnEmptyHeaderFallsBackToTheBodysId(): void
+    {
+        $reply = SystemOneReplyDecoder::decode('{"id":"gen-from-body","answers":{}}', '');
+
+        self::assertSame('gen-from-body', $reply->receipt->requestId);
+    }
+
     /** Only a string question id with a numeric Noul is an answer; the parser rejects a batch missing one. */
     public function testAnAnswerWithoutAStringIdOrANumericNoulIsLeftOut(): void
     {

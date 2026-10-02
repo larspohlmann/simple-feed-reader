@@ -24,7 +24,7 @@ final class SystemOneReplyDecoder
             $body,
             self::noulsIn($root['answers'] ?? null),
             new ProviderCallReceiptModel(
-                $requestIdHeader ?? self::textIn($root['id'] ?? null),
+                self::textIn($requestIdHeader) ?? self::textIn($root['id'] ?? null),
                 self::textIn($root['model'] ?? null),
                 self::usageIn($root['usage'] ?? null),
             ),

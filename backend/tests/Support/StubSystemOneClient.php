@@ -12,11 +12,12 @@ use App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface;
 
 /**
  * The test container's SystemOneClientInterface: records every request and answers each from one FIFO queue, so
- * "rate limited, then answered" keeps its order. Replies are decoded as the real client decodes them.
+ * "rate limited, then answered" keeps its order. Replies are shaped and decoded like OpenRouter's, which sends no
+ * request-id header.
  */
 final class StubSystemOneClient implements SystemOneClientInterface
 {
-    public const string REQUEST_ID = 'stub-request';
+    public const string REQUEST_ID = 'gen-dec-1790947706-stub';
     public const string ANSWERING_MODEL = 'typesafe/jev-1.13-20260917';
     public const int INPUT_TOKENS = 1200;
     public const int COST_NANO_CREDITS = 4_200_000;
@@ -32,14 +33,14 @@ final class StubSystemOneClient implements SystemOneClientInterface
     {
         $this->queue[] = static fn (SystemOneRequestModel $request): SystemOneOutcomeModel
             => SystemOneOutcomeModel::answered(
-                SystemOneReplyDecoder::decode(self::replyBody($request, $nouls), self::REQUEST_ID),
+                SystemOneReplyDecoder::decode(self::replyBody($request, $nouls), null),
             );
     }
 
     public function queueBody(string $body): void
     {
         $this->queue[] = static fn (): SystemOneOutcomeModel
-            => SystemOneOutcomeModel::answered(SystemOneReplyDecoder::decode($body, self::REQUEST_ID));
+            => SystemOneOutcomeModel::answered(SystemOneReplyDecoder::decode($body, null));
     }
 
     public function queueFailure(\RuntimeException $failure): void
@@ -73,10 +74,11 @@ final class StubSystemOneClient implements SystemOneClientInterface
         }
 
         return json_encode([
-            'id' => 'gen-stub',
             'model' => self::ANSWERING_MODEL,
             'answers' => $answers,
             'usage' => ['input_tokens' => self::INPUT_TOKENS, 'output_tokens' => 30, 'cost' => 0.0042],
+            'id' => self::REQUEST_ID,
+            'provider' => 'TypeSafe',
         ], \JSON_THROW_ON_ERROR);
     }
 }
