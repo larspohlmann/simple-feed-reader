@@ -423,7 +423,7 @@ describe('AiSectionComponent', () => {
     expect(setSlowModel).toHaveBeenCalledWith(7, true);
   });
 
-  it('offers a row no tuning control when its engine reads none, and keeps its actions', () => {
+  it('offers no tuning control in a row whose engine reads none, and keeps its actions', () => {
     const fixture = mountWithConfigs([
       config({ id: 7, capabilities: NO_RECOMMENDATION_CAPABILITIES }),
     ]);

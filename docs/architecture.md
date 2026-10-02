@@ -213,10 +213,11 @@ on each other without a cycle, so each one can be read, tested and moved without
 A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
 `serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm`). A sub-module is a module of
 its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in it implementing its
-parent's interface is another module's implementation (§10). It may depend on its parent; the reverse closes a cycle, and
-when a cycle runs through a parent's import of its own sub-module, that import is the one reported; a cycle between peers is
-reported where it closes. Each hop of the reported cycle names its first site. The longest declared directory wins, so
-a sub-module may declare one of its own. The boundaries below are prefixes, so they cover a module's sub-modules too.
+parent's interface is another module's implementation (§10). It may depend on its parent; the reverse closes a cycle,
+and when a cycle runs through a parent's import of its own sub-module, that import is the one reported; a cycle between
+peers is reported where it closes. Each hop of the reported cycle names its first site. The longest declared directory
+wins, so a sub-module may declare one of its own. The boundaries below are prefixes, so they cover a module's
+sub-modules too.
 So `Service/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
 `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
 

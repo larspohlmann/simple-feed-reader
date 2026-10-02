@@ -44,7 +44,7 @@ final readonly class ServiceModules
         return implode('\\', \array_slice(explode('\\', $className), 0, 2));
     }
 
-    /** A sub-module may depend on its parent, never the reverse. Only a declared sub-module's name has a separator. */
+    /** Whether $module is a declared sub-module below $parent; a parent naming it closes any cycle through it at that import. */
     public static function isSubModuleOf(string $module, string $parent): bool
     {
         return str_starts_with($module, $parent . '\\');

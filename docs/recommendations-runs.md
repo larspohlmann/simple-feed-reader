@@ -82,8 +82,8 @@ an engine (today every connection is an LLM connection); `SnapshotPhase` asks th
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
-The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile, scores the
-batches in waves and consolidates the best of them into the final list with reasons. Each engine reports its
+The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then distills a profile,
+scores the batches in waves and consolidates the best of them into the final list with reasons. Each engine reports its
 capabilities (`reasons`, and which tuning fields it reads); the API passes them to the client, which shows only the
 settings that apply.
 
