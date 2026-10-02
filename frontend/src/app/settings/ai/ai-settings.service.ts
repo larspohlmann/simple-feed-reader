@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Observable } from 'rxjs';
+import { EMPTY, Observable, catchError, throwError } from 'rxjs';
 import {
   AiAvailabilityService,
   RecommendationCapabilities,
@@ -202,7 +202,9 @@ export class AiSettingsService {
   chooseProfileSource(id: number): void {
     this.run(
       { action: 'profile' },
-      this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+      this.reloadWhenGone(
+        this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${id}/profile`, {}),
+      ),
       (config) => this.upsert(config),
     );
   }
@@ -214,8 +216,23 @@ export class AiSettingsService {
 
     this.run(
       { action: 'profile' },
-      this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+      this.reloadWhenGone(
+        this.http.delete<void>(`${this.base}/api/me/ai/configs/${holder.id}/profile`),
+      ),
       () => this.upsert({ ...holder, profileSource: false }),
+    );
+  }
+
+  /** A 404 means the row the choice names is gone: reload instead of failing. Completing empty
+   *  leaves `busy` to the reload's own request. */
+  private reloadWhenGone<T>(request: Observable<T>): Observable<T> {
+    return request.pipe(
+      catchError((error: HttpErrorResponse) => {
+        if (error.status !== 404) return throwError(() => error);
+
+        this.load();
+        return EMPTY;
+      }),
     );
   }
 
@@ -299,10 +316,6 @@ export class AiSettingsService {
       },
       error: (error: HttpErrorResponse) => {
         this.busy.set(false);
-        if (scope.action === 'profile' && error.status === 404) {
-          this.load();
-          return;
-        }
         this.failure.set({ failure: aiFailure(error), scope });
       },
     });

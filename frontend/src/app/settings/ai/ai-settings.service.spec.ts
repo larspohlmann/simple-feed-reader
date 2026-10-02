@@ -112,6 +112,22 @@ describe('AiSettingsService', () => {
     expect(service.failure()).toBeNull();
   });
 
+  it('stays busy through the reload when the chosen profile connection is gone', () => {
+    service.chooseProfileSource(4);
+    ctrl
+      .expectOne(`${base}/api/me/ai/configs/4/profile`)
+      .flush(null, { status: 404, statusText: 'Not Found' });
+
+    expect(service.busy()).toBe(true);
+
+    ctrl
+      .expectOne(`${base}/api/me/ai`)
+      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
+    expect(service.busy()).toBe(false);
+    expect(service.configs().map((each) => each.id)).toEqual([5]);
+    expect(service.failure()).toBeNull();
+  });
+
   it('clears the profile connection on whichever row holds it', () => {
     service.configs.set([
       config({ id: 1, profileSource: false }),
