@@ -63,6 +63,16 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         self::assertSame(0, $eta);
     }
 
+    /** 40 s over 3 batches is 13.3 s a batch: one batch leaves 33.3 s, two leave 46.7 s, 20 s in. */
+    public function testRoundsTheRemainingSecondsToTheNearest(): void
+    {
+        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 3, consolidate: 30);
+        $estimator = $this->estimatorAt('+20 seconds');
+
+        self::assertSame(33, $estimator->estimateSeconds($this->liveReportWithBatches(1), $this->user));
+        self::assertSame(47, $estimator->estimateSeconds($this->liveReportWithBatches(2), $this->user));
+    }
+
     public function testReturnsNullWithoutAnyCompletedHistory(): void
     {
         $report = $this->liveReportWithBatches(3);
