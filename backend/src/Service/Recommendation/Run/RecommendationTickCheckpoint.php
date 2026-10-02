@@ -9,6 +9,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 
 /**
  * Where a tick finds out it must stop: the user cancelled the run, or TickLockKeepalive saw another process take the

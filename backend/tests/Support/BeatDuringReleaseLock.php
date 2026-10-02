@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use Symfony\Component\Lock\SharedLockInterface;
 
 /**
@@ -20,7 +20,7 @@ final class BeatDuringReleaseLock implements SharedLockInterface
 
     public function __construct(
         private readonly SharedLockInterface $lock,
-        private readonly CompletionStreamHeartbeatInterface $heartbeat,
+        private readonly ProviderCallHeartbeatInterface $heartbeat,
     ) {
     }
 

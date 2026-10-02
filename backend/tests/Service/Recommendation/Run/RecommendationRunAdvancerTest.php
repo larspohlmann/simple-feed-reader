@@ -23,9 +23,6 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
-use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
-use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -33,11 +30,14 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Ai\Llm\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Llm\Completion\Model\Reasoning;
+use App\Service\Ai\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Ai\Llm\Prompt\RecommendationAnswerBudget;
+use App\Service\Ai\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
-use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Tests\DbTestCase;
@@ -637,10 +637,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     /**
      * What the transport pings once per streamed chunk.
      */
-    private function streamHeartbeat(): CompletionStreamHeartbeatInterface
+    private function streamHeartbeat(): ProviderCallHeartbeatInterface
     {
-        /** @var CompletionStreamHeartbeatInterface $heartbeat */
-        $heartbeat = self::getContainer()->get(CompletionStreamHeartbeatInterface::class);
+        /** @var ProviderCallHeartbeatInterface $heartbeat */
+        $heartbeat = self::getContainer()->get(ProviderCallHeartbeatInterface::class);
 
         return $heartbeat;
     }

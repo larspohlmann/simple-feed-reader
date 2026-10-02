@@ -80,7 +80,7 @@
 - **D13 — Mappers.** The resolver is a service, the mappers are static. So: a new injected `Http/RecommendationCapabilitiesJson` (calls the resolver); `AiSettingsJson` becomes an injected `final readonly` service (instance methods, every one, so the controller has one calling style); `MeJson::profile()` keeps its three parameters and loses its `ai` block to a new injected `Http/ActiveAiJson`, which `MeProfileJson` appends. The `/api/me` wire shape is unchanged apart from the new key (`JwtAccessTest`'s key list stays green). *Deviation in letter from "in MeJson's `ai` block":* a fourth `MeJson::profile()` parameter would break the three-parameter rule.
 - **D14 — Frontend source of capabilities.** `AiAvailabilityService` gains a `capabilities` signal fed by `/api/me` and by every AI-settings write (as `ready`/`model` are); the recommendation card reads it. Each connection row reads its own `config.capabilities`. Types are required, not optional; spec fixtures gain `capabilities: null`. The recommendation strip needs no change: it already renders score and reason under separate conditions.
 - **D15 — `kindFor()` ignores its argument in this PR** (always `Llm`). phptramp will warn (3 hops: `RecommendationCapabilitiesJson::of → engineFor → kindFor` forwarding a connection none reads). 3 hops warn and do not fail the build; #1345 reads the model there. Do not "fix" the warning. **Assumption (verify):** PhpStorm's unused-parameter inspection on `kindFor()` is a weak warning; if `lint_files` reports it as WARNING, add `/** @noinspection PhpUnusedParameterInspection #1345 reads the model id */` above the method and say so in the report.
-- **D16 — Docblocks of neutral classes that spoke of prompts are reworded in Task 3** (comment-only, so `compare-moves.php` still reads "0 differ"): `ArticleLineModel` (docblock dropped), `CandidatePoolSummaryModel`, `RecommendationHistoryModel`, both loaders, `ProviderCallHeartbeatInterface`, and the `services.yaml` heartbeat comment.
+- **D16 — Docblocks of neutral classes that spoke of prompts are reworded in Task 3** (comment-only, so `compare-moves.php` still reads "0 differ"): `ArticleLineModel` (docblock dropped), `CandidatePoolSummaryModel`, `RecommendationHistoryModel`, both loaders, `ProviderCallHeartbeatInterface`, the `services.yaml` heartbeat comment, and three neutral `Recommendation` comments that name `Ai\Llm` classes after the move (`RecommendationPackingSettingsModel`, `RecommendationWaveConcurrency`, `RecommendationWinnerRanker`); `src/Service/Recommendation` comments name no `Ai\Llm` class.
 - **D17 — The move tooling is copied unchanged** from `docs/superpowers/plans/2026-09-28-1202-scripts/` (`class-names.php`, `move-classes.php`, `compare-moves.php`, `stale-names.php`) into `docs/superpowers/plans/2026-10-02-1344-scripts/`, with this plan's `moves.php` map and a new `psr4-namespaces.php` sweep (the #1202 hazard: a namespace corruption the comparison script once skipped). `compare-moves.php` already checks every moved file's namespace; the sweep covers every file in `src` and `tests`.
 - **D18 — CLAUDE.md's module sentence** ("A module is the first directory under `src/Service`" is no longer the whole truth) is proposed in the PR body for Lars; not edited in-branch.
 - **D19 — `RecommendationSettingsJson` keeps exposing the LLM's fixed prompt** (`RecommendationPromptText`), and the card keeps showing it and the distilled profile. `Http` may name `Ai\Llm`; whether a non-LLM engine hides them is #1345's decision.
@@ -1762,7 +1762,7 @@ Expected: green, `ServiceModuleCycleRule` and `ServiceRoleRule` included. A role
 
 The move touches about 60 test files across `Ai`, `Recommendation`, `Worker`, `Http`, `Command` and `Support`; the parallel run is the cheap way to cover them all.
 
-Run: `composer test:parallel` → Expected: green, same test count as the Task 0 baseline plus Task 1 and Task 2's new tests.
+Run: `composer test:parallel` → Expected: green, same test count as before the move (6781): no test is moved away, so the count does not change.
 
 - [ ] **Step 9: A deliberate `Recommendation → Ai\Llm` reference fails the cycle rule** (issue "done when"; quote the output)
 
@@ -1776,7 +1776,7 @@ Expected: FAIL with `Service modules must not depend on each other in a cycle: A
 
 ```bash
 git add -A src tests config ../docs/architecture.md
-git status --short | grep -v '^R ' | head -40    # review: only the reworded files, services.yaml and architecture.md are M
+git status --short | grep -v '^R ' | head -40    # review: files whose imports were rewritten show M, moved-and-edited files show RM; judge by "only expected paths", not "only R"
 git commit -m "refactor(#1344): move the llm engine into service/ai/llm"
 ```
 

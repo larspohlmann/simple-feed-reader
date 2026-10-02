@@ -215,7 +215,8 @@ cycle, so each one can be read, tested and moved without the others. Decided in 
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
-  (`Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface`, implemented in `Recommendation\Run`).
+  (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Ai\Llm`; and
+  `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the `Ai\Llm` transport calls).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.

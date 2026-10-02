@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
+use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;

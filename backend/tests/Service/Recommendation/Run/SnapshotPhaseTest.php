@@ -9,8 +9,8 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Prompt\Model\PromptLineModel;
-use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
+use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
@@ -57,7 +57,7 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertCount(1, $engine->packedCandidates);
         self::assertEqualsCanonicalizing(
             $ids,
-            array_map(static fn (PromptLineModel $line): int => $line->entryId, $engine->packedCandidates[0]),
+            array_map(static fn (ArticleLineModel $line): int => $line->entryId, $engine->packedCandidates[0]),
         );
     }
 

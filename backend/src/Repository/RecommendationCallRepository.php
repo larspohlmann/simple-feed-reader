@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\Ai\Completion\Model\CompletionUsageModel;
+use App\Service\Ai\Llm\Completion\Model\CompletionUsageModel;
 use Doctrine\DBAL\Connection;
 
 /**

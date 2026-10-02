@@ -8,7 +8,7 @@ use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesMode
 use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Prompt\Model\PromptLineModel;
+use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 /** An engine that is not the LLM: it packs and advances as scripted and records what it was asked. */
 final class ScriptedRecommendationEngine implements RecommendationEngineInterface
 {
-    /** @var list<list<PromptLineModel>> */
+    /** @var list<list<ArticleLineModel>> */
     public array $packedCandidates = [];
 
     /** @var list<TickContext> */

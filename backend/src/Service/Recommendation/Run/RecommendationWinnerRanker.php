@@ -26,7 +26,7 @@ final readonly class RecommendationWinnerRanker
 
     /**
      * The best entries the consolidation call re-scores and dedupes. How many is what the connection's context window
-     * holds (RecommendationPromptBuilder::consolidationInputSize()), not a multiple of the final list.
+     * holds, not a multiple of the final list.
      *
      * @param list<array{id: int, score: int, reason: string}> $ranked
      *

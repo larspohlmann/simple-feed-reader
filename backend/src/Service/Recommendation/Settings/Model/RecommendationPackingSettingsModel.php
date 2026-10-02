@@ -6,10 +6,7 @@ namespace App\Service\Recommendation\Settings\Model;
 
 use App\Enum\RecommendationBatchSize;
 
-/**
- * What RecommendationPromptBuilder reads to size a batch: the resolved context window and its source, the reader's
- * batch size, and the connection's ceiling on candidates per batch.
- */
+/** What sizes a batch: the context window and its source, the reader's batch size, and the connection's ceiling. */
 final readonly class RecommendationPackingSettingsModel
 {
     /**

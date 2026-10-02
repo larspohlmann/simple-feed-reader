@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Completion\Model\RetryPlanModel;
+use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 

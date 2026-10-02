@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Engine\RecommendationEngine;
 
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Prompt\Model\PromptLineModel;
+use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -20,7 +20,7 @@ interface RecommendationEngineInterface
     /**
      * The frozen plan the run advances through, batch by batch.
      *
-     * @param list<PromptLineModel> $candidates
+     * @param list<ArticleLineModel> $candidates
      *
      * @return list<list<int>>
      */

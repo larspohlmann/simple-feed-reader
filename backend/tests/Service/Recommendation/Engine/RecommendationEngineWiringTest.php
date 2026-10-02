@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\User;
-use App\Service\Recommendation\Engine\RecommendationEngine\LlmRecommendationEngine;
+use App\Service\Ai\Llm\LlmRecommendationEngine;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

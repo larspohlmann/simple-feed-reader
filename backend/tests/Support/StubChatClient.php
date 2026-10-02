@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface;
-use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
-use App\Service\Ai\Completion\Model\CompletionRequestModel;
-use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
-use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
+use App\Service\Ai\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface;
+use App\Service\Ai\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Ai\Llm\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Llm\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Llm\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Llm\Completion\Model\Reasoning;
 use App\Service\Ai\Model\ProviderConnectionModel;
 
 /**

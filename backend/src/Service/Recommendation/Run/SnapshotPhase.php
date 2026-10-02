@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Prompt\Model\CandidatePoolRequestModel;
-use App\Service\Recommendation\Prompt\Model\PromptLineModel;
-use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
+use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Pool\Model\CandidatePoolRequestModel;
+use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
@@ -46,7 +46,7 @@ final readonly class SnapshotPhase
         return RecommendationRunReportModel::fromRun($run);
     }
 
-    /** @return list<PromptLineModel> */
+    /** @return list<ArticleLineModel> */
     private function candidatesFor(TickContext $tick): array
     {
         $now = $this->clock->now();
