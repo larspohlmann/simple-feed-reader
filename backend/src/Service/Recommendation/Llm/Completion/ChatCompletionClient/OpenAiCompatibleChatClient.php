@@ -15,11 +15,11 @@ use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionOutcomeModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Completion\Pass\CompletionCallSlot;
 use App\Service\Recommendation\Llm\Completion\Pass\CompletionStreamReader;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -265,7 +265,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         if ('' !== $content) {
             $reader->consume($content);
             $this->guardRetainedSize($slot);
-            $slot->observer->streamProgressed(new CompletionStreamProgressModel(
+            $slot->observer->streamProgressed(new CallProgressModel(
                 $reader->assistantContent() ?? '',
                 $reader->wireBytes(),
                 $reader->finishReason(),

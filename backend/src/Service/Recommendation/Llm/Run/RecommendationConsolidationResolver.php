@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Run;
 
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
+use App\Service\Recommendation\Llm\Completion\Support\CompletionFinishReason;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Llm\Prompt\Model\ConsolidationParseResultModel;
@@ -14,12 +15,14 @@ use App\Service\Recommendation\Llm\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Llm\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
-use App\Service\Recommendation\Llm\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
+use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
 
@@ -70,7 +73,11 @@ final readonly class RecommendationConsolidationResolver
             $tick->connection,
             new CallPromptModel($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
-        $recordedCall = $this->callRecorder->begin($run, CallSlotModel::consolidation(), $request);
+        $recordedCall = $this->callRecorder->begin(
+            $run,
+            CallSlotModel::consolidation(),
+            RenderedCompletionRequest::of($request),
+        );
         $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
@@ -80,7 +87,9 @@ final readonly class RecommendationConsolidationResolver
 
             return ConsolidationOutcomeModel::unusable(
                 $content,
-                $recordedCall->providerCutTheAnswer() ? $this->salvagedRankingOrPool($content, $pool) : $pool,
+                CompletionFinishReason::cutByProvider($recordedCall->finishReason())
+                    ? $this->salvagedRankingOrPool($content, $pool)
+                    : $pool,
             );
         }
 

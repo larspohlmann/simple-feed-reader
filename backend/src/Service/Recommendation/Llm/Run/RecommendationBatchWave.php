@@ -19,11 +19,14 @@ use App\Service\Recommendation\Llm\Prompt\RecommendationPickParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Llm\Run\Model\BatchWaveResultModel;
-use App\Service\Recommendation\Llm\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Llm\Run\Model\WaveBatchModel;
-use App\Service\Recommendation\Llm\Run\Pass\RecordedCall;
+use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
 use App\Service\Recommendation\Llm\Run\Pass\WaveContext;
+use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
 
 /**
@@ -139,8 +142,12 @@ final readonly class RecommendationBatchWave
                 new CallPromptModel($messages, $validIdCount, RecommendationResponseSchema::BatchScore),
             );
             $slot = CallSlotModel::batch($waveBatch->index + 1);
-            $recordedCall = $this->callRecorder->begin($tick->run, $slot, $request);
-            $calls[] = new ConcurrentCompletion($request, $recordedCall);
+            $recordedCall = $this->callRecorder->begin(
+                $tick->run,
+                $slot,
+                RenderedCompletionRequest::of($request),
+            );
+            $calls[] = new ConcurrentCompletion($request, new RecordedCallObserver($recordedCall));
             $recordedCalls[] = $recordedCall;
         }
 

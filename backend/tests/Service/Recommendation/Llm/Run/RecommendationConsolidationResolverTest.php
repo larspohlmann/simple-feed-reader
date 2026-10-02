@@ -13,9 +13,9 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Recommendation\Llm\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Recommendation\Llm\Run\RecommendationConsolidationResolver;
+use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -187,7 +187,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             $secondId,
             $thirdId,
         );
-        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel($cutReply, 100, 'error'));
+        $this->stubChatClient()->queueStreamedReply(new CallProgressModel($cutReply, 100, 'error'));
 
         $outcome = $this->resolveConsolidation($run);
 
@@ -214,7 +214,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             ['id' => $secondId, 'score' => 400, 'reason' => ''],
         ]);
 
-        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel(
+        $this->stubChatClient()->queueStreamedReply(new CallProgressModel(
             sprintf(
                 '{"recommendations": [{"id": %d, "score": 910, "reason": "Finished."}, {"id": %d, "sco',
                 $firstId,
@@ -243,7 +243,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             ['id' => $secondId, 'score' => 400, 'reason' => ''],
         ]);
 
-        $this->stubChatClient()->queueStreamedReply(new CompletionStreamProgressModel(
+        $this->stubChatClient()->queueStreamedReply(new CallProgressModel(
             sprintf('{"recommendations": [{"id": %d, "score": 9', $firstId),
             100,
             'error',

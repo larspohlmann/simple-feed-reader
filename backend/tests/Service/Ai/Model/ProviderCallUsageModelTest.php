@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Completion\Model;
+namespace App\Tests\Service\Ai\Model;
 
-use App\Service\Recommendation\Llm\Completion\Model\CompletionUsageModel;
+use App\Service\Ai\Model\ProviderCallUsageModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
-#[CoversClass(CompletionUsageModel::class)]
-final class CompletionUsageModelTest extends TestCase
+#[CoversClass(ProviderCallUsageModel::class)]
+final class ProviderCallUsageModelTest extends TestCase
 {
     public function testCarriesEveryFieldTheProviderReported(): void
     {
-        $usage = new CompletionUsageModel(1200, 340, 280, 900, 41_230_000);
+        $usage = new ProviderCallUsageModel(1200, 340, 280, 900, 41_230_000);
 
         self::assertSame(1200, $usage->promptTokens);
         self::assertSame(340, $usage->completionTokens);
@@ -24,7 +24,7 @@ final class CompletionUsageModelTest extends TestCase
 
     public function testAnUnpricedCallCarriesTokensWithNoCost(): void
     {
-        $usage = new CompletionUsageModel(10, 5, 0, 0, null);
+        $usage = new ProviderCallUsageModel(10, 5, 0, 0, null);
 
         self::assertSame(10, $usage->promptTokens);
         self::assertNull($usage->costNanoCredits);

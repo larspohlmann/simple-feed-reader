@@ -2,20 +2,19 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Llm\Run;
+namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Llm\Run\Factory\RecommendationRunLogFactory;
-use App\Service\Recommendation\Llm\Run\Model\CallSlotModel;
-use App\Service\Recommendation\Llm\Run\Pass\RecordedCall;
+use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Opens the run-log row for one provider call the moment it is sent and hands back the RecordedCall that watches its
- * stream. Every run records, debug on or off: the log is the history the ETA reads.
+ * Opens the run-log row for one provider call the moment it is sent and hands back the RecordedCall that settles it.
+ * Every run records, debug on or off: the log is the history the ETA reads.
  */
 final readonly class RecommendationCallRecorder
 {
@@ -27,9 +26,9 @@ final readonly class RecommendationCallRecorder
     ) {
     }
 
-    public function begin(RecommendationRun $run, CallSlotModel $slot, CompletionRequestModel $request): RecordedCall
+    public function begin(RecommendationRun $run, CallSlotModel $slot, string $renderedRequest): RecordedCall
     {
-        $log = $this->logFactory->create($run, $slot, $request);
+        $log = $this->logFactory->create($run, $slot, $renderedRequest);
         $this->entityManager->persist($log);
         $this->entityManager->flush();
 
