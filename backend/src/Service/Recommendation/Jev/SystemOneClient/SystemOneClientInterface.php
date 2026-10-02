@@ -10,9 +10,6 @@ use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 
 interface SystemOneClientInterface
 {
-    /** A reply body an outcome carries never exceeds this many bytes. */
-    public const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
-
     /**
      * Sends every request at once; one outcome per request, aligned by index. A per-call failure is carried in its
      * outcome, never thrown, so it cannot discard a sibling's answer.

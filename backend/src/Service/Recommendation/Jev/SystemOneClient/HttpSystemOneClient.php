@@ -8,6 +8,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\ResponseByteCap;
 use App\Service\Ai\Support\RetryAfter;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
@@ -36,6 +37,8 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 
     private const array RETRYABLE_STATUSES = [429, 529];
 
+    private const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private ProviderCallHeartbeatInterface $heartbeat,
@@ -51,7 +54,9 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             try {
                 $wave->await($position, $this->send($credentials, $request));
             } catch (ExceptionInterface $exception) {
-                $wave->settleAt($position, SystemOneOutcomeModel::failed(self::unanswered($exception)));
+                $wave->settleAt($position, SystemOneOutcomeModel::failed(
+                    ProviderUnreachableException::didNotAnswer($exception),
+                ));
             }
         }
 
@@ -59,7 +64,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             $this->streamRound($wave, $open);
         }
 
-        return $wave->outcomes(\count($requests));
+        return $wave->outcomes();
     }
 
     /**
@@ -72,19 +77,11 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
     {
         foreach ($this->httpClient->stream($open, self::HEARTBEAT_SECONDS) as $response => $chunk) {
             $this->heartbeat->beat();
-            $this->read($wave, $response, $chunk);
+            $outcome = $wave->isSettled($response) ? null : $this->outcomeAfter($wave, $response, $chunk);
+            if (null !== $outcome) {
+                $wave->settle($response, $outcome);
+            }
             $wave->failSilentFor(self::IDLE_TIMEOUT_SECONDS);
-        }
-    }
-
-    private function read(SystemOneWave $wave, ResponseInterface $response, ChunkInterface $chunk): void
-    {
-        if ($wave->isSettled($response)) {
-            return;
-        }
-        $outcome = $this->outcomeAfter($wave, $response, $chunk);
-        if (null !== $outcome) {
-            $wave->settle($response, $outcome);
         }
     }
 
@@ -109,15 +106,10 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 
             return $this->outcomeOf($response);
         } catch (ExceptionInterface $exception) {
-            return self::abandoned($response, $exception);
+            $response->cancel();
+
+            return SystemOneOutcomeModel::failed(ProviderUnreachableException::didNotAnswer($exception));
         }
-    }
-
-    private static function abandoned(ResponseInterface $response, ExceptionInterface $exception): SystemOneOutcomeModel
-    {
-        $response->cancel();
-
-        return SystemOneOutcomeModel::failed(self::unanswered($exception));
     }
 
     private function outcomeOf(ResponseInterface $response): SystemOneOutcomeModel
@@ -127,7 +119,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 
         return match (true) {
             401 === $status, 403 === $status => SystemOneOutcomeModel::failed(
-                new CredentialsRejectedException('That provider refused the API key.'),
+                CredentialsRejectedException::refusedKey(),
             ),
             \in_array($status, self::RETRYABLE_STATUSES, true) => SystemOneOutcomeModel::failed(
                 new RetryableProviderException($status, RetryAfter::secondsIn($response)),
@@ -135,18 +127,11 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
                 new ProviderUnreachableException(RefusalMessage::of($status, $body)),
             ),
-            $status >= 300 => SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status)),
-            ),
+            $status >= 300 => SystemOneOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
             default => SystemOneOutcomeModel::answered(
                 SystemOneReplyDecoder::decode($body, ResponseHeader::first($response, 'x-typesafe-request-id')),
             ),
         };
-    }
-
-    private static function unanswered(ExceptionInterface $exception): ProviderUnreachableException
-    {
-        return new ProviderUnreachableException('That address did not answer.', 0, $exception);
     }
 
     private function send(ProviderCredentialsModel $credentials, SystemOneRequestModel $request): ResponseInterface
@@ -164,14 +149,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             'timeout' => self::IDLE_TIMEOUT_SECONDS,
             'max_duration' => self::WALL_CLOCK_SECONDS,
             'max_redirects' => 0,
-            'on_progress' => static function (int $downloaded): void {
-                if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
-                    throw new ProviderUnreachableException(sprintf(
-                        'That provider answered with more than %d bytes.',
-                        self::MAXIMUM_RESPONSE_BYTES,
-                    ));
-                }
-            },
+            'on_progress' => ResponseByteCap::onProgress(self::MAXIMUM_RESPONSE_BYTES),
         ]);
     }
 }

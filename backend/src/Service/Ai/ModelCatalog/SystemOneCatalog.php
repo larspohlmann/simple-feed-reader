@@ -50,7 +50,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
     private static function assertTheEndpointAnswered(int $status): void
     {
         if (401 === $status || 403 === $status) {
-            throw new CredentialsRejectedException('That provider refused the API key.');
+            throw CredentialsRejectedException::refusedKey();
         }
 
         if ($status < 400 || $status >= 500 || 404 === $status || 405 === $status) {
@@ -74,7 +74,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
                 'max_redirects' => 0,
             ])->getStatusCode();
         } catch (ExceptionInterface $exception) {
-            throw new ProviderUnreachableException('That address did not answer.', 0, $exception);
+            throw ProviderUnreachableException::didNotAnswer($exception);
         }
     }
 }

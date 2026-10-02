@@ -128,7 +128,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
                 $response = $this->request($connection, $call->request);
             } catch (ExceptionInterface $exception) {
                 $outcomes[$index] = CompletionOutcomeModel::failure(
-                    new ProviderUnreachableException('That address did not answer.', 0, $exception),
+                    ProviderUnreachableException::didNotAnswer($exception),
                 );
 
                 continue;
@@ -193,7 +193,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
         if (!$slot->reader->hitTokenCeiling()) {
-            return new ProviderUnreachableException('That address did not answer.', 0, $failure);
+            return ProviderUnreachableException::didNotAnswer($failure);
         }
 
         return new ProviderRunawayException(
@@ -281,7 +281,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         $status = $response->getStatusCode();
 
         if (401 === $status || 403 === $status) {
-            throw new CredentialsRejectedException('That provider refused the API key.');
+            throw CredentialsRejectedException::refusedKey();
         }
 
         if (\in_array($status, [429, 502, 503, 504], true)) {
@@ -289,7 +289,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         }
 
         if ($status >= 300) {
-            throw new ProviderUnreachableException(sprintf('That provider answered with status %d.', $status));
+            throw ProviderUnreachableException::answeredWithStatus($status);
         }
     }
 

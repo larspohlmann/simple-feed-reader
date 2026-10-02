@@ -11,4 +11,18 @@ namespace App\Service\Ai\Exception;
  */
 final class ProviderUnreachableException extends \RuntimeException
 {
+    public static function didNotAnswer(\Throwable $transportFailure): self
+    {
+        return new self('That address did not answer.', 0, $transportFailure);
+    }
+
+    public static function answeredWithStatus(int $status): self
+    {
+        return new self(sprintf('That provider answered with status %d.', $status));
+    }
+
+    public static function answeredMoreThan(int $maximumBytes): self
+    {
+        return new self(sprintf('That provider answered with more than %d bytes.', $maximumBytes));
+    }
 }

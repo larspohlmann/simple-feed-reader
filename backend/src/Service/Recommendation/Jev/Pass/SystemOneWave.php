@@ -54,9 +54,10 @@ final class SystemOneWave
 
     public function failSilentFor(float $idleSeconds): void
     {
+        $now = $this->now();
         foreach ($this->positions as $response) {
             $position = $this->positions->getInfo();
-            if (isset($this->outcomes[$position]) || $this->now() - $this->lastHeardAt[$position] <= $idleSeconds) {
+            if (isset($this->outcomes[$position]) || $now - $this->lastHeardAt[$position] <= $idleSeconds) {
                 continue;
             }
             $response->cancel();
@@ -79,17 +80,13 @@ final class SystemOneWave
         return $open;
     }
 
-    /** @return list<SystemOneOutcomeModel> */
-    public function outcomes(int $requestCount): array
+    /** @return list<SystemOneOutcomeModel> in request order */
+    public function outcomes(): array
     {
-        $aligned = [];
-        for ($position = 0; $position < $requestCount; $position++) {
-            $aligned[] = $this->outcomes[$position] ?? SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException('That provider answered without a reply.'),
-            );
-        }
+        $outcomes = $this->outcomes;
+        ksort($outcomes);
 
-        return $aligned;
+        return array_values($outcomes);
     }
 
     private function now(): float

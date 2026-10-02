@@ -24,8 +24,8 @@
                 'App\\Service\\ClientError\\ClientErrorScrubber::redact',
             ],
         },
-        // cancel() on a landed or failed response only frees the connection early: against MockHttpClient it has
-        // no observable effect, and a spy on it would test the mock.
+        // cancel() on a landed response only frees the connection early: against MockHttpClient it has no
+        // observable effect, and a spy on it would test the mock.
         MethodCallRemoval: {
             ignore: [
                 'App\\Service\\Fetch\\RedirectFollower::redirectTarget',
@@ -34,7 +34,6 @@
                 'App\\Service\\Image\\ImageDownloader::assertServed',
                 'App\\Service\\Image\\ImageDownloader::servedType',
                 'App\\Service\\Image\\OriginCookies::visit',
-                'App\\Service\\Recommendation\\Jev\\SystemOneClient\\HttpSystemOneClient::abandoned',
             ],
         },
         // Both read the body only after isSuccess() was confirmed, and getContent()'s flag differs only on a non-2xx.

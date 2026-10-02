@@ -14,7 +14,6 @@ use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneReplyModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Pass\JevWave;
-use App\Service\Recommendation\Jev\Support\ClippedText;
 use App\Service\Recommendation\Jev\Support\RenderedSystemOneRequest;
 use App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
@@ -237,7 +236,7 @@ final readonly class JevBatchWave
     /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */
     private static function logged(string $body): string
     {
-        return ClippedText::of($body, SystemOneClientInterface::MAXIMUM_RESPONSE_BYTES);
+        return mb_scrub($body, 'UTF-8');
     }
 
     /** @return list<int> */
