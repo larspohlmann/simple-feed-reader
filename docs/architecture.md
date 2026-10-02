@@ -207,7 +207,10 @@ Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` o
 ## 9. Service modules form no cycle
 
 A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with all its
-subdirectories is one module. Every service belongs to a module, and the modules depend on each other without a
+subdirectories is one module.
+The one exception is a directory listed in `ServiceModules::SUB_MODULES` (`backend/tests/PhpStan/`): `Service/Ai/Llm`
+is a module of its own, so the LLM engine there may depend on `Recommendation` while `Recommendation` depends on the
+rest of `Ai` (#1344). Every service belongs to a module, and the modules depend on each other without a
 cycle, so each one can be read, tested and moved without the others. Decided in #1161.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the

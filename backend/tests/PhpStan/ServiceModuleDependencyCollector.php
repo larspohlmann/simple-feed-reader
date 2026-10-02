@@ -11,20 +11,18 @@ use PHPStan\Collectors\Collector;
 use PHPStan\Node\FileNode;
 
 /**
- * [its module, the module it names, line] for every App\Service name a Service file mentions. A module is the first
- * segment under App\Service; a class loose in the root is a module of its own, named by its file (PSR-4).
+ * [its module, the module it names, line] for every App\Service name a Service file mentions. ServiceModules
+ * names the module.
  *
  * @implements Collector<FileNode, list<array{string, string, int}>>
  */
 final readonly class ServiceModuleDependencyCollector implements Collector
 {
-    private const string SERVICE_NAMESPACE = 'App\\Service\\';
-
     private ClassNameReferences $references;
 
     public function __construct(NodeFinder $finder)
     {
-        $this->references = new ClassNameReferences($finder, [self::SERVICE_NAMESPACE]);
+        $this->references = new ClassNameReferences($finder, [ServiceModules::SERVICE_NAMESPACE]);
     }
 
     public function getNodeType(): string
@@ -41,7 +39,7 @@ final readonly class ServiceModuleDependencyCollector implements Collector
     {
         $fileClassName = basename($scope->getFile(), '.php');
         $dependencies = [];
-        foreach ($this->references->forbiddenInFile($node, [self::SERVICE_NAMESPACE]) as $reference) {
+        foreach ($this->references->forbiddenInFile($node, [ServiceModules::SERVICE_NAMESPACE]) as $reference) {
             $module = self::moduleOf($reference->inNamespace . '\\' . $fileClassName);
             $dependency = self::moduleOf($reference->name);
             if ('' !== $dependency && $dependency !== $module) {
@@ -54,6 +52,6 @@ final readonly class ServiceModuleDependencyCollector implements Collector
 
     private static function moduleOf(string $className): string
     {
-        return explode('\\', substr($className, \strlen(self::SERVICE_NAMESPACE)))[0];
+        return ServiceModules::of($className);
     }
 }

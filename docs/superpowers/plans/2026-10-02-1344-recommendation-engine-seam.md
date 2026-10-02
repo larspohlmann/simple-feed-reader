@@ -82,7 +82,7 @@
 - **D15 — `kindFor()` ignores its argument in this PR** (always `Llm`). phptramp will warn (3 hops: `RecommendationCapabilitiesJson::of → engineFor → kindFor` forwarding a connection none reads). 3 hops warn and do not fail the build; #1345 reads the model there. Do not "fix" the warning. **Assumption (verify):** PhpStorm's unused-parameter inspection on `kindFor()` is a weak warning; if `lint_files` reports it as WARNING, add `/** @noinspection PhpUnusedParameterInspection #1345 reads the model id */` above the method and say so in the report.
 - **D16 — Docblocks of neutral classes that spoke of prompts are reworded in Task 3** (comment-only, so `compare-moves.php` still reads "0 differ"): `ArticleLineModel` (docblock dropped), `CandidatePoolSummaryModel`, `RecommendationHistoryModel`, both loaders, `ProviderCallHeartbeatInterface`, and the `services.yaml` heartbeat comment.
 - **D17 — The move tooling is copied unchanged** from `docs/superpowers/plans/2026-09-28-1202-scripts/` (`class-names.php`, `move-classes.php`, `compare-moves.php`, `stale-names.php`) into `docs/superpowers/plans/2026-10-02-1344-scripts/`, with this plan's `moves.php` map and a new `psr4-namespaces.php` sweep (the #1202 hazard: a namespace corruption the comparison script once skipped). `compare-moves.php` already checks every moved file's namespace; the sweep covers every file in `src` and `tests`.
-- **D18 — CLAUDE.md's module sentence is updated** in Task 1 ("A module is the first directory under `src/Service`" is no longer the whole truth). Lars may veto in review.
+- **D18 — CLAUDE.md's module sentence** ("A module is the first directory under `src/Service`" is no longer the whole truth) is proposed in the PR body for Lars; not edited in-branch.
 - **D19 — `RecommendationSettingsJson` keeps exposing the LLM's fixed prompt** (`RecommendationPromptText`), and the card keeps showing it and the distilled profile. `Http` may name `Ai\Llm`; whether a non-LLM engine hides them is #1345's decision.
 - **D20 — Test double `tests/Support/ScriptedRecommendationEngine`** stands in for "an engine that is not the LLM" in `TickPhasesTest`, `SnapshotPhaseTest` and the Http tests. It registers under `llm` because `kindFor()` maps every connection there today.
 - **D21 — New unit tests for `TickPhases` and `SnapshotPhase`.** *The brief said "updated"; none exist today* (both are covered only through `RecommendationRunAdvancerTest`). They are new, DB-backed, and drive the seam with the scripted engine.
@@ -201,7 +201,7 @@ The rule changes before anything moves into the sub-module; with no `Ai\Llm` cla
 - Create: `backend/tests/PhpStan/data/service-module-cycle/{ai-sub-module-acyclic,ai-sub-module-cycle,ai-sibling-of-sub-module,ai-sub-module-alias}.php`
 - Create: `backend/tests/PhpStan/data/service-role-sub-module-fixture.php`
 - Modify: `backend/tests/PhpStan/ServiceModuleCycleRuleTest.php`, `backend/tests/PhpStan/ServiceRoleRuleTest.php`
-- Modify: `docs/architecture.md` §9, `CLAUDE.md` (D18)
+- Modify: `docs/architecture.md` §9 (the `CLAUDE.md` sentence, D18, is proposed in the PR body; not edited in-branch)
 
 **Interfaces:**
 - Produces: `App\Tests\PhpStan\ServiceModules::SERVICE_NAMESPACE = 'App\\Service\\'`; `ServiceModules::of(string $className): string` (`$className` starts with `App\Service\`; returns `Ai\Llm` for that sub-module, else the first segment below `App\Service`). `ServiceRoleNames::moduleOf()` returns `App\Service\Ai\Llm` for any name in the sub-module.
@@ -545,14 +545,14 @@ is a module of its own, so the LLM engine there may depend on `Recommendation` w
 rest of `Ai` (#1344).
 ```
 
-In `CLAUDE.md`, in the bullet **Service modules form no cycle.**, replace `A module is the first directory under \`src/Service\`, and every service belongs to one.` with `A module is the first directory under \`src/Service\` (\`Service/Ai/Llm\` is a module of its own, #1344), and every service belongs to one.`
+`CLAUDE.md` is not edited in this branch: the replacement sentence (`A module is the first directory under \`src/Service\` (\`Service/Ai/Llm\` is a module of its own, #1344), and every service belongs to one.`) is proposed in the PR body for Lars.
 
 - [ ] **Step 11: Gates and commit**
 
 ```bash
 composer check
 php bin/phpunit tests/PhpStan
-git add tests/PhpStan ../docs/architecture.md ../CLAUDE.md
+git add tests/PhpStan ../docs/architecture.md
 git commit -m "refactor(#1344): service/ai/llm is a module of its own"
 ```
 Expected: `composer check` green (no `Ai\Llm` class exists yet, so the real tree is unchanged).

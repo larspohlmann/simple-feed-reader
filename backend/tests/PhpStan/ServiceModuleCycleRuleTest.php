@@ -79,6 +79,32 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         );
     }
 
+    public function testAnLlmEngineMayDependOnRecommendationWhichDependsOnTheRestOfAi(): void
+    {
+        $this->analyse([self::fixture('ai-sub-module-acyclic')], []);
+    }
+
+    public function testRecommendationNamingTheLlmSubModuleClosesACycle(): void
+    {
+        $this->analyse(
+            [self::fixture('ai-sub-module-cycle')],
+            [[self::message('Ai\Llm -> Recommendation -> Ai\Llm'), 25]],
+        );
+    }
+
+    public function testASiblingWhoseNameStartsLikeTheSubModuleStaysInAi(): void
+    {
+        $this->analyse([self::fixture('ai-sibling-of-sub-module')], []);
+    }
+
+    public function testAnAliasImportOfTheSubModulesNamespaceNamesTheSubModule(): void
+    {
+        $this->analyse(
+            [self::fixture('ai-sub-module-alias')],
+            [[self::message('Ai\Llm -> Recommendation -> Ai\Llm'), 9]],
+        );
+    }
+
     private static function fixture(string $name): string
     {
         return __DIR__ . '/data/service-module-cycle/' . $name . '.php';
