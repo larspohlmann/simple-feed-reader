@@ -8898,6 +8898,28 @@ used to complete a day before), with calls back to back, so their asserted value
 (`RecommendationEtaEstimatorTest`, 18 s), the averaging (`PhaseDurationsModelTest`, 43 s) and `runSeconds` per span
 (`RecommendationRunTimingRepositoryTest`, 46 s). `RecommendationPipelineTest` is untouched.
 
+### Task B13: the ai settings say jev is supported
+
+**Request (Lars):** Settings → AI shows that Jev models are supported, in the model picker, the step-by-step guide and
+"add configuration".
+
+**Done:**
+- Model picker. `GET /api/me/ai/configs/{id}/models` and the add response's `models` list objects now,
+  `{id, capabilities}`, where `capabilities` is what a connection would report once it saves that model
+  (`RecommendationEngineResolver::capabilitiesForModel`, `RecommendationCapabilitiesJson::ofModel`, the same
+  `jev-` rule as `kindFor`). The client never names the engine (B9-D6): `AiSectionComponent.modelHint` turns
+  `reasons: false` and `profile: 'borrowed'` into a muted hint under the option ("scores articles, writes no reasons ·
+  needs a profile connection"); an LLM entry stays bare. `SelectOption` gains an optional `hint`, which the
+  searchable select renders under the label in the open list only; the filter matches labels alone. The picker's
+  info tip mentions Jev models too.
+- Guide: a third walkthrough, "Use Jev (TypeSafe System One)", five steps (an LLM connection first, add OpenRouter
+  or TypeSafe, save `jev-latest`, choose the profile connection, activate); the intro says three walkthroughs.
+- Add configuration: a hint at the top of the form says LLM endpoints and Jev both work, with the OpenRouter address.
+- Copy in en and de. `docs/recommendations-runs.md` (Engines) notes the per-model capabilities.
+- Pins: `AiSettingsJsonTest` (models + added), `AiSettingsControllerTest` (GET models with `jev-latest`),
+  `RecommendationCapabilitiesJsonTest` (`ofModel`, Jev and `typesafe/jev-router`), the searchable-select hint spec,
+  and three `AiSectionComponent` specs (picker hint, guide section, add-form hint).
+
 ---
 
 ### Task B8: Docs, gates, a real run, PR B
