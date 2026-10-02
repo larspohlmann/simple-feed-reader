@@ -55,7 +55,7 @@ final class RateLimitedCallsTest extends TestCase
         $send = static function ($calls) use (&$sends): array {
             ++$sends;
 
-            return [ScriptedRateLimitedOutcome::limited('one', 4), ScriptedRateLimitedOutcome::limited('two', 11)];
+            return [ScriptedRateLimitedOutcome::limited('one', 11), ScriptedRateLimitedOutcome::limited('two', 4)];
         };
 
         $result = (new RateLimitedCalls(new MockClock()))->send(['a', 'b'], $send, RetryPlanModel::deferring());
@@ -63,5 +63,20 @@ final class RateLimitedCallsTest extends TestCase
         self::assertTrue($result->isDeferred());
         self::assertSame(11.0, $result->deferSeconds);
         self::assertSame(1, $sends);
+    }
+
+    public function testABlockingPlanStillWaitsAHintThatUsesTheWholeBudget(): void
+    {
+        $clock = new MockClock('2026-10-02 09:00:00');
+        /** @var \SplQueue<list<ScriptedRateLimitedOutcome>> $replies */
+        $replies = new \SplQueue();
+        $replies->enqueue([ScriptedRateLimitedOutcome::limited('first', 120)]);
+        $replies->enqueue([ScriptedRateLimitedOutcome::answered('first again')]);
+        $send = static fn ($calls) => $replies->dequeue();
+
+        $result = (new RateLimitedCalls($clock))->send(['a'], $send, RetryPlanModel::blocking());
+
+        self::assertFalse($result->isDeferred());
+        self::assertEquals(new \DateTimeImmutable('2026-10-02 09:02:00'), $clock->now());
     }
 }
