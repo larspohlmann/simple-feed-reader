@@ -8,6 +8,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -16,6 +17,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Reads `GET {baseUrl}/models`, which every OpenAI-compatible provider answers alike. The caps are no SSRF boundary
  * (docs/security.md#ai-provider-endpoints); they stop one endpoint holding a request open or filling memory.
  */
+#[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 10])]
 final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
 {
     private const float TIMEOUT_SECONDS = 10.0;
