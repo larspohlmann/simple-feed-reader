@@ -73,22 +73,22 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertNull($state['profileText']);
     }
 
-    public function testStateEmitsShowReasons(): void
+    public function testStateEmitsShowScoreAndReasons(): void
     {
         $state = RecommendationSettingsJson::state(
-            $this->effectiveSettings(showReasons: true),
+            $this->effectiveSettings(showScoreAndReasons: true),
             self::llm(),
             workerAlive: true,
         );
 
-        self::assertTrue($state['showReasons']);
+        self::assertTrue($state['showScoreAndReasons']);
     }
 
-    public function testStateEmitsShowReasonsFalseByDefault(): void
+    public function testStateEmitsShowScoreAndReasonsFalseByDefault(): void
     {
         $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
 
-        self::assertFalse($state['showReasons']);
+        self::assertFalse($state['showScoreAndReasons']);
     }
 
     public function testStateEmitsFactoryDefaultsForTheExpertDraft(): void
@@ -135,7 +135,7 @@ final class RecommendationSettingsJsonTest extends TestCase
 
     private function effectiveSettings(
         ?string $profileText = null,
-        bool $showReasons = false,
+        bool $showScoreAndReasons = false,
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
@@ -150,7 +150,7 @@ final class RecommendationSettingsJsonTest extends TestCase
             debugEnabled: false,
             autoGenerateIntervalHours: null,
             profileText: $profileText,
-            showReasons: $showReasons,
+            showScoreAndReasons: $showScoreAndReasons,
         );
     }
 }

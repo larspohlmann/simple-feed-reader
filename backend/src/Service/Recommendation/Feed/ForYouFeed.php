@@ -13,7 +13,8 @@ use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 
 /**
- * A page of the user's for-you feed, enriched like every entry list, annotated as the reader's "show reasons" allows.
+ * A page of the user's for-you feed, enriched like every entry list, annotated as the reader's "show score and
+ * reasons" allows.
  */
 final readonly class ForYouFeed
 {
@@ -29,7 +30,7 @@ final readonly class ForYouFeed
         $page = $this->pager->page($query);
 
         $visibility = new FeedAnnotationVisibilityModel(
-            showExplanation: $this->settings->forUser($query->user)->showReasons,
+            showScoreAndReasons: $this->settings->forUser($query->user)->showScoreAndReasons,
         );
 
         return new ForYouFeedPageModel(

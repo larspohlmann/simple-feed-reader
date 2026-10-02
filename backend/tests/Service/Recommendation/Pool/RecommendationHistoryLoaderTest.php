@@ -243,7 +243,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             debugEnabled: false,
             autoGenerateIntervalHours: null,
             profileText: null,
-            showReasons: false,
+            showScoreAndReasons: false,
         );
     }
 

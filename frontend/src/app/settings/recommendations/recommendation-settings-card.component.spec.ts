@@ -60,7 +60,7 @@ describe('RecommendationSettingsCardComponent', () => {
     lookbackDays: 2,
     workerAlive: true,
     profileText: null,
-    showReasons: false,
+    showScoreAndReasons: false,
   };
 
   function mount(
@@ -101,11 +101,11 @@ describe('RecommendationSettingsCardComponent', () => {
   ): HTMLSelectElement =>
     fixture.nativeElement.querySelector('select[data-testid="lookback-days"]');
 
-  const showReasonsToggle = (
+  const showScoreAndReasonsToggle = (
     fixture: ComponentFixture<RecommendationSettingsCardComponent>,
   ): HTMLInputElement =>
     fixture.nativeElement.querySelector(
-      '[data-testid="show-reasons"] app-toggle input[type="checkbox"]',
+      '[data-testid="show-score-and-reasons"] app-toggle input[type="checkbox"]',
     );
 
   const batchSizeSelect = (
@@ -159,7 +159,7 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(fixture.componentInstance.contextWindow()).toBeNull();
     expect(fixture.componentInstance.guidance()).toBe('');
     expect(fixture.componentInstance.debugEnabled()).toBe(false);
-    expect(fixture.componentInstance.showReasons()).toBe(false);
+    expect(fixture.componentInstance.showScoreAndReasons()).toBe(false);
   });
 
   it('shows the fixed prompt, read-only, inside a disclosure', () => {
@@ -203,18 +203,17 @@ describe('RecommendationSettingsCardComponent', () => {
   });
 
   describe("rendering from the engine's capabilities", () => {
-    it('offers the reasons switch, the batch size and the context window to an engine that reads them all', () => {
+    it('offers the score-and-reasons switch, the batch size and the context window to an engine that reads them all', () => {
       const fixture = mount();
 
-      expect(showReasonsToggle(fixture)).not.toBeNull();
+      expect(showScoreAndReasonsToggle(fixture)).not.toBeNull();
       expect(batchSizeSelect(fixture)).not.toBeNull();
       expect(contextWindowInput(fixture)).not.toBeNull();
     });
 
-    it('offers none of them to an engine without reasons or tuning, and keeps the shared settings', () => {
+    it('offers no tuning to an engine without it, and keeps the shared settings', () => {
       const fixture = mount(STATE, NO_RECOMMENDATION_CAPABILITIES);
 
-      expect(showReasonsToggle(fixture)).toBeNull();
       expect(batchSizeSelect(fixture)).toBeNull();
       expect(contextWindowInput(fixture)).toBeNull();
       expect(picksInput(fixture)).not.toBeNull();
@@ -231,15 +230,16 @@ describe('RecommendationSettingsCardComponent', () => {
 
       expect(contextWindowInput(fixture)).not.toBeNull();
       expect(batchSizeSelect(fixture)).toBeNull();
-      expect(showReasonsToggle(fixture)).toBeNull();
     });
 
-    it('offers the reasons switch to an engine that writes reasons but reads no tuning', () => {
-      const fixture = mount(STATE, { reasons: true, prompt: true, tuningFields: [] });
+    it('offers the score-and-reasons switch to an engine that writes no reasons, for its score', () => {
+      const fixture = mount(STATE, {
+        reasons: false,
+        prompt: false,
+        tuningFields: ['batchConcurrency'],
+      });
 
-      expect(showReasonsToggle(fixture)).not.toBeNull();
-      expect(batchSizeSelect(fixture)).toBeNull();
-      expect(contextWindowInput(fixture)).toBeNull();
+      expect(showScoreAndReasonsToggle(fixture)).not.toBeNull();
     });
   });
 
@@ -259,27 +259,27 @@ describe('RecommendationSettingsCardComponent', () => {
     });
   });
 
-  describe('the show-reasons switch (instant)', () => {
-    it('persists immediately with showReasons in the PUT body', () => {
+  describe('the show-score-and-reasons switch (instant)', () => {
+    it('persists immediately with showScoreAndReasons in the PUT body', () => {
       const fixture = mount();
 
-      const toggle = showReasonsToggle(fixture);
+      const toggle = showScoreAndReasonsToggle(fixture);
       toggle.checked = true;
       toggle.dispatchEvent(new Event('change'));
 
       const request = http.expectOne('/api/me/ai/recommendations');
       expect(request.request.method).toBe('PUT');
-      expect(request.request.body.showReasons).toBe(true);
-      request.flush({ ...STATE, showReasons: true });
+      expect(request.request.body.showScoreAndReasons).toBe(true);
+      request.flush({ ...STATE, showScoreAndReasons: true });
 
-      expect(fixture.componentInstance.showReasons()).toBe(true);
+      expect(fixture.componentInstance.showScoreAndReasons()).toBe(true);
     });
 
     it('leaves the dirty flag untouched — it is not a typed edit', () => {
       const fixture = mount();
 
-      fixture.componentInstance.onShowReasons(true);
-      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showReasons: true });
+      fixture.componentInstance.onShowScoreAndReasons(true);
+      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showScoreAndReasons: true });
 
       expect(fixture.componentInstance.svc.dirty()).toBe(false);
     });
@@ -580,11 +580,11 @@ describe('RecommendationSettingsCardComponent', () => {
     it('fires once on an actual persist success, not on the click', () => {
       const fixture = mount();
 
-      fixture.componentInstance.onShowReasons(true);
+      fixture.componentInstance.onShowScoreAndReasons(true);
       // No toast yet: the PUT is in flight.
       expect(toastStub.show).not.toHaveBeenCalled();
 
-      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showReasons: true });
+      http.expectOne('/api/me/ai/recommendations').flush({ ...STATE, showScoreAndReasons: true });
       fixture.detectChanges();
 
       expect(toastStub.show).toHaveBeenCalledTimes(1);

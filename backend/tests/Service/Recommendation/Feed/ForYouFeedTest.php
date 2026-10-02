@@ -60,7 +60,7 @@ final class ForYouFeedTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    public function testOmitsBothAnnotationsWhenShowReasonsIsOff(): void
+    public function testOmitsBothAnnotationsWhenShowScoreAndReasonsIsOff(): void
     {
         $first = $this->firstEntry();
 
@@ -68,9 +68,9 @@ final class ForYouFeedTest extends DbTestCase
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testShowsTheReasonAndItsScoreWhenShowReasonsIsOn(): void
+    public function testShowsTheReasonAndItsScoreWhenShowScoreAndReasonsIsOn(): void
     {
-        $this->fixtures->showReasonsEnabledSettings($this->user);
+        $this->fixtures->showScoreAndReasonsEnabledSettings($this->user);
 
         $first = $this->firstEntry();
 
@@ -91,9 +91,9 @@ final class ForYouFeedTest extends DbTestCase
 
     /** Debug does not take anything away either: with reasons on, the pair is
      *  shown whether or not the reader is also collecting call logs. */
-    public function testDebugDoesNotChangeWhatShowReasonsReveals(): void
+    public function testDebugDoesNotChangeWhatShowScoreAndReasonsReveals(): void
     {
-        $this->fixtures->showReasonsAndDebugEnabledSettings($this->user);
+        $this->fixtures->showScoreAndReasonsAndDebugEnabledSettings($this->user);
 
         $first = $this->firstEntry();
 

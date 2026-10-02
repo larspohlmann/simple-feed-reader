@@ -89,7 +89,7 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   autoGenerateIntervalHours: null,
   workerAlive: true,
   profileText: null,
-  showReasons: false,
+  showScoreAndReasons: false,
 };
 
 function createStub(): AiSettingsStub {

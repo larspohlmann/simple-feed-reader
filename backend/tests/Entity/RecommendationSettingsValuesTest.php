@@ -12,7 +12,7 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsValuesTest extends TestCase
 {
-    public function testShowReasonsDefaultsToFalse(): void
+    public function testShowScoreAndReasonsDefaultsToFalse(): void
     {
         $values = new RecommendationSettingsValues(
             guidancePrompt: null,
@@ -23,6 +23,6 @@ final class RecommendationSettingsValuesTest extends TestCase
             debugEnabled: false,
         );
 
-        self::assertFalse($values->showReasons);
+        self::assertFalse($values->showScoreAndReasons);
     }
 }

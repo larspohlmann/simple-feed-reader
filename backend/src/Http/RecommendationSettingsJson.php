@@ -52,7 +52,7 @@ final class RecommendationSettingsJson
             'contextWindowSource' => $effective->packing->contextWindowSource,
             'batchSize' => $effective->packing->batchSize->value,
             'debugEnabled' => $effective->debugEnabled,
-            'showReasons' => $effective->showReasons,
+            'showScoreAndReasons' => $effective->showScoreAndReasons,
             'autoGenerateIntervalHours' => $effective->autoGenerateIntervalHours,
             'workerAlive' => $workerAlive,
         ];

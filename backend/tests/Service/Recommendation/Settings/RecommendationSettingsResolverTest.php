@@ -157,20 +157,20 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame('Likes self-hosted home automation.', $settings->profileText);
     }
 
-    public function testShowReasonsDefaultsToFalseWhenNoRowExists(): void
+    public function testShowScoreAndReasonsDefaultsToFalseWhenNoRowExists(): void
     {
         $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
 
-        self::assertFalse($settings->showReasons);
+        self::assertFalse($settings->showScoreAndReasons);
     }
 
-    public function testShowReasonsIsReadFromTheSettingsRow(): void
+    public function testShowScoreAndReasonsIsReadFromTheSettingsRow(): void
     {
-        $this->settingsRowFor($this->user, showReasons: true);
+        $this->settingsRowFor($this->user, showScoreAndReasons: true);
 
         $settings = $this->resolver()->forUser($this->user);
 
-        self::assertTrue($settings->showReasons);
+        self::assertTrue($settings->showScoreAndReasons);
     }
 
     private function userWithoutSettingsRow(): User
@@ -181,7 +181,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     private function settingsRowFor(
         User $user,
         ?string $profileText = null,
-        bool $showReasons = false,
+        bool $showScoreAndReasons = false,
     ): RecommendationSettings {
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
@@ -192,7 +192,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
             profileText: $profileText,
-            showReasons: $showReasons,
+            showScoreAndReasons: $showScoreAndReasons,
         ));
         $this->entityManager->persist($row);
         $this->entityManager->flush();

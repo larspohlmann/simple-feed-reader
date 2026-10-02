@@ -33,7 +33,7 @@ function state(over: Partial<RecommendationSettingsState> = {}): RecommendationS
     autoGenerateIntervalHours: null,
     workerAlive: true,
     profileText: null,
-    showReasons: false,
+    showScoreAndReasons: false,
     ...otherOverrides,
     expertDefaults: expertDefaults ?? {
       guidancePrompt: null,
@@ -82,19 +82,19 @@ describe('RecommendationSettingsService', () => {
     http.expectOne(ENDPOINT).flush(state(over));
   }
 
-  it('saveInstant path: showReasons issues an immediate PUT with the full body', () => {
+  it('saveInstant path: showScoreAndReasons issues an immediate PUT with the full body', () => {
     loadState();
 
-    service.saveInstant({ showReasons: true });
+    service.saveInstant({ showScoreAndReasons: true });
 
     const put = http.expectOne(ENDPOINT);
     expect(put.request.method).toBe('PUT');
-    expect(put.request.body.showReasons).toBe(true);
+    expect(put.request.body.showScoreAndReasons).toBe(true);
     expect(put.request.body.favoritesCap).toBe(50);
     expect(put.request.body.contextWindow).toBeNull();
 
-    put.flush(state({ showReasons: true }));
-    expect(service.state()?.showReasons).toBe(true);
+    put.flush(state({ showScoreAndReasons: true }));
+    expect(service.state()?.showScoreAndReasons).toBe(true);
   });
 
   it('typed path: a cap edit sets dirty and issues no PUT until save()', () => {
@@ -119,12 +119,12 @@ describe('RecommendationSettingsService', () => {
     service.setTypedField('favoritesCap', 99);
     expect(service.dirty()).toBe(true);
 
-    service.saveInstant({ showReasons: true });
+    service.saveInstant({ showScoreAndReasons: true });
     const put = http.expectOne(ENDPOINT);
-    expect(put.request.body.showReasons).toBe(true);
+    expect(put.request.body.showScoreAndReasons).toBe(true);
     expect(put.request.body.favoritesCap).toBe(50);
 
-    put.flush(state({ showReasons: true }));
+    put.flush(state({ showScoreAndReasons: true }));
     expect(service.dirty()).toBe(true);
   });
 
@@ -148,8 +148,8 @@ describe('RecommendationSettingsService', () => {
     loadState();
     expect(service.saved()).toBe(false);
 
-    service.saveInstant({ showReasons: true });
-    http.expectOne(ENDPOINT).flush(state({ showReasons: true }));
+    service.saveInstant({ showScoreAndReasons: true });
+    http.expectOne(ENDPOINT).flush(state({ showScoreAndReasons: true }));
 
     expect(service.saved()).toBe(true);
   });

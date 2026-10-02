@@ -5,24 +5,22 @@
       [title]="'settings.ai.recommendations.forYouTitle' | transloco"
       [caption]="'settings.ai.recommendations.forYouCaption' | transloco"
     >
-      @if (offersReasons()) {
-        <app-settings-row
-          data-testid="show-reasons"
-          [title]="'settings.ai.recommendations.showReasons' | transloco"
-          [description]="'settings.ai.recommendations.showReasonsDesc' | transloco"
-        >
-          <app-info-tip
-            rowTitleTip
-            [text]="'settings.ai.info.showReasons' | transloco"
-            [label]="'settings.ai.recommendations.showReasons' | transloco"
-          />
-          <app-toggle
-            [label]="'settings.ai.recommendations.showReasons' | transloco"
-            [checked]="showReasons()"
-            (toggled)="onShowReasons($event)"
-          />
-        </app-settings-row>
-      }
+      <app-settings-row
+        data-testid="show-score-and-reasons"
+        [title]="'settings.ai.recommendations.showScoreAndReasons' | transloco"
+        [description]="'settings.ai.recommendations.showScoreAndReasonsDesc' | transloco"
+      >
+        <app-info-tip
+          rowTitleTip
+          [text]="'settings.ai.info.showScoreAndReasons' | transloco"
+          [label]="'settings.ai.recommendations.showScoreAndReasons' | transloco"
+        />
+        <app-toggle
+          [label]="'settings.ai.recommendations.showScoreAndReasons' | transloco"
+          [checked]="showScoreAndReasons()"
+          (toggled)="onShowScoreAndReasons($event)"
+        />
+      </app-settings-row>
 
       <app-settings-row
         [stackable]="true"

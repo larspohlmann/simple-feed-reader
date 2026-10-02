@@ -973,7 +973,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             debugEnabled: false,
             autoGenerateIntervalHours: null,
             profileText: null,
-            showReasons: false,
+            showScoreAndReasons: false,
         );
     }
 }

@@ -138,14 +138,14 @@ final class EntryControllerTest extends WebTestCase
         (new RecommendationRunFixtures($entityManager, $cipher))->debugEnabledSettings($user);
     }
 
-    private function seedShowReasonsSettings(User $user): void
+    private function seedShowScoreAndReasonsSettings(User $user): void
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        (new RecommendationRunFixtures($entityManager, $cipher))->showReasonsEnabledSettings($user);
+        (new RecommendationRunFixtures($entityManager, $cipher))->showScoreAndReasonsEnabledSettings($user);
     }
 
     private function seedSavedSearchMembership(User $user, string $term, Entry $entry): SavedSearch
@@ -693,7 +693,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
 
-    public function testForYouViewIncludesTheReasonAndItsScoreWhenShowReasonsIsEnabled(): void
+    public function testForYouViewIncludesTheReasonAndItsScoreWhenShowScoreAndReasonsIsEnabled(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
@@ -710,7 +710,7 @@ final class EntryControllerTest extends WebTestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $entityManager->persist($run);
         $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
-        $this->seedShowReasonsSettings($user);
+        $this->seedShowScoreAndReasonsSettings($user);
         $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
@@ -720,7 +720,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        // showReasons on, debug off: the reason and the score beside it both show, one explanation, one switch.
+        // showScoreAndReasons on, debug off: the reason and the score beside it both show, one explanation, one switch.
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
         self::assertSame(42, $first['recommendationScore']);
     }
