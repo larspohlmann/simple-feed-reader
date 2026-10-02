@@ -55,14 +55,14 @@ final class SystemOneWave
     public function failSilentFor(float $idleSeconds): void
     {
         foreach ($this->positions as $response) {
-            $position = $this->positions[$response];
+            $position = $this->positions->getInfo();
             if (isset($this->outcomes[$position]) || $this->now() - $this->lastHeardAt[$position] <= $idleSeconds) {
                 continue;
             }
             $response->cancel();
-            $this->outcomes[$position] = SystemOneOutcomeModel::failed(new ProviderUnreachableException(
+            $this->settleAt($position, SystemOneOutcomeModel::failed(new ProviderUnreachableException(
                 sprintf('That provider sent nothing for more than %s seconds.', $idleSeconds),
-            ));
+            )));
         }
     }
 

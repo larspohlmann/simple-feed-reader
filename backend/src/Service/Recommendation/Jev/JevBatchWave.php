@@ -100,9 +100,7 @@ final readonly class JevBatchWave
 
         $result = $this->sendAll($wave, $requests, $recordedCalls);
         if ($result->isDeferred()) {
-            foreach ($recordedCalls as $recordedCall) {
-                $recordedCall->abortAfterTransportFailure('Provider rate limited; deferring.');
-            }
+            self::abortEvery($recordedCalls, 'Provider rate limited; deferring.');
 
             throw new ProviderRateLimitedException($result->deferSeconds);
         }
@@ -140,11 +138,17 @@ final readonly class JevBatchWave
                 $wave->tick->retryPlan(),
             );
         } catch (\Throwable $exception) {
-            foreach ($recordedCalls as $recordedCall) {
-                $recordedCall->abortAfterTransportFailure($exception->getMessage());
-            }
+            self::abortEvery($recordedCalls, $exception->getMessage());
 
             throw $exception;
+        }
+    }
+
+    /** @param list<RecordedCall> $recordedCalls */
+    private static function abortEvery(array $recordedCalls, string $detail): void
+    {
+        foreach ($recordedCalls as $recordedCall) {
+            $recordedCall->abortAfterTransportFailure($detail);
         }
     }
 
