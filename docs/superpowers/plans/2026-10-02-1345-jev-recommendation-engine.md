@@ -56,6 +56,7 @@ B6 and B7, and B8's docs, gate and real-run steps; each of those places says so.
 | B7 | B | A run whose connection switched engines fails | ☐ | — |
 | B9 | B | Jev reads the distilled profile through a profile connection (backend) | ☐ | — |
 | B10 | B | The profile-connection picker and the profile on the card (frontend) | ☐ | — |
+| B12 | B | The Jev ETA predicts on the run's clock | ☑ | `4d00d45a1` |
 | B8 | B | Docs, gates, a real run, PR B (`Closes #1345`) | ☐ | — |
 
 ## Scope
@@ -8876,6 +8877,27 @@ For-you card shows the profile after a run. Reviewer: yes.
 - Specs: B10 pins kept (the manager is opened first); "offered only when the active connection borrows" replaced by
   renders-in-an-inactive-borrowed-row, absent-from-an-own-row, and two-borrowed-rows-follow-one-change.
 
+### Task B12: the jev eta
+
+**Symptom (B8's real runs 146 and 147, dev stack):** run 1 had no estimate. On run 2, once `firstBatchStarted`, the
+`etaSeconds` was 0, and the For-you bar jumped to 99%.
+
+**Root cause:** `PhaseDurationsModel` predicted a run as the sum of its provider-call spans (run-log rows), while
+`RecommendationEtaEstimator` subtracts elapsed time counted from `run.createdAt`. Elapsed included the time between calls and the
+prediction never did: worker pickup, the 10 s tick waits (`WorkerSchedule`, one step per tick) and Jev's separate
+finalize tick. Run 146 predicted 5 s distill + 11 s of batch waves = 16 s for a 46 s run. 28 s in at the first
+batch, max(0, 16 − 28) = 0. LLM runs had the same defect (11–30 s short, runs 138–145), masked by their long calls.
+Run 1's null is by design for every engine (no completed run of the kind) and stays.
+
+**Fix (coordinator ruling, option A, every engine):** `RecommendationRunTimingRepository::completedRunPhaseSpans`
+carries each run's created-to-completed seconds (`runSeconds`). `PhaseDurationsModel` averages each qualifying run's
+time between calls (`runSeconds − Σ phase spans`, `betweenCallSeconds`) and adds it to `predictedTotalSeconds`.
+On the dev history this predicts 47 s for 5 Jev batches (actual 46–48 s), so about 19 s remain at the first batch. The LLM
+prediction grows by its real ~21 s. The estimator test's history fixtures now complete after they are created (they
+used to complete a day before), with calls back to back, so their asserted values hold. Pins: the 146 → 147 shape
+(`RecommendationEtaEstimatorTest`, 18 s), the averaging (`PhaseDurationsModelTest`, 43 s) and `runSeconds` per span
+(`RecommendationRunTimingRepositoryTest`, 46 s). `RecommendationPipelineTest` is untouched.
+
 ---
 
 ### Task B8: Docs, gates, a real run, PR B
@@ -8966,6 +8988,10 @@ curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/model -H "Authorizati
 curl -sk -X PUT https://localhost:8443/api/me/ai/configs/8/active -H "Authorization: Bearer $TOKEN" | jq '{active, capabilities}'   # only if 8 was not active
 ```
 
+*Amended (B12 brief):* each PUT here and below is conditional on step 1's recorded state. Skip the model PUT when
+the connection already holds `jev-latest`, the active PUT when 8 is already active, and the profile PUT when that
+connection already holds the profile flag. Record each PUT made, so step 7 restores exactly those.
+
 Then choose the profile connection (*Added (B9):* an LLM connection of that account; *Amended (final review M2):*
 the account's most recently used non-Jev, ready LLM connection, found read only — e.g. the connection of its latest
 non-Jev run, or the most recently updated LLM connection — named in the report with how it was chosen. If the account
@@ -8973,9 +8999,16 @@ has none: stop and report BLOCKED; adding a connection is a write outside this s
 
 Expected capabilities `{"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}`. In `/settings/ai` the Jev row shows the batch concurrency and nothing else, and the profile-connection picker is in the Jev connection's configuration (behind Manage and expanding the row, Lars's ruling, B11) with that connection selected; the For-you card shows "Show score and reasons", no fixed prompt, and (after run 1) the profile. Turn the switch on if it is off (record that, to restore).
 
-4. First run: `curl -sk -X POST https://localhost:8443/api/recommendations/runs -H "Authorization: Bearer $TOKEN"`; poll `GET /api/recommendations/runs/current` once a minute (no loop in a background agent) until it leaves `pending`/`running`.
+4. First run: `curl -sk -X POST https://localhost:8443/api/recommendations/runs -H "Authorization: Bearer $TOKEN"`. *Amended (B12 brief):* wait with
+one terminating Monitor loop (an until-loop polling `GET /api/recommendations/runs/current` every 10 s that exits
+when the status leaves `pending`/`running`, with a 10-minute cap), never an open-ended background poll. Run 1 shows
+`etaSeconds: null` throughout: no completed Jev run exists yet (by design, B12).
 
-5. Second run, the same way; while it runs, one poll must show `etaSeconds` non-null after `firstBatchStarted` is true.
+5. Second run, the same way (*Amended (B12 brief):* the same terminating Monitor loop, plus single `GET`s by hand
+while it runs). *Amended (B12):* once `firstBatchStarted` is true, `etaSeconds` is non-null and **above 0**. Expect
+roughly run 1's created-to-completed seconds minus the elapsed (about 15–25 s at the first batch for a run like
+146/147). Successive GETs count down instead of pinning at 0. Record the first non-null value, its elapsed and the run's
+actual remaining time.
 
 6. Verify (read only) for both runs:
 
@@ -8989,7 +9022,7 @@ Expected: `completed`, `engine_kind = 'jev'`, *Amended (B9):* each run's distill
 the profile connection's prompt), every other row `phase = 'batch'` with a `request_id` (`gen-…`), an `answering_model` like `typesafe/jev-1.13-…` and a `cost_nano_credits`; *Amended (final review I1):* D28 is verified from one batch row's stored reply, not the run's `prompt_tokens` (the
 distill call's usage is banked on the run too): `SELECT response_text FROM recommendation_run_log WHERE run_id = <id>
 AND phase = 'batch' LIMIT 1` through `jq '.usage | keys'` names `input_tokens` or `prompt_tokens` (else D28's
-assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the picks; the UI shows the score, no reason line. The first System One request's `state` is `{"profile": …[, "guidance": …]}` (the debug panel's request body).
+assumption failed: report it); `items = without_reason`, scores spread within 0–1000. `GET /api/entries?view=for-you` shows `recommendationScore` and an empty `recommendationReason` on the Jev picks (*Amended (B12 brief):* not on every pick: the for-you feed also lists earlier LLM picks, which keep their reasons; match the picks to the Jev run's `recommendation_item` rows); the UI shows the score, no reason line. The first System One request's `state` is `{"profile": …[, "guidance": …]}` (the debug panel's request body).
 
 7. Restore: `PUT /api/me/ai/configs/8/model` with the recorded model (a model no longer offered fails verification — then report it to Lars rather than forcing it), `PUT /api/me/ai/configs/<recorded active id>/active` if the active connection changed, and the "show score and reasons" switch to its recorded state. *Added (B9):* restore the profile flag through the API to what step 1 recorded: `PUT /api/me/ai/configs/<recorded id>/profile` when one held it (if that one is no longer an LLM connection the PUT is refused: report it, never write SQL), or `DELETE /api/me/ai/configs/<llm id>/profile` when none did. Re-run step 1's queries: the rows match what was recorded.
 
