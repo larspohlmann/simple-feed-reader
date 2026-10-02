@@ -15,7 +15,7 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new ServiceModuleCycleRule();
+        return new ServiceModuleCycleRule(new ServiceModules(self::SUB_MODULES));
     }
 
     protected function getCollectors(): array

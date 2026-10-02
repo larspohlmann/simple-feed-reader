@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm;
 
 use App\Entity\RecommendationRun;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Run\ProviderPhase\BatchPhase;
@@ -44,11 +42,6 @@ final readonly class LlmRecommendationEngine implements RecommendationEngineInte
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
         return $this->providerPhaseFor($tick->run)->advance($tick);
-    }
-
-    public function capabilities(): RecommendationEngineCapabilitiesModel
-    {
-        return new RecommendationEngineCapabilitiesModel(true, RecommendationTuningField::cases());
     }
 
     private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface

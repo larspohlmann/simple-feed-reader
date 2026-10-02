@@ -23,6 +23,7 @@ import { ToggleComponent } from '../../shared/toggle/toggle.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
 import {
   AiAvailabilityService,
+  offersTuning,
   RecommendationTuningField,
 } from '../../core/ai-availability.service';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -251,7 +252,7 @@ export class RecommendationSettingsCardComponent {
 
   /** Whether the active engine reads this setting; one it ignores is not offered. */
   offersTuning(field: RecommendationTuningField): boolean {
-    return this.availability.capabilities().tuningFields.includes(field);
+    return offersTuning(this.availability.capabilities(), field);
   }
 
   private nullableNumberValue(event: Event): number | null {

@@ -16,12 +16,12 @@ final readonly class ServiceModuleCycle
     }
 
     /** A parent naming its own sub-module is the offending hop by design; between peers, the hop that closes it. */
-    public function reportedSite(): ServiceModuleDependencySite
+    public function reportedSite(ServiceModules $serviceModules): ServiceModuleDependencySite
     {
         return array_find(
             $this->sites,
             fn (ServiceModuleDependencySite $site, int $hop): bool
-                => ServiceModules::isSubModuleOf($this->modules[$hop + 1], $this->modules[$hop]),
+                => $serviceModules->isSubModuleOf($this->modules[$hop + 1], $this->modules[$hop]),
         ) ?? $this->sites[array_key_last($this->sites)];
     }
 }

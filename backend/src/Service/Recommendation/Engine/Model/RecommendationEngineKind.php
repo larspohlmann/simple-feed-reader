@@ -8,4 +8,11 @@ namespace App\Service\Recommendation\Engine\Model;
 enum RecommendationEngineKind: string
 {
     case Llm = 'llm';
+
+    public function capabilities(): RecommendationEngineCapabilitiesModel
+    {
+        return match ($this) {
+            self::Llm => new RecommendationEngineCapabilitiesModel(true, RecommendationTuningField::cases()),
+        };
+    }
 }

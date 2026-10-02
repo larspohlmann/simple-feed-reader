@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
-import { RecommendationTuningField } from '../../core/ai-availability.service';
+import { offersTuning, RecommendationTuningField } from '../../core/ai-availability.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
@@ -215,7 +215,13 @@ export class AiSectionComponent {
 
   /** Whether this connection's engine reads the setting; one it ignores is not offered. */
   offersTuning(config: AiConfig, field: RecommendationTuningField): boolean {
-    return config.capabilities.tuningFields.includes(field);
+    return offersTuning(config.capabilities, field);
+  }
+
+  offersAnyToggle(config: AiConfig): boolean {
+    return (['suppressReasoning', 'slowModel', 'maxBatchSize'] as const).some((field) =>
+      this.offersTuning(config, field),
+    );
   }
 
   /** An empty field means "no claim, the default stands" — never `NaN`. */

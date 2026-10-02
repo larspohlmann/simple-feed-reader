@@ -6,7 +6,6 @@ namespace App\Tests\Service\Recommendation\Llm;
 
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Llm\LlmRecommendationEngine;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Tests\DbTestCase;
@@ -31,24 +30,6 @@ final class LlmRecommendationEngineTest extends DbTestCase
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('llm-engine@example.test');
         $this->fixtures->seedReadyAiSettings($this->owner);
-    }
-
-    public function testTheLlmWritesReasonsAndReadsEveryTuningField(): void
-    {
-        $capabilities = $this->engine()->capabilities();
-
-        self::assertTrue($capabilities->writesReasons);
-        self::assertSame(
-            [
-                RecommendationTuningField::ContextWindow,
-                RecommendationTuningField::BatchSize,
-                RecommendationTuningField::SuppressReasoning,
-                RecommendationTuningField::SlowModel,
-                RecommendationTuningField::MaxBatchSize,
-                RecommendationTuningField::BatchConcurrency,
-            ],
-            $capabilities->tuningFields,
-        );
     }
 
     /** A ceiling of 7 splits 17 candidates 7/7/3; the 32k window is far from the budget limit. */

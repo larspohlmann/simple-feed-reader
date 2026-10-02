@@ -68,11 +68,7 @@
                         </app-button>
                       </div>
                     } @else {
-                      @if (
-                        offersTuning(config, 'suppressReasoning') ||
-                        offersTuning(config, 'slowModel') ||
-                        offersTuning(config, 'maxBatchSize')
-                      ) {
+                      @if (offersAnyToggle(config)) {
                         <div class="reasoning-toggle">
                           @if (offersTuning(config, 'suppressReasoning')) {
                             <span class="reasoning-toggle-row">

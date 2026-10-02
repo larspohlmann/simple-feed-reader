@@ -45,8 +45,8 @@ final readonly class ServiceModules
     }
 
     /** Whether $module is a declared sub-module below $parent; a parent naming it closes any cycle through it at that import. */
-    public static function isSubModuleOf(string $module, string $parent): bool
+    public function isSubModuleOf(string $module, string $parent): bool
     {
-        return str_starts_with($module, $parent . '\\');
+        return \in_array($module, $this->subModules, true) && str_starts_with($module, $parent . '\\');
     }
 }

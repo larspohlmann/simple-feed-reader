@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
@@ -26,32 +25,29 @@ final class ScriptedRecommendationEngine implements RecommendationEngineInterfac
     private function __construct(
         private readonly array $batches,
         private readonly ?\Throwable $advanceFailure,
-        private readonly RecommendationEngineCapabilitiesModel $capabilities,
     ) {
     }
 
     /** @param list<list<int>> $batches */
     public static function packing(array $batches): self
     {
-        return new self($batches, null, new RecommendationEngineCapabilitiesModel(false, []));
+        return new self($batches, null);
     }
 
     public static function failingWith(\Throwable $advanceFailure): self
     {
-        return new self([], $advanceFailure, new RecommendationEngineCapabilitiesModel(false, []));
+        return new self([], $advanceFailure);
     }
 
-    public static function reporting(RecommendationEngineCapabilitiesModel $capabilities): self
-    {
-        return new self([], null, $capabilities);
-    }
-
-    /** Registered under the only kind there is, which kindFor() gives every connection today. */
+    /** Registered under every kind, so a test does not depend on which kind kindFor() picks. */
     public function resolver(): RecommendationEngineResolver
     {
-        return new RecommendationEngineResolver(new ServiceLocator([
-            RecommendationEngineKind::Llm->value => fn (): self => $this,
-        ]));
+        $engines = [];
+        foreach (RecommendationEngineKind::cases() as $kind) {
+            $engines[$kind->value] = fn (): self => $this;
+        }
+
+        return new RecommendationEngineResolver(new ServiceLocator($engines));
     }
 
     public function packBatches(array $candidates, TickContext $tick): array
@@ -69,10 +65,5 @@ final class ScriptedRecommendationEngine implements RecommendationEngineInterfac
         }
 
         return RecommendationRunReportModel::fromRun($tick->run);
-    }
-
-    public function capabilities(): RecommendationEngineCapabilitiesModel
-    {
-        return $this->capabilities;
     }
 }

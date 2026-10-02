@@ -23,6 +23,10 @@ final readonly class ServiceModuleCycleRule implements Rule
         . 'Break it at the reported dependency: move the class it names into the module that owns it, '
         . 'or let the lower module own an interface the higher one implements (docs/architecture.md §9).';
 
+    public function __construct(private ServiceModules $modules)
+    {
+    }
+
     public function getNodeType(): string
     {
         return CollectedDataNode::class;
@@ -32,12 +36,12 @@ final readonly class ServiceModuleCycleRule implements Rule
     {
         $graph = ServiceModuleGraph::fromCollected($node->get(ServiceModuleDependencyCollector::class));
 
-        return array_map(self::error(...), $graph->cycles());
+        return array_map($this->error(...), $graph->cycles());
     }
 
-    private static function error(ServiceModuleCycle $cycle): IdentifierRuleError
+    private function error(ServiceModuleCycle $cycle): IdentifierRuleError
     {
-        $site = $cycle->reportedSite();
+        $site = $cycle->reportedSite($this->modules);
 
         return RuleErrorBuilder::message(sprintf(self::MESSAGE, self::path($cycle)))
             ->identifier('simpleFeedReader.serviceModuleCycle')

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Engine\RecommendationEngine;
 
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
@@ -28,6 +27,4 @@ interface RecommendationEngineInterface
 
     /** One tick of a running run that is not waiting out a rate limit. */
     public function advance(TickContext $tick): RecommendationRunReportModel;
-
-    public function capabilities(): RecommendationEngineCapabilitiesModel;
 }

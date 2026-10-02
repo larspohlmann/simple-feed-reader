@@ -7,10 +7,12 @@ namespace App\Tests\Service\Recommendation\Engine;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
+use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ScriptedRecommendationEngine;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 
@@ -23,6 +25,37 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('gpt-4o-mini')));
         self::assertSame(RecommendationEngineKind::Llm, $resolver->kindFor($this->connection('typesafe/jev-router')));
+    }
+
+    public function testTheLlmKindWritesReasonsAndReadsEveryTuningFieldInTheirOrder(): void
+    {
+        $capabilities = RecommendationEngineKind::Llm->capabilities();
+
+        self::assertTrue($capabilities->writesReasons);
+        self::assertSame(
+            [
+                RecommendationTuningField::ContextWindow,
+                RecommendationTuningField::BatchSize,
+                RecommendationTuningField::SuppressReasoning,
+                RecommendationTuningField::SlowModel,
+                RecommendationTuningField::MaxBatchSize,
+                RecommendationTuningField::BatchConcurrency,
+            ],
+            $capabilities->tuningFields,
+        );
+    }
+
+    public function testCapabilitiesAreTheConnectionsKindsAndBuildNoEngine(): void
+    {
+        $locator = $this->createMock(ContainerInterface::class);
+        $locator->expects($this->never())->method('get');
+        $locator->expects($this->never())->method('has');
+        $resolver = new RecommendationEngineResolver($locator);
+
+        self::assertEquals(
+            RecommendationEngineKind::Llm->capabilities(),
+            $resolver->capabilitiesFor($this->connection('gpt-4o-mini')),
+        );
     }
 
     public function testTheEngineComesFromTheLocatorUnderItsKindsValue(): void

@@ -8,8 +8,6 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
@@ -21,9 +19,7 @@ final class AiSettingsJsonTest extends TestCase
 
     private function json(): AiSettingsJson
     {
-        return new AiSettingsJson(RecommendationCapabilitiesJsons::reporting(
-            new RecommendationEngineCapabilitiesModel(true, [RecommendationTuningField::BatchConcurrency]),
-        ));
+        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
     }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
@@ -58,11 +54,11 @@ final class AiSettingsJsonTest extends TestCase
         self::assertTrue($shape['ready']);
     }
 
-    public function testTheConfigurationShapeCarriesItsEnginesCapabilities(): void
+    public function testTheConfigurationShapeCarriesItsKindsCapabilities(): void
     {
         $shape = $this->json()->configuration($this->settings('gpt-4o'), null);
 
-        self::assertSame(['reasons' => true, 'tuningFields' => ['batchConcurrency']], $shape['capabilities']);
+        self::assertSame(RecommendationCapabilitiesJsons::LLM, $shape['capabilities']);
     }
 
     public function testConfigurationIsActiveWhenItsIdMatchesTheActiveId(): void

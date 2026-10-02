@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
+use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use Psr\Container\ContainerExceptionInterface;
@@ -23,6 +24,11 @@ final readonly class RecommendationEngineResolver
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
         return RecommendationEngineKind::Llm;
+    }
+
+    public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
+    {
+        return $this->kindFor($connection)->capabilities();
     }
 
     public function engineFor(AiProviderSettings $connection): RecommendationEngineInterface

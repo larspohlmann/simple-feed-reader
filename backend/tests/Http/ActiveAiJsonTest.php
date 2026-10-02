@@ -6,8 +6,6 @@ namespace App\Tests\Http;
 
 use App\Entity\User;
 use App\Http\ActiveAiJson;
-use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
@@ -15,8 +13,6 @@ use PHPUnit\Framework\TestCase;
 /** The `ai` block reads an association, not a column: it must report the ACTIVE configuration, not just any. */
 final class ActiveAiJsonTest extends TestCase
 {
-    private const array SCRIPTED_CAPABILITIES = ['reasons' => false, 'tuningFields' => ['slowModel', 'contextWindow']];
-
     public function testAnAccountWithNoActiveConfigurationIsNotReadyAndHasNoCapabilities(): void
     {
         self::assertSame(
@@ -25,13 +21,13 @@ final class ActiveAiJsonTest extends TestCase
         );
     }
 
-    public function testTheActiveConfigurationReportsItsModelAndItsEnginesCapabilities(): void
+    public function testTheActiveConfigurationReportsItsModelAndItsKindsCapabilities(): void
     {
         $user = $this->user();
         $this->activate($user, 'Work OpenAI', 'gpt-4o-mini');
 
         self::assertSame(
-            ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => self::SCRIPTED_CAPABILITIES],
+            ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
             $this->json()->of($user),
         );
     }
@@ -43,7 +39,7 @@ final class ActiveAiJsonTest extends TestCase
         $user->setActiveAiProviderSettings(AiProviderSettingsFactory::build($user, 'Fresh'));
 
         self::assertSame(
-            ['ready' => false, 'model' => null, 'capabilities' => self::SCRIPTED_CAPABILITIES],
+            ['ready' => false, 'model' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
             $this->json()->of($user),
         );
     }
@@ -57,7 +53,7 @@ final class ActiveAiJsonTest extends TestCase
         $other->chooseModel('claude-3-haiku', new \DateTimeImmutable('2026-08-09T09:06:00Z'), null);
 
         self::assertSame(
-            ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => self::SCRIPTED_CAPABILITIES],
+            ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
             $this->json()->of($user),
         );
     }
@@ -71,10 +67,7 @@ final class ActiveAiJsonTest extends TestCase
 
     private function json(): ActiveAiJson
     {
-        return new ActiveAiJson(RecommendationCapabilitiesJsons::reporting(new RecommendationEngineCapabilitiesModel(
-            false,
-            [RecommendationTuningField::SlowModel, RecommendationTuningField::ContextWindow],
-        )));
+        return new ActiveAiJson(RecommendationCapabilitiesJsons::ofTheKind());
     }
 
     private function user(): User

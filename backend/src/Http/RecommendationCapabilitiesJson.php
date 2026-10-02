@@ -18,7 +18,7 @@ final readonly class RecommendationCapabilitiesJson
     /** @return array{reasons: bool, tuningFields: list<string>} */
     public function of(AiProviderSettings $connection): array
     {
-        $capabilities = $this->engines->engineFor($connection)->capabilities();
+        $capabilities = $this->engines->capabilitiesFor($connection);
 
         return [
             'reasons' => $capabilities->writesReasons,

@@ -3,18 +3,29 @@ import { CurrentUser } from './auth/auth.service';
 import { onIdentityChange } from './auth/session-identity';
 
 /** A recommendation setting only some engines read; each value is that setting's field name on the wire. */
-export type RecommendationTuningField =
-  | 'contextWindow'
-  | 'batchSize'
-  | 'suppressReasoning'
-  | 'slowModel'
-  | 'maxBatchSize'
-  | 'batchConcurrency';
+export const RECOMMENDATION_TUNING_FIELDS = [
+  'contextWindow',
+  'batchSize',
+  'suppressReasoning',
+  'slowModel',
+  'maxBatchSize',
+  'batchConcurrency',
+] as const;
+
+export type RecommendationTuningField = (typeof RECOMMENDATION_TUNING_FIELDS)[number];
 
 /** What a connection's recommendation engine can do; the client renders from it and never learns the engine. */
 export interface RecommendationCapabilities {
   readonly reasons: boolean;
   readonly tuningFields: readonly RecommendationTuningField[];
+}
+
+/** Whether the engine reads the setting; one it ignores is not offered. */
+export function offersTuning(
+  capabilities: RecommendationCapabilities,
+  field: RecommendationTuningField,
+): boolean {
+  return capabilities.tuningFields.includes(field);
 }
 
 export const NO_RECOMMENDATION_CAPABILITIES: RecommendationCapabilities = {
