@@ -8,6 +8,7 @@ use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Jev\Factory\JevStateFactory;
 use App\Service\Recommendation\Jev\Pass\JevWave;
+use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Run\BatchWavePhase;
 use App\Service\Recommendation\Run\BatchWaveRounds;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
@@ -34,6 +35,7 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
         private RecommendationWinnerRanker $ranker,
         private RecommendationRunFinalizer $finalizer,
         private RecommendationRunFailure $runFailure,
+        private RecommendationHistoryLoader $historyLoader,
     ) {
     }
 
@@ -67,6 +69,12 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
         $profile = $tick->run->getProfileText()
             ?? throw new \LogicException('A Jev wave runs only once the run holds a profile.');
 
-        return new JevWave($tick, $this->stateFactory->create($profile, $tick->settings->guidancePrompt), $batches);
+        $state = $this->stateFactory->create(
+            $profile,
+            $tick->settings->guidancePrompt,
+            $this->historyLoader->favorites($tick->userId(), $tick->settings),
+        );
+
+        return new JevWave($tick, $state, $batches);
     }
 }

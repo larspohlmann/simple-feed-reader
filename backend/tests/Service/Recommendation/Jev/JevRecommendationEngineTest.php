@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev;
 
+use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -291,6 +292,27 @@ final class JevRecommendationEngineTest extends DbTestCase
         $lastRequest = end($requests);
         self::assertNotFalse($lastRequest);
         self::assertSame(['profile' => self::PROFILE], $lastRequest->state);
+    }
+
+    /** Favorites go beside the profile, newest first, in the shape the candidates take. */
+    public function testEveryWaveSendsTheReadersFavorites(): void
+    {
+        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $favorites = $this->fixtures->seedFavorites($this->owner, 'liked', 2);
+        usort($favorites, static fn (Entry $left, Entry $right): int
+            => $right->getEffectiveDate() <=> $left->getEffectiveDate());
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $requests = $this->systemOne()->requests();
+        $lastRequest = end($requests);
+        self::assertNotFalse($lastRequest);
+        self::assertIsArray($lastRequest->state['favorites']);
+        self::assertSame(
+            array_map(static fn (Entry $entry): string => $entry->getTitle(), $favorites),
+            array_column($lastRequest->state['favorites'], 'title'),
+        );
     }
 
     /** A gateway's invalid byte: the reply is unusable, and the run log still holds valid UTF-8 (MySQL strict). */
