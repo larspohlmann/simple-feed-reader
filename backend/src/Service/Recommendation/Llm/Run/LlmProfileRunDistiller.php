@@ -28,7 +28,7 @@ final readonly class LlmProfileRunDistiller implements ProfileRunDistillerInterf
     {
         $request = $this->requestFactory->create($tick->connection, CallPromptModel::distillation(
             $this->promptBuilder->messagesWithCorrectiveTail(
-                $this->promptBuilder->distillMessages($tick->history, $tick->settings),
+                $this->promptBuilder->distillMessages($tick->history),
                 $tick->profileRun->getLastInvalidReply(),
                 RecommendationPromptText::DISTILL_CORRECTIVE,
             ),

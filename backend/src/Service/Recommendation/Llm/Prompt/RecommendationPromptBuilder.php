@@ -47,20 +47,10 @@ final readonly class RecommendationPromptBuilder
      */
     private const string QUOTED_REPLY_ELLIPSIS = "\n… (this quote is truncated)";
 
-    private const int DESCRIPTION_MIN_CHARS = 120;
-    private const int DESCRIPTION_MAX_CHARS = 480;
-    private const int DESCRIPTION_WINDOW_DIVISOR = 137;
+    private const int DESCRIPTION_CHARS = 1000;
 
     public function __construct(private RecommendationAnswerBudget $answerBudget)
     {
-    }
-
-    public function descriptionLength(int $contextWindow): int
-    {
-        return min(
-            self::DESCRIPTION_MAX_CHARS,
-            max(self::DESCRIPTION_MIN_CHARS, intdiv($contextWindow, self::DESCRIPTION_WINDOW_DIVISOR)),
-        );
     }
 
     /**
@@ -73,8 +63,7 @@ final readonly class RecommendationPromptBuilder
         RecommendationHistoryModel $history,
         EffectiveRecommendationSettingsModel $settings,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-        $favoritesSection = $this->favoritesSection($history, $descriptionLength);
+        $favoritesSection = $this->favoritesSection($history);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + TokenEstimate::of($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = $this->answerBudget->answerBoundTokens(
@@ -88,7 +77,7 @@ final readonly class RecommendationPromptBuilder
         $used = 0;
 
         foreach ($candidates as $candidate) {
-            $lineTokens = TokenEstimate::of($this->candidateLine($candidate, $descriptionLength));
+            $lineTokens = TokenEstimate::of($this->candidateLine($candidate));
             $overBudget = $used + $lineTokens > $budget && \count($current) >= self::MINIMUM_BATCH_SIZE;
             $atCapacity = \count($current) >= $cap;
             if ([] !== $current && ($overBudget || $atCapacity)) {
@@ -115,11 +104,10 @@ final readonly class RecommendationPromptBuilder
     {
         $contextWindow = $context->settings->packing->contextWindow;
         $picksLimit = $context->settings->poolLimits->picksLimit;
-        $descriptionLength = $this->descriptionLength($contextWindow);
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
             + TokenEstimate::of((string) $context->profile)
-            + TokenEstimate::of($this->favoritesSection($context->history, $descriptionLength));
-        $lineChars = $descriptionLength + self::CANDIDATE_LINE_FRAME_CHARS;
+            + TokenEstimate::of($this->favoritesSection($context->history));
+        $lineChars = self::DESCRIPTION_CHARS + self::CANDIDATE_LINE_FRAME_CHARS;
         $perCandidateInputTokens = TokenEstimate::ofLength($lineChars);
 
         $floor = self::CONSOLIDATION_MIN_INPUT_FACTOR * $picksLimit;
@@ -177,17 +165,16 @@ final readonly class RecommendationPromptBuilder
         array $candidateLines,
         ?CandidatePoolSummaryModel $poolSummary,
     ): array {
-        $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $sections = [];
         if ($this->hasContent($context->profile)) {
             $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($context->history, $descriptionLength);
+        $sections[] = $this->favoritesSection($context->history);
         $poolFrame = $this->poolFrameLine($poolSummary);
         if (null !== $poolFrame) {
             $sections[] = $poolFrame;
         }
-        $sections[] = $this->candidateSection($candidateLines, $descriptionLength);
+        $sections[] = $this->candidateSection($candidateLines);
 
         return $sections;
     }
@@ -211,19 +198,15 @@ final readonly class RecommendationPromptBuilder
      *
      * @return list<array{role: string, content: string}>
      */
-    public function distillMessages(
-        RecommendationHistoryModel $history,
-        EffectiveRecommendationSettingsModel $settings,
-    ): array {
-        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-
+    public function distillMessages(RecommendationHistoryModel $history): array
+    {
         return [
             [
                 'role' => 'system',
                 'content' => RecommendationPromptText::DISTILL_ROLE
                     . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT,
             ],
-            ['role' => 'user', 'content' => $this->historySections($history, $descriptionLength)],
+            ['role' => 'user', 'content' => $this->historySections($history)],
         ];
     }
 
@@ -244,7 +227,6 @@ final readonly class RecommendationPromptBuilder
             throw new \LogicException('The consolidation phase requires at least one ranked winner.');
         }
 
-        $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $shortlistLines = array_values(array_filter(array_map(
             static fn (array $winner): ?ArticleLineModel => $linesById[$winner['id']] ?? null,
             $rankedPool,
@@ -254,8 +236,8 @@ final readonly class RecommendationPromptBuilder
         if ($this->hasContent($context->profile)) {
             $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($context->history, $descriptionLength);
-        $sections[] = $this->candidateSection($shortlistLines, $descriptionLength);
+        $sections[] = $this->favoritesSection($context->history);
+        $sections[] = $this->candidateSection($shortlistLines);
 
         return [
             [
@@ -319,31 +301,31 @@ final readonly class RecommendationPromptBuilder
     }
 
     /** FAVORITES, KEPT, then VIEWED, newest first within each. */
-    private function historySections(RecommendationHistoryModel $history, int $descriptionLength): string
+    private function historySections(RecommendationHistoryModel $history): string
     {
         return implode("\n\n", [
-            $this->favoritesSection($history, $descriptionLength),
-            $this->historySection('KEPT (newest first):', $history->kept, $descriptionLength),
-            $this->historySection('VIEWED (newest first):', $history->viewed, $descriptionLength),
+            $this->favoritesSection($history),
+            $this->historySection('KEPT (newest first):', $history->kept),
+            $this->historySection('VIEWED (newest first):', $history->viewed),
         ]);
     }
 
-    private function favoritesSection(RecommendationHistoryModel $history, int $descriptionLength): string
+    private function favoritesSection(RecommendationHistoryModel $history): string
     {
-        return $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        return $this->historySection('FAVORITES (newest first):', $history->favorites);
     }
 
     /**
      * @param list<ArticleLineModel> $lines
      */
-    private function historySection(string $header, array $lines, int $descriptionLength): string
+    private function historySection(string $header, array $lines): string
     {
         if ([] === $lines) {
             return $header . "\n- none";
         }
 
         $rendered = array_map(
-            fn (ArticleLineModel $line): string => $this->historyLine($line, $descriptionLength),
+            fn (ArticleLineModel $line): string => $this->historyLine($line),
             $lines,
         );
 
@@ -353,7 +335,7 @@ final readonly class RecommendationPromptBuilder
     /**
      * @param list<ArticleLineModel> $candidateLines
      */
-    private function candidateSection(array $candidateLines, int $descriptionLength): string
+    private function candidateSection(array $candidateLines): string
     {
         if ([] === $candidateLines) {
             return "CANDIDATES:\n- none";
@@ -370,25 +352,25 @@ final readonly class RecommendationPromptBuilder
         );
 
         $rendered = array_map(
-            fn (ArticleLineModel $line): string => $this->candidateLine($line, $descriptionLength),
+            fn (ArticleLineModel $line): string => $this->candidateLine($line),
             $candidateLines,
         );
 
         return $header . "\n" . implode("\n", $rendered);
     }
 
-    private function historyLine(ArticleLineModel $line, int $descriptionLength): string
+    private function historyLine(ArticleLineModel $line): string
     {
-        $description = $this->truncatedDescription($line->description, $descriptionLength);
+        $description = $this->truncatedDescription($line->description);
 
         return null === $description
             ? \sprintf('- %s — %s — %s', $line->title, $line->feedName, $line->date)
             : \sprintf('- %s — %s — %s — %s', $line->title, $line->feedName, $line->date, $description);
     }
 
-    private function candidateLine(ArticleLineModel $line, int $descriptionLength): string
+    private function candidateLine(ArticleLineModel $line): string
     {
-        $description = $this->truncatedDescription($line->description, $descriptionLength);
+        $description = $this->truncatedDescription($line->description);
         $baseLine = \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date);
 
         return null === $description
@@ -396,12 +378,12 @@ final readonly class RecommendationPromptBuilder
             : $baseLine . ' — ' . $description;
     }
 
-    private function truncatedDescription(?string $description, int $length): ?string
+    private function truncatedDescription(?string $description): ?string
     {
         if (null === $description) {
             return null;
         }
 
-        return ClippedText::of($description, $length);
+        return ClippedText::of($description, self::DESCRIPTION_CHARS);
     }
 }
