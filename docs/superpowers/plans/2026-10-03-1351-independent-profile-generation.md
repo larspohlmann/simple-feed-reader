@@ -8186,15 +8186,19 @@ export class ProfileSectionComponent {
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
 
-  readonly keptCap = linkedSignal<number>(() => this.svc.state()?.keptCap ?? 0);
-  readonly viewedCap = linkedSignal<number>(() => this.svc.state()?.viewedCap ?? 0);
+  readonly keptCap = linkedSignal<number>(
+    () => this.svc.pending('keptCap') ?? this.svc.state()?.keptCap ?? 0,
+  );
+  readonly viewedCap = linkedSignal<number>(
+    () => this.svc.pending('viewedCap') ?? this.svc.state()?.viewedCap ?? 0,
+  );
 
   readonly generatedAt = computed(() => {
     const at = this.svc.state()?.generatedAt;
     return at ? formatLongDateTime(at, this.language.lang()) : null;
   });
 
-  readonly canGenerate = computed(() => !this.svc.runActive() && !this.svc.starting());
+  readonly canGenerate = computed(() => !this.svc.polling() && !this.svc.starting());
 
   /** The one line under the profile about the newest run; a failure shows as a banner instead. */
   readonly runStatusKey = computed(() => {
@@ -8326,9 +8330,7 @@ export class ProfileSectionComponent {
           </p>
         }
       </div>
-    </app-settings-group>
 
-    <app-settings-group icon="schedule" [title]="'settings.profile.settingsTitle' | transloco">
       <app-settings-row
         [stackable]="true"
         [title]="'settings.profile.schedule' | transloco"
@@ -8497,7 +8499,6 @@ i18n — `settings.profile` in `en.json`:
       "statusFailed": "The last attempt failed: {{error}}",
       "generateNow": "Generate now",
       "chooseConnection": "No connection can build your profile. Choose one below, or add an LLM connection under AI.",
-      "settingsTitle": "Schedule and inputs",
       "schedule": "Regenerate",
       "scheduleDesc": "How often a new profile is built. A scheduled run is skipped while your reading is unchanged.",
       "scheduleManual": "Only manually",
@@ -8533,7 +8534,6 @@ and in `de.json`:
       "statusFailed": "Der letzte Versuch ist fehlgeschlagen: {{error}}",
       "generateNow": "Jetzt erstellen",
       "chooseConnection": "Keine Verbindung kann dein Profil erstellen. Wähle unten eine aus oder füge unter KI eine LLM-Verbindung hinzu.",
-      "settingsTitle": "Zeitplan und Eingaben",
       "schedule": "Neu erstellen",
       "scheduleDesc": "Wie oft ein neues Profil erstellt wird. Ein geplanter Lauf entfällt, solange sich dein Lesen nicht ändert.",
       "scheduleManual": "Nur manuell",
@@ -8610,7 +8610,13 @@ git commit -m "feat(#1351): a top-level profile section shows, schedules and gen
 - de `keptCap`/`viewedCap` reuse the existing wording ("Aufbewahrte in der Historie", "Angesehene in der Historie"); `settings.ai.recommendations.keptCap`/`viewedCap`, now unused, are deleted with `profileLabel` and `settings.ai.info.profile`.
 - Also touched: `ai-section.component.spec.ts` (its recommendation fixture carried the dropped fields), the card's `.expert-profile-text` style, the card docblock ("three caps": favourites, pool, picks), and the card spec's counts (five → three numeric tuning fields, three → one `0–500` range); its Jev prompt-pieces test keeps its fixed-prompt and placeholder assertions without the profile.
 
+**Amendments after review (Task 9, fix round 1):**
+- **A typed cap survives a run's end.** The caps' `linkedSignal`s seed from `svc.pending(field)` before `state()`, so the reload that follows a finished run no longer shows the stored value while Save sends the draft. Pinned at section level: type 12, finish a run, and the input still reads 12.
+- **A failed status read does not end the poll.** `loadRun()` retries on error and gives up after `MAX_POLL_FAILURES = 3` consecutive failures, the same ceiling as the For You poller's `MAX_TRANSPORT_RETRIES`. A success resets the count. Giving up sets `pollFailure`, which shows a `settings.profile.statusUnreadable` banner (en+de). `polling = runActive && !pollFailure` then re-enables "Generate now", which is safe because a manual start returns the active run and re-arms the poll. The debug log polls on `svc.polling()`. Its fetch has an error handler that keeps the last entries; its timer never depended on the response, so it keeps polling. The state reload in `adoptRun` takes `takeUntilDestroyed` and reports a failure through the section's `failure`.
+- **Profile, schedule, connection and caps are one `app-settings-group`** (Lars). Under the "Profile" header, in this order: the profile block, then the Regenerate and Connection rows, then the caps and the save bar. The profile block draws the same inset hairline below itself that `app-settings-row` draws (`.profile::after`, as `account-section`'s `.who::after` does). `settings.profile.settingsTitle` is deleted in en and de. The Debug log stays its own group.
+
 ---
+
 ### Task 10: Docs, the full gates on both legs, and a real run
 
 **Files:**
