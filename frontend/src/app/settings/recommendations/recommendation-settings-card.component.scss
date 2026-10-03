@@ -56,12 +56,6 @@ app-field {
   width: 100%;
 }
 
-.numeric-range {
-  margin: 0 0 var(--space-1);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-}
-
 input[aria-invalid='true'] {
   border-color: var(--danger);
 }

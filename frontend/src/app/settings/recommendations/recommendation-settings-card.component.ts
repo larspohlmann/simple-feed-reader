@@ -27,7 +27,7 @@ import {
   RecommendationTuningField,
 } from '../../core/ai-availability.service';
 import { LanguageService } from '../../core/i18n/language.service';
-import { formatInteger } from '../../reader/format';
+import { formatInteger, formatRange } from '../../reader/format';
 import {
   RecommendationSettingsService,
   RecommendationBatchSize,
@@ -290,8 +290,7 @@ export class RecommendationSettingsCardComponent {
   }
 
   rangeLabel(field: RecommendationExpertField): string {
-    const bounds = this.range(field);
-    return `${formatInteger(bounds.min, this.language.lang())}–${formatInteger(bounds.max, this.language.lang())}`;
+    return formatRange(this.range(field), this.language.lang());
   }
 
   fieldError(field: RecommendationExpertField): string | null {

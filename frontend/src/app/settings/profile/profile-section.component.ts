@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
-import { formatInteger, formatLongDateTime } from '../../reader/format';
+import { formatLongDateTime, formatRange } from '../../reader/format';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../shared/field/field.component';
@@ -105,9 +105,7 @@ export class ProfileSectionComponent {
   }
 
   rangeLabel(field: ProfileCapField): string {
-    const bounds = this.svc.state()!.bounds[field];
-    const lang = this.language.lang();
-    return `${formatInteger(bounds.min, lang)}–${formatInteger(bounds.max, lang)}`;
+    return formatRange(this.svc.state()!.bounds[field], this.language.lang());
   }
 
   onSchedule(event: Event): void {

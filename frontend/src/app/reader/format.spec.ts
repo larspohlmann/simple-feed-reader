@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatLongDate,
   formatLongDateTime,
+  formatRange,
   formatTime,
   relativeTime,
   relativeTimeNarrow,
@@ -225,6 +226,13 @@ describe('formatCost', () => {
      enough to collapse to `$ 0.0000` was weighed and accepted in #465. */
   it('still separates a cheap run from a free one', () => {
     expect(formatCost(100_000, 'en')).toBe('$ 0.0001');
+  });
+});
+
+describe('formatRange', () => {
+  it('joins the grouped bounds with an en dash in the given language', () => {
+    expect(formatRange({ min: 1024, max: 262144 }, 'en')).toBe('1,024–262,144');
+    expect(formatRange({ min: 1024, max: 262144 }, 'de')).toBe('1.024–262.144');
   });
 });
 
