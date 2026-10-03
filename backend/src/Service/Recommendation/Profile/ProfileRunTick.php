@@ -16,6 +16,7 @@ use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -25,8 +26,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class ProfileRunTick
 {
-    public const string KEY_UNREADABLE = 'The stored API key can no longer be read.';
-
     public function __construct(
         private RecommendationSettingsResolver $settingsResolver,
         private RecommendationHistoryLoader $historyLoader,
@@ -67,7 +66,7 @@ final readonly class ProfileRunTick
         ) {
             $this->failure->recordTransportFailure($tick, $exception->getMessage());
         } catch (AiKeyUnreadableException) {
-            $this->failure->fail($tick->profileRun, self::KEY_UNREADABLE);
+            $this->failure->fail($tick->profileRun, RecommendationRunAdvancer::KEY_UNREADABLE);
         }
     }
 

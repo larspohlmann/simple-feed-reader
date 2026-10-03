@@ -24,6 +24,7 @@ use App\Service\Recommendation\Profile\ProfileConnections;
 use App\Service\Recommendation\Profile\ProfileRunFailure;
 use App\Service\Recommendation\Profile\ProfileRunTick;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
@@ -241,7 +242,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
-        self::assertSame(ProfileRunTick::KEY_UNREADABLE, $profileRun->getError());
+        self::assertSame(RecommendationRunAdvancer::KEY_UNREADABLE, $profileRun->getError());
         self::assertSame(0, $profileRun->getTransportFailures());
         self::assertSame([], $this->chat()->calls());
         $row = $this->entityManager->getRepository(RecommendationSettings::class)->findOneBy(['user' => $stranger]);

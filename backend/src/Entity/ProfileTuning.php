@@ -10,14 +10,17 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Embeddable]
 final class ProfileTuning
 {
+    public const int DEFAULT_KEPT_CAP = 40;
+    public const int DEFAULT_VIEWED_CAP = 80;
+
     /** How often a profile run starts on its own; null means only by hand. */
     #[ORM\Column(name: 'profile_interval_hours', nullable: true)]
     private ?int $intervalHours;
 
-    #[ORM\Column(name: 'kept_cap', options: ['default' => RecommendationSettings::DEFAULT_KEPT_CAP])]
+    #[ORM\Column(name: 'kept_cap', options: ['default' => self::DEFAULT_KEPT_CAP])]
     private int $keptCap;
 
-    #[ORM\Column(name: 'viewed_cap', options: ['default' => RecommendationSettings::DEFAULT_VIEWED_CAP])]
+    #[ORM\Column(name: 'viewed_cap', options: ['default' => self::DEFAULT_VIEWED_CAP])]
     private int $viewedCap;
 
     public function __construct(?int $intervalHours, int $keptCap, int $viewedCap)
@@ -29,7 +32,7 @@ final class ProfileTuning
 
     public static function defaults(): self
     {
-        return new self(null, RecommendationSettings::DEFAULT_KEPT_CAP, RecommendationSettings::DEFAULT_VIEWED_CAP);
+        return new self(null, self::DEFAULT_KEPT_CAP, self::DEFAULT_VIEWED_CAP);
     }
 
     public function getIntervalHours(): ?int

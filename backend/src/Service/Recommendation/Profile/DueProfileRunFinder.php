@@ -8,6 +8,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
+use App\Service\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -41,19 +42,17 @@ final readonly class DueProfileRunFinder
     private function isDue(RecommendationSettings $row): bool
     {
         $user = $row->getUser();
-        if (null === $this->profileConnections->usableFor($user)) {
+        $latest = $this->profileRuns->findLatestForUser($user);
+        if (true === $latest?->getStatus()->isActive()) {
             return false;
         }
 
-        if (null !== $this->profileRuns->findActiveForUser($user)) {
+        $intervalHours = $row->profileSettings()->intervalHours
+            ?? throw new \LogicException('A scheduled row has an interval.');
+        if (!IntervalElapsed::since($latest?->getCreatedAt(), $intervalHours, $this->clock->now())) {
             return false;
         }
 
-        $anchor = $this->profileRuns->findLatestForUser($user)?->getCreatedAt();
-        if (null === $anchor) {
-            return true;
-        }
-
-        return $this->clock->now() >= $anchor->modify(\sprintf('+%d hours', $row->profileSettings()->intervalHours));
+        return null !== $this->profileConnections->usableGiven($user, $row);
     }
 }

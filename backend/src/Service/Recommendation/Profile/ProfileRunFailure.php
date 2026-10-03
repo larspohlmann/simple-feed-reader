@@ -7,14 +7,13 @@ namespace App\Service\Recommendation\Profile;
 use App\Entity\ProfileRun;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
+use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /** How a profile run ends badly; the stored profile is never touched here. */
 final readonly class ProfileRunFailure
 {
-    public const string PROVIDER_FAILED = 'The AI provider at %s failed: %s';
-
     public const string UNEXPECTED_FAILURE = 'An unexpected error stopped the profile run.';
 
     public function __construct(
@@ -42,7 +41,11 @@ final readonly class ProfileRunFailure
 
         $this->strike(
             $profileRun,
-            \sprintf(self::PROVIDER_FAILED, $tick->connection->getBaseUrl(), $failureDetail),
+            \sprintf(
+                RecommendationTransportFailureRecorder::PROVIDER_FAILED,
+                $tick->connection->getBaseUrl(),
+                $failureDetail,
+            ),
         );
     }
 

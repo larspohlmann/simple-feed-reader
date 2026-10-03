@@ -10,6 +10,7 @@ use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Support\AiReadiness;
+use App\Service\Recommendation\Run\Support\IntervalElapsed;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -54,13 +55,10 @@ final readonly class DueRecommendationRunFinder
             return false;
         }
 
-        $anchor = $this->runs->findLatestForUser($user)?->getCreatedAt();
-        if (null === $anchor) {
-            return true;
-        }
-
-        $intervalHours = $row->values()->autoGenerateIntervalHours;
-
-        return $this->clock->now() >= $anchor->modify(\sprintf('+%d hours', $intervalHours));
+        return IntervalElapsed::since(
+            $this->runs->findLatestForUser($user)?->getCreatedAt(),
+            $row->values()->autoGenerateIntervalHours ?? throw new \LogicException('A scheduled row has an interval.'),
+            $this->clock->now(),
+        );
     }
 }

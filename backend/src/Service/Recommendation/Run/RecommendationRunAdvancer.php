@@ -23,6 +23,8 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class RecommendationRunAdvancer
 {
+    public const string KEY_UNREADABLE = 'The stored API key can no longer be read.';
+
     public function __construct(
         private RecommendationRunRepository $runs,
         private ClockInterface $clock,
@@ -85,7 +87,7 @@ final readonly class RecommendationRunAdvancer
     private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $exception): string
     {
         return $exception instanceof AiKeyUnreadableException
-            ? 'The stored API key can no longer be read.'
+            ? self::KEY_UNREADABLE
             : 'The AI provider is no longer configured.';
     }
 }

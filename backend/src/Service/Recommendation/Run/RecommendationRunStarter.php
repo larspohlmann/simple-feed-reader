@@ -11,6 +11,7 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Support\AiReadiness;
+use App\Service\Ai\Support\ProviderHost;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Support\RunLogRetention;
@@ -93,15 +94,11 @@ final readonly class RecommendationRunStarter
         return RecommendationRunReportModel::fromRun($latest);
     }
 
-    /**
-     * Copied onto the run, never read back from the editable configuration, so the history keeps each run's model.
-     * Host only, tested with is_string(): a host of '0' survives, a malformed or hostless URL stamps null.
-     */
+    /** Copied onto the run, never read back from the editable configuration, so the history keeps each run's model. */
     private function stampProvider(RecommendationRun $run, User $user): void
     {
         $settings = $this->configurator->settingsFor($user);
-        $host = parse_url($settings?->getBaseUrl() ?? '', \PHP_URL_HOST);
 
-        $run->stampProvider(\is_string($host) ? $host : null, $settings?->getModel());
+        $run->stampProvider(ProviderHost::of($settings), $settings?->getModel());
     }
 }

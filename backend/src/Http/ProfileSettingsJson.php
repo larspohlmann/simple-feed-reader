@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationSettings;
+use App\Entity\ProfileTuning;
 use App\Service\Recommendation\Profile\Model\ProfileSettingsModel;
 use App\Service\Recommendation\Profile\Support\ProfileSchedule;
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
@@ -34,8 +34,8 @@ final class ProfileSettingsJson
             'keptCap' => $profile->values->keptCap,
             'viewedCap' => $profile->values->viewedCap,
             'defaults' => [
-                'keptCap' => RecommendationSettings::DEFAULT_KEPT_CAP,
-                'viewedCap' => RecommendationSettings::DEFAULT_VIEWED_CAP,
+                'keptCap' => ProfileTuning::DEFAULT_KEPT_CAP,
+                'viewedCap' => ProfileTuning::DEFAULT_VIEWED_CAP,
             ],
             'bounds' => RecommendationSettingsBounds::PROFILE_FIELDS,
             'debugEnabled' => $profile->debugEnabled,

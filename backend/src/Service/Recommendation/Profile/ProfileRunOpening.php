@@ -8,6 +8,7 @@ use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
+use App\Service\Ai\Support\ProviderHost;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
@@ -30,7 +31,7 @@ final readonly class ProfileRunOpening
         $fingerprint = ProfileInputFingerprint::of($tick->history, $tick->settings->historyCaps, $tick->connection);
         $unchanged = $this->isUnchangedScheduledRun($tick, $fingerprint);
 
-        $profileRun->start($fingerprint, self::hostOf($tick), $this->modelOf($tick));
+        $profileRun->start($fingerprint, ProviderHost::of($tick->connection), $this->modelOf($tick));
 
         if ($tick->history->isEmpty()) {
             $profileRun->complete(ProfileRunOutcome::NoHistory, $this->clock->now());
@@ -54,12 +55,5 @@ final readonly class ProfileRunOpening
     {
         return $tick->connection->getModel()
             ?? throw new \LogicException('A connection that builds profiles has a model.');
-    }
-
-    private static function hostOf(ProfileTick $tick): ?string
-    {
-        $host = parse_url($tick->connection->getBaseUrl(), \PHP_URL_HOST);
-
-        return \is_string($host) ? $host : null;
     }
 }
