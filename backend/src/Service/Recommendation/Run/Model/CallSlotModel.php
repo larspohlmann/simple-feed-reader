@@ -15,11 +15,6 @@ final readonly class CallSlotModel
     ) {
     }
 
-    public static function distillation(): self
-    {
-        return new self(CallPhase::Distill, null);
-    }
-
     public static function batch(int $batchNumber): self
     {
         return new self(CallPhase::Batch, $batchNumber);

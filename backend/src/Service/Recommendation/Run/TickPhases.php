@@ -61,7 +61,7 @@ final readonly class TickPhases
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
-            $this->transportFailures->record($tick->run, $tick->connectionInFlight(), $exception->getMessage());
+            $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
 
             throw $exception;
         }

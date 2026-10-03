@@ -46,8 +46,6 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     public function testReturnsEachPhaseWallSpanWithBatchCount(): void
     {
         $run = $this->completedRun();
-        // Distill 10s.
-        $this->finishedLog($run, CallPhase::Distill, null, '10:00:00', '10:00:10');
         // Two batches running concurrently: the phase wall span is 10:00:10 →
         // 10:00:40 = 30s over 2 distinct batch numbers.
         $this->finishedLog($run, CallPhase::Batch, 1, '10:00:10', '10:00:40');
@@ -63,7 +61,6 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         $runId = $run->getId();
         self::assertEqualsCanonicalizing([
-            ['runId' => $runId, 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0, 'runSeconds' => 3600.0],
             ['runId' => $runId, 'phase' => 'batch', 'spanSeconds' => 30.0, 'batchCount' => 2, 'runSeconds' => 3600.0],
             [
                 'runId' => $runId,
@@ -81,8 +78,8 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-08T10:00:46Z'));
-        $this->finishedLog($run, CallPhase::Distill, null, '10:00:16', '10:00:21');
-        $this->finishedLog($run, CallPhase::Batch, 1, '10:00:26', '10:00:37');
+        $this->finishedLog($run, CallPhase::Batch, 1, '10:00:16', '10:00:27');
+        $this->finishedLog($run, CallPhase::Consolidate, null, '10:00:32', '10:00:37');
         $this->entityManager->flush();
 
         $spans = $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 10);
@@ -95,20 +92,20 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         // A running run of this user: no completed status, so excluded.
         $running = $this->fixtures->createRun($this->user);
         $running->snapshot(RecommendationEngineKind::Llm, [[1]]);
-        $this->finishedLog($running, CallPhase::Distill, null, '10:00:00', '10:00:05');
+        $this->finishedLog($running, CallPhase::Batch, 1, '10:00:00', '10:00:05');
 
         // Another user's completed run.
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         $stranger = (new UserFactory($this->entityManager, $hasher))->create('timing-stranger@example.test');
         $strangerRun = $this->completedRun($stranger);
-        $this->finishedLog($strangerRun, CallPhase::Distill, null, '10:00:00', '10:00:05');
+        $this->finishedLog($strangerRun, CallPhase::Batch, 1, '10:00:00', '10:00:05');
 
         // Two completed runs of this user, but the limit is 1 → only the newest.
         $older = $this->completedRun();
-        $this->finishedLog($older, CallPhase::Distill, null, '10:00:00', '10:00:05');
+        $this->finishedLog($older, CallPhase::Batch, 1, '10:00:00', '10:00:05');
         $newer = $this->completedRun();
-        $this->finishedLog($newer, CallPhase::Distill, null, '10:00:00', '10:00:09');
+        $this->finishedLog($newer, CallPhase::Batch, 1, '10:00:00', '10:00:09');
         $this->entityManager->flush();
 
         $spans = $this->timings->completedRunPhaseSpans($this->user, RecommendationEngineKind::Llm, 1);
@@ -120,7 +117,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     public function testDeletingRetiredDedupRowsRestoresTheEtaRead(): void
     {
         $run = $this->completedRun();
-        $this->finishedLog($run, CallPhase::Distill, null, '10:00:00', '10:00:10');
+        $this->finishedLog($run, CallPhase::Consolidate, null, '10:00:00', '10:00:10');
         $this->entityManager->flush();
 
         $connection = $this->entityManager->getConnection();
@@ -162,7 +159,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         self::assertSame(
             [[
                 'runId' => $run->getId(),
-                'phase' => 'distill',
+                'phase' => 'consolidate',
                 'spanSeconds' => 10.0,
                 'batchCount' => 0,
                 'runSeconds' => 3600.0,
@@ -175,13 +172,13 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     public function testOnlyRunsOfTheAskedKindAreRead(): void
     {
         $llm = $this->completedRun();
-        $this->finishedLog($llm, CallPhase::Distill, null, '10:00:00', '10:00:10');
+        $this->finishedLog($llm, CallPhase::Batch, 1, '10:00:00', '10:00:10');
         $legacy = $this->completedRun();
-        $this->finishedLog($legacy, CallPhase::Distill, null, '10:00:00', '10:00:20');
+        $this->finishedLog($legacy, CallPhase::Batch, 1, '10:00:00', '10:00:20');
         $jev = $this->fixtures->createRun($this->user);
         $jev->snapshot(RecommendationEngineKind::Jev, [[1]]);
         $jev->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
-        $this->finishedLog($jev, CallPhase::Distill, null, '10:00:00', '10:00:30');
+        $this->finishedLog($jev, CallPhase::Batch, 1, '10:00:00', '10:00:30');
         $this->entityManager->flush();
         $this->entityManager->getConnection()->executeStatement(
             'UPDATE recommendation_run SET engine_kind = NULL WHERE id = ?',

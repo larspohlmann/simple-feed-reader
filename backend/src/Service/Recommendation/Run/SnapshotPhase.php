@@ -14,8 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Freezes a pending run's candidate pool into its engine's batches without a provider call; an empty pool completes
- * at once.
+ * Freezes a pending run's candidate pool into its engine's batches, and the stored profile into the run, without a
+ * provider call; an empty pool completes at once.
  */
 final readonly class SnapshotPhase
 {
@@ -40,6 +40,7 @@ final readonly class SnapshotPhase
             return RecommendationRunReportModel::fromRun($run);
         }
 
+        $run->freezeProfile($tick->settings->profileText);
         $run->snapshot(
             $tick->engineKind,
             $this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick),

@@ -12,7 +12,6 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
@@ -43,13 +42,13 @@ final class RecommendationPipelineTest extends DbTestCase
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
-    /** A two-batch plan: one distillation call, one call per batch, then one consolidation call. */
-    public function testRunDistillsThenScoresThenConsolidates(): void
+    /** A two-batch plan: one call per batch, then one consolidation call, on the profile the run froze. */
+    public function testRunScoresThenConsolidates(): void
     {
         $entries = $this->seedTwoBatchCandidates();
         $firstId = $this->idOf($entries[0]);
 
-        $this->queueDistillReply('Likes Rust.');
+        $this->storeProfile('Likes Rust.');
         // One reply per batch: the plan has two, and each covers every known
         // id so it answers whichever ten-entry slice the packer put in it.
         $this->queueBatchReplyScoringEveryEntry($entries, 800);
@@ -67,9 +66,9 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertSame($firstId, $this->entryIdOf($items[0]));
         self::assertSame('On Rust.', $items[0]->getReason()); // reason came from consolidation
         self::assertSame(900, $items[0]->getScore());         // score is the consolidation score
-        self::assertSame('Likes Rust.', $this->storedProfileText()); // cached on settings
+        self::assertSame('Likes Rust.', $this->runProfileTextFor($run));
         self::assertSame(
-            ['profile', 'recommendations', 'recommendations', 'recommendations'],
+            ['recommendations', 'recommendations', 'recommendations'],
             array_column($this->chat()->calls(), 'responseSchemaName'),
         );
     }
@@ -80,7 +79,7 @@ final class RecommendationPipelineTest extends DbTestCase
         $entries = $this->seedSingleBatchCandidates();
         $firstId = $this->idOf($entries[0]);
 
-        $this->queueDistillReply('x');
+        $this->storeProfile('x');
         $this->queueBatchReplyScoringEveryEntry($entries, 700);
         $this->queueConsolidationReply([
             ['id' => $firstId, 'score' => 700, 'reason' => 'y'],
@@ -92,23 +91,17 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertNotEmpty($items);
         self::assertSame('y', $items[0]->getReason());
         self::assertSame(
-            ['profile', 'recommendations', 'recommendations'],
+            ['recommendations', 'recommendations'],
             array_column($this->chat()->calls(), 'responseSchemaName'),
         );
     }
 
-    /**
-     * An unusable distillation spends every retry, then degrades to no profile: the run still completes, with an
-     * empty PROFILE block on every later prompt and no profile frozen on the run.
-     */
-    public function testDistillationFailureDegradesToNoProfileBatches(): void
+    /** Without a stored profile the run still completes, with an empty PROFILE block and no profile frozen on it. */
+    public function testWithoutAStoredProfileTheRunScoresWithoutOne(): void
     {
         $entries = $this->seedSingleBatchCandidates();
         $firstId = $this->idOf($entries[0]);
 
-        for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
-            $this->chat()->queueContent('not json');
-        }
         $this->queueBatchReplyScoringEveryEntry($entries, 600);
         $this->queueConsolidationReply([
             ['id' => $firstId, 'score' => 600, 'reason' => 'z'],
@@ -118,7 +111,6 @@ final class RecommendationPipelineTest extends DbTestCase
 
         self::assertNotEmpty($this->items($run)); // the run still completes
         self::assertNull($this->runProfileTextFor($run));       // no profile frozen on the run
-        self::assertNull($this->storedProfileText());           // nothing was cached on settings either
     }
 
     /**
@@ -129,7 +121,7 @@ final class RecommendationPipelineTest extends DbTestCase
     {
         $entries = $this->seedSingleBatchCandidates();
 
-        $this->queueDistillReply('x');
+        $this->storeProfile('x');
         $this->queueBatchReplyScoringEveryEntry($entries, 500);
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
             $this->chat()->queueContent('not json');
@@ -191,9 +183,9 @@ final class RecommendationPipelineTest extends DbTestCase
         return $entries;
     }
 
-    private function queueDistillReply(string $profile): void
+    private function storeProfile(string $profileText): void
     {
-        $this->chat()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
+        $this->fixtures->storeProfile($this->user, $profileText);
     }
 
     /**
@@ -243,15 +235,5 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertNotNull($fresh);
 
         return $fresh->getProfileText();
-    }
-
-    private function storedProfileText(): ?string
-    {
-        $this->entityManager->clear();
-        /** @var RecommendationSettingsRepository $repository */
-        $repository = $this->entityManager->getRepository(RecommendationSettings::class);
-        $settings = $repository->findForUser($this->user);
-
-        return $settings?->getStoredProfile()->getText();
     }
 }

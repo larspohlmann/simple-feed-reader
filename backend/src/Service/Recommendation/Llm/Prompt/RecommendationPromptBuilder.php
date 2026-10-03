@@ -22,10 +22,7 @@ final readonly class RecommendationPromptBuilder
 {
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
-    /**
-     * What packBatches() budgets for the profile before distillation has written it. An estimate: DISTILL_ROLE's word
-     * cap bounds the real profile to roughly this.
-     */
+    /** What packBatches() budgets for the profile. An estimate: DISTILL_ROLE's word cap bounds it to roughly this. */
     private const int ESTIMATED_PROFILE_TOKENS = 700;
 
     /**
@@ -292,7 +289,8 @@ final readonly class RecommendationPromptBuilder
 
     /**
      * Appends the model's last invalid reply and the phase's own correction, when there is a reply: the batch phase
-     * passes each batch's own, distillation and consolidation the run's; each phase asks for different things back.
+     * passes each batch's own, consolidation the run's and distillation the profile run's; each asks for different
+     * things back.
      *
      * @param list<array{role: string, content: string}> $messages
      *

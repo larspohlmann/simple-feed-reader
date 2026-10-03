@@ -14,8 +14,8 @@ enum RecommendationEngineKind: string
     public function phases(): array
     {
         return match ($this) {
-            self::Llm => [CallPhase::Distill, CallPhase::Batch, CallPhase::Consolidate],
-            self::Jev => [CallPhase::Distill, CallPhase::Batch],
+            self::Llm => [CallPhase::Batch, CallPhase::Consolidate],
+            self::Jev => [CallPhase::Batch],
         };
     }
 

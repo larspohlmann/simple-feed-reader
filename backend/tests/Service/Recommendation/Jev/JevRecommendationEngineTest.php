@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -16,7 +15,7 @@ use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Jev\JevProfileStep;
+use App\Service\Recommendation\Jev\JevRecommendationEngine;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\TickPhases;
 use App\Tests\DbTestCase;
@@ -34,7 +33,6 @@ final class JevRecommendationEngineTest extends DbTestCase
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
-    private AiProviderSettings $jevConnection;
 
     protected function setUp(): void
     {
@@ -44,8 +42,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-engine@example.test');
-        $this->jevConnection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
-        $this->fixtures->seedProfileConnectionFor($this->owner);
+        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
     }
 
     /** A poll tick never waits: the 429 defers the run, halves its concurrency and strikes nothing. */
@@ -77,7 +74,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         $run = $this->activeRun();
         self::assertSame(1, $run->getProgress()->batchesDone);
         self::assertSame(2 * StubSystemOneClient::COST_NANO_CREDITS, $run->getCostNanoCredits());
-        $answered = $this->logs($run)[2];
+        $answered = $this->logs($run)[1];
         self::assertSame(StubSystemOneClient::REQUEST_ID, $answered->getRequestId());
         self::assertSame('Provider rate limited; deferring.', $answered->getErrorDetail());
     }
@@ -133,7 +130,7 @@ final class JevRecommendationEngineTest extends DbTestCase
             array_fill(0, 3, 'That provider is down.'),
             array_map(
                 static fn (RecommendationRunLog $log): ?string => $log->getErrorDetail(),
-                \array_slice($this->logs($run), 2),
+                \array_slice($this->logs($run), 1),
             ),
         );
     }
@@ -142,7 +139,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testARunCancelledDuringTheWaveBanksNothing(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->startAndDistil(TickDriver::Poll);
+        $this->startAndSnapshot(TickDriver::Poll);
         $run = $this->activeRun();
         $this->systemOne()->duringNextCall(function () use ($run): void {
             $run->cancel(new \DateTimeImmutable('2026-10-02 09:00:00'));
@@ -158,7 +155,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testARefusedKeyStrikesTheRunAndSettlesItsRow(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->startAndDistil(TickDriver::Poll);
+        $this->startAndSnapshot(TickDriver::Poll);
         $this->systemOne()->queueFailure(new CredentialsRejectedException('That provider refused the API key.'));
 
         try {
@@ -176,7 +173,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testAnUnreadableKeySettlesTheRowItOpened(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->startAndDistil(TickDriver::Poll);
+        $this->startAndSnapshot(TickDriver::Poll);
         $this->sealKeyForAnotherAccount();
 
         try {
@@ -193,7 +190,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testARejectedRequestFailsTheRunWithTheProvidersDetail(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->startAndDistil(TickDriver::Poll);
+        $this->startAndSnapshot(TickDriver::Poll);
         for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
             $this->systemOne()->queueFailure(new ProviderUnreachableException(
                 'That provider refused the request (status 400): Model typesafe/jev-preview does not exist',
@@ -214,7 +211,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testAnUnusableReplyIsRetriedThenTheBatchYieldsNothing(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->startAndDistil(TickDriver::Poll);
+        $this->startAndSnapshot(TickDriver::Poll);
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
             $this->systemOne()->queueBody('{"model":"jev-1.13.0","answers":{}}');
         }
@@ -229,7 +226,7 @@ final class JevRecommendationEngineTest extends DbTestCase
             [CallVerdict::Unusable, CallVerdict::Unusable, CallVerdict::Unusable],
             array_map(
                 static fn (RecommendationRunLog $log): ?CallVerdict => $log->getVerdict(),
-                \array_slice($this->logs($run), 1),
+                $this->logs($run),
             ),
         );
     }
@@ -256,11 +253,9 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame([], $this->systemOne()->requests());
     }
 
-    /** An absent profile connection is the account's to fix: the run fails with the message, never strikes. */
-    public function testWithoutAProfileConnectionTheFirstProviderTickFailsTheRun(): void
+    /** A missing profile is the account's to fix: the run fails with the reason, never strikes. */
+    public function testARunWithoutAProfileFailsWithTheReasonAndNeverAsksSystemOne(): void
     {
-        $this->jevConnection->setProfileConnection(null);
-        $this->entityManager->flush();
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->starter()->start($this->owner);
         $this->advancer()->advance($this->owner);         // the snapshot: no provider call, no check
@@ -269,13 +264,14 @@ final class JevRecommendationEngineTest extends DbTestCase
 
         $run = $this->latestRun();
         self::assertSame('failed', $report->status);
-        self::assertSame(JevProfileStep::NO_PROFILE_CONNECTION, $run->getError());
+        self::assertSame(JevRecommendationEngine::NO_PROFILE, $run->getError());
         self::assertSame(0, $run->getTransportFailures());
         self::assertSame([], $this->logs($run));
+        self::assertSame([], $this->systemOne()->requests());
     }
 
-    /** The profile is the run's frozen copy: a later wave sends what this run distilled, not the settings' copy. */
-    public function testEveryWaveSendsTheProfileThisRunDistilled(): void
+    /** The profile is the run's frozen copy: a later wave sends what this run froze, not the settings' copy. */
+    public function testEveryWaveSendsTheProfileThisRunFroze(): void
     {
         $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
         $this->settingsWriter()->storeProfile(
@@ -307,7 +303,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         }
     }
 
-    /** Snapshot, distillation, then the one-request warm-up wave banks the first 100-question batch. */
+    /** Snapshot, then the one-request warm-up wave banks the first 100-question batch. */
     private function startRunAfterTheWarmUp(int $candidateCount, TickDriver $driver): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, $candidateCount);
@@ -315,18 +311,17 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertNotNull($connection);
         $connection->setBatchConcurrency(4);
         $this->entityManager->flush();
-        $this->startAndDistil($driver);
+        $this->startAndSnapshot($driver);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
         $this->advancer()->advance($this->owner, $driver);
         self::assertSame(1, $this->activeRun()->getProgress()->batchesDone);
     }
 
-    private function startAndDistil(TickDriver $driver): void
+    private function startAndSnapshot(TickDriver $driver): void
     {
+        $this->fixtures->storeProfile($this->owner, self::PROFILE);
         $this->starter()->start($this->owner);
         $this->advancer()->advance($this->owner, $driver);   // the snapshot
-        $this->chat()->queueContent(json_encode(['profile' => self::PROFILE], \JSON_THROW_ON_ERROR));
-        $this->advancer()->advance($this->owner, $driver);   // the distillation
     }
 
     private function sealKeyForAnotherAccount(): void

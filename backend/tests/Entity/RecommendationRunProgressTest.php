@@ -12,90 +12,50 @@ final class RecommendationRunProgressTest extends TestCase
 {
     public function testConsolidationRunsEvenForASingleBatch(): void
     {
-        $progress = RecommendationRunProgress::forBatchPlan(
-            [[1, 2, 3]],
-            batchesDone: 1,
-            attempts: 0,
-            distilled: true,
-            engineKind: RecommendationEngineKind::Llm,
+        self::assertTrue(
+            RecommendationRunProgress::forBatchPlan([[1, 2, 3]], 1, 0, RecommendationEngineKind::Llm)
+                ->isConsolidationPhase,
         );
-
-        self::assertTrue($progress->isConsolidationPhase);
     }
 
     public function testConsolidationWaitsUntilAllBatchesAreDone(): void
     {
-        $progress = RecommendationRunProgress::forBatchPlan(
-            [[1], [2]],
-            batchesDone: 1,
-            attempts: 0,
-            distilled: true,
-            engineKind: RecommendationEngineKind::Llm,
-        );
-
-        self::assertFalse($progress->isConsolidationPhase);
-    }
-
-    public function testConsolidationNeverStartsWithoutAPlanEvenIfDistilled(): void
-    {
-        $progress = RecommendationRunProgress::forBatchPlan(
-            null,
-            batchesDone: 0,
-            attempts: 0,
-            distilled: true,
-            engineKind: RecommendationEngineKind::Llm,
-        );
-
-        self::assertFalse($progress->isConsolidationPhase);
-    }
-
-    public function testDistillPendingUntilDistilled(): void
-    {
-        self::assertTrue(
-            RecommendationRunProgress::forBatchPlan(
-                [[1]],
-                0,
-                0,
-                distilled: false,
-                engineKind: RecommendationEngineKind::Llm,
-            )->distillPending,
-        );
         self::assertFalse(
-            RecommendationRunProgress::forBatchPlan(
-                [[1]],
-                0,
-                0,
-                distilled: true,
-                engineKind: RecommendationEngineKind::Llm,
-            )->distillPending,
+            RecommendationRunProgress::forBatchPlan([[1], [2]], 1, 0, RecommendationEngineKind::Llm)
+                ->isConsolidationPhase,
         );
     }
 
-    public function testTotalCountsDistillationAndConsolidation(): void
+    public function testConsolidationNeverStartsWithoutAPlan(): void
     {
-        $progress = RecommendationRunProgress::forBatchPlan([[1], [2]], 0, 0, true, RecommendationEngineKind::Llm);
+        self::assertFalse(
+            RecommendationRunProgress::forBatchPlan(null, 0, 0, RecommendationEngineKind::Llm)->isConsolidationPhase,
+        );
+    }
 
-        self::assertSame(4, $progress->batchesTotal);
+    public function testTheLlmTotalCountsTheBatchesAndTheConsolidation(): void
+    {
+        self::assertSame(
+            3,
+            RecommendationRunProgress::forBatchPlan([[1], [2]], 0, 0, RecommendationEngineKind::Llm)->batchesTotal,
+        );
     }
 
     public function testThePlanCountsItsBatchesAloneAndARunWithoutOneCountsNone(): void
     {
-        $planned = RecommendationRunProgress::forBatchPlan([[1], [2]], 0, 0, true, RecommendationEngineKind::Llm);
-        $unplanned = RecommendationRunProgress::forBatchPlan(null, 0, 0, true, RecommendationEngineKind::Llm);
+        $planned = RecommendationRunProgress::forBatchPlan([[1], [2]], 0, 0, RecommendationEngineKind::Llm);
+        $unplanned = RecommendationRunProgress::forBatchPlan(null, 0, 0, RecommendationEngineKind::Llm);
 
         self::assertSame(2, $planned->batchCount);
         self::assertNull($unplanned->batchCount);
     }
 
-    /** Three batches and the distillation before them; no consolidation to reach once they are done. */
-    public function testAJevPlanCountsItsDistillationAndHasNoConsolidation(): void
+    public function testAJevPlanCountsOnlyItsBatchesAndHasNoConsolidation(): void
     {
-        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, false, RecommendationEngineKind::Jev);
-        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, true, RecommendationEngineKind::Jev);
+        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, RecommendationEngineKind::Jev);
+        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, RecommendationEngineKind::Jev);
 
-        self::assertSame(4, $pending->batchesTotal);
-        self::assertTrue($pending->distillPending);
-        self::assertFalse($done->distillPending);
+        self::assertSame(3, $pending->batchesTotal);
         self::assertTrue($done->allBatchCallsDone);
         self::assertFalse($done->isConsolidationPhase);
     }

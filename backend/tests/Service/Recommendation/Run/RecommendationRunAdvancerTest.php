@@ -115,7 +115,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('running', $report->status);
-        self::assertSame(3, $report->batchesTotal); // 1 batch + distill + consolidate
+        self::assertSame(2, $report->batchesTotal); // 1 batch + consolidate
         self::assertSame(0, $report->batchesDone);
         self::assertSame([], $this->stubChatClient()->calls());
 
@@ -139,7 +139,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('completed', $report->status);
         // No candidates means no batch plan was ever frozen, so there is no
-        // distill/consolidate phase to count either.
+        // consolidate phase to count either.
         self::assertNull($report->batchesTotal);
 
         // Proves complete() was actually flushed, not just set on the
@@ -274,7 +274,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testATickWithinItsRetryWindowMakesNoProviderCall(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
+        $run = $this->startAndSnapshot(); // run is RUNNING, ready for the batch phase
         $runId = $run->requireId();
 
         $this->entityManager->getConnection()->update(
@@ -414,7 +414,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $lockFactory = $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
 
         /** @var list<?float> $lifetimes */
@@ -449,7 +449,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $lockFactory = $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         $lock = $this->tickLock($lockFactory);
         $lifetimeAfterTheTick = $lock->getRemainingLifetime();
@@ -474,7 +474,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
         self::getContainer()->set(LockFactory::class, $lockFactory);
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         $lock = $lockFactory->lastLockFor('ai-recommendations-' . $this->user->getId());
         self::assertNotNull($lock, 'The tick must have created its per-user lock.');
@@ -498,7 +498,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $runId = $run->requireId();
 
@@ -534,7 +534,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $runId = $run->requireId();
 
         $thief = null;
@@ -567,7 +567,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
         $runId = $run->requireId();
@@ -677,7 +677,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testBatchTickRecordsWinnersAndAdvances(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -693,8 +693,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(1, $report->batchesDone);
 
         $calls = $this->stubChatClient()->calls();
-        self::assertCount(2, $calls); // the distill call, then this batch call
-        $batchCall = $calls[1];
+        self::assertCount(1, $calls);
+        $batchCall = $calls[0];
         self::assertSame('m', $batchCall['model']);
         self::assertStringContainsString(
             'You score candidate posts for one reader of an RSS reader.',
@@ -733,9 +733,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
         $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
@@ -746,8 +745,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $warmUp = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(1, $warmUp->batchesDone);
-        // The distill call, then exactly one batch call -- not three.
-        self::assertCount(2, $this->stubChatClient()->calls());
+        // Exactly one batch call -- not three.
+        self::assertCount(1, $this->stubChatClient()->calls());
         self::assertFalse($this->activeRun()->getProgress()->isConsolidationPhase);
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -759,8 +758,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $fanOut = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(3, $fanOut->batchesDone);
-        // The distill call, the warm-up call, then both fanned-out batch calls.
-        self::assertCount(4, $this->stubChatClient()->calls());
+        // The warm-up call, then both fanned-out batch calls.
+        self::assertCount(3, $this->stubChatClient()->calls());
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
@@ -772,9 +771,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
         $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
@@ -797,8 +795,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('running', $report->status);
         self::assertSame(3, $report->batchesDone);
-        // The distill call, the warm-up call, then both fanned-out batch calls.
-        self::assertCount(4, $this->stubChatClient()->calls());
+        // The warm-up call, then both fanned-out batch calls.
+        self::assertCount(3, $this->stubChatClient()->calls());
 
         $this->entityManager->clear();
         $persisted = $this->activeRun();
@@ -825,9 +823,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
         $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
@@ -850,9 +847,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('running', $report->status);
         self::assertSame(3, $report->batchesDone);
-        // Distill, warm-up, then batch 1 once and batch 2 three times -- the
-        // retries stayed in-tick.
-        self::assertCount(6, $this->stubChatClient()->calls());
+        // Warm-up, then batch 1 once and batch 2 three times -- the retries
+        // stayed in-tick.
+        self::assertCount(5, $this->stubChatClient()->calls());
 
         $this->entityManager->clear();
         $persisted = $this->activeRun();
@@ -869,9 +866,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -904,9 +900,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // Only the warm-up's batch banked; the failed wave advanced nothing.
         self::assertSame(1, $persisted->getProgress()->batchesDone);
         self::assertSame(1, $persisted->getTransportFailures());
-        // Distill, warm-up, then all three calls of the wave fired, even
-        // though only one failed.
-        self::assertCount(5, $this->stubChatClient()->calls());
+        // Warm-up, then all three calls of the wave fired, even though only
+        // one failed.
+        self::assertCount(4, $this->stubChatClient()->calls());
 
         // The next tick re-runs the very same batch indices from the unmoved
         // cursor -- three fresh usable replies bank all three.
@@ -924,9 +920,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
         $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -955,7 +950,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConcurrencyOneTakesTheSequentialPath(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -965,7 +960,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $firstTick = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(1, $firstTick->batchesDone);
-        self::assertCount(2, $this->stubChatClient()->calls()); // the distill call, then this batch call
+        self::assertCount(1, $this->stubChatClient()->calls());
         self::assertFalse($this->activeRun()->getProgress()->isConsolidationPhase);
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -974,7 +969,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $secondTick = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(2, $secondTick->batchesDone);
-        self::assertCount(3, $this->stubChatClient()->calls());
+        self::assertCount(2, $this->stubChatClient()->calls());
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
@@ -986,9 +981,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Poll);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Poll);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -1010,7 +1004,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Poll);
 
         self::assertSame(3, $report->batchesDone);
-        self::assertCount(4, $this->stubChatClient()->calls()); // distill, warm-up, then two clamped calls
+        self::assertCount(3, $this->stubChatClient()->calls()); // warm-up, then two clamped calls
         self::assertFalse($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
@@ -1018,9 +1012,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Sweep);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Sweep);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -1042,7 +1035,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Sweep);
 
         self::assertSame(3, $report->batchesDone);
-        self::assertCount(4, $this->stubChatClient()->calls()); // distill, warm-up, then two clamped calls
+        self::assertCount(3, $this->stubChatClient()->calls()); // warm-up, then two clamped calls
         self::assertFalse($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
@@ -1054,9 +1047,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(2);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -1085,7 +1077,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $thirdTick = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(4, $thirdTick->batchesDone);
-        self::assertCount(5, $this->stubChatClient()->calls()); // distill, warm-up, two, then one
+        self::assertCount(4, $this->stubChatClient()->calls()); // warm-up, two, then one
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
@@ -1097,10 +1089,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user, TickDriver::Poll); // snapshot
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user, TickDriver::Poll); // distill
         $batches = $this->activeRun()->getCandidateBatches();
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
@@ -1132,9 +1123,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         $this->stubChatClient()->queueContent(json_encode([
@@ -1166,9 +1156,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         $this->stubChatClient()->queueContent(json_encode([
@@ -1204,7 +1193,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testZeroBatchConcurrencyStillAdvancesOneBatch(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
         $this->setBatchConcurrency(0);
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -1214,15 +1203,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(1, $report->batchesDone);
-        self::assertCount(2, $this->stubChatClient()->calls()); // the distill call, then this batch call
+        self::assertCount(1, $this->stubChatClient()->calls());
     }
 
     public function testZeroBatchConcurrencyStillAdvancesOneBatchPerWaveAfterTheFirst(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
@@ -1239,15 +1227,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(2, $report->batchesDone);
-        self::assertCount(3, $this->stubChatClient()->calls()); // distill, the warm-up wave, then one floored call
+        self::assertCount(2, $this->stubChatClient()->calls()); // the warm-up wave, then one floored call
     }
 
     public function testZeroBatchConcurrencyStillAdvancesOneBatchPerPollWaveAfterTheFirst(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Poll);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Poll);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
@@ -1264,7 +1251,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Poll);
 
         self::assertSame(2, $report->batchesDone);
-        self::assertCount(3, $this->stubChatClient()->calls());
+        self::assertCount(2, $this->stubChatClient()->calls());
     }
 
     public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
@@ -1278,10 +1265,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($index = 0; $index < 3; $index++) {
             $this->entry('entry-' . $index, 60 - $index);
         }
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
         // An empty ranking is unusable, so it retries in-tick: one reply per attempt degrades the single batch within
         // the one tick. The reasoning flag this test pins rides on every call, first included.
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
@@ -1291,7 +1277,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $calls = $this->stubChatClient()->calls();
         self::assertNotSame([], $calls);
-        self::assertFalse($calls[1]['suppressReasoning']); // calls[0] is the distill call
+        self::assertFalse($calls[0]['suppressReasoning']);
     }
 
     /**
@@ -1301,7 +1287,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testInvalidReplyTriggersCorrectiveRetryInTheSameTick(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueContent('not json');
         $this->stubChatClient()->queueContent(json_encode([
@@ -1313,8 +1299,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(1, $report->batchesDone);
 
         $calls = $this->stubChatClient()->calls();
-        self::assertCount(3, $calls); // the distill call, then this batch's two attempts
-        $secondCallMessages = $calls[2]['messages'];
+        self::assertCount(2, $calls); // this batch's two attempts
+        $secondCallMessages = $calls[1]['messages'];
         self::assertCount(4, $secondCallMessages);
         self::assertSame('assistant', $secondCallMessages[2]['role']);
         self::assertSame('not json', $secondCallMessages[2]['content']);
@@ -1329,7 +1315,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testARunawayRetriesItsOwnBatchInsteadOfFailingTheWave(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueFailure(new ProviderRunawayException('would not stop', '{"recomm'));
         $this->stubChatClient()->queueContent(json_encode([
@@ -1340,7 +1326,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('running', $report->status);
         self::assertSame(1, $report->batchesDone);
-        self::assertCount(3, $this->stubChatClient()->calls()); // the distill call, then this batch's two attempts
+        self::assertCount(2, $this->stubChatClient()->calls()); // this batch's two attempts
 
         $this->entityManager->clear();
         self::assertSame(0, $this->activeRun()->getTransportFailures());
@@ -1349,7 +1335,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testTheRetryAfterARunawayShowsTheModelWhereItWentWrong(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueFailure(
             new ProviderRunawayException('would not stop', str_repeat('{"id": 349500}, ', 4000)),
@@ -1360,8 +1346,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->advancer()->advance($this->user);
 
-        // calls()[0] is the distill call from startSnapshotAndDistill().
-        $retryMessages = $this->stubChatClient()->calls()[2]['messages'];
+        $retryMessages = $this->stubChatClient()->calls()[1]['messages'];
         self::assertCount(4, $retryMessages);
         self::assertSame('assistant', $retryMessages[2]['role']);
         self::assertStringContainsString('{"id": 349500}', $retryMessages[2]['content']);
@@ -1375,7 +1360,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAPersistentlyUnusableBatchIsDroppedNotFatal(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $secondBatch = $run->getCandidateBatches()[1];
 
         // The three attempts for the first batch all run inside one tick, so one advance drops it.
@@ -1410,7 +1395,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testResumeAfterFailureRetriesTheFailedBatchNotTheFirst(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -1451,7 +1436,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testProviderExceptionLeavesTheRunUntouched(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
 
@@ -1479,7 +1464,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConsecutiveTransportFailuresReachingTheCeilingFailTheRun(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         for ($index = 0; $index < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $index++) {
             $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
@@ -1515,46 +1500,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNull($this->runs()->findActiveForUser($this->user));
     }
 
-    /**
-     * Each phase asks for its own response schema: one shared schema would make the distillation call demand the
-     * ranking shape.
-     */
-    public function testEachPhaseRequestsItsOwnResponseSchema(): void
-    {
-        $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
-        $firstBatch = $run->getCandidateBatches()[0];
-        $secondBatch = $run->getCandidateBatches()[1];
-
-        $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'one']],
-        ], \JSON_THROW_ON_ERROR));
-        $this->advancer()->advance($this->user);
-
-        $this->stubChatClient()->queueContent(json_encode([
-            'recommendations' => [['id' => $secondBatch[0], 'score' => 95, 'reason' => 'two']],
-        ], \JSON_THROW_ON_ERROR));
-        $this->advancer()->advance($this->user);
-
-        $this->queueConsolidationReply([
-            ['id' => $firstBatch[0], 'score' => 80, 'reason' => 'one'],
-            ['id' => $secondBatch[0], 'score' => 95, 'reason' => 'two'],
-        ]);
-        $this->advancer()->advance($this->user);
-
-        $calls = $this->stubChatClient()->calls();
-        self::assertSame('profile', $calls[0]['responseSchemaName']); // the distill call
-        self::assertSame('recommendations', $calls[1]['responseSchemaName']);
-        self::assertSame('recommendations', $calls[2]['responseSchemaName']);
-        self::assertSame('recommendations', $calls[3]['responseSchemaName']); // the consolidation call
-    }
-
     /** A success between transport failures must not carry the old count
      *  into a later run of bad luck. */
     public function testABatchWinBetweenTransportFailuresResetsTheCounter(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
         try {
@@ -1592,8 +1543,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testPrunedBatchSkipsWithoutAProviderCall(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
-        $callsBeforeThisTick = \count($this->stubChatClient()->calls()); // the distill call
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
+        $callsBeforeThisTick = \count($this->stubChatClient()->calls());
 
         foreach ($firstBatch as $entryId) {
             $entry = $this->entityManager->getRepository(Entry::class)->find($entryId);
@@ -1623,13 +1574,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testSingleBatchRunWithEveryEntryPrunedCompletesInsteadOfWedging(): void
     {
         $this->seedSingleBatchFixture(picksLimit: 2);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
         $run = $this->activeRun();
-        self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
-
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
+        self::assertSame(2, $run->getProgress()->batchesTotal); // 1 batch + consolidate
 
         foreach ($run->getCandidateBatches()[0] as $entryId) {
             $entry = $this->entityManager->getRepository(Entry::class)->find($entryId);
@@ -1642,12 +1591,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $afterPrunedBatch = $this->advancer()->advance($this->user); // batch tick: fully pruned, no call
 
         self::assertSame('running', $afterPrunedBatch->status);
-        self::assertCount(1, $this->stubChatClient()->calls()); // only ever the distill call
+        self::assertSame([], $this->stubChatClient()->calls());
 
         $report = $this->advancer()->advance($this->user); // consolidate tick: empty pool, finalizes for free
 
         self::assertSame('completed', $report->status);
-        self::assertCount(1, $this->stubChatClient()->calls());
+        self::assertSame([], $this->stubChatClient()->calls());
         self::assertNull($this->runs()->findActiveForUser($this->user));
         self::assertCount(0, $this->recommendationItems($run));
 
@@ -1664,9 +1613,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -1711,7 +1659,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testPartiallyPrunedBatchStillCallsTheProviderWithoutTheDroppedId(): void
     {
         $this->seedMultiBatchFixture();
-        $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
+        $firstBatch = $this->startAndSnapshot()->getCandidateBatches()[0];
         $droppedId = $firstBatch[1];
 
         $entry = $this->entityManager->getRepository(Entry::class)->find($droppedId);
@@ -1728,8 +1676,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame(1, $report->batchesDone);
         $calls = $this->stubChatClient()->calls();
-        self::assertCount(2, $calls); // the distill call, then this batch call
-        $userMessage = $calls[1]['messages'][1]['content'];
+        self::assertCount(1, $calls);
+        $userMessage = $calls[0]['messages'][1]['content'];
         self::assertStringContainsString('- [' . $firstBatch[0], $userMessage);
         self::assertStringNotContainsString('- [' . $droppedId . ']', $userMessage);
     }
@@ -1742,9 +1690,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker);
-        $this->queueDistillReply();
         $this->advancer()->advance($this->user, TickDriver::Worker);
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
@@ -1775,8 +1722,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user, TickDriver::Worker);
 
         self::assertSame(4, $report->batchesDone);
-        // Distill, warm-up, then only the two not-pruned batches call the provider.
-        self::assertCount(4, $this->stubChatClient()->calls());
+        // Warm-up, then only the two not-pruned batches call the provider.
+        self::assertCount(3, $this->stubChatClient()->calls());
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
 
         $winners = $this->activeRun()->getWinners();
@@ -1784,8 +1731,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A single-batch run still spends a distillation and a consolidation call, and the final list's order, score and
-     * reason come from the consolidation reply.
+     * A single-batch run still spends a consolidation call, and the final list's order, score and reason come from
+     * the consolidation reply.
      */
     public function testSingleBatchRunStillRunsConsolidationBeforeFinalizing(): void
     {
@@ -1793,14 +1740,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($index = 0; $index < 5; $index++) {
             $this->entry('entry-' . $index, 60 - $index);
         }
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
         $run = $this->activeRun();
-        self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
+        self::assertSame(2, $run->getProgress()->batchesTotal); // 1 batch + consolidate
         $batch = $run->getCandidateBatches()[0];
-
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
@@ -1820,7 +1765,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user); // consolidate tick
 
         self::assertSame('completed', $report->status);
-        self::assertCount(3, $this->stubChatClient()->calls()); // distill, batch, consolidate
+        self::assertCount(2, $this->stubChatClient()->calls()); // batch, consolidate
 
         $this->entityManager->clear();
         $items = $this->recommendationItems($run);
@@ -1843,7 +1788,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConsolidateTickDropsNamedDuplicatesAndFinalizesInScoreOrder(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -1875,7 +1820,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('completed', $report->status);
 
-        $consolidateCall = $this->stubChatClient()->calls()[3]; // distill, batch one, batch two, consolidate
+        $consolidateCall = $this->stubChatClient()->calls()[2]; // batch one, batch two, consolidate
         self::assertStringContainsString(
             'You rank a candidate list of unread posts',
             $consolidateCall['messages'][0]['content'],
@@ -1902,103 +1847,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A distillation transport failure counts once against the run's ceiling, keeps the run RUNNING and re-throws;
-     * the next tick retries the call from the unchanged distillation phase.
-     */
-    #[DataProvider('transportFailureArms')]
-    public function testTransportFailureDuringDistillCallCountsTheCeilingAndKeepsRunRunning(
-        \RuntimeException $transportFailure,
-    ): void {
-        $this->seedMultiBatchFixture();
-        $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user); // snapshot tick, no provider call yet
-        self::assertTrue($this->activeRun()->getProgress()->distillPending);
-
-        $this->stubChatClient()->queueFailure($transportFailure);
-
-        try {
-            $this->advancer()->advance($this->user);
-            self::fail('The distillation transport failure must propagate.');
-        } catch (ProviderUnreachableException | CredentialsRejectedException) {
-            // expected -- the caller still sees the error this tick
-        }
-
-        $this->entityManager->clear();
-        $persisted = $this->activeRun();
-        self::assertSame(RunStatus::Running, $persisted->getStatus());
-        self::assertSame(1, $persisted->getTransportFailures());
-        self::assertTrue(
-            $persisted->getProgress()->distillPending,
-            'A failed distillation call leaves the phase to retry.',
-        );
-        self::assertSame([], $this->recommendationItems($persisted));
-    }
-
-    /**
-     * A poll tick never blocks, so a 429 on the distillation call defers the run, profile unwritten and still
-     * RUNNING: the strike ceiling is for a dead endpoint, and a rate limit is a wait.
-     */
-    public function testAPollDistillTickDefersOnA429WithoutStrikingOrCalling(): void
-    {
-        $this->seedMultiBatchFixture();
-        $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Poll); // snapshot tick
-        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 30));
-
-        $report = $this->advancer()->advance($this->user, TickDriver::Poll); // distill, rate limited
-
-        self::assertSame(RunStatus::Running->value, $report->status);
-        $run = $this->activeRun();
-        self::assertSame(0, $run->getTransportFailures());
-        self::assertNotNull($run->getRetryNotBefore());
-        self::assertFalse($run->isDistilled());
-    }
-
-    /**
-     * A worker tick may block, so a 429 on the distillation call retries in place, writes the profile and never
-     * strikes. Retry-After 0 keeps the retry free: setUp() has resolved the real clock, so no MockClock can stand in.
-     */
-    public function testAWorkerDistillTickRetriesA429AndRecovers(): void
-    {
-        $this->seedMultiBatchFixture();
-        $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user, TickDriver::Worker); // snapshot tick
-        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
-        $this->queueDistillReply('a profile');
-
-        $report = $this->advancer()->advance($this->user, TickDriver::Worker); // distill, recovers
-
-        self::assertSame(RunStatus::Running->value, $report->status);
-        self::assertTrue($this->activeRun()->isDistilled());
-        self::assertSame(0, $this->activeRun()->getTransportFailures());
-    }
-
-    /**
-     * An unusable distillation reply retries across ticks; only attemptsExhausted degrades to no profile. A profile
-     * recorded after one bad reply, even a null one, would clear distillPending and skip an unfinished phase.
-     */
-    public function testAnUnusableDistillReplyRetriesInsteadOfImmediatelyDegrading(): void
-    {
-        $this->seedMultiBatchFixture();
-        $this->starter()->start($this->user);
-        $this->advancer()->advance($this->user); // snapshot tick, no provider call yet
-        self::assertTrue($this->activeRun()->getProgress()->distillPending);
-
-        $this->stubChatClient()->queueContent('not json');
-
-        $this->advancer()->advance($this->user);
-
-        $this->entityManager->clear();
-        $persisted = $this->activeRun();
-        self::assertSame(RunStatus::Running, $persisted->getStatus());
-        self::assertFalse($persisted->isDistilled());
-        self::assertTrue(
-            $persisted->getProgress()->distillPending,
-            'A single unusable distillation reply must retry, not immediately degrade to no profile.',
-        );
-    }
-
-    /**
      * A consolidation transport failure counts once against the run's ceiling, keeps the run RUNNING and re-throws;
      * the next tick retries the call from the unchanged consolidation phase.
      */
@@ -2007,7 +1855,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         \RuntimeException $transportFailure,
     ): void {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2048,7 +1896,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAPollConsolidationTickDefersOnA429WithoutStriking(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2088,7 +1936,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConsolidateTickWithAllWinnersPrunedFinalizesWithoutAProviderCall(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2116,7 +1964,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('completed', $report->status);
-        self::assertCount(3, $this->stubChatClient()->calls()); // distill, batch one, batch two -- no consolidate call
+        self::assertCount(2, $this->stubChatClient()->calls()); // batch one, batch two -- no consolidate call
         $this->entityManager->clear();
         self::assertCount(0, $this->recommendationItems($run));
     }
@@ -2124,10 +1972,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConsolidationInputIsCutToTwiceThePicksLimitAcrossTheWholePool(): void
     {
         $this->seedMultiBatchFixture(picksLimit: 4);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
         $run = $this->activeRun();
         self::assertCount(2, $run->getCandidateBatches());
         $firstBatch = $run->getCandidateBatches()[0];
@@ -2152,8 +1999,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
         $this->advancer()->advance($this->user);
 
-        // calls()[0] is the distill call from above.
-        $consolidateUserMessage = $this->stubChatClient()->calls()[1]['messages'][1]['content'];
+        $consolidateUserMessage = $this->stubChatClient()->calls()[0]['messages'][1]['content'];
         // 2 × picksLimit(4) = 8 lines survive the cut — and because batch two
         // outscores batch one everywhere, all 8 come from batch two.
         self::assertSame(8, substr_count($consolidateUserMessage, "\n- ["));
@@ -2173,7 +2019,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAConsolidationReplyNamingEveryPooledIdIsRejectedAndTheRunDegrades(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2206,7 +2052,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // The retry asks for the consolidation phase's own correction, not
         // the batch phase's "use only candidate ids".
-        $retryMessages = $this->stubChatClient()->calls()[4]['messages']; // distill, batch one, batch two, attempt one
+        $retryMessages = $this->stubChatClient()->calls()[3]['messages']; // batch one, batch two, attempt one
         self::assertSame($overFlagging, $retryMessages[2]['content']);
         self::assertSame(RecommendationPromptText::CONSOLIDATION_CORRECTIVE, $retryMessages[3]['content']);
 
@@ -2227,14 +2073,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testSingleBatchRunTruncatesTheRankedPoolToThePicksLimit(): void
     {
         $this->seedSingleBatchFixture(picksLimit: 2);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
         $run = $this->activeRun();
-        self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
+        self::assertSame(2, $run->getProgress()->batchesTotal); // 1 batch + consolidate
         $batch = $run->getCandidateBatches()[0];
-
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
@@ -2272,7 +2116,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testARunawayConsolidateReplyDegradesInsteadOfEscapingTheTick(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2305,7 +2149,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testThreeUnusableConsolidationRepliesCompleteTheRunUndeduped(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2328,8 +2172,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('running', $secondTry->status);
 
         // The retry carries the corrective tail, same as a batch retry.
-        // calls()[0] is the distill call, [1] and [2] are the two batches.
-        $retryMessages = $this->stubChatClient()->calls()[4]['messages'];
+        // calls()[0] and [1] are the two batches.
+        $retryMessages = $this->stubChatClient()->calls()[3]['messages'];
         self::assertCount(4, $retryMessages);
         self::assertSame('garbage 1', $retryMessages[2]['content']);
 
@@ -2356,7 +2200,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testConsolidationRepliesTheProviderKeepsCuttingCompleteTheRunWithTheFinishedPicks(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2408,10 +2252,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testTheDegradedConsolidationEndingStillCutsThePoolToThePicksLimit(): void
     {
         $this->seedMultiBatchFixture(picksLimit: 2);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user); // distill tick
         $run = $this->activeRun();
         self::assertCount(2, $run->getCandidateBatches());
 
@@ -2448,7 +2291,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAnEntryPrunedBeforeTheConsolidationCallNeverReachesTheFinalList(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2481,8 +2324,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('completed', $report->status);
 
-        // calls()[0] is the distill call, [1] and [2] are the two batches.
-        $consolidateUserMessage = $this->stubChatClient()->calls()[3]['messages'][1]['content'];
+        // calls()[0] and [1] are the two batches.
+        $consolidateUserMessage = $this->stubChatClient()->calls()[2]['messages'][1]['content'];
         self::assertStringNotContainsString('[' . $prunedId . ']', $consolidateUserMessage);
 
         $this->entityManager->clear();
@@ -2495,10 +2338,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
-    public function testDistillBatchAndConsolidateCallsAreLoggedWithVerdicts(): void
+    public function testBatchAndConsolidateCallsAreLoggedWithVerdicts(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill(); // the distill call logs like every phase
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2519,7 +2362,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $rows = $this->logRowsOfLatestRun();
         self::assertSame(
             [
-                [CallPhase::Distill, null, CallVerdict::Usable],
                 [CallPhase::Batch, 1, CallVerdict::Usable],
                 [CallPhase::Batch, 2, CallVerdict::Usable],
                 [CallPhase::Consolidate, null, CallVerdict::Usable],
@@ -2529,7 +2371,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
                 $rows,
             ),
         );
-        $batchLog = $this->freshRunLog($rows[1]['id']);
+        $batchLog = $this->freshRunLog($rows[0]['id']);
         self::assertStringContainsString('You score candidate posts', $batchLog->getRequestBody());
         // json_encode() with no pretty-print flag (StubChatClient's queued
         // content, unlike the pretty-printed request body) has no space
@@ -2540,7 +2382,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testACorrectiveRetryGetsItsOwnLogRowWithTheUnusableVerdict(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
 
         // The unusable reply and its corrective retry are one tick, so a single advance consumes both queued replies,
         // and each still gets its own log row with the right verdict.
@@ -2551,8 +2393,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        // The distill call every run spends first logs its own row; this scenario reads only the batch calls.
-        $rows = $this->batchLogRowsOfLatestRun();
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
         self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
         self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
@@ -2565,7 +2406,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testATransportFailureStampsItsLogRow(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('gone'));
         try {
@@ -2574,7 +2415,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (ProviderUnreachableException) {
         }
 
-        $rows = $this->batchLogRowsOfLatestRun();
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
@@ -2584,7 +2425,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testABatchCallsStreamReportsReachItsLogRow(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
 
         $this->stubChatClient()->queueStreamedReply(new CallProgressModel(
             json_encode([
@@ -2595,7 +2436,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
         $this->advancer()->advance($this->user);
 
-        $rows = $this->batchLogRowsOfLatestRun();
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame([CallVerdict::Usable], array_column($rows, 'verdict'));
         self::assertSame(['stop'], array_column($rows, 'finishReason'));
         self::assertSame([512], array_column($rows, 'wireBytes'));
@@ -2604,7 +2445,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
     {
         $this->seedMultiBatchFixture();
-        $this->startSnapshotAndDistill();
+        $this->startAndSnapshot();
 
         $keyDonor = (new UserFactory($this->entityManager, $this->passwordHasher()))->create('key-donor@example.test');
         $this->fixtures->seedReadyAiSettings($keyDonor);
@@ -2625,7 +2466,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (AiKeyUnreadableException) {
         }
 
-        $rows = $this->batchLogRowsOfLatestRun();
+        $rows = $this->logRowsOfLatestRun();
         self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertNotNull($log->getErrorDetail());
@@ -2779,35 +2620,25 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    /**
-     * Drives a run through the snapshot and distillation ticks, pinning the two-batch split on the way. The caller
-     * lands ready for its first batch call, the distill reply already spent as calls()[0].
-     */
-    private function startSnapshotAndDistill(): RecommendationRun
+    /** Drives a run through the snapshot tick, pinning the two-batch split on the way. */
+    private function startAndSnapshot(): RecommendationRun
     {
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user);
         $run = $this->activeRun();
 
-        self::assertSame(4, $run->getProgress()->batchesTotal); // 2 batches + distill + consolidate
+        self::assertSame(3, $run->getProgress()->batchesTotal); // 2 batches + consolidate
         self::assertCount(2, $run->getCandidateBatches());
         self::assertCount(10, $run->getCandidateBatches()[0]);
         self::assertCount(10, $run->getCandidateBatches()[1]);
 
-        $this->queueDistillReply();
-        $this->advancer()->advance($this->user);
-
         return $run;
     }
 
-    /**
-     * The canned distill reply most tests neither read nor care about the
-     * content of -- only that the distillation phase spends exactly one
-     * provider call before the batches begin.
-     */
-    private function queueDistillReply(string $profile = 'a distilled profile'): void
+    private function storeProfile(string $profileText): void
     {
-        $this->stubChatClient()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
+        $this->fixtures->storeProfile($this->user, $profileText);
     }
 
     /**
@@ -2855,19 +2686,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         return $this->runLogs()->listForRun($this->user, $run->requireId());
     }
 
-    /**
-     * The batch-phase rows of the newest run: every run's distill call logs a row first.
-     *
-     * @return list<DebugLogRow>
-     */
-    private function batchLogRowsOfLatestRun(): array
-    {
-        return array_values(array_filter(
-            $this->logRowsOfLatestRun(),
-            static fn (array $row): bool => CallPhase::Batch === $row['phase'],
-        ));
-    }
-
     private function runLogs(): RecommendationRunLogRepository
     {
         /** @var RecommendationRunLogRepository $repository */
@@ -2909,7 +2727,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testARunStoppedDuringAProviderCallDoesNotRecordThatCallsResult(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $firstBatch = $run->getCandidateBatches()[0];
 
         $runId = $run->requireId();
@@ -2939,7 +2757,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testAStatusPollDuringTheFirstBatchCallSeesTheFirstBatchStarted(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill();
+        $run = $this->startAndSnapshot();
         $runId = $run->requireId();
         self::assertFalse($this->persistedFirstBatchStarted($runId));
 

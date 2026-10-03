@@ -80,7 +80,6 @@ services:
     App\Service\Reader\ArticleExtractor\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor\ArticleExtractor'
     App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
     App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
-    App\Service\Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface: '@App\Service\Recommendation\Llm\Run\ProviderPhase\DistillationPhase'
 
     # Page repairs, in this order, before readability scores the page: the class-reading repairs precede
     # ImageWrapperClassRemover and HeadingClassRemover, which strip the classes they key on.

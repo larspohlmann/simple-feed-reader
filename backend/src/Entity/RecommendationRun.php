@@ -13,7 +13,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * One "For you" run, checkpointed after every tick so any driver resumes it where the last tick stopped. The candidate
- * batches freeze at snapshot(), so a resume retries the exact failed batch; the reading history is read fresh.
+ * batches and the profile freeze at snapshot(), so a resume retries the exact failed batch; the reading history is read
+ * fresh.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunRepository::class)]
 #[ORM\Table(name: 'recommendation_run')]
@@ -162,7 +163,6 @@ final class RecommendationRun
             $this->candidateBatches,
             $this->batchProgress->batchesDone(),
             $this->callAttempts->attempts(),
-            $this->isDistilled(),
             $this->getEngineKind(),
         );
     }
@@ -230,28 +230,15 @@ final class RecommendationRun
         return new RunningCallAttempts($this, $this->callAttempts);
     }
 
-    /**
-     * Records the profile distilled for this run and freezes it: later reads
-     * of getProfileText() see exactly what this run produced, even a null
-     * from a degraded distillation, never a stale profile from a prior run.
-     */
-    public function recordProfile(?string $profileText): void
+    public function freezeProfile(?string $profileText): void
     {
-        $this->guardStatus(RunStatus::Running, 'recordProfile');
-
-        $this->runProfile->record($profileText);
-        $this->callAttempts->reset();
-        $this->throttle->clearDeferral();
+        $this->guardStatus(RunStatus::Pending, 'freeze a profile on');
+        $this->runProfile->freeze($profileText);
     }
 
     public function getProfileText(): ?string
     {
         return $this->runProfile->getProfileText();
-    }
-
-    public function isDistilled(): bool
-    {
-        return $this->runProfile->isDistilled();
     }
 
     public function getAttempts(): int

@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Profile\ProfileConnectionResolver;
 
 /**
  * One first-byte wait of the slowest connection the tick may call, plus the margin, not the whole tick: the keepalive
@@ -26,19 +25,12 @@ final readonly class TickLockTtl
     public function __construct(
         private AiProviderConfigurator $configurator,
         private ProviderConnectionFactory $connectionFactory,
-        private ProfileConnectionResolver $profileConnections,
     ) {
     }
 
     public function secondsFor(User $user): float
     {
-        $active = $this->configurator->settingsFor($user);
-        $borrowed = null === $active ? null : $this->profileConnections->borrowedFor($active);
-        if (null === $borrowed) {
-            return $this->secondsForConnection($active);
-        }
-
-        return max($this->secondsForConnection($active), $this->secondsForConnection($borrowed));
+        return $this->secondsForConnection($this->configurator->settingsFor($user));
     }
 
     /** No connection gets the standard bound: a tick that only fails its run still holds the lock briefly. */

@@ -272,6 +272,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-tick@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
+        $this->fixtures()->storeProfile($user, 'a distilled profile');
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
         self::assertResponseIsSuccessful();
@@ -286,13 +287,6 @@ final class RecommendationRunControllerTest extends WebTestCase
             ->getRepository(Entry::class)
             ->findOneBy(['guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
-
-        $this->stubChatClient()->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
-
-        // The distillation tick spends the one queued profile reply, ahead of any batch call.
-        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
-        self::assertResponseIsSuccessful();
-        self::assertSame('running', $this->payload($client->getResponse())['status']);
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
@@ -748,6 +742,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->disableReboot();
         [$headers, $user] = $this->authWithReadyAi('run-purge-completed@example.test');
         $this->seedOneCandidateEntry($user);
+        $this->fixtures()->storeProfile($user, 'a distilled profile');
         $this->startRun($client, $headers);
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
@@ -756,10 +751,6 @@ final class RecommendationRunControllerTest extends WebTestCase
             ->getRepository(Entry::class)
             ->findOneBy(['guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
-
-        $this->stubChatClient()->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
-        $client->request('POST', '/api/recommendations/runs/tick', server: $headers); // distillation tick
-        self::assertResponseIsSuccessful();
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Prompt\Model;
 
 /**
- * One distillation reply's outcome: RecommendationProfileDistiller stores a usable profile, and an unusable reply is
+ * One distillation reply's outcome: LlmProfileRunDistiller passes a usable profile on, and an unusable reply is
  * retried with a corrective message.
  */
 final readonly class ProfileParseResultModel

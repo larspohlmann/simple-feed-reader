@@ -14,13 +14,12 @@ final class CallSlotModelTest extends TestCase
     {
         self::assertSame(
             [
-                [CallPhase::Distill, null],
                 [CallPhase::Batch, 3],
                 [CallPhase::Consolidate, null],
             ],
             array_map(
                 static fn (CallSlotModel $slot): array => [$slot->phase, $slot->batchNumber],
-                [CallSlotModel::distillation(), CallSlotModel::batch(3), CallSlotModel::consolidation()],
+                [CallSlotModel::batch(3), CallSlotModel::consolidation()],
             ),
         );
     }

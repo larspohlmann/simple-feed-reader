@@ -116,6 +116,17 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertSame('jev', $this->storedEngineKind($run));
     }
 
+    public function testTheStoredProfileIsFrozenIntoTheRun(): void
+    {
+        $this->fixtures->storeProfile($this->owner, 'Likes rail and maps.');
+        $this->fixtures->seedFeedWithEntries($this->owner, 2);
+        $run = $this->pendingRun();
+
+        $this->snapshot(ScriptedRecommendationEngine::packing([[1]]))->advance($this->tick($run));
+
+        self::assertSame('Likes rail and maps.', $run->getProfileText());
+    }
+
     private function storedEngineKind(RecommendationRun $run): mixed
     {
         return $this->entityManager->getConnection()->fetchOne(

@@ -160,7 +160,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
         self::assertSame(
             [
                 'status' => 'failed',
-                'batchesTotal' => 5,
+                'batchesTotal' => 4,
                 'batchesDone' => 1,
                 'error' => 'boom',
                 'background' => false,
