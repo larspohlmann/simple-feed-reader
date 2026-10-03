@@ -10,6 +10,27 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**A second engine for For You.** Recommendations can now come from Jev, a hosted
+decision model, as well as from a language model. Jev scores each article
+directly; it gives no written reasons. Each Jev connection keeps its own
+settings.
+
+**Comments in the reader.** Reddit posts show their discussion below the article.
+Other feeds that publish a comments feed get a "Load comments" button, and a
+Discussion link appears whenever a feed names one. Reddit posts no longer
+trigger a fetch of the linked page.
+
+**Images that load, at the right size.** Images that a site refuses to show on
+other websites now load through the server. When a feed offers several sizes of
+an image, your browser picks the one that fits the screen, so phones download
+less and retina screens look sharp.
+
+**Read oldest first.** Any list can switch between newest first and oldest
+first, which suits serials and catching up on a backlog. Each list remembers its
+own choice.
+
 ## [v1.0.16] - 2026-09-23
 
 ## What's Changed
