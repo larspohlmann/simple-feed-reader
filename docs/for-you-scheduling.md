@@ -5,10 +5,21 @@ The cadence lives in **Settings → AI → Recommendations → Auto-generate**: 
 manually* (default), or every 1, 3, 6, 12, or 24 hours. A run is due when the
 account's newest run is at least one interval old.
 
+The interest profile has its own schedule in **Settings → Profile**: *only
+manually*, or every 6, 12 or 24 hours, every 2 days or weekly. A profile run is
+due one interval after the account's newest profile run, whatever its outcome,
+and a due account without a connection that can build the profile is skipped.
+Accounts that had auto-generate on were moved to a daily profile when this
+shipped (#1351). Profile runs have their own due finder (`DueProfileRunFinder`)
+and are started and advanced by the same drivers as recommendation runs, below.
+
 ## With the background worker
 
 On an install that runs the `worker` container, nothing else is needed. The
 worker starts due runs every five minutes and advances them to completion.
+It does the same for profile runs: it starts due ones every five minutes
+(`StartDueProfileRuns`) and ticks active ones every ten seconds
+(`AdvanceProfileRuns`).
 If the worker stops, open tabs and the on-demand drainer take over its active
 runs once its heartbeat is 16 minutes old (`WorkerPresence::FRESH_SECONDS`),
 and the settings card stops reporting a worker at the same moment.
@@ -16,7 +27,8 @@ and the settings card stops reporting a worker at the same moment.
 ## Without a worker (external cron)
 
 An install without the worker exposes a token-guarded endpoint that does the
-same work — start due runs, then advance each active run one step:
+same work — start due recommendation and profile runs, then advance each
+active run of either kind one step:
 
     POST /maintenance/recommendations/sweep
     Header: X-Maintenance-Token: <MAINTENANCE_TOKEN>
@@ -41,16 +53,29 @@ Example GitHub Actions schedule (store the token as the repository secret
               curl -fsS -X POST "https://YOUR_HOST/maintenance/recommendations/sweep" \
                 -H "X-Maintenance-Token: ${{ secrets.MAINTENANCE_TOKEN }}"
 
-The response is JSON: `{ "startedRuns": n, "advancedRuns": m, "activeRuns": k }`.
+The response is JSON:
+
+    { "startedRuns": n, "advancedRuns": m, "activeRuns": k,
+      "startedProfileRuns": p, "advancedProfileRuns": q, "activeProfileRuns": r }
+
+The sweep is bounded by count, not by time: it starts every due run and
+advances each active run of both kinds one step, so a request with many active
+accounts makes that many provider calls before it answers.
+
+A host with neither the worker, a drainer nor this cron never builds a profile.
+A recommendation run that waits for one (it needs a profile and none is stored)
+then stays `pending` until it is stopped.
 
 ## The on-demand drainer
 
 Worker-less installs do not depend on the cron cadence for interactive
 runs. A `kernel.terminate` listener
 (`RecommendationDrainOnTerminateListener`) fires once after every request
-and, whenever the database still shows an active run, spawns
+and, whenever the database still shows an active recommendation run or an
+active profile run, spawns
 a short-lived, detached CLI process (`app:recommendations:drain`) that
-advances every active run at full worker concurrency until none is left,
+advances every active run of both kinds at full worker concurrency until
+none is left,
 then exits. The spawn lives on that one listener, not on any individual call
 site — starting or resuming a run, the maintenance tick, the sweep endpoint
 and the poll endpoint all get the same respawn net for free if a drainer
@@ -93,11 +118,12 @@ of the two separate ones:
     POST /maintenance/tick
     Header: X-Maintenance-Token: <MAINTENANCE_TOKEN>
 
-It refreshes all due feeds, then starts due recommendation runs and advances
-each active run one step, and returns both reports:
+It refreshes all due feeds, then starts due recommendation and profile runs and
+advances each active run one step, and returns both reports:
 
     { "refresh": { "status": "completed", ... },
-      "recommendations": { "startedRuns": n, "advancedRuns": m, "activeRuns": k } }
+      "recommendations": { "startedRuns": n, "advancedRuns": m, "activeRuns": k,
+        "startedProfileRuns": p, "advancedProfileRuns": q, "activeProfileRuns": r } }
 
 It always answers `200` when the tick ran; read each half's own status in the
 body. The granular `/maintenance/refresh` and `/maintenance/recommendations/sweep`

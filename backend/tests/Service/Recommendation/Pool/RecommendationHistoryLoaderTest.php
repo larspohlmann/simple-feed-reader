@@ -207,6 +207,21 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         self::assertSame($this->feed->getUrl(), $history->favorites[0]->feedName);
     }
 
+    public function testAHistoryWithoutAnyEntryIsEmpty(): void
+    {
+        self::assertTrue($this->loader()->load($this->userId(), $this->settings())->isEmpty());
+    }
+
+    public function testOneViewedEntryMakesTheHistoryNonEmpty(): void
+    {
+        $state = new EntryState($this->user, $this->entry('A', '2026-07-10T00:00:00Z'));
+        $state->markViewed(new \DateTimeImmutable('2026-07-10T09:00:00Z'));
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+
+        self::assertFalse($this->loader()->load($this->userId(), $this->settings())->isEmpty());
+    }
+
     private function entry(string $guid, string $published): Entry
     {
         $publishedAt = new \DateTimeImmutable($published);
@@ -242,7 +257,6 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             ),
             debugEnabled: false,
             autoGenerateIntervalHours: null,
-            profileText: null,
             showScoreAndReasons: false,
         );
     }

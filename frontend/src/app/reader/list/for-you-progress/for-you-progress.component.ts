@@ -33,6 +33,10 @@ export class ForYouProgressComponent {
     return { done: report?.batchesDone ?? 0, total: report?.batchesTotal ?? 0 };
   });
 
+  protected readonly buildingProfile = computed(
+    () => this.recs.report()?.waitingForProfile === true,
+  );
+
   /** The ETA/status phrase appended after the count, or null when there is
    *  nothing to add. `starting`, `waiting` and `lockHeld` are fixed phrases;
    *  `eta` formats the remaining seconds; `hidden` (no run) adds nothing. */

@@ -43,10 +43,10 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
     public function testWeightsTheTailPhasesFromHistoryAndSubtractsElapsed(): void
     {
-        // History: distill 10s, batch phase 40s over 4 batches (10s/batch),
+        // History: pickup 10s, batch phase 40s over 4 batches (10s/batch),
         // consolidate 30s. A live run with 3 batches is predicted to take
         // 10 + 3×10 + 30 = 70s; 20s in, 50s remain.
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $report = $this->liveReportWithBatches(3);
 
         $eta = $this->estimatorAt('+20 seconds')->estimateSeconds($report, $this->user);
@@ -56,7 +56,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
     public function testPinsAtZeroOnceElapsedPassesThePrediction(): void
     {
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $report = $this->liveReportWithBatches(3); // predicted 70s
 
         $eta = $this->estimatorAt('+200 seconds')->estimateSeconds($report, $this->user);
@@ -67,7 +67,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     /** 40 s over 3 batches is 13.3 s a batch: one batch leaves 33.3 s, two leave 46.7 s, 20 s in. */
     public function testRoundsTheRemainingSecondsToTheNearest(): void
     {
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 3, consolidate: 30);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 3, consolidate: 30);
         $estimator = $this->estimatorAt('+20 seconds');
 
         self::assertSame(33, $estimator->estimateSeconds($this->liveReportWithBatches(1), $this->user));
@@ -83,7 +83,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
     public function testReturnsNullBeforeTheFirstBatchStarts(): void
     {
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
 
@@ -97,7 +97,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
     public function testReturnsNullWhenNoRunIsInFlight(): void
     {
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
 
         self::assertNull(
             $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReportModel::none(), $this->user),
@@ -105,28 +105,27 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     }
 
     /**
-     * History: an LLM run (10 + 4 × 10 + 30), a Jev run (15 + 3 × 25) and an LLM run that skipped consolidation, whose
-     * phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
+     * History: an LLM run (10 s pickup + 4 × 10 + 30), a Jev run (15 s pickup + 3 × 25) and an LLM run that skipped
+     * consolidation, whose phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
      */
     public function testAJevRunIsPredictedFromJevRunsAlone(): void
     {
-        $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
-        $this->seedHistoricalJevRun(distill: 15, batchWall: 75, batches: 3);
-        $this->seedHistoricalLlmRunWithoutConsolidation(distill: 10, batchWall: 40, batches: 4);
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
+        $this->seedHistoricalJevRun(pickup: 15, batchWall: 75, batches: 3);
+        $this->seedHistoricalLlmRunWithoutConsolidation(pickup: 10, batchWall: 40, batches: 4);
         $eta = $this->estimatorAt('+20 seconds')->estimateSeconds($this->liveJevReportWithBatches(4), $this->user);
 
         self::assertSame(95, $eta);
     }
 
     /**
-     * 16 s of pickup, a 5 s distill, a 5 s wait, 11 s of batch waves over 5 batches and a 9 s finalize tick make 46 s.
+     * 16 s of pickup, a 10 s wait, 11 s of batch waves over 5 batches and a 9 s finalize tick make 46 s.
      * 28 s into the next 5-batch run, 18 s remain, not the 0 the call time alone leaves.
      */
     public function testPredictsTheTimeBetweenCallsOnTheClockElapsedRunsOn(): void
     {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
         $run->snapshot(RecommendationEngineKind::Jev, [[1]]);
-        $this->finishedLog($run, CallPhase::Distill, null, 16, 5);
         for ($batch = 1; $batch <= 5; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, 26, 11);
         }
@@ -173,39 +172,38 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         return RecommendationRunReportModel::fromRun($run);
     }
 
-    private function seedHistoricalRun(int $distill, int $batchWall, int $batches, int $consolidate): void
+    private function seedHistoricalRun(int $pickup, int $batchWall, int $batches, int $consolidate): void
     {
-        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Llm, $distill, $batchWall, $batches);
-        $this->finishedLog($run, CallPhase::Consolidate, null, $distill + $batchWall, $consolidate);
-        $this->completeAfter($run, $distill + $batchWall + $consolidate);
+        $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Llm, $pickup, $batchWall, $batches);
+        $this->finishedLog($run, CallPhase::Consolidate, null, $pickup + $batchWall, $consolidate);
+        $this->completeAfter($run, $pickup + $batchWall + $consolidate);
     }
 
     /** An LLM run whose pool was empty at consolidation: no consolidate row, so its phases are Jev's. */
-    private function seedHistoricalLlmRunWithoutConsolidation(int $distill, int $batchWall, int $batches): void
+    private function seedHistoricalLlmRunWithoutConsolidation(int $pickup, int $batchWall, int $batches): void
     {
-        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Llm, $distill, $batchWall, $batches);
-        $this->completeAfter($run, $distill + $batchWall);
+        $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Llm, $pickup, $batchWall, $batches);
+        $this->completeAfter($run, $pickup + $batchWall);
     }
 
-    private function seedHistoricalJevRun(int $distill, int $batchWall, int $batches): void
+    private function seedHistoricalJevRun(int $pickup, int $batchWall, int $batches): void
     {
-        $run = $this->runWithDistillationAndBatches(RecommendationEngineKind::Jev, $distill, $batchWall, $batches);
-        $this->completeAfter($run, $distill + $batchWall);
+        $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Jev, $pickup, $batchWall, $batches);
+        $this->completeAfter($run, $pickup + $batchWall);
     }
 
-    /** Created when its distill call starts, its batches one wave right after: no time passes between calls. */
-    private function runWithDistillationAndBatches(
+    /** Its batches go out in one wave, $pickup seconds after it was created: the only time between its calls. */
+    private function runWithPickupAndBatches(
         RecommendationEngineKind $engineKind,
-        int $distill,
+        int $pickup,
         int $batchWall,
         int $batches,
     ): RecommendationRun {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
         $run->snapshot($engineKind, [[1]]);
 
-        $this->finishedLog($run, CallPhase::Distill, null, 0, $distill);
         for ($batch = 1; $batch <= $batches; $batch++) {
-            $this->finishedLog($run, CallPhase::Batch, $batch, $distill, $batchWall);
+            $this->finishedLog($run, CallPhase::Batch, $batch, $pickup, $batchWall);
         }
 
         return $run;

@@ -41,8 +41,7 @@ final class WaveContextLoaderTest extends DbTestCase
     public function testTheWaveTakesTheNextBatchesFramedByTheWholePool(): void
     {
         $ids = $this->entryIds(6);
-        $run = $this->runWithPlan([[$ids[0], $ids[1]], [$ids[2], $ids[3]], [$ids[4], $ids[5]]]);
-        $run->recordProfile('Likes Rust.');
+        $run = $this->runWithPlan([[$ids[0], $ids[1]], [$ids[2], $ids[3]], [$ids[4], $ids[5]]], 'Likes Rust.');
         $run->recordBatchWinners([]);
         $this->entityManager->flush();
 
@@ -84,9 +83,10 @@ final class WaveContextLoaderTest extends DbTestCase
     }
 
     /** @param list<list<int>> $plan */
-    private function runWithPlan(array $plan): RecommendationRun
+    private function runWithPlan(array $plan, ?string $frozenProfile = null): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
+        $run->freezeProfile($frozenProfile);
         $run->snapshot(RecommendationEngineKind::Llm, $plan);
         $this->entityManager->flush();
 

@@ -10,11 +10,18 @@ use PHPUnit\Framework\TestCase;
 
 final class ForYouSweepReportJsonTest extends TestCase
 {
-    public function testItSendsTheThreeCounts(): void
+    public function testItSendsTheCountsOfBothKindsOfRun(): void
     {
         self::assertSame(
-            ['startedRuns' => 2, 'advancedRuns' => 3, 'activeRuns' => 1],
-            ForYouSweepReportJson::report(new ForYouSweepReportModel(2, 3, 1)),
+            [
+                'startedRuns' => 2,
+                'advancedRuns' => 3,
+                'activeRuns' => 1,
+                'startedProfileRuns' => 4,
+                'advancedProfileRuns' => 5,
+                'activeProfileRuns' => 6,
+            ],
+            ForYouSweepReportJson::report(new ForYouSweepReportModel(2, 3, 1, 4, 5, 6)),
         );
     }
 }

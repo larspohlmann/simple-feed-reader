@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -16,7 +17,8 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Scheduled "For you": startDueRuns() for the worker; sweepOnce() for the cron, which also advances each active run one
- * Sweep tick. While sweeping it holds its own liveness key, surrendered when the sweep ends.
+ * Sweep tick. While sweeping it holds its own liveness key, surrendered when the sweep ends. Profile runs ride along:
+ * sweepOnce() also starts the due ones and ticks every active one.
  */
 final readonly class ForYouSweep
 {
@@ -24,6 +26,7 @@ final readonly class ForYouSweep
         private DueRecommendationRunFinder $finder,
         private RecommendationRunStarter $starter,
         private RecommendationRunAdvancer $advancer,
+        private ProfileRunSweep $profileSweep,
         private RecommendationRunRepository $runs,
         private WorkerPresence $presence,
         private SweepStreamHeartbeat $heartbeat,
@@ -51,23 +54,34 @@ final readonly class ForYouSweep
     public function sweepOnce(): ForYouSweepReportModel
     {
         $startedRuns = $this->startDueRuns();
-        $advancedRuns = $this->advanceEveryActiveRunAsTheDriver();
+        $startedProfileRuns = $this->profileSweep->startDueRuns();
+        [$advancedRuns, $advancedProfileRuns] = $this->advanceEveryActiveRunAsTheDriver();
 
         // The identity map is per-sweep state, not request state; clear it so
-        // the remaining-active count below is a fresh read from the database.
+        // the remaining-active counts below are a fresh read from the database.
         $this->entityManager->clear();
 
-        return new ForYouSweepReportModel($startedRuns, $advancedRuns, \count($this->runs->findAllActive()));
+        return new ForYouSweepReportModel(
+            startedRuns: $startedRuns,
+            advancedRuns: $advancedRuns,
+            activeRuns: \count($this->runs->findAllActive()),
+            startedProfileRuns: $startedProfileRuns,
+            advancedProfileRuns: $advancedProfileRuns,
+            activeProfileRuns: \count($this->profileSweep->activeRuns()),
+        );
     }
 
     /**
      * Marks the cron key before each run and beats it mid-call. The key is surrendered in `finally` and, for a request
      * the gateway kills (Strato's 240 s cap), by a shutdown hook: a stale key would keep the poll tick and the drain
      * spawner from recovering the run for FRESH_SECONDS.
+     *
+     * @return array{int, int} the recommendation runs, then the profile runs, it advanced
      */
-    private function advanceEveryActiveRunAsTheDriver(): int
+    private function advanceEveryActiveRunAsTheDriver(): array
     {
         $advancedRuns = 0;
+        $advancedProfileRuns = 0;
         $this->surrenderTheCronSweepKeyIfTheRequestIsKilled();
         $this->heartbeat->sweepStarted(RecommendationDriverKind::CronSweep);
 
@@ -76,12 +90,17 @@ final readonly class ForYouSweep
                 $this->presence->mark(RecommendationDriverKind::CronSweep);
                 $advancedRuns += $this->advanceOne($run);
             }
+            foreach ($this->profileSweep->activeRuns() as $profileRun) {
+                $this->presence->mark(RecommendationDriverKind::CronSweep);
+                $this->profileSweep->advanceOne($profileRun, TickDriver::Sweep);
+                ++$advancedProfileRuns;
+            }
         } finally {
             $this->heartbeat->sweepEnded();
             $this->surrenderTheCronSweepKey();
         }
 
-        return $advancedRuns;
+        return [$advancedRuns, $advancedProfileRuns];
     }
 
     /**

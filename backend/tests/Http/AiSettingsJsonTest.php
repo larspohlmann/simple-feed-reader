@@ -212,20 +212,10 @@ final class AiSettingsJsonTest extends TestCase
         );
     }
 
-    public function testTheConfigurationShapeCarriesThePointerToItsProfileConnection(): void
-    {
-        $jev = self::withId($this->settings('jev-latest'), 8);
-        $jev->setProfileConnection(self::withId($this->settings('gpt-4o'), 6));
-
-        self::assertSame(6, $this->json()->configuration($jev, null)['profileConnectionId']);
-    }
-
-    public function testAConfigurationThatPointsNowhereCarriesANullProfileConnection(): void
+    public function testAConfigurationCarriesNoProfileConnectionPointer(): void
     {
         $shape = $this->json()->configuration(self::withId($this->settings('gpt-4o'), 7), null);
 
-        self::assertArrayHasKey('profileConnectionId', $shape);
-        self::assertArrayNotHasKey('profileSource', $shape);
-        self::assertNull($shape['profileConnectionId']);
+        self::assertArrayNotHasKey('profileConnectionId', $shape);
     }
 }

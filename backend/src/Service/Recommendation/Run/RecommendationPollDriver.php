@@ -57,7 +57,7 @@ final readonly class RecommendationPollDriver
     private function logLockWithNoHeartbeatBehindIt(User $user): void
     {
         $this->logger->warning('Recommendation run lock is held with no driver heartbeat behind it', [
-            'lock' => RecommendationRunAdvancer::lockNameFor($user),
+            'lock' => UserTickLock::nameFor($user),
         ]);
     }
 

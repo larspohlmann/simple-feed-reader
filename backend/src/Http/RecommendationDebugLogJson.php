@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
+use App\Service\Recommendation\Profile\Model\ProfileDebugLogModel;
 
 /**
  * Response shapes for the recommendation debug log: poll-cheap, bodies never ride along, only sizes, except
@@ -24,16 +25,33 @@ final class RecommendationDebugLogJson
     public static function list(RecommendationDebugLogModel $log): array
     {
         return [
-            'entries' => array_map(
-                static fn (array $row): array => [
-                    ...self::entry($row),
-                    'streamingText' => $log->streamingTextById[$row['id']] ?? null,
-                ],
-                $log->rows,
-            ),
+            'entries' => self::entries($log->rows, $log->streamingTextById),
             'run' => null === $log->selectedRun ? null : self::run($log->selectedRun),
             'runs' => array_map(self::choice(...), $log->retainedRuns),
         ];
+    }
+
+    /** @return array{entries: list<array<string, mixed>>} */
+    public static function profileRunLog(ProfileDebugLogModel $log): array
+    {
+        return ['entries' => self::entries($log->rows, $log->streamingTextById)];
+    }
+
+    /**
+     * @param list<DebugLogRow>  $rows
+     * @param array<int, string> $streamingTextById
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function entries(array $rows, array $streamingTextById): array
+    {
+        return array_map(
+            static fn (array $row): array => [
+                ...self::entry($row),
+                'streamingText' => $streamingTextById[$row['id']] ?? null,
+            ],
+            $rows,
+        );
     }
 
     /**

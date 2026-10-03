@@ -46,15 +46,15 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
-        self::assertSame(4, $run->getProgress()->batchesTotal); // 2 batches + distill + consolidate
+        self::assertSame(3, $run->getProgress()->batchesTotal); // 2 batches + consolidate
     }
 
-    public function testASingleBatchPlanTotalsThreeStages(): void
+    public function testASingleBatchPlanTotalsTwoStages(): void
     {
         $run = $this->makeRun();
         $run->snapshot(RecommendationEngineKind::Llm, [[1, 2, 3]]);
 
-        self::assertSame(3, $run->getProgress()->batchesTotal); // 1 batch + distill + consolidate
+        self::assertSame(2, $run->getProgress()->batchesTotal); // 1 batch + consolidate
     }
 
     public function testRecordingWinnersAdvancesAndClearsRetryState(): void
@@ -252,7 +252,7 @@ final class RecommendationRunTest extends TestCase
 
         self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertSame($when, $run->getCompletedAt());
-        self::assertSame(4, $run->getProgress()->batchesDone);
+        self::assertSame(3, $run->getProgress()->batchesDone); // 2 batches + consolidate
     }
 
     public function testSnapshotAgainAfterAlreadyRunningThrows(): void
@@ -333,37 +333,6 @@ final class RecommendationRunTest extends TestCase
         self::assertSame('bonsai-27b', $run->getModel());
     }
 
-    public function testRecordProfileStoresTextAndMarksDistilled(): void
-    {
-        $run = $this->runInRunningState();
-        $run->recordProfile('Likes Rust.');
-
-        self::assertTrue($run->isDistilled());
-        self::assertSame('Likes Rust.', $run->getProfileText());
-    }
-
-    public function testRecordProfileWithNullMarksDistilledButKeepsNoProfile(): void
-    {
-        $run = $this->runInRunningState();
-        $run->recordProfile(null);
-
-        self::assertTrue($run->isDistilled());
-        self::assertNull($run->getProfileText());
-    }
-
-    public function testFreshRunIsNotDistilled(): void
-    {
-        self::assertFalse($this->runInRunningState()->isDistilled());
-    }
-
-    public function testRecordProfileBeforeSnapshotThrows(): void
-    {
-        $run = $this->makeRun();
-
-        $this->expectException(\LogicException::class);
-        $run->recordProfile('Likes Rust.');
-    }
-
     public function testMarkFirstBatchStartedBeforeSnapshotThrows(): void
     {
         $run = $this->makeRun();
@@ -380,21 +349,6 @@ final class RecommendationRunTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $run->cancel(new \DateTimeImmutable('2026-08-07T10:00:01Z'));
-    }
-
-    public function testRecordProfileResetsAttemptsToExactlyZero(): void
-    {
-        $run = $this->runInRunningState();
-        $run->getRunningCallAttempts()->recordInvalidReply('a');
-        $run->getRunningCallAttempts()->recordInvalidReply('b');
-
-        $run->recordProfile('Likes Rust.');
-
-        $run->getRunningCallAttempts()->recordInvalidReply('c');
-        $run->getRunningCallAttempts()->recordInvalidReply('d');
-        self::assertFalse($run->getProgress()->attemptsExhausted);
-        $run->getRunningCallAttempts()->recordInvalidReply('e');
-        self::assertTrue($run->getProgress()->attemptsExhausted);
     }
 
     public function testAFreshRunNeitherWaitsNorReducesTheCap(): void
@@ -540,18 +494,6 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(4, $run->getWaveConcurrencyCap(8));
     }
 
-    public function testRecordProfileClearsTheDeferralButKeepsTheReducedCap(): void
-    {
-        $run = $this->runInRunningState();
-        $run->getRunningThrottle()->reduceConcurrency(8);
-        $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-
-        $run->recordProfile('Likes Rust.');
-
-        self::assertNull($run->getRetryNotBefore());
-        self::assertSame(4, $run->getWaveConcurrencyCap(8));
-    }
-
     public function testCompleteClearsTheDeferralButKeepsTheReducedCap(): void
     {
         $run = $this->makeRun();
@@ -577,6 +519,56 @@ final class RecommendationRunTest extends TestCase
 
         self::assertNull($run->getRetryNotBefore());
         self::assertSame(8, $run->getWaveConcurrencyCap(8));
+    }
+
+    public function testAProfileFrozenBeforeTheSnapshotIsTheOneTheRunReads(): void
+    {
+        $run = $this->makeRun();
+
+        $run->freezeProfile('Likes rail and maps.');
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+
+        self::assertSame('Likes rail and maps.', $run->getProfileText());
+    }
+
+    public function testARunningRunCannotFreezeAnotherProfile(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+
+        $this->expectException(InvalidRunStatusException::class);
+        $run->freezeProfile('Later profile.');
+    }
+
+    public function testOnlyARunThatFailedAfterItsSnapshotIsResumable(): void
+    {
+        $neverSnapshotted = $this->makeRun();
+        $neverSnapshotted->fail('Profile generation failed: gone', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $snapshotted = $this->makeRun();
+        $snapshotted->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $snapshotted->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:05:00'));
+
+        self::assertFalse($neverSnapshotted->isResumable());
+        self::assertTrue($snapshotted->isResumable());
+    }
+
+    public function testAJevRunThatFrozeNoProfileIsNotResumable(): void
+    {
+        $withoutProfile = $this->makeRun();
+        $withoutProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withoutProfile->fail('Jev needs your reading profile.', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $withProfile = $this->makeRun();
+        $withProfile->freezeProfile('Likes rail and maps.');
+        $withProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withProfile->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:05:00'));
+
+        self::assertFalse($withoutProfile->isResumable());
+        self::assertTrue($withProfile->isResumable());
+    }
+
+    public function testARunThatHasNotFailedIsNotResumable(): void
+    {
+        self::assertFalse($this->runInRunningState()->isResumable());
     }
 
     private function makeRun(): RecommendationRun

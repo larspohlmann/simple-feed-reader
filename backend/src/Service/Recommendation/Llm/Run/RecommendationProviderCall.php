@@ -8,8 +8,8 @@ use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\RateLimitedCompletion;
 use App\Service\Recommendation\Llm\Run\Pass\RecordedCallObserver;
+use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
 use App\Service\Recommendation\Run\Pass\RecordedCall;
-use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
  * One recorded provider call for the single-call phases. Any failure, an unreadable key included, settles the debug
@@ -23,14 +23,17 @@ final readonly class RecommendationProviderCall
     ) {
     }
 
-    public function complete(TickContext $tick, CompletionRequestModel $request, RecordedCall $recordedCall): string
-    {
+    public function complete(
+        ProviderCallRouteModel $route,
+        CompletionRequestModel $request,
+        RecordedCall $recordedCall,
+    ): string {
         try {
             return $this->completion->complete(
-                $this->connectionFactory->forSettings($tick->connection),
+                $this->connectionFactory->forSettings($route->connection),
                 $request,
                 new RecordedCallObserver($recordedCall),
-                $tick->retryPlan(),
+                $route->retryPlan,
             );
         } catch (\Throwable $exception) {
             $recordedCall->abortAfterTransportFailure($exception->getMessage());

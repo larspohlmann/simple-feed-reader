@@ -13,6 +13,8 @@ final readonly class RecommendationRunStatusModel
         public RecommendationForYouSummaryModel $forYou,
         public \DateTimeImmutable $observedAt,
         public ?int $etaSeconds,
+        public bool $waitingForProfile = false,
+        public bool $resumable = false,
     ) {
     }
 }

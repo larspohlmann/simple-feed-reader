@@ -16,6 +16,8 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class RecommendationTransportFailureRecorder
 {
+    public const string PROVIDER_FAILED = 'The AI provider at %s failed: %s';
+
     public function __construct(
         private RecommendationTickCheckpoint $checkpoint,
         private EntityManagerInterface $entityManager,
@@ -31,7 +33,7 @@ final readonly class RecommendationTransportFailureRecorder
         if ($run->hasExhaustedTransportRetries()) {
             // The call's own detail, not a flat "unreachable", which hid a fixable 400 behind a network story (#329).
             $run->fail(
-                sprintf('The AI provider at %s failed: %s', $settings->getBaseUrl(), $failureDetail),
+                sprintf(self::PROVIDER_FAILED, $settings->getBaseUrl(), $failureDetail),
                 $this->clock->now(),
             );
         }

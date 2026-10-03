@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\RecommendationItem;
-use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
@@ -15,11 +13,12 @@ use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
 use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
-use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Feed\ForYouFeed;
-use App\Service\Recommendation\Jev\JevProfileStep;
+use App\Service\Recommendation\Jev\JevRecommendationEngine;
 use App\Service\Recommendation\Jev\Support\QuestionId;
+use App\Service\Recommendation\Profile\ProfileConnections;
+use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -27,8 +26,8 @@ use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubSystemOneClient;
 
 /**
- * A Jev run end to end through the advancer's real dispatch, only System One and the profile connection's chat faked:
- * snapshot, the distillation, one wave, the finalising tick. Five candidates fit one request.
+ * A Jev run end to end through the advancer's real dispatch, only System One faked: snapshot, one wave, the
+ * finalising tick. Five candidates fit one request.
  */
 final class JevPipelineTest extends DbTestCase
 {
@@ -37,8 +36,6 @@ final class JevPipelineTest extends DbTestCase
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
-    private AiProviderSettings $jevConnection;
-    private AiProviderSettings $profileConnection;
 
     protected function setUp(): void
     {
@@ -48,8 +45,7 @@ final class JevPipelineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-pipeline@example.test');
-        $this->jevConnection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
-        $this->profileConnection = $this->fixtures->seedProfileConnectionFor($this->owner);
+        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
     }
 
     public function testEveryCandidateIsScoredByItsNoulAndRankedWithoutAReason(): void
@@ -57,7 +53,7 @@ final class JevPipelineTest extends DbTestCase
         $ids = $this->entryIds($this->fixtures->seedFeedWithEntries($this->owner, 5));
         $nouls = [$ids[0] => 0.2, $ids[1] => 0.91, $ids[2] => 0.55, $ids[3] => 0.0737, $ids[4] => 0.66];
         $this->systemOne()->queueNouls(static fn (int $entryId): float => $nouls[$entryId]);
-        $this->queueProfile('Likes Rust and homelab.');
+        $this->storeProfile('Likes Rust and homelab.');
 
         $run = $this->runToCompletion($this->owner);
 
@@ -75,15 +71,15 @@ final class JevPipelineTest extends DbTestCase
             $items,
         ));
         self::assertSame(RecommendationEngineKind::Jev, $run->getEngineKind());
-        self::assertSame(2, $run->getProgress()->batchesTotal);   // the distillation and one batch (the LLM: 3)
-        self::assertSame([RecommendationRunFixtures::PROFILE_MODEL], array_column($this->chat()->calls(), 'model'));
+        self::assertSame(1, $run->getProgress()->batchesTotal);   // one batch (the LLM: 2)
+        self::assertSame([], $this->chat()->calls());
     }
 
     public function testTheRequestCarriesTheAliasTheStateAndOneQuestionPerCandidate(): void
     {
         $ids = $this->entryIds($this->fixtures->seedFeedWithEntries($this->owner, 5));
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->queueProfile('Likes Rust and homelab.');
+        $this->storeProfile('Likes Rust and homelab.');
 
         $this->runToCompletion($this->owner);
 
@@ -101,16 +97,15 @@ final class JevPipelineTest extends DbTestCase
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->queueProfile('Likes Rust and homelab.');
+        $this->storeProfile('Likes Rust and homelab.');
 
         $run = $this->runToCompletion($this->owner);
 
         $this->entityManager->clear();
         $logs = $this->entityManager->getRepository(RecommendationRunLog::class)
             ->findBy(['run' => $run->requireId()], ['id' => 'ASC']);
-        self::assertCount(2, $logs);
-        self::assertSame(CallPhase::Distill, $logs[0]->getPhase());
-        $log = $logs[1];
+        self::assertCount(1, $logs);
+        $log = $logs[0];
         self::assertSame(CallPhase::Batch, $log->getPhase());
         self::assertSame(1, $log->getBatchNumber());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());
@@ -130,7 +125,7 @@ final class JevPipelineTest extends DbTestCase
         $this->fixtures->showScoreAndReasonsEnabledSettings($this->owner);
         $ids = $this->entryIds($this->fixtures->seedFeedWithEntries($this->owner, 5));
         $this->systemOne()->queueNouls(static fn (int $entryId): float => $entryId === $ids[2] ? 0.97 : 0.1);
-        $this->queueProfile('Likes Rust and homelab.');
+        $this->storeProfile('Likes Rust and homelab.');
         $this->runToCompletion($this->owner);
 
         /** @var ForYouFeed $feed */
@@ -147,7 +142,7 @@ final class JevPipelineTest extends DbTestCase
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->queueProfile('Likes Rust and homelab.');
+        $this->storeProfile('Likes Rust and homelab.');
 
         $this->runToCompletion($this->owner);
 
@@ -157,143 +152,46 @@ final class JevPipelineTest extends DbTestCase
         );
     }
 
-    /** No profile connection: the run fails before any call, says how to fix it, and resumes once one is chosen. */
-    public function testWithoutAProfileConnectionTheRunFailsThenResumesOnceOneIsChosen(): void
-    {
-        $this->jevConnection->setProfileConnection(null);
-        $this->entityManager->flush();
-        $this->fixtures->seedFeedWithEntries($this->owner, 5);
-
-        $failed = $this->runToCompletion($this->owner);
-
-        self::assertSame('failed', $failed->getStatus()->value);
-        self::assertSame(JevProfileStep::NO_PROFILE_CONNECTION, $failed->getError());
-        self::assertSame([], $this->chat()->calls());
-        self::assertSame([], $this->systemOne()->requests());
-
-        $this->jevConnection->setProfileConnection($this->profileConnection);
-        $this->entityManager->flush();
-        $this->queueProfile('Likes Rust and homelab.');
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone($this->owner);
-
-        self::assertSame('completed', $resumed->getStatus()->value);
-        self::assertSame($failed->requireId(), $resumed->requireId());
-    }
-
-    public function testTheWavesCompleteWhenTheProfileConnectionIsDeletedAfterTheProfileIsRecorded(): void
-    {
-        $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->queueProfile('Likes Rust and homelab.');
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->starter()->start($this->owner);
-        $this->tickUntilTheProfileIsRecorded();
-
-        $this->configurator()->deleteConfiguration($this->profileConnection);
-        $run = $this->tickUntilDone($this->owner);
-
-        self::assertSame('completed', $run->getStatus()->value);
-        self::assertCount(1, $this->systemOne()->requests());
-        self::assertNull($this->jevConnection->getProfileConnection());
-    }
-
-    public function testAJevConnectionDistilsThroughItsOwnProfileConnection(): void
-    {
-        $other = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest');
-        $this->fixtures->seedProfileConnectionBorrowedBy($other, 'gpt-4o');
-        $this->owner->setActiveAiProviderSettings($other);
-        $this->entityManager->flush();
-        $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->queueProfile('Likes Rust and homelab.');
-
-        $run = $this->runToCompletion($this->owner);
-
-        self::assertSame('completed', $run->getStatus()->value);
-        self::assertSame(['gpt-4o'], array_column($this->chat()->calls(), 'model'));
-        self::assertSame($this->profileConnection, $this->jevConnection->getProfileConnection());
-    }
-
-    /** The profile connection answers nothing usable: the run scores on the profile an earlier run stored. */
-    public function testAFailedDistillationFallsBackToTheStoredProfile(): void
-    {
-        $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->settingsWriter()->storeProfile($this->owner, 'Stored: likes Rust.');
-        $this->queueUnusableProfiles();
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-
-        $run = $this->runToCompletion($this->owner);
-
-        self::assertSame('completed', $run->getStatus()->value);
-        self::assertSame('Stored: likes Rust.', $run->getProfileText());
-        self::assertSame(['profile' => 'Stored: likes Rust.'], $this->systemOne()->requests()[0]->state);
-    }
-
-    /** Guidance alone is not enough: with nothing stored the run fails, then a usable answer on resume completes it. */
-    public function testAFailedDistillationWithNothingStoredFailsEvenWithGuidanceThenResumes(): void
+    /** Guidance alone is not enough: a profile run that finds no history leaves the run without a profile. */
+    public function testWithoutAProfileTheRunFailsEvenWithGuidance(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
-        $this->queueUnusableProfiles();
+        $profileConnection = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'qwen3-14b');
+        $this->fixtures->chooseProfileConnection($this->owner, $profileConnection);
+        $this->waitForTheProfileRun();
 
-        $failed = $this->runToCompletion($this->owner);
+        $failed = $this->tickUntilDone($this->owner);
 
         self::assertSame('failed', $failed->getStatus()->value);
-        self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
+        self::assertSame(JevRecommendationEngine::NO_PROFILE, $failed->getError());
+        self::assertSame([], $this->chat()->calls());
         self::assertSame([], $this->systemOne()->requests());
-
-        $this->queueProfile('Likes Rust and homelab.');
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone($this->owner);
-
-        self::assertSame('completed', $resumed->getStatus()->value);
-        self::assertSame(
-            ['profile' => 'Likes Rust and homelab.', 'guidance' => 'More self-hosting.'],
-            $this->systemOne()->requests()[0]->state,
-        );
     }
 
-    /** A resume starts the distillation's attempts afresh: one more unusable reply is retried, not the end. */
-    public function testAResumedRunGetsEveryDistillationAttemptAgain(): void
+    /** Jev builds no profile itself: with no profile connection chosen, the profile run fails, and the run with it. */
+    public function testWithoutAProfileConnectionTheWaitingRunFailsWithTheProfileRunsError(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->queueUnusableProfiles();
-        $failed = $this->runToCompletion($this->owner);
-        self::assertSame(JevProfileStep::NO_PROFILE, $failed->getError());
+        $this->waitForTheProfileRun();
 
-        $this->chat()->queueContent('not a profile');
-        $this->queueProfile('Likes Rust and homelab.');
-        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
-        $this->starter()->resume($this->owner);
-        $resumed = $this->tickUntilDone($this->owner);
+        $failed = $this->tickUntilDone($this->owner);
 
-        self::assertSame('completed', $resumed->getStatus()->value);
-        self::assertSame('Likes Rust and homelab.', $resumed->getProfileText());
+        self::assertSame(\sprintf(SnapshotPhase::PROFILE_FAILED, ProfileConnections::MISSING), $failed->getError());
+        self::assertSame([], $this->systemOne()->requests());
     }
 
-    private function queueProfile(string $profile): void
+    private function waitForTheProfileRun(): void
     {
-        $this->chat()->queueContent(json_encode(['profile' => $profile], \JSON_THROW_ON_ERROR));
+        $this->starter()->start($this->owner);
+        $this->advancer()->advance($this->owner);
+        self::assertSame('pending', $this->runs()->findLatestForUser($this->owner)?->getStatus()->value);
+        $this->tickTheProfileRun($this->owner);
     }
 
-    private function queueUnusableProfiles(): void
+    private function storeProfile(string $profileText): void
     {
-        for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
-            $this->chat()->queueContent('not a profile');
-        }
-    }
-
-    private function tickUntilTheProfileIsRecorded(): void
-    {
-        for ($tick = 0; $tick < self::MAX_TICKS; $tick++) {
-            if (null !== $this->runs()->findActiveForUser($this->owner)?->getProfileText()) {
-                return;
-            }
-            $this->advancer()->advance($this->owner);
-        }
-        self::fail('The profile was not recorded within the tick budget.');
+        $this->fixtures->storeProfile($this->owner, $profileText);
     }
 
     /**
@@ -304,13 +202,5 @@ final class JevPipelineTest extends DbTestCase
     private function entryIds(array $entries): array
     {
         return array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
-    }
-
-    private function configurator(): AiProviderConfigurator
-    {
-        /** @var AiProviderConfigurator $configurator */
-        $configurator = self::getContainer()->get(AiProviderConfigurator::class);
-
-        return $configurator;
     }
 }

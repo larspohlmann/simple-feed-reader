@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
@@ -64,12 +64,13 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($this->user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            favoritesCap: 10,
             poolLimits: new RecommendationPoolLimits(400, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
+        $row->updateProfileSettings(new ProfileSettingsValues(null, null, 20, 30));
         $this->entityManager->persist($row);
         $this->entityManager->flush();
 
@@ -142,7 +143,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         );
     }
 
-    /** A borrowed distillation sizes its history by the profile connection, not the active one. */
+    /** A profile run sizes its history by the profile connection, not the active one. */
     public function testForAConnectionTheWindowAndTheCeilingAreThatConnections(): void
     {
         $active = AiProviderSettingsFactory::build($this->user);
@@ -160,22 +161,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(128_000, $forProfile->packing->contextWindow);
         self::assertSame(30, $forProfile->packing->maximumBatchSize);
         self::assertSame(32_000, $this->resolver()->forUser($this->user)->packing->contextWindow);
-    }
-
-    public function testProfileTextDefaultsToNullWhenNoRowExists(): void
-    {
-        $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
-
-        self::assertNull($settings->profileText);
-    }
-
-    public function testProfileTextIsReadFromTheSettingsRow(): void
-    {
-        $this->settingsRowFor($this->user, profileText: 'Likes self-hosted home automation.');
-
-        $settings = $this->resolver()->forUser($this->user);
-
-        self::assertSame('Likes self-hosted home automation.', $settings->profileText);
     }
 
     public function testShowScoreAndReasonsDefaultsToFalseWhenNoRowExists(): void
@@ -201,18 +186,16 @@ final class RecommendationSettingsResolverTest extends DbTestCase
 
     private function settingsRowFor(
         User $user,
-        ?string $profileText = null,
         bool $showScoreAndReasons = false,
     ): RecommendationSettings {
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
-            profileText: $profileText,
             showScoreAndReasons: $showScoreAndReasons,
         ));
         $this->entityManager->persist($row);

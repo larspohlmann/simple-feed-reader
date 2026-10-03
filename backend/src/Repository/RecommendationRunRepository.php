@@ -68,17 +68,16 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * A count, not a fetch: the terminate listener asks on every request. It scans, as no index leads with `status`;
-     * at one row per generation per account that is the right trade, so it is neither cached nor indexed.
+     * One id at most, not a fetch: the terminate listener asks on every request. It scans, as no index leads with
+     * `status`; at one row per generation per account that is the right trade, so it is neither cached nor indexed.
      */
     public function hasActiveRun(): bool
     {
-        $activeRunCount = $this->activeStatusQuery()
-            ->select('COUNT(r.id)')
+        return [] !== $this->activeStatusQuery()
+            ->select('r.id')
+            ->setMaxResults(1)
             ->getQuery()
-            ->getSingleScalarResult();
-
-        return (int) $activeRunCount > 0;
+            ->getArrayResult();
     }
 
     /**

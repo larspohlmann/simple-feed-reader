@@ -33,32 +33,13 @@ final class TickLockTtlTest extends DbTestCase
         self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
     }
 
-    public function testAJevAccountCoversItsSlowProfileConnection(): void
-    {
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
-        $this->fixtures->seedProfileConnectionFor($this->owner)->setSlowModel(true);
-        $this->entityManager->flush();
-
-        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
-    }
-
-    public function testASlowJevConnectionStillCountsBesideAStandardProfileConnection(): void
+    public function testASlowActiveConnectionGetsTheSlowBound(): void
     {
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
         $this->owner->getActiveAiProviderSettings()?->setSlowModel(true);
-        $this->fixtures->seedProfileConnectionFor($this->owner);
-
-        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
-    }
-
-    /** The LLM never borrows, so a slow connection its row points at does not lengthen its lock. */
-    public function testAnLlmAccountIgnoresItsProfileConnection(): void
-    {
-        $this->fixtures->seedReadyAiSettings($this->owner);
-        $this->fixtures->seedProfileConnectionFor($this->owner)->setSlowModel(true);
         $this->entityManager->flush();
 
-        self::assertSame(180.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
+        self::assertSame(900.0 + TickLockTtl::MARGIN_SECONDS, $this->ttl()->secondsFor($this->owner));
     }
 
     private function ttl(): TickLockTtl

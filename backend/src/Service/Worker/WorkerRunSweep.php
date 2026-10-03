@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
@@ -19,7 +20,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * One worker-regime sweep over every active run, for the worker's firing and the drain command. ForYouSweep must not
+ * One worker-regime sweep over every active run, profile runs included, for the worker's firing and the drain
+ * command. ForYouSweep must not
  * call it: the cron pass runs inside a web request, so it advances at TickDriver::Sweep, clamped like a poll.
  */
 final readonly class WorkerRunSweep
@@ -27,6 +29,7 @@ final readonly class WorkerRunSweep
     public function __construct(
         private RecommendationRunRepository $runs,
         private RecommendationRunAdvancer $advancer,
+        private ProfileRunSweep $profileRuns,
         private WorkerPresence $presence,
         private SweepStreamHeartbeat $heartbeat,
         private EntityManagerInterface $entityManager,
@@ -40,28 +43,16 @@ final readonly class WorkerRunSweep
      */
     public function sweep(RecommendationDriverKind $kind): int
     {
-        $attemptedRuns = 0;
         // Arms the mid-call heartbeat: one provider call can outlast the freshness window between two marks.
         $this->heartbeat->sweepStarted($kind);
 
         try {
-            $activeRuns = $this->runs->findAllActive();
-
-            if ([] === $activeRuns) {
+            $attemptedRuns = $this->advanceEveryRun($kind) + $this->advanceEveryProfileRun($kind);
+            if (0 === $attemptedRuns) {
                 // Marked with nothing to do as well: the heartbeat is the
                 // liveness signal the poll driver defers to, not a work log,
                 // and an idle worker is still a worker.
                 $this->presence->mark($kind);
-
-                return 0;
-            }
-
-            foreach ($activeRuns as $run) {
-                // Before each run: a sweep lasts the sum of its runs, and one run can spend a whole provider
-                // timeout, so one mark per sweep goes stale and the client takes the working worker for dead.
-                $this->presence->mark($kind);
-                $this->advanceOne($run);
-                ++$attemptedRuns;
             }
         } finally {
             // Per-sweep state: cleared in `finally`, so even a failure past advanceOne()'s floor never leaves the
@@ -71,6 +62,30 @@ final readonly class WorkerRunSweep
         }
 
         return $attemptedRuns;
+    }
+
+    private function advanceEveryRun(RecommendationDriverKind $kind): int
+    {
+        $activeRuns = $this->runs->findAllActive();
+        foreach ($activeRuns as $run) {
+            // Before each run: a sweep lasts the sum of its runs, and one run can spend a whole provider
+            // timeout, so one mark per sweep goes stale and the client takes the working worker for dead.
+            $this->presence->mark($kind);
+            $this->advanceOne($run);
+        }
+
+        return \count($activeRuns);
+    }
+
+    private function advanceEveryProfileRun(RecommendationDriverKind $kind): int
+    {
+        $activeProfileRuns = $this->profileRuns->activeRuns();
+        foreach ($activeProfileRuns as $profileRun) {
+            $this->presence->mark($kind);
+            $this->profileRuns->advanceOne($profileRun, TickDriver::Worker);
+        }
+
+        return \count($activeProfileRuns);
     }
 
     private function advanceOne(RecommendationRun $run): void

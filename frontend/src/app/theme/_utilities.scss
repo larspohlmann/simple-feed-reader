@@ -88,3 +88,10 @@ app-warning-box a[href].note-link,
 app-warning-box button.note-link {
   color: var(--warning);
 }
+
+/* The allowed range printed under a numeric settings field. */
+.numeric-range {
+  margin: 0 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

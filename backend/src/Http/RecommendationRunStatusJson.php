@@ -9,6 +9,7 @@ use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 /**
  * The shape every /api/recommendations/runs* action returns. `elapsedSeconds` comes from the server's clock, so the
  * client never subtracts timestamps across machines; `etaSeconds` is null until there is an estimate.
+ * `waitingForProfile`: a pending run waits on a profile run. `resumable`: a failed run that resume() would continue.
  */
 final class RecommendationRunStatusJson
 {
@@ -25,6 +26,8 @@ final class RecommendationRunStatusJson
             'error' => $report->error,
             'background' => $report->background,
             'waitingForLock' => $report->waitingForLock,
+            'waitingForProfile' => $status->waitingForProfile,
+            'resumable' => $status->resumable,
             'streamedChars' => $report->streamedChars,
             'firstBatchStarted' => $report->start->firstBatchStarted,
             'elapsedSeconds' => $report->start->elapsedSecondsAt($status->observedAt),

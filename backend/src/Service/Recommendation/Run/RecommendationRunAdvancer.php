@@ -14,65 +14,39 @@ use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\Lock\LockFactory;
 
 /**
  * The driver-agnostic tick: the worker, the poll endpoint and the cron sweep all call advance(), one tick per account
- * at a time behind a per-user lock. TickPhases decides what the tick does.
+ * at a time behind UserTickLock. TickPhases decides what the tick does.
  */
 final readonly class RecommendationRunAdvancer
 {
-    private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
+    public const string KEY_UNREADABLE = 'The stored API key can no longer be read.';
 
     public function __construct(
         private RecommendationRunRepository $runs,
-        private LockFactory $lockFactory,
         private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
         private TickContextFactory $tickContexts,
-        private TickLockKeepalive $keepalive,
         private TickPhases $phases,
+        private UserTickLock $tickLock,
         private TickLockTtl $lockTtl,
     ) {
     }
 
-    /** The one place the lock's name is formed; RecommendationPollDriver logs this very name. */
-    public static function lockNameFor(User $user): string
-    {
-        return self::LOCK_NAME_PREFIX . $user->requireId();
-    }
-
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReportModel
     {
-        $lockName = self::lockNameFor($user);
-        $lock = $this->lockFactory->createLock($lockName, $this->lockTtl->secondsFor($user));
-
-        if (!$lock->acquire()) {
-            // Silent: a failed acquire is the healthy, frequent case; only the poll driver can tell a stall.
+        $held = $this->tickLock->acquire($user, $this->lockTtl->secondsFor($user));
+        if (null === $held) {
             return RecommendationRunReportModel::busy();
         }
-
-        // A hard request kill (Strato's 240 s cap) never reaches the finally below and would strand the lock for
-        // its whole TTL. The delete is token-scoped, so on the normal path this hook is a harmless no-op.
-        register_shutdown_function(static function () use ($lock): void {
-            try {
-                $lock->release();
-            } catch (\Throwable) {
-                // A failed release during shutdown must not raise a second fatal; the TTL still bounds the stall.
-            }
-        });
-
-        $this->keepalive->hold($lock, $lockName);
 
         try {
             return $this->tick($user, $driver);
         } finally {
-            // Disarmed before the release, never after: a beat in between would refresh a lock on its way out.
-            $this->keepalive->release();
-            $lock->release();
+            $held->release();
         }
     }
 
@@ -113,7 +87,7 @@ final readonly class RecommendationRunAdvancer
     private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $exception): string
     {
         return $exception instanceof AiKeyUnreadableException
-            ? 'The stored API key can no longer be read.'
+            ? self::KEY_UNREADABLE
             : 'The AI provider is no longer configured.';
     }
 }

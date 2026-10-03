@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Settings;
 
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The only writer of RecommendationSettings. Blank guidance normalises to null here, the resolver's "use the default".
- * save() keeps the stored profile whatever the form sends; only storeProfile(), the distiller's entry point, sets it.
+ * The only writer of RecommendationSettings, one method per part of the row. Blank guidance normalises to null here,
+ * the resolver's "use the default".
  */
 final readonly class RecommendationSettingsWriter
 {
@@ -24,16 +26,19 @@ final readonly class RecommendationSettingsWriter
 
     public function save(User $user, RecommendationSettingsValues $values): void
     {
-        $settings = $this->loadOrCreate($user);
-        $requested = $this->withNormalisedGuidance($values);
-        $settings->update($this->withReplacedProfileText($requested, $settings->values()->profileText));
+        $this->loadOrCreate($user)->update($this->withNormalisedGuidance($values));
         $this->entityManager->flush();
     }
 
-    public function storeProfile(User $user, ?string $profileText): void
+    public function saveProfileSettings(User $user, ProfileSettingsValues $values): void
     {
-        $settings = $this->loadOrCreate($user);
-        $settings->update($this->withReplacedProfileText($settings->values(), $profileText));
+        $this->loadOrCreate($user)->updateProfileSettings($values);
+        $this->entityManager->flush();
+    }
+
+    public function storeProfile(User $user, StoredProfile $profile): void
+    {
+        $this->loadOrCreate($user)->storeProfile($profile);
         $this->entityManager->flush();
     }
 
@@ -61,29 +66,12 @@ final readonly class RecommendationSettingsWriter
 
         return new RecommendationSettingsValues(
             guidancePrompt: $guidancePrompt,
-            historyCaps: $values->historyCaps,
+            favoritesCap: $values->favoritesCap,
             poolLimits: $values->poolLimits,
             contextWindow: $values->contextWindow,
             batchSize: $values->batchSize,
             debugEnabled: $values->debugEnabled,
             autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
-            showScoreAndReasons: $values->showScoreAndReasons,
-        );
-    }
-
-    private function withReplacedProfileText(
-        RecommendationSettingsValues $values,
-        ?string $profileText,
-    ): RecommendationSettingsValues {
-        return new RecommendationSettingsValues(
-            guidancePrompt: $values->guidancePrompt,
-            historyCaps: $values->historyCaps,
-            poolLimits: $values->poolLimits,
-            contextWindow: $values->contextWindow,
-            batchSize: $values->batchSize,
-            debugEnabled: $values->debugEnabled,
-            autoGenerateIntervalHours: $values->autoGenerateIntervalHours,
-            profileText: $profileText,
             showScoreAndReasons: $values->showScoreAndReasons,
         );
     }

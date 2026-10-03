@@ -219,6 +219,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
 | `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |
 | `RecommendationRun` | The history of your "For you" runs. Run the engine again to get new results. The history is large, and it points at articles the restore has replaced. |
+| `ProfileRun` | The history of your interest-profile generations. Run it again to get a new profile. It has no meaning without the entries it was built from, which the restore replaces. |
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |

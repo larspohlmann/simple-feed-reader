@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Dto\Recommendation;
 
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettingsValues;
 use App\Enum\RecommendationBatchSize;
@@ -26,16 +25,6 @@ final readonly class SaveRecommendationSettingsRequest
             max: RecommendationSettingsBounds::FAVORITES_CAP_MAXIMUM,
         )]
         public int $favoritesCap,
-        #[Assert\Range(
-            min: RecommendationSettingsBounds::KEPT_CAP_MINIMUM,
-            max: RecommendationSettingsBounds::KEPT_CAP_MAXIMUM,
-        )]
-        public int $keptCap,
-        #[Assert\Range(
-            min: RecommendationSettingsBounds::VIEWED_CAP_MINIMUM,
-            max: RecommendationSettingsBounds::VIEWED_CAP_MAXIMUM,
-        )]
-        public int $viewedCap,
         #[Assert\Range(
             min: RecommendationSettingsBounds::CANDIDATE_POOL_SIZE_MINIMUM,
             max: RecommendationSettingsBounds::CANDIDATE_POOL_SIZE_MAXIMUM,
@@ -65,7 +54,7 @@ final readonly class SaveRecommendationSettingsRequest
     {
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
-            historyCaps: new RecommendationHistoryCaps($this->favoritesCap, $this->keptCap, $this->viewedCap),
+            favoritesCap: $this->favoritesCap,
             poolLimits: new RecommendationPoolLimits($this->candidatePoolSize, $this->lookbackDays, $this->picksLimit),
             contextWindow: $this->contextWindow,
             batchSize: $this->batchSize,

@@ -7,11 +7,11 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\SavedSearch;
+use App\Entity\StoredProfile;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -276,13 +276,13 @@ final class AccountBackupExporterTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only long reads.',
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(1000, 2, 50),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
-            profileText: 'Reads long-form essays about urban planning.',
         ));
+        $settings->storeProfile(new StoredProfile('Reads long-form essays about urban planning.', null, null, null));
         $this->entityManager->persist($settings);
         $this->entityManager->flush();
 

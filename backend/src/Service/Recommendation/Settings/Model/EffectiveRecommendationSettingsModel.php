@@ -22,7 +22,6 @@ final readonly class EffectiveRecommendationSettingsModel
         public RecommendationPackingSettingsModel $packing,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours,
-        public ?string $profileText,
         public bool $showScoreAndReasons,
     ) {
     }

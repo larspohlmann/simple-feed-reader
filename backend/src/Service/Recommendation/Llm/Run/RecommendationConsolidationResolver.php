@@ -73,7 +73,7 @@ final readonly class RecommendationConsolidationResolver
             new CallPromptModel($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
         $recordedCall = $this->callRecorder->begin($run, CallSlotModel::consolidation(), $request);
-        $content = $this->providerCall->complete($tick, $request, $recordedCall);
+        $content = $this->providerCall->complete($tick->callRoute(), $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
         if (!$result->usable) {

@@ -9,6 +9,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
@@ -45,7 +46,7 @@ final class RecordedCallTest extends DbTestCase
         $this->run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $this->entityManager->persist($this->run);
 
-        $this->log = new RecommendationRunLog(
+        $this->log = RecommendationRunLog::forRun(
             $this->run,
             CallPhase::Batch,
             1,
@@ -336,7 +337,7 @@ final class RecordedCallTest extends DbTestCase
 
         $calls = new RecommendationCallRepository($this->entityManager->getConnection());
 
-        return new RecordedCall($calls, $this->clock, $runId, $logId);
+        return new RecordedCall($calls, $this->clock, CallingRun::recommendationRun($runId), $logId);
     }
 
     /** @return array{promptTokens: int, completionTokens: int, reasoningTokens: int, cachedTokens: int, costNanoCredits: ?int} */

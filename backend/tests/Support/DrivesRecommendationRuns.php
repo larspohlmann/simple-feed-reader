@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\Profile\ProfileRunAdvancer;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
@@ -45,6 +49,23 @@ trait DrivesRecommendationRuns
         self::assertNotNull($run);
 
         return $run;
+    }
+
+    /**
+     * A waiting run never ticks its profile run: the profile drivers do, and this stands in for one of them, down to
+     * the fresh identity map each driver pass leaves behind.
+     */
+    private function tickTheProfileRun(User $owner): void
+    {
+        /** @var ProfileRunAdvancer $profileAdvancer */
+        $profileAdvancer = self::getContainer()->get(ProfileRunAdvancer::class);
+        /** @var ProfileRunRepository $profileRuns */
+        $profileRuns = $this->entityManager->getRepository(ProfileRun::class);
+        $profileRun = $profileRuns->findActiveForUser($owner);
+        if (null !== $profileRun) {
+            $profileAdvancer->advance($profileRun, TickDriver::Poll);
+        }
+        $this->entityManager->clear();
     }
 
     /** @return list<RecommendationItem> */

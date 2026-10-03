@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Settings\Pass;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
@@ -36,8 +38,7 @@ final readonly class AccountRecommendationSettings
 
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $values?->guidancePrompt,
-            profileText: $values?->profileText,
-            historyCaps: $values->historyCaps ?? RecommendationHistoryCaps::defaults(),
+            historyCaps: $this->historyCaps($values),
             poolLimits: $values->poolLimits ?? RecommendationPoolLimits::defaults(),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: $window,
@@ -48,6 +49,18 @@ final readonly class AccountRecommendationSettings
             debugEnabled: $values->debugEnabled ?? false,
             autoGenerateIntervalHours: $values?->autoGenerateIntervalHours,
             showScoreAndReasons: $values->showScoreAndReasons ?? false,
+        );
+    }
+
+    /** The favorites cap is the recommendation form's; kept and viewed are the profile section's. */
+    private function historyCaps(?RecommendationSettingsValues $values): RecommendationHistoryCaps
+    {
+        $profileSettings = $this->row?->profileSettings() ?? ProfileSettingsValues::defaults();
+
+        return new RecommendationHistoryCaps(
+            $values->favoritesCap ?? RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            $profileSettings->keptCap,
+            $profileSettings->viewedCap,
         );
     }
 

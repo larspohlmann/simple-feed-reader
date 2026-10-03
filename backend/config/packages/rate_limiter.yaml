@@ -98,6 +98,15 @@ framework:
             interval: '15 minutes'
             cache_pool: 'cache.rate_limiter'
 
+        # Per user: "Generate now" opens a run that always calls the model; an already active run costs nothing and
+        # spends nothing. Ten an hour is far beyond honest use (a profile takes one call); the status poll reads
+        # /runs/current, which has no limiter.
+        ai_profile_runs:
+            policy: 'sliding_window'
+            limit: 10
+            interval: '1 hour'
+            cache_pool: 'cache.rate_limiter'
+
         # Counts polls, not provider calls: the loop also spends ticks on snapshot, merge and backoff, and a budget
         # sized to provider calls stranded a 26-batch run mid-run with a 429 (#308). Sized like refresh.
         ai_recommendations:

@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\ProfileRunTrigger;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Ai\Model\ProviderCallUsageModel;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Completion\Model\JsonSchemaModel;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
@@ -202,6 +205,105 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertSame([1, 2], array_column($rows, 'attempt'));
     }
 
+    public function testAProfileRunCallOpensADistillRowUnderTheProfileRun(): void
+    {
+        $profileRun = $this->runningProfileRun();
+
+        $this->recorder->beginForProfileRun($profileRun, $this->request([['role' => 'user', 'content' => 'history']]));
+
+        $rows = $this->logs->listForProfileRun($this->user, $profileRun->requireId());
+        self::assertCount(1, $rows);
+        self::assertSame(CallPhase::Distill, $rows[0]['phase']);
+        self::assertNull($rows[0]['batchNumber']);
+        self::assertSame(1, $rows[0]['attempt']);
+        self::assertSame($profileRun->requireId(), $rows[0]['runId']);
+        self::assertSame([], $this->logRows(), 'a profile-run row is not the recommendation run\'s');
+    }
+
+    public function testASecondProfileRunCallCountsTheAttempt(): void
+    {
+        $profileRun = $this->runningProfileRun();
+        $this->recorder->beginForProfileRun($profileRun, $this->request([]));
+
+        $this->recorder->beginForProfileRun($profileRun, $this->request([]));
+
+        $rows = $this->logs->listForProfileRun($this->user, $profileRun->requireId());
+        self::assertSame([1, 2], array_column($rows, 'attempt'));
+    }
+
+    public function testAProfileRunCallsLivenessAndUsageLandOnTheProfileRun(): void
+    {
+        $profileRun = $this->runningProfileRun();
+        $call = $this->recorder->beginForProfileRun($profileRun, $this->request([]));
+
+        $this->clock->modify('+3 seconds');
+        $usage = new ProviderCallUsageModel(910, 37, 0, 0, 1_500);
+        $call->progressed(new CallProgressModel('{"prof', 2_345, usage: $usage));
+
+        self::assertSame(2_345, $this->profileRunColumns($profileRun)['streamed_chars']);
+
+        $call->finishUsable('{"profile":"Likes maps."}');
+
+        $columns = $this->profileRunColumns($profileRun);
+        self::assertSame(0, $columns['streamed_chars']);
+        self::assertSame(910, $columns['prompt_tokens']);
+        self::assertSame(1_500, $columns['cost_nano_credits']);
+        self::assertSame(0, $this->runColumns()['prompt_tokens'], 'the recommendation run is not billed');
+    }
+
+    public function testAProfileRunCallBillsOnlyItsOwnProfileRun(): void
+    {
+        $profileRun = $this->runningProfileRun();
+        $otherProfileRun = $this->runningProfileRun();
+        $call = $this->recorder->beginForProfileRun($profileRun, $this->request([]));
+
+        $call->progressed(new CallProgressModel('{"prof', 10, usage: new ProviderCallUsageModel(910, 37, 0, 0, 1_500)));
+        $call->finishUsable('{"profile":"Likes maps."}');
+
+        $columns = $this->profileRunColumns($otherProfileRun);
+        self::assertSame(0, $columns['prompt_tokens']);
+        self::assertNull($columns['cost_nano_credits']);
+    }
+
+    private function runningProfileRun(): ProfileRun
+    {
+        $createdAt = new \DateTimeImmutable('2026-10-03T09:00:00Z');
+        $profileRun = new ProfileRun($this->user, ProfileRunTrigger::Manual, $createdAt);
+        $profileRun->start('fingerprint-1', 'llm.example.test', 'qwen3-14b');
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+
+        return $profileRun;
+    }
+
+    /** @return array{streamed_chars: int, prompt_tokens: int, cost_nano_credits: ?int} */
+    private function profileRunColumns(ProfileRun $profileRun): array
+    {
+        /** @var array{streamed_chars: int|string, prompt_tokens: int|string, cost_nano_credits: int|string|null} $row */
+        $row = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT streamed_chars, prompt_tokens, cost_nano_credits FROM profile_run WHERE id = ?',
+            [$profileRun->requireId()],
+        );
+
+        return [
+            'streamed_chars' => (int) $row['streamed_chars'],
+            'prompt_tokens' => (int) $row['prompt_tokens'],
+            'cost_nano_credits' => null === $row['cost_nano_credits'] ? null : (int) $row['cost_nano_credits'],
+        ];
+    }
+
+    /** @return array{prompt_tokens: int} */
+    private function runColumns(): array
+    {
+        /** @var array{prompt_tokens: int|string} $row */
+        $row = $this->entityManager->getConnection()->fetchAssociative(
+            'SELECT prompt_tokens FROM recommendation_run WHERE id = ?',
+            [$this->run->requireId()],
+        );
+
+        return ['prompt_tokens' => (int) $row['prompt_tokens']];
+    }
+
     /**
      * @return array{0: int, 1: int} the other user's run id and log id
      */
@@ -213,7 +315,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $otherRun = new RecommendationRun($otherUser, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $this->entityManager->persist($otherRun);
-        $otherLog = new RecommendationRunLog(
+        $otherLog = RecommendationRunLog::forRun(
             $otherRun,
             CallPhase::Batch,
             1,

@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run\Pass;
 
 use App\Entity\CallOutcome;
 use App\Enum\CallVerdict;
+use App\Repository\CallingRun;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Model\ProviderCallReceiptModel;
@@ -41,7 +42,7 @@ final class RecordedCall
     public function __construct(
         private readonly RecommendationCallRepository $calls,
         private readonly ClockInterface $clock,
-        private readonly int $runId,
+        private readonly CallingRun $callingRun,
         private readonly int $logId,
     ) {
         // The recorder's begin() already wrote time zero, so the first checkpoint is due CHECKPOINT_SECONDS after it.
@@ -60,7 +61,7 @@ final class RecordedCall
         }
         $this->lastCheckpointAt = $now;
 
-        $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
+        $this->calls->recordStreamedChars($this->callingRun, $progress->wireBytes);
         $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
     }
 
@@ -119,7 +120,7 @@ final class RecordedCall
 
     private function resetLiveness(): void
     {
-        $this->calls->recordStreamedChars($this->runId, 0);
+        $this->calls->recordStreamedChars($this->callingRun, 0);
     }
 
     private function bankUsage(): void
@@ -131,6 +132,6 @@ final class RecordedCall
         }
         $this->usageBanked = true;
 
-        $this->calls->addUsage($this->runId, $usage);
+        $this->calls->addUsage($this->callingRun, $usage);
     }
 }

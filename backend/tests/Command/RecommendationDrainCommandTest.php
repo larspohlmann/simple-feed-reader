@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\RecommendationDrainCommand;
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
@@ -60,15 +62,14 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * A two-batch run needs four sweeps (distillation, one per batch, consolidation) and a fifth that finds nothing,
-     * so reaching completion proves the loop really looped.
+     * A two-batch run needs three sweeps (one per batch, consolidation) and a fourth that finds nothing, so reaching
+     * completion proves the loop really looped.
      */
     public function testDrainsAnActiveRunToCompletionAndReleasesTheLock(): void
     {
         $user = $this->user('drain-to-completion@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
-        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
         $this->queueCleanConsolidationReply(array_merge(
@@ -142,8 +143,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     {
         $user = $this->user('drain-lost-lock@example.test');
         $this->seedTwoBatchFixture($user);
-        $this->startAndSnapshot($user);
-        $this->queueDistillReply();
+        $run = $this->startAndSnapshot($user);
+        $this->queueBatchReply($run->getCandidateBatches()[0]);
 
         $command = $this->commandWithLockStore(
             new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->entityManager->getConnection())),
@@ -162,7 +163,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $user = $this->user('drain-lock-expired@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
-        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
         $this->queueCleanConsolidationReply(array_merge(
@@ -248,6 +248,56 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $lock->release();
     }
 
+    public function testTheDrainerTicksAProfileRunWithNoRecommendationRunActive(): void
+    {
+        $owner = $this->user('drain-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+        $profileRunId = $profileRun->requireId();
+
+        $this->execute($this->command());
+
+        $this->entityManager->clear();
+        self::assertSame(
+            RunStatus::Completed,
+            $this->entityManager->find(ProfileRun::class, $profileRunId)?->getStatus(),
+        );
+    }
+
+    public function testTheDrainerKeepsDrainingAProfileRunWhoseFirstReplyWasUnusable(): void
+    {
+        $owner = $this->user('drain-profile-two-ticks@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedFavorites($owner, 'maps', 1);
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+        $profileRunId = $profileRun->requireId();
+        /** @var StubChatClient $chat */
+        $chat = self::getContainer()->get(StubChatClient::class);
+        $chat->queueContent('not json');
+        $chat->queueContent('{"profile":"Likes maps."}');
+
+        $this->execute($this->command());
+
+        $this->entityManager->clear();
+        self::assertSame(
+            RunStatus::Completed,
+            $this->entityManager->find(ProfileRun::class, $profileRunId)?->getStatus(),
+        );
+    }
+
+    public function testWithNothingActiveTheDrainerNeverPauses(): void
+    {
+        $clock = new MockClock('2026-10-03 09:00:00');
+
+        $this->execute($this->command($clock));
+
+        self::assertEquals(new \DateTimeImmutable('2026-10-03 09:00:00'), $clock->now());
+    }
+
     private function execute(RecommendationDrainCommand $command): int
     {
         return (new CommandTester($command))->execute([]);
@@ -287,11 +337,20 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
+            $this->profileRunSweep(),
             $this->presence(),
             $this->streamHeartbeat($this->presence()),
             $this->entityManager,
             new NullLogger(),
         );
+    }
+
+    private function profileRunSweep(): ProfileRunSweep
+    {
+        /** @var ProfileRunSweep $profileRunSweep */
+        $profileRunSweep = self::getContainer()->get(ProfileRunSweep::class);
+
+        return $profileRunSweep;
     }
 
     private function lockFactory(): LockFactory
@@ -304,6 +363,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
     private function startAndSnapshot(User $user): RecommendationRun
     {
+        $this->fixtures->storeProfile($user, 'a distilled profile');
         $this->starter()->start($user);
         $this->advancer()->advance($user);
         $run = $this->runs()->findActiveForUser($user);
@@ -330,13 +390,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
                 array_keys($batchIds),
             ),
         ], \JSON_THROW_ON_ERROR));
-    }
-
-    private function queueDistillReply(): void
-    {
-        /** @var StubChatClient $client */
-        $client = self::getContainer()->get(StubChatClient::class);
-        $client->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -377,7 +430,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 self::TWO_BATCH_ENTRY_COUNT,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,

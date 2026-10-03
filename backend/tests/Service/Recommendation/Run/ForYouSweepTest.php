@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Feed;
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileRun;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\DueRecommendationRunFinder;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
@@ -47,6 +51,42 @@ final class ForYouSweepTest extends DbTestCase
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
+    public function testSweepOnceStartsAndTicksDueProfileRunsToo(): void
+    {
+        $owner = $this->user('sweep-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        /** @var RecommendationSettingsWriter $writer */
+        $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
+        $writer->saveProfileSettings($owner, new ProfileSettingsValues(6, null, 40, 80));
+
+        $report = $this->sweep()->sweepOnce();
+
+        self::assertSame(1, $report->startedProfileRuns);
+        self::assertSame(1, $report->advancedProfileRuns);
+        self::assertSame(0, $report->activeProfileRuns);
+        self::assertSame(0, $report->startedRuns);
+    }
+
+    public function testTheSweepClaimsDriverLivenessWhileItAdvancesOnlyAProfileRun(): void
+    {
+        $owner = $this->user('sweep-profile-presence@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedFavorites($owner, 'maps', 1);
+        $this->entityManager->persist(
+            new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00')),
+        );
+        $this->entityManager->flush();
+        $this->chatClient()->queueContent('{"profile":"Likes maps."}');
+        $drivingDuringTheCall = null;
+        $this->chatClient()->duringNextCall(function () use (&$drivingDuringTheCall): void {
+            $drivingDuringTheCall = $this->presence()->isAnybodyDrivingRecommendationRuns();
+        });
+
+        $this->sweep()->sweepOnce();
+
+        self::assertTrue($drivingDuringTheCall);
+    }
+
     private function sweep(): ForYouSweep
     {
         $sweep = self::getContainer()->get(ForYouSweep::class);
@@ -69,7 +109,7 @@ final class ForYouSweepTest extends DbTestCase
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $writer->save($user, new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
@@ -84,6 +124,7 @@ final class ForYouSweepTest extends DbTestCase
         $user = $this->user($email);
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 1);
+        $this->fixtures->storeProfile($user, 'a stored profile');
 
         $feed = new Feed('https://example.com/' . $email . '/feed.xml');
         $feed->setTitle('Example');
@@ -260,6 +301,7 @@ final class ForYouSweepTest extends DbTestCase
             $this->service(DueRecommendationRunFinder::class),
             $this->service(RecommendationRunStarter::class),
             $this->service(RecommendationRunAdvancer::class),
+            $this->service(ProfileRunSweep::class),
             $this->runs(),
             $presence,
             new SweepStreamHeartbeat($presence, $clock),

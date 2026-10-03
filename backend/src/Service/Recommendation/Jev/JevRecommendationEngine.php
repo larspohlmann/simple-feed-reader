@@ -14,6 +14,7 @@ use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -21,6 +22,9 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: RecommendationEngineKind::Jev->value)]
 final readonly class JevRecommendationEngine implements RecommendationEngineInterface
 {
+    public const string NO_PROFILE = 'Jev needs your reading profile, and there is no reading history to build one '
+        . 'from yet. Read, keep or favourite a few articles, then start a new run.';
+
     public function __construct(
         private JevBatchPacker $packer,
         private BatchWavePhase $batchWavePhase,
@@ -29,7 +33,7 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
         private BatchWaveRounds $rounds,
         private RecommendationWinnerRanker $ranker,
         private RecommendationRunFinalizer $finalizer,
-        private JevProfileStep $profileStep,
+        private RecommendationRunFailure $runFailure,
     ) {
     }
 
@@ -41,8 +45,8 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
-        if ($this->profileStep->isPending($run)) {
-            return $this->profileStep->advance($tick);
+        if (null === $run->getProfileText()) {
+            return $this->runFailure->fail($run, self::NO_PROFILE);
         }
         if ($run->getProgress()->allBatchCallsDone) {
             return $this->finalizer->finalize($run, $this->ranker->ranked($run->getWinners()));

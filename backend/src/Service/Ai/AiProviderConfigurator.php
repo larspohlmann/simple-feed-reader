@@ -7,6 +7,7 @@ namespace App\Service\Ai;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
+use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -27,7 +28,8 @@ use Psr\Clock\ClockInterface;
 /**
  * Creates, verifies and removes provider connections. Every write is preceded by a live call, and a failed one
  * persists nothing; only duplicateConfiguration() skips it, reusing a verified row's key. The active configuration
- * is a single pointer on User, not a per-row flag; a borrowing row's profile connection is a pointer on that row.
+ * is a single pointer on User, not a per-row flag; the profile connection is a pointer on the account's
+ * recommendation settings.
  */
 final readonly class AiProviderConfigurator
 {
@@ -40,6 +42,7 @@ final readonly class AiProviderConfigurator
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private AiConfigurationFactory $configurationFactory,
+        private RecommendationSettingsRepository $recommendationSettings,
     ) {
     }
 
@@ -185,9 +188,7 @@ final readonly class AiProviderConfigurator
             $user->setActiveAiProviderSettings(null);
         }
 
-        foreach ($this->aiProviderSettings->findBorrowersOf($settings) as $borrower) {
-            $borrower->setProfileConnection(null);
-        }
+        $this->recommendationSettings->findForUser($user)?->forgetProfileConnection($settings);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void

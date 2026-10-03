@@ -27,7 +27,7 @@ import {
   RecommendationTuningField,
 } from '../../core/ai-availability.service';
 import { LanguageService } from '../../core/i18n/language.service';
-import { formatInteger } from '../../reader/format';
+import { formatInteger, formatRange } from '../../reader/format';
 import {
   RecommendationSettingsService,
   RecommendationBatchSize,
@@ -41,7 +41,7 @@ import { typedSeed } from './recommendation-typed-seed';
 /** The "For You" tuning card, rebuilt on the settings primitives (#541). The
  *  "show score and reasons" switch, auto-generate cadence, and look-back window (#386)
  *  persist instantly through `saveInstant`. Everything typed (guidance prompt,
- *  six caps, context window, batch count) folds into one "Expert settings"
+ *  three caps, context window, batch count) folds into one "Expert settings"
  *  drill-in, held as a pending draft until the save bar's Save; Reset drops it
  *  and reseeds from the last-saved state. The fixed prompt layers ship with
  *  the app, not the account, so they stay read-only. The purge below is its
@@ -78,7 +78,7 @@ export class RecommendationSettingsCardComponent {
   private readonly language = inject(LanguageService);
   private readonly availability = inject(AiAvailabilityService);
 
-  /** Only an engine that sends a prompt has a fixed prompt, a guidance default and a distilled profile to show. */
+  /** Only an engine that sends a prompt has a fixed prompt and a guidance default to show. */
   readonly offersPrompt = computed(() => this.availability.capabilities().prompt);
 
   // Typed fields: displayed here, held as a pending draft in the service until
@@ -86,8 +86,6 @@ export class RecommendationSettingsCardComponent {
   // state does (after a save); a keystroke overrides the seed via `.set`.
   readonly guidance = linkedSignal<string>(() => this.svc.state()?.guidancePrompt ?? '');
   readonly favoritesCap = linkedSignal<number>(() => this.svc.state()?.favoritesCap ?? 0);
-  readonly keptCap = linkedSignal<number>(() => this.svc.state()?.keptCap ?? 0);
-  readonly viewedCap = linkedSignal<number>(() => this.svc.state()?.viewedCap ?? 0);
   readonly candidatePoolSize = linkedSignal<number>(() => this.svc.state()?.candidatePoolSize ?? 0);
   readonly picksLimit = linkedSignal<number>(() => this.svc.state()?.picksLimit ?? 0);
   /** The batch-size choice; the batch count is derived from it (#935). Defaults
@@ -292,8 +290,7 @@ export class RecommendationSettingsCardComponent {
   }
 
   rangeLabel(field: RecommendationExpertField): string {
-    const bounds = this.range(field);
-    return `${formatInteger(bounds.min, this.language.lang())}–${formatInteger(bounds.max, this.language.lang())}`;
+    return formatRange(this.range(field), this.language.lang());
   }
 
   fieldError(field: RecommendationExpertField): string | null {
@@ -318,8 +315,6 @@ export class RecommendationSettingsCardComponent {
   private reseed(seed: RecommendationExpertDefaults): void {
     this.guidance.set(seed.guidancePrompt ?? '');
     this.favoritesCap.set(seed.favoritesCap);
-    this.keptCap.set(seed.keptCap);
-    this.viewedCap.set(seed.viewedCap);
     this.candidatePoolSize.set(seed.candidatePoolSize);
     this.picksLimit.set(seed.picksLimit);
     this.batchSize.set(seed.batchSize);
@@ -346,8 +341,6 @@ export class RecommendationSettingsCardComponent {
   private expertFieldValues(): Record<RecommendationExpertField, number | null> {
     return {
       favoritesCap: this.favoritesCap(),
-      keptCap: this.keptCap(),
-      viewedCap: this.viewedCap(),
       candidatePoolSize: this.candidatePoolSize(),
       picksLimit: this.picksLimit(),
       contextWindow: this.contextWindow(),

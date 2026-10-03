@@ -19,8 +19,6 @@ use Doctrine\ORM\Mapping as ORM;
 final class RecommendationSettings
 {
     public const int DEFAULT_FAVORITES_CAP = 40;
-    public const int DEFAULT_KEPT_CAP = 40;
-    public const int DEFAULT_VIEWED_CAP = 80;
     public const int DEFAULT_CANDIDATE_POOL_SIZE = 500;
     public const int DEFAULT_LOOKBACK_DAYS = 2;
     public const int DEFAULT_PICKS_LIMIT = 50;
@@ -37,18 +35,11 @@ final class RecommendationSettings
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $guidancePrompt = null;
 
-    /** The distilled preference profile; only RecommendationSettingsWriter::storeProfile() changes it. */
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $profileText = null;
+    #[ORM\Embedded(class: StoredProfile::class, columnPrefix: false)]
+    private StoredProfile $storedProfile;
 
     #[ORM\Column(options: ['default' => self::DEFAULT_FAVORITES_CAP])]
     private int $favoritesCap = self::DEFAULT_FAVORITES_CAP;
-
-    #[ORM\Column(options: ['default' => self::DEFAULT_KEPT_CAP])]
-    private int $keptCap = self::DEFAULT_KEPT_CAP;
-
-    #[ORM\Column(options: ['default' => self::DEFAULT_VIEWED_CAP])]
-    private int $viewedCap = self::DEFAULT_VIEWED_CAP;
 
     #[ORM\Column(options: ['default' => self::DEFAULT_CANDIDATE_POOL_SIZE])]
     private int $candidatePoolSize = self::DEFAULT_CANDIDATE_POOL_SIZE;
@@ -76,6 +67,14 @@ final class RecommendationSettings
     #[ORM\Column(nullable: true)]
     private ?int $autoGenerateIntervalHours = null;
 
+    #[ORM\Embedded(class: ProfileTuning::class, columnPrefix: false)]
+    private ProfileTuning $profileTuning;
+
+    /** The connection that builds the profile; null means the active one. */
+    #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
+    #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
+    private ?AiProviderSettings $profileConnection = null;
+
     /** Whether the reader UI shows each pick's score and, where the engine writes one, its reason. */
     #[ORM\Column(name: 'show_reasons', options: ['default' => false])]
     private bool $showScoreAndReasons = false;
@@ -83,6 +82,8 @@ final class RecommendationSettings
     public function __construct(User $user)
     {
         $this->user = $user;
+        $this->storedProfile = StoredProfile::none();
+        $this->profileTuning = ProfileTuning::defaults();
     }
 
     public function getUser(): User
@@ -93,10 +94,7 @@ final class RecommendationSettings
     public function update(RecommendationSettingsValues $values): void
     {
         $this->guidancePrompt = $values->guidancePrompt;
-        $this->profileText = $values->profileText;
-        $this->favoritesCap = $values->historyCaps->favorites;
-        $this->keptCap = $values->historyCaps->kept;
-        $this->viewedCap = $values->historyCaps->viewed;
+        $this->favoritesCap = $values->favoritesCap;
         $this->candidatePoolSize = $values->poolLimits->candidatePoolSize;
         $this->lookbackDays = $values->poolLimits->lookbackDays;
         $this->picksLimit = $values->poolLimits->picksLimit;
@@ -111,8 +109,7 @@ final class RecommendationSettings
     {
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
-            profileText: $this->profileText,
-            historyCaps: new RecommendationHistoryCaps($this->favoritesCap, $this->keptCap, $this->viewedCap),
+            favoritesCap: $this->favoritesCap,
             poolLimits: new RecommendationPoolLimits($this->candidatePoolSize, $this->lookbackDays, $this->picksLimit),
             contextWindow: $this->contextWindow,
             batchSize: $this->batchSize,
@@ -120,5 +117,38 @@ final class RecommendationSettings
             autoGenerateIntervalHours: $this->autoGenerateIntervalHours,
             showScoreAndReasons: $this->showScoreAndReasons,
         );
+    }
+
+    public function updateProfileSettings(ProfileSettingsValues $values): void
+    {
+        $this->profileTuning = new ProfileTuning($values->intervalHours, $values->keptCap, $values->viewedCap);
+        $this->profileConnection = $values->connection;
+    }
+
+    public function profileSettings(): ProfileSettingsValues
+    {
+        return new ProfileSettingsValues(
+            $this->profileTuning->getIntervalHours(),
+            $this->profileConnection,
+            $this->profileTuning->getKeptCap(),
+            $this->profileTuning->getViewedCap(),
+        );
+    }
+
+    public function storeProfile(StoredProfile $profile): void
+    {
+        $this->storedProfile = $profile;
+    }
+
+    public function getStoredProfile(): StoredProfile
+    {
+        return $this->storedProfile;
+    }
+
+    public function forgetProfileConnection(AiProviderSettings $connection): void
+    {
+        if ($this->profileConnection === $connection) {
+            $this->profileConnection = null;
+        }
     }
 }

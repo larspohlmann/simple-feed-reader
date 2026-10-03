@@ -180,6 +180,14 @@ export function formatInteger(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
+/** An inclusive bound pair as `min–max`, each side grouped like `formatInteger`. */
+export function formatRange(
+  bounds: { readonly min: number; readonly max: number },
+  locale: string,
+): string {
+  return `${formatInteger(bounds.min, locale)}–${formatInteger(bounds.max, locale)}`;
+}
+
 /** Nano-credits per credit. The API stores money as an integer -- floats do
  *  not hold money -- and this is the one place it becomes a human figure. */
 const NANO_PER_CREDIT = 1_000_000_000;

@@ -17,7 +17,6 @@ final readonly class RecommendationRunProgress
         public int $batchesDone,
         public ?int $batchCount,
         public ?int $batchesTotal,
-        public bool $distillPending,
         public bool $isConsolidationPhase,
         public bool $allBatchCallsDone,
         public int $nextBatchIndex,
@@ -33,7 +32,6 @@ final readonly class RecommendationRunProgress
         ?array $candidateBatches,
         int $batchesDone,
         int $attempts,
-        bool $distilled,
         RecommendationEngineKind $engineKind,
     ): self {
         $batchCount = count($candidateBatches ?? []);
@@ -44,9 +42,7 @@ final readonly class RecommendationRunProgress
             batchesDone: $batchesDone,
             batchCount: $hasPlan ? $batchCount : null,
             batchesTotal: $hasPlan ? $batchCount + $engineKind->singleCallPhaseCount() : null,
-            distillPending: $hasPlan && !$distilled,
-            isConsolidationPhase: $hasPlan && $distilled && $allBatchCallsDone
-                && $engineKind->runs(CallPhase::Consolidate),
+            isConsolidationPhase: $hasPlan && $allBatchCallsDone && $engineKind->runs(CallPhase::Consolidate),
             allBatchCallsDone: $allBatchCallsDone,
             nextBatchIndex: $batchesDone,
             attemptsExhausted: $attempts >= RecommendationRun::MAX_ATTEMPTS,

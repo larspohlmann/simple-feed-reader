@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\EntryState;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -33,6 +34,7 @@ final readonly class AccountWipeRepository
             ))->setParameter('user', $user)->execute();
         }
         $this->deleteByUser(RecommendationRun::class, $user);
+        $this->deleteByUser(ProfileRun::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
     }
 

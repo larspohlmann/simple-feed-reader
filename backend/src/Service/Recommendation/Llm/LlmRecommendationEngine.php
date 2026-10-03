@@ -10,21 +10,22 @@ use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineI
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Run\ProviderPhase\BatchPhase;
 use App\Service\Recommendation\Llm\Run\ProviderPhase\ConsolidationPhase;
-use App\Service\Recommendation\Llm\Run\ProviderPhase\DistillationPhase;
 use App\Service\Recommendation\Llm\Run\ProviderPhase\ProviderPhaseInterface;
 use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** The chat-completion engine: packs by the context window, then distills, scores in batches and consolidates. */
+/**
+ * The chat-completion engine: packs by the context window, then scores in batches and consolidates, against the
+ * profile the run froze.
+ */
 #[AsTaggedItem(index: RecommendationEngineKind::Llm->value)]
 final readonly class LlmRecommendationEngine implements RecommendationEngineInterface
 {
     public function __construct(
         private RecommendationHistoryLoader $historyLoader,
         private RecommendationPromptBuilder $promptBuilder,
-        private DistillationPhase $distillation,
         private BatchPhase $batch,
         private ConsolidationPhase $consolidation,
     ) {
@@ -46,12 +47,6 @@ final readonly class LlmRecommendationEngine implements RecommendationEngineInte
 
     private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface
     {
-        $progress = $run->getProgress();
-
-        return match (true) {
-            $progress->distillPending => $this->distillation,
-            $progress->isConsolidationPhase => $this->consolidation,
-            default => $this->batch,
-        };
+        return $run->getProgress()->isConsolidationPhase ? $this->consolidation : $this->batch;
     }
 }

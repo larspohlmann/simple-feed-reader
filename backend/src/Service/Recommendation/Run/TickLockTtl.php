@@ -9,10 +9,9 @@ use App\Entity\User;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
-use App\Service\Recommendation\Profile\ProfileConnectionResolver;
 
 /**
- * One first-byte wait of the slowest connection the tick may call, plus the margin, not the whole tick: the keepalive
+ * One first-byte wait of the connection the tick calls, plus the margin, not the whole tick: the keepalive
  * refreshes the lock on streamed chunks. Sizing: docs/recommendations-runs.md#the-tick-lock
  */
 final readonly class TickLockTtl
@@ -26,25 +25,21 @@ final readonly class TickLockTtl
     public function __construct(
         private AiProviderConfigurator $configurator,
         private ProviderConnectionFactory $connectionFactory,
-        private ProfileConnectionResolver $profileConnections,
     ) {
     }
 
     public function secondsFor(User $user): float
     {
-        $active = $this->configurator->settingsFor($user);
-        if (null === $active) {
-            return ProviderTimeoutsModel::standard()->firstByteSeconds + self::MARGIN_SECONDS;
-        }
-
-        $profileConnection = $this->profileConnections->borrowedFor($active);
-        $calledConnections = null === $profileConnection ? [$active] : [$active, $profileConnection];
-
-        return max(array_map($this->firstByteSeconds(...), $calledConnections)) + self::MARGIN_SECONDS;
+        return $this->secondsForConnection($this->configurator->settingsFor($user));
     }
 
-    private function firstByteSeconds(AiProviderSettings $connection): float
+    /** No connection gets the standard bound: a tick that only fails its run still holds the lock briefly. */
+    public function secondsForConnection(?AiProviderSettings $connection): float
     {
-        return $this->connectionFactory->timeoutsFor($connection)->firstByteSeconds;
+        $timeouts = null === $connection
+            ? ProviderTimeoutsModel::standard()
+            : $this->connectionFactory->timeoutsFor($connection);
+
+        return $timeouts->firstByteSeconds + self::MARGIN_SECONDS;
     }
 }

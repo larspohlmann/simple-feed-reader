@@ -74,7 +74,7 @@ final class RecommendationDebugLogJsonTest extends TestCase
     {
         $user = new User('detail-json@example.test', new \DateTimeImmutable());
         $run = new RecommendationRun($user, new \DateTimeImmutable());
-        $log = new RecommendationRunLog($run, CallPhase::Batch, 1, 1, 'req', new \DateTimeImmutable());
+        $log = RecommendationRunLog::forRun($run, CallPhase::Batch, 1, 1, 'req', new \DateTimeImmutable());
 
         $warningRaised = false;
         set_error_handler(static function () use (&$warningRaised): bool {

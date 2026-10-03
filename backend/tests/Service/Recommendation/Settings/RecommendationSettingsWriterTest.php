@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Settings;
 
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
+use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
@@ -40,99 +42,102 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         $this->recommendationSettings = $repository;
     }
 
-    public function testStoreProfilePersistsOnlyTheProfileText(): void
+    public function testStoreProfilePersistsTheWholeProfile(): void
     {
-        $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
+        $this->writer->storeProfile($this->user, $this->typographyProfile());
 
-        $reloaded = $this->recommendationSettings->findForUser($this->user);
-        self::assertNotNull($reloaded);
-        self::assertSame('Likes long-form essays on typography.', $reloaded->values()->profileText);
+        $stored = $this->reloaded()->getStoredProfile();
+        self::assertSame('Likes long-form essays on typography.', $stored->getText());
+        self::assertSame('2026-10-03 07:15:00', $stored->getGeneratedAt()?->format('Y-m-d H:i:s'));
+        self::assertSame('llm.example.test', $stored->getProviderHost());
+        self::assertSame('qwen3-14b', $stored->getModel());
     }
 
     public function testStoreProfileCreatesARowWhenNoneExists(): void
     {
-        $this->writer->storeProfile($this->userWithoutSettingsRow(), 'Likes maps and cartography.');
+        $this->writer->storeProfile($this->userWithoutSettingsRow(), $this->typographyProfile());
 
         self::assertNotNull($this->recommendationSettings->findForUser($this->userWithoutSettingsRow()));
     }
 
-    /**
-     * The one field storeProfile() may change is the profile text itself;
-     * everything else on the row must survive it untouched.
-     */
-    public function testStoreProfileLeavesOtherFieldsUntouched(): void
+    public function testStoreProfileLeavesTheSettingsAndTheProfileSettingsUntouched(): void
     {
-        $this->writer->save($this->user, new RecommendationSettingsValues(
-            guidancePrompt: 'Only cats.',
-            historyCaps: $this->nonDefaultHistoryCaps(),
-            poolLimits: RecommendationPoolLimits::defaults(),
-            contextWindow: 65536,
-            batchSize: RecommendationBatchSize::Large,
-            debugEnabled: true,
-        ));
+        $this->writer->save($this->user, $this->values(showScoreAndReasons: false));
+        $this->writer->saveProfileSettings($this->user, new ProfileSettingsValues(48, null, 20, 30));
 
-        $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
+        $this->writer->storeProfile($this->user, $this->typographyProfile());
 
-        $reloaded = $this->recommendationSettings->findForUser($this->user);
-        self::assertNotNull($reloaded);
-        $values = $reloaded->values();
-        self::assertSame('Only cats.', $values->guidancePrompt);
-        self::assertSame(10, $values->historyCaps->favorites);
-        self::assertSame(20, $values->historyCaps->kept);
-        self::assertSame(30, $values->historyCaps->viewed);
-        self::assertSame(65536, $values->contextWindow);
-        self::assertSame(RecommendationBatchSize::Large, $values->batchSize);
-        self::assertTrue($values->debugEnabled);
-        self::assertSame('Likes long-form essays on typography.', $values->profileText);
+        $reloaded = $this->reloaded();
+        self::assertSame('Only cats.', $reloaded->values()->guidancePrompt);
+        self::assertSame(10, $reloaded->values()->favoritesCap);
+        self::assertSame(65536, $reloaded->values()->contextWindow);
+        self::assertTrue($reloaded->values()->debugEnabled);
+        self::assertSame(48, $reloaded->profileSettings()->intervalHours);
+        self::assertSame(20, $reloaded->profileSettings()->keptCap);
+        self::assertSame(30, $reloaded->profileSettings()->viewedCap);
     }
 
-    /**
-     * save() rebuilds the values twice, to normalise the guidance and to re-attach the stored profile: both rebuilds
-     * must carry showScoreAndReasons, or the toggle silently resets to its default.
-     */
     public function testSavingSettingsPersistsShowScoreAndReasons(): void
     {
-        $this->writer->save($this->user, new RecommendationSettingsValues(
-            guidancePrompt: 'Only cats.',
-            historyCaps: $this->nonDefaultHistoryCaps(),
-            poolLimits: RecommendationPoolLimits::defaults(),
-            contextWindow: 65536,
-            batchSize: RecommendationBatchSize::Large,
-            debugEnabled: false,
-            showScoreAndReasons: true,
-        ));
+        $this->writer->save($this->user, $this->values(showScoreAndReasons: true));
 
-        $reloaded = $this->recommendationSettings->findForUser($this->user);
-        self::assertNotNull($reloaded);
-        self::assertTrue($reloaded->values()->showScoreAndReasons);
+        self::assertTrue($this->reloaded()->values()->showScoreAndReasons);
     }
 
-    /**
-     * The settings form never carries profileText, so save() always receives a null one: it must keep whatever
-     * storeProfile() already wrote.
-     */
-    public function testSavingSettingsDoesNotWipeAnExistingProfile(): void
+    public function testSavingSettingsKeepsTheStoredProfileAndTheProfileSettings(): void
     {
-        $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
+        $this->writer->storeProfile($this->user, $this->typographyProfile());
+        $this->writer->saveProfileSettings($this->user, new ProfileSettingsValues(168, null, 20, 30));
 
-        $this->writer->save($this->user, new RecommendationSettingsValues(
+        $this->writer->save($this->user, $this->values(showScoreAndReasons: false));
+
+        $reloaded = $this->reloaded();
+        self::assertSame('Likes long-form essays on typography.', $reloaded->getStoredProfile()->getText());
+        self::assertSame(168, $reloaded->profileSettings()->intervalHours);
+        self::assertSame(20, $reloaded->profileSettings()->keptCap);
+        self::assertSame(30, $reloaded->profileSettings()->viewedCap);
+    }
+
+    public function testSaveProfileSettingsPersistsTheScheduleAndTheCaps(): void
+    {
+        $this->writer->saveProfileSettings($this->user, new ProfileSettingsValues(6, null, 7, 9));
+
+        $profileSettings = $this->reloaded()->profileSettings();
+        self::assertSame(6, $profileSettings->intervalHours);
+        self::assertSame(7, $profileSettings->keptCap);
+        self::assertSame(9, $profileSettings->viewedCap);
+    }
+
+    private function values(bool $showScoreAndReasons): RecommendationSettingsValues
+    {
+        return new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: $this->nonDefaultHistoryCaps(),
+            favoritesCap: 10,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
-        ));
-
-        $reloaded = $this->recommendationSettings->findForUser($this->user);
-        self::assertNotNull($reloaded);
-        self::assertSame('Likes long-form essays on typography.', $reloaded->values()->profileText);
-        self::assertSame('Only cats.', $reloaded->values()->guidancePrompt);
+            showScoreAndReasons: $showScoreAndReasons,
+        );
     }
 
-    private function nonDefaultHistoryCaps(): RecommendationHistoryCaps
+    private function typographyProfile(): StoredProfile
     {
-        return new RecommendationHistoryCaps(10, 20, 30);
+        return new StoredProfile(
+            'Likes long-form essays on typography.',
+            new \DateTimeImmutable('2026-10-03 07:15:00'),
+            'llm.example.test',
+            'qwen3-14b',
+        );
+    }
+
+    private function reloaded(): RecommendationSettings
+    {
+        $this->entityManager->clear();
+        $reloaded = $this->recommendationSettings->findForUser($this->user);
+        self::assertNotNull($reloaded);
+
+        return $reloaded;
     }
 
     private function userWithoutSettingsRow(): User

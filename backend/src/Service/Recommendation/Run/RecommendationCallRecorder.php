@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
+use App\Repository\CallingRun;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
@@ -28,15 +31,25 @@ final readonly class RecommendationCallRecorder
 
     public function begin(RecommendationRun $run, CallSlotModel $slot, string $renderedRequest): RecordedCall
     {
-        $log = $this->logFactory->create($run, $slot, $renderedRequest);
+        return $this->opened(
+            $this->logFactory->create($run, $slot, $renderedRequest),
+            CallingRun::recommendationRun($run->requireId()),
+        );
+    }
+
+    public function beginForProfileRun(ProfileRun $profileRun, string $renderedRequest): RecordedCall
+    {
+        return $this->opened(
+            $this->logFactory->createForProfileRun($profileRun, $renderedRequest),
+            CallingRun::profileRun($profileRun->requireId()),
+        );
+    }
+
+    private function opened(RecommendationRunLog $log, CallingRun $callingRun): RecordedCall
+    {
         $this->entityManager->persist($log);
         $this->entityManager->flush();
 
-        return new RecordedCall(
-            $this->calls,
-            $this->clock,
-            $run->requireId(),
-            $log->requireId(),
-        );
+        return new RecordedCall($this->calls, $this->clock, $callingRun, $log->requireId());
     }
 }

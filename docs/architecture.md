@@ -227,9 +227,8 @@ the two sub-modules never name each other.
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
   (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Recommendation\Llm`
   and `Recommendation\Jev`; `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the
-  `Recommendation\Llm` transport calls; and `Recommendation\Profile\ProfileDistiller\ProfileDistillerInterface`,
-  implemented by `Recommendation\Llm`'s `DistillationPhase`, the only way `Recommendation\Jev` reaches the LLM's
-  distillation).
+  `Recommendation\Llm` transport calls; and `Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface`,
+  implemented by `Recommendation\Llm`'s `LlmProfileRunDistiller`, the only way a profile run reaches the LLM).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
   cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
   it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.

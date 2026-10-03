@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Run;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Llm\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Llm\Run\Support\RenderedCompletionRequest;
@@ -20,5 +21,10 @@ final readonly class CompletionCallRecorder
     public function begin(RecommendationRun $run, CallSlotModel $slot, CompletionRequestModel $request): RecordedCall
     {
         return $this->callRecorder->begin($run, $slot, RenderedCompletionRequest::of($request));
+    }
+
+    public function beginForProfileRun(ProfileRun $profileRun, CompletionRequestModel $request): RecordedCall
+    {
+        return $this->callRecorder->beginForProfileRun($profileRun, RenderedCompletionRequest::of($request));
     }
 }

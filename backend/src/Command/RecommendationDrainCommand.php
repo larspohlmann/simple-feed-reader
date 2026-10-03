@@ -23,7 +23,7 @@ use Symfony\Component\Lock\LockInterface;
  */
 #[AsCommand(
     name: 'app:recommendations:drain',
-    description: 'Advance all active recommendation runs until none is left',
+    description: 'Advance all active recommendation and profile runs until none is left',
 )]
 final class RecommendationDrainCommand extends Command
 {

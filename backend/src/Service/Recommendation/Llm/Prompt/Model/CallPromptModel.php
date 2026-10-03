@@ -13,4 +13,10 @@ final readonly class CallPromptModel
         public RecommendationResponseSchema $schema,
     ) {
     }
+
+    /** @param list<array{role: string, content: string}> $messages */
+    public static function distillation(array $messages): self
+    {
+        return new self($messages, 1, RecommendationResponseSchema::Distillation);
+    }
 }

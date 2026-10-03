@@ -18,8 +18,8 @@ final readonly class RecommendationHistoryCaps
     {
         return new self(
             RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            RecommendationSettings::DEFAULT_KEPT_CAP,
-            RecommendationSettings::DEFAULT_VIEWED_CAP,
+            ProfileTuning::DEFAULT_KEPT_CAP,
+            ProfileTuning::DEFAULT_VIEWED_CAP,
         );
     }
 }

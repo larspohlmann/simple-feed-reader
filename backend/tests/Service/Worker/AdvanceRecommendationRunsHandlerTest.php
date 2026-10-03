@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -18,15 +17,16 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\TickLockTtl;
 use App\Service\Recommendation\Run\TickPhases;
+use App\Service\Recommendation\Run\UserTickLock;
 use App\Service\Recommendation\Run\WorkerPresence;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
@@ -47,7 +47,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\Lock\LockFactory;
 
 /** Real repository, advancer, presence and entity manager: the handler's whole job is coordinating them. */
 final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
@@ -81,10 +80,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $first = $this->user('heartbeat-first@example.test');
         $this->fixtures->seedSingleBatchFixture($first);
+        $this->storeProfile($first);
         $this->starter()->start($first);
 
         $second = $this->user('heartbeat-second@example.test');
         $this->fixtures->seedSingleBatchFixture($second);
+        $this->storeProfile($second);
         $this->starter()->start($second);
 
         $startedAt = new \DateTimeImmutable('2026-08-08 00:00:00');
@@ -102,6 +103,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $user = $this->user('single-batch@example.test');
         $this->fixtures->seedSingleBatchFixture($user);
+        $this->storeProfile($user);
         $this->starter()->start($user);
 
         // Snapshot firing: moves the run from pending into running with its
@@ -111,11 +113,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame(RunStatus::Running, $run->getStatus());
         $batch = $run->getCandidateBatches()[0] ?? [];
         self::assertNotSame([], $batch);
-
-        $this->queueDistillReply();
-
-        // Distillation firing: spends the profile call that precedes every batch.
-        $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         $this->requeueCleanReplyFor($batch);
 
@@ -144,6 +141,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $user = $this->user('worker-wave@example.test');
         $this->seedForcedBatchCountFixture($user, entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency($user, 3);
+        $this->storeProfile($user);
         $this->starter()->start($user);
 
         // Snapshot firing freezes the four-batch plan.
@@ -151,11 +149,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $run = $this->activeRun($user);
         $batches = $run->getCandidateBatches();
         self::assertCount(4, $batches);
-
-        $this->queueDistillReply();
-
-        // Distillation firing: the profile call before any batch.
-        $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         // Warm-up firing: batch 0 alone writes the prompt-cache.
         $this->requeueCleanReplyFor($batches[0]);
@@ -189,10 +182,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyRun = $this->startAndSnapshot($healthyUser);
 
         // Runs are processed oldest-first, so the failure the struggling
-        // user's own distillation call queues is consumed before the healthy
-        // user's own distill reply.
+        // user's own batch call queues is consumed before the healthy
+        // user's own batch reply.
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
-        $this->queueDistillReply();
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
@@ -203,15 +196,11 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame(RunStatus::Running, $stillActive->getStatus());
 
         // The healthy run's own tick was not blocked by the struggling one's
-        // failure in the same firing: its distillation phase went through.
-        $advancedAfterDistill = $this->activeRun($healthyUser);
-        self::assertFalse($advancedAfterDistill->getProgress()->distillPending);
+        // failure in the same firing: its batch went through.
+        self::assertSame(1, $this->activeRun($healthyUser)->getProgress()->batchesDone);
 
         // Fairness is proven above, in the one shared firing. More shared firings would re-tick the struggling run
         // with no reply queued for it, so the healthy run finishes through its own advancer.
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
-        $this->advancer()->advance($healthyUser, TickDriver::Worker);
-
         $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
@@ -280,6 +269,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $clearTracker,
@@ -348,7 +338,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyUser = $this->user('healthy-after-pending-failure@example.test');
         $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
-        $this->queueDistillReply();
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
@@ -357,12 +347,9 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
 
-        // Fairness is proven: the healthy run's distillation went through in the firing the pending failure landed
-        // in. It finishes through its own advancer now that the struggling run is gone.
-        self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
-
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
-        $this->advancer()->advance($healthyUser, TickDriver::Worker);
+        // Fairness is proven: the healthy run's batch went through in the firing the pending failure landed in. It
+        // finishes through its own advancer now that the struggling run is gone.
+        self::assertSame(1, $this->activeRun($healthyUser)->getProgress()->batchesDone);
 
         $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
@@ -389,7 +376,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $healthyUser = $this->user('flush-failure-healthy@example.test');
         $this->fixtures->seedSingleBatchFixture($healthyUser);
         $healthyRun = $this->startAndSnapshot($healthyUser);
-        $this->queueDistillReply();
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
 
         $logSpy = new TestHandler();
         $this->handlerWithFlushFailingEntityManager(new Logger('test', [$logSpy]))
@@ -402,12 +389,9 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($struggling);
         self::assertSame(RunStatus::Failed, $struggling->getStatus());
 
-        self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
+        self::assertSame(1, $this->activeRun($healthyUser)->getProgress()->batchesDone);
 
         // The healthy run finishes through its own advancer; the flush resilience is pinned above.
-        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
-        $this->advancer()->advance($healthyUser, TickDriver::Worker);
-
         $this->queueConsolidationReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
@@ -447,6 +431,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancerWithFlushFailingEntityManager(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $this->entityManager,
@@ -459,16 +444,23 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      * Only the advancer's own EntityManager fails its first flush: that is the struggling run's fail() write. The
      * phases come from the container, so the healthy run banks through the real EntityManager.
      */
+    private function profileRunSweep(): ProfileRunSweep
+    {
+        /** @var ProfileRunSweep $profileRunSweep */
+        $profileRunSweep = self::getContainer()->get(ProfileRunSweep::class);
+
+        return $profileRunSweep;
+    }
+
     private function advancerWithFlushFailingEntityManager(): RecommendationRunAdvancer
     {
         return new RecommendationRunAdvancer(
             $this->runs(),
-            self::getContainer()->get(LockFactory::class),
             self::getContainer()->get(ClockInterface::class),
             new FlushFailingEntityManager($this->entityManager),
             self::getContainer()->get(TickContextFactory::class),
-            self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(TickPhases::class),
+            self::getContainer()->get(UserTickLock::class),
             self::getContainer()->get(TickLockTtl::class),
         );
     }
@@ -480,6 +472,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $this->entityManager,
@@ -494,6 +487,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 new WorkerPresence($this->heartbeats(), $presenceClock),
                 $this->streamHeartbeat(new WorkerPresence($this->heartbeats(), $presenceClock)),
                 $this->entityManager,
@@ -518,9 +512,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $mover->pointActiveAt($to, $moved);
     }
 
-    /** Starts a run and advances it once, so its single batch is frozen and it is RUNNING. */
+    /** Stores a profile, starts a run and advances it once, so its single batch is frozen and it is RUNNING. */
     private function startAndSnapshot(User $user): RecommendationRun
     {
+        $this->storeProfile($user);
         $this->starter()->start($user);
         $this->advancer()->advance($user);
 
@@ -545,13 +540,9 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
     }
 
-    /** A canned distill reply: these tests need only the distillation phase to spend its one provider call. */
-    private function queueDistillReply(): void
+    private function storeProfile(User $user): void
     {
-        $this->stubChatClient()->queueContent(json_encode(
-            ['profile' => 'a distilled profile'],
-            \JSON_THROW_ON_ERROR,
-        ));
+        $this->fixtures->storeProfile($user, 'a distilled profile');
     }
 
     /**
@@ -597,7 +588,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 $entryCount,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,

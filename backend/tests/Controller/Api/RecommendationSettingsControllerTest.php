@@ -56,8 +56,6 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         return json_encode([
             'guidancePrompt' => 'Prefer long-form pieces.',
             'favoritesCap' => 20,
-            'keptCap' => 15,
-            'viewedCap' => 30,
             'candidatePoolSize' => 500,
             'lookbackDays' => 3,
             'picksLimit' => 25,
@@ -114,8 +112,6 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         // The batch call asks for a score only, never a reason.
         self::assertStringNotContainsString('"reason"', $payload['fixedPrompt']['outputContract']);
         self::assertSame(40, $payload['favoritesCap']);
-        self::assertSame(40, $payload['keptCap']);
-        self::assertSame(80, $payload['viewedCap']);
         self::assertSame(500, $payload['candidatePoolSize']);
         self::assertSame(2, $payload['lookbackDays']);
         self::assertSame(50, $payload['picksLimit']);
@@ -184,8 +180,6 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         $payload = $this->payload($client);
         self::assertSame('Prefer long-form pieces.', $payload['guidancePrompt']);
         self::assertSame(20, $payload['favoritesCap']);
-        self::assertSame(15, $payload['keptCap']);
-        self::assertSame(30, $payload['viewedCap']);
         self::assertSame(500, $payload['candidatePoolSize']);
         self::assertSame(3, $payload['lookbackDays']);
         self::assertSame(25, $payload['picksLimit']);

@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { EMPTY, Observable, catchError, throwError } from 'rxjs';
+import { Observable } from 'rxjs';
 import {
   AiAvailabilityService,
   RecommendationCapabilities,
@@ -21,7 +21,6 @@ export interface AiConfig {
   readonly model: string | null;
   readonly ready: boolean;
   readonly active: boolean;
-  readonly profileConnectionId: number | null;
   readonly suppressReasoning: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
@@ -199,46 +198,6 @@ export class AiSettingsService {
     );
   }
 
-  chooseProfileConnection(borrowerId: number, connectionId: number): void {
-    this.run(
-      { action: 'profile', configId: borrowerId },
-      this.reloadWhenGone(
-        this.http.put<AiConfig>(`${this.base}/api/me/ai/configs/${borrowerId}/profile`, {
-          connectionId,
-        }),
-      ),
-      (config) => this.upsert(config),
-    );
-  }
-
-  clearProfileConnection(borrowerId: number): void {
-    this.run(
-      { action: 'profile', configId: borrowerId },
-      this.reloadWhenGone(
-        this.http.delete<void>(`${this.base}/api/me/ai/configs/${borrowerId}/profile`),
-      ),
-      () => this.forgetProfileConnection(borrowerId),
-    );
-  }
-
-  /** A 404 means the row or the connection it names is gone: reload instead of failing. Completing
-   *  empty leaves `busy` to the reload's own request. */
-  private reloadWhenGone<T>(request: Observable<T>): Observable<T> {
-    return request.pipe(
-      catchError((error: HttpErrorResponse) => {
-        if (error.status !== 404) return throwError(() => error);
-
-        this.load();
-        return EMPTY;
-      }),
-    );
-  }
-
-  private forgetProfileConnection(borrowerId: number): void {
-    const borrower = this.configs().find((each) => each.id === borrowerId);
-    if (borrower) this.upsert({ ...borrower, profileConnectionId: null });
-  }
-
   activate(id: number): void {
     this.run(
       { action: 'row', configId: id },
@@ -284,13 +243,7 @@ export class AiSettingsService {
   }
 
   private drop(id: number): void {
-    this.configs.set(
-      this.configs()
-        .filter((each) => each.id !== id)
-        .map((each) =>
-          each.profileConnectionId === id ? { ...each, profileConnectionId: null } : each,
-        ),
-    );
+    this.configs.set(this.configs().filter((each) => each.id !== id));
     this.applyAvailability();
   }
 

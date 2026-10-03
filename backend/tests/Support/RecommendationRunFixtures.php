@@ -7,13 +7,15 @@ namespace App\Tests\Support;
 use App\Entity\AiProviderSettings;
 use App\Entity\CallOutcome;
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
+use App\Entity\StoredProfile;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CallPhase;
@@ -29,9 +31,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class RecommendationRunFixtures
 {
-    public const string PROFILE_MODEL = 'profile-llm';
-    public const string PROFILE_BASE_URL = 'https://profile.example.test/v1';
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
@@ -56,27 +55,6 @@ final readonly class RecommendationRunFixtures
     public function seedInactiveAiSettingsFor(User $user, string $model): AiProviderSettings
     {
         return $this->seedConnection($user, null, 'https://api.example.test/v1', $model);
-    }
-
-    /** A ready connection, not active, that the active connection borrows its profile from. */
-    public function seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings
-    {
-        $borrower = $user->getActiveAiProviderSettings()
-            ?? throw new \LogicException('Cannot seed a profile connection before a provider is seeded.');
-
-        return $this->seedProfileConnectionBorrowedBy($borrower, $model);
-    }
-
-    /** A ready connection, not active, that $borrower borrows its profile from; its base URL tells its calls apart. */
-    public function seedProfileConnectionBorrowedBy(
-        AiProviderSettings $borrower,
-        string $model = self::PROFILE_MODEL,
-    ): AiProviderSettings {
-        $connection = $this->seedConnection($borrower->getUser(), 'Profile', self::PROFILE_BASE_URL, $model);
-        $borrower->setProfileConnection($connection);
-        $this->entityManager->flush();
-
-        return $connection;
     }
 
     private function seedConnection(User $owner, ?string $name, string $baseUrl, string $model): AiProviderSettings
@@ -134,6 +112,62 @@ final readonly class RecommendationRunFixtures
         }
 
         return $entries;
+    }
+
+    /**
+     * $count favourites in a feed of their own, newest first, so a test can grow the history a second time.
+     *
+     * @return list<Entry>
+     */
+    public function seedFavorites(User $user, string $feedSlug, int $count): array
+    {
+        $feed = new Feed('https://example.com/' . $user->getEmail() . '/' . $feedSlug . '.xml');
+        $feed->setTitle('Favourites ' . $feedSlug);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $entries = [];
+        for ($index = 0; $index < $count; $index++) {
+            $entry = $this->entry($feed, $feedSlug . '-' . $user->getEmail() . '-' . $index, $count - $index);
+            $state = new EntryState($user, $entry);
+            $state->markFavorite();
+            $this->entityManager->persist($state);
+            $entries[] = $entry;
+        }
+        $this->entityManager->flush();
+
+        return $entries;
+    }
+
+    public function chooseProfileConnection(User $user, AiProviderSettings $connection): void
+    {
+        $row = $this->settingsRowOf($user);
+        $current = $row->profileSettings();
+        $row->updateProfileSettings(
+            new ProfileSettingsValues($current->intervalHours, $connection, $current->keptCap, $current->viewedCap),
+        );
+        $this->entityManager->flush();
+    }
+
+    public function storeProfile(User $user, string $text): void
+    {
+        $this->settingsRowOf($user)->storeProfile(
+            new StoredProfile($text, new \DateTimeImmutable('2026-10-03 06:00:00'), 'api.example.test', 'm'),
+        );
+        $this->entityManager->flush();
+    }
+
+    private function settingsRowOf(User $user): RecommendationSettings
+    {
+        $row = $this->entityManager->getRepository(RecommendationSettings::class)->findOneBy(['user' => $user]);
+        if ($row instanceof RecommendationSettings) {
+            return $row;
+        }
+
+        $row = new RecommendationSettings($user);
+        $this->entityManager->persist($row);
+
+        return $row;
     }
 
     public function subscribedFeed(User $user): Feed
@@ -204,7 +238,7 @@ final readonly class RecommendationRunFixtures
         string $requestBody,
         ?\DateTimeImmutable $createdAt = null,
     ): RecommendationRunLog {
-        $log = new RecommendationRunLog(
+        $log = RecommendationRunLog::forRun(
             $run,
             $phase,
             $batchNumber,
@@ -265,7 +299,7 @@ final readonly class RecommendationRunFixtures
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: $guidancePrompt,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
