@@ -12,7 +12,9 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -94,6 +96,33 @@ final class RecommendationPipelineTest extends DbTestCase
             ['recommendations', 'recommendations'],
             array_column($this->chat()->calls(), 'responseSchemaName'),
         );
+    }
+
+    /** No stored profile: the run waits, the profile run generates one, and the run scores on exactly that text. */
+    public function testARunWithoutAProfileWaitsForTheGeneratedOneAndFreezesIt(): void
+    {
+        $entries = $this->seedSingleBatchCandidates();
+        $firstId = $this->idOf($entries[0]);
+        $this->fixtures->seedFavorites($this->user, 'maps', 2);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+
+        $waiting = $this->runs()->findLatestForUser($this->user);
+        self::assertSame(RunStatus::Pending, $waiting?->getStatus());
+        self::assertTrue($this->profiles()->isBuildingFor($this->user));
+
+        $this->chat()->queueContent('{"profile":"Likes maps and cartography."}');
+        $this->tickTheProfileRun($this->user);
+        $this->queueBatchReplyScoringEveryEntry($entries, 600);
+        $this->queueConsolidationReply([
+            ['id' => $firstId, 'score' => 600, 'reason' => 'On maps.'],
+        ]);
+
+        $run = $this->tickUntilDone($this->user);
+
+        self::assertSame(RunStatus::Completed, $run->getStatus());
+        self::assertSame('Likes maps and cartography.', $this->runProfileTextFor($run));
+        self::assertSame('Likes maps and cartography.', $this->storedProfileText());
     }
 
     /** A profile run that finds no history leaves the run to score without a profile, and it still completes. */
@@ -229,6 +258,22 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertNotNull($id);
 
         return $id;
+    }
+
+    private function storedProfileText(): ?string
+    {
+        $this->entityManager->clear();
+        $row = $this->entityManager->getRepository(RecommendationSettings::class)->findOneBy(['user' => $this->user]);
+
+        return $row?->getStoredProfile()->getText();
+    }
+
+    private function profiles(): ProfileForRunInterface
+    {
+        /** @var ProfileForRunInterface $profiles */
+        $profiles = self::getContainer()->get(ProfileForRunInterface::class);
+
+        return $profiles;
     }
 
     private function runProfileTextFor(RecommendationRun $run): ?string
