@@ -96,18 +96,21 @@ final class RecommendationPipelineTest extends DbTestCase
         );
     }
 
-    /** Without a stored profile the run still completes, with an empty PROFILE block and no profile frozen on it. */
-    public function testWithoutAStoredProfileTheRunScoresWithoutOne(): void
+    /** A profile run that finds no history leaves the run to score without a profile, and it still completes. */
+    public function testAProfileRunWithoutHistoryLetsTheRunScoreWithoutAProfile(): void
     {
         $entries = $this->seedSingleBatchCandidates();
         $firstId = $this->idOf($entries[0]);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+        $this->tickTheProfileRun($this->user);
 
         $this->queueBatchReplyScoringEveryEntry($entries, 600);
         $this->queueConsolidationReply([
             ['id' => $firstId, 'score' => 600, 'reason' => 'z'],
         ]);
 
-        $run = $this->runToCompletion($this->user);
+        $run = $this->tickUntilDone($this->user);
 
         self::assertNotEmpty($this->items($run)); // the run still completes
         self::assertNull($this->runProfileTextFor($run));       // no profile frozen on the run

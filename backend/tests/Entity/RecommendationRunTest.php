@@ -540,6 +540,37 @@ final class RecommendationRunTest extends TestCase
         $run->freezeProfile('Later profile.');
     }
 
+    public function testOnlyARunThatFailedAfterItsSnapshotIsResumable(): void
+    {
+        $neverSnapshotted = $this->makeRun();
+        $neverSnapshotted->fail('Profile generation failed: gone', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $snapshotted = $this->makeRun();
+        $snapshotted->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $snapshotted->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:05:00'));
+
+        self::assertFalse($neverSnapshotted->isResumable());
+        self::assertTrue($snapshotted->isResumable());
+    }
+
+    public function testAJevRunThatFrozeNoProfileIsNotResumable(): void
+    {
+        $withoutProfile = $this->makeRun();
+        $withoutProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withoutProfile->fail('Jev needs your reading profile.', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $withProfile = $this->makeRun();
+        $withProfile->freezeProfile('Likes rail and maps.');
+        $withProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withProfile->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:05:00'));
+
+        self::assertFalse($withoutProfile->isResumable());
+        self::assertTrue($withProfile->isResumable());
+    }
+
+    public function testARunThatHasNotFailedIsNotResumable(): void
+    {
+        self::assertFalse($this->runInRunningState()->isResumable());
+    }
+
     private function makeRun(): RecommendationRun
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

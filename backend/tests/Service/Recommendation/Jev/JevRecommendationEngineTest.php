@@ -234,6 +234,7 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testAnLlmRunWhoseConnectionSwitchedToJevFailsWithoutAnyCall(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->fixtures->storeProfile($this->owner, self::PROFILE);
         $connection = $this->owner->getActiveAiProviderSettings();
         self::assertNotNull($connection);
         $connection->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
@@ -253,12 +254,16 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame([], $this->systemOne()->requests());
     }
 
-    /** A missing profile is the account's to fix: the run fails with the reason, never strikes. */
+    /** No history, so no profile: the account's to fix, so the run fails with the reason and never strikes. */
     public function testARunWithoutAProfileFailsWithTheReasonAndNeverAsksSystemOne(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $profileConnection = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'qwen3-14b');
+        $this->fixtures->chooseProfileConnection($this->owner, $profileConnection);
         $this->starter()->start($this->owner);
-        $this->advancer()->advance($this->owner);         // the snapshot: no provider call, no check
+        $this->advancer()->advance($this->owner);         // waits for the profile run it starts
+        $this->tickTheProfileRun($this->owner);           // no history: it completes without a profile
+        $this->advancer()->advance($this->owner);         // the snapshot freezes no profile
 
         $report = $this->advancer()->advance($this->owner);
 

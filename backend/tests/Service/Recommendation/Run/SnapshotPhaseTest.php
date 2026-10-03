@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Entry;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
+use App\Repository\ProfileRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
@@ -42,6 +46,7 @@ final class SnapshotPhaseTest extends DbTestCase
     /** One entry alone, then the other two: a plan the LLM packer, which fills batches in pool order, never makes. */
     public function testTheResolvedEnginesBatchesBecomeTheRunsPlan(): void
     {
+        $this->fixtures->storeProfile($this->owner, 'a stored profile');
         $ids = array_map(
             static fn (Entry $entry): int => $entry->requireId(),
             $this->fixtures->seedFeedWithEntries($this->owner, 3),
@@ -73,11 +78,13 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertSame([], $run->getCandidateBatches());
         self::assertSame([], $engine->packedCandidates);
+        self::assertNull($this->profileRuns()->findLatestForUser($this->owner));
     }
 
     /** The raw column, not getEngineKind(): that reads a missing kind as the LLM too. */
     public function testThePlanRecordsTheKindItWasPackedFor(): void
     {
+        $this->fixtures->storeProfile($this->owner, 'a stored profile');
         $this->fixtures->seedFeedWithEntries($this->owner, 2);
         $run = $this->pendingRun();
 
@@ -97,6 +104,7 @@ final class SnapshotPhaseTest extends DbTestCase
 
     public function testAJevTickRecordsTheJevKindWithAPlan(): void
     {
+        $this->fixtures->storeProfile($this->owner, 'a stored profile');
         $this->fixtures->seedFeedWithEntries($this->owner, 2);
         $run = $this->pendingRun();
         $jevTick = $this->tickOfKind($run, RecommendationEngineKind::Jev);
@@ -127,6 +135,35 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertSame('Likes rail and maps.', $run->getProfileText());
     }
 
+    public function testWithoutAStoredProfileTheRunStaysPendingWhileAProfileRunStarts(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 2);
+        $engine = ScriptedRecommendationEngine::packing([[1]]);
+        $run = $this->pendingRun();
+
+        $this->snapshot($engine)->advance($this->tick($run));
+
+        self::assertSame(RunStatus::Pending, $run->getStatus());
+        self::assertSame([], $engine->packedCandidates);
+        self::assertNotNull($this->profileRuns()->findActiveForUser($this->owner));
+    }
+
+    public function testAFailedProfileRunFailsTheWaitingRunWithItsError(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 2);
+        $run = $this->pendingRun();
+        $phase = $this->snapshot(ScriptedRecommendationEngine::packing([[1]]));
+        $phase->advance($this->tick($run));
+        $this->profileRuns()->findActiveForUser($this->owner)
+            ?->fail('No connection can build your profile.', new \DateTimeImmutable('2026-10-03 09:01:00'));
+        $this->entityManager->flush();
+
+        $phase->advance($this->tick($run));
+
+        self::assertSame(RunStatus::Failed, $run->getStatus());
+        self::assertSame('Profile generation failed: No connection can build your profile.', $run->getError());
+    }
+
     private function storedEngineKind(RecommendationRun $run): mixed
     {
         return $this->entityManager->getConnection()->fetchOne(
@@ -150,6 +187,26 @@ final class SnapshotPhaseTest extends DbTestCase
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
 
-        return new SnapshotPhase($candidates, $engine->resolver(), $this->entityManager, $clock);
+        /** @var ProfileForRunInterface $profiles */
+        $profiles = self::getContainer()->get(ProfileForRunInterface::class);
+        /** @var RecommendationRunFailure $runFailure */
+        $runFailure = self::getContainer()->get(RecommendationRunFailure::class);
+
+        return new SnapshotPhase(
+            $candidates,
+            $engine->resolver(),
+            $this->entityManager,
+            $clock,
+            $profiles,
+            $runFailure,
+        );
+    }
+
+    private function profileRuns(): ProfileRunRepository
+    {
+        /** @var ProfileRunRepository $profileRuns */
+        $profileRuns = $this->entityManager->getRepository(ProfileRun::class);
+
+        return $profileRuns;
     }
 }

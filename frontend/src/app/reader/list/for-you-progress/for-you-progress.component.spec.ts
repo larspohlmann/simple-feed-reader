@@ -47,6 +47,16 @@ describe('ForYouProgressComponent', () => {
     return fixture;
   };
 
+  it('says the profile is being built while the run waits for it', () => {
+    report.set(makeReport({ status: 'pending', waitingForProfile: true }));
+    const element = build().nativeElement as HTMLElement;
+
+    expect(element.querySelector('.for-you-progress')!.textContent).toContain(
+      'Building your profile',
+    );
+    expect(element.textContent).not.toContain('4 of 24');
+  });
+
   it('shows the count and fills the bar to the run fraction', () => {
     const element = build().nativeElement as HTMLElement;
     expect(element.querySelector('.for-you-progress')!.textContent).toContain('4 of 24');

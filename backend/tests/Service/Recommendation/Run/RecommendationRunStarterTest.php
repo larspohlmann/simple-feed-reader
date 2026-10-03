@@ -108,6 +108,18 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->starter()->resume($this->user);
     }
 
+    public function testARunThatFailedBeforeItsSnapshotIsNotResumed(): void
+    {
+        $this->seedReadyAiSettings($this->user);
+        $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $run->fail('Profile generation failed: gone', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
+
+        $this->expectException(NoResumableRecommendationRunException::class);
+        $this->starter()->resume($this->user);
+    }
+
     public function testStampsTheProviderAndModelOnANewRun(): void
     {
         $user = $this->userWithProvider('https://openrouter.ai/api/v1', 'x-ai/grok-4-fast');

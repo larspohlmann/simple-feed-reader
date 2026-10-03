@@ -1125,6 +1125,7 @@
     "forYouStop": "Stoppen",
     "forYouShowProgress": "Fortschritt anzeigen",
     "forYouStopping": "Wird gestoppt…",
+    "forYouBuildingProfile": "Dein Profil wird erstellt …",
     "forYouProgress": "Deine Feeds werden sortiert — {{done}} von {{total}}",
     "forYouUnfinishedTitle": "Du hast einen nicht beendeten Empfehlungslauf",
     "forYouUnreachable": "Der Empfehlungsdienst war nicht erreichbar. Versuch es noch einmal.",

@@ -351,6 +351,18 @@ final class RecommendationRun
         $this->terminate(RunStatus::Cancelled, $when);
     }
 
+    /**
+     * Nothing to resume before the snapshot, nor for a Jev run that froze no profile: a new run asks for one again.
+     */
+    public function isResumable(): bool
+    {
+        if (RunStatus::Failed !== $this->status || null === $this->candidateBatches) {
+            return false;
+        }
+
+        return RecommendationEngineKind::Jev !== $this->engineKind || null !== $this->getProfileText();
+    }
+
     public function resume(): void
     {
         $this->guardStatus(RunStatus::Failed, 'resume');

@@ -11,6 +11,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Pool\RecommendationCandidateLoader;
+use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
 use App\Service\Recommendation\Run\RecommendationRunDeferral;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
@@ -60,6 +61,7 @@ final class TickPhasesTest extends DbTestCase
     public function testAPendingRunIsSnapshottedNotAdvanced(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 3);
+        $this->fixtures->storeProfile($this->owner, 'a stored profile');
         $engine = ScriptedRecommendationEngine::packing([[1]]);
         $run = $this->fixtures->createRun($this->owner);
         $this->entityManager->flush();
@@ -191,14 +193,17 @@ final class TickPhasesTest extends DbTestCase
         $candidates = self::getContainer()->get(RecommendationCandidateLoader::class);
         /** @var RecommendationTickCheckpoint $checkpoint */
         $checkpoint = self::getContainer()->get(RecommendationTickCheckpoint::class);
+        /** @var ProfileForRunInterface $profiles */
+        $profiles = self::getContainer()->get(ProfileForRunInterface::class);
         $resolver = $engine->resolver();
+        $runFailure = new RecommendationRunFailure($checkpoint, $this->entityManager, $this->clock);
 
         return new TickPhases(
-            new SnapshotPhase($candidates, $resolver, $this->entityManager, $this->clock),
+            new SnapshotPhase($candidates, $resolver, $this->entityManager, $this->clock, $profiles, $runFailure),
             $resolver,
             new RecommendationRunDeferral($checkpoint, $this->entityManager, $this->clock),
             new RecommendationTransportFailureRecorder($checkpoint, $this->entityManager, $this->clock),
-            new RecommendationRunFailure($checkpoint, $this->entityManager, $this->clock),
+            $runFailure,
             $this->clock,
         );
     }

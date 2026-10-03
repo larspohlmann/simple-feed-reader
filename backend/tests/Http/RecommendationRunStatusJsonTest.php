@@ -128,6 +128,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'error' => null,
                 'background' => false,
                 'waitingForLock' => true,
+                'waitingForProfile' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
@@ -165,6 +166,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'error' => 'boom',
                 'background' => false,
                 'waitingForLock' => false,
+                'waitingForProfile' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => true,
                 'elapsedSeconds' => 90,
@@ -173,6 +175,19 @@ final class RecommendationRunStatusJsonTest extends TestCase
             ],
             $json,
         );
+    }
+
+    public function testAWaitingReportSaysItWaitsForItsProfile(): void
+    {
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::none(),
+            $this->emptySummary(),
+            new \DateTimeImmutable('2026-08-09T10:00:00'),
+            null,
+            waitingForProfile: true,
+        ));
+
+        self::assertTrue($json['waitingForProfile']);
     }
 
     private function user(): User

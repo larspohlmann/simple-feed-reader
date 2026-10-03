@@ -17,6 +17,8 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Feed\ForYouFeed;
 use App\Service\Recommendation\Jev\JevRecommendationEngine;
 use App\Service\Recommendation\Jev\Support\QuestionId;
+use App\Service\Recommendation\Profile\ProfileConnections;
+use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -150,18 +152,41 @@ final class JevPipelineTest extends DbTestCase
         );
     }
 
-    /** Guidance alone is not enough: without a stored profile the run fails before any call and says why. */
+    /** Guidance alone is not enough: a profile run that finds no history leaves the run without a profile. */
     public function testWithoutAProfileTheRunFailsEvenWithGuidance(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->fixtures->guidanceSettings($this->owner, 'More self-hosting.');
+        $profileConnection = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'qwen3-14b');
+        $this->fixtures->chooseProfileConnection($this->owner, $profileConnection);
+        $this->waitForTheProfileRun();
 
-        $failed = $this->runToCompletion($this->owner);
+        $failed = $this->tickUntilDone($this->owner);
 
         self::assertSame('failed', $failed->getStatus()->value);
         self::assertSame(JevRecommendationEngine::NO_PROFILE, $failed->getError());
         self::assertSame([], $this->chat()->calls());
         self::assertSame([], $this->systemOne()->requests());
+    }
+
+    /** Jev builds no profile itself: with no profile connection chosen, the profile run fails, and the run with it. */
+    public function testWithoutAProfileConnectionTheWaitingRunFailsWithTheProfileRunsError(): void
+    {
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $this->waitForTheProfileRun();
+
+        $failed = $this->tickUntilDone($this->owner);
+
+        self::assertSame(\sprintf(SnapshotPhase::PROFILE_FAILED, ProfileConnections::MISSING), $failed->getError());
+        self::assertSame([], $this->systemOne()->requests());
+    }
+
+    private function waitForTheProfileRun(): void
+    {
+        $this->starter()->start($this->owner);
+        $this->advancer()->advance($this->owner);
+        self::assertSame('pending', $this->runs()->findLatestForUser($this->owner)?->getStatus()->value);
+        $this->tickTheProfileRun($this->owner);
     }
 
     private function storeProfile(string $profileText): void

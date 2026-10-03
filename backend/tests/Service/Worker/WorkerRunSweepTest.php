@@ -67,10 +67,12 @@ final class WorkerRunSweepTest extends DbTestCase
     {
         $first = $this->user('sweep-count-first@example.test');
         $this->fixtures->seedSingleBatchFixture($first);
+        $this->fixtures->storeProfile($first, 'a stored profile');
         $this->starter()->start($first);
 
         $second = $this->user('sweep-count-second@example.test');
         $this->fixtures->seedSingleBatchFixture($second);
+        $this->fixtures->storeProfile($second, 'a stored profile');
         $this->starter()->start($second);
 
         // Both runs are PENDING; the sweep's snapshot tick advances each
@@ -127,6 +129,7 @@ final class WorkerRunSweepTest extends DbTestCase
     {
         $user = $this->user('sweep-stream-heartbeat@example.test');
         $this->fixtures->seedSingleBatchFixture($user);
+        $this->fixtures->storeProfile($user, 'a stored profile');
         $this->starter()->start($user);
 
         // The first tick only snapshots the candidate pool -- no provider

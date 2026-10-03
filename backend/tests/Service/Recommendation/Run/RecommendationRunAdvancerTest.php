@@ -108,6 +108,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($index = 0; $index < 5; $index++) {
             $this->entry('entry-' . $index, 60 - $index);
         }
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
         self::assertNotNull($runId);
@@ -155,6 +156,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // Default window is 2 days: 30 minutes ago is inside, 5 days ago is not.
         $inside = $this->entry('inside-window', 30);
         $this->entry('outside-window', 60 * 24 * 5);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
         self::assertNotNull($runId);
@@ -206,6 +208,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $insideWiderWindow = $this->entry('inside-wider-window', 60 * 24 * 3);
         $this->entry('outside-both-windows', 60 * 24 * 10);
+        $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
         self::assertNotNull($runId);

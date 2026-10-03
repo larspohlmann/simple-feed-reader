@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -17,6 +18,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
+use App\Service\Recommendation\Profile\ProfileRunStarter;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -187,6 +189,47 @@ final class RecommendationRunControllerTest extends WebTestCase
         return $decoded;
     }
 
+    public function testTheStatusOfARunWaitingForItsProfileSaysSo(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('runs-waiting-profile@example.test');
+        $this->fixtures()->seedSingleBatchFixture($user);
+
+        $client->request('POST', '/api/recommendations/runs', server: $headers);
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('pending', $payload['status']);
+        self::assertTrue($payload['waitingForProfile']);
+    }
+
+    /** A profile run of the account's own schedule is no wait for a run already past its snapshot. */
+    public function testARunningRunIsNotWaitingForAProfileRunThatHappensMeanwhile(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->auth('runs-running-profile@example.test');
+        $this->fixtures()->seedSingleBatchFixture($user);
+        $this->fixtures()->storeProfile($user, 'a stored profile');
+        $client->request('POST', '/api/recommendations/runs', server: $headers);
+        $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
+        $profileRunStarter = self::getContainer()->get(ProfileRunStarter::class);
+        self::assertInstanceOf(ProfileRunStarter::class, $profileRunStarter);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $profileRunStarter->start(
+            $entityManager->find(User::class, $user->requireId()) ?? self::fail('The user is gone.'),
+            ProfileRunTrigger::Scheduled,
+        );
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('running', $payload['status']);
+        self::assertFalse($payload['waitingForProfile']);
+    }
+
     public function testAnUnauthenticatedTickIsRejected(): void
     {
         $client = self::createClient();
@@ -228,6 +271,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'waitingForLock' => false,
+                'waitingForProfile' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'etaSeconds' => null,
@@ -340,6 +384,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'waitingForLock' => false,
+                'waitingForProfile' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
@@ -405,6 +450,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->disableReboot();
         [$headers, $user] = $this->authWithReadyAi('stale-heartbeat@example.test');
         $this->seedOneCandidateEntry($user);
+        $this->fixtures()->storeProfile($user, 'a stored profile');
         $this->startRun($client, $headers);
 
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
@@ -582,6 +628,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-refused-' . $refusal::class . '@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
+        $this->fixtures()->storeProfile($user, 'a stored profile');
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
         self::assertResponseIsSuccessful();
@@ -638,6 +685,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-tick-unreadable@example.test');
         $this->seedReadyAiSettings($user);
         $this->seedOneCandidateEntry($user);
+        $this->fixtures()->storeProfile($user, 'a stored profile');
 
         $client->request('POST', '/api/recommendations/runs', server: $headers);
         self::assertResponseIsSuccessful();
@@ -726,6 +774,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'error' => null,
                 'background' => false,
                 'waitingForLock' => false,
+                'waitingForProfile' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,

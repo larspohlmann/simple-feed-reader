@@ -8,6 +8,8 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\Profile\ProfileRunAdvancer;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
@@ -45,6 +47,14 @@ trait DrivesRecommendationRuns
         self::assertNotNull($run);
 
         return $run;
+    }
+
+    /** A waiting run never ticks its profile run: the profile drivers do, and this stands in for one of them. */
+    private function tickTheProfileRun(User $owner): void
+    {
+        /** @var ProfileRunAdvancer $profileAdvancer */
+        $profileAdvancer = self::getContainer()->get(ProfileRunAdvancer::class);
+        $profileAdvancer->advance($owner, TickDriver::Poll);
     }
 
     /** @return list<RecommendationItem> */

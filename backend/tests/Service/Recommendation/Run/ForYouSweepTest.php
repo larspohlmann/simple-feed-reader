@@ -102,6 +102,7 @@ final class ForYouSweepTest extends DbTestCase
         $user = $this->user($email);
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 1);
+        $this->fixtures->storeProfile($user, 'a stored profile');
 
         $feed = new Feed('https://example.com/' . $email . '/feed.xml');
         $feed->setTitle('Example');

@@ -458,6 +458,8 @@ export interface RecommendationRunReport {
    *  stale: a lock held with nobody beating. Optional for older-backend
    *  responses; treat an absent value as false (#439). */
   readonly waitingForLock?: boolean;
+  /** True while a pending run waits for its profile to be built. Optional for older-backend responses. */
+  readonly waitingForProfile?: boolean;
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;

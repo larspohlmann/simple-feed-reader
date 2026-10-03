@@ -1125,6 +1125,7 @@
     "forYouStop": "Stop",
     "forYouShowProgress": "Show progress",
     "forYouStopping": "Stopping…",
+    "forYouBuildingProfile": "Building your profile…",
     "forYouProgress": "Ranking your feeds — {{done}} of {{total}}",
     "forYouUnfinishedTitle": "You have an unfinished recommendation run",
     "forYouUnreachable": "Could not reach the recommendation service. Try again.",
