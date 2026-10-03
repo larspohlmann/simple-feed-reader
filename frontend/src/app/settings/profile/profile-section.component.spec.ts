@@ -51,6 +51,12 @@ describe('ProfileSectionComponent', () => {
 
   afterEach(() => http.verify());
 
+  it('renders its groups without a stack of its own', () => {
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('app-settings-stack')).toBeNull();
+  });
+
   it('shows the profile with when and by which model it was generated', () => {
     const fixture = mount();
 
@@ -225,6 +231,21 @@ describe('ProfileSectionComponent', () => {
     const request = http.expectOne((each) => each.method === 'PUT' && each.url === ENDPOINT);
     expect(request.request.body.keptCap).toBe(12);
     request.flush(profileState({ keptCap: 12 }));
+  });
+
+  it('reads the state again when the connections change, keeping a typed cap', () => {
+    const fixture = mount();
+    const input = byTestId(fixture, 'profile-kept-cap') as HTMLInputElement;
+    input.value = '12';
+    input.dispatchEvent(new Event('input'));
+    http.expectNone(ENDPOINT);
+
+    fixture.componentRef.setInput('connections', [{ id: 1 }]);
+    fixture.detectChanges();
+    http.expectOne(ENDPOINT).flush(profileState({ keptCap: 5 }));
+    fixture.detectChanges();
+
+    expect((byTestId(fixture, 'profile-kept-cap') as HTMLInputElement).value).toBe('12');
   });
 
   it('keeps a typed cap on screen when a finished run reloads the state', () => {

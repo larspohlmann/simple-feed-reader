@@ -3,8 +3,11 @@ import {
   Component,
   WritableSignal,
   computed,
+  effect,
+  input,
   inject,
   linkedSignal,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -15,7 +18,6 @@ import { FieldComponent } from '../../shared/field/field.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-bar.component';
-import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
 import { ProfileDebugLogComponent } from './profile-debug-log.component';
 import {
@@ -35,7 +37,6 @@ import {
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,
-    SettingsStackComponent,
     TranslocoPipe,
   ],
   providers: [ProfileSettingsService],
@@ -44,6 +45,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileSectionComponent {
+  readonly connections = input<readonly unknown[]>([]);
   readonly svc = inject(ProfileSettingsService);
   private readonly language = inject(LanguageService);
 
@@ -92,6 +94,15 @@ export class ProfileSectionComponent {
   constructor() {
     this.svc.load();
     this.svc.loadRun();
+    let initial = true;
+    effect(() => {
+      this.connections();
+      if (initial) {
+        initial = false;
+        return;
+      }
+      untracked(() => this.svc.refresh());
+    });
     toastOnSaved(this.svc, 'settings.profile.saved');
   }
 

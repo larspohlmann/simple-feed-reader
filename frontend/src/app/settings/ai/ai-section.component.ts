@@ -28,6 +28,7 @@ import {
 } from '../../shared/searchable-select/searchable-select.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
+import { ProfileSectionComponent } from '../profile/profile-section.component';
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
 import { AiConfig, AiSettingsService } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
@@ -51,6 +52,7 @@ import { RecommendationSettingsCardComponent } from '../recommendations/recommen
     PasswordInputComponent,
     IconComponent,
     InfoTipComponent,
+    ProfileSectionComponent,
     RecommendationDebugLogComponent,
     RecommendationRunHistoryComponent,
     RecommendationSettingsCardComponent,

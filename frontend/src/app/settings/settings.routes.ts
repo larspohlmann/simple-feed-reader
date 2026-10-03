@@ -64,14 +64,7 @@ export const SETTINGS_ROUTES: Routes = [
         loadComponent: () =>
           import('./ai/ai-section.component').then((module) => module.AiSectionComponent),
       },
-      {
-        path: 'profile',
-        title: sectionLabelKey('profile'),
-        loadComponent: () =>
-          import('./profile/profile-section.component').then(
-            (module) => module.ProfileSectionComponent,
-          ),
-      },
+      { path: 'profile', redirectTo: 'ai', pathMatch: 'full' },
       {
         path: 'about',
         title: sectionLabelKey('about'),
