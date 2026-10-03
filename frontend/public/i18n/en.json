@@ -339,6 +339,7 @@
     "profile": {
       "title": "Profile",
       "caption": "What the model has learned from your reading. For You recommendations are scored against it.",
+      "details": "Profile and settings",
       "empty": "No profile yet. Generate one now, or let the schedule build it.",
       "generated": "Generated {{when}} by {{model}} at {{host}}",
       "statusRunning": "Building your profile…",
