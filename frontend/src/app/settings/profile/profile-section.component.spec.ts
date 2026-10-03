@@ -324,12 +324,28 @@ describe('ProfileSectionComponent', () => {
     fixture.destroy();
   });
 
-  it('shows the debug log only when debug mode is on', () => {
-    expect(element(mount()).querySelector('app-profile-debug-log')).toBeNull();
-
-    const debugged = mount(profileState({ debugEnabled: true }));
+  it('renders the debug log inside the profile disclosure, after the save bar', () => {
+    const fixture = mount(profileState({ debugEnabled: true }));
     http.expectOne(`${ENDPOINT}/runs/current/log`).flush({ entries: [] });
 
-    expect(element(debugged).querySelector('app-profile-debug-log')).not.toBeNull();
+    const outer = element(fixture).querySelector(
+      'app-settings-group details',
+    ) as HTMLDetailsElement;
+    const log = element(fixture).querySelector('app-profile-debug-log')!;
+    const saveBar = outer.querySelector('app-settings-save-bar')!;
+
+    expect(log.closest('details')?.parentElement?.closest('details')).toBe(outer);
+    expect(saveBar.compareDocumentPosition(log) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders no debug log when debug mode is off', () => {
+    expect(element(mount()).querySelector('app-profile-debug-log')).toBeNull();
+  });
+
+  it('has no standalone debug group', () => {
+    const fixture = mount(profileState({ debugEnabled: true }));
+    http.expectOne(`${ENDPOINT}/runs/current/log`).flush({ entries: [] });
+
+    expect(element(fixture).querySelectorAll('app-settings-group')).toHaveLength(1);
   });
 });
