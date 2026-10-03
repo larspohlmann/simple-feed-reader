@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.1.0] - 2026-10-03
+
 ### Highlights
 
 **A second engine for For You.** Recommendations can now come from Jev, a hosted
@@ -30,6 +32,151 @@ less and retina screens look sharp.
 **Read oldest first.** Any list can switch between newest first and oldest
 first, which suits serials and catching up on a backlog. Each list remembers its
 own choice.
+
+## What's Changed
+* fix(#1135): start the entry list empty for a new account by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1136
+* fix(#1138): step the article reading focus down past the plateau by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1139
+* feat(#1140): entry comments feeds, and a Reddit platform rule by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1142
+* feat(#1143): per-view newest/oldest-first sort toggle by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1145
+* fix(#1146): disable HTTP/2 server push on the HTTP client transport by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1147
+* fix(#1150): reading focus over the comments section by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1151
+* fix(#1152): unify keep and favourite toggles — grey hollow off, green filled on by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1153
+* fix(#1154): make the list count follow the unread switch by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1174
+* fix(#1173): give the Docker stack its own kernel cache by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1175
+* refactor(#1160): one domain-failure → problem+json mapping by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1176
+* refactor(#1165): typed failures and outcomes instead of null, bool and magic strings (PR A) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1177
+* refactor(#1165): requireId() replaces silent id coercion, guarded by PHPStan by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1178
+* refactor(#1170): queries live in src/Repository by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1179
+* refactor(#1157): thin controllers — persistence and entity mutation move into services (PR A) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1180
+* refactor(#1157): thin controllers, part B — lookups, decisions, response assembly and commands leave controllers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1181
+* refactor(#1158): domain code no longer touches Symfony HTTP (part 1 of 2) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1183
+* refactor(#1158): services return typed values; controllers map them (part 2 of 2) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1184
+* refactor(#1164): intention-revealing methods for Feed, User and EntryState (part A) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1185
+* refactor(#1164): intention-revealing entity methods (part B) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1186
+* refactor(#1167): flags, string modes and missing value objects by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1187
+* refactor(#1167): user-scoped repository methods take the owner first by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1188
+* refactor(#1168): shared text, URL, JSON-LD, base64url and header helpers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1189
+* refactor(#1168): shared queries, clocks, config, console options and test fixtures by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1190
+* refactor(#1159): split the proxy admin service from the runtime proxy by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1191
+* refactor(#1159): Grafana and mail settings split into admin and runtime sides by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1192
+* refactor(#1182): services take service values, not request DTOs (part A) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1193
+* refactor(#1182): response mappers, store serialisers and shared value homes (part B) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1194
+* refactor(#1162): the completion transport moves to Service/Ai, Service/Recommendation splits in four by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1195
+* refactor(#1162): one tick context, one catch envelope, one wave context by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1196
+* refactor(#1162): one answer budget, recorded calls settled without a flag by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1197
+* refactor(#1162): run status, call phase and verdict are enums; the debug-log rows carry values by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1200
+* refactor(#1163): reading state moves to service/reading behind one read marker by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1201
+* refactor(#1163): typed parse failure; the reader body cleaner is an ordered pipeline by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1203
+* refactor(#1163): extraction failures are an enum; the extractor is orchestration behind an entry-hints seam by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1204
+* refactor(#1166): the refresh runner splits into an outcome persister, a refresh pass and the housekeeping by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1205
+* refactor(#1166): entry construction and the catalog import get their own collaborators by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1206
+* refactor(#1166): the restore loader loses begin(), bulk subscribe gets a per-batch object by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1207
+* refactor(#1161): the Service modules lose their dependency cycles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1208
+* refactor(#1161): PHPStan rules keep the service module graph acyclic by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1209
+* refactor(#1202): ServiceRoleRule reports every class outside its role, report-only by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1210
+* refactor(#1202): interfaces end in Interface and live in a folder with their implementations by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1211
+* refactor(#1202): factories live in Factory/, and build-and-save services hand construction to one by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1212
+* refactor(#1202): models A to P live in Model/ and take the Model suffix by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1213
+* refactor(#1202): models Q to Z live in Model/ and take the Model suffix by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1214
+* refactor(#1202): per-call objects live in Pass/, static helpers in Support/ by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1215
+* refactor(#1202): services are final readonly; stateful ones reset between messages or say why not by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1216
+* refactor(#1202): every event listener ends in Listener; listener and handler names are enforced by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1217
+* refactor(#1202): ServiceRoleRule fails the build on every role by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1218
+* refactor(#1169): persistence classes are final by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1219
+* refactor(#1169): strict types everywhere; stateless classes are final readonly by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1220
+* refactor(#1169): collaborators are injected, never defaulted or located by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1221
+* refactor(#1169): the reader's policies are injected services by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1222
+* refactor(#1169): the remaining policies are injected services by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1225
+* Show a mascot on the "You're all caught up" empty state by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1199
+* refactor(#1169): test and rule consistency by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1226
+* refactor(#1169): one reorder lookup, owner-first ids, typed results by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1228
+* refactor(#1169): shared values have ruled homes; the recommendation suppressions go by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1229
+* refactor(#1172): the entity manager is $entityManager by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1230
+* refactor(#1172): names outside the service layer say what they hold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1231
+* refactor(#1172): the service modules A to M name what they hold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1233
+* refactor(#1172): the service modules N to Z name what they hold; the change marker names its file by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1234
+* refactor(#1172): the tests outside tests/Service name what they hold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1235
+* refactor(#1172): the service tests name what they hold; the naming rule is enforced by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1236
+* chore(#1171): a guard that caps comment blocks at three lines of prose by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1237
+* chore(#1171): OAuth and event-listener comments follow the comment rules by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1238
+* chore(#1171): security, auth and passkey comments state invariants by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1239
+* chore(#1171): account, admin and settings comments meet the comment rules by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1240
+* chore(#1171): mail and worker comments state invariants only by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1241
+* chore(#1171): the http layer's comments follow the comment rules by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1242
+* chore(#1171): comment sweep G — admin controllers, commands, controller tests by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1243
+* chore(#1171): comment sweep H — repositories and their tests by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1244
+* chore(#1171): comment sweep i, entities, doctrine, enums and kernel by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1245
+* chore(#1171): comment sweep J — test support, e2e suite, root test files by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1246
+* chore(#1171): comment sweep k — ai, ingest, image, sanitizer, opml, catalog by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1247
+* chore(#1171): comment sweep l, backup and search by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1248
+* chore(#1171): comment sweep M, reader support folders by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1249
+* chore(#1171): comment sweep N, Reader root by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1250
+* chore(#1171): comment sweep O, Reader tests by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1251
+* chore(#1171): comment sweep P, fetch, html and scraper by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1252
+* chore(#1171): comment sweep Q, Parser and ReaderAudit by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1253
+* chore(#1171): comment sweep R, subscription, feed and reading by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1254
+* chore(#1171): comment sweep S, discovery, refresh, retention, preview by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1255
+* chore(#1171): comment sweep T, recommendation runs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1256
+* chore(#1171): comment sweep U, recommendation source, clock by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1257
+* chore(#1171): comment sweep V, Recommendation tests by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1259
+* chore(#1171): comment sweep W, the PHPStan rules and backend config; the allow-list goes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1260
+* docs(#1258): the design spec and the README-linked docs match develop by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1261
+* fix(#1263): the OAuth flow cookie always carries Secure by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1272
+* refactor(#1269): small src cleanups by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1273
+* test(#1266): EntryPrunerTest cap tests bind, a misnamed test, a wrong reason, two notes by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1274
+* chore(#1270): config cleanups: CastInt ignores, public test services by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1275
+* test(#1265): every admin route sits under /api/admin/ and refuses a non-admin by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1277
+* chore(#1276): faster backend CI jobs by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1278
+* fix(#1279): the test bootstrap refuses to run outside APP_ENV=test by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1280
+* fix(#1267): a run's views refuse writes once the run ended by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1281
+* refactor(#1268): one substantial-prose check, one emptied-wrapper walk, remove() by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1282
+* fix(#1262): the e2e rot check boots the stack with tracing off by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1283
+* chore(#1232): drop unreachable catch types in FaviconFetcher by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1284
+* test(#1224): pin tag parity between the test and prod containers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1285
+* fix(#1223): a consolidation the provider keeps cutting degrades to the picks it finished by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1286
+* fix(#1287): e2e runs send their mail to Mailpit, never through the saved mail server by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1288
+* fix(#1289): list views get a bottom tail clear of the back-to-top button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1290
+* fix(#1291): no article fetch for any Reddit entry by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1292
+* feat(#475): proxy article images the browser cannot load by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1293
+* Forbid variables acting as class or method names in src by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1295
+* fix(#1296): proxy removePassword keeps unsaved typed edits by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1305
+* chore(#1297): lint baseline mirroring the backend gates by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1307
+* refactor(#1298): each module in the layer that owns it; boundaries rule is an error by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1308
+* refactor(#1299): one home for confirm dialogs and failure messages by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1309
+* refactor(#1300): HTTP only through api files by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1310
+* refactor(#1301): settings endpoints and shapes live in settings by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1311
+* refactor(#1302): entry actions reach the shell without forwarding by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1312
+* refactor(#1303): split the reader shell into six services by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1313
+* refactor(#1304): full names, comment trim; naming rules are errors by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1315
+* refactor(#1314): folders by concern for core, settings, admin and reader by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1316
+* refactor(#1317): size and complexity rules become errors by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1318
+* test(#1319): admin sign-in wait gets 15 s under parallel load by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1320
+* refactor(#1306): comment length is a recommendation, not a PHPStan rule by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1321
+* fix(#1322): caught-up list hides the to-top and mark-above-read buttons by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1323
+* fix(#1324): list images skip the proxy; images are verified, not trusted by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1325
+* chore(#1326): parallel frontend CI and a clean green run by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1327
+* refactor(#1328): remove OpenTelemetry tracing and Pyroscope profiling by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1329
+* feat(#1330): responsive feed images by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1331
+* fix(#1332): article actions take a tap during scroll momentum by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1333
+* revert(#1332): the momentum-tap fix did not fix the tap by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1334
+* fix(#1332): the article chrome floats outside the scroller by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1335
+* fix(#1336): the phone's article scroller leaves the scrollbar to the rail by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1337
+* test(#1338): e2e specs build entries and sign in through the shared support helpers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1339
+* refactor(#1344): recommendation engine seam by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1346
+* refactor(#1345): engine prerequisites for jev by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1347
+* feat(#1345): jev as a second recommendation engine by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1348
+* Each Jev connection keeps its own profile connection (#1349) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1350
+* For You profile: generate independently of recommendation runs (#1351) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1352
+* Profile settings live on the AI settings page (#1353) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1354
+* Profile group on Settings → AI starts collapsed (#1355) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1356
+* The profile debug log sits inside the Profile group (#1357) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1358
+* Article descriptions in the LLM prompts are a fixed 1,000 characters (#1359) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1360
+* fix(#1361): floor the For You bar at the phase-weighted finished share by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1362
+* feat(#1363): send the reader's favorites in the Jev state by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1364
+* docs(#1366): prepare v1.1.0 release highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1367
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.16...v1.1.0
 
 ## [v1.0.16] - 2026-09-23
 
