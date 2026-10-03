@@ -1901,6 +1901,14 @@ git add backend/src/Enum/ProfileRunTrigger.php backend/src/Enum/ProfileRunOutcom
 git commit -m "feat(#1351): a profile run, the stored profile and the profile settings have their own columns"
 ```
 
+*Amended (Task 1 execution):*
+1. `RecommendationSettings` reached 17 fields and PHPMD `TooManyFields` reports above 15. The interval and the two caps live in a new embeddable `App\Entity\ProfileTuning` (`intervalHours`, `keptCap`, `viewedCap`; columns `profile_interval_hours`, `kept_cap`, `viewed_cap`, `columnPrefix: false`, defaults kept), which `updateProfileSettings()` replaces whole and `profileSettings()` reads. Step 6's `$profileIntervalHours`, `$keptCap` and `$viewedCap` properties do not exist; the migration and the public API of Step 6 are unchanged.
+2. Step 11 missed three more `storeProfile(` callers: `tests/Service/Recommendation/Jev/JevPipelineTest.php`, `JevProfileStepTest.php` and `JevRecommendationEngineTest.php` pass `new StoredProfile('…', null, null, null)`.
+3. `BackupSchemaCoverageTest::ACCOUNT_SCOPED_WHOLLY_DROPPED` declares `ProfileRun::class`, and `docs/backup.md` section 6.2 gets a `ProfileRun` row (the doc test requires both).
+4. Step 9: `RecommendationSettingsControllerTest` asserts 40/80 only in the later persisted-state block (the echo block was already 15/30 -> 40/80 in the same test); `testUserOverrideBeatsTheProviderWindow` had no `viewed` assertion, so one (`30`) is added.
+5. Step 15 deletion check 3 applies to `update()` re-adding `$this->profileTuning = ProfileTuning::defaults();`; check 7 breaks the `$profileRun, CallPhase::Distill` argument.
+
+
 ---
 ### Task 2: The run log records a profile run's calls
 
