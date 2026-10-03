@@ -7472,7 +7472,7 @@ Read `docs/design-language.md` before writing the template; the section is built
 
 **Interfaces:**
 - Consumes (Task 7): the five `/api/me/ai/profile` routes and their shapes; `GET /api/recommendations/runs/debug-log/{id}` for a row's bodies.
-- Produces: settings section `profile` (route `/settings/profile`, icon `psychology`, label `settings.profile.title`); `ProfileSettingsService` (`state`, `run`, `runActive`, `starting`, `startFailure`, `loadRun()`, `startRun()`, plus the `DraftSettingsService` API); `<app-profile-section>`; `<app-profile-debug-log [running] [runId]>`; `SettingsApi.profileDebugLog(): Observable<{ entries: DebugLogEntry[] }>`.
+- Produces: settings section `profile` (route `/settings/profile`, icon `psychology`, label `settings.profile.title`); `ProfileSettingsService` (`state`, `profileRun`, `runActive`, `starting`, `startFailure`, `loadRun()`, `startRun()`, plus the `DraftSettingsService` API); `<app-profile-section>`; `<app-profile-debug-log [running] [runId]>`; `SettingsApi.profileDebugLog(): Observable<{ entries: DebugLogEntry[] }>`.
 
 - [ ] **Step 1: Write the failing service spec**
 
@@ -7680,9 +7680,9 @@ export class ProfileSettingsService
 {
   protected readonly endpoint = `${this.base}/api/me/ai/profile`;
 
-  readonly run = signal<ProfileRun | null>(null);
+  readonly profileRun = signal<ProfileRun | null>(null);
   readonly runActive = computed(() => {
-    const status = this.run()?.status;
+    const status = this.profileRun()?.status;
     return status === 'pending' || status === 'running';
   });
   readonly starting = signal(false);
@@ -7725,7 +7725,7 @@ export class ProfileSettingsService
   /** A run that just ended may have replaced the stored profile, so the state is read again, keeping the draft. */
   private adoptRun(run: ProfileRun): void {
     const wasActive = this.runActive();
-    this.run.set(run);
+    this.profileRun.set(run);
     if (wasActive && !this.runActive()) {
       this.http.get<ProfileSettingsState>(this.endpoint).subscribe((state) => this.state.set(state));
     }
@@ -7761,7 +7761,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ProfileSectionComponent } from './profile-section.component';
 import { ProfileRun, ProfileSettingsState } from './profile-settings.service';
-import { profileRun, profileState } from './profile-settings.service.spec';
+import { profileRun, profileState } from '../../../testing/profile-settings';
 
 const ENDPOINT = '/api/me/ai/profile';
 
@@ -8118,7 +8118,7 @@ export class ProfileDebugLogComponent {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text);
+  color: var(--text-secondary);
   font: inherit;
   font-size: var(--fs-sm);
   text-align: start;
@@ -8198,7 +8198,7 @@ export class ProfileSectionComponent {
 
   /** The one line under the profile about the newest run; a failure shows as a banner instead. */
   readonly runStatusKey = computed(() => {
-    const run = this.svc.run();
+    const run = this.svc.profileRun();
     if (this.svc.runActive()) return 'settings.profile.statusRunning';
     if (run?.status !== 'completed') return null;
     if (run.outcome === 'unchanged') return 'settings.profile.statusUnchanged';
@@ -8207,7 +8207,7 @@ export class ProfileSectionComponent {
   });
 
   readonly runError = computed(() => {
-    const run = this.svc.run();
+    const run = this.svc.profileRun();
     return run?.status === 'failed'
       ? this.i18n.translate('settings.profile.statusFailed', { error: run.error ?? '' })
       : null;
@@ -8410,7 +8410,7 @@ export class ProfileSectionComponent {
 
     @if (state.debugEnabled) {
       <app-settings-group icon="bug_report" [title]="'settings.profile.debugTitle' | transloco">
-        <app-profile-debug-log [running]="svc.runActive()" [runId]="svc.run()?.id ?? null" />
+        <app-profile-debug-log [running]="svc.runActive()" [runId]="svc.profileRun()?.id ?? null" />
       </app-settings-group>
     }
   </app-settings-stack>
@@ -8599,6 +8599,16 @@ Open `https://localhost:8443/settings/profile` in the Docker stack (light and da
 git add frontend
 git commit -m "feat(#1351): a top-level profile section shows, schedules and generates the profile"
 ```
+
+**Amendments after execution (Task 9):**
+- `DraftSettingsService` already has a `protected run<T>()`, so the run signal is `profileRun` (service, section component, template).
+- `profileState()`/`profileRun()` live in `frontend/src/testing/profile-settings.ts`: importing them from `profile-settings.service.spec.ts` would register that spec's `describe` a second time inside the section spec.
+- Both pollers (the service's `runs/current` and the debug log's) schedule their `setTimeout` with `NgZone.runOutsideAngular` and step back in with `zone.run`, and the requests take `takeUntilDestroyed`, so an in-flight answer after destroy cannot re-arm a poll. Added pins: the service stops polling on destroy, a finished run's reload keeps the typed draft, the debug log stops polling on destroy, a refused start shows its banner, "only manually" saves `null`, an unnamed connection is labelled by host and model.
+- `--text` does not exist: the debug log uses `--text-secondary` (the recommendation debug panel's text colour) and pads itself with `--panel-inset-y`/`--panel-inset-x` like any non-row panel child; `overflow-wrap: anywhere` is dropped (inherited from `body`). `14rem` in `grid-template-columns` passes Stylelint (no unit rule on that property).
+- The failure banner translates `settings.profile.statusFailed` in the template, so the section injects no `TranslocoService`; `.profile-banner` stretches the banners across the flex-start column, `.panel-banner` gets the bottom inset.
+- The Save button is `app-settings-save-bar button.primary` (its own spec's selector).
+- de `keptCap`/`viewedCap` reuse the existing wording ("Aufbewahrte in der Historie", "Angesehene in der Historie"); `settings.ai.recommendations.keptCap`/`viewedCap`, now unused, are deleted with `profileLabel` and `settings.ai.info.profile`.
+- Also touched: `ai-section.component.spec.ts` (its recommendation fixture carried the dropped fields), the card's `.expert-profile-text` style, the card docblock ("three caps": favourites, pool, picks), and the card spec's counts (five → three numeric tuning fields, three → one `0–500` range); its Jev prompt-pieces test keeps its fixed-prompt and placeholder assertions without the profile.
 
 ---
 ### Task 10: Docs, the full gates on both legs, and a real run
