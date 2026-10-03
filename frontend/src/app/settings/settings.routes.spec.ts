@@ -37,6 +37,15 @@ describe('SETTINGS_ROUTES', () => {
 
     expect(router.url).toBe('/organise');
   });
+
+  it('forwards the retired Profile path to AI, so an old link still lands', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter(SETTINGS_ROUTES)] });
+    const router = TestBed.inject(Router);
+
+    await router.navigateByUrl('/profile');
+
+    expect(router.url).toBe('/ai');
+  });
 });
 
 /** A section owns a path and renders a page. The hub answers on the area's own

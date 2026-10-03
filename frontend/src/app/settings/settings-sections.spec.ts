@@ -19,6 +19,10 @@ describe('SETTINGS_SECTIONS', () => {
     }
   });
 
+  it('lists no Profile section; the profile lives on the AI page (#1353)', () => {
+    expect(SETTINGS_SECTIONS.map((section) => section.path)).not.toContain('profile');
+  });
+
   it('rejects a path no section owns rather than titling a page with nothing', () => {
     // The parameter type keeps a caller from asking in the first place; the
     // cast is how a spec reaches the guard behind it.
