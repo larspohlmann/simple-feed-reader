@@ -322,6 +322,16 @@ but keeps their data. Free it with
 `docker volume rm simple-feed-reader-prod_tempo-data simple-feed-reader-prod_pyroscope-data`,
 and delete the leftover "Application performance" dashboard in Grafana.
 
+The update that gave the reading profile its own runs (#1351) migrates with
+`Version20261003100000`, `Version20261003110000` and `Version20261003120000`.
+They drop `recommendation_run.distilled` and `user_ai_settings.profile_connection_id`,
+so they must ship together with the code, and the worker must restart after
+them: a worker still on the old code crashes on the dropped columns.
+`update.sh` does both. The three migrations are not transactional, so take the
+database dump of §8 before this update: if one stops part-way, restore the dump
+rather than re-running the update, as a re-run either skips the half-applied
+migration and records it as done or stops on a statement that already ran.
+
 ## 7. Reconfigure
 
 To change the public origin, the search engine, the mail settings or the

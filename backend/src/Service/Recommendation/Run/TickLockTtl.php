@@ -11,7 +11,7 @@ use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 
 /**
- * One first-byte wait of the slowest connection the tick may call, plus the margin, not the whole tick: the keepalive
+ * One first-byte wait of the connection the tick calls, plus the margin, not the whole tick: the keepalive
  * refreshes the lock on streamed chunks. Sizing: docs/recommendations-runs.md#the-tick-lock
  */
 final readonly class TickLockTtl

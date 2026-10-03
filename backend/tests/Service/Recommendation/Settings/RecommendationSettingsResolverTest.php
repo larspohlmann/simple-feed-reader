@@ -144,7 +144,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         );
     }
 
-    /** A borrowed distillation sizes its history by the profile connection, not the active one. */
+    /** A profile run sizes its history by the profile connection, not the active one. */
     public function testForAConnectionTheWindowAndTheCeilingAreThatConnections(): void
     {
         $active = AiProviderSettingsFactory::build($this->user);
