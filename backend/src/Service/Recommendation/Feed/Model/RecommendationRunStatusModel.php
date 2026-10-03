@@ -14,6 +14,7 @@ final readonly class RecommendationRunStatusModel
         public \DateTimeImmutable $observedAt,
         public ?int $etaSeconds,
         public bool $waitingForProfile = false,
+        public bool $resumable = false,
     ) {
     }
 }

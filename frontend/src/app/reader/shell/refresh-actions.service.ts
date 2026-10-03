@@ -78,9 +78,10 @@ export class RefreshActions {
    *  budget, so it's confirmed every time before it begins. Run, poll loop and
    *  stop live in `RecommendationsService`; this only guards the door. A
    *  leftover failed run can resume at its failed batch, but its candidate
-   *  snapshot is frozen from when it started -- so the choice is the user's (#329). */
+   *  snapshot is frozen from when it started -- so the choice is the user's (#329).
+   *  Only the server knows whether a failed run can resume, so `resumable` decides. */
   startRecommendations(): void {
-    if (this.recs.report()?.status === 'failed') {
+    if (this.recs.report()?.resumable === true) {
       this.chooseResumeOrFreshRun();
       return;
     }

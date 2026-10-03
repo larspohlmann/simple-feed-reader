@@ -2049,6 +2049,7 @@ describe('ReaderShellComponent', () => {
     batchesDone: 2,
     error: 'The AI provider at http://x/v1 failed: That provider answered with status 400.',
     background: false,
+    resumable: true,
     streamedChars: 0,
     elapsedSeconds: null,
     forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
@@ -2163,6 +2164,27 @@ describe('ReaderShellComponent', () => {
     fixture.detectChanges();
 
     menuItem('Start a new run').click();
+    fixture.detectChanges();
+
+    ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(runningReport);
+  });
+
+  it('goes straight to the fresh-run confirm for a failed run the server cannot resume', () => {
+    const fixture = bootForYou();
+    TestBed.inject(RecommendationsService).report.set({
+      ...failedReport,
+      error: 'Profile generation failed: No connection can build your profile.',
+      resumable: false,
+    });
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.for-you-run') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(document.querySelector('[role="menuitem"]')).toBeNull();
+    (document.querySelector('[data-testid="confirm"]') as HTMLButtonElement).click();
     fixture.detectChanges();
 
     ctrl.expectOne('https://api.test/api/recommendations/runs').flush(runningReport);

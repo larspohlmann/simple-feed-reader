@@ -272,6 +272,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'background' => false,
                 'waitingForLock' => false,
                 'waitingForProfile' => false,
+                'resumable' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'etaSeconds' => null,
@@ -291,6 +292,37 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(409);
         self::assertSame('no_resumable_recommendation_run', $this->payload($client->getResponse())['type']);
+    }
+
+    public function testTheStatusOfAFailedRunSaysItCanResume(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-status-resumable@example.test');
+        $this->seedReadyAiSettings($user);
+        $this->persistFailedRun($user);
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        self::assertTrue($this->payload($client->getResponse())['resumable']);
+    }
+
+    public function testTheStatusOfARunThatFailedWaitingForItsProfileSaysItCannotResume(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('run-status-not-resumable@example.test');
+        $this->seedReadyAiSettings($user);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $run = new RecommendationRun($user, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $run->fail('Profile generation failed: gone', new \DateTimeImmutable('2026-10-03 09:05:00'));
+        $entityManager->persist($run);
+        $entityManager->flush();
+
+        $client->request('GET', '/api/recommendations/runs/current', server: $headers);
+
+        $payload = $this->payload($client->getResponse());
+        self::assertSame('failed', $payload['status']);
+        self::assertFalse($payload['resumable']);
     }
 
     public function testResumeContinuesAFailedRun(): void
@@ -385,6 +417,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'background' => false,
                 'waitingForLock' => false,
                 'waitingForProfile' => false,
+                'resumable' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
@@ -775,6 +808,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'background' => false,
                 'waitingForLock' => false,
                 'waitingForProfile' => false,
+                'resumable' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,

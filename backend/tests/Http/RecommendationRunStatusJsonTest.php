@@ -129,6 +129,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'background' => false,
                 'waitingForLock' => true,
                 'waitingForProfile' => false,
+                'resumable' => false,
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
@@ -156,6 +157,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             $this->emptySummary(),
             $startedAt->modify('+90 seconds'),
             42,
+            resumable: true,
         ));
 
         self::assertSame(
@@ -167,6 +169,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'background' => false,
                 'waitingForLock' => false,
                 'waitingForProfile' => false,
+                'resumable' => true,
                 'streamedChars' => 0,
                 'firstBatchStarted' => true,
                 'elapsedSeconds' => 90,

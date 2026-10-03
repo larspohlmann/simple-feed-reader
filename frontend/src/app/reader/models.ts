@@ -460,6 +460,9 @@ export interface RecommendationRunReport {
   readonly waitingForLock?: boolean;
   /** True while a pending run waits for its profile to be built. Optional for older-backend responses. */
   readonly waitingForProfile?: boolean;
+  /** True when a failed run would continue on resume; a run that failed before its snapshot, or a Jev
+   *  run without a profile, would not. Optional for older-backend responses. */
+  readonly resumable?: boolean;
   /** Bytes of the in-flight provider answer received so far this call; 0
    *  between calls, since the server resets the counter when a call ends. */
   streamedChars: number;
