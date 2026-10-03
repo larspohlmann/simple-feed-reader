@@ -5615,6 +5615,18 @@ git commit -m "refactor(#1351): recommendation runs read a frozen copy of the st
 
 Check `git status` before `git add -A backend` that nothing outside this task is staged.
 
+*Amended (Task 5 execution):*
+1. `RecommendationRunTest` has no `pendingRun()`; the two new tests use its `makeRun()`. `testCompleteStampsAndFillsProgress` also changes: a completed two-batch LLM run reads `batchesDone` 3, not 4.
+2. `TickLockTtlTest`'s slow-active-connection case itself seeded a profile connection, so all three seeding tests go and one replaces them: `testASlowActiveConnectionGetsTheSlowBound` (Jev connection marked slow, no profile connection, 900 s + margin).
+3. `JevRecommendationEngineTest` has no `runningJevRun()`/`jevTick()`/`engine()` builders: it drives the advancer. Its `startAndDistil()` becomes `startAndSnapshot()` (`storeProfile(self::PROFILE)`, start, the snapshot tick); `setUp()` no longer seeds a profile connection; log indices drop by one (`logs($run)[1]`, `array_slice(…, 1)`, the whole list for the unusable-reply verdicts). The no-profile test drives start → snapshot → one tick and also asserts no log rows and no strike; the frozen-profile test is `testEveryWaveSendsTheProfileThisRunFroze`.
+4. The migration also overrides `isTransactional(): bool { return false; }`, like `Version20261003100000`: MySQL DDL commits implicitly and doctrine/migrations logs a deprecation otherwise.
+5. `RecommendationRunTimingRepositoryTest` is phase-agnostic: where a `Distill` row was the only row a test needed, it becomes a `Batch` (batch 1) or `Consolidate` row with the same span, so every expected number stays; the first test just drops the distill row and its expected span.
+6. Further fallout rule-3 deletions: `RecommendationRunAdvancerTest::testEachPhaseRequestsItsOwnResponseSchema` (batch and consolidation share the schema name `recommendations`, so without the `profile` call the test cannot tell phases apart), its `batchLogRowsOfLatestRun()` helper (every row of those scenarios is a batch row; callers use `logRowsOfLatestRun()`), and in `JevPipelineTest` the borrowing and fallback cases. `JevPipelineTest`'s no-profile-connection and nothing-stored cases merge into `testWithoutAProfileTheRunFailsEvenWithGuidance` (no resume: a resumed run keeps its frozen `null`, and `NO_PROFILE` says to start a new run).
+7. `RecommendationPipelineTest::testDistillationFailureDegradesToNoProfileBatches` becomes `testWithoutAStoredProfileTheRunScoresWithoutOne` (no stored profile: the run completes, nothing frozen); its `storedProfileText()` helper goes.
+8. `RecommendationPromptBuilder` (in `Llm/`) docblocks name the profile run: `ESTIMATED_PROFILE_TOKENS` no longer says "before distillation has written it", `messagesWithCorrectiveTail()` says distillation passes the profile run's last reply.
+
+**Task 6 inherits:** with the wait in place, three Task 5 tests that expect a no-profile run to proceed or fail at its first engine tick will instead find it `pending`: `RecommendationPipelineTest::testWithoutAStoredProfileTheRunScoresWithoutOne` (delete it; Task 6's `SnapshotPhaseTest` pins the wait), `JevRecommendationEngineTest::testARunWithoutAProfileFailsWithTheReasonAndNeverAsksSystemOne` and `JevPipelineTest::testWithoutAProfileTheRunFailsEvenWithGuidance` (reach `NO_PROFILE` through a run whose profile run completed `no_history`, i.e. `ready(null)`, or keep the unit-level guard test only).
+
 ---
 ### Task 6: A run without a stored profile asks the profile module for one and waits in `pending`
 
