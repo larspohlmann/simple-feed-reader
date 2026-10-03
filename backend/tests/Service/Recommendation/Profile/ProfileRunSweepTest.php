@@ -21,6 +21,8 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SeedsUsers;
+use Doctrine\ORM\Event\PrePersistEventArgs;
+use Doctrine\ORM\Events;
 
 final class ProfileRunSweepTest extends DbTestCase
 {
@@ -45,6 +47,25 @@ final class ProfileRunSweepTest extends DbTestCase
 
         self::assertSame(ProfileRunTrigger::Scheduled, $this->profileRuns()->findActiveForUser($first)?->getTrigger());
         self::assertSame(ProfileRunTrigger::Scheduled, $this->profileRuns()->findActiveForUser($second)?->getTrigger());
+    }
+
+    public function testAnAccountWhoseStartFailsIsLoggedAndSkippedAndTheOthersStillStart(): void
+    {
+        $failing = $this->scheduledOwner('profile-sweep-e@example.test');
+        $healthy = $this->scheduledOwner('profile-sweep-f@example.test');
+        $this->entityManager->getEventManager()->addEventListener(
+            Events::prePersist,
+            $this->listenerRefusingProfileRunsFor($failing),
+        );
+        $logger = new RecordingLogger();
+
+        self::assertSame(1, $this->sweepLoggingTo($logger)->startDueRuns());
+
+        self::assertNull($this->profileRuns()->findActiveForUser($failing));
+        self::assertNotNull($this->profileRuns()->findActiveForUser($healthy));
+        self::assertCount(1, $logger->records);
+        self::assertSame('error', $logger->records[0]['level']);
+        self::assertSame($failing->getId(), $logger->records[0]['context']['userId']);
     }
 
     public function testAdvanceTicksEveryActiveRunAndCountsThem(): void
@@ -91,6 +112,23 @@ final class ProfileRunSweepTest extends DbTestCase
         $writer->saveProfileSettings($owner, new ProfileSettingsValues(24, null, 40, 80));
 
         return $owner;
+    }
+
+    private function listenerRefusingProfileRunsFor(User $owner): object
+    {
+        return new readonly class ($owner) {
+            public function __construct(private User $owner)
+            {
+            }
+
+            public function prePersist(PrePersistEventArgs $event): void
+            {
+                $persisted = $event->getObject();
+                if ($persisted instanceof ProfileRun && $persisted->getUser() === $this->owner) {
+                    throw new \RuntimeException('Simulated: this account cannot start a profile run.');
+                }
+            }
+        };
     }
 
     private function sweepLoggingTo(RecordingLogger $logger): ProfileRunSweep

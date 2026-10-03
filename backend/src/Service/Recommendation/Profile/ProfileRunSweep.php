@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
+use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -24,12 +25,12 @@ final readonly class ProfileRunSweep
 
     public function startDueRuns(): int
     {
-        $due = $this->finder->due();
-        foreach ($due as $user) {
-            $this->starter->start($user, ProfileRunTrigger::Scheduled);
+        $started = 0;
+        foreach ($this->finder->due() as $user) {
+            $started += $this->startOne($user);
         }
 
-        return \count($due);
+        return $started;
     }
 
     /** Counts attempted runs, failed ones included: the drain command loops until a pass attempts none. */
@@ -46,6 +47,23 @@ final readonly class ProfileRunSweep
     public function activeRunCount(): int
     {
         return \count($this->profileRuns->findAllActive());
+    }
+
+    /** One account's failure must not cost the others their run, nor the cron sweep its recommendation pass. */
+    private function startOne(User $user): int
+    {
+        try {
+            $this->starter->start($user, ProfileRunTrigger::Scheduled);
+
+            return 1;
+        } catch (\Throwable $exception) {
+            $this->logger->error('Profile sweep: starting a due profile run failed.', [
+                'userId' => $user->getId(),
+                'exception' => $exception,
+            ]);
+
+            return 0;
+        }
     }
 
     private function advanceOne(ProfileRun $profileRun, TickDriver $driver): void
