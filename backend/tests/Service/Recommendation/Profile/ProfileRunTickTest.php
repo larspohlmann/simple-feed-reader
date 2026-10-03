@@ -17,6 +17,8 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Ai\Model\RetryPlanModel;
+use App\Service\Ai\RateLimitedCalls;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Profile\ProfileConnections;
 use App\Service\Recommendation\Profile\ProfileRunTick;
@@ -26,6 +28,7 @@ use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
+use Symfony\Component\Clock\MockClock;
 
 final class ProfileRunTickTest extends DbTestCase
 {
@@ -310,7 +313,8 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(1, $profileRun->getTransportFailures());
     }
 
-    public function testAServerErrorIsAStrike(): void
+    /** A polling tick never waits out a 5xx: it defers, and the deferral is the strike. */
+    public function testAServerErrorOnAPollingTickDefersAsAStrike(): void
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
@@ -320,6 +324,35 @@ final class ProfileRunTickTest extends DbTestCase
 
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
+        self::assertCount(1, $this->chat()->calls(), 'a polling tick sends once and retries nothing');
+    }
+
+    /** The worker waits out a 5xx in blocking retries; once they are spent, the 5xx itself is the strike. */
+    public function testAServerErrorThatOutlastsTheWorkersRetriesIsAStrikeAndTheThirdFailsTheRun(): void
+    {
+        self::getContainer()->set(RateLimitedCalls::class, new RateLimitedCalls(new MockClock()));
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $this->fixtures->storeProfile($this->owner, 'Earlier profile.');
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $callsPerTick = 1 + RetryPlanModel::blocking()->maxRetries();
+        for ($reply = 0; $reply < 3 * $callsPerTick; $reply++) {
+            $this->chat()->queueFailure(new RetryableProviderException(503));
+        }
+
+        $this->tick()->advance($profileRun, TickDriver::Worker);
+        self::assertSame(RunStatus::Running, $profileRun->getStatus());
+        self::assertSame(1, $profileRun->getTransportFailures());
+        self::assertCount($callsPerTick, $this->chat()->calls());
+
+        $this->tick()->advance($profileRun, TickDriver::Worker);
+        $this->tick()->advance($profileRun, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Failed, $profileRun->getStatus());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: That provider answered with status 503.',
+            $profileRun->getError(),
+        );
+        self::assertSame('Earlier profile.', $this->storedProfile()->getText());
     }
 
     public function testARunWithoutAUsableConnectionIsSavedAsFailed(): void
