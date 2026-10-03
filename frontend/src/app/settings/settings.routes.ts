@@ -65,6 +65,14 @@ export const SETTINGS_ROUTES: Routes = [
           import('./ai/ai-section.component').then((module) => module.AiSectionComponent),
       },
       {
+        path: 'profile',
+        title: sectionLabelKey('profile'),
+        loadComponent: () =>
+          import('./profile/profile-section.component').then(
+            (module) => module.ProfileSectionComponent,
+          ),
+      },
+      {
         path: 'about',
         title: sectionLabelKey('about'),
         loadComponent: () =>

@@ -104,38 +104,6 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
             </app-field>
 
             <app-field
-              [label]="'settings.ai.recommendations.keptCap' | transloco"
-              [info]="'settings.ai.info.keptCap' | transloco"
-              [error]="fieldError('keptCap')"
-            >
-              <p class="numeric-range">{{ rangeLabel('keptCap') }}</p>
-              <input
-                type="number"
-                [min]="range('keptCap').min"
-                [max]="range('keptCap').max"
-                [attr.aria-invalid]="isFieldInvalid('keptCap')"
-                [value]="keptCap()"
-                (input)="onCapInput('keptCap', keptCap, $event)"
-              />
-            </app-field>
-
-            <app-field
-              [label]="'settings.ai.recommendations.viewedCap' | transloco"
-              [info]="'settings.ai.info.viewedCap' | transloco"
-              [error]="fieldError('viewedCap')"
-            >
-              <p class="numeric-range">{{ rangeLabel('viewedCap') }}</p>
-              <input
-                type="number"
-                [min]="range('viewedCap').min"
-                [max]="range('viewedCap').max"
-                [attr.aria-invalid]="isFieldInvalid('viewedCap')"
-                [value]="viewedCap()"
-                (input)="onCapInput('viewedCap', viewedCap, $event)"
-              />
-            </app-field>
-
-            <app-field
               [label]="'settings.ai.recommendations.candidatePool' | transloco"
               [info]="'settings.ai.info.candidatePool' | transloco"
               [error]="fieldError('candidatePoolSize')"
@@ -245,19 +213,6 @@ curl -X POST https://YOUR_HOST/maintenance/recommendations/sweep
                 }}
               </app-button>
             </div>
-
-            @if (state.profileText; as profile) {
-              <app-disclosure
-                appearance="drill-in"
-                data-testid="recommendation-profile"
-                [label]="'settings.ai.recommendations.profileLabel' | transloco"
-              >
-                <div class="prompt-body">
-                  <p class="prompt-info">{{ 'settings.ai.info.profile' | transloco }}</p>
-                  <p class="expert-profile-text">{{ profile }}</p>
-                </div>
-              </app-disclosure>
-            }
 
             @if (offersPrompt()) {
               @if (state.fixedPrompt; as fixedPrompt) {

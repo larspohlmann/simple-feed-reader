@@ -11,8 +11,6 @@ export function typedSeed(state: RecommendationSettingsState | null): Recommenda
   return {
     guidancePrompt: pick('guidancePrompt', ''),
     favoritesCap: pick('favoritesCap', 0),
-    keptCap: pick('keptCap', 0),
-    viewedCap: pick('viewedCap', 0),
     candidatePoolSize: pick('candidatePoolSize', 0),
     picksLimit: pick('picksLimit', 0),
     batchSize: pick('batchSize', 'medium' as const),

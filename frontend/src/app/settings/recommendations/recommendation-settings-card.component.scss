@@ -104,7 +104,6 @@ textarea {
   }
 }
 
-.expert-profile-text,
 .fixed,
 .cron-example {
   margin: 0;
@@ -117,14 +116,12 @@ textarea {
   white-space: pre-wrap;
 }
 
-// The profile prose and the fixed prompt read in the same body font -- the
-// fixed prompt is instructions, not code, so its default monospace is dropped.
-.expert-profile-text,
+// The fixed prompt is instructions, not code, so its default monospace is dropped.
 .fixed {
   font-family: inherit;
 }
 
-// The three prompt areas (guidance, profile, fixed) stack one above the other.
+// The prompt areas (guidance, fixed) stack one above the other.
 .reference-refs {
   display: flex;
   flex-direction: column;

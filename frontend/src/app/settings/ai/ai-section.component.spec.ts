@@ -69,8 +69,6 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   expertDefaults: {
     guidancePrompt: null,
     favoritesCap: 40,
-    keptCap: 40,
-    viewedCap: 80,
     candidatePoolSize: 500,
     picksLimit: 50,
     batchSize: 'medium',
@@ -78,15 +76,11 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   },
   expertBounds: {
     favoritesCap: { min: 0, max: 500 },
-    keptCap: { min: 0, max: 500 },
-    viewedCap: { min: 0, max: 500 },
     candidatePoolSize: { min: 10, max: 5000 },
     picksLimit: { min: 1, max: 500 },
     contextWindow: { min: 4096, max: 2097152 },
   },
   favoritesCap: 50,
-  keptCap: 50,
-  viewedCap: 200,
   candidatePoolSize: 400,
   lookbackDays: 2,
   picksLimit: 20,
@@ -97,7 +91,6 @@ const RECOMMENDATIONS: RecommendationSettingsState = {
   debugEnabled: false,
   autoGenerateIntervalHours: null,
   workerAlive: true,
-  profileText: null,
   showScoreAndReasons: false,
 };
 

@@ -5,14 +5,14 @@ export interface OpmlImportResult {
   skippedOverLimit: number;
 }
 
-/** One provider call logged during a for-you run: a scored batch or the
- *  final dedup pass. `verdict` is null while the call is still streaming. */
+/** One provider call logged during a for-you run or a profile run. `verdict`
+ *  is null while the call is still streaming. */
 export interface DebugLogEntry {
   id: number;
   /** The run this call belongs to. The log can hold more than one run (a
    *  resumed run keeps appending), so the panel groups rows by it. */
   runId: number;
-  phase: 'batch' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
   batchNumber: number | null;
   attempt: number;
   verdict: 'usable' | 'unusable' | 'transport-failed' | null;
@@ -64,7 +64,7 @@ export interface DebugLogPayload {
 /** The full request/response pair for one logged provider call. */
 export interface DebugLogDetail {
   id: number;
-  phase: 'batch' | 'dedup';
+  phase: 'distill' | 'batch' | 'consolidate' | 'dedup';
   batchNumber: number | null;
   attempt: number;
   verdict: string | null;

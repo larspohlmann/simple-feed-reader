@@ -14,8 +14,6 @@ export type RecommendationBatchSize = 'small' | 'medium' | 'large';
 export interface RecommendationExpertDefaults {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
-  readonly keptCap: number;
-  readonly viewedCap: number;
   readonly candidatePoolSize: number;
   readonly picksLimit: number;
   readonly batchSize: RecommendationBatchSize;
@@ -28,7 +26,7 @@ export interface RecommendationSettingBounds {
 }
 
 export type RecommendationExpertField =
-  'favoritesCap' | 'keptCap' | 'viewedCap' | 'candidatePoolSize' | 'picksLimit' | 'contextWindow';
+  'favoritesCap' | 'candidatePoolSize' | 'picksLimit' | 'contextWindow';
 
 /** Mirrors the GET payload 1:1 — see Task 14's `RecommendationSettingsJson`. */
 export interface RecommendationSettingsState {
@@ -43,8 +41,6 @@ export interface RecommendationSettingsState {
   readonly expertDefaults: RecommendationExpertDefaults;
   readonly expertBounds: Readonly<Record<RecommendationExpertField, RecommendationSettingBounds>>;
   readonly favoritesCap: number;
-  readonly keptCap: number;
-  readonly viewedCap: number;
   readonly candidatePoolSize: number;
   /** How many days back the candidate pool reaches; 1-7, default 2 (#386). */
   readonly lookbackDays: number;
@@ -61,22 +57,17 @@ export interface RecommendationSettingsState {
   /** Whether a background worker heartbeat is fresh; false hides the schedule's
    *  external-cron help note. */
   readonly workerAlive: boolean;
-  /** The persisted, distilled preference profile the pipeline writes; read-only
-   *  here, null until a run has generated one. */
-  readonly profileText: string | null;
   /** Shows each pick's score and, where the engine writes one, its reason — one
    *  switch for both; debug mode reaches neither (#576). */
   readonly showScoreAndReasons: boolean;
 }
 
-/** The writable fields of the PUT body. `showScoreAndReasons` is the twelfth field;
+/** The writable fields of the PUT body. `showScoreAndReasons` is the tenth field;
  *  every write built through this service (`bodyFromState`, `saveInstant`,
  *  `save`) always sends it. */
 export interface SaveRecommendationSettings {
   readonly guidancePrompt: string | null;
   readonly favoritesCap: number;
-  readonly keptCap: number;
-  readonly viewedCap: number;
   readonly candidatePoolSize: number;
   readonly lookbackDays: number;
   readonly picksLimit: number;
@@ -127,8 +118,6 @@ export class RecommendationSettingsService extends DraftSettingsService<
     return {
       guidancePrompt: state.guidancePrompt,
       favoritesCap: state.favoritesCap,
-      keptCap: state.keptCap,
-      viewedCap: state.viewedCap,
       candidatePoolSize: state.candidatePoolSize,
       lookbackDays: state.lookbackDays,
       picksLimit: state.picksLimit,

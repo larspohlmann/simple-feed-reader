@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import {
   DebugLogDetail,
+  DebugLogEntry,
   DebugLogPayload,
   OpmlImportResult,
   ReadingActivity,
@@ -62,6 +63,13 @@ export class SettingsApi {
     const query = runId === undefined ? '' : `?run=${runId}`;
     return this.http.get<DebugLogPayload>(
       `${this.base}/api/recommendations/runs/debug-log${query}`,
+    );
+  }
+
+  /** The newest profile run's calls, for the profile section's debug panel. */
+  profileDebugLog(): Observable<{ entries: DebugLogEntry[] }> {
+    return this.http.get<{ entries: DebugLogEntry[] }>(
+      `${this.base}/api/me/ai/profile/runs/current/log`,
     );
   }
 

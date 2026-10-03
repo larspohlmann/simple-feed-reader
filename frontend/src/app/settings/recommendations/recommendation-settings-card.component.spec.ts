@@ -34,8 +34,6 @@ describe('RecommendationSettingsCardComponent', () => {
     expertDefaults: {
       guidancePrompt: null,
       favoritesCap: 40,
-      keptCap: 40,
-      viewedCap: 80,
       candidatePoolSize: 500,
       picksLimit: 50,
       batchSize: 'medium',
@@ -43,15 +41,11 @@ describe('RecommendationSettingsCardComponent', () => {
     },
     expertBounds: {
       favoritesCap: { min: 0, max: 500 },
-      keptCap: { min: 0, max: 500 },
-      viewedCap: { min: 0, max: 500 },
       candidatePoolSize: { min: 10, max: 5000 },
       picksLimit: { min: 1, max: 500 },
       contextWindow: { min: 4096, max: 2097152 },
     },
     favoritesCap: 50,
-    keptCap: 50,
-    viewedCap: 200,
     candidatePoolSize: 400,
     picksLimit: 20,
     batchSize: 'medium',
@@ -62,7 +56,6 @@ describe('RecommendationSettingsCardComponent', () => {
     autoGenerateIntervalHours: null,
     lookbackDays: 2,
     workerAlive: true,
-    profileText: null,
     showScoreAndReasons: false,
   };
 
@@ -187,7 +180,7 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(pre.textContent).toContain('Return at most 20 picks as a JSON array of entry ids.');
   });
 
-  it('renders the five numeric tuning fields and the batch-size select inside the expert drill-in', () => {
+  it('renders the three numeric tuning fields and the batch-size select inside the expert drill-in', () => {
     const fixture = mount();
 
     const grid = fixture.nativeElement.querySelector('details .expert-grid') as HTMLElement;
@@ -197,8 +190,6 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(labels).toEqual(
       expect.arrayContaining([
         expect.stringContaining('Favorites in history'),
-        expect.stringContaining('Kept in history'),
-        expect.stringContaining('Viewed in history'),
         expect.stringContaining('Maximum articles'),
         expect.stringContaining('Maximum picks'),
         expect.stringContaining('Batch size'),
@@ -216,7 +207,7 @@ describe('RecommendationSettingsCardComponent', () => {
     expect(ranges).toEqual(
       expect.arrayContaining(['0–500', '10–5,000', '1–500', '4,096–2,097,152']),
     );
-    expect(ranges.filter((range) => range === '0–500')).toHaveLength(3);
+    expect(ranges.filter((range) => range === '0–500')).toHaveLength(1);
   });
 
   describe("rendering from the engine's capabilities", () => {
@@ -259,17 +250,11 @@ describe('RecommendationSettingsCardComponent', () => {
   });
 
   describe("the prompt capability's read-only pieces", () => {
-    it('shows the distilled profile but no fixed prompt or guidance default to an engine that sends no prompt', () => {
-      const fixture = mount(
-        { ...STATE, profileText: 'Likes self-hosted tooling and Rust.' },
-        JEV_RECOMMENDATION_CAPABILITIES,
-      );
+    it('shows no fixed prompt or guidance default to an engine that sends no prompt', () => {
+      const fixture = mount(STATE, JEV_RECOMMENDATION_CAPABILITIES);
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
-      expect(
-        fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]')?.textContent,
-      ).toContain('Likes self-hosted tooling and Rust.');
       expect(guidance.placeholder).toBe('');
     });
 
@@ -460,8 +445,6 @@ describe('RecommendationSettingsCardComponent', () => {
 
       expect(fixture.componentInstance.guidance()).toBe('');
       expect(fixture.componentInstance.favoritesCap()).toBe(40);
-      expect(fixture.componentInstance.keptCap()).toBe(40);
-      expect(fixture.componentInstance.viewedCap()).toBe(80);
       expect(fixture.componentInstance.candidatePoolSize()).toBe(500);
       expect(fixture.componentInstance.picksLimit()).toBe(50);
       expect(fixture.componentInstance.batchSize()).toBe('medium');
@@ -688,28 +671,19 @@ describe('RecommendationSettingsCardComponent', () => {
     ) as HTMLButtonElement[];
     expect(triggers.map((element) => element.getAttribute('aria-label'))).toEqual([
       'Favorites in history',
-      'Kept in history',
-      'Viewed in history',
       'Maximum articles',
       'Maximum picks',
       'Batch size',
     ]);
   });
 
-  it('shows the persisted preference profile read-only when present', () => {
-    const fixture = mount({ ...STATE, profileText: 'Likes self-hosted tooling and Rust.' });
-
-    const element = fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]');
-    expect(element?.textContent).toContain('Likes self-hosted tooling and Rust.');
-    expect(element?.querySelector('textarea')).toBeNull();
-  });
-
-  it('hides the profile block when no profile has been generated yet', () => {
-    const fixture = mount({ ...STATE, profileText: null });
+  it('no longer shows the profile or the kept and viewed caps', () => {
+    const fixture = mount();
 
     expect(
       fixture.nativeElement.querySelector('[data-testid="recommendation-profile"]'),
     ).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('Kept in history');
   });
 
   describe('clearing recommendations', () => {

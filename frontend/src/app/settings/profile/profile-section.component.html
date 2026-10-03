@@ -1,0 +1,146 @@
+@if (svc.state(); as state) {
+  <app-settings-stack>
+    <app-settings-group
+      icon="psychology"
+      [title]="'settings.profile.title' | transloco"
+      [caption]="'settings.profile.caption' | transloco"
+    >
+      <div class="profile">
+        @if (state.profileText; as text) {
+          <p class="profile-text" data-testid="profile-text">{{ text }}</p>
+          @if (generatedAt(); as when) {
+            <p class="profile-meta" data-testid="profile-meta">
+              {{
+                'settings.profile.generated'
+                  | transloco
+                    : {
+                        when: when,
+                        model: state.generatedBy?.model ?? '',
+                        host: state.generatedBy?.providerHost ?? '',
+                      }
+              }}
+            </p>
+          }
+        } @else {
+          <p class="profile-empty" data-testid="profile-empty">
+            {{ 'settings.profile.empty' | transloco }}
+          </p>
+        }
+
+        @if (runStatusKey(); as key) {
+          <p class="profile-status" data-testid="profile-status">{{ key | transloco }}</p>
+        }
+        @if (runError(); as error) {
+          <app-error-banner
+            class="profile-banner"
+            [message]="'settings.profile.statusFailed' | transloco: { error: error }"
+          />
+        }
+        @if (startFailureMessage(); as message) {
+          <app-error-banner class="profile-banner" [message]="message" />
+        }
+
+        @if (state.connection) {
+          <app-button
+            data-testid="generate-now"
+            [disabled]="!canGenerate()"
+            [loading]="svc.starting()"
+            (click)="generate()"
+          >
+            {{ 'settings.profile.generateNow' | transloco }}
+          </app-button>
+        } @else {
+          <p class="profile-hint" data-testid="choose-connection">
+            {{ 'settings.profile.chooseConnection' | transloco }}
+          </p>
+        }
+      </div>
+    </app-settings-group>
+
+    <app-settings-group icon="schedule" [title]="'settings.profile.settingsTitle' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.profile.schedule' | transloco"
+        [description]="'settings.profile.scheduleDesc' | transloco"
+      >
+        <select data-testid="profile-schedule" (change)="onSchedule($event)">
+          @for (hours of state.intervalChoices; track hours) {
+            <option [value]="hours ?? ''" [selected]="state.intervalHours === hours">
+              {{ intervalKey(hours) | transloco }}
+            </option>
+          }
+        </select>
+      </app-settings-row>
+
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.profile.connection' | transloco"
+        [description]="'settings.profile.connectionDesc' | transloco"
+      >
+        <select data-testid="profile-connection" (change)="onConnection($event)">
+          <option value="" [selected]="state.connectionId === null">
+            {{ 'settings.profile.connectionActive' | transloco }}
+          </option>
+          @for (candidate of state.candidates; track candidate.id) {
+            <option [value]="candidate.id" [selected]="state.connectionId === candidate.id">
+              {{ label(candidate) }}
+            </option>
+          }
+        </select>
+      </app-settings-row>
+
+      <div class="caps">
+        <app-field
+          [label]="'settings.profile.keptCap' | transloco"
+          [info]="'settings.ai.info.keptCap' | transloco"
+        >
+          <p class="numeric-range">{{ rangeLabel('keptCap') }}</p>
+          <input
+            data-testid="profile-kept-cap"
+            type="number"
+            [min]="state.bounds.keptCap.min"
+            [max]="state.bounds.keptCap.max"
+            [value]="keptCap()"
+            (input)="onCapInput('keptCap', keptCap, $event)"
+          />
+        </app-field>
+        <app-field
+          [label]="'settings.profile.viewedCap' | transloco"
+          [info]="'settings.ai.info.viewedCap' | transloco"
+        >
+          <p class="numeric-range">{{ rangeLabel('viewedCap') }}</p>
+          <input
+            data-testid="profile-viewed-cap"
+            type="number"
+            [min]="state.bounds.viewedCap.min"
+            [max]="state.bounds.viewedCap.max"
+            [value]="viewedCap()"
+            (input)="onCapInput('viewedCap', viewedCap, $event)"
+          />
+        </app-field>
+      </div>
+
+      @if (svc.failureMessage(); as message) {
+        <div class="panel-banner">
+          <app-error-banner [message]="message" />
+        </div>
+      }
+
+      <app-settings-save-bar
+        [dirty]="svc.dirty()"
+        [saving]="svc.busy()"
+        [saveLabel]="'settings.profile.save' | transloco"
+        [resetLabel]="'settings.profile.reset' | transloco"
+        [unsavedLabel]="'settings.profile.unsaved' | transloco"
+        (save)="svc.save()"
+        (reset)="onReset()"
+      />
+    </app-settings-group>
+
+    @if (state.debugEnabled) {
+      <app-settings-group icon="bug_report" [title]="'settings.profile.debugTitle' | transloco">
+        <app-profile-debug-log [running]="svc.runActive()" [runId]="svc.profileRun()?.id ?? null" />
+      </app-settings-group>
+    }
+  </app-settings-stack>
+}
