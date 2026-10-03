@@ -839,6 +839,54 @@ describe('RecommendationsService', () => {
     jest.useRealTimers();
   }));
 
+  describe('real progress as the floor', () => {
+    const progressAfter = (over: Partial<RecommendationRunReport>): number => {
+      service.start();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs')
+        .flush(report({ status: 'running', ...over }));
+      const progress = service.progress();
+      ctrl
+        .expectOne('https://api.test/api/recommendations/runs/tick')
+        .flush(report({ status: 'completed' }));
+      return progress;
+    };
+
+    it('weighs finished batches by the phase history from the server', () => {
+      expect(
+        progressAfter({ batchesTotal: 10, batchesDone: 9, etaSeconds: null, finishedShare: 0.6 }),
+      ).toBeCloseTo(0.6);
+    });
+
+    it('falls back to the batch count without history', () => {
+      expect(progressAfter({ batchesTotal: 10, batchesDone: 9, etaSeconds: null })).toBeCloseTo(
+        0.9,
+      );
+    });
+
+    it('jumps to the finished-batch share when the time model lags behind', () => {
+      expect(
+        progressAfter({
+          batchesTotal: 4,
+          batchesDone: 3,
+          elapsedSeconds: 20,
+          etaSeconds: 60,
+          finishedShare: 0.5,
+        }),
+      ).toBeCloseTo(0.5);
+    });
+
+    it('keeps the time model when it is ahead of the finished batches', () => {
+      expect(
+        progressAfter({ batchesTotal: 4, batchesDone: 1, elapsedSeconds: 60, etaSeconds: 20 }),
+      ).toBeCloseTo(0.75);
+    });
+
+    it('stays short of full while the run is still going after its last batch', () => {
+      expect(progressAfter({ batchesTotal: 4, batchesDone: 4, etaSeconds: null })).toBe(0.99);
+    });
+  });
+
   it('shows the server ETA and ticks it down between polls', fakeAsync(() => {
     jest.useFakeTimers();
     nowMs = 0;

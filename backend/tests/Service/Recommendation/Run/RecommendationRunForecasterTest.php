@@ -13,14 +13,14 @@ use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\RecommendationEtaEstimator;
+use App\Service\Recommendation\Run\RecommendationRunForecaster;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class RecommendationEtaEstimatorTest extends DbTestCase
+final class RecommendationRunForecasterTest extends DbTestCase
 {
     private const string RUN_START = '2026-08-08T12:00:00Z';
     private const string HISTORY_START = '2026-08-07T09:00:00Z';
@@ -49,7 +49,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $report = $this->liveReportWithBatches(3);
 
-        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds($report, $this->user);
+        $eta = $this->forecasterAt('+20 seconds')->forecast($report, $this->user)?->etaSeconds;
 
         self::assertSame(50, $eta);
     }
@@ -59,26 +59,37 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $report = $this->liveReportWithBatches(3); // predicted 70s
 
-        $eta = $this->estimatorAt('+200 seconds')->estimateSeconds($report, $this->user);
+        $eta = $this->forecasterAt('+200 seconds')->forecast($report, $this->user)?->etaSeconds;
 
         self::assertSame(0, $eta);
+    }
+
+    /** Of a 70 s three-batch run (10 s pickup, 10 s a batch, 30 s consolidate), two finished batches are 20 s. */
+    public function testWeighsTheFinishedBatchesAgainstThePredictedRun(): void
+    {
+        $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
+
+        $forecast = $this->forecasterAt('+20 seconds')->forecast($this->liveReportWithBatches(3, 2), $this->user);
+
+        self::assertNotNull($forecast);
+        self::assertEqualsWithDelta(20 / 70, $forecast->finishedShare, 1e-9);
     }
 
     /** 40 s over 3 batches is 13.3 s a batch: one batch leaves 33.3 s, two leave 46.7 s, 20 s in. */
     public function testRoundsTheRemainingSecondsToTheNearest(): void
     {
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 3, consolidate: 30);
-        $estimator = $this->estimatorAt('+20 seconds');
+        $forecaster = $this->forecasterAt('+20 seconds');
 
-        self::assertSame(33, $estimator->estimateSeconds($this->liveReportWithBatches(1), $this->user));
-        self::assertSame(47, $estimator->estimateSeconds($this->liveReportWithBatches(2), $this->user));
+        self::assertSame(33, $forecaster->forecast($this->liveReportWithBatches(1), $this->user)?->etaSeconds);
+        self::assertSame(47, $forecaster->forecast($this->liveReportWithBatches(2), $this->user)?->etaSeconds);
     }
 
     public function testReturnsNullWithoutAnyCompletedHistory(): void
     {
         $report = $this->liveReportWithBatches(3);
 
-        self::assertNull($this->estimatorAt('+20 seconds')->estimateSeconds($report, $this->user));
+        self::assertNull($this->forecasterAt('+20 seconds')->forecast($report, $this->user));
     }
 
     public function testReturnsNullBeforeTheFirstBatchStarts(): void
@@ -87,12 +98,12 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
 
-        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(
+        $forecast = $this->forecasterAt('+20 seconds')->forecast(
             RecommendationRunReportModel::fromRun($run),
             $this->user,
         );
 
-        self::assertNull($eta);
+        self::assertNull($forecast);
     }
 
     public function testReturnsNullWhenNoRunIsInFlight(): void
@@ -100,7 +111,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
 
         self::assertNull(
-            $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReportModel::none(), $this->user),
+            $this->forecasterAt('+20 seconds')->forecast(RecommendationRunReportModel::none(), $this->user),
         );
     }
 
@@ -113,7 +124,8 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $this->seedHistoricalJevRun(pickup: 15, batchWall: 75, batches: 3);
         $this->seedHistoricalLlmRunWithoutConsolidation(pickup: 10, batchWall: 40, batches: 4);
-        $eta = $this->estimatorAt('+20 seconds')->estimateSeconds($this->liveJevReportWithBatches(4), $this->user);
+        $eta = $this->forecasterAt('+20 seconds')
+            ->forecast($this->liveJevReportWithBatches(4), $this->user)?->etaSeconds;
 
         self::assertSame(95, $eta);
     }
@@ -132,23 +144,24 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $run->complete((new \DateTimeImmutable(self::HISTORY_START))->modify('+46 seconds'));
         $this->entityManager->flush();
 
-        $eta = $this->estimatorAt('+28 seconds')->estimateSeconds($this->liveJevReportWithBatches(5), $this->user);
+        $eta = $this->forecasterAt('+28 seconds')
+            ->forecast($this->liveJevReportWithBatches(5), $this->user)?->etaSeconds;
 
         self::assertSame(18, $eta);
     }
 
-    private function estimatorAt(string $offset): RecommendationEtaEstimator
+    private function forecasterAt(string $offset): RecommendationRunForecaster
     {
         /** @var RecommendationRunTimingRepository $timings */
         $timings = self::getContainer()->get(RecommendationRunTimingRepository::class);
 
-        return new RecommendationEtaEstimator(
+        return new RecommendationRunForecaster(
             $timings,
             new MockClock((new \DateTimeImmutable(self::RUN_START))->modify($offset)),
         );
     }
 
-    private function liveReportWithBatches(int $batches): RecommendationRunReportModel
+    private function liveReportWithBatches(int $batches, int $finished = 0): RecommendationRunReportModel
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(
@@ -156,6 +169,9 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
             array_map(static fn (int $index): array => [$index], range(1, $batches)),
         );
         $run->markFirstBatchStarted();
+        for ($batch = 0; $batch < $finished; $batch++) {
+            $run->recordBatchWinners([]);
+        }
 
         return RecommendationRunReportModel::fromRun($run);
     }

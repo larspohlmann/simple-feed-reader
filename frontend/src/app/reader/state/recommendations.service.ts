@@ -18,6 +18,7 @@ import { ForYouProgressComponent } from '../list/for-you-progress/for-you-progre
 import { LayoutService } from '../layout.service';
 import { RecommendationRunReport } from '../models';
 import { selectionQueryParams } from '../query/query';
+import { finishedShare, timeShare } from './run-progress';
 
 const BACKOFF_MS = 1500;
 /** Matches `RecommendationRun::MAX_TRANSPORT_FAILURES`: the server tolerates
@@ -45,7 +46,6 @@ const MAX_RATE_LIMIT_RETRIES = 20;
  *  coarse enough to be cheap; the shared hairline's own `width` transition
  *  smooths between ticks. */
 const TICK_MS = 200;
-const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 /** A run held up by its lock or by its profile build does no work of its own, so its bar holds still. */
 const isStalled = (report: RecommendationRunReport | null): boolean =>
   report?.waitingForLock === true || report?.waitingForProfile === true;
@@ -127,13 +127,9 @@ export class RecommendationsService {
     if (!current) return 0;
     if (current.status === 'completed') return 1;
 
-    const elapsed = this.elapsedSeconds();
-    const eta = this.etaSeconds();
-    if (elapsed === null || eta === null) return 0;
-
-    // An overrun pins ETA at zero. Keep the active bar short of completion;
-    // only the server's completed status may fill it fully.
-    return Math.min(0.99, clamp01(elapsed / (elapsed + eta)));
+    // Only the server's completed status may fill the bar fully.
+    const elapsed = timeShare(this.elapsedSeconds(), this.etaSeconds());
+    return Math.min(0.99, Math.max(elapsed, finishedShare(current)));
   });
 
   /** Whole seconds elapsed from the server report, continued on the local
