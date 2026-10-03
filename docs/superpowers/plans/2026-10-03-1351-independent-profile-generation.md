@@ -58,7 +58,7 @@ What run code gains: `RecommendationRun::freezeProfile()` (replaces `recordProfi
 5. **Skip rule.** Only a `scheduled` run skips, only when a profile is stored, and only when the newest *completed* profile run has the same fingerprint (`outcome = unchanged`). Empty history completes with `no_history` and stores nothing, for every trigger.
 6. **Connection resolution** (`ProfileConnections::usableFor()`): the chosen connection when it can build profiles (ready, profile source `own`); a chosen connection that cannot gives **none** (no silent fallback); nothing chosen gives the active connection when it can. None → the section says "choose a connection", the finder skips the account, a manual start answers `422 profile_connection_missing`, a profile run started for a waiting recommendation run fails with that message.
 7. **Taking turns.** Both kinds of tick take `UserTickLock`; each passes its own TTL (`TickLockTtl::secondsFor()` for the active connection, `secondsForConnection()` of the profile connection for a profile tick). The recommendation advancer never ticks a profile run.
-8. **A profile tick never throws a provider failure.** Transport failures and a deferring 429 count one strike each (fails at 3 with `The AI provider at {base} failed: {detail}`); an unreadable key fails the run at once; an unusable reply is retried with the corrective tail and fails the run after 3. A lost lock discards the tick's work. A failure never touches the stored profile.
+8. **A profile tick never throws a provider failure.** Transport failures and a deferring 429 count one strike each (fails at 3 with `The AI provider at {base} failed: {detail}`); an unreadable key fails the run at once; an unusable reply is retried with the corrective tail and fails the run after 3. Any other throwable is a strike too (fails at 3 with `An unexpected error stopped the profile run.`) and is rethrown for the driver to log. A lost lock discards the tick's work. A failure never touches the stored profile.
 9. **The wait, minimal.** `ProfileForRunInterface::profileFor($user, $runCreatedAt)`: stored profile → `ready(text)`; else the newest profile run, if active or started since the run was created, decides (`building` / `failed(error)` / `ready(null)` on completion without a profile); else it starts a `recommendation`-trigger profile run and answers `building`. `SnapshotPhase` freezes on `ready`, returns on `building` (the run stays `pending`), fails the run with `Profile generation failed: {error}` on `failed`. An empty candidate pool completes before the question is asked. `waitingForProfile` is set by the status resolver (`isBuildingFor()`) on any pending report. A run that failed before its snapshot is no longer resumable (`isResumable()`); a new run asks again.
 10. **Engine phases.** `CallPhase::Distill` stays for profile-run log rows only. The ETA learns from runs carrying exactly the new phases, so estimates return after the first completed run on the new code. A Jev run without a profile fails at its first engine tick with `JevRecommendationEngine::NO_PROFILE`.
 11. **Run log.** `RecommendationRunLog` gets named constructors `forRun()` / `forProfileRun()` (constructor private), so exactly one of `run_id` / `profile_run_id` is set; no database CHECK. Profile-run rows are trimmed to the newest `RunLogRetention::RUNS` profile runs whenever a profile run starts. `RecordedCall` writes liveness and usage onto the run a `CallingRun` (repository value) names.
@@ -734,9 +734,13 @@ final class ProfileRun
         return $this->callAttempts->attempts() >= self::MAX_ATTEMPTS;
     }
 
+    /** Also legal from PENDING: an unexpected failure is a strike too, and it can stop a run before it opens. */
     public function recordTransportFailure(): void
     {
-        $this->guardStatus(RunStatus::Running, 'record a transport failure on');
+        if (!$this->status->isActive()) {
+            throw new InvalidRunStatusException('record a transport failure on', $this->status);
+        }
+
         $this->callAttempts->recordTransportFailure();
     }
 
@@ -1910,6 +1914,8 @@ git commit -m "feat(#1351): a profile run, the stored profile and the profile se
 
 
 ---
+*Amended (final review):* `ProfileRun::recordTransportFailure()` is legal from `pending` too (any active status), so an unexpected failure can strike a run before it opens; `ProfileRunTest` pins `testAPendingRunTakesAStrike` and `testACompletedRunCannotRecordATransportFailure` instead of `testAPendingRunCannotRecordATransportFailure`.
+
 ### Task 2: The run log records a profile run's calls
 
 **Files:**
@@ -3636,6 +3642,8 @@ final readonly class ProfileRunFailure
 {
     public const string PROVIDER_FAILED = 'The AI provider at %s failed: %s';
 
+    public const string UNEXPECTED_FAILURE = 'An unexpected error stopped the profile run.';
+
     public function __construct(
         private TickLockKeepalive $keepalive,
         private EntityManagerInterface $entityManager,
@@ -3659,12 +3667,35 @@ final readonly class ProfileRunFailure
             return;
         }
 
+        $this->strike(
+            $profileRun,
+            \sprintf(self::PROVIDER_FAILED, $tick->connection->getBaseUrl(), $failureDetail),
+        );
+    }
+
+    /**
+     * A strike over the run as last saved, dropping what the failed tick half-did to it. A closed manager can write
+     * nothing, so it records nothing and the tick's own failure is the one reported.
+     */
+    public function recordUnexpectedFailure(ProfileRun $profileRun): void
+    {
+        if (!$this->entityManager->isOpen()) {
+            return;
+        }
+
+        $this->entityManager->refresh($profileRun);
+        if ($this->keepalive->hasLostTheLock() || !$profileRun->getStatus()->isActive()) {
+            return;
+        }
+
+        $this->strike($profileRun, self::UNEXPECTED_FAILURE);
+    }
+
+    private function strike(ProfileRun $profileRun, string $failureMessage): void
+    {
         $profileRun->recordTransportFailure();
         if ($profileRun->hasExhaustedTransportRetries()) {
-            $profileRun->fail(
-                \sprintf(self::PROVIDER_FAILED, $tick->connection->getBaseUrl(), $failureDetail),
-                $this->clock->now(),
-            );
+            $profileRun->fail($failureMessage, $this->clock->now());
         }
         $this->entityManager->flush();
     }
@@ -3714,27 +3745,38 @@ final readonly class ProfileRunTick
     ) {
     }
 
+    /** Rethrows any other failure once it is recorded as a strike, so the driver still logs it. */
     public function advance(ProfileRun $profileRun, TickDriver $driver): void
     {
-        $connection = $this->profileConnections->usableFor($profileRun->getUser());
-        if (null === $connection) {
-            $this->failure->fail($profileRun, ProfileConnections::MISSING);
+        try {
+            $connection = $this->profileConnections->usableFor($profileRun->getUser());
+            if (null === $connection) {
+                $this->failure->fail($profileRun, ProfileConnections::MISSING);
 
-            return;
+                return;
+            }
+
+            $this->advanceRecordingProviderFailures($this->tickFor($profileRun, $connection, $driver));
+        } catch (\Throwable $exception) {
+            $this->failure->recordUnexpectedFailure($profileRun);
+
+            throw $exception;
         }
+    }
 
-        $tick = $this->tickFor($profileRun, $connection, $driver);
+    private function advanceRecordingProviderFailures(ProfileTick $tick): void
+    {
         try {
             $this->advanceWithin($tick);
         } catch (RecommendationTickLockLostException) {
-            $this->entityManager->refresh($profileRun);
+            $this->entityManager->refresh($tick->profileRun);
         } catch (
             ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException
             | ProviderRateLimitedException $exception
         ) {
             $this->failure->recordTransportFailure($tick, $exception->getMessage());
         } catch (AiKeyUnreadableException) {
-            $this->failure->fail($profileRun, self::KEY_UNREADABLE);
+            $this->failure->fail($tick->profileRun, self::KEY_UNREADABLE);
         }
     }
 
@@ -4263,6 +4305,8 @@ git commit -m "feat(#1351): a profile run generates the profile under the lock i
 7. Long lines wrapped (the `new ProfileRun(...)` lines in the tests, the `ProfileConnections::usableFor()` docblock reworded to "if" to fit 120 columns).
 
 ---
+*Amended (final review):* `ProfileRunTick::advance()` wraps its whole body in a floor: any throwable the provider arms do not catch is recorded by `ProfileRunFailure::recordUnexpectedFailure()` (nothing on a closed entity manager; otherwise refresh the run, nothing after a lost lock or on a run no longer active, else one strike that fails the run at `MAX_TRANSPORT_FAILURES` with `UNEXPECTED_FAILURE`), then rethrown so the sweep still logs it. Without it a run whose tick kept throwing stayed `running` forever and wedged every recommendation run waiting on it. The floor sits in the tick, not in `ProfileRunSweep::advanceOne()`, because only inside the tick is the lock still held and `hasLostTheLock()` current; all three drivers (worker, cron, drainer) reach it through the sweep. It wraps the body rather than delegating, so `$driver` takes no extra phptramp hop. `ProfileRunTickTest` pins it (`testAnUnexpectedFailure…`, `testWithAClosedEntityManager…`).
+
 ### Task 4: Profile runs are scheduled and driven like recommendation runs
 
 **Files:**
@@ -4751,6 +4795,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
+use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -4770,12 +4815,12 @@ final readonly class ProfileRunSweep
 
     public function startDueRuns(): int
     {
-        $due = $this->finder->due();
-        foreach ($due as $user) {
-            $this->starter->start($user, ProfileRunTrigger::Scheduled);
+        $started = 0;
+        foreach ($this->finder->due() as $user) {
+            $started += $this->startOne($user);
         }
 
-        return \count($due);
+        return $started;
     }
 
     /** Counts attempted runs, failed ones included: the drain command loops until a pass attempts none. */
@@ -4792,6 +4837,23 @@ final readonly class ProfileRunSweep
     public function activeRunCount(): int
     {
         return \count($this->profileRuns->findAllActive());
+    }
+
+    /** One account's failure must not cost the others their run, nor the cron sweep its recommendation pass. */
+    private function startOne(User $user): int
+    {
+        try {
+            $this->starter->start($user, ProfileRunTrigger::Scheduled);
+
+            return 1;
+        } catch (\Throwable $exception) {
+            $this->logger->error('Profile sweep: starting a due profile run failed.', [
+                'userId' => $user->getId(),
+                'exception' => $exception,
+            ]);
+
+            return 0;
+        }
     }
 
     private function advanceOne(ProfileRun $profileRun, TickDriver $driver): void
@@ -5177,6 +5239,8 @@ git commit -m "feat(#1351): profile runs start on their schedule and every drive
 6. `AccountResetTest::testDoesNotTouchAnotherUsersRows` also checks that the bystander's profile run and its log row survive. This pins the profile-log subquery's correlation by user.
 
 ---
+*Amended (final review):* `ProfileRunSweep::startDueRuns()` starts each account in its own try/catch (log `Profile sweep: starting a due profile run failed.` with `userId`, skip) and counts the runs it started, so one failing start no longer aborts the cron's recommendation pass. `ProfileRunSweepTest::testAnAccountWhoseStartFailsIsLoggedAndSkippedAndTheOthersStillStart` pins it with a `prePersist` listener refusing one account's run.
+
 ### Task 5: Recommendation runs lose their distillation and read a frozen copy of the stored profile
 
 This is the simplification the issue exists for. The run keeps exactly one profile fact — the text it froze at its snapshot — and every distillation state, branch and borrowing goes. The net line count of `src/Service/Recommendation/{Run,Llm,Jev}` and `src/Entity/{RecommendationRun,RunProfile,RecommendationRunProgress}.php` must drop; quote `git diff --stat` for those paths in the task report.
@@ -5512,7 +5576,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** A run that was mid-distillation at the deploy snapshots on with whatever profile_text it holds. */
+/** A run that was mid-distillation at the deploy now scores on without a profile. */
 final class Version20261003110000 extends AbstractMigration
 {
     public function getDescription(): string
@@ -5918,9 +5982,12 @@ final readonly class ProvisionedProfileForRun implements ProfileForRunInterface
         }
 
         return match ($latest->getStatus()) {
-            RunStatus::Failed => RunProfileModel::failed($latest->getError() ?? ''),
+            RunStatus::Failed => RunProfileModel::failed(
+                $latest->getError() ?? throw new \LogicException('A failed profile run carries its error.'),
+            ),
             RunStatus::Completed => RunProfileModel::ready(null),
-            RunStatus::Pending, RunStatus::Running, RunStatus::Cancelled => RunProfileModel::building(),
+            RunStatus::Pending, RunStatus::Running => RunProfileModel::building(),
+            RunStatus::Cancelled => throw new \LogicException('A profile run is never cancelled.'),
         };
     }
 
@@ -6225,6 +6292,8 @@ git commit -m "feat(#1351): a run without a stored profile waits in pending whil
 8. No `services_test.yaml` entry: the container serves `ProfileForRunInterface` once `SnapshotPhase` and the resolver consume it.
 
 ---
+*Amended (final review):* `ProvisionedProfileForRun` throws `\LogicException` for a `cancelled` profile run and for a failed one without an error, instead of waiting forever or answering an empty error. The frontend bar sync treats `waitingForProfile` like `waitingForLock` (`isStalled()`: the ticker stops and the anchor holds). `RecommendationPipelineTest` gains the end-to-end success path (`testARunWithoutAProfileWaitsForTheGeneratedOneAndFreezesIt`) and the wedge (`testAProfileRunThatKeepsFailingUnexpectedlyFailsTheRunWaitingForIt`).
+
 ### Task 7: The profile API
 
 **Files:**
@@ -6971,7 +7040,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** The interest profile: its settings, a manual start, and the newest run's status and calls. Reads have no limiter. */
+/** The interest profile: its settings, a manual start, and the newest run's status and calls. */
 #[Route('/api/me/ai/profile')]
 final readonly class ProfileController
 {
@@ -8354,6 +8423,16 @@ export class ProfileSectionComponent {
           <option value="" [selected]="state.connectionId === null">
             {{ 'settings.profile.connectionActive' | transloco }}
           </option>
+          @if (unusableChoice(); as connectionId) {
+            <option
+              data-testid="profile-connection-unusable"
+              [value]="connectionId"
+              disabled
+              selected
+            >
+              {{ 'settings.profile.connectionUnusable' | transloco }}
+            </option>
+          }
           @for (candidate of state.candidates; track candidate.id) {
             <option [value]="candidate.id" [selected]="state.connectionId === candidate.id">
               {{ label(candidate) }}
@@ -8510,6 +8589,7 @@ i18n — `settings.profile` in `en.json`:
       "connection": "Connection",
       "connectionDesc": "The LLM connection that writes your profile.",
       "connectionActive": "The active connection",
+      "connectionUnusable": "A connection that can no longer build profiles",
       "keptCap": "Kept in history",
       "viewedCap": "Viewed in history",
       "save": "Save",
@@ -8545,6 +8625,7 @@ and in `de.json`:
       "connection": "Verbindung",
       "connectionDesc": "Die LLM-Verbindung, die dein Profil schreibt.",
       "connectionActive": "Die aktive Verbindung",
+      "connectionUnusable": "Eine Verbindung, die keine Profile mehr erstellen kann",
       "keptCap": "Behaltene im Verlauf",
       "viewedCap": "Angesehene im Verlauf",
       "save": "Speichern",
@@ -8616,6 +8697,8 @@ git commit -m "feat(#1351): a top-level profile section shows, schedules and gen
 - **Profile, schedule, connection and caps are one `app-settings-group`** (Lars). Under the "Profile" header, in this order: the profile block, then the Regenerate and Connection rows, then the caps and the save bar. The profile block draws the same inset hairline below itself that `app-settings-row` draws (`.profile::after`, as `account-section`'s `.who::after` does). `settings.profile.settingsTitle` is deleted in en and de. The Debug log stays its own group.
 
 ---
+
+*Amended (final review):* a chosen profile connection that is no longer among the candidates shows as a disabled, selected option (`settings.profile.connectionUnusable`, en + de) instead of falling back to "The active connection".
 
 ### Task 10: Docs, the full gates on both legs, and a real run
 
