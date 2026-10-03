@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Jev;
 
-use App\Entity\RecommendationItem;
 use App\Entity\Entry;
+use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\StoredProfile;

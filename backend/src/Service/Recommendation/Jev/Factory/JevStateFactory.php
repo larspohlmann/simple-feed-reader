@@ -12,10 +12,7 @@ use App\Service\Recommendation\Support\TokenEstimate;
 
 final readonly class JevStateFactory
 {
-    /**
-     * What JevBatchPacker reserves for the state in every request. The guidance wins it, the profile gets the rest,
-     * and the favorites fill what is left.
-     */
+    /** What JevBatchPacker reserves for the state in every request: guidance first, then profile, then favorites. */
     public const int STATE_TOKEN_BUDGET = 10_000;
 
     /**
@@ -53,8 +50,8 @@ final readonly class JevStateFactory
     private static function fittingFavorites(array $favorites, array $others): array
     {
         $fitting = [];
-        foreach ($favorites as $favorite) {
-            $candidate = [...$fitting, JevArticle::of($favorite)];
+        foreach (array_map(JevArticle::of(...), $favorites) as $article) {
+            $candidate = [...$fitting, $article];
             if (!self::fits($others + ['favorites' => $candidate])) {
                 break;
             }
