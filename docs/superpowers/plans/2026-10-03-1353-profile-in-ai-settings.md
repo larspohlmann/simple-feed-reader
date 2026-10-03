@@ -18,19 +18,24 @@
 - Modify: `frontend/src/app/settings/profile/profile-section.component.html`, `profile-section.component.scss`, `profile-section.component.ts`, `profile-section.component.spec.ts`
 - Modify: `frontend/src/app/settings/ai/ai-section.component.html`, `ai-section.component.ts`, `ai-section.component.spec.ts`
 
-- [ ] **Step 1: Write the failing AI spec.** In `ai-section.component.spec.ts` add the import `import { profileRun, profileState } from '../../../testing/profile-settings';`. In `mount()`, directly after `fixture.detectChanges();` flush the two requests the embedded profile makes, then detect again, so existing tests stay green under `http.verify()`:
+- [ ] **Step 1: Write the failing AI spec.** In `ai-section.component.spec.ts` add the import `import { profileRun, profileState } from '../../../testing/profile-settings';`. The profile only mounts once the active connection is ready, so `mount()` stays untouched. Add a `flushProfile` helper beside `CONFIG`, call it before every `http.expectOne('/api/me/ai/recommendations')` (the two inline sites and `flushReady`), so existing ready-state tests stay green under `http.verify()`:
 
 ```ts
+  const flushProfile = (): void => {
     http.expectOne('/api/me/ai/profile').flush(profileState());
     http.expectOne('/api/me/ai/profile/runs/current').flush(profileRun());
-    fixture.detectChanges();
+  };
 ```
 
 Add the test (inside `describe('AiSectionComponent'`):
 
 ```ts
-  it('shows the profile group before the For You card', () => {
+  it('shows the profile group between the connections and the For You card', () => {
     const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: true })]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.detectChanges();
     const html = (fixture.nativeElement as HTMLElement).innerHTML;
     const profileAt = html.indexOf('data-testid="profile-text"');
 
@@ -49,7 +54,7 @@ Also in `profile-section.component.spec.ts` add:
   });
 ```
 
-- [ ] **Step 2: Run, expect FAIL.** `docker compose exec -T frontend npm test -- ai-section.component profile-section.component` — the order test fails (no profile in the AI page; `http.expectOne` in `mount()` throws on the missing profile request), and the stack test fails.
+- [ ] **Step 2: Run, expect FAIL.** `docker compose exec -T frontend npm test -- ai-section.component profile-section.component` — the order test fails (no profile in the AI page; `flushProfile` finds no request) and the stack test fails.
 
 - [ ] **Step 3: Implement.**
   - `profile-section.component.html`: remove the `<app-settings-stack>` / `</app-settings-stack>` wrapper (keep `@if (svc.state(); as state) { … }`, de-indent the two groups one level; Prettier reflows).
@@ -86,7 +91,7 @@ Also in `profile-section.component.spec.ts` add:
   });
 ```
 
-(Copy the surrounding test's setup exactly; if that spec asserts the shell's route table elsewhere, mirror it.) Also in `settings-sections.spec.ts` add:
+(Setup is `TestBed.configureTestingModule({ providers: [provideRouter(SETTINGS_ROUTES)] })` and `TestBed.inject(Router)`, as in the Tags test.) Also in `settings-sections.spec.ts` add:
 
 ```ts
   it('lists no Profile section; the profile lives on the AI page (#1353)', () => {
@@ -100,10 +105,9 @@ Also in `profile-section.component.spec.ts` add:
   - `settings-sections.ts`: delete the line `{ path: 'profile', icon: 'psychology', labelKey: 'settings.profile.title', group: 'general' },`.
   - `settings.routes.ts`: replace the `profile` route block with
     ```ts
-      // #1353: the profile moved into the AI page; the path forwards for stale links.
       { path: 'profile', redirectTo: 'ai', pathMatch: 'full' },
     ```
-    (the one-line comment mirrors the `tags` forward above it).
+    (no comment: the name and target say it).
   - `settings.profile.title` is still used by the group header; leave it.
 
 - [ ] **Step 4: Run, expect PASS.** `docker compose exec -T frontend npm test -- settings` (nav, hub, shell, sections, routes specs).
@@ -122,7 +126,7 @@ Also in `profile-section.component.spec.ts` add:
 - [ ] **Step 2: Run, expect FAIL.** `docker compose exec -T frontend npm test -- ai-section.component`.
 
 - [ ] **Step 3: Change the copy.**
-  - en `borrowedProfile`: `takes its profile from Settings → AI`; `modelPicker`: `… take your reading profile from Settings → AI.`; `jevStep4`: `Open Settings → AI and choose your LLM connection under Profile.`
+  - en `borrowedProfile`: `takes its profile from Settings → AI`; `modelPicker`: `… take your reading profile from Settings → AI.`; `jevStep4`: `Open Settings → AI and choose your LLM connection under Profile.` (the AI nav label in en is `AI`)
   - de `borrowedProfile`: `übernimmt das Profil aus Einstellungen → KI`; `modelPicker`: `… übernehmen dein Leseprofil aus Einstellungen → KI.`; `jevStep4`: `Öffne Einstellungen → KI und wähle unter Profil deine LLM-Verbindung.`
   - Use the exact label the AI nav entry shows: check `settings.ai.title` in each file first and use that word (`settings.ai.title` is `KI` in de.json — confirmed).
   - Update the `ai-section.component.spec.ts` strings to match the exact de/en text above if they assert the Jev step wording in full.
