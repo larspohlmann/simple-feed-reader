@@ -7456,7 +7456,10 @@ git commit -m "refactor(#1351): the profile connection is the account's, so the 
 
 The `grep` must print nothing (the migrations are outside `src`). Check `git status` before `git add -A`.
 
+**Amendments after execution (Task 8):** `ProfileConnectionResolver::canBuildProfiles` and `ProfileConnectionChooser::REJECTION` went with their classes; `ProfileConnections::canBuildProfiles` and `ProfileSettingsEditor::REJECTION` are the single homes. `AccountDeleterTest`'s borrowing test now seeds the account's `RecommendationSettings` pointer instead of being dropped, so the cascade over `user_recommendation_settings.profile_connection_id` stays covered. The frontend guard mounts a managed (unfolded) Jev row: an active ready connection folds, so the test sets `managing` and flushes the recommendation requests (`flushReady()`) first. `settings/ai` copy now points at "Settings → Profile", a section Task 9 creates.
+
 ---
+
 ### Task 9: The Profile settings section
 
 Read `docs/design-language.md` before writing the template; the section is built only from the shared primitives the recommendation card already uses (`app-settings-stack`, `-group`, `-row`, `app-field`, `app-settings-save-bar`, `app-button`, `app-error-banner`).
