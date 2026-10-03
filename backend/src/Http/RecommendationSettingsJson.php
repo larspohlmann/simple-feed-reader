@@ -12,7 +12,7 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
- * The effective recommendation settings, the distilled profile and, for an engine that sends a prompt, the prompt
+ * The effective recommendation settings and, for an engine that sends a prompt, the prompt
  * layers the card shows read-only. `contextWindowOverride` is the user's own value or null; `contextWindow` is always
  * the effective one.
  */
@@ -28,13 +28,10 @@ final class RecommendationSettingsJson
     ): array {
         return [
             'guidancePrompt' => $effective->guidancePrompt,
-            'profileText' => $effective->profileText,
             ...self::promptPieces($capabilities),
             'expertDefaults' => [
                 'guidancePrompt' => null,
                 'favoritesCap' => RecommendationSettings::DEFAULT_FAVORITES_CAP,
-                'keptCap' => RecommendationSettings::DEFAULT_KEPT_CAP,
-                'viewedCap' => RecommendationSettings::DEFAULT_VIEWED_CAP,
                 'candidatePoolSize' => RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
                 'picksLimit' => RecommendationSettings::DEFAULT_PICKS_LIMIT,
                 'batchSize' => RecommendationBatchSize::Medium->value,
@@ -42,8 +39,6 @@ final class RecommendationSettingsJson
             ],
             'expertBounds' => RecommendationSettingsBounds::EXPERT_FIELDS,
             'favoritesCap' => $effective->historyCaps->favorites,
-            'keptCap' => $effective->historyCaps->kept,
-            'viewedCap' => $effective->historyCaps->viewed,
             'candidatePoolSize' => $effective->poolLimits->candidatePoolSize,
             'lookbackDays' => $effective->poolLimits->lookbackDays,
             'picksLimit' => $effective->poolLimits->picksLimit,

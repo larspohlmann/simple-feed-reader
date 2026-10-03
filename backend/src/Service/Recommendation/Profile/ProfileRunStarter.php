@@ -9,10 +9,13 @@ use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingException;
 use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /** Opens a profile run; an active one is returned as it is, so a second start opens no duplicate. */
 final readonly class ProfileRunStarter
@@ -23,15 +26,27 @@ final readonly class ProfileRunStarter
         private RecommendationRunLogRepository $logs,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private RateLimitGuard $rateLimitGuard,
+        private RateLimiterFactoryInterface $aiProfileRunsLimiter,
     ) {
     }
 
-    /** @throws ProfileConnectionMissingException */
+    /**
+     * Spends the ai_profile_runs budget only when a run is opened: returning the active run costs no provider call.
+     *
+     * @throws ProfileConnectionMissingException
+     * @throws RateLimitedException
+     */
     public function startManually(User $user): ProfileRun
     {
+        $active = $this->profileRuns->findActiveForUser($user);
+        if (null !== $active) {
+            return $active;
+        }
         if (null === $this->profileConnections->usableFor($user)) {
             throw new ProfileConnectionMissingException(ProfileConnections::MISSING);
         }
+        $this->rateLimitGuard->enforceForUser($this->aiProfileRunsLimiter, $user);
 
         return $this->start($user, ProfileRunTrigger::Manual);
     }

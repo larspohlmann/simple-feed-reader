@@ -11,6 +11,7 @@ use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
 use App\Service\Recommendation\Exception\ProfileNotBorrowedException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
+use App\Service\Recommendation\Profile\Exception\ProfileConnectionMissingException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RecommendationRunProblems implements ExceptionProblemsInterface
@@ -39,6 +40,12 @@ final readonly class RecommendationRunProblems implements ExceptionProblemsInter
             $exception instanceof ProfileConnectionRejectedException => new ResolvedProblem(new ApiProblem(
                 'profile_connection_rejected',
                 'This connection cannot build the profile',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof ProfileConnectionMissingException => new ResolvedProblem(new ApiProblem(
+                'profile_connection_missing',
+                'No connection can build the profile',
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),

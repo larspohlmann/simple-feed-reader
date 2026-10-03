@@ -17,15 +17,6 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase
 {
-    public function testStateEmitsProfileText(): void
-    {
-        $effective = $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.');
-
-        $state = RecommendationSettingsJson::state($effective, self::llm(), workerAlive: true);
-
-        self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
-    }
-
     /**
      * The settings card shows the prompt the batch call sends: `fixedPrompt` must stay pointed at
      * `BATCH_SYSTEM_ROLE` and `BATCH_OUTPUT_CONTRACT`.
@@ -51,27 +42,19 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertStringNotContainsString('"reason"', $fixedPrompt['outputContract']);
     }
 
-    /** Every engine runs on a distilled profile; only the LLM's own prompt pieces depend on the prompt capability. */
-    public function testAnEngineWithoutAPromptShowsTheProfileButNoPromptPieces(): void
+    /** Only the LLM's own prompt pieces depend on the prompt capability. */
+    public function testAnEngineWithoutAPromptShowsNoPromptPieces(): void
     {
         $state = RecommendationSettingsJson::state(
-            $this->effectiveSettings(profileText: 'Likes Rust and homelab posts.'),
+            $this->effectiveSettings(),
             RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
             workerAlive: true,
         );
 
-        self::assertSame('Likes Rust and homelab posts.', $state['profileText']);
         self::assertArrayHasKey('defaultGuidancePrompt', $state);
         self::assertArrayHasKey('fixedPrompt', $state);
         self::assertNull($state['defaultGuidancePrompt']);
         self::assertNull($state['fixedPrompt']);
-    }
-
-    public function testStateEmitsNullProfileTextWhenAbsent(): void
-    {
-        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
-
-        self::assertNull($state['profileText']);
     }
 
     public function testStateEmitsShowScoreAndReasons(): void
@@ -99,8 +82,6 @@ final class RecommendationSettingsJsonTest extends TestCase
         self::assertSame([
             'guidancePrompt' => null,
             'favoritesCap' => 40,
-            'keptCap' => 40,
-            'viewedCap' => 80,
             'candidatePoolSize' => 500,
             'picksLimit' => 50,
             'batchSize' => 'medium',
@@ -121,12 +102,23 @@ final class RecommendationSettingsJsonTest extends TestCase
 
         self::assertSame([
             'favoritesCap' => ['min' => 0, 'max' => 500],
-            'keptCap' => ['min' => 0, 'max' => 500],
-            'viewedCap' => ['min' => 0, 'max' => 500],
             'candidatePoolSize' => ['min' => 10, 'max' => 5000],
             'picksLimit' => ['min' => 1, 'max' => 500],
             'contextWindow' => ['min' => 4096, 'max' => 2097152],
         ], $state['expertBounds']);
+    }
+
+    /** The profile and its two history caps moved to /api/me/ai/profile. */
+    public function testStateCarriesNoProfileKeys(): void
+    {
+        /** @var array{expertDefaults: array<string, mixed>, expertBounds: array<string, mixed>} $state */
+        $state = RecommendationSettingsJson::state($this->effectiveSettings(), self::llm(), workerAlive: true);
+
+        foreach (['profileText', 'keptCap', 'viewedCap'] as $key) {
+            self::assertArrayNotHasKey($key, $state);
+            self::assertArrayNotHasKey($key, $state['expertDefaults']);
+            self::assertArrayNotHasKey($key, $state['expertBounds']);
+        }
     }
 
     private static function llm(): RecommendationEngineCapabilitiesModel
@@ -134,10 +126,8 @@ final class RecommendationSettingsJsonTest extends TestCase
         return RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm);
     }
 
-    private function effectiveSettings(
-        ?string $profileText = null,
-        bool $showScoreAndReasons = false,
-    ): EffectiveRecommendationSettingsModel {
+    private function effectiveSettings(bool $showScoreAndReasons = false): EffectiveRecommendationSettingsModel
+    {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
             historyCaps: RecommendationHistoryCaps::defaults(),
@@ -150,7 +140,7 @@ final class RecommendationSettingsJsonTest extends TestCase
             ),
             debugEnabled: false,
             autoGenerateIntervalHours: null,
-            profileText: $profileText,
+            profileText: 'Likes Rust and homelab posts.',
             showScoreAndReasons: $showScoreAndReasons,
         );
     }

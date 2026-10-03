@@ -16,6 +16,7 @@ use App\Service\Recommendation\Run\Support\RunLogRetention;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
+use Psr\Cache\CacheItemPoolInterface;
 
 final class ProfileRunStarterTest extends DbTestCase
 {
@@ -27,6 +28,10 @@ final class ProfileRunStarterTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The limiter counts in a filesystem pool that outlives the test, so earlier runs' spend would trip a 429.
+        /** @var CacheItemPoolInterface $rateLimiterCache */
+        $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
+        $rateLimiterCache->clear();
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);

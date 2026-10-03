@@ -27,8 +27,6 @@ final class RecommendationSettingsBounds
     /** @var array<string, array{min: int, max: int}> */
     public const array EXPERT_FIELDS = [
         'favoritesCap' => ['min' => self::FAVORITES_CAP_MINIMUM, 'max' => self::FAVORITES_CAP_MAXIMUM],
-        'keptCap' => ['min' => self::KEPT_CAP_MINIMUM, 'max' => self::KEPT_CAP_MAXIMUM],
-        'viewedCap' => ['min' => self::VIEWED_CAP_MINIMUM, 'max' => self::VIEWED_CAP_MAXIMUM],
         'candidatePoolSize' => [
             'min' => self::CANDIDATE_POOL_SIZE_MINIMUM,
             'max' => self::CANDIDATE_POOL_SIZE_MAXIMUM,
@@ -38,6 +36,12 @@ final class RecommendationSettingsBounds
             'min' => self::CONTEXT_WINDOW_MINIMUM,
             'max' => self::CONTEXT_WINDOW_MAXIMUM,
         ],
+    ];
+
+    /** @var array<string, array{min: int, max: int}> */
+    public const array PROFILE_FIELDS = [
+        'keptCap' => ['min' => self::KEPT_CAP_MINIMUM, 'max' => self::KEPT_CAP_MAXIMUM],
+        'viewedCap' => ['min' => self::VIEWED_CAP_MINIMUM, 'max' => self::VIEWED_CAP_MAXIMUM],
     ];
 
     private function __construct()
