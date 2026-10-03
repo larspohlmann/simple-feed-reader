@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Worker;
 
-use App\Service\Worker\Message\AdvanceProfileRuns;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
@@ -44,7 +43,6 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('1 hour', new SendDueDigests()))
             ->add(RecurringMessage::every('1 minute', new SweepSavedSearchMemberships()))
             ->add(RecurringMessage::every('1 minute', new VerifyPendingImages()))
-            ->add(RecurringMessage::every('10 seconds', new AdvanceProfileRuns()))
             ->add(RecurringMessage::every('5 minutes', new StartDueProfileRuns()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);

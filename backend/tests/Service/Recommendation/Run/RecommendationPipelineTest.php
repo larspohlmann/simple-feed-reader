@@ -139,7 +139,9 @@ final class RecommendationPipelineTest extends DbTestCase
         $this->advancer()->advance($this->user);
 
         for ($sweep = 0; $sweep < ProfileRun::MAX_TRANSPORT_FAILURES; $sweep++) {
-            $this->profileSweep()->advanceEveryActiveRun(TickDriver::Worker);
+            foreach ($this->profileSweep()->activeRuns() as $profileRun) {
+                $this->profileSweep()->advanceOne($profileRun, TickDriver::Worker);
+            }
         }
         // A fresh identity map, as each driver pass has: the stored created_at drops the microseconds the run holds.
         $this->entityManager->clear();

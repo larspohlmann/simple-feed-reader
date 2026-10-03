@@ -38,7 +38,6 @@ final readonly class AccountRecommendationSettings
 
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $values?->guidancePrompt,
-            profileText: $this->row?->getStoredProfile()->getText(),
             historyCaps: $this->historyCaps($values),
             poolLimits: $values->poolLimits ?? RecommendationPoolLimits::defaults(),
             packing: new RecommendationPackingSettingsModel(

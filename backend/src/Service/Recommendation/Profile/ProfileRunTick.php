@@ -21,14 +21,13 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * One tick of a profile run under the caller's lock: open it, or make its one model call. A provider failure is
- * recorded on the run and never thrown, so a recommendation tick that hands its turn to a profile run cannot fail.
+ * recorded on the run and never thrown.
  */
 final readonly class ProfileRunTick
 {
     public const string KEY_UNREADABLE = 'The stored API key can no longer be read.';
 
     public function __construct(
-        private ProfileConnections $profileConnections,
         private RecommendationSettingsResolver $settingsResolver,
         private RecommendationHistoryLoader $historyLoader,
         private ProfileRunOpening $opening,
@@ -39,10 +38,9 @@ final readonly class ProfileRunTick
     }
 
     /** Rethrows any other failure once it is recorded as a strike, so the driver still logs it. */
-    public function advance(ProfileRun $profileRun, TickDriver $driver): void
+    public function advance(ProfileRun $profileRun, ?AiProviderSettings $connection, TickDriver $driver): void
     {
         try {
-            $connection = $this->profileConnections->usableFor($profileRun->getUser());
             if (null === $connection) {
                 $this->failure->fail($profileRun, ProfileConnections::MISSING);
 

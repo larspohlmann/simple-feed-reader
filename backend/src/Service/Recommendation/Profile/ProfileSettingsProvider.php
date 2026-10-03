@@ -20,14 +20,14 @@ final readonly class ProfileSettingsProvider
 
     public function forUser(User $user): ProfileSettingsModel
     {
-        $row = $this->recommendationSettings->findForUser($user);
+        $storedSettings = $this->recommendationSettings->findForUser($user);
 
         return new ProfileSettingsModel(
-            $row?->getStoredProfile() ?? StoredProfile::none(),
-            $row?->profileSettings() ?? ProfileSettingsValues::defaults(),
-            $this->profileConnections->usableFor($user),
+            $storedSettings?->getStoredProfile() ?? StoredProfile::none(),
+            $storedSettings?->profileSettings() ?? ProfileSettingsValues::defaults(),
+            $this->profileConnections->usableGiven($user, $storedSettings),
             $this->profileConnections->candidatesFor($user),
-            $row?->values()->debugEnabled ?? false,
+            $storedSettings?->values()->debugEnabled ?? false,
         );
     }
 }

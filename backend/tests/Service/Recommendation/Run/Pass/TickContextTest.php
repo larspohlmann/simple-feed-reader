@@ -58,7 +58,6 @@ final class TickContextTest extends TestCase
                 ),
                 debugEnabled: false,
                 autoGenerateIntervalHours: null,
-                profileText: null,
                 showScoreAndReasons: false,
             ),
             $driver,

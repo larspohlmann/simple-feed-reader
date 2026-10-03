@@ -140,7 +140,6 @@ final class RecommendationSettingsJsonTest extends TestCase
             ),
             debugEnabled: false,
             autoGenerateIntervalHours: null,
-            profileText: 'Likes Rust and homelab posts.',
             showScoreAndReasons: $showScoreAndReasons,
         );
     }

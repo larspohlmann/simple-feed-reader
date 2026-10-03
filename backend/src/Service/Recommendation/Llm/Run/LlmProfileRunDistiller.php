@@ -6,7 +6,6 @@ namespace App\Service\Recommendation\Llm\Run;
 
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Llm\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
@@ -27,14 +26,12 @@ final readonly class LlmProfileRunDistiller implements ProfileRunDistillerInterf
 
     public function distill(ProfileTick $tick): ProfileDistillationOutcomeModel
     {
-        $request = $this->requestFactory->create($tick->connection, new CallPromptModel(
+        $request = $this->requestFactory->create($tick->connection, CallPromptModel::distillation(
             $this->promptBuilder->messagesWithCorrectiveTail(
                 $this->promptBuilder->distillMessages($tick->history, $tick->settings),
                 $tick->profileRun->getLastInvalidReply(),
                 RecommendationPromptText::DISTILL_CORRECTIVE,
             ),
-            1,
-            RecommendationResponseSchema::Distillation,
         ));
         $recordedCall = $this->callRecorder->beginForProfileRun($tick->profileRun, $request);
         $content = $this->providerCall->complete($tick->callRoute(), $request, $recordedCall);

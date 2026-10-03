@@ -25,7 +25,7 @@ final readonly class AccountWipeRepository
 
     public function deleteRecommendationData(User $user): void
     {
-        // Redundant with the run FKs' ON DELETE CASCADE on purpose: the wipe's scope stays readable in one place.
+        // Redundant with the run FK's ON DELETE CASCADE on purpose: the wipe's scope stays readable in one place.
         foreach ([RecommendationItem::class, RecommendationRunLog::class] as $childClass) {
             $this->entityManager->createQuery(sprintf(
                 'DELETE FROM %s c WHERE IDENTITY(c.run) IN (SELECT r.id FROM %s r WHERE r.user = :user)',
@@ -34,11 +34,6 @@ final readonly class AccountWipeRepository
             ))->setParameter('user', $user)->execute();
         }
         $this->deleteByUser(RecommendationRun::class, $user);
-        $this->entityManager->createQuery(sprintf(
-            'DELETE FROM %s c WHERE IDENTITY(c.profileRun) IN (SELECT p.id FROM %s p WHERE p.user = :user)',
-            RecommendationRunLog::class,
-            ProfileRun::class,
-        ))->setParameter('user', $user)->execute();
         $this->deleteByUser(ProfileRun::class, $user);
         $this->deleteByUser(RecommendationSettings::class, $user);
     }

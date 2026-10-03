@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
@@ -86,6 +89,24 @@ final class WorkerRunSweepTest extends DbTestCase
         }
     }
 
+    public function testSweepTicksEveryActiveProfileRunAsTheWorkerAndCountsIt(): void
+    {
+        $owner = $this->user('sweep-profile-run@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'qwen3-14b');
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+        $profileRunId = $profileRun->requireId();
+
+        self::assertSame(1, $this->sweep()->sweep(RecommendationDriverKind::PersistentWorker));
+
+        self::assertSame(
+            RunStatus::Completed,
+            $this->entityManager->find(ProfileRun::class, $profileRunId)?->getStatus(),
+        );
+        self::assertTrue($this->presence()->hasPersistentRecommendationWorker());
+    }
+
     /**
      * clear() sits in `finally`: the drain command runs sweep after sweep in one process. The seam is a presence clock
      * good for one reading: it carries the first run, then fails inside the loop after findAllActive() filled the map.
@@ -105,6 +126,7 @@ final class WorkerRunSweepTest extends DbTestCase
         $sweep = new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
+            $this->profileRunSweep(),
             $presence,
             $this->streamHeartbeat($presence),
             $clearTracker,
@@ -150,6 +172,7 @@ final class WorkerRunSweepTest extends DbTestCase
         $sweep = new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
+            $this->profileRunSweep(),
             $presence,
             $heartbeat,
             $this->entityManager,
@@ -216,11 +239,20 @@ final class WorkerRunSweepTest extends DbTestCase
         return new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
+            $this->profileRunSweep(),
             $this->presence(),
             $this->streamHeartbeat($this->presence()),
             $this->entityManager,
             new NullLogger(),
         );
+    }
+
+    private function profileRunSweep(): ProfileRunSweep
+    {
+        /** @var ProfileRunSweep $profileRunSweep */
+        $profileRunSweep = self::getContainer()->get(ProfileRunSweep::class);
+
+        return $profileRunSweep;
     }
 
     private function advancer(): RecommendationRunAdvancer

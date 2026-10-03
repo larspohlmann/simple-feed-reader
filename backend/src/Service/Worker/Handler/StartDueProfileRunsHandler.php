@@ -8,7 +8,7 @@ use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Worker\Message\StartDueProfileRuns;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-/** Only starts due profile runs; ticking them is AdvanceProfileRuns' job. */
+/** Only starts due profile runs; WorkerRunSweep ticks them. */
 #[AsMessageHandler]
 final readonly class StartDueProfileRunsHandler
 {

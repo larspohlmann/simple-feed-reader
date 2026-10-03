@@ -11,7 +11,7 @@ use App\Repository\ProfileRunRepository;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use Psr\Log\LoggerInterface;
 
-/** Scheduled profiles: start the due runs, and tick every active one, for the cron sweep, the worker and the drainer. */
+/** Scheduled profiles: start the due runs, and tick each active one, for the cron sweep, the worker and the drainer. */
 final readonly class ProfileRunSweep
 {
     public function __construct(
@@ -33,20 +33,23 @@ final readonly class ProfileRunSweep
         return $started;
     }
 
-    /** Counts attempted runs, failed ones included: the drain command loops until a pass attempts none. */
-    public function advanceEveryActiveRun(TickDriver $driver): int
+    /** @return list<ProfileRun> */
+    public function activeRuns(): array
     {
-        $profileRuns = $this->profileRuns->findAllActive();
-        foreach ($profileRuns as $profileRun) {
-            $this->advanceOne($profileRun, $driver);
-        }
-
-        return \count($profileRuns);
+        return $this->profileRuns->findAllActive();
     }
 
-    public function activeRunCount(): int
+    public function advanceOne(ProfileRun $profileRun, TickDriver $driver): void
     {
-        return \count($this->profileRuns->findAllActive());
+        try {
+            $this->advancer->advance($profileRun, $driver);
+        } catch (\Throwable $exception) {
+            // The floor: a tick records every provider failure itself, so whatever lands here is unexpected.
+            $this->logger->error('Profile sweep: unexpected failure advancing a profile run.', [
+                'profileRunId' => $profileRun->getId(),
+                'exception' => $exception,
+            ]);
+        }
     }
 
     /** One account's failure must not cost the others their run, nor the cron sweep its recommendation pass. */
@@ -63,19 +66,6 @@ final readonly class ProfileRunSweep
             ]);
 
             return 0;
-        }
-    }
-
-    private function advanceOne(ProfileRun $profileRun, TickDriver $driver): void
-    {
-        try {
-            $this->advancer->advance($profileRun->getUser(), $driver);
-        } catch (\Throwable $exception) {
-            // The floor: a tick records every provider failure itself, so whatever lands here is unexpected.
-            $this->logger->error('Profile sweep: unexpected failure advancing a profile run.', [
-                'profileRunId' => $profileRun->getId(),
-                'exception' => $exception,
-            ]);
         }
     }
 }

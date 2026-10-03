@@ -17,6 +17,7 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -79,10 +80,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $first = $this->user('heartbeat-first@example.test');
         $this->fixtures->seedSingleBatchFixture($first);
+        $this->storeProfile($first);
         $this->starter()->start($first);
 
         $second = $this->user('heartbeat-second@example.test');
         $this->fixtures->seedSingleBatchFixture($second);
+        $this->storeProfile($second);
         $this->starter()->start($second);
 
         $startedAt = new \DateTimeImmutable('2026-08-08 00:00:00');
@@ -266,6 +269,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $clearTracker,
@@ -427,6 +431,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancerWithFlushFailingEntityManager(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $this->entityManager,
@@ -439,6 +444,14 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      * Only the advancer's own EntityManager fails its first flush: that is the struggling run's fail() write. The
      * phases come from the container, so the healthy run banks through the real EntityManager.
      */
+    private function profileRunSweep(): ProfileRunSweep
+    {
+        /** @var ProfileRunSweep $profileRunSweep */
+        $profileRunSweep = self::getContainer()->get(ProfileRunSweep::class);
+
+        return $profileRunSweep;
+    }
+
     private function advancerWithFlushFailingEntityManager(): RecommendationRunAdvancer
     {
         return new RecommendationRunAdvancer(
@@ -459,6 +472,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
                 $this->entityManager,
@@ -473,6 +487,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             new WorkerRunSweep(
                 $this->runs(),
                 $this->advancer(),
+                $this->profileRunSweep(),
                 new WorkerPresence($this->heartbeats(), $presenceClock),
                 $this->streamHeartbeat(new WorkerPresence($this->heartbeats(), $presenceClock)),
                 $this->entityManager,

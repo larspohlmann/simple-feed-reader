@@ -68,19 +68,22 @@ final class ProfileRunSweepTest extends DbTestCase
         self::assertSame($failing->getId(), $logger->records[0]['context']['userId']);
     }
 
-    public function testAdvanceTicksEveryActiveRunAndCountsThem(): void
+    public function testEveryActiveRunIsListedAndAdvancedOneByOne(): void
     {
         $first = $this->scheduledOwner('profile-sweep-c@example.test');
         $second = $this->scheduledOwner('profile-sweep-d@example.test');
         $this->sweep()->startDueRuns();
 
-        self::assertSame(2, $this->sweep()->activeRunCount());
-        self::assertSame(2, $this->sweep()->advanceEveryActiveRun(TickDriver::Sweep));
+        $activeRuns = $this->sweep()->activeRuns();
+        self::assertCount(2, $activeRuns);
+        foreach ($activeRuns as $profileRun) {
+            $this->sweep()->advanceOne($profileRun, TickDriver::Sweep);
+        }
 
         $this->entityManager->clear();
         self::assertSame(RunStatus::Completed, $this->profileRuns()->findLatestForUser($first)?->getStatus());
         self::assertSame(RunStatus::Completed, $this->profileRuns()->findLatestForUser($second)?->getStatus());
-        self::assertSame(0, $this->sweep()->activeRunCount());
+        self::assertSame([], $this->sweep()->activeRuns());
     }
 
     /** The stub chat client has no reply queued, so the call throws past the tick into the sweep's floor. */
@@ -94,7 +97,7 @@ final class ProfileRunSweepTest extends DbTestCase
         $this->entityManager->flush();
         $logger = new RecordingLogger();
 
-        self::assertSame(1, $this->sweepLoggingTo($logger)->advanceEveryActiveRun(TickDriver::Sweep));
+        $this->sweepLoggingTo($logger)->advanceOne($profileRun, TickDriver::Sweep);
 
         self::assertCount(1, $logger->records);
         self::assertSame('error', $logger->records[0]['level']);

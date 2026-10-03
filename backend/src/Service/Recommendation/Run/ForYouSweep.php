@@ -67,7 +67,7 @@ final readonly class ForYouSweep
             activeRuns: \count($this->runs->findAllActive()),
             startedProfileRuns: $startedProfileRuns,
             advancedProfileRuns: $advancedProfileRuns,
-            activeProfileRuns: $this->profileSweep->activeRunCount(),
+            activeProfileRuns: \count($this->profileSweep->activeRuns()),
         );
     }
 
@@ -81,6 +81,7 @@ final readonly class ForYouSweep
     private function advanceEveryActiveRunAsTheDriver(): array
     {
         $advancedRuns = 0;
+        $advancedProfileRuns = 0;
         $this->surrenderTheCronSweepKeyIfTheRequestIsKilled();
         $this->heartbeat->sweepStarted(RecommendationDriverKind::CronSweep);
 
@@ -89,8 +90,11 @@ final readonly class ForYouSweep
                 $this->presence->mark(RecommendationDriverKind::CronSweep);
                 $advancedRuns += $this->advanceOne($run);
             }
-            $this->presence->mark(RecommendationDriverKind::CronSweep);
-            $advancedProfileRuns = $this->profileSweep->advanceEveryActiveRun(TickDriver::Sweep);
+            foreach ($this->profileSweep->activeRuns() as $profileRun) {
+                $this->presence->mark(RecommendationDriverKind::CronSweep);
+                $this->profileSweep->advanceOne($profileRun, TickDriver::Sweep);
+                ++$advancedProfileRuns;
+            }
         } finally {
             $this->heartbeat->sweepEnded();
             $this->surrenderTheCronSweepKey();

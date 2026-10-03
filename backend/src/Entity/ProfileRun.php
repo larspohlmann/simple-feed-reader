@@ -149,21 +149,6 @@ final class ProfileRun
         return $this->providerUsage->getModel();
     }
 
-    public function getPromptTokens(): int
-    {
-        return $this->providerUsage->getPromptTokens();
-    }
-
-    public function getCompletionTokens(): int
-    {
-        return $this->providerUsage->getCompletionTokens();
-    }
-
-    public function getCostNanoCredits(): ?int
-    {
-        return $this->providerUsage->getCostNanoCredits();
-    }
-
     public function start(string $fingerprint, ?string $providerHost, string $model): void
     {
         $this->guardStatus(RunStatus::Pending, 'start');

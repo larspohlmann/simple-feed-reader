@@ -7,6 +7,7 @@ namespace App\Service\Ai;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
+use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -41,6 +42,7 @@ final readonly class AiProviderConfigurator
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private AiConfigurationFactory $configurationFactory,
+        private RecommendationSettingsRepository $recommendationSettings,
     ) {
     }
 
@@ -186,7 +188,7 @@ final readonly class AiProviderConfigurator
             $user->setActiveAiProviderSettings(null);
         }
 
-        $user->getRecommendationSettings()?->forgetProfileConnection($settings);
+        $this->recommendationSettings->findForUser($user)?->forgetProfileConnection($settings);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void

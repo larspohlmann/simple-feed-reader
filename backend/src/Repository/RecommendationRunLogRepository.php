@@ -204,7 +204,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     /** The account's recommendation-run rows; profile-run rows are not this purge's. */
     public function deleteForUser(User $user): void
     {
-        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, null));
+        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, self::OWNER_RUN, []));
     }
 
     /**
@@ -215,7 +215,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function deleteForUserOutsideRuns(User $user, array $keptRunIds): void
     {
-        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, $keptRunIds));
+        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, self::OWNER_RUN, $keptRunIds));
     }
 
     /**
@@ -225,32 +225,27 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function deleteForUserOutsideProfileRuns(User $user, array $keptProfileRunIds): void
     {
-        $query = $this->createQueryBuilder('l')
-            ->join('l.profileRun', 'p')
-            ->where('p.user = :user')
-            ->setParameter('user', $user);
-
-        if ([] !== $keptProfileRunIds) {
-            $query->andWhere('p.id NOT IN (:kept)')->setParameter('kept', $keptProfileRunIds);
-        }
-
-        $this->rowIds->delete(RecommendationRunLog::class, $this->rowIds->selectedBy($query));
+        $this->rowIds->delete(
+            RecommendationRunLog::class,
+            $this->idsForUser($user, self::OWNER_PROFILE_RUN, $keptProfileRunIds),
+        );
     }
 
     /**
-     * @param ?list<int> $keptRunIds null keeps nothing
+     * @param self::OWNER_* $owner
+     * @param list<int> $keptOwnerIds
      *
      * @return list<int>
      */
-    private function idsForUser(User $user, ?array $keptRunIds): array
+    private function idsForUser(User $user, string $owner, array $keptOwnerIds): array
     {
         $query = $this->createQueryBuilder('l')
-            ->join('l.run', 'r')
+            ->join('l.' . $owner, 'r')
             ->where('r.user = :user')
             ->setParameter('user', $user);
 
-        if (null !== $keptRunIds && [] !== $keptRunIds) {
-            $query->andWhere('r.id NOT IN (:kept)')->setParameter('kept', $keptRunIds);
+        if ([] !== $keptOwnerIds) {
+            $query->andWhere('r.id NOT IN (:kept)')->setParameter('kept', $keptOwnerIds);
         }
 
         return $this->rowIds->selectedBy($query);

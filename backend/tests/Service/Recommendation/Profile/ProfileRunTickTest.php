@@ -56,7 +56,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->chat()->queueContent('{"profile":"Likes maps and cartography."}');
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Completed, $profileRun->getStatus());
         self::assertSame(ProfileRunOutcome::Generated, $profileRun->getOutcome());
@@ -77,7 +77,7 @@ final class ProfileRunTickTest extends DbTestCase
         );
         $this->chat()->queueContent('{"profile":"Likes maps."}');
 
-        $this->tick()->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
 
         self::assertSame('profile-llm', $this->chat()->calls()[0]['model']);
         self::assertSame('profile-llm', $this->storedProfile()->getModel());
@@ -87,7 +87,7 @@ final class ProfileRunTickTest extends DbTestCase
     {
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(ProfileRunOutcome::NoHistory, $profileRun->getOutcome());
         self::assertSame([], $this->chat()->calls());
@@ -98,10 +98,10 @@ final class ProfileRunTickTest extends DbTestCase
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 2);
         $this->chat()->queueContent('{"profile":"First."}');
-        $this->tick()->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
         $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
 
-        $this->tick()->advance($scheduled, TickDriver::Poll);
+        $this->advance($scheduled, TickDriver::Poll);
 
         self::assertSame(ProfileRunOutcome::Unchanged, $scheduled->getOutcome());
         self::assertCount(1, $this->chat()->calls());
@@ -112,11 +112,11 @@ final class ProfileRunTickTest extends DbTestCase
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 2);
         $this->chat()->queueContent('{"profile":"First."}');
-        $this->tick()->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
         $this->chat()->queueContent('{"profile":"Second."}');
         $manual = $this->profileRun(ProfileRunTrigger::Manual);
 
-        $this->tick()->advance($manual, TickDriver::Poll);
+        $this->advance($manual, TickDriver::Poll);
 
         self::assertSame(ProfileRunOutcome::Generated, $manual->getOutcome());
         self::assertSame('Second.', $this->storedProfile()->getText());
@@ -126,12 +126,12 @@ final class ProfileRunTickTest extends DbTestCase
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 2);
         $this->chat()->queueContent('{"profile":"First."}');
-        $this->tick()->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
         $this->fixtures->seedFavorites($this->owner, 'rail', 1);
         $this->chat()->queueContent('{"profile":"Maps and trains."}');
         $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
 
-        $this->tick()->advance($scheduled, TickDriver::Poll);
+        $this->advance($scheduled, TickDriver::Poll);
 
         self::assertSame(ProfileRunOutcome::Generated, $scheduled->getOutcome());
         self::assertSame('Maps and trains.', $this->storedProfile()->getText());
@@ -141,12 +141,12 @@ final class ProfileRunTickTest extends DbTestCase
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 2);
         $this->chat()->queueContent('{"profile":"First."}');
-        $this->tick()->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
         $this->clearStoredProfile();
         $this->chat()->queueContent('{"profile":"Again."}');
         $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
 
-        $this->tick()->advance($scheduled, TickDriver::Poll);
+        $this->advance($scheduled, TickDriver::Poll);
 
         self::assertSame(ProfileRunOutcome::Generated, $scheduled->getOutcome());
     }
@@ -160,12 +160,12 @@ final class ProfileRunTickTest extends DbTestCase
             $this->chat()->queueContent($reply);
         }
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getAttempts());
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame('The model gave no usable profile in 3 attempts.', $profileRun->getError());
@@ -183,12 +183,12 @@ final class ProfileRunTickTest extends DbTestCase
             $this->chat()->queueFailure(new ProviderUnreachableException('gone'));
         }
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame('The AI provider at https://api.example.test/v1 failed: gone', $profileRun->getError());
@@ -203,12 +203,12 @@ final class ProfileRunTickTest extends DbTestCase
             $this->chat()->queueFailure(new RetryableProviderException(429, 20));
         }
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame(
@@ -238,7 +238,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame(ProfileRunTick::KEY_UNREADABLE, $profileRun->getError());
@@ -261,7 +261,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame(ProfileConnections::MISSING, $profileRun->getError());
@@ -275,8 +275,8 @@ final class ProfileRunTickTest extends DbTestCase
         $this->chat()->queueContent('not json');
         $this->chat()->queueContent('{"profile":"Likes maps."}');
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
         self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
@@ -288,7 +288,7 @@ final class ProfileRunTickTest extends DbTestCase
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueContent('not json');
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(1, $this->saved($profileRun)->getAttempts());
     }
@@ -299,7 +299,7 @@ final class ProfileRunTickTest extends DbTestCase
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueFailure(new ProviderUnreachableException('gone'));
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(1, $this->saved($profileRun)->getTransportFailures());
     }
@@ -310,7 +310,7 @@ final class ProfileRunTickTest extends DbTestCase
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueFailure(CredentialsRejectedException::refusedKey());
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
@@ -323,7 +323,7 @@ final class ProfileRunTickTest extends DbTestCase
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueFailure(new RetryableProviderException(503));
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
@@ -342,13 +342,13 @@ final class ProfileRunTickTest extends DbTestCase
             $this->chat()->queueFailure(new RetryableProviderException(503));
         }
 
-        $this->tick()->advance($profileRun, TickDriver::Worker);
+        $this->advance($profileRun, TickDriver::Worker);
         self::assertSame(RunStatus::Running, $profileRun->getStatus());
         self::assertSame(1, $profileRun->getTransportFailures());
         self::assertCount($callsPerTick, $this->chat()->calls());
 
-        $this->tick()->advance($profileRun, TickDriver::Worker);
-        $this->tick()->advance($profileRun, TickDriver::Worker);
+        $this->advance($profileRun, TickDriver::Worker);
+        $this->advance($profileRun, TickDriver::Worker);
 
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame(
@@ -447,7 +447,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();
 
-        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
     }
@@ -489,7 +489,7 @@ final class ProfileRunTickTest extends DbTestCase
     private function tickExpectingTheStubsFailure(ProfileRun $profileRun): void
     {
         try {
-            $this->tick()->advance($profileRun, TickDriver::Poll);
+            $this->advance($profileRun, TickDriver::Poll);
         } catch (\LogicException $exception) {
             self::assertSame('StubChatClient has no queued response left.', $exception->getMessage());
 
@@ -505,6 +505,13 @@ final class ProfileRunTickTest extends DbTestCase
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
 
         return $logs;
+    }
+
+    private function advance(ProfileRun $profileRun, TickDriver $driver): void
+    {
+        /** @var ProfileConnections $profileConnections */
+        $profileConnections = self::getContainer()->get(ProfileConnections::class);
+        $this->tick()->advance($profileRun, $profileConnections->usableFor($profileRun->getUser()), $driver);
     }
 
     private function tick(): ProfileRunTick

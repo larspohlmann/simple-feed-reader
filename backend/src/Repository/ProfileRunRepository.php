@@ -64,12 +64,11 @@ final class ProfileRunRepository extends ServiceEntityRepository
 
     public function hasActiveRun(): bool
     {
-        $activeRunCount = $this->activeStatusQuery()
-            ->select('COUNT(p.id)')
+        return [] !== $this->activeStatusQuery()
+            ->select('p.id')
+            ->setMaxResults(1)
             ->getQuery()
-            ->getSingleScalarResult();
-
-        return (int) $activeRunCount > 0;
+            ->getArrayResult();
     }
 
     public function latestCompletedFingerprintFor(User $user): ?string

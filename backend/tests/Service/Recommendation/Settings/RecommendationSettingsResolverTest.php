@@ -9,7 +9,6 @@ use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
-use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -164,22 +163,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(32_000, $this->resolver()->forUser($this->user)->packing->contextWindow);
     }
 
-    public function testProfileTextDefaultsToNullWhenNoRowExists(): void
-    {
-        $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
-
-        self::assertNull($settings->profileText);
-    }
-
-    public function testProfileTextIsReadFromTheSettingsRow(): void
-    {
-        $this->settingsRowFor($this->user, profileText: 'Likes self-hosted home automation.');
-
-        $settings = $this->resolver()->forUser($this->user);
-
-        self::assertSame('Likes self-hosted home automation.', $settings->profileText);
-    }
-
     public function testShowScoreAndReasonsDefaultsToFalseWhenNoRowExists(): void
     {
         $settings = $this->resolver()->forUser($this->userWithoutSettingsRow());
@@ -203,7 +186,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
 
     private function settingsRowFor(
         User $user,
-        ?string $profileText = null,
         bool $showScoreAndReasons = false,
     ): RecommendationSettings {
         $row = new RecommendationSettings($user);
@@ -216,7 +198,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             debugEnabled: false,
             showScoreAndReasons: $showScoreAndReasons,
         ));
-        $row->storeProfile(new StoredProfile($profileText, null, null, null));
         $this->entityManager->persist($row);
         $this->entityManager->flush();
 

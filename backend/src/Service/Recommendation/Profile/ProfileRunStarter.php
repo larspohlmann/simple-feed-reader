@@ -48,16 +48,16 @@ final readonly class ProfileRunStarter
         }
         $this->rateLimitGuard->enforceForUser($this->aiProfileRunsLimiter, $user);
 
-        return $this->start($user, ProfileRunTrigger::Manual);
+        return $this->open($user, ProfileRunTrigger::Manual);
     }
 
     public function start(User $user, ProfileRunTrigger $trigger): ProfileRun
     {
-        $active = $this->profileRuns->findActiveForUser($user);
-        if (null !== $active) {
-            return $active;
-        }
+        return $this->profileRuns->findActiveForUser($user) ?? $this->open($user, $trigger);
+    }
 
+    private function open(User $user, ProfileRunTrigger $trigger): ProfileRun
+    {
         $profileRun = new ProfileRun($user, $trigger, $this->clock->now());
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();

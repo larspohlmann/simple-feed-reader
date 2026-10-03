@@ -49,25 +49,25 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $profileRun = $this->pendingProfileRun();
         $this->chat()->queueContent('{"profile":"Likes maps."}');
 
-        self::assertTrue($this->advancer()->advance($this->owner, TickDriver::Poll));
+        $this->advancer()->advance($profileRun, TickDriver::Poll);
 
         $this->entityManager->refresh($profileRun);
         self::assertSame(RunStatus::Completed, $profileRun->getStatus());
     }
 
-    public function testWithoutAnActiveProfileRunThereIsNothingToTick(): void
+    /** No reply is queued: a tick of the ended run would reach the stub and throw. */
+    public function testARunThatEndedBeforeTheLockWasTakenIsNotTicked(): void
     {
-        self::assertFalse($this->advancer()->advance($this->owner, TickDriver::Poll));
-    }
+        $profileRun = $this->pendingProfileRun();
+        $this->entityManager->getConnection()->executeStatement(
+            "UPDATE profile_run SET status = 'failed', error = 'Ended elsewhere.' WHERE id = ?",
+            [$profileRun->requireId()],
+        );
 
-    public function testWithoutAnActiveProfileRunTheLockIsNeverTaken(): void
-    {
-        $lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
-        self::getContainer()->set(LockFactory::class, $lockFactory);
+        $this->advancer()->advance($profileRun, TickDriver::Poll);
 
-        self::assertFalse($this->advancer()->advance($this->owner, TickDriver::Poll));
-
-        self::assertNull($lockFactory->lastLockFor(UserTickLock::nameFor($this->owner)));
+        self::assertSame(RunStatus::Failed, $profileRun->getStatus());
+        self::assertSame('Ended elsewhere.', $profileRun->getError());
     }
 
     public function testAHeldLockSkipsTheTurn(): void
@@ -77,7 +77,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
         self::assertTrue($holder->acquire());
 
         try {
-            self::assertFalse($this->advancer()->advance($this->owner, TickDriver::Poll));
+            $this->advancer()->advance($profileRun, TickDriver::Poll);
         } finally {
             $holder->release();
         }
@@ -99,7 +99,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $this->chat()->queueContent('{"profile":"Stolen profile."}');
 
         try {
-            $this->advancer()->advance($this->owner, TickDriver::Poll);
+            $this->advancer()->advance($profileRun, TickDriver::Poll);
         } finally {
             $thief?->release();
         }
@@ -124,7 +124,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $this->chat()->queueFailure(new ProviderUnreachableException('down'));
 
         try {
-            $this->advancer()->advance($this->owner, TickDriver::Poll);
+            $this->advancer()->advance($profileRun, TickDriver::Poll);
         } finally {
             $thief?->release();
         }
@@ -149,7 +149,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $this->chat()->queueContent('{"profile":"Stolen profile."}');
 
         try {
-            $this->advancer()->advance($this->owner, TickDriver::Poll);
+            $this->advancer()->advance($profileRun, TickDriver::Poll);
         } finally {
             $thief?->release();
         }
@@ -170,7 +170,7 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $this->chat()->queueFailure(new ProviderUnreachableException('down'));
 
         try {
-            $this->advancer()->advance($this->owner, TickDriver::Poll);
+            $this->advancer()->advance($profileRun, TickDriver::Poll);
         } finally {
             $thief?->release();
         }
@@ -186,10 +186,10 @@ final class ProfileRunAdvancerTest extends DbTestCase
         $slow = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'profile-llm');
         $slow->setSlowModel(true);
         $this->fixtures->chooseProfileConnection($this->owner, $slow);
-        $this->pendingProfileRun();
+        $profileRun = $this->pendingProfileRun();
         $this->chat()->queueContent('{"profile":"Likes maps."}');
 
-        $this->advancer()->advance($this->owner, TickDriver::Poll);
+        $this->advancer()->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(
             900.0 + TickLockTtl::MARGIN_SECONDS,

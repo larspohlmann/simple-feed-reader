@@ -67,6 +67,5 @@ final readonly class ProfileGeneration
             $profileRun->getUser(),
             new StoredProfile($profileText, $now, $profileRun->getProviderHost(), $profileRun->getModel()),
         );
-        $this->entityManager->flush();
     }
 }

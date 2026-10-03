@@ -17,11 +17,11 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\WorkerPresence;
-use App\Service\Worker\WorkerProfileRunSweep;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
@@ -318,7 +318,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return new RecommendationDrainCommand(
             $lockFactory,
             $this->sweep(),
-            $this->profileSweep(),
             $clock ?? new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
             $this->presence(),
         );
@@ -338,6 +337,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return new WorkerRunSweep(
             $this->runs(),
             $this->advancer(),
+            $this->profileRunSweep(),
             $this->presence(),
             $this->streamHeartbeat($this->presence()),
             $this->entityManager,
@@ -345,12 +345,12 @@ final class RecommendationDrainCommandTest extends DbTestCase
         );
     }
 
-    private function profileSweep(): WorkerProfileRunSweep
+    private function profileRunSweep(): ProfileRunSweep
     {
-        /** @var WorkerProfileRunSweep $profileSweep */
-        $profileSweep = self::getContainer()->get(WorkerProfileRunSweep::class);
+        /** @var ProfileRunSweep $profileRunSweep */
+        $profileRunSweep = self::getContainer()->get(ProfileRunSweep::class);
 
-        return $profileSweep;
+        return $profileRunSweep;
     }
 
     private function lockFactory(): LockFactory

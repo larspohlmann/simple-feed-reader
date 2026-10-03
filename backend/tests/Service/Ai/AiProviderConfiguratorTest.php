@@ -330,17 +330,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $settings->updateProfileSettings(new ProfileSettingsValues(24, $chosen, 40, 80));
         $this->entityManager->persist($settings);
         $this->entityManager->flush();
-        $chosenId = $chosen->requireId();
         $userId = $user->requireId();
-        $this->entityManager->clear();
-        $reloadedUser = $this->entityManager->find(User::class, $userId);
-        $reloadedChosen = $this->entityManager->find(AiProviderSettings::class, $chosenId);
-        self::assertNotNull($reloadedUser);
-        self::assertNotNull($reloadedChosen);
 
-        $configurator->deleteConfiguration($reloadedChosen);
+        $configurator->deleteConfiguration($chosen);
 
-        self::assertNull($reloadedUser->getRecommendationSettings()?->profileSettings()->connection);
         $this->entityManager->clear();
         $persisted = $this->entityManager->getRepository(RecommendationSettings::class)
             ->findOneBy(['user' => $userId]);

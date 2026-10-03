@@ -257,7 +257,6 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             ),
             debugEnabled: false,
             autoGenerateIntervalHours: null,
-            profileText: null,
             showScoreAndReasons: false,
         );
     }
