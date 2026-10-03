@@ -102,6 +102,16 @@ export class ProfileSettingsService
     };
   }
 
+  refresh(): void {
+    this.http
+      .get<ProfileSettingsState>(this.endpoint)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (state) => this.state.set(state),
+        error: (error: HttpErrorResponse) => this.failure.set(parseProblem(error)),
+      });
+  }
+
   loadRun(): void {
     this.http
       .get<ProfileRun>(`${this.endpoint}/runs/current`)
@@ -145,13 +155,7 @@ export class ProfileSettingsService
     const wasActive = this.runActive();
     this.profileRun.set(run);
     if (wasActive && !this.runActive()) {
-      this.http
-        .get<ProfileSettingsState>(this.endpoint)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (state) => this.state.set(state),
-          error: (error: HttpErrorResponse) => this.failure.set(parseProblem(error)),
-        });
+      this.refresh();
     }
     this.schedulePoll();
   }

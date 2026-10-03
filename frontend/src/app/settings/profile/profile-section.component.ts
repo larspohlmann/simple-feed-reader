@@ -3,8 +3,11 @@ import {
   Component,
   WritableSignal,
   computed,
+  effect,
+  input,
   inject,
   linkedSignal,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -42,6 +45,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileSectionComponent {
+  readonly connections = input<readonly unknown[]>([]);
   readonly svc = inject(ProfileSettingsService);
   private readonly language = inject(LanguageService);
 
@@ -90,6 +94,15 @@ export class ProfileSectionComponent {
   constructor() {
     this.svc.load();
     this.svc.loadRun();
+    let initial = true;
+    effect(() => {
+      this.connections();
+      if (initial) {
+        initial = false;
+        return;
+      }
+      untracked(() => this.svc.refresh());
+    });
     toastOnSaved(this.svc, 'settings.profile.saved');
   }
 

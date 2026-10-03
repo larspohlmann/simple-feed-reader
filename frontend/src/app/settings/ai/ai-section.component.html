@@ -347,7 +347,7 @@
        is rendered directly here rather than wrapped in a second group -- one
        group header per concern, no nesting. -->
   @if (activeReady()) {
-    <app-profile-section />
+    <app-profile-section [connections]="ai.configs()" />
     <app-recommendation-settings-card />
 
     <app-settings-group
