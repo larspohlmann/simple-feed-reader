@@ -4253,6 +4253,15 @@ git add backend/src backend/tests
 git commit -m "feat(#1351): a profile run generates the profile under the lock its recommendation runs take"
 ```
 
+*Amended (Task 3 execution):*
+1. `ServiceModuleCycleRule`: `Recommendation\Llm` is a declared sub-module, so `Recommendation\Profile` (part of `Recommendation`) may not name it, and Step 8's `Profile/ProfileDistiller` closed the cycle `Recommendation -> Recommendation\Llm -> Recommendation`. The lower module now owns the interface: `Profile/ProfileRunDistiller/ProfileRunDistillerInterface::distill(ProfileTick): ProfileDistillationOutcomeModel`, implemented by `Llm/Run/LlmProfileRunDistiller` (Step 8's distiller body without the lock guard, single implementation, autowired). The lock guard moves to `ProfileGeneration::advance()`, right after the call and before any write (it takes `TickLockKeepalive`); `Profile/ProfileDistiller.php` does not exist.
+2. Task 5's move happens here: `ProfileDistillationOutcomeModel` is `Profile/Model/ProfileDistillationOutcomeModel` (its test in `tests/Service/Recommendation/Profile/Model/`), since the interface returns it; `Llm/Run/RecommendationProfileDistiller` imports it from there; its docblock says "the unusable reply its caller retries".
+3. Nothing in `src` takes `ProfileRunTick`, `ProfileRunAdvancer` or `ProfileRunStarter` yet, so the test container finds them removed: `config/services_test.yaml` declares the three `autowire: true, public: true` under `# Public: no driver takes the profile run's services yet, so their tests would find them removed.` Task 4 deletes those entries once its drivers take them (keep any a test still needs).
+4. `ProfileGeneration::store()` completes the run before `storeProfile()`, so the writer's flush writes the run and the profile in one transaction; a kill between two flushes would otherwise leave a stored profile under a `running` run.
+5. Added pins: `ProfileRunTickTest::testADeferringRateLimitIsAStrikeAndTheThirdFailsTheRun`, `testAnUnreadableKeyFailsTheRunAtOnceKeepingTheProfile`, `ProfileRunAdvancerTest::testATickThatLostItsLockDuringAFailedCallRecordsNoStrike`. The stolen-lock test reads the run with `assertNotNull` and `->` (PHPStan rejects `?->` after the first assertion); the fingerprint test builds its lines in a typed `lines()` helper (PHPStan `list<>`).
+6. `HeldTickLock` carries no `@noinspection AutowireWrongClass` (PhpStorm: redundant suppression, `Pass/` is not autowired). `docs/recommendations-runs.md` names `UserTickLock::nameFor()` instead of `lockNameFor()`.
+7. Long lines wrapped (the `new ProfileRun(...)` lines in the tests, the `ProfileConnections::usableFor()` docblock reworded to "if" to fit 120 columns).
+
 ---
 ### Task 4: Profile runs are scheduled and driven like recommendation runs
 
@@ -5164,11 +5173,11 @@ This is the simplification the issue exists for. The run keeps exactly one profi
 
 **Files:**
 - Create: `backend/migrations/Version20261003110000.php`
-- Move: `backend/src/Service/Recommendation/Llm/Run/Model/ProfileDistillationOutcomeModel.php` → `backend/src/Service/Recommendation/Profile/Model/ProfileDistillationOutcomeModel.php` (its test to `backend/tests/Service/Recommendation/Profile/Model/`)
+- (Done in Task 3, amendment 2.) Move: `backend/src/Service/Recommendation/Llm/Run/Model/ProfileDistillationOutcomeModel.php` → `backend/src/Service/Recommendation/Profile/Model/ProfileDistillationOutcomeModel.php` (its test to `backend/tests/Service/Recommendation/Profile/Model/`)
 - Modify: `backend/src/Entity/RecommendationRun.php`, `RunProfile.php`, `RecommendationRunProgress.php`, `backend/src/Enum/RecommendationEngineKind.php`
 - Modify: `backend/src/Service/Recommendation/Run/SnapshotPhase.php`, `TickPhases.php`, `TickLockTtl.php`, `Pass/TickContext.php`, `Factory/TickContextFactory.php`, `Model/CallSlotModel.php`
 - Modify: `backend/src/Service/Recommendation/Llm/LlmRecommendationEngine.php`, `Llm/Run/InvalidReplyRetry.php` (docblock), `backend/src/Service/Recommendation/Jev/JevRecommendationEngine.php`
-- Modify: `backend/src/Service/Recommendation/Profile/ProfileDistiller.php`, `ProfileGeneration.php` (import of the moved model); `backend/config/services.yaml` (drop the `ProfileDistillerInterface` alias)
+- Modify (Task 3 amendment 1: the imports are already in place; `Profile/ProfileDistiller.php` is `Llm/Run/LlmProfileRunDistiller.php`): `backend/config/services.yaml` (drop the `ProfileDistillerInterface` alias)
 - Delete: `backend/src/Service/Recommendation/Llm/Run/ProviderPhase/DistillationPhase.php`, `Llm/Run/RecommendationProfileDistiller.php`, `Profile/ProfileDistiller/ProfileDistillerInterface.php`, `Jev/JevProfileStep.php`, `Run/Model/BorrowedProfileModel.php`; tests `tests/Service/Recommendation/Jev/JevProfileStepTest.php`, `tests/Service/Recommendation/Llm/Run/RecommendationProfileDistillerTest.php`
 - Test: `backend/tests/Entity/RecommendationRunTest.php`, `RecommendationRunProgressTest.php`, `backend/tests/Enum/RecommendationEngineKindTest.php`, `backend/tests/Service/Recommendation/Run/SnapshotPhaseTest.php`, `backend/tests/Service/Recommendation/Jev/JevRecommendationEngineTest.php`, `backend/tests/Service/Recommendation/Run/TickLockTtlTest.php`, plus the fallout in Step 9.
 
