@@ -4459,7 +4459,7 @@ In `backend/src/Repository/RecommendationSettingsRepository.php` add:
     {
         /** @var list<RecommendationSettings> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.profileIntervalHours IS NOT NULL')
+            ->andWhere('s.profileTuning.intervalHours IS NOT NULL')
             ->getQuery()
             ->getResult();
 
@@ -4729,8 +4729,9 @@ final class StartDueProfileRunsHandlerTest extends DbTestCase
         /** @var ProfileRunRepository $profileRuns */
         $profileRuns = $this->entityManager->getRepository(ProfileRun::class);
         $started = $profileRuns->findActiveForUser($owner);
-        self::assertSame(ProfileRunTrigger::Scheduled, $started?->getTrigger());
-        self::assertSame('pending', $started?->getStatus()->value);
+        self::assertNotNull($started);
+        self::assertSame(ProfileRunTrigger::Scheduled, $started->getTrigger());
+        self::assertSame(RunStatus::Pending, $started->getStatus());
     }
 }
 ```
@@ -4935,14 +4936,14 @@ final readonly class AdvanceProfileRunsHandler
 
 `AdvanceRecommendationRunsHandler`'s docblock loses "The only place the persistent worker's liveness key is claimed:"; it reads `Runs one WorkerRunSweep per ten-second firing and claims the persistent worker's liveness key, which the settings card reads to tell whether an install still needs a cron.`
 
-In `WorkerSchedule::getSchedule()`, directly after the `StartDueRecommendationRuns` entry:
+In `WorkerSchedule::getSchedule()`, after the last entry (`VerifyPendingImages`) — see the amendment below:
 
 ```php
             ->add(RecurringMessage::every('10 seconds', new AdvanceProfileRuns()))
             ->add(RecurringMessage::every('5 minutes', new StartDueProfileRuns()))
 ```
 
-In `WorkerScheduleWiringTest::testTheWorkerScheduleCarriesExactlyTheDecidedEntries`: count 9; insert `AdvanceProfileRuns::class, StartDueProfileRuns::class,` after `StartDueRecommendationRuns::class` and `'every 10 seconds', 'every 5 minutes',` after the second entry of the frequency list. If the file's catch-up tests (`MessageGenerator` over a `MockClock`) count generated messages, raise their expected counts by the two new entries' firings in the same window and report the arithmetic.
+In `WorkerScheduleWiringTest::testTheWorkerScheduleCarriesExactlyTheDecidedEntries`: count 9; append `AdvanceProfileRuns::class, StartDueProfileRuns::class,` to the class list and `'every 10 seconds', 'every 5 minutes',` to the frequency list. If the file's catch-up tests (`MessageGenerator` over a `MockClock`) count generated messages, raise their expected counts by the two new entries' firings in the same window and report the arithmetic.
 
 Run the Step 3 tests and `php bin/phpunit tests/Service/Worker`. Expected: OK.
 
@@ -4950,7 +4951,7 @@ Run the Step 3 tests and `php bin/phpunit tests/Service/Worker`. Expected: OK.
 
 In `backend/tests/Service/Recommendation/Run/ForYouSweepTest.php`:
 
-1. `sweepMarkingWith()` builds `ForYouSweep` by hand: add `$this->service(ProfileRunSweep::class),` as the new last-but-two argument, matching the constructor order in Step 6.
+1. `sweepMarkingWith()` builds `ForYouSweep` by hand: add `$this->service(ProfileRunSweep::class),` as the fourth argument (after the advancer), matching the constructor order in Step 6.
 2. Append:
 
 ```php
@@ -4998,7 +4999,8 @@ The owner has no reading history, so its run completes without a model call in t
 ```php
     public function testTheDrainerTicksAProfileRunWithNoRecommendationRunActive(): void
     {
-        $owner = $this->drainOwner('drain-profile@example.test');
+        $owner = $this->user('drain-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
         $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();
@@ -5165,6 +5167,14 @@ composer cs && composer stan && composer md && composer tramp
 git add backend/src backend/tests
 git commit -m "feat(#1351): profile runs start on their schedule and every driver ticks them"
 ```
+
+*Amended (Task 4 execution):*
+1. `findWithProfileInterval()` filters on `s.profileTuning.intervalHours`: since Task 1 the schedule lives in the `ProfileTuning` embeddable, and `RecommendationSettings` has no `profileIntervalHours` field.
+2. The two schedule entries go at the end of `WorkerSchedule`, not after `StartDueRecommendationRuns`. The stateful checkpoint stores `(time, index)` into the recurring-message list, and an insertion would shift the index of every entry after it across the deploy, so one firing could be skipped or repeated. The docblock gains `New entries go last: the checkpoint stores a position in this list, which an insertion would shift.` `debug:scheduler` after the deploy shows the new entries on the existing anchor. The catch-up tests count only `AdvanceRecommendationRuns` and `PurgeFailedMessages`, so their counts do not change.
+3. Carried from Task 3: `ProfileRunAdvancer::advance()` checks `findActiveForUser()` before it takes the lock and checks again under it. A profile tick for an account with no active run never takes the shared lock, so a recommendation tick never answers `busy` because of it. Pinned by `ProfileRunAdvancerTest::testWithoutAnActiveProfileRunTheLockIsNeverTaken` (a recording lock factory sees no lock).
+4. All three `services_test.yaml` entries from Task 3 are deleted. The drivers now take these services, and every test still fetches them from the test container.
+5. `StartDueProfileRunsHandlerTest` uses `assertNotNull` and `->`, comparing against `RunStatus::Pending` (PHPStan `nullsafe.neverNull`). `drainOwner()` became `$this->user()` plus `seedReadyAiSettings()`. Long lines are wrapped.
+6. `AccountResetTest::testDoesNotTouchAnotherUsersRows` also checks that the bystander's profile run and its log row survive. This pins the profile-log subquery's correlation by user.
 
 ---
 ### Task 5: Recommendation runs lose their distillation and read a frozen copy of the stored profile
