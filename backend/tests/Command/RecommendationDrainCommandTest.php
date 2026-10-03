@@ -62,15 +62,14 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * A two-batch run needs four sweeps (distillation, one per batch, consolidation) and a fifth that finds nothing,
-     * so reaching completion proves the loop really looped.
+     * A two-batch run needs three sweeps (one per batch, consolidation) and a fourth that finds nothing, so reaching
+     * completion proves the loop really looped.
      */
     public function testDrainsAnActiveRunToCompletionAndReleasesTheLock(): void
     {
         $user = $this->user('drain-to-completion@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
-        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
         $this->queueCleanConsolidationReply(array_merge(
@@ -144,8 +143,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     {
         $user = $this->user('drain-lost-lock@example.test');
         $this->seedTwoBatchFixture($user);
-        $this->startAndSnapshot($user);
-        $this->queueDistillReply();
+        $run = $this->startAndSnapshot($user);
+        $this->queueBatchReply($run->getCandidateBatches()[0]);
 
         $command = $this->commandWithLockStore(
             new LockLostAfterFirstRefreshStore(new DoctrineDbalStore($this->entityManager->getConnection())),
@@ -164,7 +163,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $user = $this->user('drain-lock-expired@example.test');
         $this->seedTwoBatchFixture($user);
         $run = $this->startAndSnapshot($user);
-        $this->queueDistillReply();
         $this->queueBatchReply($run->getCandidateBatches()[0]);
         $this->queueBatchReply($run->getCandidateBatches()[1]);
         $this->queueCleanConsolidationReply(array_merge(
@@ -333,6 +331,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
     private function startAndSnapshot(User $user): RecommendationRun
     {
+        $this->fixtures->storeProfile($user, 'a distilled profile');
         $this->starter()->start($user);
         $this->advancer()->advance($user);
         $run = $this->runs()->findActiveForUser($user);
@@ -359,13 +358,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
                 array_keys($batchIds),
             ),
         ], \JSON_THROW_ON_ERROR));
-    }
-
-    private function queueDistillReply(): void
-    {
-        /** @var StubChatClient $client */
-        $client = self::getContainer()->get(StubChatClient::class);
-        $client->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
     }
 
     /**
