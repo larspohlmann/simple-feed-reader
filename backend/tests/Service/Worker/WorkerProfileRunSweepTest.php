@@ -57,14 +57,13 @@ final class WorkerProfileRunSweepTest extends DbTestCase
         self::assertTrue($clearTracker->wasCleared());
     }
 
-    /** The first sweep opens the profile run; the second makes its call, inside which the beat must reach presence. */
+    /** The clock steps past the heartbeat's 30-second throttle, so only a disarmed heartbeat can stay silent. */
     public function testItArmsTheStreamHeartbeatForTheSweepAndDisarmsItAfterwards(): void
     {
         $this->pendingProfileRunWithHistory('worker-profile-sweep-heartbeat@example.test');
-        $this->sweep($this->presence(), new MockClock())->sweep(RecommendationDriverKind::PersistentWorker);
         $this->chat()->queueContent('{"profile":"Likes maps."}');
 
-        $clock = new TickingClock(new \DateTimeImmutable('2026-10-03 12:00:00'), 10);
+        $clock = new TickingClock(new \DateTimeImmutable('2026-10-03 12:00:00'), 60);
         $presence = new WorkerPresence($this->heartbeats(), $clock);
         $heartbeat = new SweepStreamHeartbeat($presence, $clock);
         $this->chat()->duringNextCall(static function () use ($heartbeat): void {

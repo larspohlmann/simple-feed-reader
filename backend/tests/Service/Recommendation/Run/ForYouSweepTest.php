@@ -76,7 +76,6 @@ final class ForYouSweepTest extends DbTestCase
             new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00')),
         );
         $this->entityManager->flush();
-        $this->sweep()->sweepOnce();
         $this->chatClient()->queueContent('{"profile":"Likes maps."}');
         $drivingDuringTheCall = null;
         $this->chatClient()->duringNextCall(function () use (&$drivingDuringTheCall): void {

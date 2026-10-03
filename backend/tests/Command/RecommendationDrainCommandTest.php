@@ -266,7 +266,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         );
     }
 
-    public function testTheDrainerKeepsDrainingAProfileRunThatNeedsASecondTick(): void
+    public function testTheDrainerKeepsDrainingAProfileRunWhoseFirstReplyWasUnusable(): void
     {
         $owner = $this->user('drain-profile-two-ticks@example.test');
         $this->fixtures->seedReadyAiSettings($owner);
@@ -277,6 +277,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $profileRunId = $profileRun->requireId();
         /** @var StubChatClient $chat */
         $chat = self::getContainer()->get(StubChatClient::class);
+        $chat->queueContent('not json');
         $chat->queueContent('{"profile":"Likes maps."}');
 
         $this->execute($this->command());
