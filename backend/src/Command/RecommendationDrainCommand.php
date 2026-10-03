@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Worker\WorkerProfileRunSweep;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -23,7 +24,7 @@ use Symfony\Component\Lock\LockInterface;
  */
 #[AsCommand(
     name: 'app:recommendations:drain',
-    description: 'Advance all active recommendation runs until none is left',
+    description: 'Advance all active recommendation and profile runs until none is left',
 )]
 final class RecommendationDrainCommand extends Command
 {
@@ -51,6 +52,7 @@ final class RecommendationDrainCommand extends Command
     public function __construct(
         private readonly LockFactory $lockFactory,
         private readonly WorkerRunSweep $sweep,
+        private readonly WorkerProfileRunSweep $profileSweep,
         private readonly ClockInterface $clock,
         private readonly WorkerPresence $presence,
     ) {
@@ -128,7 +130,7 @@ final class RecommendationDrainCommand extends Command
     {
         $startedAt = $this->clock->now();
 
-        while ($this->sweep->sweep(RecommendationDriverKind::OnDemandDrainer) > 0) {
+        while ($this->sweepOnceMore() > 0) {
             if ($this->clock->now()->getTimestamp() - $startedAt->getTimestamp() >= self::MAX_RUNTIME_SECONDS) {
                 return;
             }
@@ -139,6 +141,13 @@ final class RecommendationDrainCommand extends Command
 
             $this->clock->sleep(self::SWEEP_PAUSE_SECONDS);
         }
+    }
+
+    /** Both kinds of run, so a profile run with no recommendation run beside it still drains. */
+    private function sweepOnceMore(): int
+    {
+        return $this->sweep->sweep(RecommendationDriverKind::OnDemandDrainer)
+            + $this->profileSweep->sweep(RecommendationDriverKind::OnDemandDrainer);
     }
 
     /**

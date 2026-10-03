@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\RecommendationDrainCommand;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
@@ -19,6 +21,7 @@ use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\WorkerPresence;
+use App\Service\Worker\WorkerProfileRunSweep;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
@@ -247,6 +250,24 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $lock->release();
     }
 
+    public function testTheDrainerTicksAProfileRunWithNoRecommendationRunActive(): void
+    {
+        $owner = $this->user('drain-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+        $profileRunId = $profileRun->requireId();
+
+        $this->execute($this->command());
+
+        $this->entityManager->clear();
+        self::assertSame(
+            RunStatus::Completed,
+            $this->entityManager->find(ProfileRun::class, $profileRunId)?->getStatus(),
+        );
+    }
+
     private function execute(RecommendationDrainCommand $command): int
     {
         return (new CommandTester($command))->execute([]);
@@ -267,6 +288,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return new RecommendationDrainCommand(
             $lockFactory,
             $this->sweep(),
+            $this->profileSweep(),
             $clock ?? new TickingClock(new \DateTimeImmutable('2026-08-14 00:00:00'), 1),
             $this->presence(),
         );
@@ -291,6 +313,14 @@ final class RecommendationDrainCommandTest extends DbTestCase
             $this->entityManager,
             new NullLogger(),
         );
+    }
+
+    private function profileSweep(): WorkerProfileRunSweep
+    {
+        /** @var WorkerProfileRunSweep $profileSweep */
+        $profileSweep = self::getContainer()->get(WorkerProfileRunSweep::class);
+
+        return $profileSweep;
     }
 
     private function lockFactory(): LockFactory

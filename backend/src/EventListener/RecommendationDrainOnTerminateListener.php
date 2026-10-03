@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Run\RecommendationDrainSpawner;
 use Doctrine\ORM\EntityManagerInterface;
@@ -21,6 +22,7 @@ final readonly class RecommendationDrainOnTerminateListener
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RecommendationRunRepository $runs,
+        private ProfileRunRepository $profileRuns,
         private RecommendationDrainSpawner $spawner,
         private LoggerInterface $logger,
     ) {
@@ -35,7 +37,7 @@ final readonly class RecommendationDrainOnTerminateListener
         }
 
         try {
-            if (!$this->runs->hasActiveRun()) {
+            if (!$this->runs->hasActiveRun() && !$this->profileRuns->hasActiveRun()) {
                 return;
             }
             $this->spawner->spawnIfNoWorker();

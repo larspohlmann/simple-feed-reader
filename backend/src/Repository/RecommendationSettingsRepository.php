@@ -39,4 +39,20 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
 
         return $rows;
     }
+
+    /**
+     * Every account that scheduled its profile; the finder decides which of them are due right now.
+     *
+     * @return list<RecommendationSettings>
+     */
+    public function findWithProfileInterval(): array
+    {
+        /** @var list<RecommendationSettings> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->andWhere('s.profileTuning.intervalHours IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
 }

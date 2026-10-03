@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Worker;
 
+use App\Service\Worker\Message\AdvanceProfileRuns;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\Message\SendDueDigests;
+use App\Service\Worker\Message\StartDueProfileRuns;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use App\Service\Worker\Message\SweepSavedSearchMemberships;
 use App\Service\Worker\Message\VerifyPendingImages;
@@ -30,6 +32,7 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
      * stateful() is load-bearing: the consumer restarts hourly (--time-limit=3600), and an in-process checkpoint
      * re-anchors every entry at each start, so the daily one would never fire. The pool must outlive var/cache/prod.
      * Every message stays a property-less sweep (a failed copy never goes stale), so one catch-up firing suffices.
+     * New entries go last: the checkpoint stores a position in this list, which an insertion would shift.
      */
     public function getSchedule(): Schedule
     {
@@ -41,6 +44,8 @@ final readonly class WorkerSchedule implements ScheduleProviderInterface
             ->add(RecurringMessage::every('1 hour', new SendDueDigests()))
             ->add(RecurringMessage::every('1 minute', new SweepSavedSearchMemberships()))
             ->add(RecurringMessage::every('1 minute', new VerifyPendingImages()))
+            ->add(RecurringMessage::every('10 seconds', new AdvanceProfileRuns()))
+            ->add(RecurringMessage::every('5 minutes', new StartDueProfileRuns()))
             ->stateful($this->schedulerStateCache)
             ->processOnlyLastMissedRun(true);
     }

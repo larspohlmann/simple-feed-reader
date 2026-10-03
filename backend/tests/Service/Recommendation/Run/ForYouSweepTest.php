@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Feed;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
@@ -15,6 +16,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\DueRecommendationRunFinder;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
@@ -45,6 +47,22 @@ final class ForYouSweepTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
+    }
+
+    public function testSweepOnceStartsAndTicksDueProfileRunsToo(): void
+    {
+        $owner = $this->user('sweep-profile@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        /** @var RecommendationSettingsWriter $writer */
+        $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
+        $writer->saveProfileSettings($owner, new ProfileSettingsValues(6, null, 40, 80));
+
+        $report = $this->sweep()->sweepOnce();
+
+        self::assertSame(1, $report->startedProfileRuns);
+        self::assertSame(1, $report->advancedProfileRuns);
+        self::assertSame(0, $report->activeProfileRuns);
+        self::assertSame(0, $report->startedRuns);
     }
 
     private function sweep(): ForYouSweep
@@ -260,6 +278,7 @@ final class ForYouSweepTest extends DbTestCase
             $this->service(DueRecommendationRunFinder::class),
             $this->service(RecommendationRunStarter::class),
             $this->service(RecommendationRunAdvancer::class),
+            $this->service(ProfileRunSweep::class),
             $this->runs(),
             $presence,
             new SweepStreamHeartbeat($presence, $clock),

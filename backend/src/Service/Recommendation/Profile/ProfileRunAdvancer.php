@@ -25,6 +25,11 @@ final readonly class ProfileRunAdvancer
     /** False when the account has no active profile run, or another tick holds the lock. */
     public function advance(User $user, TickDriver $driver): bool
     {
+        // Checked before the lock too: a lock taken for nothing makes the user's recommendation tick answer busy.
+        if (null === $this->profileRuns->findActiveForUser($user)) {
+            return false;
+        }
+
         $held = $this->tickLock->acquire(
             $user,
             $this->lockTtl->secondsForConnection($this->profileConnections->usableFor($user)),

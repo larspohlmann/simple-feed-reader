@@ -39,17 +39,6 @@ services:
         alias: App\Service\Recommendation\Run\ProviderCallHeartbeat\CompositeProviderCallHeartbeat
         public: true
 
-    # Public: no driver takes the profile run's services yet, so their tests would find them removed.
-    App\Service\Recommendation\Profile\ProfileRunTick:
-        autowire: true
-        public: true
-    App\Service\Recommendation\Profile\ProfileRunAdvancer:
-        autowire: true
-        public: true
-    App\Service\Recommendation\Profile\ProfileRunStarter:
-        autowire: true
-        public: true
-
     # Public: ImageProxyControllerTest replaces it, and its one consumer would otherwise inline it away.
     App\Service\Image\ImageProxy\ImageProxyInterface:
         alias: App\Service\Image\ImageProxy\ImageProxy

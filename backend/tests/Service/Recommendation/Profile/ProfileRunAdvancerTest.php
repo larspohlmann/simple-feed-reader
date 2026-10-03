@@ -60,6 +60,16 @@ final class ProfileRunAdvancerTest extends DbTestCase
         self::assertFalse($this->advancer()->advance($this->owner, TickDriver::Poll));
     }
 
+    public function testWithoutAnActiveProfileRunTheLockIsNeverTaken(): void
+    {
+        $lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
+        self::getContainer()->set(LockFactory::class, $lockFactory);
+
+        self::assertFalse($this->advancer()->advance($this->owner, TickDriver::Poll));
+
+        self::assertNull($lockFactory->lastLockFor(UserTickLock::nameFor($this->owner)));
+    }
+
     public function testAHeldLockSkipsTheTurn(): void
     {
         $profileRun = $this->pendingProfileRun();

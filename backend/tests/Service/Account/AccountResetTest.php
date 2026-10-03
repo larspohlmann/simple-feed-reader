@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -20,6 +21,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CallPhase;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Account\AccountReset;
 use App\Tests\DbTestCase;
@@ -37,7 +39,7 @@ final class AccountResetTest extends DbTestCase
         return $service;
     }
 
-    /** @return array{0: User, 1: Feed, 2: Entry, 3: RecommendationRun} */
+    /** @return array{0: User, 1: Feed, 2: Entry, 3: RecommendationRun, 4: ProfileRun} */
     private function seedAccount(string $email): array
     {
         $user = $this->user($email);
@@ -81,16 +83,26 @@ final class AccountResetTest extends DbTestCase
             '{}',
             new \DateTimeImmutable('2026-08-05T00:00:00Z'),
         ));
+        $profileRun = new ProfileRun(
+            $user,
+            ProfileRunTrigger::Scheduled,
+            new \DateTimeImmutable('2026-08-05T00:00:00Z'),
+        );
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->persist(
+            RecommendationRunLog::forProfileRun($profileRun, 1, '{}', new \DateTimeImmutable('2026-08-05T00:00:00Z')),
+        );
         $this->entityManager->flush();
 
-        return [$user, $feed, $entry, $run];
+        return [$user, $feed, $entry, $run, $profileRun];
     }
 
     public function testWipesEverythingTheUserOwns(): void
     {
-        [$user, , , $run] = $this->seedAccount('reset-wipes@example.com');
+        [$user, , , $run, $profileRun] = $this->seedAccount('reset-wipes@example.com');
         $userId = $user->requireId();
         $runId = $run->requireId();
+        $profileRunId = $profileRun->requireId();
 
         $this->reset()->reset($user);
 
@@ -112,6 +124,11 @@ final class AccountResetTest extends DbTestCase
         self::assertSame(
             [],
             $this->entityManager->getRepository(RecommendationRunLog::class)->findBy(['run' => $runId]),
+        );
+        self::assertSame([], $this->entityManager->getRepository(ProfileRun::class)->findBy(['user' => $userId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationRunLog::class)->findBy(['profileRun' => $profileRunId]),
         );
         $subscriptionTags = $this->entityManager->getRepository(SubscriptionTag::class)->findAll();
         self::assertSame([], $subscriptionTags);
@@ -152,10 +169,11 @@ final class AccountResetTest extends DbTestCase
     public function testDoesNotTouchAnotherUsersRows(): void
     {
         [$victim] = $this->seedAccount('reset-target@example.com');
-        [, , , $bystanderRun] = $this->seedAccount('reset-bystander@example.com');
+        [, , , $bystanderRun, $bystanderProfileRun] = $this->seedAccount('reset-bystander@example.com');
         $bystander = $bystanderRun->getUser();
         $bystanderId = $bystander->requireId();
         $bystanderRunId = $bystanderRun->requireId();
+        $bystanderProfileRunId = $bystanderProfileRun->requireId();
 
         $this->reset()->reset($victim);
 
@@ -183,6 +201,13 @@ final class AccountResetTest extends DbTestCase
         self::assertCount(
             1,
             $this->entityManager->getRepository(RecommendationRunLog::class)->findBy(['run' => $bystanderRunId]),
+        );
+        self::assertCount(1, $this->entityManager->getRepository(ProfileRun::class)->findBy(['user' => $bystanderId]));
+        self::assertCount(
+            1,
+            $this->entityManager
+                ->getRepository(RecommendationRunLog::class)
+                ->findBy(['profileRun' => $bystanderProfileRunId]),
         );
     }
 

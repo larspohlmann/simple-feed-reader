@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\EventListener;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Kernel;
 use App\Service\Mail\DeferredMailer;
 use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
@@ -152,6 +154,20 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
         $this->bootedKernel->terminate($request, $response);
 
         self::assertSame([], $this->launcher->launches);
+    }
+
+    public function testAnActiveProfileRunAloneSpawnsTheDrainer(): void
+    {
+        $this->entityManager->persist(
+            new ProfileRun($this->user, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00')),
+        );
+        $this->entityManager->flush();
+
+        $request = $this->healthRequest();
+        $response = $this->bootedKernel->handle($request);
+        $this->bootedKernel->terminate($request, $response);
+
+        self::assertSame([[RecommendationDrainSpawner::DRAIN_COMMAND, '--detach']], $this->launcher->launches);
     }
 
     private function persistActiveRun(): void

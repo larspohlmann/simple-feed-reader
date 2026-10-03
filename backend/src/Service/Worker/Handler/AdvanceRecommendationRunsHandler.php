@@ -10,8 +10,8 @@ use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
- * Runs one WorkerRunSweep per ten-second firing. The only place the persistent worker's liveness key is claimed: the
- * settings card reads that key to tell whether an install still needs a cron.
+ * Runs one WorkerRunSweep per ten-second firing and claims the persistent worker's liveness key, which the settings
+ * card reads to tell whether an install still needs a cron.
  */
 #[AsMessageHandler]
 final readonly class AdvanceRecommendationRunsHandler
