@@ -27,7 +27,8 @@ use Psr\Clock\ClockInterface;
 /**
  * Creates, verifies and removes provider connections. Every write is preceded by a live call, and a failed one
  * persists nothing; only duplicateConfiguration() skips it, reusing a verified row's key. The active configuration
- * is a single pointer on User, not a per-row flag; a borrowing row's profile connection is a pointer on that row.
+ * is a single pointer on User, not a per-row flag; the profile connection is a pointer on the account's
+ * recommendation settings.
  */
 final readonly class AiProviderConfigurator
 {
@@ -185,9 +186,7 @@ final readonly class AiProviderConfigurator
             $user->setActiveAiProviderSettings(null);
         }
 
-        foreach ($this->aiProviderSettings->findBorrowersOf($settings) as $borrower) {
-            $borrower->setProfileConnection(null);
-        }
+        $user->getRecommendationSettings()?->forgetProfileConnection($settings);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void

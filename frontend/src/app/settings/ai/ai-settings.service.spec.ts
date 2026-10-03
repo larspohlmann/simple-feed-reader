@@ -24,7 +24,6 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
-  profileConnectionId: null,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
@@ -61,106 +60,6 @@ describe('AiSettingsService', () => {
   afterEach(() => {
     ctrl.verify();
     jest.useRealTimers();
-  });
-
-  it('chooses a profile connection for one borrowing row and leaves the others alone', () => {
-    service.configs.set([
-      config({ id: 1, profileConnectionId: 5 }),
-      config({ id: 2, profileConnectionId: 5 }),
-      config({ id: 5 }),
-    ]);
-
-    service.chooseProfileConnection(2, 6);
-    const request = ctrl.expectOne(`${base}/api/me/ai/configs/2/profile`);
-    expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ connectionId: 6 });
-    request.flush(config({ id: 2, profileConnectionId: 6 }));
-
-    expect(service.configs().map((each) => [each.id, each.profileConnectionId])).toEqual([
-      [1, 5],
-      [2, 6],
-      [5, null],
-    ]);
-  });
-
-  it("scopes a refused profile choice to the borrowing row's picker", () => {
-    service.chooseProfileConnection(3, 9);
-    ctrl.expectOne(`${base}/api/me/ai/configs/3/profile`).flush(
-      {
-        type: 'profile_connection_rejected',
-        detail: 'Only a ready LLM connection can build your profile.',
-      },
-      { status: 422, statusText: 'Unprocessable Entity' },
-    );
-
-    expect(service.failure()?.scope).toEqual({ action: 'profile', configId: 3 });
-    expect(service.failure()?.failure).toMatchObject({
-      kind: 'unknown',
-      detail: 'Only a ready LLM connection can build your profile.',
-    });
-  });
-
-  it('reloads the settings when the borrowing row is gone', () => {
-    service.configs.set([config({ id: 4, profileConnectionId: 5 })]);
-
-    service.clearProfileConnection(4);
-    ctrl
-      .expectOne(`${base}/api/me/ai/configs/4/profile`)
-      .flush(null, { status: 404, statusText: 'Not Found' });
-
-    ctrl
-      .expectOne(`${base}/api/me/ai`)
-      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
-    expect(service.configs().map((each) => each.id)).toEqual([5]);
-    expect(service.failure()).toBeNull();
-  });
-
-  it('stays busy through the reload when the chosen profile connection is gone', () => {
-    service.chooseProfileConnection(4, 5);
-    ctrl
-      .expectOne(`${base}/api/me/ai/configs/4/profile`)
-      .flush(null, { status: 404, statusText: 'Not Found' });
-
-    expect(service.busy()).toBe(true);
-
-    ctrl
-      .expectOne(`${base}/api/me/ai`)
-      .flush({ configs: [config({ id: 5 })], activeId: null, defaultMaxBatchSize: 50 });
-    expect(service.busy()).toBe(false);
-    expect(service.configs().map((each) => each.id)).toEqual([5]);
-    expect(service.failure()).toBeNull();
-  });
-
-  it('clears the profile connection of one borrowing row', () => {
-    service.configs.set([
-      config({ id: 1, profileConnectionId: 5 }),
-      config({ id: 4, profileConnectionId: 5 }),
-    ]);
-
-    service.clearProfileConnection(4);
-    const request = ctrl.expectOne(`${base}/api/me/ai/configs/4/profile`);
-    expect(request.request.method).toBe('DELETE');
-    request.flush(null, { status: 204, statusText: 'No Content' });
-
-    expect(service.configs().map((each) => each.profileConnectionId)).toEqual([5, null]);
-  });
-
-  it('drops the pointers to a removed connection, as the server does', () => {
-    service.configs.set([
-      config({ id: 1, profileConnectionId: 5 }),
-      config({ id: 2, profileConnectionId: 6 }),
-      config({ id: 5 }),
-    ]);
-
-    service.remove(5);
-    ctrl
-      .expectOne(`${base}/api/me/ai/configs/5`)
-      .flush(null, { status: 204, statusText: 'No Content' });
-
-    expect(service.configs().map((each) => [each.id, each.profileConnectionId])).toEqual([
-      [1, null],
-      [2, 6],
-    ]);
   });
 
   it('loads the list and follows the active configuration', () => {

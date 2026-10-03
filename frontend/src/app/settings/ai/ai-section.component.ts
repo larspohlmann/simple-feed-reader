@@ -34,11 +34,6 @@ import { RecommendationDebugLogComponent } from '../recommendations/recommendati
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
 import { RecommendationSettingsCardComponent } from '../recommendations/recommendation-settings-card.component';
 
-interface ProfilePick {
-  readonly borrowerId: number;
-  readonly connectionId: number | null;
-}
-
 /** The AI provider list: every saved configuration, one row each, plus the
  *  add form below. Each row carries its own model and readiness, at most
  *  one active; this component only reflects that (activation is decided
@@ -136,36 +131,6 @@ export class AiSectionComponent {
   readonly listFailure: Signal<string | null> = computed(() => this.messageFor('load'));
   readonly addFailure: Signal<string | null> = computed(() => this.messageFor('add'));
 
-  readonly profileCandidates = computed(() =>
-    this.ai.configs().filter((config) => config.ready && config.capabilities.profile === 'own'),
-  );
-  /** The pick while its write is in flight, then null. The source is an object so a busy flip back
-   *  to false, unread in between, still recomputes. */
-  readonly profilePick = linkedSignal<{ busy: boolean }, ProfilePick | null>({
-    source: () => ({ busy: this.ai.busy() }),
-    computation: (source, previous) => (source.busy && previous ? previous.value : null),
-  });
-
-  shownProfileConnectionId(config: AiConfig): number | null {
-    const pick = this.profilePick();
-    return pick?.borrowerId === config.id ? pick.connectionId : config.profileConnectionId;
-  }
-
-  chooseProfileConnection(config: AiConfig, event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    const connectionId = value === '' ? null : Number(value);
-    this.profilePick.set({ borrowerId: config.id, connectionId });
-    if (connectionId === null) {
-      this.ai.clearProfileConnection(config.id);
-      return;
-    }
-    this.ai.chooseProfileConnection(config.id, connectionId);
-  }
-
-  profileFailure(configId: number): string | null {
-    return this.failureFor('profile', configId);
-  }
-
   private modelHint(capabilities: RecommendationCapabilities): string | undefined {
     const differences = [
       capabilities.reasons ? null : 'settings.ai.modelHint.noReasons',
@@ -176,12 +141,12 @@ export class AiSectionComponent {
   }
 
   rowFailure(configId: number): string | null {
-    return this.failureFor('row', configId);
+    return this.failureFor(configId);
   }
 
-  private failureFor(action: 'row' | 'profile', configId: number): string | null {
+  private failureFor(configId: number): string | null {
     const scoped = this.ai.failure();
-    if (!scoped || scoped.scope.action !== action) return null;
+    if (!scoped || scoped.scope.action !== 'row') return null;
     if (scoped.scope.configId !== configId) return null;
 
     return this.message(scoped.failure);

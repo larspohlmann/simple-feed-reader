@@ -6,6 +6,8 @@ namespace App\Tests\Service\Account;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
+use App\Entity\ProfileSettingsValues;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Account\Exception\LastAdminException;
@@ -127,14 +129,15 @@ final class AccountDeleterTest extends DbTestCase
         self::assertSame(0, is_numeric($count) ? (int) $count : -1);
     }
 
-    /** profile_connection_id points at a sibling (ON DELETE SET NULL) that the same cascade removes. */
-    public function testDeletionTakesABorrowingConnectionAndTheSiblingItBorrowsFrom(): void
+    /** user_recommendation_settings.profile_connection_id points at a connection the same cascade removes. */
+    public function testDeletionTakesTheConnectionTheProfileSettingPointsAt(): void
     {
         $admin = $this->userFactory->create('admin-ai-3@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-ai-3@example.com');
-        $borrower = $this->fixtures->seedInactiveAiSettingsFor($target, 'jev-latest');
-        $this->fixtures->seedProfileConnectionBorrowedBy($borrower);
-        $target->setActiveAiProviderSettings($borrower);
+        $connection = $this->fixtures->seedReadyAiSettingsFor($target, 'gpt-4o');
+        $settings = new RecommendationSettings($target);
+        $settings->updateProfileSettings(new ProfileSettingsValues(24, $connection, 40, 80));
+        $this->entityManager->persist($settings);
         $this->entityManager->flush();
         $targetId = $target->requireId();
 

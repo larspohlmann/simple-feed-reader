@@ -90,11 +90,6 @@ final class AiProviderSettings
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $verifiedAt = null;
 
-    /** Cleared on delete before the row goes; ON DELETE SET NULL is only the database floor. */
-    #[ORM\ManyToOne(targetEntity: self::class)]
-    #[ORM\JoinColumn(name: 'profile_connection_id', nullable: true, onDelete: 'SET NULL')]
-    private ?self $profileConnection = null;
-
     /**
      * The caller passes $verifiedAt: a row is normally born of a successful live call, but a duplicate
      * (AiProviderConfigurator::duplicateConfiguration) carries its sibling's. Delegates to replaceConnection().
@@ -222,16 +217,6 @@ final class AiProviderSettings
     public function copyRunTuningFrom(self $source): void
     {
         $this->runTuning->copyFrom($source->runTuning);
-    }
-
-    public function getProfileConnection(): ?self
-    {
-        return $this->profileConnection;
-    }
-
-    public function setProfileConnection(?self $profileConnection): void
-    {
-        $this->profileConnection = $profileConnection;
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

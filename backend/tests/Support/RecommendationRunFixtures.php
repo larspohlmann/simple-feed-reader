@@ -31,9 +31,6 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class RecommendationRunFixtures
 {
-    public const string PROFILE_MODEL = 'profile-llm';
-    public const string PROFILE_BASE_URL = 'https://profile.example.test/v1';
-
     public function __construct(
         private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
@@ -58,27 +55,6 @@ final readonly class RecommendationRunFixtures
     public function seedInactiveAiSettingsFor(User $user, string $model): AiProviderSettings
     {
         return $this->seedConnection($user, null, 'https://api.example.test/v1', $model);
-    }
-
-    /** A ready connection, not active, that the active connection borrows its profile from. */
-    public function seedProfileConnectionFor(User $user, string $model = self::PROFILE_MODEL): AiProviderSettings
-    {
-        $borrower = $user->getActiveAiProviderSettings()
-            ?? throw new \LogicException('Cannot seed a profile connection before a provider is seeded.');
-
-        return $this->seedProfileConnectionBorrowedBy($borrower, $model);
-    }
-
-    /** A ready connection, not active, that $borrower borrows its profile from; its base URL tells its calls apart. */
-    public function seedProfileConnectionBorrowedBy(
-        AiProviderSettings $borrower,
-        string $model = self::PROFILE_MODEL,
-    ): AiProviderSettings {
-        $connection = $this->seedConnection($borrower->getUser(), 'Profile', self::PROFILE_BASE_URL, $model);
-        $borrower->setProfileConnection($connection);
-        $this->entityManager->flush();
-
-        return $connection;
     }
 
     private function seedConnection(User $owner, ?string $name, string $baseUrl, string $model): AiProviderSettings

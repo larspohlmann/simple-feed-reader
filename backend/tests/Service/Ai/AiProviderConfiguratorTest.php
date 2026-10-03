@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ProfileSettingsValues;
+use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -318,30 +320,32 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertCount(1, $configurator->listConfigurations($user));
     }
 
-    public function testDeletingAProfileConnectionClearsOnlyThePointersToIt(): void
+    public function testDeletingTheProfileConnectionClearsTheProfileSettingAndKeepsTheSchedule(): void
     {
-        $configurator = $this->configurator(['gpt-4o', 'jev-latest']);
+        $configurator = $this->configurator(['gpt-4o']);
         $user = $this->user('cfg-delete-profile@example.test');
-        $deleted = $this->readyConfiguration($configurator, $user, 'gpt-4o');
-        $kept = $this->readyConfiguration($configurator, $user, 'gpt-4o');
-        $borrower = $this->readyConfiguration($configurator, $user, 'jev-latest');
-        $otherBorrower = $this->readyConfiguration($configurator, $user, 'jev-latest');
-        $borrower->setProfileConnection($deleted);
-        $otherBorrower->setProfileConnection($kept);
+        $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $chosen = $this->readyConfiguration($configurator, $user, 'gpt-4o');
+        $settings = new RecommendationSettings($user);
+        $settings->updateProfileSettings(new ProfileSettingsValues(24, $chosen, 40, 80));
+        $this->entityManager->persist($settings);
         $this->entityManager->flush();
-
-        $configurator->deleteConfiguration($deleted);
-
-        self::assertNull($borrower->getProfileConnection());
-        self::assertSame($kept, $otherBorrower->getProfileConnection());
+        $chosenId = $chosen->requireId();
+        $userId = $user->requireId();
         $this->entityManager->clear();
-        self::assertSame(
-            [null, null, 'gpt-4o'],
-            array_map(
-                static fn (AiProviderSettings $each): ?string => $each->getProfileConnection()?->getModel(),
-                $configurator->listConfigurations($this->reload('cfg-delete-profile@example.test')),
-            ),
-        );
+        $reloadedUser = $this->entityManager->find(User::class, $userId);
+        $reloadedChosen = $this->entityManager->find(AiProviderSettings::class, $chosenId);
+        self::assertNotNull($reloadedUser);
+        self::assertNotNull($reloadedChosen);
+
+        $configurator->deleteConfiguration($reloadedChosen);
+
+        self::assertNull($reloadedUser->getRecommendationSettings()?->profileSettings()->connection);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationSettings::class)
+            ->findOneBy(['user' => $userId]);
+        self::assertNull($persisted?->profileSettings()->connection);
+        self::assertSame(24, $persisted?->profileSettings()->intervalHours);
     }
 
     public function testDuplicateReusesTheKeyAndStartsWithoutAModel(): void

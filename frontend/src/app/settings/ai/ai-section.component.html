@@ -155,44 +155,6 @@
                       }
                     }
 
-                    @if (config.capabilities.profile === 'borrowed') {
-                      <div class="profile-connection">
-                        @if (profileCandidates().length) {
-                          <app-field
-                            [label]="'settings.ai.profileConnection.label' | transloco"
-                            [info]="'settings.ai.profileConnection.info' | transloco"
-                          >
-                            <select
-                              [disabled]="ai.busy()"
-                              (change)="chooseProfileConnection(config, $event)"
-                            >
-                              <option
-                                value=""
-                                [selected]="shownProfileConnectionId(config) === null"
-                              >
-                                {{ 'settings.ai.profileConnection.none' | transloco }}
-                              </option>
-                              @for (candidate of profileCandidates(); track candidate.id) {
-                                <option
-                                  [value]="candidate.id"
-                                  [selected]="shownProfileConnectionId(config) === candidate.id"
-                                >
-                                  {{ label(candidate) }}
-                                </option>
-                              }
-                            </select>
-                          </app-field>
-                        } @else {
-                          <p class="hint">
-                            {{ 'settings.ai.profileConnection.empty' | transloco }}
-                          </p>
-                        }
-                        @if (profileFailure(config.id); as message) {
-                          <app-error-banner [message]="message" />
-                        }
-                      </div>
-                    }
-
                     @if (ai.choosingModelFor() === config.id && ai.models().length) {
                       <div class="model-picker">
                         <app-field

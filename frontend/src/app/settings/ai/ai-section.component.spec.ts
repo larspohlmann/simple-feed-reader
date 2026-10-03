@@ -38,8 +38,6 @@ interface AiSettingsStub {
   setBatchConcurrency: jest.Mock;
   activate: jest.Mock;
   remove: jest.Mock;
-  chooseProfileConnection: jest.Mock;
-  clearProfileConnection: jest.Mock;
 }
 
 const config = (over: Partial<AiConfig> = {}): AiConfig => ({
@@ -50,7 +48,6 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   model: null,
   ready: false,
   active: false,
-  profileConnectionId: null,
   suppressReasoning: true,
   batchConcurrency: 1,
   slowModel: false,
@@ -126,8 +123,6 @@ function createStub(): AiSettingsStub {
     setBatchConcurrency: jest.fn(),
     activate: jest.fn(),
     remove: jest.fn(),
-    chooseProfileConnection: jest.fn(),
-    clearProfileConnection: jest.fn(),
   };
 }
 
@@ -375,7 +370,10 @@ describe('AiSectionComponent', () => {
     const options = Array.from(row(fixture, 0).querySelectorAll('[role="option"]'));
     expect(
       options.map((option) => option.querySelector('.option-hint')?.textContent?.trim()),
-    ).toEqual([undefined, 'scores articles, writes no reasons · needs a profile connection']);
+    ).toEqual([
+      undefined,
+      'scores articles, writes no reasons · takes its profile from Settings → Profile',
+    ]);
   });
 
   it("shows the server's label beside a model's id, and keeps it and the hint once chosen", () => {
@@ -399,7 +397,7 @@ describe('AiSectionComponent', () => {
       'jev-latest · Jev',
     );
     expect(picker.querySelector('app-field .hint')?.textContent?.trim()).toBe(
-      'scores articles, writes no reasons · needs a profile connection',
+      'scores articles, writes no reasons · takes its profile from Settings → Profile',
     );
 
     fixture.componentInstance.chosenModel.set('gpt-4o');
@@ -1051,8 +1049,7 @@ describe('AiSectionComponent', () => {
     expect(jevSteps).toHaveLength(5);
     expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
     expect(jevSteps[2]).toContain('jev-latest');
-    expect(jevSteps[3]).toContain('Expand the new configuration’s row');
-    expect(jevSteps[3]).toContain('“Profile connection”');
+    expect(jevSteps[3]).toContain('Open Settings → Profile');
   });
 
   it('says in the add form that Jev models are supported alongside LLMs', () => {
@@ -1088,293 +1085,26 @@ describe('AiSectionComponent', () => {
     expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });
 
-  describe('the profile connection', () => {
-    const picker = (fixture: ComponentFixture<AiSectionComponent>): HTMLSelectElement | null =>
-      (fixture.nativeElement as HTMLElement).querySelector('.profile-connection select');
+  it('offers no profile picker on a Jev connection', () => {
+    const fixture = mount();
+    ai.configs.set([
+      config({
+        id: 7,
+        ready: true,
+        active: true,
+        model: 'jev-latest',
+        capabilities: JEV_RECOMMENDATION_CAPABILITIES,
+      }),
+    ]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.componentInstance.managing.set(true);
+    fixture.detectChanges();
+    expandRow(fixture, 0);
 
-    const profilePickers = (
-      fixture: ComponentFixture<AiSectionComponent>,
-    ): { areas: HTMLElement[]; selects: HTMLSelectElement[] } => {
-      const areas = Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.profile-connection'),
-      );
-
-      return {
-        areas,
-        selects: areas.map((area) => area.querySelector('select') as HTMLSelectElement),
-      };
-    };
-
-    const mountReady = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
-      const fixture = mount();
-      ai.configs.set(configs);
-      fixture.detectChanges();
-      flushReady();
-      fixture.componentInstance.managing.set(true);
-      fixture.detectChanges();
-      return fixture;
-    };
-
-    const mountManaging = (configs: readonly AiConfig[]): ComponentFixture<AiSectionComponent> => {
-      const fixture = mount();
-      ai.configs.set(configs);
-      fixture.detectChanges();
-      if (configs.some((each) => each.active && each.ready)) flushReady();
-      fixture.componentInstance.managing.set(true);
-      fixture.detectChanges();
-      return fixture;
-    };
-
-    const areaOf = (fixture: ComponentFixture<AiSectionComponent>, id: number): HTMLElement =>
-      Array.from(
-        (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>('.config-row'),
-      ).find((row) => row.textContent?.includes(`row-${id}`)) as HTMLElement;
-
-    const shown = (select: HTMLSelectElement): string =>
-      (select.selectedOptions[0]?.textContent ?? '').trim();
-
-    const pick = (select: HTMLSelectElement, index: number): void => {
-      select.selectedIndex = index;
-      select.dispatchEvent(new Event('change'));
-    };
-
-    const jevActive = config({
-      id: 7,
-      ready: true,
-      active: true,
-      model: 'jev-latest',
-      capabilities: JEV_RECOMMENDATION_CAPABILITIES,
-    });
-
-    it('renders inside the configuration area of a borrowed connection that is not active', () => {
-      const fixture = mountManaging([
-        config({ id: 7, name: 'row-7', ready: true, active: true, model: 'gpt-4o' }),
-        { ...jevActive, id: 12, name: 'row-12', active: false },
-      ]);
-
-      expect(areaOf(fixture, 12).querySelector('.config-body .profile-connection')).not.toBeNull();
-    });
-
-    it('is absent from the configuration area of a connection that builds its own profile', () => {
-      const fixture = mountManaging([
-        config({ id: 7, name: 'row-7', ready: true, active: true, model: 'gpt-4o' }),
-        { ...jevActive, id: 12, name: 'row-12', active: false },
-      ]);
-
-      expect(areaOf(fixture, 7).querySelector('.profile-connection')).toBeNull();
-      expect(profilePickers(fixture).areas).toHaveLength(1);
-    });
-
-    it('shows each borrowed connection its own choice and saves a change for that row only', () => {
-      const fixture = mountManaging([
-        { ...jevActive, id: 12, name: 'row-12', active: false, profileConnectionId: 8 },
-        { ...jevActive, id: 13, name: 'row-13', active: false, profileConnectionId: 11 },
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
-        config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
-      ]);
-      const { selects } = profilePickers(fixture);
-      expect(selects.map(shown)).toEqual(['Local', 'Cloud']);
-
-      pick(selects[1], 1);
-      fixture.detectChanges();
-
-      expect(ai.chooseProfileConnection).toHaveBeenCalledTimes(1);
-      expect(ai.chooseProfileConnection).toHaveBeenCalledWith(13, 8);
-      expect(selects.map(shown)).toEqual(['Local', 'Local']);
-    });
-
-    it('lists only the ready connections that build their own profile', () => {
-      const fixture = mountReady([
-        jevActive,
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
-        config({ id: 9, name: 'No model', ready: false }),
-        config({
-          id: 10,
-          name: 'Other Jev',
-          ready: true,
-          model: 'jev-latest',
-          capabilities: JEV_RECOMMENDATION_CAPABILITIES,
-        }),
-      ]);
-
-      const options = Array.from(picker(fixture)?.options ?? []).slice(1);
-      expect(options.map((option) => option.textContent?.trim())).toEqual(['Local']);
-    });
-
-    it('selects the chosen connection and saves a new choice on change', () => {
-      const fixture = mountReady([
-        { ...jevActive, profileConnectionId: 8 },
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
-        config({ id: 11, name: 'Cloud', ready: true, model: 'gpt-4o' }),
-      ]);
-      const select = picker(fixture) as HTMLSelectElement;
-      expect(shown(select)).toBe('Local');
-
-      pick(select, 2);
-
-      expect(ai.chooseProfileConnection).toHaveBeenCalledWith(7, 11);
-    });
-
-    it('offers "None", selected while nothing is chosen, and clears the choice with it', () => {
-      const fixture = mountReady([
-        jevActive,
-        config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
-      ]);
-      const select = picker(fixture) as HTMLSelectElement;
-      expect(shown(select)).toBe('None');
-      expect(select.options[0].textContent?.trim()).toBe('None');
-
-      pick(select, 0);
-
-      expect(ai.clearProfileConnection).toHaveBeenCalledWith(7);
-      expect(ai.chooseProfileConnection).not.toHaveBeenCalled();
-    });
-
-    it('explains what to add when no connection can build the profile', () => {
-      const fixture = mountReady([jevActive]);
-
-      expect(picker(fixture)).toBeNull();
-      expect(
-        (fixture.nativeElement as HTMLElement).querySelector('.profile-connection')?.textContent,
-      ).toContain('Add a connection');
-    });
-
-    describe('against the real service', () => {
-      const mountWithRealService = (
-        extra: readonly AiConfig[] = [],
-      ): ComponentFixture<AiSectionComponent> => {
-        TestBed.resetTestingModule();
-        TestBed.configureTestingModule({
-          imports: [provideTranslocoTesting()],
-          providers: [
-            provideHttpClient(),
-            provideHttpClientTesting(),
-            { provide: API_BASE_URL, useValue: '' },
-            { provide: Dialog, useValue: dialogStub },
-          ],
-        });
-        http = TestBed.inject(HttpTestingController);
-        const fixture = TestBed.createComponent(AiSectionComponent);
-        fixture.detectChanges();
-        http.expectOne('/api/me/ai').flush({
-          configs: [
-            jevActive,
-            ...extra,
-            config({ id: 8, name: 'Local', ready: true, model: 'qwen' }),
-          ],
-          activeId: 7,
-          defaultMaxBatchSize: 50,
-        });
-        fixture.detectChanges();
-        flushReady();
-        fixture.componentInstance.managing.set(true);
-        fixture.detectChanges();
-        return fixture;
-      };
-
-      it('shows the stored choice after a 404 reload', () => {
-        const fixture = mountWithRealService();
-        const select = picker(fixture) as HTMLSelectElement;
-
-        pick(select, 1);
-        fixture.detectChanges();
-        http
-          .expectOne('/api/me/ai/configs/7/profile')
-          .flush(null, { status: 404, statusText: 'Not Found' });
-        http.expectOne('/api/me/ai').flush({
-          configs: [
-            { ...jevActive, profileConnectionId: 9 },
-            config({ id: 8, name: 'Gone', ready: false }),
-            config({ id: 9, name: 'Other', ready: true, model: 'qwen' }),
-          ],
-          activeId: 7,
-          defaultMaxBatchSize: 50,
-        });
-        fixture.detectChanges();
-
-        expect(shown(picker(fixture) as HTMLSelectElement)).toBe('Other');
-      });
-
-      it('locks the select and sends the pick while the choice is being saved', () => {
-        const fixture = mountWithRealService();
-        const select = picker(fixture) as HTMLSelectElement;
-
-        pick(select, 1);
-        fixture.detectChanges();
-
-        expect(shown(select)).toBe('Local');
-        expect(select.disabled).toBe(true);
-
-        const request = http.expectOne('/api/me/ai/configs/7/profile');
-        expect(request.request.body).toEqual({ connectionId: 8 });
-        request.flush({ ...jevActive, profileConnectionId: 8 });
-        fixture.detectChanges();
-
-        expect(shown(select)).toBe('Local');
-        expect(select.disabled).toBe(false);
-      });
-
-      it('puts the select back on the stored choice after two refusals in a row', () => {
-        const fixture = mountWithRealService();
-        const select = picker(fixture) as HTMLSelectElement;
-        const refuse = (): void => {
-          pick(select, 1);
-          fixture.detectChanges();
-          http
-            .expectOne('/api/me/ai/configs/7/profile')
-            .flush(
-              { type: 'profile_connection_rejected', detail: 'Refused.' },
-              { status: 422, statusText: 'Unprocessable Entity' },
-            );
-          fixture.detectChanges();
-        };
-
-        refuse();
-        refuse();
-
-        expect(select.selectedIndex).toBe(0);
-      });
-
-      it("saves the second row's pick without touching the first", () => {
-        const fixture = mountWithRealService([
-          { ...jevActive, id: 13, name: 'second', active: false },
-        ]);
-        const { selects } = profilePickers(fixture);
-
-        pick(selects[1], 1);
-        fixture.detectChanges();
-
-        expect(selects.map(shown)).toEqual(['None', 'Local']);
-
-        http
-          .expectOne('/api/me/ai/configs/13/profile')
-          .flush({ ...jevActive, id: 13, name: 'second', active: false, profileConnectionId: 8 });
-        fixture.detectChanges();
-
-        expect(selects.map(shown)).toEqual(['None', 'Local']);
-      });
-
-      it('shows a refusal under the row that was refused and puts its select back', () => {
-        const fixture = mountWithRealService([
-          { ...jevActive, id: 13, name: 'second', active: false },
-        ]);
-        const { areas, selects } = profilePickers(fixture);
-
-        pick(selects[1], 1);
-        fixture.detectChanges();
-        http.expectOne('/api/me/ai/configs/13/profile').flush(
-          {
-            type: 'profile_connection_rejected',
-            detail: 'Only a ready LLM connection can build your profile.',
-          },
-          { status: 422, statusText: 'Unprocessable Entity' },
-        );
-        fixture.detectChanges();
-
-        expect(banners(areas[0])).toEqual([]);
-        expect(banners(areas[1])).toEqual(['Only a ready LLM connection can build your profile.']);
-        expect(selects.map(shown)).toEqual(['None', 'None']);
-      });
-    });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('.config-body')).not.toBeNull();
+    expect(element.querySelector('.profile-connection')).toBeNull();
+    expect(element.textContent).not.toContain('Profile connection');
   });
 });

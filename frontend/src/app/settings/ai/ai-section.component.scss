@@ -48,13 +48,6 @@ app-searchable-select {
   color: var(--text-muted);
 }
 
-.profile-connection {
-  display: flex;
-  flex-direction: column;
-  align-self: stretch;
-  gap: var(--space-3);
-}
-
 .manage {
   flex: none;
 }

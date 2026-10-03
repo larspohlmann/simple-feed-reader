@@ -271,6 +271,11 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->preferences;
     }
 
+    public function getRecommendationSettings(): ?RecommendationSettings
+    {
+        return $this->recommendationSettings;
+    }
+
     /** Null until the account activates a configuration — see AiProviderSettings. */
     public function getActiveAiProviderSettings(): ?AiProviderSettings
     {
