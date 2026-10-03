@@ -12,6 +12,7 @@ import {
 import { NO_RECOMMENDATION_CAPABILITIES } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
+import { profileRun, profileState } from '../../../testing/profile-settings';
 import { AiFailure, ScopedAiFailure } from './ai-failure';
 import { AiSectionComponent } from './ai-section.component';
 import { AiConfig, AiModel, AiSettingsService } from './ai-settings.service';
@@ -175,6 +176,11 @@ describe('AiSectionComponent', () => {
     failure,
     scope,
   });
+
+  const flushProfile = (): void => {
+    http.expectOne('/api/me/ai/profile').flush(profileState());
+    http.expectOne('/api/me/ai/profile/runs/current').flush(profileRun());
+  };
 
   const CONFIG = config({ id: 7 });
 
@@ -647,6 +653,7 @@ describe('AiSectionComponent', () => {
     // Row 1 is the active, ready configuration, so it is the one the
     // recommendation card now renders for — same as the dedicated card test
     // below.
+    flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
     // `tz` is a query param, so match the URL alone: `url` excludes the query
@@ -923,6 +930,7 @@ describe('AiSectionComponent', () => {
     ai.configs.set([config({ id: 1, active: true, ready: true, model: 'gpt-4o' })]);
     fixture.detectChanges();
 
+    flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
     // `tz` is a query param, so match the URL alone: `url` excludes the query
@@ -939,12 +947,26 @@ describe('AiSectionComponent', () => {
   // construction once the active config is ready; a ready-state test must drain
   // those three requests before `http.verify()`.
   const flushReady = (): void => {
+    flushProfile();
     http.expectOne('/api/me/ai/recommendations').flush(RECOMMENDATIONS);
     http.expectOne('/api/recommendations/runs/debug-log').flush({ entries: [] });
     http
       .expectOne((request) => request.url === '/api/recommendations/runs/history')
       .flush({ totalCostNanoCredits: null, months: [], latest: null });
   };
+
+  it('shows the profile group between the connections and the For You card', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 1, active: true, ready: true })]);
+    fixture.detectChanges();
+    flushReady();
+    fixture.detectChanges();
+    const html = (fixture.nativeElement as HTMLElement).innerHTML;
+    const profileAt = html.indexOf('data-testid="profile-text"');
+
+    expect(profileAt).toBeGreaterThan(-1);
+    expect(profileAt).toBeLessThan(html.indexOf('app-recommendation-settings-card'));
+  });
 
   it('folds the provider group to a one-line summary when a ready active connection exists', () => {
     const fixture = mount();

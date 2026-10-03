@@ -51,6 +51,12 @@ describe('ProfileSectionComponent', () => {
 
   afterEach(() => http.verify());
 
+  it('renders its groups without a stack of its own', () => {
+    const fixture = mount();
+
+    expect(element(fixture).querySelector('app-settings-stack')).toBeNull();
+  });
+
   it('shows the profile with when and by which model it was generated', () => {
     const fixture = mount();
 

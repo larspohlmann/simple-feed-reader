@@ -15,7 +15,6 @@ import { FieldComponent } from '../../shared/field/field.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsSaveBarComponent } from '../../shared/settings/save-bar/save-bar.component';
-import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { toastOnSaved } from '../../shared/toast/saved-toast';
 import { ProfileDebugLogComponent } from './profile-debug-log.component';
 import {
@@ -35,7 +34,6 @@ import {
     SettingsGroupComponent,
     SettingsRowComponent,
     SettingsSaveBarComponent,
-    SettingsStackComponent,
     TranslocoPipe,
   ],
   providers: [ProfileSettingsService],
