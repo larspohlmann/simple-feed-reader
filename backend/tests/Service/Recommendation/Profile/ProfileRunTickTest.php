@@ -152,6 +152,18 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(ProfileRunOutcome::Generated, $scheduled->getOutcome());
     }
 
+    public function testAScheduledRunOfAnAccountWithoutASettingsRowCallsTheModel(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 2);
+        $this->chat()->queueContent('{"profile":"Likes maps."}');
+        $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
+
+        $this->advance($scheduled, TickDriver::Poll);
+
+        self::assertSame(ProfileRunOutcome::Generated, $scheduled->getOutcome());
+        self::assertSame('Likes maps.', $this->storedProfile()->getText());
+    }
+
     public function testAnUnusableReplyIsRetriedWithTheCorrectionAndTheThirdFailsTheRunKeepingTheProfile(): void
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);

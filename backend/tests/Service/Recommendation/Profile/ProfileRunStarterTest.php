@@ -59,6 +59,16 @@ final class ProfileRunStarterTest extends DbTestCase
         self::assertSame(ProfileRunTrigger::Scheduled, $second->getTrigger());
     }
 
+    public function testAStartWhileARunIsActiveReturnsItAndOpensNoSecond(): void
+    {
+        $first = $this->starter()->start($this->owner, ProfileRunTrigger::Scheduled);
+
+        $second = $this->starter()->start($this->owner, ProfileRunTrigger::Recommendation);
+
+        self::assertSame($first, $second);
+        self::assertSame(ProfileRunTrigger::Scheduled, $second->getTrigger());
+    }
+
     public function testAManualStartWithoutAUsableConnectionIsRefused(): void
     {
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');

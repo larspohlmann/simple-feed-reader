@@ -334,6 +334,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $configurator->deleteConfiguration($chosen);
 
+        self::assertNull($settings->profileSettings()->connection);
         $this->entityManager->clear();
         $persisted = $this->entityManager->getRepository(RecommendationSettings::class)
             ->findOneBy(['user' => $userId]);
