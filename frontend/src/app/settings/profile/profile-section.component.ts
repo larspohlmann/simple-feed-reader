@@ -47,15 +47,19 @@ export class ProfileSectionComponent {
   readonly svc = inject(ProfileSettingsService);
   private readonly language = inject(LanguageService);
 
-  readonly keptCap = linkedSignal<number>(() => this.svc.state()?.keptCap ?? 0);
-  readonly viewedCap = linkedSignal<number>(() => this.svc.state()?.viewedCap ?? 0);
+  readonly keptCap = linkedSignal<number>(
+    () => this.svc.pending('keptCap') ?? this.svc.state()?.keptCap ?? 0,
+  );
+  readonly viewedCap = linkedSignal<number>(
+    () => this.svc.pending('viewedCap') ?? this.svc.state()?.viewedCap ?? 0,
+  );
 
   readonly generatedAt = computed(() => {
     const generatedAt = this.svc.state()?.generatedAt;
     return generatedAt ? formatLongDateTime(generatedAt, this.language.lang()) : null;
   });
 
-  readonly canGenerate = computed(() => !this.svc.runActive() && !this.svc.starting());
+  readonly canGenerate = computed(() => !this.svc.polling() && !this.svc.starting());
 
   /** The one line under the profile about the newest run; a failure shows as a banner instead. */
   readonly runStatusKey = computed(() => {

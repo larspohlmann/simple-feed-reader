@@ -80,6 +80,18 @@ describe('ProfileDebugLogComponent', () => {
     http.expectNone(LOG);
   });
 
+  it('keeps polling after a failed read', () => {
+    const fixture = mount(true);
+    http.expectOne(LOG).flush('gateway', { status: 500, statusText: 'Server Error' });
+
+    jest.advanceTimersByTime(2000);
+    http.expectOne(LOG).flush({ entries: [entry()] });
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('attempt 2');
+    fixture.destroy();
+  });
+
   it('stops polling when it is destroyed', () => {
     const fixture = mount(true);
     http.expectOne(LOG).flush({ entries: [] });

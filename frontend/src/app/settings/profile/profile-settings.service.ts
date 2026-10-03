@@ -5,6 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { DraftSettingsService } from '../../shared/settings/draft-settings.service';
 
 const POLL_MS = 2000;
+const MAX_POLL_FAILURES = 3;
 
 export interface ProfileConnection {
   readonly id: number;
@@ -85,8 +86,12 @@ export class ProfileSettingsService
   });
   readonly starting = signal(false);
   readonly startFailure = signal<Problem | null>(null);
+  /** Set once the status could not be read three times in a row; polling has stopped. */
+  readonly pollFailure = signal<Problem | null>(null);
+  readonly polling = computed(() => this.runActive() && this.pollFailure() === null);
 
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
+  private consecutivePollFailures = 0;
 
   protected bodyFromState(state: ProfileSettingsState): SaveProfileSettings {
     return {
@@ -101,12 +106,21 @@ export class ProfileSettingsService
     this.http
       .get<ProfileRun>(`${this.endpoint}/runs/current`)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((run) => this.adoptRun(run));
+      .subscribe({
+        next: (run) => {
+          this.consecutivePollFailures = 0;
+          this.pollFailure.set(null);
+          this.adoptRun(run);
+        },
+        error: (error: HttpErrorResponse) => this.retryOrGiveUp(error),
+      });
   }
 
   startRun(): void {
     this.starting.set(true);
     this.startFailure.set(null);
+    this.consecutivePollFailures = 0;
+    this.pollFailure.set(null);
     this.http
       .post<ProfileRun>(`${this.endpoint}/runs`, {})
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -133,7 +147,20 @@ export class ProfileSettingsService
     if (wasActive && !this.runActive()) {
       this.http
         .get<ProfileSettingsState>(this.endpoint)
-        .subscribe((state) => this.state.set(state));
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (state) => this.state.set(state),
+          error: (error: HttpErrorResponse) => this.failure.set(parseProblem(error)),
+        });
+    }
+    this.schedulePoll();
+  }
+
+  private retryOrGiveUp(error: HttpErrorResponse): void {
+    this.consecutivePollFailures += 1;
+    if (this.consecutivePollFailures >= MAX_POLL_FAILURES) {
+      this.pollFailure.set(parseProblem(error));
+      return;
     }
     this.schedulePoll();
   }

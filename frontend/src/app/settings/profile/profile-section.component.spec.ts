@@ -6,7 +6,11 @@ import { profileRun, profileState } from '../../../testing/profile-settings';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ToastService } from '../../shared/toast/toast.service';
 import { ProfileSectionComponent } from './profile-section.component';
-import { ProfileRun, ProfileSettingsState } from './profile-settings.service';
+import {
+  ProfileRun,
+  ProfileSettingsService,
+  ProfileSettingsState,
+} from './profile-settings.service';
 
 const ENDPOINT = '/api/me/ai/profile';
 
@@ -55,6 +59,17 @@ describe('ProfileSectionComponent', () => {
     );
     expect(byTestId(fixture, 'profile-meta')?.textContent).toContain('qwen3-14b');
     expect(byTestId(fixture, 'profile-meta')?.textContent).toContain('llm.example.test');
+  });
+
+  it('holds the profile, the schedule, the connection and the caps in one group', () => {
+    const groups = element(mount()).querySelectorAll('app-settings-group');
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].querySelector('[data-testid="profile-text"]')).not.toBeNull();
+    expect(groups[0].querySelector('[data-testid="profile-schedule"]')).not.toBeNull();
+    expect(groups[0].querySelector('[data-testid="profile-connection"]')).not.toBeNull();
+    expect(groups[0].querySelector('[data-testid="profile-kept-cap"]')).not.toBeNull();
+    expect(groups[0].querySelector('app-settings-save-bar')).not.toBeNull();
   });
 
   it('says there is no profile yet', () => {
@@ -193,6 +208,46 @@ describe('ProfileSectionComponent', () => {
     const request = http.expectOne((each) => each.method === 'PUT' && each.url === ENDPOINT);
     expect(request.request.body.keptCap).toBe(12);
     request.flush(profileState({ keptCap: 12 }));
+  });
+
+  it('keeps a typed cap on screen when a finished run reloads the state', () => {
+    jest.useFakeTimers();
+    try {
+      const fixture = mount();
+      const input = byTestId(fixture, 'profile-kept-cap') as HTMLInputElement;
+      input.value = '12';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      generateButton(fixture).click();
+      http
+        .expectOne((each) => each.method === 'POST')
+        .flush(profileRun({ status: 'pending', id: 4 }));
+
+      jest.advanceTimersByTime(2000);
+      http
+        .expectOne(`${ENDPOINT}/runs/current`)
+        .flush(profileRun({ status: 'completed', id: 4, outcome: 'generated' }));
+      http.expectOne(ENDPOINT).flush(profileState({ profileText: 'Fresh profile.' }));
+      fixture.detectChanges();
+
+      expect((byTestId(fixture, 'profile-kept-cap') as HTMLInputElement).value).toBe('12');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('says the status could not be read and offers Generate now again once polling gives up', () => {
+    const fixture = mount(profileState(), profileRun({ status: 'running', id: 4 }));
+    const service = fixture.debugElement.injector.get(ProfileSettingsService);
+
+    service.pollFailure.set({ type: 'about:blank', title: 'Server Error', status: 500 });
+    fixture.detectChanges();
+
+    expect(element(fixture).querySelector('app-error-banner')?.textContent).toContain(
+      'could not be read',
+    );
+    expect(generateButton(fixture).disabled).toBe(false);
+    fixture.destroy();
   });
 
   it('shows the debug log only when debug mode is on', () => {

@@ -87,6 +87,57 @@ describe('ProfileSettingsService', () => {
     expect(service.pending('keptCap')).toBe(12);
   });
 
+  it('keeps polling after a failed status read', () => {
+    service.startRun();
+    http
+      .expectOne((each) => each.method === 'POST')
+      .flush(profileRun({ status: 'pending', id: 9 }));
+
+    jest.advanceTimersByTime(2000);
+    http
+      .expectOne(`${ENDPOINT}/runs/current`)
+      .flush('gateway', { status: 500, statusText: 'Server Error' });
+    jest.advanceTimersByTime(2000);
+    http.expectOne(`${ENDPOINT}/runs/current`).flush(profileRun({ status: 'running', id: 9 }));
+
+    expect(service.pollFailure()).toBeNull();
+    expect(service.polling()).toBe(true);
+  });
+
+  it('gives up after three failed status reads in a row', () => {
+    service.startRun();
+    http
+      .expectOne((each) => each.method === 'POST')
+      .flush(profileRun({ status: 'pending', id: 9 }));
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      jest.advanceTimersByTime(2000);
+      http
+        .expectOne(`${ENDPOINT}/runs/current`)
+        .flush('gateway', { status: 500, statusText: 'Server Error' });
+    }
+    jest.advanceTimersByTime(4000);
+
+    http.expectNone(`${ENDPOINT}/runs/current`);
+    expect(service.pollFailure()).not.toBeNull();
+    expect(service.polling()).toBe(false);
+  });
+
+  it('reports a failed reload of the state after the run ends', () => {
+    service.startRun();
+    http
+      .expectOne((each) => each.method === 'POST')
+      .flush(profileRun({ status: 'pending', id: 9 }));
+
+    jest.advanceTimersByTime(2000);
+    http
+      .expectOne(`${ENDPOINT}/runs/current`)
+      .flush(profileRun({ status: 'completed', id: 9, outcome: 'generated' }));
+    http.expectOne(ENDPOINT).flush('gateway', { status: 500, statusText: 'Server Error' });
+
+    expect(service.failure()).not.toBeNull();
+  });
+
   it('stops polling when it is destroyed', () => {
     service.startRun();
     http

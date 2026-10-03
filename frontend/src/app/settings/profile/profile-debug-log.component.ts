@@ -64,7 +64,11 @@ export class ProfileDebugLogComponent {
     this.api
       .profileDebugLog()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((payload) => this.entries.set(payload.entries));
+      .subscribe({
+        next: (payload) => this.entries.set(payload.entries),
+        // A failed read keeps the last entries; the next poll tries again.
+        error: () => undefined,
+      });
     if (!running) return;
     this.zone.runOutsideAngular(() => {
       this.timer = setTimeout(() => this.zone.run(() => this.fetch(this.running())), POLL_MS);

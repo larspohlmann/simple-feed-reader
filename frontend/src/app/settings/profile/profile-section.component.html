@@ -36,6 +36,12 @@
             [message]="'settings.profile.statusFailed' | transloco: { error: error }"
           />
         }
+        @if (svc.pollFailure()) {
+          <app-error-banner
+            class="profile-banner"
+            [message]="'settings.profile.statusUnreadable' | transloco"
+          />
+        }
         @if (startFailureMessage(); as message) {
           <app-error-banner class="profile-banner" [message]="message" />
         }
@@ -55,9 +61,7 @@
           </p>
         }
       </div>
-    </app-settings-group>
 
-    <app-settings-group icon="schedule" [title]="'settings.profile.settingsTitle' | transloco">
       <app-settings-row
         [stackable]="true"
         [title]="'settings.profile.schedule' | transloco"
@@ -139,7 +143,7 @@
 
     @if (state.debugEnabled) {
       <app-settings-group icon="bug_report" [title]="'settings.profile.debugTitle' | transloco">
-        <app-profile-debug-log [running]="svc.runActive()" [runId]="svc.profileRun()?.id ?? null" />
+        <app-profile-debug-log [running]="svc.polling()" [runId]="svc.profileRun()?.id ?? null" />
       </app-settings-group>
     }
   </app-settings-stack>
