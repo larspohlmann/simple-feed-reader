@@ -136,6 +136,48 @@ final class ProfileRunAdvancerTest extends DbTestCase
         self::assertSame(0, $fresh->getTransportFailures());
     }
 
+    public function testATickThatLostItsLockDuringTheCallTakesOnTheWinnersRun(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $profileRun = $this->pendingProfileRun();
+        $thief = null;
+        $this->chat()->duringNextCall(function () use (&$thief, $profileRun): void {
+            $thief = $this->stealTheTickLock();
+            $this->winnerRecordsAStrike($profileRun);
+            $this->providerCallHeartbeat()->beat();
+        });
+        $this->chat()->queueContent('{"profile":"Stolen profile."}');
+
+        try {
+            $this->advancer()->advance($this->owner, TickDriver::Poll);
+        } finally {
+            $thief?->release();
+        }
+
+        self::assertSame(1, $profileRun->getTransportFailures());
+    }
+
+    public function testATickThatLostItsLockDuringAFailedCallTakesOnTheWinnersRun(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $profileRun = $this->pendingProfileRun();
+        $thief = null;
+        $this->chat()->duringNextCall(function () use (&$thief, $profileRun): void {
+            $thief = $this->stealTheTickLock();
+            $this->winnerRecordsAStrike($profileRun);
+            $this->providerCallHeartbeat()->beat();
+        });
+        $this->chat()->queueFailure(new ProviderUnreachableException('down'));
+
+        try {
+            $this->advancer()->advance($this->owner, TickDriver::Poll);
+        } finally {
+            $thief?->release();
+        }
+
+        self::assertSame(1, $profileRun->getTransportFailures());
+    }
+
     /** The profile tick sizes the shared lock by the connection it calls, not by the account's active one. */
     public function testTheLockLastsAsLongAsTheSlowProfileConnectionNeeds(): void
     {
@@ -183,6 +225,14 @@ final class ProfileRunAdvancerTest extends DbTestCase
         self::getContainer()->set(
             LockFactory::class,
             new TtlRecordingLockFactory(new DoctrineDbalStore($this->entityManager->getConnection())),
+        );
+    }
+
+    private function winnerRecordsAStrike(ProfileRun $profileRun): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE profile_run SET transport_failures = 1 WHERE id = ?',
+            [$profileRun->requireId()],
         );
     }
 

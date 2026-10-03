@@ -266,6 +266,37 @@ final class RecommendationDrainCommandTest extends DbTestCase
         );
     }
 
+    public function testTheDrainerKeepsDrainingAProfileRunThatNeedsASecondTick(): void
+    {
+        $owner = $this->user('drain-profile-two-ticks@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedFavorites($owner, 'maps', 1);
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+        $profileRunId = $profileRun->requireId();
+        /** @var StubChatClient $chat */
+        $chat = self::getContainer()->get(StubChatClient::class);
+        $chat->queueContent('{"profile":"Likes maps."}');
+
+        $this->execute($this->command());
+
+        $this->entityManager->clear();
+        self::assertSame(
+            RunStatus::Completed,
+            $this->entityManager->find(ProfileRun::class, $profileRunId)?->getStatus(),
+        );
+    }
+
+    public function testWithNothingActiveTheDrainerNeverPauses(): void
+    {
+        $clock = new MockClock('2026-10-03 09:00:00');
+
+        $this->execute($this->command($clock));
+
+        self::assertEquals(new \DateTimeImmutable('2026-10-03 09:00:00'), $clock->now());
+    }
+
     private function execute(RecommendationDrainCommand $command): int
     {
         return (new CommandTester($command))->execute([]);

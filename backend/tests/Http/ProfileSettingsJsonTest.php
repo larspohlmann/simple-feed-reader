@@ -6,8 +6,10 @@ namespace App\Tests\Http;
 
 use App\Entity\ProfileSettingsValues;
 use App\Entity\StoredProfile;
+use App\Entity\User;
 use App\Http\ProfileSettingsJson;
 use App\Service\Recommendation\Profile\Model\ProfileSettingsModel;
+use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
 final class ProfileSettingsJsonTest extends TestCase
@@ -48,5 +50,32 @@ final class ProfileSettingsJsonTest extends TestCase
 
         self::assertNull($json['generatedBy']);
         self::assertSame(['keptCap' => 40, 'viewedCap' => 80], $json['defaults']);
+    }
+
+    public function testTheBuildingConnectionAndTheCandidatesShowTheirNameUrlAndModel(): void
+    {
+        $connection = AiProviderSettingsFactory::build(
+            new User('profile-json@example.test', new \DateTimeImmutable('2026-10-01 06:00:00')),
+            'Local',
+            'https://llm.example.test/v1',
+        );
+        $connection->chooseModel('qwen3-14b', new \DateTimeImmutable('2026-10-03 07:00:00'), 32_000);
+
+        $json = ProfileSettingsJson::state(new ProfileSettingsModel(
+            StoredProfile::none(),
+            ProfileSettingsValues::defaults(),
+            $connection,
+            [$connection],
+            false,
+        ));
+
+        $expected = [
+            'id' => null,
+            'name' => 'Local',
+            'baseUrl' => 'https://llm.example.test/v1',
+            'model' => 'qwen3-14b',
+        ];
+        self::assertSame($expected, $json['connection']);
+        self::assertSame([$expected], $json['candidates']);
     }
 }

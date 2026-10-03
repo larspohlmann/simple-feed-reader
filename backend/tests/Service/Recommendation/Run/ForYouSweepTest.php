@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Feed;
+use App\Entity\ProfileRun;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -12,6 +13,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ProfileRunTrigger;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
@@ -63,6 +65,27 @@ final class ForYouSweepTest extends DbTestCase
         self::assertSame(1, $report->advancedProfileRuns);
         self::assertSame(0, $report->activeProfileRuns);
         self::assertSame(0, $report->startedRuns);
+    }
+
+    public function testTheSweepClaimsDriverLivenessWhileItAdvancesOnlyAProfileRun(): void
+    {
+        $owner = $this->user('sweep-profile-presence@example.test');
+        $this->fixtures->seedReadyAiSettings($owner);
+        $this->fixtures->seedFavorites($owner, 'maps', 1);
+        $this->entityManager->persist(
+            new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00')),
+        );
+        $this->entityManager->flush();
+        $this->sweep()->sweepOnce();
+        $this->chatClient()->queueContent('{"profile":"Likes maps."}');
+        $drivingDuringTheCall = null;
+        $this->chatClient()->duringNextCall(function () use (&$drivingDuringTheCall): void {
+            $drivingDuringTheCall = $this->presence()->isAnybodyDrivingRecommendationRuns();
+        });
+
+        $this->sweep()->sweepOnce();
+
+        self::assertTrue($drivingDuringTheCall);
     }
 
     private function sweep(): ForYouSweep

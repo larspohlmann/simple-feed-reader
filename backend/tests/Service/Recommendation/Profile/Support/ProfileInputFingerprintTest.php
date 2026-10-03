@@ -46,6 +46,32 @@ final class ProfileInputFingerprintTest extends TestCase
         );
     }
 
+    public function testTheFavouritesCapChangesIt(): void
+    {
+        self::assertNotSame(
+            ProfileInputFingerprint::of($this->history([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13]),
+                new RecommendationHistoryCaps(41, 40, 80),
+                $this->connection(5, 'm'),
+            ),
+        );
+    }
+
+    public function testAnEntryRetitledByItsFeedLeavesItAlone(): void
+    {
+        $retitled = new RecommendationHistoryModel(
+            [new ArticleLineModel(11, 'Corrected title', 'Feed', '2026-10-01', null)],
+            self::lines([12]),
+            self::lines([13]),
+        );
+
+        self::assertSame(
+            ProfileInputFingerprint::of($this->history([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::of($retitled, $this->caps(), $this->connection(5, 'm')),
+        );
+    }
+
     public function testAnotherModelOnTheSameConnectionChangesIt(): void
     {
         self::assertNotSame(

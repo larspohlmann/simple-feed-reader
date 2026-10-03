@@ -8,10 +8,13 @@ use App\Entity\ProfileRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\StoredProfile;
 use App\Entity\User;
+use App\Enum\CallVerdict;
 use App\Enum\ProfileRunOutcome;
 use App\Enum\ProfileRunTrigger;
 use App\Enum\RunStatus;
+use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
@@ -259,6 +262,79 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame([], $this->chat()->calls());
     }
 
+    public function testEachCallsVerdictIsSettledInTheRunLog(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueContent('not json');
+        $this->chat()->queueContent('{"profile":"Likes maps."}');
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
+    }
+
+    public function testAnUnusableReplyIsSavedBeforeTheNextTick(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueContent('not json');
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(1, $this->saved($profileRun)->getAttempts());
+    }
+
+    public function testATransportStrikeIsSavedBeforeTheNextTick(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(new ProviderUnreachableException('gone'));
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(1, $this->saved($profileRun)->getTransportFailures());
+    }
+
+    public function testRejectedCredentialsAreAStrike(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(CredentialsRejectedException::refusedKey());
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(RunStatus::Running, $profileRun->getStatus());
+        self::assertSame(1, $profileRun->getTransportFailures());
+    }
+
+    public function testAServerErrorIsAStrike(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(new RetryableProviderException(503));
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(RunStatus::Running, $profileRun->getStatus());
+        self::assertSame(1, $profileRun->getTransportFailures());
+    }
+
+    public function testARunWithoutAUsableConnectionIsSavedAsFailed(): void
+    {
+        $owner = $this->user('profile-run-tick-saved-failure@example.test');
+        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->flush();
+
+        $this->tick()->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
+    }
+
     private function profileRun(ProfileRunTrigger $trigger): ProfileRun
     {
         $profileRun = new ProfileRun($this->owner, $trigger, new \DateTimeImmutable('2026-10-03 09:00:00'));
@@ -281,6 +357,24 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertInstanceOf(RecommendationSettings::class, $row);
         $row->storeProfile(StoredProfile::none());
         $this->entityManager->flush();
+    }
+
+    private function saved(ProfileRun $profileRun): ProfileRun
+    {
+        $profileRunId = $profileRun->requireId();
+        $this->entityManager->clear();
+        $saved = $this->entityManager->find(ProfileRun::class, $profileRunId);
+        self::assertInstanceOf(ProfileRun::class, $saved);
+
+        return $saved;
+    }
+
+    private function logs(): RecommendationRunLogRepository
+    {
+        /** @var RecommendationRunLogRepository $logs */
+        $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return $logs;
     }
 
     private function tick(): ProfileRunTick

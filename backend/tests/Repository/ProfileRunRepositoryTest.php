@@ -26,6 +26,15 @@ final class ProfileRunRepositoryTest extends DbTestCase
         self::assertSame($running->getId(), $this->profileRuns()->findActiveForUser($owner)?->getId());
     }
 
+    public function testOfTwoActiveRunsTheNewestIsTheActiveOne(): void
+    {
+        $owner = $this->user('profile-runs-two-active@example.test');
+        $this->running($owner, 'fp-duplicate-start');
+        $newest = $this->running($owner, 'fp-newest');
+
+        self::assertSame($newest->getId(), $this->profileRuns()->findActiveForUser($owner)?->getId());
+    }
+
     public function testTheLatestRunIsTheNewestWhateverItsStatus(): void
     {
         $owner = $this->user('profile-runs-latest@example.test');

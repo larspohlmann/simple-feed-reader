@@ -251,6 +251,20 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertSame(0, $this->runColumns()['prompt_tokens'], 'the recommendation run is not billed');
     }
 
+    public function testAProfileRunCallBillsOnlyItsOwnProfileRun(): void
+    {
+        $profileRun = $this->runningProfileRun();
+        $otherProfileRun = $this->runningProfileRun();
+        $call = $this->recorder->beginForProfileRun($profileRun, $this->request([]));
+
+        $call->progressed(new CallProgressModel('{"prof', 10, usage: new ProviderCallUsageModel(910, 37, 0, 0, 1_500)));
+        $call->finishUsable('{"profile":"Likes maps."}');
+
+        $columns = $this->profileRunColumns($otherProfileRun);
+        self::assertSame(0, $columns['prompt_tokens']);
+        self::assertNull($columns['cost_nano_credits']);
+    }
+
     private function runningProfileRun(): ProfileRun
     {
         $createdAt = new \DateTimeImmutable('2026-10-03T09:00:00Z');

@@ -69,6 +69,16 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         self::assertSame($earlier->getId(), $this->profileRuns()->findLatestForUser($this->owner)?->getId());
     }
 
+    public function testARunningProfileRunIsWaitedOn(): void
+    {
+        $this->profileRunAt('2026-10-03 08:00:00')->start('fingerprint', 'api.example.test', 'qwen3-14b');
+        $this->entityManager->flush();
+
+        $profile = $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+
+        self::assertSame(RunProfileState::Building, $profile->state);
+    }
+
     public function testAProfileRunThatFailedSinceTheRunStartedIsAFailure(): void
     {
         $this->profileRunAt('2026-10-03 09:00:30')
