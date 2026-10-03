@@ -114,7 +114,7 @@ catalog offers `jev-latest` wherever `{base}/systemone` answers.
 
 ### The tick lock
 
-Every tick runs behind a per-user lock (`RecommendationRunAdvancer::lockNameFor()`), so two drivers never advance
+Every tick runs behind a per-user lock (`UserTickLock::nameFor()`), so two drivers never advance
 the same account's run at once. `RecommendationRun` has no optimistic-version guard: a second tick that took the lock
 mid-call could bank the same batch twice and pay for its provider call twice.
 

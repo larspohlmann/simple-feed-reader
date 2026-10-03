@@ -21,11 +21,11 @@ use App\Service\Recommendation\Run\Factory\TickContextFactory;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\SweepStreamHeartbeat;
-use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\TickLockTtl;
 use App\Service\Recommendation\Run\TickPhases;
+use App\Service\Recommendation\Run\UserTickLock;
 use App\Service\Recommendation\Run\WorkerPresence;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
@@ -46,7 +46,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\Lock\LockFactory;
 
 /** Real repository, advancer, presence and entity manager: the handler's whole job is coordinating them. */
 final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
@@ -462,12 +461,11 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         return new RecommendationRunAdvancer(
             $this->runs(),
-            self::getContainer()->get(LockFactory::class),
             self::getContainer()->get(ClockInterface::class),
             new FlushFailingEntityManager($this->entityManager),
             self::getContainer()->get(TickContextFactory::class),
-            self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(TickPhases::class),
+            self::getContainer()->get(UserTickLock::class),
             self::getContainer()->get(TickLockTtl::class),
         );
     }

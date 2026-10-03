@@ -33,18 +33,21 @@ final readonly class TickLockTtl
     public function secondsFor(User $user): float
     {
         $active = $this->configurator->settingsFor($user);
-        if (null === $active) {
-            return ProviderTimeoutsModel::standard()->firstByteSeconds + self::MARGIN_SECONDS;
+        $borrowed = null === $active ? null : $this->profileConnections->borrowedFor($active);
+        if (null === $borrowed) {
+            return $this->secondsForConnection($active);
         }
 
-        $profileConnection = $this->profileConnections->borrowedFor($active);
-        $calledConnections = null === $profileConnection ? [$active] : [$active, $profileConnection];
-
-        return max(array_map($this->firstByteSeconds(...), $calledConnections)) + self::MARGIN_SECONDS;
+        return max($this->secondsForConnection($active), $this->secondsForConnection($borrowed));
     }
 
-    private function firstByteSeconds(AiProviderSettings $connection): float
+    /** No connection gets the standard bound: a tick that only fails its run still holds the lock briefly. */
+    public function secondsForConnection(?AiProviderSettings $connection): float
     {
-        return $this->connectionFactory->timeoutsFor($connection)->firstByteSeconds;
+        $timeouts = null === $connection
+            ? ProviderTimeoutsModel::standard()
+            : $this->connectionFactory->timeoutsFor($connection);
+
+        return $timeouts->firstByteSeconds + self::MARGIN_SECONDS;
     }
 }
