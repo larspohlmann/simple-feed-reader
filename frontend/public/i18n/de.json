@@ -339,6 +339,7 @@
     "profile": {
       "title": "Profil",
       "caption": "Was das Modell aus deinem Lesen gelernt hat. „Für dich“-Empfehlungen werden daran gemessen.",
+      "details": "Profil und Einstellungen",
       "empty": "Noch kein Profil. Erstelle jetzt eins oder lass es nach Zeitplan erstellen.",
       "generated": "Erstellt am {{when}} mit {{model}} auf {{host}}",
       "statusRunning": "Dein Profil wird erstellt …",

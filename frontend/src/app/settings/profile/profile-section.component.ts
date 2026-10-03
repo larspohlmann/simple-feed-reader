@@ -13,6 +13,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageService } from '../../core/i18n/language.service';
 import { formatLongDateTime, formatRange } from '../../reader/format';
 import { ButtonComponent } from '../../shared/button/button.component';
+import { DisclosureComponent } from '../../shared/disclosure/disclosure.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import { FieldComponent } from '../../shared/field/field.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
@@ -31,6 +32,7 @@ import {
   selector: 'app-profile-section',
   imports: [
     ButtonComponent,
+    DisclosureComponent,
     ErrorBannerComponent,
     FieldComponent,
     ProfileDebugLogComponent,

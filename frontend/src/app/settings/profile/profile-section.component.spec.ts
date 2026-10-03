@@ -78,6 +78,42 @@ describe('ProfileSectionComponent', () => {
     expect(groups[0].querySelector('app-settings-save-bar')).not.toBeNull();
   });
 
+  it('hides the profile and its settings until the group is expanded', () => {
+    const fixture = mount();
+    const disclosure = element(fixture).querySelector(
+      'app-settings-group details',
+    ) as HTMLDetailsElement;
+    const body = [
+      'profile-text',
+      'profile-meta',
+      'generate-now',
+      'profile-schedule',
+      'profile-connection',
+      'profile-kept-cap',
+      'profile-viewed-cap',
+    ];
+
+    expect(disclosure.open).toBe(false);
+    for (const id of body) expect(byTestId(fixture, id)?.closest('details')).toBe(disclosure);
+    expect(element(fixture).querySelector('app-settings-save-bar')?.closest('details')).toBe(
+      disclosure,
+    );
+
+    disclosure.querySelector('summary')!.click();
+
+    expect(disclosure.open).toBe(true);
+  });
+
+  it('keeps the title and caption visible while the group is collapsed', () => {
+    const group = element(mount()).querySelector('app-settings-group')!;
+
+    expect(group.querySelector('.g-title')?.closest('details')).toBeNull();
+    expect(group.querySelector('.g-caption')?.textContent).toContain(
+      'What the model has learned from your reading.',
+    );
+    expect(group.querySelector('.g-caption')?.closest('details')).toBeNull();
+  });
+
   it('says there is no profile yet', () => {
     const fixture = mount(
       profileState({ profileText: null, generatedAt: null, generatedBy: null }),
