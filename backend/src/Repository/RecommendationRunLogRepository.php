@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
@@ -25,6 +26,9 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunLogRepository extends ServiceEntityRepository
 {
+    private const string OWNER_RUN = 'run';
+    private const string OWNER_PROFILE_RUN = 'profileRun';
+
     public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
         parent::__construct($registry, RecommendationRunLog::class);
@@ -33,6 +37,22 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     /** @return list<DebugLogRow> */
     public function listForRun(User $user, int $runId): array
     {
+        return $this->listRowsOf($user, self::OWNER_RUN, $runId);
+    }
+
+    /** @return list<DebugLogRow> the rows of one profile run; `runId` carries the profile run's id */
+    public function listForProfileRun(User $user, int $profileRunId): array
+    {
+        return $this->listRowsOf($user, self::OWNER_PROFILE_RUN, $profileRunId);
+    }
+
+    /**
+     * @param self::OWNER_* $owner
+     *
+     * @return list<DebugLogRow>
+     */
+    private function listRowsOf(User $user, string $owner, int $ownerId): array
+    {
         /** @var list<array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
          *     verdict: ?CallVerdict, requestBytes: int|string, responseBytes: int|string,
          *     wireBytes: int, createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable,
@@ -40,7 +60,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         $rows = $this->createQueryBuilder('l')
             ->select(
                 'l.id AS id',
-                'IDENTITY(l.run) AS runId',
+                \sprintf('IDENTITY(l.%s) AS runId', $owner),
                 'l.phase AS phase',
                 'l.batchNumber AS batchNumber',
                 'l.attempt AS attempt',
@@ -53,11 +73,11 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'l.errorDetail AS errorDetail',
                 'l.finishReason AS finishReason',
             )
-            ->join('l.run', 'r')
+            ->join('l.' . $owner, 'r')
             ->where('r.user = :user')
-            ->andWhere('r.id = :run')
+            ->andWhere('r.id = :owner')
             ->setParameter('user', $user)
-            ->setParameter('run', $runId)
+            ->setParameter('owner', $ownerId)
             ->orderBy('l.id', 'ASC')
             ->getQuery()
             ->getArrayResult();
@@ -108,6 +128,19 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return (int) $count;
     }
 
+    public function countProfileRunAttempts(ProfileRun $profileRun): int
+    {
+        /** @var int|string $count */
+        $count = $this->createQueryBuilder('l')
+            ->select('COUNT(l.id)')
+            ->where('l.profileRun = :profileRun')
+            ->setParameter('profileRun', $profileRun)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (int) $count;
+    }
+
     /**
      * The partial text of the call(s) still streaming — at most one row in
      * practice, since a run makes one provider call at a time.
@@ -116,15 +149,31 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function streamingTextForRun(User $user, int $runId): array
     {
+        return $this->streamingTextOf($user, self::OWNER_RUN, $runId);
+    }
+
+    /** @return array<int, string> log id => response text so far */
+    public function streamingTextForProfileRun(User $user, int $profileRunId): array
+    {
+        return $this->streamingTextOf($user, self::OWNER_PROFILE_RUN, $profileRunId);
+    }
+
+    /**
+     * @param self::OWNER_* $owner
+     *
+     * @return array<int, string>
+     */
+    private function streamingTextOf(User $user, string $owner, int $ownerId): array
+    {
         /** @var list<array{id: int, responseText: string}> $rows */
         $rows = $this->createQueryBuilder('l')
             ->select('l.id AS id', 'l.responseText AS responseText')
-            ->join('l.run', 'r')
+            ->join('l.' . $owner, 'r')
             ->where('r.user = :user')
-            ->andWhere('r.id = :run')
+            ->andWhere('r.id = :owner')
             ->andWhere('l.verdict IS NULL')
             ->setParameter('user', $user)
-            ->setParameter('run', $runId)
+            ->setParameter('owner', $ownerId)
             ->getQuery()
             ->getArrayResult();
 
@@ -140,9 +189,10 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     {
         /** @var RecommendationRunLog|null $log */
         $log = $this->createQueryBuilder('l')
-            ->join('l.run', 'r')
+            ->leftJoin('l.run', 'r')
+            ->leftJoin('l.profileRun', 'p')
             ->where('l.id = :id')
-            ->andWhere('r.user = :user')
+            ->andWhere('r.user = :user OR p.user = :user')
             ->setParameter('id', $logId)
             ->setParameter('user', $user)
             ->getQuery()
@@ -151,6 +201,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $log ?? throw new RecordNotFoundException('No such debug log entry.');
     }
 
+    /** The account's recommendation-run rows; profile-run rows are not this purge's. */
     public function deleteForUser(User $user): void
     {
         $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, null));
@@ -165,6 +216,25 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     public function deleteForUserOutsideRuns(User $user, array $keptRunIds): void
     {
         $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, $keptRunIds));
+    }
+
+    /**
+     * Drops the account's profile-run rows except those of the named profile runs; recommendation-run rows stay.
+     *
+     * @param list<int> $keptProfileRunIds
+     */
+    public function deleteForUserOutsideProfileRuns(User $user, array $keptProfileRunIds): void
+    {
+        $query = $this->createQueryBuilder('l')
+            ->join('l.profileRun', 'p')
+            ->where('p.user = :user')
+            ->setParameter('user', $user);
+
+        if ([] !== $keptProfileRunIds) {
+            $query->andWhere('p.id NOT IN (:kept)')->setParameter('kept', $keptProfileRunIds);
+        }
+
+        $this->rowIds->delete(RecommendationRunLog::class, $this->rowIds->selectedBy($query));
     }
 
     /**

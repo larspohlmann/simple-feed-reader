@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\CallOutcome;
+use App\Entity\ProfileRun;
+use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
+use App\Enum\ProfileRunTrigger;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -212,5 +215,106 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->entityManager->clear();
         self::assertSame([], $this->logs->listForRun($this->user, $run->requireId()));
         self::assertNotNull($this->entityManager->find(RecommendationRunLog::class, $keptId));
+    }
+
+    public function testTheRunListLeavesProfileRunRowsOut(): void
+    {
+        [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        self::assertSame([CallPhase::Batch], array_column($this->logs->listForRun($owner, $run->requireId()), 'phase'));
+        self::assertSame(
+            [CallPhase::Distill],
+            array_column($this->logs->listForProfileRun($owner, $profileRun->requireId()), 'phase'),
+        );
+    }
+
+    public function testTheStreamingTextOfARunLeavesProfileRunRowsOut(): void
+    {
+        [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        $runRowId = $this->logs->listForRun($owner, $run->requireId())[0]['id'];
+        $profileRowId = $this->logs->listForProfileRun($owner, $profileRun->requireId())[0]['id'];
+
+        self::assertSame([$runRowId], array_keys($this->logs->streamingTextForRun($owner, $run->requireId())));
+        self::assertSame(
+            [$profileRowId],
+            array_keys($this->logs->streamingTextForProfileRun($owner, $profileRun->requireId())),
+        );
+    }
+
+    public function testAProfileRunRowIsReadableByItsOwnerOnly(): void
+    {
+        [$owner, , $profileRun] = $this->ownerWithARunAndAProfileRun();
+        $rowId = $this->logs->listForProfileRun($owner, $profileRun->requireId())[0]['id'];
+
+        self::assertSame('{"profile-request":1}', $this->logs->getOneForUser($owner, $rowId)->getRequestBody());
+
+        $this->expectException(RecordNotFoundException::class);
+        $this->logs->getOneForUser($this->otherUser, $rowId);
+    }
+
+    public function testTheProfileRunTrimKeepsTheNamedProfileRunsAndEveryRecommendationRow(): void
+    {
+        [$owner, $run, $kept] = $this->ownerWithARunAndAProfileRun();
+        $dropped = $this->profileRunWithOneRow($owner);
+
+        $this->logs->deleteForUserOutsideProfileRuns($owner, [$kept->requireId()]);
+
+        self::assertCount(1, $this->logs->listForProfileRun($owner, $kept->requireId()));
+        self::assertSame([], $this->logs->listForProfileRun($owner, $dropped->requireId()));
+        self::assertCount(1, $this->logs->listForRun($owner, $run->requireId()));
+    }
+
+    public function testThePurgeOfRecommendationRowsLeavesProfileRunRows(): void
+    {
+        [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        $this->logs->deleteForUser($owner);
+
+        self::assertSame([], $this->logs->listForRun($owner, $run->requireId()));
+        self::assertCount(1, $this->logs->listForProfileRun($owner, $profileRun->requireId()));
+    }
+
+    public function testTheRunTrimLeavesProfileRunRows(): void
+    {
+        [$owner, $run, $profileRun] = $this->ownerWithARunAndAProfileRun();
+
+        $this->logs->deleteForUserOutsideRuns($owner, [$run->requireId()]);
+
+        self::assertCount(1, $this->logs->listForRun($owner, $run->requireId()));
+        self::assertCount(1, $this->logs->listForProfileRun($owner, $profileRun->requireId()));
+    }
+
+    public function testAProfileRunsAttemptsAreCountedOnItsOwn(): void
+    {
+        [$owner, , $profileRun] = $this->ownerWithARunAndAProfileRun();
+        $this->profileRunWithOneRow($owner);
+
+        self::assertSame(1, $this->logs->countProfileRunAttempts($profileRun));
+    }
+
+    /** @return array{User, RecommendationRun, ProfileRun} */
+    private function ownerWithARunAndAProfileRun(): array
+    {
+        $run = $this->fixtures->createRun($this->user);
+        $this->fixtures->log($run, CallPhase::Batch, 1, 1, '{"batch-request":1}');
+        $this->entityManager->flush();
+
+        return [$this->user, $run, $this->profileRunWithOneRow($this->user)];
+    }
+
+    private function profileRunWithOneRow(User $owner): ProfileRun
+    {
+        $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03T09:00:00Z'));
+        $this->entityManager->persist($profileRun);
+        $this->entityManager->persist(RecommendationRunLog::forProfileRun(
+            $profileRun,
+            1,
+            '{"profile-request":1}',
+            new \DateTimeImmutable('2026-10-03T09:00:05Z'),
+        ));
+        $this->entityManager->flush();
+
+        return $profileRun;
     }
 }

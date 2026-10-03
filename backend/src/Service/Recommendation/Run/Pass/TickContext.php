@@ -9,6 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Enum\RecommendationEngineKind;
 use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
+use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
@@ -63,5 +64,10 @@ final readonly class TickContext
     public function retryPlan(): RetryPlanModel
     {
         return $this->driver->retryPlan();
+    }
+
+    public function callRoute(): ProviderCallRouteModel
+    {
+        return new ProviderCallRouteModel($this->connection, $this->retryPlan());
     }
 }

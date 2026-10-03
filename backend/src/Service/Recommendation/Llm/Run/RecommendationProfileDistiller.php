@@ -51,7 +51,7 @@ final readonly class RecommendationProfileDistiller
             new CallPromptModel($messages, 1, RecommendationResponseSchema::Distillation),
         );
         $recordedCall = $this->callRecorder->begin($run, CallSlotModel::distillation(), $request);
-        $content = $this->providerCall->complete($tick, $request, $recordedCall);
+        $content = $this->providerCall->complete($tick->callRoute(), $request, $recordedCall);
 
         $result = $this->profileParser->parse($content);
         if (!$result->usable) {

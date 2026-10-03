@@ -11,6 +11,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
+use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\BorrowedProfileModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
@@ -27,6 +28,17 @@ final class TickContextTest extends TestCase
     {
         self::assertTrue($this->tick($this->connection(), TickDriver::Worker)->retryPlan()->blocks());
         self::assertFalse($this->tick($this->connection(), TickDriver::Sweep)->retryPlan()->blocks());
+    }
+
+    public function testTheCallRouteIsTheTicksConnectionUnderItsDriversRetryPlan(): void
+    {
+        $connection = $this->connection();
+        $tick = $this->tick($connection, TickDriver::Worker);
+
+        $route = $tick->callRoute();
+
+        self::assertSame($connection, $route->connection);
+        self::assertEquals(RetryPlanModel::blocking(), $route->retryPlan);
     }
 
     /** The profile connection answers for the tick while a borrowed distillation is pending, the tick's own after. */

@@ -9,8 +9,8 @@ use App\Service\Ai\Model\ProviderCallUsageModel;
 use Doctrine\DBAL\Connection;
 
 /**
- * A recorded provider call's writes, on DBAL on purpose: they commit at once for the status poll, and never flush
- * what the advancer's EntityManager holds dirty mid-tick.
+ * A recorded provider call's writes, onto its run-log row and the run that `CallingRun` names. On DBAL on purpose:
+ * they commit at once for the status poll, and never flush what the advancer's EntityManager holds dirty mid-tick.
  */
 final readonly class RecommendationCallRepository
 {
@@ -18,12 +18,12 @@ final readonly class RecommendationCallRepository
     {
     }
 
-    public function recordStreamedChars(int $runId, int $streamedChars): void
+    public function recordStreamedChars(CallingRun $callingRun, int $streamedChars): void
     {
         $this->connection->update(
-            'recommendation_run',
+            $callingRun->table,
             ['streamed_chars' => $streamedChars],
-            ['id' => $runId],
+            ['id' => $callingRun->id],
         );
     }
 
@@ -63,10 +63,10 @@ final readonly class RecommendationCallRepository
     }
 
     /** SQL arithmetic, not read-modify-write: one batch wave settles several calls against the same run. */
-    public function addUsage(int $runId, ProviderCallUsageModel $usage): void
+    public function addUsage(CallingRun $callingRun, ProviderCallUsageModel $usage): void
     {
         $this->connection->executeStatement(
-            'UPDATE recommendation_run SET'
+            'UPDATE ' . $callingRun->table . ' SET'
             . ' prompt_tokens = prompt_tokens + :promptTokens,'
             . ' completion_tokens = completion_tokens + :completionTokens,'
             . ' reasoning_tokens = reasoning_tokens + :reasoningTokens,'
@@ -77,11 +77,11 @@ final readonly class RecommendationCallRepository
                 'completionTokens' => $usage->completionTokens,
                 'reasoningTokens' => $usage->reasoningTokens,
                 'cachedTokens' => $usage->cachedTokens,
-                'runId' => $runId,
+                'runId' => $callingRun->id,
             ],
         );
 
-        $this->addCost($runId, $usage->costNanoCredits);
+        $this->addCost($callingRun, $usage->costNanoCredits);
     }
 
     /**
@@ -103,17 +103,17 @@ final readonly class RecommendationCallRepository
     }
 
     /** An unpriced call leaves the column NULL: null means no price was reported, 0 would claim the run was free. */
-    private function addCost(int $runId, ?int $costNanoCredits): void
+    private function addCost(CallingRun $callingRun, ?int $costNanoCredits): void
     {
         if (null === $costNanoCredits) {
             return;
         }
 
         $this->connection->executeStatement(
-            'UPDATE recommendation_run'
+            'UPDATE ' . $callingRun->table
             . ' SET cost_nano_credits = COALESCE(cost_nano_credits, 0) + :costNanoCredits'
             . ' WHERE id = :runId',
-            ['costNanoCredits' => $costNanoCredits, 'runId' => $runId],
+            ['costNanoCredits' => $costNanoCredits, 'runId' => $callingRun->id],
         );
     }
 }
