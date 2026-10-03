@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Settings\Pass;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\ProfileSettingsValues;
+use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;

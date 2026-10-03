@@ -9,7 +9,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
-/** A run that was mid-distillation at the deploy snapshots on with whatever profile_text it holds. */
+/** A run that was mid-distillation at the deploy now scores on without a profile. */
 final class Version20261003110000 extends AbstractMigration
 {
     public function getDescription(): string

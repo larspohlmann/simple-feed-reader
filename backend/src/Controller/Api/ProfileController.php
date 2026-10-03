@@ -19,7 +19,7 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/** The interest profile: its settings, a manual start, and the newest run's status and calls. Reads have no limiter. */
+/** The interest profile: its settings, a manual start, and the newest run's status and calls. */
 #[Route('/api/me/ai/profile')]
 final readonly class ProfileController
 {
