@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Llm\Run\Model;
+namespace App\Tests\Service\Recommendation\Profile\Model;
 
-use App\Service\Recommendation\Llm\Run\Model\ProfileDistillationOutcomeModel;
+use App\Service\Recommendation\Profile\Model\ProfileDistillationOutcomeModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

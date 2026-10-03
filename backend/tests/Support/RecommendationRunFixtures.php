@@ -7,12 +7,15 @@ namespace App\Tests\Support;
 use App\Entity\AiProviderSettings;
 use App\Entity\CallOutcome;
 use App\Entity\Entry;
+use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
+use App\Entity\StoredProfile;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CallPhase;
@@ -133,6 +136,62 @@ final readonly class RecommendationRunFixtures
         }
 
         return $entries;
+    }
+
+    /**
+     * $count favourites in a feed of their own, newest first, so a test can grow the history a second time.
+     *
+     * @return list<Entry>
+     */
+    public function seedFavorites(User $user, string $feedSlug, int $count): array
+    {
+        $feed = new Feed('https://example.com/' . $user->getEmail() . '/' . $feedSlug . '.xml');
+        $feed->setTitle('Favourites ' . $feedSlug);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+
+        $entries = [];
+        for ($index = 0; $index < $count; $index++) {
+            $entry = $this->entry($feed, $feedSlug . '-' . $user->getEmail() . '-' . $index, $count - $index);
+            $state = new EntryState($user, $entry);
+            $state->markFavorite();
+            $this->entityManager->persist($state);
+            $entries[] = $entry;
+        }
+        $this->entityManager->flush();
+
+        return $entries;
+    }
+
+    public function chooseProfileConnection(User $user, AiProviderSettings $connection): void
+    {
+        $row = $this->settingsRowOf($user);
+        $current = $row->profileSettings();
+        $row->updateProfileSettings(
+            new ProfileSettingsValues($current->intervalHours, $connection, $current->keptCap, $current->viewedCap),
+        );
+        $this->entityManager->flush();
+    }
+
+    public function storeProfile(User $user, string $text): void
+    {
+        $this->settingsRowOf($user)->storeProfile(
+            new StoredProfile($text, new \DateTimeImmutable('2026-10-03 06:00:00'), 'api.example.test', 'm'),
+        );
+        $this->entityManager->flush();
+    }
+
+    private function settingsRowOf(User $user): RecommendationSettings
+    {
+        $row = $this->entityManager->getRepository(RecommendationSettings::class)->findOneBy(['user' => $user]);
+        if ($row instanceof RecommendationSettings) {
+            return $row;
+        }
+
+        $row = new RecommendationSettings($user);
+        $this->entityManager->persist($row);
+
+        return $row;
     }
 
     public function subscribedFeed(User $user): Feed

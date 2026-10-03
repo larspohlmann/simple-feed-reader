@@ -21,4 +21,9 @@ final readonly class RecommendationHistoryModel
         public array $viewed,
     ) {
     }
+
+    public function isEmpty(): bool
+    {
+        return [] === $this->favorites && [] === $this->kept && [] === $this->viewed;
+    }
 }

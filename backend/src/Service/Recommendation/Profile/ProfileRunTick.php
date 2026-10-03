@@ -1,0 +1,89 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Profile;
+
+use App\Entity\AiProviderSettings;
+use App\Entity\ProfileRun;
+use App\Enum\RunStatus;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
+use App\Service\Recommendation\Profile\Pass\ProfileTick;
+use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * One tick of a profile run under the caller's lock: open it, or make its one model call. A provider failure is
+ * recorded on the run and never thrown, so a recommendation tick that hands its turn to a profile run cannot fail.
+ */
+final readonly class ProfileRunTick
+{
+    public const string KEY_UNREADABLE = 'The stored API key can no longer be read.';
+
+    public function __construct(
+        private ProfileConnections $profileConnections,
+        private RecommendationSettingsResolver $settingsResolver,
+        private RecommendationHistoryLoader $historyLoader,
+        private ProfileRunOpening $opening,
+        private ProfileGeneration $generation,
+        private ProfileRunFailure $failure,
+        private EntityManagerInterface $entityManager,
+    ) {
+    }
+
+    public function advance(ProfileRun $profileRun, TickDriver $driver): void
+    {
+        $connection = $this->profileConnections->usableFor($profileRun->getUser());
+        if (null === $connection) {
+            $this->failure->fail($profileRun, ProfileConnections::MISSING);
+
+            return;
+        }
+
+        $tick = $this->tickFor($profileRun, $connection, $driver);
+        try {
+            $this->advanceWithin($tick);
+        } catch (RecommendationTickLockLostException) {
+            $this->entityManager->refresh($profileRun);
+        } catch (
+            ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException
+            | ProviderRateLimitedException $exception
+        ) {
+            $this->failure->recordTransportFailure($tick, $exception->getMessage());
+        } catch (AiKeyUnreadableException) {
+            $this->failure->fail($profileRun, self::KEY_UNREADABLE);
+        }
+    }
+
+    private function tickFor(ProfileRun $profileRun, AiProviderSettings $connection, TickDriver $driver): ProfileTick
+    {
+        $user = $profileRun->getUser();
+        $settings = $this->settingsResolver->forAccount($user)->forConnection($connection);
+
+        return new ProfileTick(
+            $profileRun,
+            $connection,
+            $settings,
+            $this->historyLoader->load($user->requireId(), $settings),
+            $driver,
+        );
+    }
+
+    private function advanceWithin(ProfileTick $tick): void
+    {
+        if (RunStatus::Pending === $tick->profileRun->getStatus()) {
+            $this->opening->open($tick);
+        }
+
+        if (RunStatus::Running === $tick->profileRun->getStatus()) {
+            $this->generation->advance($tick);
+        }
+    }
+}
