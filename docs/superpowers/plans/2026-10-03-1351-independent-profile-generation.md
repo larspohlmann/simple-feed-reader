@@ -8622,6 +8622,9 @@ git commit -m "feat(#1351): a top-level profile section shows, schedules and gen
 **Files:**
 - Modify: `docs/recommendations-runs.md`, `docs/for-you-scheduling.md`, `README.md` (only where it describes distillation or the profile connection)
 - Modify: `backend/infection.json5` only if Step 4 says the ratchet may rise (never lower it)
+- Modify: `docs/docker-production.md` §6 Update — the deploy note: the three migrations ship with the code, the worker restarts after them (an old worker crashes on the dropped `distilled` / `profile_connection_id` columns), and they are non-transactional, so take the §8 dump first and restore it rather than re-running a half-applied one
+- Modify: `docs/recommendations-runs.md` also gets `waitingForProfile` and `resumable` (the status JSON's two new fields) and the host-without-drainer-or-cron note; `docs/for-you-scheduling.md` says the cron sweep is count-bounded
+- Test: whatever `infection:diff` reports as escaped on this branch's lines gets a killing test (Step 4)
 
 - [ ] **Step 1: `docs/recommendations-runs.md`**
 
@@ -8679,6 +8682,8 @@ The commands of Task 1 Step 13, now through all three new migrations: `[OK] Succ
 - [ ] **Step 6: A real run in the Docker stack**
 
 With the dev stack on this checkout (the preflight above), the live migrations applied, and a real LLM connection configured on a test account:
+
+> Amended after execution: no real LLM credentials are used. A throwaway OpenAI-compatible stub listens on the host's port 8999 (`host.docker.internal:8999/v1` from the containers; it answers `/models` and streamed `/chat/completions` by the request's JSON-schema name). The run uses throwaway `e2e-1351-*@example.com` accounts seeded with `app:e2e:seed-admin` / `app:e2e:seed-admin-subscription` and removed with `app:e2e:purge-users`, so `e2e-admin@example.com` is left as found. Step 3 needs candidates the fixture feed cannot give (its one sample entry did not make the pool, so the run completed before it asked for a profile): subscribe the account to a feed already in the dev database. To see `waitingForProfile` at all, the stub has to delay its profile reply (20 s); with no history, or a fast reply, the profile run ends inside one worker tick. The failure path is the same with an unusable profile reply: three attempts, then `Profile generation failed: The model gave no usable profile in 3 attempts.`
 
 1. Settings → Profile: "Generate now" → "Building your profile…" → the profile text with its time, host and model. Check `docker compose exec php bin/console dbal:run-sql "SELECT id, status, run_trigger, outcome, model FROM profile_run ORDER BY id DESC LIMIT 3"`.
 2. Set the schedule to every 6 hours and reload: the choice persists. The due logic itself is pinned by `DueProfileRunFinderTest`; never back-date a row behind the running app.
