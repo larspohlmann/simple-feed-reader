@@ -42,7 +42,14 @@ final readonly class ProfileRunTick
     public function advance(ProfileRun $profileRun, TickDriver $driver): void
     {
         try {
-            $this->advanceRecordingProviderFailures($profileRun, $driver);
+            $connection = $this->profileConnections->usableFor($profileRun->getUser());
+            if (null === $connection) {
+                $this->failure->fail($profileRun, ProfileConnections::MISSING);
+
+                return;
+            }
+
+            $this->advanceRecordingProviderFailures($this->tickFor($profileRun, $connection, $driver));
         } catch (\Throwable $exception) {
             $this->failure->recordUnexpectedFailure($profileRun);
 
@@ -50,27 +57,19 @@ final readonly class ProfileRunTick
         }
     }
 
-    private function advanceRecordingProviderFailures(ProfileRun $profileRun, TickDriver $driver): void
+    private function advanceRecordingProviderFailures(ProfileTick $tick): void
     {
-        $connection = $this->profileConnections->usableFor($profileRun->getUser());
-        if (null === $connection) {
-            $this->failure->fail($profileRun, ProfileConnections::MISSING);
-
-            return;
-        }
-
-        $tick = $this->tickFor($profileRun, $connection, $driver);
         try {
             $this->advanceWithin($tick);
         } catch (RecommendationTickLockLostException) {
-            $this->entityManager->refresh($profileRun);
+            $this->entityManager->refresh($tick->profileRun);
         } catch (
             ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException
             | ProviderRateLimitedException $exception
         ) {
             $this->failure->recordTransportFailure($tick, $exception->getMessage());
         } catch (AiKeyUnreadableException) {
-            $this->failure->fail($profileRun, self::KEY_UNREADABLE);
+            $this->failure->fail($tick->profileRun, self::KEY_UNREADABLE);
         }
     }
 
