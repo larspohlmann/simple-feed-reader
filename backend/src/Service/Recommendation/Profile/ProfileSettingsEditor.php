@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Profile;
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\User;
+use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\Exception\ConfigurationNotFoundException;
 use App\Service\Recommendation\Exception\ProfileConnectionRejectedException;
@@ -21,6 +22,7 @@ final readonly class ProfileSettingsEditor
         private AiConfigurationForUser $configurations,
         private ProfileConnections $profileConnections,
         private RecommendationSettingsWriter $writer,
+        private RecommendationSettingsRepository $recommendationSettings,
     ) {
     }
 
@@ -45,10 +47,15 @@ final readonly class ProfileSettingsEditor
         }
 
         $connection = $this->configurations->require($user, $connectionId);
-        if (!$this->profileConnections->canBuildProfiles($connection)) {
+        if (!$this->isStoredPick($user, $connection) && !$this->profileConnections->canBuildProfiles($connection)) {
             throw new ProfileConnectionRejectedException(self::REJECTION);
         }
 
         return $connection;
+    }
+
+    private function isStoredPick(User $user, AiProviderSettings $connection): bool
+    {
+        return $this->recommendationSettings->findForUser($user)?->profileSettings()->connection === $connection;
     }
 }

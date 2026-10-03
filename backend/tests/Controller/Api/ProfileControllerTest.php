@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
@@ -101,6 +102,38 @@ final class ProfileControllerTest extends ApiTestCase
 
         $this->assertRejected($client, 422);
         self::assertSame('profile_connection_rejected', $this->payload($client)['type']);
+    }
+
+    public function testAStoredPickThatCanNoLongerBuildAProfileDoesNotBlockSavingTheRest(): void
+    {
+        $client = static::createClient();
+        [$headers, $user] = $this->auth('profile-stale-pick@example.test');
+        $this->fixtures()->seedReadyAiSettingsFor($user, 'qwen3-14b');
+        $chosen = $this->fixtures()->seedInactiveAiSettingsFor($user, 'gpt-4o');
+        $this->put(
+            $client,
+            $headers,
+            ['intervalHours' => null, 'connectionId' => $chosen->getId(), 'keptCap' => 40, 'viewedCap' => 80],
+        );
+        self::assertResponseIsSuccessful();
+
+        $stale = $this->entityManager()->find(AiProviderSettings::class, $chosen->getId());
+        self::assertNotNull($stale);
+        $stale->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-03 09:00:00'), null);
+        $this->entityManager()->flush();
+
+        $this->put(
+            $client,
+            $headers,
+            ['intervalHours' => 24, 'connectionId' => $chosen->getId(), 'keptCap' => 12, 'viewedCap' => 80],
+        );
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', self::URI, server: $headers);
+        $state = $this->state($client);
+        self::assertSame(24, $state['intervalHours']);
+        self::assertSame(12, $state['keptCap']);
+        self::assertSame($chosen->getId(), $state['connectionId']);
     }
 
     public function testAnotherAccountsConnectionReadsAsMissing(): void
