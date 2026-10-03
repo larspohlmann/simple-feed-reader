@@ -21,9 +21,18 @@ final readonly class RecommendationHistoryLoader
         $caps = $settings->historyCaps;
 
         return new RecommendationHistoryModel(
-            favorites: array_map(ArticleLineModel::of(...), $this->history->favorites($userId, $caps->favorites)),
+            favorites: $this->favorites($userId, $settings),
             kept: array_map(ArticleLineModel::of(...), $this->history->kept($userId, $caps->kept)),
             viewed: array_map(ArticleLineModel::of(...), $this->history->viewed($userId, $caps->viewed)),
+        );
+    }
+
+    /** @return list<ArticleLineModel> newest first */
+    public function favorites(int $userId, EffectiveRecommendationSettingsModel $settings): array
+    {
+        return array_map(
+            ArticleLineModel::of(...),
+            $this->history->favorites($userId, $settings->historyCaps->favorites),
         );
     }
 }

@@ -25,8 +25,8 @@ final class JevBatchPackerTest extends TestCase
     }
 
     /**
-     * Three-byte characters in every field, 731 tokens a question: 26,000 tokens (32k less 2k framing and 4k state)
-     * hold 35 of them, so the token budget closes each request before the question cap.
+     * Three-byte characters in every field, 731 tokens a question: 20,000 tokens (32k less 2k framing and 10k state)
+     * hold 27 of them, so the token budget closes each request before the question cap.
      */
     public function testHeavyArticlesFillRequestsUpToTheTokenBudget(): void
     {
@@ -34,7 +34,7 @@ final class JevBatchPackerTest extends TestCase
 
         $batches = $this->packer()->pack($candidates);
 
-        self::assertSame([35, 35, 35, 15], array_map(\count(...), $batches));
+        self::assertSame([27, 27, 27, 27, 12], array_map(\count(...), $batches));
         self::assertSame(range(1, 120), array_merge(...$batches));
         $factory = new SystemOneRequestFactory();
         foreach ($batches as $batch) {
@@ -42,7 +42,7 @@ final class JevBatchPackerTest extends TestCase
             foreach ($batch as $entryId) {
                 $tokens += TokenEstimate::of(SystemOneJson::encode($factory->question($candidates[$entryId - 1])));
             }
-            self::assertLessThanOrEqual(26_000, $tokens);
+            self::assertLessThanOrEqual(20_000, $tokens);
         }
     }
 
