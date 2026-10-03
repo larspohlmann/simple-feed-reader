@@ -129,6 +129,24 @@ final class ProvisionedProfileForRunTest extends DbTestCase
         self::assertFalse($this->profiles()->isBuildingFor($this->owner));
     }
 
+    public function testACancelledProfileRunBreaksAnInvariant(): void
+    {
+        $profileRun = $this->profileRunAt('2026-10-03 09:00:30');
+        (new \ReflectionProperty(ProfileRun::class, 'status'))->setValue($profileRun, RunStatus::Cancelled);
+
+        $this->expectExceptionObject(new \LogicException('A profile run is never cancelled.'));
+        $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+    }
+
+    public function testAFailedProfileRunWithoutItsErrorBreaksAnInvariant(): void
+    {
+        $profileRun = $this->profileRunAt('2026-10-03 09:00:30');
+        (new \ReflectionProperty(ProfileRun::class, 'status'))->setValue($profileRun, RunStatus::Failed);
+
+        $this->expectExceptionObject(new \LogicException('A failed profile run carries its error.'));
+        $this->profiles()->profileFor($this->owner, $this->runCreatedAt());
+    }
+
     private function profileRunAt(string $createdAt): ProfileRun
     {
         $profileRun = new ProfileRun($this->owner, ProfileRunTrigger::Scheduled, new \DateTimeImmutable($createdAt));

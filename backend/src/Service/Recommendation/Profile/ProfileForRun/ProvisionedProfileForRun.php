@@ -36,9 +36,12 @@ final readonly class ProvisionedProfileForRun implements ProfileForRunInterface
         }
 
         return match ($latest->getStatus()) {
-            RunStatus::Failed => RunProfileModel::failed($latest->getError() ?? ''),
+            RunStatus::Failed => RunProfileModel::failed(
+                $latest->getError() ?? throw new \LogicException('A failed profile run carries its error.'),
+            ),
             RunStatus::Completed => RunProfileModel::ready(null),
-            RunStatus::Pending, RunStatus::Running, RunStatus::Cancelled => RunProfileModel::building(),
+            RunStatus::Pending, RunStatus::Running => RunProfileModel::building(),
+            RunStatus::Cancelled => throw new \LogicException('A profile run is never cancelled.'),
         };
     }
 
