@@ -10,19 +10,19 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
-use App\Service\Recommendation\Run\RecommendationEtaEstimator;
+use App\Service\Recommendation\Run\RecommendationRunForecaster;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Sources the facts every recommendation-run response carries beside the report — the for-you summary, the clock
- * reading, the phase-weighted ETA, whether a pending run waits for its profile and whether a failed run can resume —
- * so no controller gathers them.
+ * reading, the phase-weighted forecast, whether a pending run waits for its profile and whether a failed run can
+ * resume — so no controller gathers them.
  */
 final readonly class RecommendationRunStatusResolver
 {
     public function __construct(
         private RecommendationForYouSummaryProvider $forYouSummaries,
-        private RecommendationEtaEstimator $etaEstimator,
+        private RecommendationRunForecaster $forecaster,
         private ClockInterface $clock,
         private ProfileForRunInterface $profiles,
         private RecommendationRunRepository $runs,
@@ -35,7 +35,7 @@ final readonly class RecommendationRunStatusResolver
             $report,
             $this->forYouSummaries->forUser($user),
             $this->clock->now(),
-            $this->etaEstimator->estimateSeconds($report, $user),
+            $this->forecaster->forecast($report, $user),
             $this->isWaitingForProfile($report, $user),
             $this->isResumable($report, $user),
         );

@@ -479,6 +479,9 @@ export interface RecommendationRunReport {
    *  history to learn from yet — the client shows a blank, never a guess.
    *  Optional for older-backend responses; ticks down locally like `elapsedSeconds`. */
   readonly etaSeconds?: number | null;
+  /** The finished batches' share of the predicted run time, phase-weighted like the ETA so a long last step keeps
+   *  its weight. Null without history; optional for older-backend responses. */
+  readonly finishedShare?: number | null;
   /** The surviving for-you list's own summary: unread count (#724), last-generated
    *  time, and the generating run. `itemCount` keeps its wire name. Describes the
    *  *list* not this run — a failed run still carries the previous list's data;

@@ -11,6 +11,7 @@ use App\Http\RecommendationRunStatusJson;
 use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
 use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Model\RunForecastModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunStatusJsonTest extends TestCase
@@ -27,16 +28,30 @@ final class RecommendationRunStatusJsonTest extends TestCase
         self::assertSame(90, $json['elapsedSeconds']);
     }
 
-    public function testEtaSecondsEchoesTheEstimatePassedIn(): void
+    public function testEchoesTheForecastPassedIn(): void
     {
         $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
             RecommendationRunReportModel::none(),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
-            42,
+            new RunForecastModel(42, 0.25),
         ));
 
         self::assertSame(42, $json['etaSeconds']);
+        self::assertSame(0.25, $json['finishedShare']);
+    }
+
+    public function testWithoutAForecastBothEstimatesAreNull(): void
+    {
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::none(),
+            $this->emptySummary(),
+            new \DateTimeImmutable('2026-08-09T10:00:00'),
+            null,
+        ));
+
+        self::assertNull($json['etaSeconds']);
+        self::assertNull($json['finishedShare']);
     }
 
     public function testReportsWhetherTheFirstBatchHasStarted(): void
@@ -49,7 +64,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
-            42,
+            null,
         ));
 
         self::assertTrue($json['firstBatchStarted']);
@@ -65,7 +80,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
-            42,
+            null,
         ));
 
         self::assertTrue($json['firstBatchStarted']);
@@ -134,6 +149,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
+                'finishedShare' => null,
                 'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $json,
@@ -156,7 +172,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
             RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             $startedAt->modify('+90 seconds'),
-            42,
+            new RunForecastModel(42, 0.25),
             resumable: true,
         ));
 
@@ -174,6 +190,7 @@ final class RecommendationRunStatusJsonTest extends TestCase
                 'firstBatchStarted' => true,
                 'elapsedSeconds' => 90,
                 'etaSeconds' => 42,
+                'finishedShare' => 0.25,
                 'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $json,

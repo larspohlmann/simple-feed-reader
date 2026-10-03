@@ -39,6 +39,30 @@ final class PhaseDurationsModelTest extends TestCase
         self::assertSame(70.0, $durations->predictedTotalSeconds(3));
     }
 
+    /** 10 s a batch, 30 s consolidate, 10 s between calls: of a 70 s three-batch run, two batches are 20 s. */
+    public function testFinishedShareWeighsTheFinishedBatchesAgainstThePredictedTotal(): void
+    {
+        $durations = PhaseDurationsModel::fromCompletedRunSpans([
+            $this->span(1, CallPhase::Batch, 40.0, 4, 80.0),
+            $this->span(1, CallPhase::Consolidate, 30.0, 0, 80.0),
+        ], RecommendationEngineKind::Llm);
+
+        self::assertNotNull($durations);
+        self::assertEqualsWithDelta(20 / 70, $durations->finishedShare(2, 3), 1e-9);
+        self::assertEqualsWithDelta(30 / 70, $durations->finishedShare(3, 3), 1e-9);
+        self::assertSame(0.0, $durations->finishedShare(0, 3));
+    }
+
+    public function testFinishedShareIsZeroWhenNothingIsPredicted(): void
+    {
+        $durations = PhaseDurationsModel::fromCompletedRunSpans([
+            $this->span(1, CallPhase::Batch, 0.0, 1, 0.0),
+        ], RecommendationEngineKind::Jev);
+
+        self::assertNotNull($durations);
+        self::assertSame(0.0, $durations->finishedShare(1, 1));
+    }
+
     public function testARunMissingAPhaseIsIgnored(): void
     {
         // The only run has no consolidate row, so nothing can be averaged.

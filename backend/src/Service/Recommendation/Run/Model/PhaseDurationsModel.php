@@ -63,6 +63,17 @@ final readonly class PhaseDurationsModel
         return $total;
     }
 
+    /** The finished batches' share of the predicted run, so a long tail phase keeps its weight still ahead. */
+    public function finishedShare(int $batchesDone, int $batchCount): float
+    {
+        $total = $this->predictedTotalSeconds($batchCount);
+        if ($total <= 0.0) {
+            return 0.0;
+        }
+
+        return min(1.0, $batchesDone * ($this->secondsByPhase[CallPhase::Batch->value] ?? 0.0) / $total);
+    }
+
     /**
      * One run's duration per phase, in the kind's order, the batch phase per batch; null when the run does not carry
      * exactly the kind's phases.

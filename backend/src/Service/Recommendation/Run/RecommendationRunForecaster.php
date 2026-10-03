@@ -9,14 +9,15 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Model\RunForecastModel;
 use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The seconds a live run still needs: the account's phase history predicts the whole run, minus what has elapsed.
- * Null means no estimate (not in flight, or no completed run to learn from): a blank, never a made-up number.
+ * A live run's forecast: the account's phase history predicts the whole run, minus what has elapsed, and weighs the
+ * finished batches against it. Null means no estimate (not in flight, or no completed run to learn from).
  */
-final readonly class RecommendationEtaEstimator
+final readonly class RecommendationRunForecaster
 {
     public function __construct(
         private RecommendationRunTimingRepository $timings,
@@ -24,7 +25,7 @@ final readonly class RecommendationEtaEstimator
     ) {
     }
 
-    public function estimateSeconds(RecommendationRunReportModel $report, User $user): ?int
+    public function forecast(RecommendationRunReportModel $report, User $user): ?RunForecastModel
     {
         $plan = $report->plan;
         if (null === $plan || !$report->start->firstBatchStarted || !$this->isInFlight($report)) {
@@ -40,7 +41,10 @@ final readonly class RecommendationEtaEstimator
             return null;
         }
 
-        return max(0, (int) round($durations->predictedTotalSeconds($plan->batchCount) - $elapsed));
+        return new RunForecastModel(
+            max(0, (int) round($durations->predictedTotalSeconds($plan->batchCount) - $elapsed)),
+            $durations->finishedShare($report->batchesDone, $plan->batchCount),
+        );
     }
 
     private function isInFlight(RecommendationRunReportModel $report): bool
