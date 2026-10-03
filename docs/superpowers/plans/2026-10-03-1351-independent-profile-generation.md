@@ -8624,7 +8624,7 @@ git commit -m "feat(#1351): a top-level profile section shows, schedules and gen
 - Modify: `backend/infection.json5` only if Step 4 says the ratchet may rise (never lower it)
 - Modify: `docs/docker-production.md` §6 Update — the deploy note: the three migrations ship with the code, the worker restarts after them (an old worker crashes on the dropped `distilled` / `profile_connection_id` columns), and they are non-transactional, so take the §8 dump first and restore it rather than re-running a half-applied one
 - Modify: `docs/recommendations-runs.md` also gets `waitingForProfile` and `resumable` (the status JSON's two new fields) and the host-without-drainer-or-cron note; `docs/for-you-scheduling.md` says the cron sweep is count-bounded
-- Test: whatever `infection:diff` reports as escaped on this branch's lines gets a killing test (Step 4)
+- Test: whatever `infection:diff` reports as escaped on this branch's lines gets a killing test (Step 4). The `RetryableProviderException` arm of `ProfileRunTick` is live, not dead: a `TickDriver::Worker` tick runs the blocking retry plan, and once its retries are spent the 5xx itself is thrown; only a `TickDriver::Poll` tick turns it into `ProviderRateLimitedException`. Pin it with a Worker-driven tick whose `RateLimitedCalls` sleeps on a `MockClock`
 
 - [ ] **Step 1: `docs/recommendations-runs.md`**
 
