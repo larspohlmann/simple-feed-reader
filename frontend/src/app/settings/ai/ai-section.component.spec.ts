@@ -371,7 +371,7 @@ describe('AiSectionComponent', () => {
       options.map((option) => option.querySelector('.option-hint')?.textContent?.trim()),
     ).toEqual([
       undefined,
-      'scores articles, writes no reasons · takes its profile from Settings → Profile',
+      'scores articles, writes no reasons · takes its profile from Settings → AI',
     ]);
   });
 
@@ -396,7 +396,7 @@ describe('AiSectionComponent', () => {
       'jev-latest · Jev',
     );
     expect(picker.querySelector('app-field .hint')?.textContent?.trim()).toBe(
-      'scores articles, writes no reasons · takes its profile from Settings → Profile',
+      'scores articles, writes no reasons · takes its profile from Settings → AI',
     );
 
     fixture.componentInstance.chosenModel.set('gpt-4o');
@@ -1064,7 +1064,7 @@ describe('AiSectionComponent', () => {
     expect(jevSteps).toHaveLength(5);
     expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
     expect(jevSteps[2]).toContain('jev-latest');
-    expect(jevSteps[3]).toContain('Open Settings → Profile');
+    expect(jevSteps[3]).toContain('Open Settings → AI');
   });
 
   it('says in the add form that Jev models are supported alongside LLMs', () => {

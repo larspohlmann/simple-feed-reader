@@ -5,7 +5,7 @@ The cadence lives in **Settings → AI → Recommendations → Auto-generate**: 
 manually* (default), or every 1, 3, 6, 12, or 24 hours. A run is due when the
 account's newest run is at least one interval old.
 
-The interest profile has its own schedule in **Settings → Profile**: *only
+The interest profile has its own schedule in **Settings → AI**: *only
 manually*, or every 6, 12 or 24 hours, every 2 days or weekly. A profile run is
 due one interval after the account's newest profile run, whatever its outcome,
 and a due account without a connection that can build the profile is skipped.

@@ -14,7 +14,7 @@ export const RECOMMENDATION_TUNING_FIELDS = [
 
 export type RecommendationTuningField = (typeof RECOMMENDATION_TUNING_FIELDS)[number];
 
-/** Where the engine's reader profile comes from: its own connection, or the one chosen under Settings → Profile. */
+/** Where the engine's reader profile comes from: its own connection, or the one chosen under Settings → AI. */
 export type RecommendationProfileSource = 'own' | 'borrowed';
 
 /** What a connection's recommendation engine can do; the client renders from it and never learns the engine. */
