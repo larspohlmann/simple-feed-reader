@@ -59,6 +59,14 @@ export class ProfileSectionComponent {
     return generatedAt ? formatLongDateTime(generatedAt, this.language.lang()) : null;
   });
 
+  /** The server keeps a pick that can no longer build profiles, but it is no candidate: shown, never offered. */
+  readonly unusableChoice = computed(() => {
+    const state = this.svc.state();
+    if (!state || state.connectionId === null) return null;
+    const isCandidate = state.candidates.some((candidate) => candidate.id === state.connectionId);
+    return isCandidate ? null : state.connectionId;
+  });
+
   readonly canGenerate = computed(() => !this.svc.polling() && !this.svc.starting());
 
   /** The one line under the profile about the newest run; a failure shows as a banner instead. */

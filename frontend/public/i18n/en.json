@@ -359,6 +359,7 @@
       "connection": "Connection",
       "connectionDesc": "The LLM connection that writes your profile.",
       "connectionActive": "The active connection",
+      "connectionUnusable": "A connection that can no longer build profiles",
       "keptCap": "Kept in history",
       "viewedCap": "Viewed in history",
       "save": "Save",

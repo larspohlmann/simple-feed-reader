@@ -359,6 +359,7 @@
       "connection": "Verbindung",
       "connectionDesc": "Die LLM-Verbindung, die dein Profil schreibt.",
       "connectionActive": "Die aktive Verbindung",
+      "connectionUnusable": "Eine Verbindung, die keine Profile mehr erstellen kann",
       "keptCap": "Aufbewahrte in der Historie",
       "viewedCap": "Angesehene in der Historie",
       "save": "Speichern",

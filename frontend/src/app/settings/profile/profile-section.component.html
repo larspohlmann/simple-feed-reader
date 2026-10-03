@@ -85,6 +85,16 @@
           <option value="" [selected]="state.connectionId === null">
             {{ 'settings.profile.connectionActive' | transloco }}
           </option>
+          @if (unusableChoice(); as connectionId) {
+            <option
+              data-testid="profile-connection-unusable"
+              [value]="connectionId"
+              disabled
+              selected
+            >
+              {{ 'settings.profile.connectionUnusable' | transloco }}
+            </option>
+          }
           @for (candidate of state.candidates; track candidate.id) {
             <option [value]="candidate.id" [selected]="state.connectionId === candidate.id">
               {{ label(candidate) }}

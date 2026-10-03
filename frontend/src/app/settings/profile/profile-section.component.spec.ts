@@ -193,6 +193,23 @@ describe('ProfileSectionComponent', () => {
     ]);
   });
 
+  it('shows a chosen connection that can no longer build profiles as chosen, but not on offer', () => {
+    const fixture = mount(profileState({ connectionId: 9, connection: null }));
+    const select = byTestId(fixture, 'profile-connection') as HTMLSelectElement;
+    const unusable = byTestId(fixture, 'profile-connection-unusable') as HTMLOptionElement;
+
+    expect(unusable.textContent?.trim()).toBe('A connection that can no longer build profiles');
+    expect(unusable.disabled).toBe(true);
+    expect(select.selectedOptions[0]).toBe(unusable);
+  });
+
+  it('offers no unusable entry when the chosen connection is a candidate', () => {
+    const fixture = mount(profileState({ connectionId: 7 }));
+
+    expect(byTestId(fixture, 'profile-connection-unusable')).toBeNull();
+    expect((byTestId(fixture, 'profile-connection') as HTMLSelectElement).value).toBe('7');
+  });
+
   it('holds a typed cap until Save', () => {
     const fixture = mount();
     const input = byTestId(fixture, 'profile-kept-cap') as HTMLInputElement;
