@@ -30,11 +30,36 @@ final class RecommendationPromptBuilderTest extends TestCase
         $this->builder = new RecommendationPromptBuilder(new RecommendationAnswerBudget());
     }
 
-    public function testDescriptionLengthScalesAndClamps(): void
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function contextWindows(): iterable
     {
-        self::assertSame(120, $this->builder->descriptionLength(8192));
-        self::assertSame(239, $this->builder->descriptionLength(32768));
-        self::assertSame(480, $this->builder->descriptionLength(200000));
+        yield 'small window' => [8192];
+        yield 'large window' => [131072];
+    }
+
+    #[DataProvider('contextWindows')]
+    public function testADescriptionLongerThanTheFixedLengthIsClippedWhateverTheWindow(int $contextWindow): void
+    {
+        $messages = $this->builder->batchMessages(
+            new PromptContext($this->emptyHistory(), $this->settings($contextWindow, 10), null),
+            [new ArticleLineModel(1, 'Long', 'F', 'D', str_repeat('a', 1000) . 'LOST')],
+        );
+
+        self::assertStringEndsWith('- [1] Long — F — D — ' . str_repeat('a', 1000) . '…', $messages[1]['content']);
+    }
+
+    #[DataProvider('contextWindows')]
+    public function testADescriptionShorterThanTheFixedLengthIsKeptWholeWhateverTheWindow(int $contextWindow): void
+    {
+        $description = str_repeat('b', 996) . 'END';
+        $messages = $this->builder->batchMessages(
+            new PromptContext($this->emptyHistory(), $this->settings($contextWindow, 10), null),
+            [new ArticleLineModel(1, 'Short', 'F', 'D', $description)],
+        );
+
+        self::assertStringEndsWith('- [1] Short — F — D — ' . $description, $messages[1]['content']);
     }
 
     public function testAClippedReplyIsStillValidUtf8(): void
@@ -171,6 +196,25 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches($candidates, $history, $settings);
 
         self::assertLessThanOrEqual(5, \count($batches));
+    }
+
+    public function testPackingBudgetsByTheClippedDescriptionNotTheRawOne(): void
+    {
+        $tenThousandChars = array_map(
+            static fn (int $id): ArticleLineModel => self::line($id, "Candidate $id", 10000),
+            range(1, 60),
+        );
+        $thousandChars = array_map(
+            static fn (int $id): ArticleLineModel => self::line($id, "Candidate $id", 1000),
+            range(1, 60),
+        );
+        $settings = $this->settings(8192, 50);
+
+        $clipped = $this->builder->packBatches($tenThousandChars, $this->emptyHistory(), $settings);
+        $whole = $this->builder->packBatches($thousandChars, $this->emptyHistory(), $settings);
+
+        self::assertSame($whole, $clipped);
+        self::assertSame([14, 14, 14, 14, 4], array_map('count', $clipped));
     }
 
     public function testEverythingFitsInOneBatchWhenSmall(): void
@@ -641,20 +685,20 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         // Two-byte characters make mb_strlen and strlen disagree: this is the
         // boundary the `<=` clamp and the mb_-prefixed length check both guard.
-        $exactly120 = str_repeat('é', 120);
-        $exactly121 = str_repeat('é', 121);
+        $exactly1000 = str_repeat('é', 1000);
+        $exactly1001 = str_repeat('é', 1001);
 
         $messages = $this->builder->batchMessages(
             new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
             [
-                new ArticleLineModel(1, 'Boundary120', 'F', 'D', $exactly120),
-                new ArticleLineModel(2, 'Boundary121', 'F', 'D', $exactly121),
+                new ArticleLineModel(1, 'Boundary1000', 'F', 'D', $exactly1000),
+                new ArticleLineModel(2, 'Boundary1001', 'F', 'D', $exactly1001),
             ],
         );
 
         $user = $messages[1]['content'];
-        self::assertStringContainsString("- [1] Boundary120 — F — D — {$exactly120}\n", $user);
-        self::assertStringEndsWith('- [2] Boundary121 — F — D — ' . str_repeat('é', 120) . '…', $user);
+        self::assertStringContainsString("- [1] Boundary1000 — F — D — {$exactly1000}\n", $user);
+        self::assertStringEndsWith('- [2] Boundary1001 — F — D — ' . str_repeat('é', 1000) . '…', $user);
     }
 
     public function testTruncationCutsAtTheStartByCharacterNotByte(): void
@@ -663,10 +707,10 @@ final class RecommendationPromptBuilderTest extends TestCase
         // mb_substr) or an off-by-one start offset produce different text.
         $characters = ['á', 'é', 'í', 'ó', 'ú'];
         $description = '';
-        for ($index = 0; $index < 130; ++$index) {
+        for ($index = 0; $index < 1010; ++$index) {
             $description .= $characters[$index % 5];
         }
-        $expectedTruncated = mb_substr($description, 0, 120) . '…';
+        $expectedTruncated = mb_substr($description, 0, 1000) . '…';
 
         $messages = $this->builder->batchMessages(
             new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
@@ -793,7 +837,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewed: [self::line(5, 'Viewed one', 10), self::line(6, 'Viewed two', 10)],
         );
 
-        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+        $messages = $this->builder->distillMessages($history);
 
         self::assertStringContainsString('FAVORITES', $messages[1]['content']);
         self::assertStringContainsString('KEPT', $messages[1]['content']);
@@ -809,7 +853,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewed: [self::line(3, 'Viewed one', 10)],
         );
 
-        $messages = $this->builder->distillMessages($history, $this->settings(32768, 100));
+        $messages = $this->builder->distillMessages($history);
 
         $expectedSystem = RecommendationPromptText::DISTILL_ROLE
             . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT;
