@@ -46,6 +46,9 @@ const MAX_RATE_LIMIT_RETRIES = 20;
  *  smooths between ticks. */
 const TICK_MS = 200;
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
+/** A run held up by its lock or by its profile build does no work of its own, so its bar holds still. */
+const isStalled = (report: RecommendationRunReport | null): boolean =>
+  report?.waitingForLock === true || report?.waitingForProfile === true;
 
 /** How many times in a row the poll loop has been turned away, per cause.
  *  Each cause has its own ceiling, and any progress resets both. */
@@ -268,17 +271,17 @@ export class RecommendationsService {
    *  is what makes a resumed run visible too and keeps it up app-wide (#398). */
   private markRunning(): void {
     this.running.set(true);
-    this.syncBarWithLockWait();
+    this.syncBarWithWait();
     this.failure.set(null);
     this.showRunPill();
   }
 
-  /** The bar moves while the run does. A run waiting for its lock isn't
-   *  progressing, so the ticker stops and `progress()` holds its last value
-   *  rather than creeping while the label says stalled. Both halves live here
-   *  so `resume()` can't apply one without the other (#439). */
-  private syncBarWithLockWait(): void {
-    if (this.report()?.waitingForLock) {
+  /** The bar moves while the run does. A run waiting for its lock or its
+   *  profile isn't progressing, so the ticker stops and `progress()` holds its
+   *  last value rather than creeping while the label says it waits. Both halves
+   *  live here so `resume()` can't apply one without the other (#439). */
+  private syncBarWithWait(): void {
+    if (isStalled(this.report())) {
       this.stopTicker();
       return;
     }
@@ -373,10 +376,9 @@ export class RecommendationsService {
    * and elapsed time on every report, clears the rate-limited flag on any live
    * report, then stores the report. */
   private applyReport(next: RecommendationRunReport): void {
-    // A lock-wait report carries no work by this client. Keep the prior
-    // anchor so the bar remains at its last observed position while the
-    // locked process is unknown or stalled.
-    if (!next.waitingForLock) {
+    // A lock- or profile-wait report carries no work by this run. Keep the
+    // prior anchor so the bar remains at its last observed position.
+    if (!isStalled(next)) {
       // Re-anchored every working report: the server's time model keeps
       // falling as a phase runs, so each report is fresher than the last one.
       this.serverEtaSeconds.set(next.etaSeconds ?? null);
@@ -388,10 +390,10 @@ export class RecommendationsService {
     this.report.set(next);
     if (next.status === 'running' || next.status === 'pending') {
       this.rateLimited.set(false);
-      // A lock wait freezes the bar the same way `backOffWhileRateLimited`
+      // A lock or profile wait freezes the bar the same way `backOffWhileRateLimited`
       // does for a 429; anything else resumes it, in case such a backoff had
       // paused it.
-      this.syncBarWithLockWait();
+      this.syncBarWithWait();
     }
   }
 

@@ -1040,6 +1040,39 @@ describe('RecommendationsService', () => {
     jest.useRealTimers();
   }));
 
+  it('freezes the bar while the run waits for its profile, and resumes once the profile is built', fakeAsync(() => {
+    jest.useFakeTimers();
+    nowMs = 0;
+    service.start();
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs')
+      .flush(report({ status: 'pending', elapsedSeconds: 0, etaSeconds: 60 }));
+    nowMs = 20000;
+    jest.advanceTimersByTime(200);
+    const beforeWait = service.progress();
+
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'pending', elapsedSeconds: 20, etaSeconds: 90, waitingForProfile: true }));
+    expect(service.progress()).toBeCloseTo(beforeWait);
+
+    nowMs = 90000;
+    jest.advanceTimersByTime(200);
+    expect(service.progress()).toBeCloseTo(beforeWait);
+
+    nowMs = 95000;
+    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(
+      report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 95, etaSeconds: 40 }),
+    );
+    nowMs = 100000;
+    jest.advanceTimersByTime(200);
+    expect(service.progress()).toBeGreaterThan(beforeWait);
+
+    drainTrailingTick();
+    discardPeriodicTasks();
+    jest.useRealTimers();
+  }));
+
   it('stops the ticker when the run ends', fakeAsync(() => {
     jest.useFakeTimers();
     service.start();
