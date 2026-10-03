@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -597,7 +596,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 $entryCount,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,

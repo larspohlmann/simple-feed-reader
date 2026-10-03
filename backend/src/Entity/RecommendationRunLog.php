@@ -11,13 +11,15 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt: the request as sent, the response as it streams (RecordedCall writes it straight to the
- * database) and the verdict. Kept for the newest RunLogRetention::RUNS runs, debug on or off: the ETA averages these
- * rows. LONGTEXT, because one batch request over a large context window passes MySQL TEXT's 64 KB.
+ * One provider-call attempt of a recommendation run or a profile run: the request as sent, the response as it streams
+ * (RecordedCall writes it straight to the database) and the verdict. Kept for the newest RunLogRetention::RUNS runs,
+ * debug on or off: the ETA averages these rows. LONGTEXT, because one batch request over a large context window passes
+ * MySQL TEXT's 64 KB.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunLogRepository::class)]
 #[ORM\Table(name: 'recommendation_run_log')]
 #[ORM\Index(name: 'idx_recommendation_run_log_run', columns: ['run_id'])]
+#[ORM\Index(name: 'idx_recommendation_run_log_profile_run', columns: ['profile_run_id'])]
 final class RecommendationRunLog
 {
     use PersistedId;
@@ -30,8 +32,12 @@ final class RecommendationRunLog
     private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: RecommendationRun::class)]
-    #[ORM\JoinColumn(name: 'run_id', nullable: false, onDelete: 'CASCADE')]
-    private RecommendationRun $run;
+    #[ORM\JoinColumn(name: 'run_id', nullable: true, onDelete: 'CASCADE')]
+    private ?RecommendationRun $run;
+
+    #[ORM\ManyToOne(targetEntity: ProfileRun::class)]
+    #[ORM\JoinColumn(name: 'profile_run_id', nullable: true, onDelete: 'CASCADE')]
+    private ?ProfileRun $profileRun;
 
     #[ORM\Column(length: 16, enumType: CallPhase::class)]
     private CallPhase $phase;
@@ -75,9 +81,10 @@ final class RecommendationRunLog
     #[ORM\Embedded(class: CallReceipt::class, columnPrefix: false)]
     private CallReceipt $receipt;
 
-    /** @noinspection AutowireWrongClass Built with new, never autowired */
-    public function __construct(
-        RecommendationRun $run,
+    /** Private: forRun() and forProfileRun() are the only ways in, so exactly one of the two owners is set. */
+    private function __construct(
+        ?RecommendationRun $run,
+        ?ProfileRun $profileRun,
         CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
@@ -85,6 +92,7 @@ final class RecommendationRunLog
         \DateTimeImmutable $createdAt,
     ) {
         $this->run = $run;
+        $this->profileRun = $profileRun;
         $this->phase = $phase;
         $this->batchNumber = $batchNumber;
         $this->attempt = $attempt;
@@ -93,14 +101,39 @@ final class RecommendationRunLog
         $this->receipt = new CallReceipt();
     }
 
+    public static function forRun(
+        RecommendationRun $run,
+        CallPhase $phase,
+        ?int $batchNumber,
+        int $attempt,
+        string $requestBody,
+        \DateTimeImmutable $createdAt,
+    ): self {
+        return new self($run, null, $phase, $batchNumber, $attempt, $requestBody, $createdAt);
+    }
+
+    public static function forProfileRun(
+        ProfileRun $profileRun,
+        int $attempt,
+        string $requestBody,
+        \DateTimeImmutable $createdAt,
+    ): self {
+        return new self(null, $profileRun, CallPhase::Distill, null, $attempt, $requestBody, $createdAt);
+    }
+
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getRun(): RecommendationRun
+    public function getRun(): ?RecommendationRun
     {
         return $this->run;
+    }
+
+    public function getProfileRun(): ?ProfileRun
+    {
+        return $this->profileRun;
     }
 
     public function getPhase(): CallPhase

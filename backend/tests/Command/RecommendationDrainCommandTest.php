@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Command;
 
 use App\Command\RecommendationDrainCommand;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
@@ -377,7 +376,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 self::TWO_BATCH_ENTRY_COUNT,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,

@@ -23,7 +23,7 @@ final readonly class RecommendationRunLogFactory
         CallSlotModel $slot,
         string $renderedRequest,
     ): RecommendationRunLog {
-        return new RecommendationRunLog(
+        return RecommendationRunLog::forRun(
             $run,
             $slot->phase,
             $slot->batchNumber,

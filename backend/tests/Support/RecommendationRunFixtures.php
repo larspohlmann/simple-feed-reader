@@ -8,7 +8,6 @@ use App\Entity\AiProviderSettings;
 use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -204,7 +203,7 @@ final readonly class RecommendationRunFixtures
         string $requestBody,
         ?\DateTimeImmutable $createdAt = null,
     ): RecommendationRunLog {
-        $log = new RecommendationRunLog(
+        $log = RecommendationRunLog::forRun(
             $run,
             $phase,
             $batchNumber,
@@ -265,7 +264,7 @@ final readonly class RecommendationRunFixtures
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: $guidancePrompt,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,

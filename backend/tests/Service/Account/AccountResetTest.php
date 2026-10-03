@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -64,7 +63,7 @@ final class AccountResetTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'be nice',
-            historyCaps: new RecommendationHistoryCaps(1, 1, 1),
+            favoritesCap: 1,
             poolLimits: new RecommendationPoolLimits(10, 7, 3),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
@@ -74,7 +73,7 @@ final class AccountResetTest extends DbTestCase
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-05T00:00:00Z'));
         $this->entityManager->persist($run);
         $this->entityManager->persist(new RecommendationItem($run, $entry, 0, 'because'));
-        $this->entityManager->persist(new RecommendationRunLog(
+        $this->entityManager->persist(RecommendationRunLog::forRun(
             $run,
             CallPhase::Batch,
             0,

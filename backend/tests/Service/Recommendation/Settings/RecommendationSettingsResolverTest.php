@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationHistoryCaps;
+use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -64,12 +65,13 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($this->user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            favoritesCap: 10,
             poolLimits: new RecommendationPoolLimits(400, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
         ));
+        $row->updateProfileSettings(new ProfileSettingsValues(null, null, 20, 30));
         $this->entityManager->persist($row);
         $this->entityManager->flush();
 
@@ -207,14 +209,14 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
-            profileText: $profileText,
             showScoreAndReasons: $showScoreAndReasons,
         ));
+        $row->storeProfile(new StoredProfile($profileText, null, null, null));
         $this->entityManager->persist($row);
         $this->entityManager->flush();
 

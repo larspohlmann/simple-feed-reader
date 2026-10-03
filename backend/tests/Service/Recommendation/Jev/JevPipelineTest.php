@@ -9,6 +9,7 @@ use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
@@ -219,7 +220,7 @@ final class JevPipelineTest extends DbTestCase
     public function testAFailedDistillationFallsBackToTheStoredProfile(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
-        $this->settingsWriter()->storeProfile($this->owner, 'Stored: likes Rust.');
+        $this->settingsWriter()->storeProfile($this->owner, new StoredProfile('Stored: likes Rust.', null, null, null));
         $this->queueUnusableProfiles();
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
 

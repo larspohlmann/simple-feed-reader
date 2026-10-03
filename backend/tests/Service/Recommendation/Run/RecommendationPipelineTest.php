@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Entry;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -176,7 +175,7 @@ final class RecommendationPipelineTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 $entryCount,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
@@ -253,6 +252,6 @@ final class RecommendationPipelineTest extends DbTestCase
         $repository = $this->entityManager->getRepository(RecommendationSettings::class);
         $settings = $repository->findForUser($this->user);
 
-        return $settings?->values()->profileText;
+        return $settings?->getStoredProfile()->getText();
     }
 }

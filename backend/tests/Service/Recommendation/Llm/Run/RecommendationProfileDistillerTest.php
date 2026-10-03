@@ -188,7 +188,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         /** @var RecommendationSettingsRepository $repository */
         $repository = self::getContainer()->get(RecommendationSettingsRepository::class);
 
-        return $repository->findForUser($this->user)?->values()->profileText;
+        return $repository->findForUser($this->user)?->getStoredProfile()->getText();
     }
 
     private function distiller(): RecommendationProfileDistiller

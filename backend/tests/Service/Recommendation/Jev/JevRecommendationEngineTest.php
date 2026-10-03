@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\CallVerdict;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -277,7 +278,10 @@ final class JevRecommendationEngineTest extends DbTestCase
     public function testEveryWaveSendsTheProfileThisRunDistilled(): void
     {
         $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
-        $this->settingsWriter()->storeProfile($this->owner, 'Rewritten elsewhere.');
+        $this->settingsWriter()->storeProfile(
+            $this->owner,
+            new StoredProfile('Rewritten elsewhere.', null, null, null),
+        );
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
 
         $this->advancer()->advance($this->owner, TickDriver::Poll);

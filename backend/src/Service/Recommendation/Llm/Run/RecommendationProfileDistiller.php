@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Llm\Run;
 
+use App\Entity\StoredProfile;
 use App\Service\Recommendation\Llm\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Llm\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
@@ -64,7 +65,10 @@ final readonly class RecommendationProfileDistiller
         $this->checkpoint->guard($run);
         $profile = $result->profile
             ?? throw new \LogicException('A usable profile parse result has no profile text.');
-        $this->settingsWriter->storeProfile($run->getUser(), $profile);
+        $this->settingsWriter->storeProfile(
+            $run->getUser(),
+            new StoredProfile($profile, $run->getCreatedAt(), $run->getProviderHost(), $run->getModel()),
+        );
 
         return ProfileDistillationOutcomeModel::usable($profile);
     }

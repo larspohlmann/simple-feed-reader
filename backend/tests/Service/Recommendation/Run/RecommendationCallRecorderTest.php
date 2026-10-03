@@ -213,7 +213,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $otherRun = new RecommendationRun($otherUser, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $this->entityManager->persist($otherRun);
-        $otherLog = new RecommendationRunLog(
+        $otherLog = RecommendationRunLog::forRun(
             $otherRun,
             CallPhase::Batch,
             1,

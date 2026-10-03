@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev;
 
 use App\Entity\RecommendationRun;
+use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
@@ -46,7 +47,7 @@ final class JevProfileStepTest extends DbTestCase
 
     public function testTheFallbackProfileIsWrittenByTheStepItself(): void
     {
-        $this->settingsWriter()->storeProfile($this->owner, 'Stored: likes Rust.');
+        $this->settingsWriter()->storeProfile($this->owner, new StoredProfile('Stored: likes Rust.', null, null, null));
         $run = $this->runningJevRun();
 
         $this->step($this->degradingDistiller())->advance($this->borrowingTick($run));
@@ -59,7 +60,7 @@ final class JevProfileStepTest extends DbTestCase
 
     public function testARunCancelledDuringTheDistillationTakesNoFallbackProfile(): void
     {
-        $this->settingsWriter()->storeProfile($this->owner, 'Stored: likes Rust.');
+        $this->settingsWriter()->storeProfile($this->owner, new StoredProfile('Stored: likes Rust.', null, null, null));
         $run = $this->runningJevRun();
 
         try {

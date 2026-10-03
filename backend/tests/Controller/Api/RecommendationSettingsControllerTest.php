@@ -184,8 +184,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         $payload = $this->payload($client);
         self::assertSame('Prefer long-form pieces.', $payload['guidancePrompt']);
         self::assertSame(20, $payload['favoritesCap']);
-        self::assertSame(15, $payload['keptCap']);
-        self::assertSame(30, $payload['viewedCap']);
+        self::assertSame(40, $payload['keptCap']);
+        self::assertSame(80, $payload['viewedCap']);
         self::assertSame(500, $payload['candidatePoolSize']);
         self::assertSame(3, $payload['lookbackDays']);
         self::assertSame(25, $payload['picksLimit']);

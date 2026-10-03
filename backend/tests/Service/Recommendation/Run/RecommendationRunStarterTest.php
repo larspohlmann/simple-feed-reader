@@ -206,7 +206,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $run->snapshot(RecommendationEngineKind::Llm, []);
         $run->complete($startedAt->modify('+30 seconds'));
         $this->entityManager->persist($run);
-        $this->entityManager->persist(new RecommendationRunLog(
+        $this->entityManager->persist(RecommendationRunLog::forRun(
             $run,
             CallPhase::Batch,
             1,
@@ -225,7 +225,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $failed->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $failed->fail('provider gone', new \DateTimeImmutable('2026-08-08T09:01:00Z'));
         $this->entityManager->persist($failed);
-        $this->entityManager->persist(new RecommendationRunLog(
+        $this->entityManager->persist(RecommendationRunLog::forRun(
             $failed,
             CallPhase::Batch,
             1,

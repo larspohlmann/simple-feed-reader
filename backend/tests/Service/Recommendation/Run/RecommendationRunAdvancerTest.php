@@ -8,7 +8,6 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\Feed;
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -192,7 +191,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
                 5,
@@ -2732,7 +2731,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 $candidatePoolSize,
                 RecommendationSettings::DEFAULT_LOOKBACK_DAYS,

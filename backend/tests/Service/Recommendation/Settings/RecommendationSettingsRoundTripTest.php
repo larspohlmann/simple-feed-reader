@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Settings;
 
-use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
@@ -23,7 +22,7 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
     ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
             guidancePrompt: null,
-            historyCaps: RecommendationHistoryCaps::defaults(),
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: new RecommendationPoolLimits(
                 RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
                 $lookbackDays,
