@@ -366,8 +366,7 @@
       "save": "Save",
       "reset": "Reset",
       "unsaved": "Unsaved changes",
-      "saved": "Saved.",
-      "debugTitle": "Debug log"
+      "saved": "Saved."
     },
     "about": {
       "title": "About",

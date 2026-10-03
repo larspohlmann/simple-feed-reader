@@ -149,12 +149,15 @@
         (save)="svc.save()"
         (reset)="onReset()"
       />
+
+      @if (state.debugEnabled) {
+        <app-disclosure
+          appearance="drill-in"
+          [label]="'settings.ai.recommendations.debugPanelTitle' | transloco"
+        >
+          <app-profile-debug-log [running]="svc.polling()" [runId]="svc.profileRun()?.id ?? null" />
+        </app-disclosure>
+      }
     </app-disclosure>
   </app-settings-group>
-
-  @if (state.debugEnabled) {
-    <app-settings-group icon="bug_report" [title]="'settings.profile.debugTitle' | transloco">
-      <app-profile-debug-log [running]="svc.polling()" [runId]="svc.profileRun()?.id ?? null" />
-    </app-settings-group>
-  }
 }
