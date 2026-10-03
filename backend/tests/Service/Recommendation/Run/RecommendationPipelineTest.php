@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\Entry;
+use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -15,6 +16,10 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Profile\ProfileForRun\ProfileForRunInterface;
+use App\Service\Recommendation\Profile\ProfileRunFailure;
+use App\Service\Recommendation\Profile\ProfileRunSweep;
+use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\SnapshotPhase;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -123,6 +128,28 @@ final class RecommendationPipelineTest extends DbTestCase
         self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertSame('Likes maps and cartography.', $this->runProfileTextFor($run));
         self::assertSame('Likes maps and cartography.', $this->storedProfileText());
+    }
+
+    /** The stub has no reply queued, so every profile tick throws past its provider arms into the sweep's floor. */
+    public function testAProfileRunThatKeepsFailingUnexpectedlyFailsTheRunWaitingForIt(): void
+    {
+        $this->seedSingleBatchCandidates();
+        $this->fixtures->seedFavorites($this->user, 'maps', 2);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user);
+
+        for ($sweep = 0; $sweep < ProfileRun::MAX_TRANSPORT_FAILURES; $sweep++) {
+            $this->profileSweep()->advanceEveryActiveRun(TickDriver::Worker);
+        }
+        // A fresh identity map, as each driver pass has: the stored created_at drops the microseconds the run holds.
+        $this->entityManager->clear();
+        $run = $this->tickUntilDone($this->user);
+
+        self::assertSame(RunStatus::Failed, $run->getStatus());
+        self::assertSame(
+            \sprintf(SnapshotPhase::PROFILE_FAILED, ProfileRunFailure::UNEXPECTED_FAILURE),
+            $run->getError(),
+        );
     }
 
     /** A profile run that finds no history leaves the run to score without a profile, and it still completes. */
@@ -266,6 +293,14 @@ final class RecommendationPipelineTest extends DbTestCase
         $row = $this->entityManager->getRepository(RecommendationSettings::class)->findOneBy(['user' => $this->user]);
 
         return $row?->getStoredProfile()->getText();
+    }
+
+    private function profileSweep(): ProfileRunSweep
+    {
+        /** @var ProfileRunSweep $sweep */
+        $sweep = self::getContainer()->get(ProfileRunSweep::class);
+
+        return $sweep;
     }
 
     private function profiles(): ProfileForRunInterface

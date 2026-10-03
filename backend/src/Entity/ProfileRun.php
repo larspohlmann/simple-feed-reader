@@ -184,9 +184,13 @@ final class ProfileRun
         return $this->callAttempts->attempts() >= self::MAX_ATTEMPTS;
     }
 
+    /** Also legal from PENDING: an unexpected failure is a strike too, and it can stop a run before it opens. */
     public function recordTransportFailure(): void
     {
-        $this->guardStatus(RunStatus::Running, 'record a transport failure on');
+        if (!$this->status->isActive()) {
+            throw new InvalidRunStatusException('record a transport failure on', $this->status);
+        }
+
         $this->callAttempts->recordTransportFailure();
     }
 

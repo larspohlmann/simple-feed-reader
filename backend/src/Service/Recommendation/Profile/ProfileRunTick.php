@@ -38,7 +38,19 @@ final readonly class ProfileRunTick
     ) {
     }
 
+    /** Rethrows any other failure once it is recorded as a strike, so the driver still logs it. */
     public function advance(ProfileRun $profileRun, TickDriver $driver): void
+    {
+        try {
+            $this->advanceRecordingProviderFailures($profileRun, $driver);
+        } catch (\Throwable $exception) {
+            $this->failure->recordUnexpectedFailure($profileRun);
+
+            throw $exception;
+        }
+    }
+
+    private function advanceRecordingProviderFailures(ProfileRun $profileRun, TickDriver $driver): void
     {
         $connection = $this->profileConnections->usableFor($profileRun->getUser());
         if (null === $connection) {

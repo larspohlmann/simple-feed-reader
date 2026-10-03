@@ -21,11 +21,14 @@ use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Ai\RateLimitedCalls;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Profile\ProfileConnections;
+use App\Service\Recommendation\Profile\ProfileRunFailure;
 use App\Service\Recommendation\Profile\ProfileRunTick;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\RefreshCountingLock;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use Symfony\Component\Clock\MockClock;
@@ -355,6 +358,87 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame('Earlier profile.', $this->storedProfile()->getText());
     }
 
+    /** An empty stub queue throws a LogicException out of the call: a failure no arm of the tick expects. */
+    public function testAnUnexpectedFailureIsRethrownAsAStrikeAndTheThirdFailsTheRun(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+
+        $this->tickExpectingTheStubsFailure($profileRun);
+        self::assertSame(RunStatus::Running, $this->saved($profileRun)->getStatus());
+        self::assertSame(1, $this->saved($profileRun)->getTransportFailures());
+
+        $this->tickExpectingTheStubsFailure($this->saved($profileRun));
+        $this->tickExpectingTheStubsFailure($this->saved($profileRun));
+
+        self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
+        self::assertSame(ProfileRunFailure::UNEXPECTED_FAILURE, $this->saved($profileRun)->getError());
+    }
+
+    public function testAnUnexpectedFailureStrikesTheRunAsLastSavedNotWhatTheTickHalfDid(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->duringNextCall(static function () use ($profileRun): void {
+            $profileRun->recordInvalidReply('half-done, never saved');
+        });
+
+        $this->tickExpectingTheStubsFailure($profileRun);
+
+        self::assertSame(0, $this->saved($profileRun)->getAttempts());
+        self::assertSame(1, $this->saved($profileRun)->getTransportFailures());
+    }
+
+    public function testAnUnexpectedFailureAfterTheLockWasLostRecordsNothing(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        /** @var TickLockKeepalive $keepalive */
+        $keepalive = self::getContainer()->get(TickLockKeepalive::class);
+        $lock = new RefreshCountingLock();
+        $keepalive->hold($lock, 'profile-run-tick-test');
+        $lock->conflictOnNextRefresh();
+        $this->chat()->duringNextCall(static function () use ($keepalive): void {
+            $keepalive->beat();
+        });
+
+        $this->tickExpectingTheStubsFailure($profileRun);
+
+        self::assertTrue($keepalive->hasLostTheLock());
+        self::assertSame(RunStatus::Running, $this->saved($profileRun)->getStatus());
+        self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
+    }
+
+    public function testAnUnexpectedFailureOnARunThatEndedMeanwhileRecordsNothing(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $entityManager = $this->entityManager;
+        $this->chat()->duringNextCall(static function () use ($profileRun, $entityManager): void {
+            $profileRun->fail('Ended elsewhere.', new \DateTimeImmutable('2026-10-03 09:01:00'));
+            $entityManager->flush();
+        });
+
+        $this->tickExpectingTheStubsFailure($profileRun);
+
+        self::assertSame('Ended elsewhere.', $this->saved($profileRun)->getError());
+        self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
+    }
+
+    public function testWithAClosedEntityManagerTheTicksOwnFailureIsTheOneThrown(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $entityManager = $this->entityManager;
+        $this->chat()->duringNextCall(static function () use ($entityManager): void {
+            $entityManager->close();
+        });
+
+        $this->tickExpectingTheStubsFailure($profileRun);
+
+        self::assertSame(RunStatus::Running, $profileRun->getStatus());
+    }
+
     public function testARunWithoutAUsableConnectionIsSavedAsFailed(): void
     {
         $owner = $this->user('profile-run-tick-saved-failure@example.test');
@@ -400,6 +484,19 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertInstanceOf(ProfileRun::class, $saved);
 
         return $saved;
+    }
+
+    private function tickExpectingTheStubsFailure(ProfileRun $profileRun): void
+    {
+        try {
+            $this->tick()->advance($profileRun, TickDriver::Poll);
+        } catch (\LogicException $exception) {
+            self::assertSame('StubChatClient has no queued response left.', $exception->getMessage());
+
+            return;
+        }
+
+        self::fail('The tick swallowed the failure it did not expect.');
     }
 
     private function logs(): RecommendationRunLogRepository

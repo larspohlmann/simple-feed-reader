@@ -97,10 +97,22 @@ final class ProfileRunTest extends TestCase
         $this->profileRun()->recordInvalidReply('not json');
     }
 
-    public function testAPendingRunCannotRecordATransportFailure(): void
+    public function testAPendingRunTakesAStrike(): void
     {
+        $profileRun = $this->profileRun();
+
+        $profileRun->recordTransportFailure();
+
+        self::assertSame(1, $profileRun->getTransportFailures());
+    }
+
+    public function testACompletedRunCannotRecordATransportFailure(): void
+    {
+        $profileRun = $this->runningProfileRun();
+        $profileRun->complete(ProfileRunOutcome::Generated, new \DateTimeImmutable('2026-10-03 09:04:00'));
+
         $this->expectException(InvalidRunStatusException::class);
-        $this->profileRun()->recordTransportFailure();
+        $profileRun->recordTransportFailure();
     }
 
     public function testCompletingClearsTheStrikesOfTheCallsBeforeIt(): void
