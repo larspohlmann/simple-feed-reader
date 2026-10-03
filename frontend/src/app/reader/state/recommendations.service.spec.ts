@@ -1053,7 +1053,9 @@ describe('RecommendationsService', () => {
 
     ctrl
       .expectOne('https://api.test/api/recommendations/runs/tick')
-      .flush(report({ status: 'pending', elapsedSeconds: 20, etaSeconds: 90, waitingForProfile: true }));
+      .flush(
+        report({ status: 'pending', elapsedSeconds: 20, etaSeconds: 90, waitingForProfile: true }),
+      );
     expect(service.progress()).toBeCloseTo(beforeWait);
 
     nowMs = 90000;
@@ -1061,9 +1063,9 @@ describe('RecommendationsService', () => {
     expect(service.progress()).toBeCloseTo(beforeWait);
 
     nowMs = 95000;
-    ctrl.expectOne('https://api.test/api/recommendations/runs/tick').flush(
-      report({ status: 'running', batchesTotal: 4, batchesDone: 1, elapsedSeconds: 95, etaSeconds: 40 }),
-    );
+    ctrl
+      .expectOne('https://api.test/api/recommendations/runs/tick')
+      .flush(report({ status: 'running', elapsedSeconds: 95, etaSeconds: 40 }));
     nowMs = 100000;
     jest.advanceTimersByTime(200);
     expect(service.progress()).toBeGreaterThan(beforeWait);
