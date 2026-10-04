@@ -1130,6 +1130,14 @@
       "readout": "Brightness {{value}}",
       "readoutDefault": "Brightness default"
     },
+    "textSize": {
+      "aria": "Text size",
+      "smaller": "Smaller text",
+      "larger": "Larger text",
+      "reset": "Reset to default",
+      "value": "{{value}}%",
+      "readout": "Text size {{value}}%"
+    },
     "versionLabel": "Version {{version}} — open settings",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update available: version {{version}} — open the release notes",

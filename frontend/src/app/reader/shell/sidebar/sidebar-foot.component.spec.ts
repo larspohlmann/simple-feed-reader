@@ -152,9 +152,10 @@ describe('SidebarFootComponent', () => {
     expect(organiseSwitch.getAttribute('aria-checked')).toBe('true');
   });
 
-  it('hides the brightness control, view controls and trial line while organising', () => {
+  it('hides the text size and brightness controls, view controls and trial line while organising', () => {
     const element = mount({ coarse: true, organising: true, user: account(inDays(5)) })
       .nativeElement as HTMLElement;
+    expect(element.querySelector('app-text-size-control')).toBeNull();
     expect(element.querySelector('app-brightness-control')).toBeNull();
     expect(element.querySelector('app-view-controls')).toBeNull();
     expect(element.querySelector('.trial')).toBeNull();
@@ -162,14 +163,15 @@ describe('SidebarFootComponent', () => {
     expect(element.querySelector('.version')).not.toBeNull();
   });
 
-  it('keeps the foot order: organise, brightness, view controls, trial, meta', () => {
+  it('keeps the foot order: organise, text size, brightness, view controls, trial, meta', () => {
     const element = mount({ coarse: true, user: account(inDays(5)) }).nativeElement as HTMLElement;
     const order = Array.from(element.children).map((child) => child.classList[0]);
-    expect(order).toEqual(['organise', 'brightness', 'controls', 'trial', 'meta']);
+    expect(order).toEqual(['organise', 'text-size', 'brightness', 'controls', 'trial', 'meta']);
   });
 
-  it('shows the brightness control on fine pointers too', () => {
+  it('shows the text size and brightness controls on fine pointers too', () => {
     const element = mount({ coarse: false }).nativeElement as HTMLElement;
+    expect(element.querySelector('app-text-size-control')).not.toBeNull();
     expect(element.querySelector('app-brightness-control')).not.toBeNull();
   });
 

@@ -24,3 +24,36 @@
     background: var(--surface-0);
   }
 }
+
+// The sidebar steppers (brightness, text size): glyph buttons either side of a
+// full-height accent fill that resets on click.
+@mixin stepper-bar {
+  .seg {
+    align-items: stretch;
+  }
+
+  .seg button:disabled {
+    color: var(--text-muted);
+    cursor: default;
+  }
+
+  .seg .bar {
+    flex: 1 1 auto;
+    padding: 0;
+    border-inline: 1px solid var(--border);
+  }
+
+  .track {
+    display: block;
+    block-size: 100%;
+    inline-size: 100%;
+    background: var(--surface-2);
+  }
+
+  .fill {
+    display: block;
+    block-size: 100%;
+    background: var(--accent-soft);
+    transition: inline-size 0.12s ease;
+  }
+}

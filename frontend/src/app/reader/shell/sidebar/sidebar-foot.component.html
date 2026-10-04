@@ -11,6 +11,7 @@
   </button>
 }
 @if (!organising()) {
+  <app-text-size-control class="text-size" />
   <app-brightness-control class="brightness" />
   <app-view-controls class="controls" />
   @if (trialDaysLeft(); as days) {

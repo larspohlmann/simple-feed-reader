@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { BrightnessControlComponent } from './brightness-control.component';
+import { TextSizeControlComponent } from './text-size-control.component';
 import { ViewControlsComponent } from '../view-controls/view-controls.component';
 import { AuthService } from '../../../core/auth/auth.service';
 import { VersionService } from '../../../core/version.service';
@@ -11,8 +12,8 @@ import { buildVersion } from '../../../../environments/version';
 import { trialDaysRemaining } from '../../format';
 
 /**
- * The sidebar drawer's foot: Organise switch (coarse pointers only), brightness
- * stepper, view controls, trial countdown, and version/feedback links. Split
+ * The sidebar drawer's foot: Organise switch (coarse pointers only), text-size
+ * stepper, brightness stepper, view controls, trial countdown, and version/feedback links. Split
  * out of {@see SidebarComponent} for its own focused stylesheet. `organising`
  * is the only shared state, a two-way model the sidebar reads to hide the nav.
  */
@@ -21,6 +22,7 @@ import { trialDaysRemaining } from '../../format';
   imports: [
     RouterLink,
     IconComponent,
+    TextSizeControlComponent,
     BrightnessControlComponent,
     ViewControlsComponent,
     TranslocoPipe,

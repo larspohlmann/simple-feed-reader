@@ -1,0 +1,39 @@
+<div class="seg" role="group" [attr.aria-label]="'reader.textSize.aria' | transloco">
+  <button
+    type="button"
+    class="smaller"
+    [title]="'reader.textSize.smaller' | transloco"
+    [attr.aria-label]="'reader.textSize.smaller' | transloco"
+    [disabled]="!textSize.canDecrease()"
+    (click)="textSize.decrease()"
+  >
+    <app-icon name="text_decrease" size="md" />
+  </button>
+  <button
+    type="button"
+    class="bar"
+    [title]="'reader.textSize.reset' | transloco"
+    [attr.aria-label]="'reader.textSize.reset' | transloco"
+    (click)="textSize.reset()"
+  >
+    <span class="track"
+      ><span class="fill" [style.inline-size.%]="textSize.fillPercent()"></span
+    ></span>
+    <span class="value" aria-hidden="true">{{
+      'reader.textSize.value' | transloco: { value: textSize.percent() }
+    }}</span>
+  </button>
+  <button
+    type="button"
+    class="larger"
+    [title]="'reader.textSize.larger' | transloco"
+    [attr.aria-label]="'reader.textSize.larger' | transloco"
+    [disabled]="!textSize.canIncrease()"
+    (click)="textSize.increase()"
+  >
+    <app-icon name="text_increase" size="md" />
+  </button>
+  <output class="sr-only" aria-live="polite">
+    {{ 'reader.textSize.readout' | transloco: { value: textSize.percent() } }}
+  </output>
+</div>
