@@ -13,7 +13,9 @@
       <ul class="toc-list">
         @for (item of entries(); track item.id) {
           <li [class]="'lvl-' + item.level">
-            <button type="button" (click)="jump.emit(item.id)">{{ item.text }}</button>
+            <button type="button" class="reads-as-text" (click)="jump.emit(item.id)">
+              {{ item.text }}
+            </button>
           </li>
         }
       </ul>

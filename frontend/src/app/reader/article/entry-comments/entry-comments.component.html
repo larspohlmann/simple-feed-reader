@@ -95,7 +95,7 @@
 </section>
 
 <ng-template #recovery>
-  <button type="button" class="retry note-link" (click)="reload()">
+  <button type="button" class="retry note-link reads-as-text" (click)="reload()">
     {{ 'reader.retry' | transloco }}
   </button>
   @if (entry().discussionUrl; as url) {

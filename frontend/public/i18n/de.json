@@ -1130,6 +1130,14 @@
       "readout": "Helligkeit {{value}}",
       "readoutDefault": "Helligkeit Standard"
     },
+    "textSize": {
+      "aria": "Schriftgröße",
+      "smaller": "Kleinere Schrift",
+      "larger": "Größere Schrift",
+      "reset": "Schriftgröße zurücksetzen",
+      "value": "{{value}} %",
+      "readout": "Schriftgröße {{value}} %"
+    },
     "versionLabel": "Version {{version}} — Einstellungen öffnen",
     "updateAvailable": "Update {{version}}",
     "updateAvailableLabel": "Update verfügbar: Version {{version}} — Versionshinweise öffnen",
