@@ -274,21 +274,24 @@
             <app-icon name="visibility" size="sm" />
           </app-button>
         }
-        <app-button
-          variant="danger"
-          size="sm"
-          class="for-you-run"
+        <button
+          appListAction
+          class="for-you-run stop"
+          type="button"
           [disabled]="recs.stopping()"
-          [ariaLabel]="
+          [attr.aria-label]="
+            (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
+          "
+          [attr.title]="
             (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
           "
           (click)="recs.stop()"
         >
-          <app-icon name="stop" size="sm" />
-          <span class="label">{{
+          <app-icon name="stop_circle" size="sm" />
+          <span class="txt">{{
             (recs.stopping() ? 'reader.forYouStopping' : 'reader.forYouStop') | transloco
           }}</span>
-        </app-button>
+        </button>
       } @else {
         <!-- The same control the unread switch and Mark all read are, down to the
              border (#710). It reads "Refresh" like the feed refresh it stands
