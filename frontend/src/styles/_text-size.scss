@@ -7,9 +7,9 @@
   font-size: calc(1em * var(--text-scale, 1));
 }
 
-// Zero specificity so a component's own font-size still wins. The 1em division
-// undoes exactly one scaling, so this holds only for controls not nested in one another.
-:where(.text-scaled) :where(button:not(.reads-as-text), app-entry-pills) {
+// One element of specificity: beats _reset's `button { font: inherit }` by source order, loses to any
+// class rule. The 1em division undoes one scaling, so it holds only for non-nested controls.
+:where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills) {
   @include type-scale.fixed;
 
   font-size: calc(1em / var(--text-scale, 1));

@@ -12,13 +12,14 @@ const SIZES = {
 };
 
 function compile(file: string): string {
-  return sass
+  const css = sass
     .compile(join(__dirname, file), { style: 'expanded' })
     .css.replace(/\/\*[\s\S]*?\*\//g, '');
+  return `\n${css}`;
 }
 
 function ruleBody(css: string, selector: string): string {
-  const start = css.indexOf(`${selector} {`);
+  const start = css.indexOf(`\n${selector} {`);
   if (start < 0) throw new Error(`No rule for ${selector}`);
   return css.slice(start, css.indexOf('}', start));
 }
@@ -36,7 +37,7 @@ describe('text-scaled scope', () => {
   const scope = ruleBody(css, '.text-scaled');
   const reset = ruleBody(
     css,
-    ':where(.text-scaled) :where(button:not(.reads-as-text), app-entry-pills)',
+    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills)',
   );
 
   it.each(Object.entries(SIZES))('multiplies --fs-%s by the text scale', (name, size) => {
