@@ -192,14 +192,9 @@ app-reader-header.hidden {
   min-height: 0;
 }
 
-/* The header's For-You slot: run controls, right-aligned. Idle holds the run
-   button; during a run, Stop. Count/ETA/bar live in the app-wide pill instead,
-   so they survive the user leaving the reader (#398). */
+/* Its buttons join the header's `.tools` row, so they take that row's gap in both forms. */
 .for-you-action {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-2);
+  display: contents;
 }
 
 /* `:not(:disabled)` leaves the shared muted look to "Stopping…". */

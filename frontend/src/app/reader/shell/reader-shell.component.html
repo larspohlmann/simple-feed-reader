@@ -264,15 +264,17 @@
           <!-- The run's pill is app-wide, so the user can close it from anywhere. This
                is the way back to it while the run is still going, offered only when
                the pill is actually gone — the Stop button beside it is untouched (#398). -->
-          <app-button
-            variant="ghost"
-            size="sm"
+          <button
+            appListAction
             class="for-you-show"
-            [ariaLabel]="'reader.forYouShowProgress' | transloco"
+            type="button"
+            [attr.aria-label]="'reader.forYouShowProgress' | transloco"
+            [attr.title]="'reader.forYouShowProgress' | transloco"
             (click)="recs.showRunPill()"
           >
             <app-icon name="visibility" size="sm" />
-          </app-button>
+            <span class="txt">{{ 'reader.forYouShowProgress' | transloco }}</span>
+          </button>
         }
         <button
           appListAction
