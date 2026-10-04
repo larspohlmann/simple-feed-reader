@@ -2266,10 +2266,9 @@ describe('ReaderShellComponent', () => {
     toast.dismiss();
     fixture.detectChanges();
 
-    const restore = fixture.nativeElement.querySelector(
-      '.for-you-show button',
-    ) as HTMLButtonElement;
-    expect(restore).not.toBeNull();
+    const restore = fixture.nativeElement.querySelector('button.for-you-show') as HTMLButtonElement;
+    expect(restore.classList).toContain('list-action');
+    expect(restore.querySelector('.txt')!.textContent!.trim()).toBe('Show progress');
 
     const raise = jest.spyOn(recommendations, 'showRunPill');
     restore.click();

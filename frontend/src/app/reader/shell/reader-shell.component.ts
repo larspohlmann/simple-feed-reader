@@ -56,7 +56,6 @@ import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
-import { ButtonComponent } from '../../shared/button/button.component';
 import { FeedIntroComponent } from './feed-intro/feed-intro.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -74,7 +73,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
     IconComponent,
     IconButtonDirective,
     ListActionDirective,
-    ButtonComponent,
     FeedIntroComponent,
     RouterLink,
     TranslocoPipe,
