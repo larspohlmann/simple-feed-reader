@@ -337,7 +337,7 @@ describe('text-scaled scope', () => {
   const scope = ruleBody(css, '.text-scaled');
   const reset = ruleBody(
     css,
-    ':where(.text-scaled) :where(button:not(.reads-as-text), app-entry-pills)',
+    ':where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills)',
   );
 
   it.each(Object.entries(SIZES))('multiplies --fs-%s by the text scale', (name, size) => {
@@ -410,16 +410,16 @@ In `tokens.scss`:
   font-size: calc(1em * var(--text-scale, 1));
 }
 
-// Zero specificity so a component's own font-size still wins. The 1em division
-// undoes exactly one scaling, so this holds only for controls not nested in one another.
-:where(.text-scaled) :where(button:not(.reads-as-text), app-entry-pills) {
+// One element of specificity: beats _reset's `button { font: inherit }` by source order,
+// loses to any class rule. The 1em division undoes one scaling, so controls must not nest.
+:where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills) {
   @include type-scale.fixed;
 
   font-size: calc(1em / var(--text-scale, 1));
 }
 ```
 
-In `frontend/src/styles.scss`, add `@use './styles/text-size';` after `@use './styles/icon-button';`. It must come after `./styles/reset`: both its `button` rule and ours have specificity (0,0,1), so the later one wins.
+In `frontend/src/styles.scss`, add `@use './styles/text-size';` after `@use './styles/icon-button';`. It must come after `./styles/reset`: its `button` rule and ours both have specificity (0,0,1) (the `:where()` parts count zero, `:is()` takes `button`), so the later one wins. A zero-specificity selector would lose to the reset and let inheriting buttons scale (caught in review).
 
 - [ ] **Step 4: Run the test and the existing Sass spec**
 
@@ -970,7 +970,7 @@ Expected: 3 passed.
 
 - [ ] **Step 3: Break-test the guard**
 
-Temporarily delete the `:where(.text-scaled) :where(…)` rule in `src/styles/_text-size.scss`. Re-run, and quote the FAIL lines: the `toolbarButton` and `rowAction` equalities must fail. Restore the rule by re-applying the edit; don't use `git checkout --`. Re-run: 3 passed.
+Temporarily delete the `:where(.text-scaled) :is(…)` rule in `src/styles/_text-size.scss`. Re-run, and quote the FAIL lines: the `toolbarButton` and `rowAction` equalities must fail. Restore the rule by re-applying the edit; don't use `git checkout --`. Re-run: 3 passed.
 
 - [ ] **Step 4: Commit**
 
