@@ -260,16 +260,32 @@ generate_certificate() {
 }
 
 # --- stack lifecycle --------------------------------------------------------
+# The worker runs only against a migrated schema (#1379). Started with the new
+# code it queries columns the old schema lacks, and on SQLite its writes lock
+# the migration out. So a bring-up removes it with `up_holding_worker`,
+# migrates, and only then calls `start_worker`. Both take the compose function
+# (compose or prod_compose) first, then extra `up` arguments.
+up_holding_worker() {
+  local compose_command=$1
+  shift
+  "${compose_command}" up -d --scale worker=0 "$@"
+}
+
+start_worker() {
+  local compose_command=$1
+  shift
+  "${compose_command}" up -d "$@" worker
+}
+
 # Start every service and bring the backend to a ready state: dependencies
 # installed and the database migrated. Safe to re-run.
 bring_up_stack() {
-  run_step 'Starting the Docker stack' compose up -d
+  run_step 'Starting the Docker stack' up_holding_worker compose
   run_step 'Installing backend dependencies (the first run downloads them)' \
     compose exec -T php composer install --no-interaction
   run_step 'Applying database migrations' \
     compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
-  # It may have started before the schema existed (first install).
-  compose restart worker >/dev/null
+  run_step 'Starting the worker' start_worker compose
 }
 
 # The dev stack's health probe; prod callers pass their own URL. Exported so

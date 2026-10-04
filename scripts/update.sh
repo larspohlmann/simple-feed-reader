@@ -98,7 +98,8 @@ fi
 # install. Both stacks can exist on a developer machine; update both.
 if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
   say 'Updating the development stack ...'
-  run_step 'Rebuilding images where their definitions changed' compose up -d --build --remove-orphans
+  run_step 'Rebuilding images where their definitions changed' \
+    up_holding_worker compose --build --remove-orphans
 
   # Reinstall the frontend packages only when the lockfile actually changed;
   # the install runs into a named volume and is the slow part of an update.
@@ -111,8 +112,7 @@ if [ -n "$(compose ps -aq php 2>/dev/null)" ]; then
     compose exec -T php composer install --no-interaction
   run_step 'Applying database migrations' \
     compose exec -T php bin/console doctrine:migrations:migrate --no-interaction
-  # It may have started before the schema existed (first install).
-  compose restart worker >/dev/null
+  run_step 'Starting the worker' start_worker compose --build
 
   if ! wait_for_health "${DEV_HEALTH_URL}"; then
     warn 'The API did not report healthy in time. Check:  docker compose logs -f php nginx worker'

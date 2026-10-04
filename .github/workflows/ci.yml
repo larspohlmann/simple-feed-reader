@@ -349,6 +349,12 @@ jobs:
       - name: wait-for-php-ready
         run: scripts/test/wait-for-php-ready.test.sh
 
+      # The worker stays down from `up` until the migration ran (#1379): on
+      # SQLite its writes locked the migration out, on any database it queried
+      # columns the old schema lacked.
+      - name: worker-waits-for-migrations
+        run: scripts/test/worker-waits-for-migrations.test.sh
+
       # What the installers put on the screen, and the options they accept
       # (#430). The default port each topology offers becomes a published
       # container port and the port in every account-mail link; --ref is parsed
