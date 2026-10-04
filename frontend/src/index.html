@@ -31,6 +31,13 @@
           var step = parseInt(localStorage.getItem('sfr.brightness.' + theme), 10);
           var clamped = Math.max(dark ? -3 : -6, Math.min(dark ? 3 : 0, isNaN(step) ? 0 : step));
           document.documentElement.setAttribute('data-brightness', String(clamped));
+          // Text size (#1382): steps mirror TEXT_SIZE_STEPS in app/theme/text-size.ts.
+          var size = Number(localStorage.getItem('sfr.textSize'));
+          var steps = [90, 100, 110, 120, 130, 140, 150];
+          document.documentElement.style.setProperty(
+            '--text-scale',
+            String((steps.indexOf(size) >= 0 ? size : 100) / 100),
+          );
         } catch (e) {}
       })();
     </script>
