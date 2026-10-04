@@ -87,7 +87,7 @@ export_build_version_args
 # --remove-orphans drops containers of services this file no longer defines;
 # a service only switched off by profile is kept.
 run_step 'Building and starting the production stack (the first build takes a few minutes)' \
-  prod_compose up -d --build --remove-orphans
+  up_holding_worker prod_compose --build --remove-orphans
 
 # `up` only starts what is in the active profiles; it never stops the search
 # engine's container when the operator has just declined it, so this runs on
@@ -129,8 +129,7 @@ run_step 'Verifying the database schema is up to date' \
   prod_compose exec -T -u www-data php bin/console doctrine:migrations:up-to-date \
   || die 'The database schema is behind the running code -- a migration did not apply. Re-run ./scripts/prod-start.sh (safe, idempotent). If it recurs, check:  docker compose -p simple-feed-reader-prod logs php'
 
-# It may have started before the schema existed (first install).
-prod_compose restart worker >/dev/null
+run_step 'Starting the worker' start_worker prod_compose --build
 
 if ! wait_for_health "$(prod_base_url)/api/health"; then
   warn 'The API did not report healthy in time. It may still be starting.'
