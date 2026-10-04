@@ -64,7 +64,8 @@ export class ListReload {
     effect(() => {
       if (this.recs.completedStamp() === 0) return;
       untracked(() => {
-        if (this.selection().kind === 'for-you') this.entries.load({ view: 'for-you' });
+        const selection = this.selection();
+        if (selection.kind === 'for-you') this.entries.load(queryFromSelection(selection));
       });
     });
   }
