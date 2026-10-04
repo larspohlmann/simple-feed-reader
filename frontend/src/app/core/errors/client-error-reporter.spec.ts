@@ -154,19 +154,59 @@ describe('ClientErrorReporter', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('reports a masked cross-origin error that still carries a same-origin bundle frame', () => {
-      const maskedError = withStack(
-        new Error('Script error.'),
-        `r@${location.origin}/reader/chunk-JCSI4LYK.js:4:15845\nrunTask@${location.origin}/reader/polyfills-5CFQRCPP.js:1:2420`,
-      );
-
-      setup().report(maskedError);
+    it('reports a stackless error, whose origin cannot be judged', () => {
+      setup().report('Script error.');
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
+  });
 
-    it('reports a stackless error, whose origin cannot be judged', () => {
-      setup().report('Script error.');
+  describe('error events that carry no error', () => {
+    const listenerStack = `r@${location.origin}/reader/chunk-JCSI4LYK.js:4:15845\nrunTask@${location.origin}/reader/polyfills-5CFQRCPP.js:1:2420`;
+
+    const errorBuiltByAngularFrom = (event: ErrorEventInit): Error =>
+      Object.assign(new Error(event.message, { cause: new ErrorEvent('error', event) }), {
+        stack: listenerStack,
+      });
+
+    it('drops a masked cross-origin error, whose only bundle frame is the global listener', () => {
+      setup().report(errorBuiltByAngularFrom({ message: 'Script error.' }));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('drops a ResizeObserver loop notice, which names no location', () => {
+      setup().report(
+        errorBuiltByAngularFrom({
+          message: 'ResizeObserver loop completed with undelivered notifications.',
+        }),
+      );
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('drops an event located in a foreign script', () => {
+      setup().report(
+        errorBuiltByAngularFrom({
+          message: 'boom',
+          filename: 'https://cdn.example.com/widget.js',
+          lineno: 3,
+          colno: 14,
+        }),
+      );
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('reports an event located in a same-origin application bundle', () => {
+      setup().report(
+        errorBuiltByAngularFrom({
+          message: 'boom',
+          filename: `${location.origin}/reader/chunk-JCSI4LYK.js`,
+          lineno: 4,
+          colno: 15845,
+        }),
+      );
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
