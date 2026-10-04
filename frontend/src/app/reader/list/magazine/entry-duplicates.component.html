@@ -5,7 +5,7 @@
     @for (item of copies(); track item.copy.id) {
       <button
         type="button"
-        class="also-entry"
+        class="also-entry reads-as-text"
         [attr.aria-expanded]="displayed()?.id === item.copy.id"
         [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
         (click)="toggle(item.copy, $event)"

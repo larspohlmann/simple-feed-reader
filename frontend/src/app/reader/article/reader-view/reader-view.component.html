@@ -101,7 +101,7 @@
             <i [style.height.%]="scope.progressPercent()"></i>
           </div>
         }
-        <article [attr.aria-busy]="source.loading() ? 'true' : null">
+        <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
             <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
           </div>
@@ -163,7 +163,11 @@
                 <div class="warning-text">
                   <p class="reader-note">
                     {{ 'reader.readerFallback' | transloco }}
-                    <button type="button" class="note-link" (click)="refreshArticle()">
+                    <button
+                      type="button"
+                      class="note-link reads-as-text"
+                      (click)="refreshArticle()"
+                    >
                       {{ 'reader.retry' | transloco }}
                     </button>
                   </p>
@@ -233,7 +237,7 @@
     <app-to-top-button (activate)="scrollToTop()" />
   }
 } @else {
-  <div class="placeholder">
+  <div class="placeholder text-scaled">
     <p>{{ 'reader.selectArticle' | transloco }}</p>
   </div>
 }

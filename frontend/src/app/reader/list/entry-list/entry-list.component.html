@@ -59,7 +59,7 @@
 
 @if (error(); as problem) {
   <app-error-banner
-    class="list-error"
+    class="list-error text-scaled"
     [message]="
       problem.status === 0
         ? ('reader.errorOffline' | transloco)
@@ -73,13 +73,13 @@
 }
 
 @if (loading() && entries().length === 0) {
-  <div class="rows">
+  <div class="rows text-scaled">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <div class="skeleton"></div>
     }
   </div>
 } @else if (content.visibleEntryCount() === 0) {
-  <div class="empty-wrap" [class.magazine]="effectiveLayout() === 'magazine'">
+  <div class="empty-wrap text-scaled" [class.magazine]="effectiveLayout() === 'magazine'">
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so it can apply the active
            layout's measure to projected content. -->
@@ -91,7 +91,7 @@
   </div>
 } @else if (effectiveLayout() === 'magazine') {
   <div
-    class="rows magazine"
+    class="rows magazine text-scaled"
     [class.airy]="isAiryMagazine()"
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
@@ -139,7 +139,7 @@
   </div>
 } @else {
   <div
-    class="rows"
+    class="rows text-scaled"
     [class.reloading]="reloadCue()"
     [attr.inert]="reloadCue() ? '' : null"
     [attr.aria-busy]="loading() ? 'true' : null"
