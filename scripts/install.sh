@@ -237,6 +237,7 @@ fi
 # catalog and the mail check to do, and the block a first-time operator reads
 # must be the LAST thing on the screen (issue #430).
 SFR_DEFER_SUMMARY=1 "${REPO_ROOT}/scripts/prod-start.sh"
+record_installed_commit
 
 # --- 8. fill the onboarding catalog -----------------------------------------
 # A new instance has an empty catalog, and an empty catalog makes the picker

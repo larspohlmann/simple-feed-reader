@@ -45,7 +45,7 @@ ensure_docker
 say 'Fetching from origin ...'
 git -C "${REPO_ROOT}" fetch --tags --quiet origin
 
-current=$(current_version)
+current=$(installed_version)
 
 # An explicit ref skips the release lookup: it may well have no release tag,
 # which is the reason to ask for it.
@@ -54,7 +54,7 @@ if [ -n "${REF}" ]; then
 else
   target=$(latest_release_tag)
   [ -n "${target}" ] || die 'No release tag (vX.Y.Z) found on main. See docs/releasing.md.'
-  if [ "${current}" = "${target}" ]; then
+  if runs_ref "${target}"; then
     ok "Already on the latest release (${target}). Nothing to do."
     exit 0
   fi
@@ -127,6 +127,7 @@ if [ "${updated_prod}" -eq 0 ] && [ "${updated_dev}" -eq 0 ]; then
   exit 0
 fi
 
+record_installed_commit
 ok "Updated ${current} -> ${target}."
 
 # The closing blocks, last: one per stack that was updated. print_notes empties

@@ -349,6 +349,12 @@ jobs:
       - name: wait-for-php-ready
         run: scripts/test/wait-for-php-ready.test.sh
 
+      # update.sh checks the release out before it rebuilds the stacks, so a
+      # failed build once made the next run report "Nothing to do" (#1378).
+      # This proves the decision reads the deployed record, not the checkout.
+      - name: installed-commit
+        run: scripts/test/installed-commit.test.sh
+
       # The worker stays down from `up` until the migration ran (#1379): on
       # SQLite its writes locked the migration out, on any database it queried
       # columns the old schema lacked.

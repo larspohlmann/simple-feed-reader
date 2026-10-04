@@ -173,6 +173,38 @@ current_version() {
   git -C "${REPO_ROOT}" describe --tags --exact-match 2>/dev/null || echo '(unreleased)'
 }
 
+# --- what the stacks run ----------------------------------------------------
+# update.sh checks the release out before it rebuilds the stacks, so after a
+# failed build the checkout names a release that never ran (#1378). Only a
+# finished update or install writes this record.
+installed_commit_file() { printf '%s/.installed-commit\n' "${REPO_ROOT}"; }
+
+record_installed_commit() {
+  git -C "${REPO_ROOT}" rev-parse HEAD > "$(installed_commit_file)"
+}
+
+installed_commit() {
+  cat "$(installed_commit_file)" 2>/dev/null || true
+}
+
+# '(unknown)' is an install from before #1378: it has no record yet.
+installed_version() {
+  local commit
+  commit=$(installed_commit)
+  if [ -z "${commit}" ]; then
+    echo '(unknown)'
+    return 0
+  fi
+  git -C "${REPO_ROOT}" describe --tags --exact-match "${commit}" 2>/dev/null || echo '(unreleased)'
+}
+
+runs_ref() {
+  local commit
+  commit=$(installed_commit)
+  [ -n "${commit}" ] \
+    && [ "${commit}" = "$(git -C "${REPO_ROOT}" rev-parse --verify --quiet "$1^{commit}")" ]
+}
+
 # --- the ref this install runs on -------------------------------------------
 # Both installers and update.sh take --ref <branch-or-tag>, so a production
 # install can be tried from a branch before it is released (issue #430). The
