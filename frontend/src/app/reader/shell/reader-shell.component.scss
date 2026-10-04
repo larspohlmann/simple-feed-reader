@@ -202,11 +202,9 @@ app-reader-header.hidden {
   gap: var(--space-2);
 }
 
-/* The For You Stop button is an app-button, not a list action, so it drops its label here. */
-@container list-header (width <= #{bp.$container-list-header-compact}) {
-  .for-you-run .label {
-    display: none;
-  }
+/* `:not(:disabled)` leaves the shared muted look to "Stopping…". */
+.for-you-run.stop:not(:disabled) {
+  color: var(--danger);
 }
 
 /* Nothing in normal flow can sit "below the header" (absolute, opaque). This

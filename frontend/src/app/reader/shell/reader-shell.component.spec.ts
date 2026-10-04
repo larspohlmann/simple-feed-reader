@@ -2222,7 +2222,7 @@ describe('ReaderShellComponent', () => {
     // beneath it and no failure alert clutter in the header (#325).
     const buttons = [...fixture.nativeElement.querySelectorAll('.for-you-run')];
     expect(buttons.length).toBe(1);
-    expect(buttons[0].querySelector('.label')!.textContent!.trim()).toBe('Stop');
+    expect(buttons[0].querySelector('.txt')!.textContent!.trim()).toBe('Stop');
     // The count, the ETA and the bar left the LIST header in #398 and never
     // came back; a live run leaves nothing but the Stop button there. On this
     // (wide) layout they read out from the app bar instead of the pill (#435).
@@ -2284,7 +2284,11 @@ describe('ReaderShellComponent', () => {
     recommendations.report.set(runningReport);
     fixture.detectChanges();
 
-    (fixture.nativeElement.querySelector('.for-you-run button') as HTMLElement).click();
+    const stopButton = fixture.nativeElement.querySelector(
+      'button.for-you-run',
+    ) as HTMLButtonElement;
+    expect(stopButton.classList).toContain('list-action');
+    stopButton.click();
 
     expect(stop).toHaveBeenCalledTimes(1);
   });
