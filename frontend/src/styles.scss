@@ -10,6 +10,7 @@
 @use './styles/list-action';
 @use './styles/flag-toggle';
 @use './styles/icon-button';
+@use './styles/text-size';
 
 // Every dialog.open() lands on the CDK's .cdk-overlay-pane; the frame is
 // app-overlay-panel's, and the prebuilt CSS already shrink-wraps and centres

@@ -1,5 +1,6 @@
 @use './breakpoints' as bp;
 @use './brightness';
+@use './type-scale';
 @use './themes/graphite';
 
 // Light is the fallback when no attribute is set yet (before the no-flash
@@ -140,15 +141,8 @@
      one value rescales the whole article. */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, sans-serif;
 
-  /* --fs-2xs is below the UI chrome scale: for compact glyph badges (the
-     sidebar's "W" whole-word pill), not body or control text. */
-  --fs-2xs: 10px;
-  --fs-xs: 11px;
-  --fs-sm: 13px;
-  --fs-base: 15px;
-  --fs-read: 16px;
-  --fs-lg: 18px;
-  --fs-xl: 24px;
+  @include type-scale.fixed;
+
   --lh-tight: 1.25;
   --lh-normal: 1.5;
 }

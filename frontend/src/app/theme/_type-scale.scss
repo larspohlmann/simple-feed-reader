@@ -1,0 +1,23 @@
+// --fs-2xs is below the UI chrome scale: for compact glyph badges (the
+// sidebar's "W" whole-word pill), not body or control text.
+$sizes: (
+  '2xs': 10px,
+  'xs': 11px,
+  'sm': 13px,
+  'base': 15px,
+  'read': 16px,
+  'lg': 18px,
+  'xl': 24px,
+);
+
+@mixin fixed {
+  @each $name, $size in $sizes {
+    --fs-#{$name}: #{$size};
+  }
+}
+
+@mixin scaled {
+  @each $name, $size in $sizes {
+    --fs-#{$name}: calc(#{$size} * var(--text-scale, 1));
+  }
+}
