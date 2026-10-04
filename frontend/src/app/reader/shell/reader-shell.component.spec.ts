@@ -2010,6 +2010,24 @@ describe('ReaderShellComponent', () => {
     testRequest.flush({ entries: [], nextCursor: null });
   });
 
+  it('keeps the unread filter when a run completes while the for-you list is open', () => {
+    localStorage.setItem('sfr.user.1.unread-only', '1');
+    const fixture = boot();
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    fixture.detectChanges();
+    ctrl
+      .expectOne((request) => request.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    fixture.detectChanges();
+
+    TestBed.inject(RecommendationsService).completedStamp.update((stamp) => stamp + 1);
+    fixture.detectChanges();
+
+    const testRequest = ctrl.expectOne((request) => request.url === 'https://api.test/api/entries');
+    expect(testRequest.request.params.get('unread')).toBe('1');
+    testRequest.flush({ entries: [], nextCursor: null });
+  });
+
   it('does not reload another list when a for-you run completes off-screen', () => {
     const fixture = boot();
     TestBed.inject(RecommendationsService).completedStamp.update((stamp) => stamp + 1);
