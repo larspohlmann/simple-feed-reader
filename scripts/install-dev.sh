@@ -187,6 +187,7 @@ check_ports_free 4200 8080 8443 8025 \
   || warn 'Free the ports listed above (or stop what is using them); docker will fail otherwise.'
 
 bring_up_stack
+record_installed_commit
 
 # --- 6. verify and report ---------------------------------------------------
 if wait_for_health "${DEV_HEALTH_URL}"; then
