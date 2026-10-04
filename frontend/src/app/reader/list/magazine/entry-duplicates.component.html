@@ -30,7 +30,7 @@
       (overlayKeydown)="$event.key === 'Escape' && close()"
     >
       @if (displayed(); as copy) {
-        <div class="dup-popover" [id]="panelId" role="note">
+        <div class="dup-popover text-scaled" [id]="panelId" role="note">
           <span class="popover-heading">{{ 'reader.alsoPublishedAs' | transloco }}</span>
           <app-entry-row [entry]="copy" />
         </div>

@@ -34,7 +34,7 @@ describe('TextSizeControlComponent', () => {
     expect(element(fixture, '[role=group]').getAttribute('aria-label')).toBe('Text size');
     expect(element(fixture, '.smaller').getAttribute('title')).toBe('Smaller text');
     expect(element(fixture, '.larger').getAttribute('title')).toBe('Larger text');
-    expect(element(fixture, '.bar').getAttribute('title')).toBe('Reset to default');
+    expect(element(fixture, '.bar').getAttribute('title')).toBe('Reset text size');
   });
 
   it('shows the decrease and increase glyphs', () => {

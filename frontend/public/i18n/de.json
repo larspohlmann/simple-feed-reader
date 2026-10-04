@@ -1134,7 +1134,7 @@
       "aria": "Schriftgröße",
       "smaller": "Kleinere Schrift",
       "larger": "Größere Schrift",
-      "reset": "Auf Standard zurücksetzen",
+      "reset": "Schriftgröße zurücksetzen",
       "value": "{{value}} %",
       "readout": "Schriftgröße {{value}} %"
     },

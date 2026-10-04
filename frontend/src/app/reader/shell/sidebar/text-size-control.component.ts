@@ -3,7 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TextSizeService } from '../../../theme/text-size.service';
 
-/** Smaller A, a progress bar with the percentage, larger A: the sidebar's text-size stepper (#1382). */
+/** Smaller A, a bar labelled with the percentage, larger A: the text-size stepper (#1382). */
 @Component({
   selector: 'app-text-size-control',
   imports: [IconComponent, TranslocoPipe],

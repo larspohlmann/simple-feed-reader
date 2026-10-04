@@ -1266,20 +1266,23 @@ reuse:
 
 `<app-text-size-control>` (local to the sidebar, #1382) sits directly above the
 brightness control and shares its shape (`segmented.stepper-bar`): `text_decrease`,
-a fill bar showing the percentage, `text_increase`. Steps are 90–150 % in tens,
+a bar whose fill marks the step and whose label is the percentage, `text_increase`. Steps are 90–150 % in tens,
 default 100, per device and theme-independent (`sfr.textSize`), never per account.
 
 The setting is one root property, `--text-scale`. A reading container takes the
 global class `text-scaled`, which multiplies the `--fs-*` tokens and the inherited
 font size by it; today that is the list `.rows`, `.empty-wrap`, `.list-error`, the
-article `<article>` and its `.placeholder`. Inside one, every `<button>` and
+article `<article>` and its `.placeholder`, and the duplicates popover (a CDK overlay sits
+outside the page's containers, so it takes the class itself). Inside one, every `<button>` and
 `app-entry-pills` keep the fixed tokens and the inherited size; any class rule
 still overrides them. A button typeset as running text (TOC
 entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons,
 spacing, images and widths are px tokens and never scale. The list header and the
 reader toolbar sit outside every `text-scaled` container, which is why their texts
-stay fixed. A new reading surface takes `text-scaled`; a new control inside one
-needs nothing.
+stay fixed. A new reading surface takes `text-scaled`. A control inside one stays fixed
+if it sizes its text with an `--fs-*` token or has no font-size rule of its own; a class
+rule like `font: inherit` with no token size outranks the reset and scales the control
+with the text (that is how the text-like `.note-link` and `.also-entry` scale).
 
 ### Brightness control
 

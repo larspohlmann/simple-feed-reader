@@ -1,14 +1,14 @@
 @use '../app/theme/type-scale';
 
-// The reader's text-size setting (#1382): a reading container takes `text-scaled`.
 .text-scaled {
   @include type-scale.scaled;
 
   font-size: calc(1em * var(--text-scale, 1));
 }
 
-// One element of specificity: beats _reset's `button { font: inherit }` by source order, loses to any
-// class rule. The 1em division undoes one scaling, so it holds only for non-nested controls.
+// One element of specificity: beats _reset's `button { font: inherit }` by source order,
+// loses to any class rule. The 1em division undoes one scaling, so it holds only for
+// non-nested controls.
 :where(.text-scaled) :is(button:where(:not(.reads-as-text)), app-entry-pills) {
   @include type-scale.fixed;
 

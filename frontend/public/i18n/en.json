@@ -1134,7 +1134,7 @@
       "aria": "Text size",
       "smaller": "Smaller text",
       "larger": "Larger text",
-      "reset": "Reset to default",
+      "reset": "Reset text size",
       "value": "{{value}}%",
       "readout": "Text size {{value}}%"
     },
