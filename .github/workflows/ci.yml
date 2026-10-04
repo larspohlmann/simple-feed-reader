@@ -349,6 +349,12 @@ jobs:
       - name: wait-for-php-ready
         run: scripts/test/wait-for-php-ready.test.sh
 
+      # update.sh checks the release out before it rebuilds the stacks, so a
+      # failed build once made the next run report "Nothing to do" (#1378).
+      # This proves the decision reads the deployed record, not the checkout.
+      - name: installed-commit
+        run: scripts/test/installed-commit.test.sh
+
       # What the installers put on the screen, and the options they accept
       # (#430). The default port each topology offers becomes a published
       # container port and the port in every account-mail link; --ref is parsed

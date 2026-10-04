@@ -17,5 +17,8 @@ AGENTS.local.md
 /docker/certs-prod/*
 !/docker/certs-prod/.gitkeep
 
+# The commit the installed stacks run, written by update.sh and the installers (#1378).
+/.installed-commit
+
 # Local Docker Compose overrides (developer machine only).
 /docker-compose.override.yml
