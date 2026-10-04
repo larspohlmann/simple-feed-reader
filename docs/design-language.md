@@ -144,6 +144,8 @@ one that must never get tighter.
 | `--lh-tight` | `1.25` | headings |
 | `--lh-normal` | `1.5` | body copy |
 
+The `--fs-*` values live in `theme/_type-scale.scss`; `text-scaled` containers multiply them (see *Text-size control*).
+
 **`--fs-read` is deliberately a step above `--fs-base`.** Long-form reading wants
 more than UI chrome does. Article headings size in `em` against it, so changing
 this one value rescales the whole article.
@@ -1259,6 +1261,25 @@ reuse:
   exclusion marker's tooltip (`exclusionTitle()`) says which surface(s) the
   feed is hidden from, so a reader never has to guess what an icon-only glyph
   means.
+
+### Text-size control
+
+`<app-text-size-control>` (local to the sidebar, #1382) sits directly above the
+brightness control and shares its shape (`segmented.stepper-bar`): `text_decrease`,
+a fill bar showing the percentage, `text_increase`. Steps are 90–150 % in tens,
+default 100, per device and theme-independent (`sfr.textSize`), never per account.
+
+The setting is one root property, `--text-scale`. A reading container takes the
+global class `text-scaled`, which multiplies the `--fs-*` tokens and the inherited
+font size by it; today that is the list `.rows`, `.empty-wrap`, `.list-error`, the
+article `<article>` and its `.placeholder`. Inside one, every `<button>` and
+`app-entry-pills` keep the fixed tokens and the inherited size; any class rule
+still overrides them. A button typeset as running text (TOC
+entries, inline "Retry", "Also in") opts back in with `reads-as-text`. Icons,
+spacing, images and widths are px tokens and never scale. The list header and the
+reader toolbar sit outside every `text-scaled` container, which is why their texts
+stay fixed. A new reading surface takes `text-scaled`; a new control inside one
+needs nothing.
 
 ### Brightness control
 
