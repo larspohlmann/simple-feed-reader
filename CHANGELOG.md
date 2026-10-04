@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.1.1] - 2026-10-04
+
+## What's Changed
+* fix(#1368): for-you reload after a run keeps the unread filter by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1369
+* fix(#1370): for-you stop is a danger-tinted list action by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1371
+* fix(#1372): for-you show progress is a list action by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1373
+* fix(#1374): report a blank screen with the state that explains it by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1376
+* fix(#1379): the worker waits for the migrations by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1381
+* fix(#1378): update.sh decides from the deployed commit, not the checkout by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1380
+* fix(#1375): judge an error event with no error by the event's location by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1377
+* feat(#1382): text-size control for lists and articles by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1383
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.1.0...v1.1.1
+
 ## [v1.1.0] - 2026-10-03
 
 ### Highlights
