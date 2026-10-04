@@ -26,6 +26,18 @@ function describeHttpError(error: HttpErrorResponse): ErrorDescription {
   return { message, stack: null, kind: 'HttpError' };
 }
 
+/** When a window `error` event carries no error object (a masked cross-origin
+ *  `Script error.`, a ResizeObserver loop notice), Angular's global listener
+ *  wraps the event as the `cause` of an Error it builds itself. That Error's
+ *  stack is the listener's, so only the event's own location shows the origin. */
+function errorEventWithoutError(error: unknown): ErrorEvent | null {
+  if (!(error instanceof Error) || typeof ErrorEvent === 'undefined') {
+    return null;
+  }
+  const cause = error.cause;
+  return cause instanceof ErrorEvent && cause.error == null ? cause : null;
+}
+
 export const DEDUPE_WINDOW_MS = 10_000;
 export const RATE_WINDOW_MS = 60_000;
 export const MAX_REPORTS_PER_WINDOW = 20;
@@ -51,7 +63,7 @@ export class ClientErrorReporter {
     try {
       const now = Date.now();
       const item = this.toWireItem(error);
-      if (this.originatesOutsideApplication(item)) {
+      if (this.originatesOutsideApplication(error, item)) {
         return;
       }
       if (this.isNavigationNoise(error, item)) {
@@ -96,12 +108,23 @@ export class ClientErrorReporter {
    *  (`chrome-extension://…`), or at native code (no location) is noise from
    *  code we do not own. A stackless error stays reportable: HTTP failures and
    *  boot errors carry no stack, and their origin cannot be judged. */
-  private originatesOutsideApplication(item: ClientErrorItem): boolean {
+  private originatesOutsideApplication(error: unknown, item: ClientErrorItem): boolean {
+    const event = errorEventWithoutError(error);
+    if (event) {
+      return !this.eventIsLocatedInApplication(event);
+    }
     const stack = item.stack?.trim();
     if (!stack) {
       return false;
     }
     return !this.stackReferencesApplicationBundle(stack);
+  }
+
+  private eventIsLocatedInApplication(event: ErrorEvent): boolean {
+    return (
+      event.filename !== '' &&
+      this.frameIsApplicationCode(`${event.filename}:${event.lineno}:${event.colno}`)
+    );
   }
 
   private stackReferencesApplicationBundle(stack: string): boolean {
