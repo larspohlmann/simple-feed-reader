@@ -221,11 +221,9 @@
         }
       </div>
     </div>
-    @if (progressRail.overflows()) {
-      <!-- Decorative: a stand-in for the scrollbar, so no progressbar role; a screen
-           reader already reports the position, and announcing every frame is noise. -->
-      <app-progress-rail [orientation]="progressRail.orientation()" />
-    }
+    <!-- Decorative: a stand-in for the scrollbar, so no progressbar role; a screen
+         reader already reports the position, and announcing every frame is noise. -->
+    <app-progress-rail [progress]="progressRail" />
   </div>
   @if (showToTop()) {
     <app-to-top-button (activate)="scrollToTop()" />

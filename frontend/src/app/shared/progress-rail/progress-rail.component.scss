@@ -1,12 +1,12 @@
-/* Laid over the scroller rather than inside it: no sticky placement to keep
-   alive, and nothing that scrolls (a dimmed paragraph, a row) paints over it. */
+/* Over the scroller, never inside it, so nothing that scrolls paints over it. No
+   z-index: the host's own chrome, positioned later or higher, stays on top. */
 :host {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 2;
   width: var(--space-1);
+  pointer-events: none; /* decorative: a drag on the edge still scrolls */
   background: var(--border);
 }
 
@@ -15,6 +15,10 @@
   left: 0;
   width: auto;
   height: var(--space-0);
+}
+
+:host(.idle) {
+  display: none;
 }
 
 /* Untransitioned: the fill reports the scroll position and has to track it. */

@@ -1,20 +1,38 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ProgressRailComponent } from './progress-rail.component';
+import { ScrollProgressRail } from './scroll-progress-rail';
 
 describe('ProgressRailComponent', () => {
-  it('is decorative and renders a fill element', () => {
+  function mount(isWide: boolean) {
+    const progress = TestBed.runInInjectionContext(
+      () =>
+        new ScrollProgressRail({
+          scroller: () => undefined,
+          isWide: signal(isWide),
+          contentBottom: () => null,
+          layoutChanges: () => undefined,
+        }),
+    );
     const fixture = TestBed.createComponent(ProgressRailComponent);
+    fixture.componentRef.setInput('progress', progress);
     fixture.detectChanges();
-    const host: HTMLElement = fixture.nativeElement;
+    return { host: fixture.nativeElement as HTMLElement, progress, fixture };
+  }
+
+  it('is decorative and idle until the content overflows', () => {
+    const { host, progress, fixture } = mount(false);
     expect(host.getAttribute('aria-hidden')).toBe('true');
-    expect(host.querySelector('i')).not.toBeNull();
-    expect(host.classList).not.toContain('horizontal');
+    expect(host.classList).toContain('idle');
+
+    progress.overflows.set(true);
+    fixture.detectChanges();
+
+    expect(host.classList).not.toContain('idle');
   });
 
-  it('runs across when horizontal', () => {
-    const fixture = TestBed.createComponent(ProgressRailComponent);
-    fixture.componentRef.setInput('orientation', 'horizontal');
-    fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).classList).toContain('horizontal');
+  it('stands up on a phone and lies along the bottom when wide', () => {
+    expect(mount(false).host.classList).not.toContain('horizontal');
+    expect(mount(true).host.classList).toContain('horizontal');
   });
 });

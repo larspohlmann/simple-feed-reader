@@ -13,7 +13,7 @@ import {
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
-import { ScrollProgressRail } from '../../scroll/scroll-progress-rail';
+import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -107,7 +107,7 @@ export class ReaderViewComponent {
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
-  protected readonly screen = inject(LayoutService);
+  private readonly screen = inject(LayoutService);
   private readonly audioPlayer = inject(AudioPlayerService);
   private readonly injector = inject(Injector);
   private readonly reduceMotion = prefersReducedMotion();
@@ -115,10 +115,9 @@ export class ReaderViewComponent {
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
-  private readonly railRef = viewChild(ProgressRailComponent, { read: ElementRef });
   protected readonly progressRail = new ScrollProgressRail({
     scroller: this.scroller,
-    rail: () => this.railRef()?.nativeElement,
+    isWide: this.screen.isWide,
     contentBottom: () => this.scope.contentBottom(),
     layoutChanges: () => this.scope.contentBottom(),
   });

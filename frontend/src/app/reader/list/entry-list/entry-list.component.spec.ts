@@ -2466,7 +2466,7 @@ describe('EntryListComponent', () => {
     }
 
     function rail(fixture: ComponentFixture<EntryListComponent>): HTMLElement | null {
-      return (fixture.nativeElement as HTMLElement).querySelector('app-progress-rail');
+      return (fixture.nativeElement as HTMLElement).querySelector('app-progress-rail:not(.idle)');
     }
 
     const fill = (fixture: ComponentFixture<EntryListComponent>): string =>

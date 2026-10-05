@@ -486,9 +486,31 @@ describe('ReaderViewComponent', () => {
       scroller.dispatchEvent(new Event('scroll'));
       fixture.detectChanges();
 
-      const rail = host.querySelector<HTMLElement>('app-progress-rail')!;
+      const rail = host.querySelector<HTMLElement>('app-progress-rail:not(.idle)')!;
       expect(rail.parentElement!.classList).toContain('frame');
       expect(rail.style.getPropertyValue('--rail-fill')).toBe('50');
+    });
+
+    it('repaints the rail when only the pane changes height', () => {
+      const fixture = mount(entry());
+      const host = stubGeometry(fixture, 2400, 800);
+      fixture.detectChanges();
+      const scroller = scrollerOf(fixture);
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () =>
+        ({ top: -scroller.scrollTop, bottom: 2400 - scroller.scrollTop }) as DOMRect;
+      scroller.scrollTop = 400;
+      scroller.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 2000 });
+      MockResizeObserver.instances
+        .filter((observer) => observer.targets.has(scroller))
+        .forEach((observer) => observer.fire());
+      fixture.detectChanges();
+
+      const rail = host.querySelector<HTMLElement>('app-progress-rail')!;
+      expect(rail.style.getPropertyValue('--rail-fill')).toBe('100');
     });
 
     it('measures the inner scroller once the article first renders', async () => {
@@ -518,7 +540,7 @@ describe('ReaderViewComponent', () => {
       const host = stubGeometry(fixture, 400, 800);
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-      expect(host.querySelector('app-progress-rail')).toBeNull();
+      expect(host.querySelector('app-progress-rail:not(.idle)')).toBeNull();
     });
 
     it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {

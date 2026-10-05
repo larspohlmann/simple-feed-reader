@@ -46,7 +46,7 @@ import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
 import { EstimatedListBottom } from './estimated-list-bottom';
-import { ScrollProgressRail } from '../../scroll/scroll-progress-rail';
+import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -197,7 +197,6 @@ export class EntryListComponent implements OnDestroy {
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
-  private readonly railRef = viewChild(ProgressRailComponent, { read: ElementRef });
   private readonly scroller = (): HTMLElement | undefined => this.rows()?.nativeElement;
 
   readonly content = new ListContent({
@@ -329,7 +328,7 @@ export class EntryListComponent implements OnDestroy {
 
   readonly progressRail = new ScrollProgressRail({
     scroller: this.scroller,
-    rail: () => this.railRef()?.nativeElement,
+    isWide: this.screen.isWide,
     contentBottom: this.listBottom.measure,
     layoutChanges: this.listBottom.layoutChanges,
   });

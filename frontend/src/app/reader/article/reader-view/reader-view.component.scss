@@ -47,8 +47,7 @@
 }
 
 /* Tail padding so a long article's closing paragraph can reach the reading
-   focus's centre (#107), applied only when the article overflows. Lives on
-   `article`, not `.reader`, whose content box bounds the sticky bar's travel (#238). */
+   focus's centre (#107), applied only when the article overflows. */
 .reader.with-tail article {
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      a deliberate share of the viewport, not a spacing value; see above. */

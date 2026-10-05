@@ -1,16 +1,35 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  effect,
+  inject,
+  input,
+} from '@angular/core';
+import { ScrollProgressRail } from './scroll-progress-rail';
 
-export type ProgressRailOrientation = 'vertical' | 'horizontal';
-
-/** A scroller's length cue: a track along the right or bottom edge of the nearest
- *  positioned ancestor, filled to the host's `--rail-fill` percentage. */
+/** The visible half of a `ScrollProgressRail`: a track along the right or bottom edge
+ *  of the nearest positioned ancestor, shown only while the content overflows. */
 @Component({
   selector: 'app-progress-rail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { 'aria-hidden': 'true', '[class.horizontal]': "orientation() === 'horizontal'" },
+  host: {
+    'aria-hidden': 'true',
+    '[class.horizontal]': "progress().orientation() === 'horizontal'",
+    '[class.idle]': '!progress().overflows()',
+  },
   template: '<i></i>',
   styleUrl: './progress-rail.component.scss',
 })
 export class ProgressRailComponent {
-  readonly orientation = input<ProgressRailOrientation>('vertical');
+  readonly progress = input.required<ScrollProgressRail>();
+
+  constructor() {
+    const host: HTMLElement = inject(ElementRef).nativeElement;
+    effect((onCleanup) => {
+      const progress = this.progress();
+      progress.attach(host);
+      onCleanup(() => progress.detach(host));
+    });
+  }
 }

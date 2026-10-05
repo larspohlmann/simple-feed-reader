@@ -1,7 +1,7 @@
 // Pure math for the article reading-focus effect, kept out of the component so
 // the fade curve is unit-testable (jsdom can't measure layout for the DOM part).
 
-import { overflowsViewport } from '../../scroll/scroll-progress';
+import { overflowsViewport } from '../../../shared/progress-rail/scroll-progress';
 
 /** How steeply a surface's reading focus falls away from the reading centre. */
 export interface FocusCurve {

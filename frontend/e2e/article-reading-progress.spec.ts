@@ -136,7 +136,7 @@ test.describe('Article reading progress', () => {
     await page.reload();
     const pane = await openArticle(page);
 
-    await expect(pane.locator('app-progress-rail')).toHaveCount(0);
+    await expect(pane.locator('app-progress-rail:not(.idle)')).toHaveCount(0);
   });
 });
 
