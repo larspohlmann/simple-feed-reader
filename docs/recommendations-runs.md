@@ -62,7 +62,7 @@ to:
 Resume reuses the article snapshot from when the run first started, so if a
 lot of time has passed, starting fresh gives more current recommendations.
 A run that failed before it took its snapshot — a failed profile is one such case — has nothing to resume, and
-neither has a Jev run that started without a profile; **Refresh** then simply starts a new run.
+neither has a run on a scoring model that started without a profile; **Refresh** then simply starts a new run.
 
 ## Install-dependent behavior
 
@@ -82,7 +82,7 @@ How the fast path is provided depends on the deployment:
 ### Engines
 
 A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
-an engine (a model id starting with `jev-` is TypeSafe's System One, any other an LLM); `SnapshotPhase` asks that engine to pack the candidate pool
+an engine: the kind the connection stored when its model was chosen (`user_ai_settings.model_kind`, `llm` or `scoring`, as the model catalog tagged the model; the model id is never read); `SnapshotPhase` asks that engine to pack the candidate pool
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
@@ -94,7 +94,7 @@ run-log row still reads `transport-failed`, with the reason in its error detail.
 profile runs.
 
 One rejection is absorbed instead (`SuppressedReasoningFallback`): a 400 or 422 to a request that asked the model not to
-reason ("Ask the model not to reason" on), on an engine that offers that setting, so never Jev. The run does not fail
+reason ("Ask the model not to reason" on), on an engine that offers that setting, so never a scoring model. The run does not fail
 and spends no strike; the connection records the refusing model (`user_ai_settings.suppression_refused_by_model`), and
 the next tick asks the same model again without the field (`Reasoning::preferredBy()` answers `Allowed`). That costs one
 rejected tick (a whole wave on a parallel run), once per model. The mark holds only while that model is chosen, shows a
@@ -102,7 +102,7 @@ note under the setting in Settings → AI, and is forgotten when the setting is 
 replaced. A rejection of the resend without the field is an ordinary rejected request and fails the run at once.
 
 When a provider answers with an error status, the message in the run and its log carries the provider's own reason if
-it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for every rejecting
+it gave one: the LLM engine for any non-retryable, non-credential error status, the scoring engine for every rejecting
 status.
 
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then scores the batches in
@@ -118,24 +118,34 @@ whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\Rate
 recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
 `models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
-label beside its id (`RecommendationEngineResolver::labelForModel`: `"Jev"`, or `null` for an LLM), so the picker
-marks a Jev model without the client parsing its id; no client logic branches on the label:
+label beside its id (`AiSettingsJson`: `"System One"` for a model the catalog tagged with that protocol, `null` for an LLM), so the picker
+marks a scoring model without the client parsing its id; no client logic branches on the label:
 
 ```json
-{"models": [{"id": "jev-latest", "label": "Jev",
+{"models": [{"id": "jev-latest", "label": "System One",
   "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
 ```
 
-The Jev engine (`Service/Recommendation/Jev`) asks TypeSafe's System One (`POST {base}/systemone`, directly or through
-OpenRouter) one yes/no question per candidate: would this reader, described by the interest profile and the guidance in
-`state`, want to read this article? A run freezes the stored profile when it snapshots; Jev needs one and fails with a
-message that says so when there is none (an account with neither reading history nor a saved search). The LLM engine
-scores without a profile in that case. The probability is the score (× 1000); there are no reasons and no consolidation,
-so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
-the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
-records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with an
-error that says so (switch back to resume it). The model catalog offers `jev-latest` wherever `{base}/systemone`
-answers.
+The scoring engine (`Service/Recommendation/Scoring`) scores every candidate against the reader instead of generating
+text. It speaks to the model through a protocol (`ScoringProtocol/ScoringProtocolInterface`, one implementation per
+`App\Enum\ScoringProtocol` case, found by `ScoringProtocolResolver`): the protocol packs the pool, words each request
+and reads each reply as a value in [0, 1] per article. A connection stores the protocol beside the kind when its model
+is chosen (`user_ai_settings.scoring_protocol`); `SystemOneCatalog` offers `jev-latest` as a System One model wherever
+`{base}/systemone` answers.
+
+| Protocol | Request | Per request |
+|---|---|---|
+| System One (`system_one`) | `POST {base}/systemone`, directly or through OpenRouter: `state` = `{profile, guidance?, favorites?}`, one `noul` question per article | at most 100 questions; a 32k-token window less 2k of framing and 10k for the state (`ScoringBudgetFactory`) |
+
+A run freezes the stored profile when it snapshots; a scoring model needs one and fails with a message that says so
+when there is none (an account with neither reading history nor a saved search). The LLM engine scores without a
+profile in that case. The value is the score (× 1000); there are no reasons and no consolidation, so the list is the
+best-scored picks once every batch is in. The engine reads only the batch-concurrency setting and records each call's
+request id, answering model and cost in the run log. `ScoringHttpTransport` sends a protocol's requests (its own idle
+and wall-clock timeouts, the tick heartbeat, a 1 MiB reply cap) and maps the statuses every protocol shares; a
+protocol adds only its retryable statuses (System One: 429 and 529). A run records the engine kind and the scoring
+protocol it was packed for; a tick that finds the active connection on another kind or protocol fails the run with an
+error that says so (switch back to resume it).
 
 ### The profile
 
@@ -143,7 +153,7 @@ The interest profile is generated by its own runs (`ProfileRun`, `Service/Recomm
 recommendation runs. A profile run loads the reading history (favourites; kept and viewed up to the profile section's
 caps) and the saved-search terms (the terms, not their results; a phrase in quotes, newest saved first, which the prompt
 weighs with the favourites), fingerprints it together with the caps and the connection and model, and makes one LLM call
-through the profile connection (Settings → AI; the active connection when none is chosen; a Jev connection can never be
+through the profile connection (Settings → AI; the active connection when none is chosen; a connection on a scoring model can never be
 one). A usable reply replaces the stored profile (`user_recommendation_settings.profile_text` with its time, host and
 model); three unusable replies or three transport failures fail the run and leave the stored profile alone, and so
 does one rejected request (see [Engines](#engines)), which spends no strike. Neither history nor a saved search
@@ -154,7 +164,7 @@ A recommendation run never builds a profile. At its snapshot it asks the profile
 one: the stored profile is frozen into the run; with none stored, a profile run is started and the run stays `pending`
 until it ends — completed, the run freezes whatever is stored (possibly nothing); failed, the run fails with
 `Profile generation failed: …`. The status JSON carries `waitingForProfile` meanwhile, and the For You toast says
-"Building your profile…". A run that failed before its snapshot, or a Jev run that froze no profile, is not resumable;
+"Building your profile…". A run that failed before its snapshot, or a run on a scoring model that froze no profile, is not resumable;
 a new run asks again. The status JSON says so in `resumable`, which the client reads instead of guessing, so it never
 offers a resume the server would refuse.
 
