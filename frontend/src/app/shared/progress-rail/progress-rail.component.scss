@@ -1,10 +1,18 @@
+/* Laid over the scroller rather than inside it: no sticky placement to keep
+   alive, and nothing that scrolls (a dimmed paragraph, a row) paints over it. */
 :host {
-  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
   width: var(--space-1);
   background: var(--border);
 }
 
 :host(.horizontal) {
+  top: auto;
+  left: 0;
   width: auto;
   height: var(--space-0);
 }

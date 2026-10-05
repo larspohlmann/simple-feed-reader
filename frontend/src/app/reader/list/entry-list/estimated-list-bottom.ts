@@ -1,11 +1,8 @@
-import { Injector, Signal, afterNextRender, effect, inject, signal } from '@angular/core';
+import { Signal, effect } from '@angular/core';
 import { EntryDto } from '../../models';
-import { articleOverflowsViewport, readingProgress } from '../../article/reading/reading-progress';
 import { estimatedListBottom } from './list-length';
 
-export interface ListProgressRailOptions {
-  readonly scroller: () => HTMLElement | undefined;
-  readonly rail: () => HTMLElement | undefined;
+export interface EstimatedListBottomOptions {
   /** The entries in the DOM, which trail the loaded ones while a page is revealed. */
   readonly rendered: Signal<EntryDto[]>;
   readonly shownEntries: Signal<number>;
@@ -17,11 +14,9 @@ export interface ListProgressRailOptions {
   readonly loading: Signal<boolean>;
 }
 
-/** The list's length cue (#1392), written straight onto the rail from the
- *  outside-zone scroll handler. Built in a field initializer, for its effects. */
-export class ListProgressRail {
-  private readonly injector = inject(Injector);
-  readonly overflows = signal(false);
+/** Where a paged list would end with every entry loaded (#1392): the progress rail's
+ *  content end for the list. Built in a field initializer, for its effect. */
+export class EstimatedListBottom {
   private highestTotal = 0;
 
   private readonly _resetOnLoadEdge = effect(() => {
@@ -29,31 +24,17 @@ export class ListProgressRail {
     this.highestTotal = 0;
   });
 
-  private readonly _paintAfterRender = effect(() => {
+  constructor(private readonly options: EstimatedListBottomOptions) {}
+
+  readonly layoutChanges = (): void => {
     this.options.rendered();
     this.options.shownEntries();
     this.options.complete();
     this.options.total();
     this.options.loadedTotal();
-    this.overflows();
-    afterNextRender(() => this.paint(), { injector: this.injector });
-  });
-
-  constructor(private readonly options: ListProgressRailOptions) {}
-
-  readonly paint = (): void => {
-    const scroller = this.options.scroller();
-    if (!scroller) return;
-    const bottom = this.estimatedBottom(scroller);
-    const overflows = bottom !== null && articleOverflowsViewport(bottom, scroller.clientHeight);
-    this.overflows.set(overflows);
-    const rail = this.options.rail();
-    if (!overflows || !rail) return;
-    const fraction = readingProgress(scroller.scrollTop, scroller.clientHeight, bottom);
-    rail.style.setProperty('--rail-fill', String(fraction * 100));
   };
 
-  private estimatedBottom(scroller: HTMLElement): number | null {
+  readonly measure = (scroller: HTMLElement): number | null => {
     const slots = scroller.querySelectorAll<HTMLElement>('.row-slot');
     if (slots.length === 0) return null;
     const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
@@ -65,7 +46,7 @@ export class ListProgressRail {
       totalEntries: this.options.loadedTotal() ?? this.raiseHeldTotal(),
       complete: this.options.complete(),
     });
-  }
+  };
 
   /** Keeps the highest count since the load began: reading lowers an unread count
    *  while the read rows stay on screen. */

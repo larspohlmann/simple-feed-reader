@@ -86,19 +86,18 @@
         </button>
       </div>
     </div>
-    <div #scroller class="scroller" (scroll)="onScroll(scroller.scrollTop)">
+    <div
+      #scroller
+      class="scroller"
+      [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
+      (scroll)="onScroll(scroller.scrollTop)"
+    >
       <div
         class="reader"
         [class.with-tail]="scope.hasTail()"
         [style.transform]="gestures.pullTransform()"
         [style.transition]="gestures.snapTransition()"
       >
-        @if (scope.showProgress() && !screen.isWide()) {
-          <!-- The same cue as the split pane's hairline, stood up on the right edge and
-               run the full height: 2px along a phone's bottom is easy to miss, with no
-               scrollbar to fall back on (#238). Decorative; leads the article for sticky positioning. -->
-          <app-progress-rail class="progress-rail" [style.--rail-fill]="scope.progressPercent()" />
-        }
         <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
             <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
@@ -220,18 +219,13 @@
             <app-spinner [size]="22" />
           </div>
         }
-        @if (scope.showProgress() && screen.isWide()) {
-          <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
-               it carries no progressbar role — a screen reader already reports the
-               reading position, and announcing every scroll frame would be noise. -->
-          <app-progress-rail
-            class="progress"
-            orientation="horizontal"
-            [style.--rail-fill]="scope.progressPercent()"
-          />
-        }
       </div>
     </div>
+    @if (progressRail.overflows()) {
+      <!-- Decorative: a stand-in for the scrollbar, so no progressbar role; a screen
+           reader already reports the position, and announcing every frame is noise. -->
+      <app-progress-rail [orientation]="progressRail.orientation()" />
+    }
   </div>
   @if (showToTop()) {
     <app-to-top-button (activate)="scrollToTop()" />

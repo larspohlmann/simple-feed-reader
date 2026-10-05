@@ -2466,7 +2466,7 @@ describe('EntryListComponent', () => {
     }
 
     function rail(fixture: ComponentFixture<EntryListComponent>): HTMLElement | null {
-      return (fixture.nativeElement as HTMLElement).querySelector('app-progress-rail.list-rail');
+      return (fixture.nativeElement as HTMLElement).querySelector('app-progress-rail');
     }
 
     const fill = (fixture: ComponentFixture<EntryListComponent>): string =>
@@ -2509,7 +2509,7 @@ describe('EntryListComponent', () => {
 
       expect(rail(fixture)!.classList).toContain('horizontal');
       expect(fill(fixture)).toBe('50');
-      expect(scroller.classList).not.toContain('has-rail');
+      expect(scroller.classList).not.toContain('scrollbar-hidden');
     });
 
     it('stands on the right edge in place of the scrollbar on a phone', () => {
@@ -2518,7 +2518,7 @@ describe('EntryListComponent', () => {
       scrollTo(fixture, scroller, 0);
 
       expect(rail(fixture)!.classList).not.toContain('horizontal');
-      expect(scroller.classList).toContain('has-rail');
+      expect(scroller.classList).toContain('scrollbar-hidden');
     });
 
     it('is not shown for a paged search, which has no total', () => {

@@ -19,23 +19,12 @@
 
 /* The only scroller. Chrome a tap must reach stays outside it: iOS spends a tap
    inside a coasting scroller on stopping it (#1332). Isolated so nothing that
-   scrolls, dimmed paragraphs and progress cues included, paints over that chrome. */
+   scrolls, dimmed paragraphs included, paints over that chrome. */
 .scroller {
   height: 100%;
   overflow: auto;
   isolation: isolate;
   scroll-padding-top: calc(var(--reader-mini-h) + var(--bar-gap));
-}
-
-/* The rail is the phone's scrollbar (#238); iOS would draw its own over it (#1336). */
-@media (width < bp.$bp-lg) {
-  .scroller {
-    scrollbar-width: none;
-  }
-
-  .scroller::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 /* Opaque and full-height so this overlay hides the still-mounted list until a
@@ -68,40 +57,6 @@
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      a deliberate share of the viewport, not a spacing value; see above. */
   padding-bottom: 50dvh;
-}
-
-/* The article's only length cue on a phone, where no scrollbar shows for a
-   nested scroller (#238). Sticky, not fixed: `.reader`'s return-gesture
-   transform would re-anchor a fixed child to this pane instead (#100). */
-.progress {
-  position: sticky;
-  bottom: 0;
-
-  /* Reading-focus sets an inline `opacity` on every article block, and an
-     element with opacity < 1 paints as if it were at z-index 0 — so a dimmed
-     paragraph would cover this bar. */
-  z-index: 2;
-}
-
-/* Same cue for split-pane, on the right edge, full height. Sticky for the
-   same reason as the hairline (#100); placed at the HEAD of the article's
-   flow, since a sticky box only travels from where it sits. */
-.progress-rail {
-  position: sticky;
-  top: 0;
-
-  /* Same reason as the hairline's: a reading-focus block with opacity < 1
-     paints as if it were at z-index 0 and would cover this. */
-  z-index: 2;
-  margin-left: auto; /* to the right edge, whatever the pane's width */
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     one screenful, not a spacing value: the rail spans the viewport. */
-  height: 100dvh;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     cancels the height above, so the rail adds nothing to the flow it leads. */
-  margin-bottom: -100dvh;
 }
 
 /* Overscroll-to-return affordance: anchored just below the article's end, so a

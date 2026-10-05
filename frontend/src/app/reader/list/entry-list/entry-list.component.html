@@ -98,7 +98,7 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [class.has-rail]="sideRail()"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
     [appScrollOutsideZone]="onRowsScroll"
   >
@@ -146,7 +146,7 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
-    [class.has-rail]="sideRail()"
+    [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
     #rows
     [appScrollOutsideZone]="onRowsScroll"
   >
@@ -196,11 +196,7 @@
 }
 
 @if (progressRail.overflows()) {
-  <app-progress-rail
-    class="list-rail"
-    [class.side]="sideRail()"
-    [orientation]="railOrientation()"
-  />
+  <app-progress-rail [orientation]="progressRail.orientation()" />
 }
 
 @if (entries().length > 0) {

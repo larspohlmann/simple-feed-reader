@@ -95,3 +95,13 @@ app-warning-box button.note-link {
   color: var(--text-muted);
   font-size: var(--fs-sm);
 }
+
+/* For a scroller whose progress rail stands in for its scrollbar (#238): iOS would
+   draw its own indicator over the rail (#1336). */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

@@ -473,6 +473,24 @@ describe('ReaderViewComponent', () => {
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
+    it('lays the progress rail over the pane and fills it as the article scrolls', () => {
+      const fixture = mount(entry());
+      const host = stubGeometry(fixture, 2400, 800);
+      fixture.detectChanges();
+      const scroller = scrollerOf(fixture);
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () =>
+        ({ top: -scroller.scrollTop, bottom: 2400 - scroller.scrollTop }) as DOMRect;
+
+      scroller.scrollTop = 800;
+      scroller.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+
+      const rail = host.querySelector<HTMLElement>('app-progress-rail')!;
+      expect(rail.parentElement!.classList).toContain('frame');
+      expect(rail.style.getPropertyValue('--rail-fill')).toBe('50');
+    });
+
     it('measures the inner scroller once the article first renders', async () => {
       const fixture = mount(entry());
       const host = pinGeometry(fixture, 2400, 800);
@@ -500,7 +518,7 @@ describe('ReaderViewComponent', () => {
       const host = stubGeometry(fixture, 400, 800);
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-      expect(host.querySelector('.progress-rail, .progress')).toBeNull();
+      expect(host.querySelector('app-progress-rail')).toBeNull();
     });
 
     it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {

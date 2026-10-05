@@ -18,10 +18,7 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
-import {
-  ProgressRailComponent,
-  ProgressRailOrientation,
-} from '../../../shared/progress-rail/progress-rail.component';
+import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -48,7 +45,8 @@ import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
-import { ListProgressRail } from './list-progress-rail';
+import { EstimatedListBottom } from './estimated-list-bottom';
+import { ScrollProgressRail } from '../../scroll/scroll-progress-rail';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -320,9 +318,7 @@ export class EntryListComponent implements OnDestroy {
 
   private readonly loadedTotal = computed(() => (this.hasMore() ? null : this.entries().length));
 
-  readonly progressRail = new ListProgressRail({
-    scroller: this.scroller,
-    rail: () => this.railRef()?.nativeElement,
+  private readonly listBottom = new EstimatedListBottom({
     rendered: this.content.rendered,
     shownEntries: this.content.renderedVisibleCount,
     complete: this.content.complete,
@@ -331,13 +327,12 @@ export class EntryListComponent implements OnDestroy {
     loading: this.loading,
   });
 
-  readonly railOrientation = computed<ProgressRailOrientation>(() =>
-    this.screen.isWide() ? 'horizontal' : 'vertical',
-  );
-
-  readonly sideRail = computed(
-    () => this.progressRail.overflows() && this.railOrientation() === 'vertical',
-  );
+  readonly progressRail = new ScrollProgressRail({
+    scroller: this.scroller,
+    rail: () => this.railRef()?.nativeElement,
+    contentBottom: this.listBottom.measure,
+    layoutChanges: this.listBottom.layoutChanges,
+  });
 
   readonly onRowsScroll = (event: Event): void => {
     this.scrolling.onScroll(event);

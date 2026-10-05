@@ -13,6 +13,7 @@ import {
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import { ScrollProgressRail } from '../../scroll/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -114,6 +115,13 @@ export class ReaderViewComponent {
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
+  private readonly railRef = viewChild(ProgressRailComponent, { read: ElementRef });
+  protected readonly progressRail = new ScrollProgressRail({
+    scroller: this.scroller,
+    rail: () => this.railRef()?.nativeElement,
+    contentBottom: () => this.scope.contentBottom(),
+    layoutChanges: () => this.scope.contentBottom(),
+  });
 
   protected readonly formatDuration = formatDuration;
 
@@ -183,7 +191,6 @@ export class ReaderViewComponent {
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
-      this.scope.reset();
       this.source.open(entry);
     });
 
@@ -254,7 +261,7 @@ export class ReaderViewComponent {
   }
 
   protected onScroll(scrollTop: number): void {
-    this.scope.trackScroll(scrollTop);
+    this.progressRail.paint();
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists

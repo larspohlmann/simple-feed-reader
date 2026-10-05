@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type ProgressRailOrientation = 'vertical' | 'horizontal';
 
-/** The length cue that stands in for a scrollbar (#238): a track whose fill is the
- *  host's `--rail-fill` percentage. The caller positions the host. */
+/** A scroller's length cue: a track along the right or bottom edge of the nearest
+ *  positioned ancestor, filled to the host's `--rail-fill` percentage. */
 @Component({
   selector: 'app-progress-rail',
   changeDetection: ChangeDetectionStrategy.OnPush,
