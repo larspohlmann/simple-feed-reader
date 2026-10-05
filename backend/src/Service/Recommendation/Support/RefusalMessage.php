@@ -2,10 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Jev\Support;
+namespace App\Service\Recommendation\Support;
 
 use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Support\ProviderErrorReason;
 
 final class RefusalMessage
 {
