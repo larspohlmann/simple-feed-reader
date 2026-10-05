@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.1.2] - 2026-10-05
+
+## What's Changed
+* feat(#1384): saved-search terms shape the For You profile by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1385
+* fix(#1386): a provider's error status carries the provider's reason by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1389
+* fix(#1387): a rejected request fails the run at once by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1390
+* fix(#1388): a model that refuses suppressed reasoning is retried without it, and remembered by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1391
+* feat(#1392): the list shows the progress rail on a phone by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1393
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.1.1...v1.1.2
+
 ## [v1.1.1] - 2026-10-04
 
 ## What's Changed
