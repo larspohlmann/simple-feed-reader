@@ -8,6 +8,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
   template: `<app-segmented-choice
     [options]="['en', 'de']"
     [selected]="selected()"
+    [disabledOptions]="disabled()"
     ariaLabelKey="lang.label"
     labelPrefix="lang."
     (pick)="picked = $event"
@@ -15,6 +16,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 })
 class HostComponent {
   readonly selected = signal<'en' | 'de'>('en');
+  readonly disabled = signal<readonly ('en' | 'de')[]>([]);
   picked: string | null = null;
 }
 
@@ -61,5 +63,17 @@ describe('SegmentedChoiceComponent', () => {
     const fixture = create();
     buttons(fixture)[1].click();
     expect(fixture.componentInstance.picked).toBe('de');
+  });
+
+  it('disables only the options it is told to, and a disabled one emits nothing', () => {
+    const fixture = create();
+    expect(buttons(fixture).map((button) => button.disabled)).toEqual([false, false]);
+
+    fixture.componentInstance.disabled.set(['de']);
+    fixture.detectChanges();
+    buttons(fixture)[1].click();
+
+    expect(buttons(fixture).map((button) => button.disabled)).toEqual([false, true]);
+    expect(fixture.componentInstance.picked).toBeNull();
   });
 });

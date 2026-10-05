@@ -4,6 +4,7 @@
       type="button"
       [class.on]="selected() === option"
       [attr.aria-pressed]="selected() === option"
+      [disabled]="disabledOptions().includes(option)"
       (click)="pick.emit(option)"
     >
       {{ labelPrefix() + option | transloco }}
