@@ -34,6 +34,7 @@ final readonly class AiSettingsJson
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
             'suppressReasoning' => $settings->suppressesReasoning(),
+            'suppressionRefused' => $settings->refusesSuppressedReasoning(),
             'batchConcurrency' => $settings->getRunTuning()->batchConcurrency(),
             'slowModel' => $settings->isSlowModel(),
             'maxBatchSize' => $settings->getRunTuning()->maxBatchSize(),

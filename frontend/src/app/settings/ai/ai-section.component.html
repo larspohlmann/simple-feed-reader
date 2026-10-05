@@ -86,6 +86,11 @@
                                 [label]="'settings.ai.configs.reasoning' | transloco"
                               />
                             </span>
+                            @if (config.suppressReasoning && config.suppressionRefused) {
+                              <span class="hint reasoning-refused">{{
+                                'settings.ai.configs.reasoningRefused' | transloco
+                              }}</span>
+                            }
                           }
                           @if (offersTuning(config, 'slowModel')) {
                             <span class="reasoning-toggle-row">

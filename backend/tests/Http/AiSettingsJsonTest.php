@@ -103,6 +103,17 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['suppressReasoning']);
     }
 
+    public function testTheConfigurationShapeSaysWhenTheModelRefusedSuppressedReasoning(): void
+    {
+        $settings = $this->settings('gpt-4o');
+
+        self::assertFalse($this->json()->configuration($settings, null)['suppressionRefused']);
+
+        $settings->recordSuppressionRefused();
+
+        self::assertTrue($this->json()->configuration($settings, null)['suppressionRefused']);
+    }
+
     public function testTheConfigurationShapeCarriesTheBatchConcurrency(): void
     {
         $settings = $this->settings('gpt-4o');

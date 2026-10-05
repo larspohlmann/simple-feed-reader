@@ -22,6 +22,7 @@ export interface AiConfig {
   readonly ready: boolean;
   readonly active: boolean;
   readonly suppressReasoning: boolean;
+  readonly suppressionRefused: boolean;
   readonly batchConcurrency: number;
   readonly slowModel: boolean;
   readonly maxBatchSize: number | null;
