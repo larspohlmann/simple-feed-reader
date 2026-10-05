@@ -14,6 +14,8 @@ enum Reasoning
 
     public static function preferredBy(AiProviderSettings $connection): self
     {
-        return $connection->suppressesReasoning() ? self::Suppressed : self::Allowed;
+        return $connection->suppressesReasoning() && !$connection->refusesSuppressedReasoning()
+            ? self::Suppressed
+            : self::Allowed;
     }
 }

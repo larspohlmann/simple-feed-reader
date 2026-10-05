@@ -25,10 +25,21 @@ final class ReasoningTest extends TestCase
         self::assertSame(Reasoning::Allowed, Reasoning::preferredBy($connection));
     }
 
+    public function testAModelThatRefusedSuppressionIsAllowedToReason(): void
+    {
+        $connection = $this->connection();
+        $connection->recordSuppressionRefused();
+
+        self::assertSame(Reasoning::Allowed, Reasoning::preferredBy($connection));
+    }
+
     private function connection(): AiProviderSettings
     {
-        return AiProviderSettingsFactory::build(
+        $connection = AiProviderSettingsFactory::build(
             new User('reasoning@example.test', new \DateTimeImmutable('2026-08-16 09:00:00')),
         );
+        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-08-16 09:00:00'), 32768);
+
+        return $connection;
     }
 }
