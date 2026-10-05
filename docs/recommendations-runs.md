@@ -113,7 +113,8 @@ OpenRouter) one yes/no question per candidate: would this reader, described by t
 message that says so when there is none (an account with neither reading history nor a saved search). The LLM engine
 scores without a profile in that case. The probability is the score (× 1000); there are no reasons and no consolidation,
 so the list is the best-scored picks once every batch is in. It packs by its own 32k-token request budget, reads only
-the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. A run
+the batch-concurrency setting, and records each call's request id, answering model and cost in the run log. When a provider answers with an error
+status, the message in the run and its log carries the provider's own reason if it gave one. A run
 records the engine it was packed for; a tick that finds the active connection on the other engine fails the run with an
 error that says so (switch back to resume it). The model catalog offers `jev-latest` wherever `{base}/systemone`
 answers.

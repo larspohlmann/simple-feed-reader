@@ -336,3 +336,9 @@ user or password, no query or fragment. `OpenAiCompatibleCatalog` and `OpenAiCom
 response size cap, no redirects (a followed redirect would hand the API key to another host) and no transparent
 compression, and `RateLimitGuard` covers the AI settings endpoints that call the provider. None of these is an SSRF
 guard. Do not copy this pattern for any other outbound call.
+
+When a provider answers with an error status (other than 401, 403 and the retryable 429, 502, 503 and 504), the run's
+message carries the provider's reason. The client reads at most 16 KiB of the error body, and a larger body ends the call
+with the bare status sentence. It shows only the JSON `detail` or `error.message` field, never the raw body, because
+OpenRouter's body carries the account's `user_id`. The reason is clipped to 500 characters, and the connection's API key
+is replaced by `[redacted]` wherever it appears in it.
