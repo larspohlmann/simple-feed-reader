@@ -29,24 +29,29 @@ final readonly class ProfileRunFailure
         $this->entityManager->flush();
     }
 
-    /** No strike and no retry: the same request would be rejected again. */
     public function failRejected(ProfileTick $tick, string $rejection): void
     {
-        if ($this->refreshedAfterLosingTheLock($tick->profileRun)) {
+        if ($this->refreshIfTheLockWasLost($tick->profileRun)) {
             return;
         }
 
-        $this->fail($tick->profileRun, $this->providerFailed($tick, $rejection));
+        $this->fail(
+            $tick->profileRun,
+            RecommendationTransportFailureRecorder::providerFailed($tick->connection->getBaseUrl(), $rejection),
+        );
     }
 
     /** One strike; the run fails at MAX_TRANSPORT_FAILURES. */
     public function recordTransportFailure(ProfileTick $tick, string $failureDetail): void
     {
-        if ($this->refreshedAfterLosingTheLock($tick->profileRun)) {
+        if ($this->refreshIfTheLockWasLost($tick->profileRun)) {
             return;
         }
 
-        $this->strike($tick->profileRun, $this->providerFailed($tick, $failureDetail));
+        $this->strike(
+            $tick->profileRun,
+            RecommendationTransportFailureRecorder::providerFailed($tick->connection->getBaseUrl(), $failureDetail),
+        );
     }
 
     /**
@@ -77,7 +82,7 @@ final readonly class ProfileRunFailure
     }
 
     /** A tick that lost its lock records nothing: the run is whatever the lock's new holder saved. */
-    private function refreshedAfterLosingTheLock(ProfileRun $profileRun): bool
+    private function refreshIfTheLockWasLost(ProfileRun $profileRun): bool
     {
         if (!$this->keepalive->hasLostTheLock()) {
             return false;
@@ -86,14 +91,5 @@ final readonly class ProfileRunFailure
         $this->entityManager->refresh($profileRun);
 
         return true;
-    }
-
-    private function providerFailed(ProfileTick $tick, string $failureDetail): string
-    {
-        return \sprintf(
-            RecommendationTransportFailureRecorder::PROVIDER_FAILED,
-            $tick->connection->getBaseUrl(),
-            $failureDetail,
-        );
     }
 }

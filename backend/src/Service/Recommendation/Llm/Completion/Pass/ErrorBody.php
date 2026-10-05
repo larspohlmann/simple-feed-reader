@@ -28,10 +28,7 @@ final class ErrorBody
         return null !== $this->status;
     }
 
-    /**
-     * @throws ProviderRejectedRequestException|ProviderUnreachableException once the body outgrows the bound, so no
-     *     more of it is read
-     */
+    /** @throws ProviderRejectedRequestException|ProviderUnreachableException once the body outgrows the bound */
     public function collect(string $content): void
     {
         if (\strlen($this->collected) + \strlen($content) > self::MAXIMUM_BYTES) {
