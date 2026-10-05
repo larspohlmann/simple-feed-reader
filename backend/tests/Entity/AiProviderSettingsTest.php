@@ -7,6 +7,7 @@ namespace App\Tests\Entity;
 use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class AiProviderSettingsTest extends TestCase
@@ -26,6 +27,21 @@ final class AiProviderSettingsTest extends TestCase
             'cdef',
             new \DateTimeImmutable('2026-08-06 09:30:00'),
         );
+    }
+
+    private function connectionOn(string $model): AiProviderSettings
+    {
+        $connection = $this->settings();
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-06 08:00:00'), 32768);
+
+        return $connection;
+    }
+
+    /** @return iterable<string, array{bool}> */
+    public static function bothSettings(): iterable
+    {
+        yield 'turned on' => [true];
+        yield 'turned off' => [false];
     }
 
     public function testANewRowCarriesTheNameItWasGiven(): void
@@ -225,5 +241,79 @@ final class AiProviderSettingsTest extends TestCase
         );
 
         self::assertSame(25, $settings->getRunTuning()->maxBatchSize());
+    }
+
+    public function testAFreshConnectionRefusesNothing(): void
+    {
+        self::assertFalse($this->connectionOn('model-a')->refusesSuppressedReasoning());
+    }
+
+    public function testAConnectionWithoutAModelRefusesNothing(): void
+    {
+        self::assertFalse($this->settings()->refusesSuppressedReasoning());
+    }
+
+    public function testARecordedRefusalHoldsForTheModelThatRefused(): void
+    {
+        $connection = $this->connectionOn('model-a');
+
+        $connection->recordSuppressionRefused();
+
+        self::assertTrue($connection->refusesSuppressedReasoning());
+    }
+
+    public function testAnotherModelOnTheConnectionIsNotTheOneThatRefused(): void
+    {
+        $connection = $this->connectionOn('model-a');
+        $connection->recordSuppressionRefused();
+
+        $connection->chooseModel('model-b', new \DateTimeImmutable('2026-10-06 09:00:00'), 32768);
+
+        self::assertFalse($connection->refusesSuppressedReasoning());
+    }
+
+    public function testSwitchingBackToTheModelThatRefusedRemembersIt(): void
+    {
+        $connection = $this->connectionOn('model-a');
+        $connection->recordSuppressionRefused();
+        $connection->chooseModel('model-b', new \DateTimeImmutable('2026-10-06 09:00:00'), 32768);
+
+        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-10-06 09:01:00'), 32768);
+
+        self::assertTrue($connection->refusesSuppressedReasoning());
+    }
+
+    #[DataProvider('bothSettings')]
+    public function testChangingTheSettingForgetsTheRefusal(bool $suppressReasoning): void
+    {
+        $connection = $this->connectionOn('model-a');
+        $connection->recordSuppressionRefused();
+
+        $connection->setSuppressReasoning($suppressReasoning);
+
+        self::assertFalse($connection->refusesSuppressedReasoning());
+    }
+
+    public function testAConnectionWithoutAModelCannotRecordARefusal(): void
+    {
+        $this->expectException(\LogicException::class);
+
+        $this->settings()->recordSuppressionRefused();
+    }
+
+    public function testReplacingTheConnectionForgetsTheRefusal(): void
+    {
+        $connection = $this->connectionOn('model-a');
+        $connection->recordSuppressionRefused();
+
+        $connection->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-10-06 09:00:00'),
+        );
+        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-10-06 09:01:00'), 32768);
+
+        self::assertFalse($connection->refusesSuppressedReasoning());
     }
 }

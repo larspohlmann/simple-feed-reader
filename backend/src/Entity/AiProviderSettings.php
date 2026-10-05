@@ -78,6 +78,9 @@ final class AiProviderSettings
     #[ORM\Column(options: ['default' => 1])]
     private bool $suppressReasoning = true;
 
+    #[ORM\Column(name: 'suppression_refused_by_model', length: 255, nullable: true)]
+    private ?string $suppressionRefusedByModel = null;
+
     #[ORM\Embedded(class: RunTuning::class, columnPrefix: false)]
     private RunTuning $runTuning;
 
@@ -165,6 +168,18 @@ final class AiProviderSettings
     public function setSuppressReasoning(bool $suppressReasoning): void
     {
         $this->suppressReasoning = $suppressReasoning;
+        $this->suppressionRefusedByModel = null;
+    }
+
+    public function recordSuppressionRefused(): void
+    {
+        $this->suppressionRefusedByModel = $this->model
+            ?? throw new \LogicException('A connection without a model has sent no request to refuse.');
+    }
+
+    public function refusesSuppressedReasoning(): bool
+    {
+        return null !== $this->model && $this->model === $this->suppressionRefusedByModel;
     }
 
     public function getRunTuning(): RunTuning
@@ -213,6 +228,7 @@ final class AiProviderSettings
         $this->applySealedKey($sealed);
         $this->model = null;
         $this->modelContextWindow = null;
+        $this->suppressionRefusedByModel = null;
         $this->verifiedAt = $verifiedAt;
     }
 
