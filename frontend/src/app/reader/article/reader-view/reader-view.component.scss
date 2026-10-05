@@ -103,9 +103,7 @@
   /* Same reason as the hairline's: a reading-focus block with opacity < 1
      paints as if it were at z-index 0 and would cover this. */
   z-index: 2;
-  width: var(--space-1);
   margin-left: auto; /* to the right edge, whatever the pane's width */
-  background: var(--border);
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      one screenful, not a spacing value: the rail spans the viewport. */
@@ -114,13 +112,6 @@
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      cancels the height above, so the rail adds nothing to the flow it leads. */
   margin-bottom: -100dvh;
-}
-
-/* Fills downward, and untransitioned for the same reason the hairline is. */
-.progress-rail i {
-  display: block;
-  width: 100%;
-  background: var(--accent);
 }
 
 /* Overscroll-to-return affordance: anchored just below the article's end, so a

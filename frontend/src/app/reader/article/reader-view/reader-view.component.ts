@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -53,6 +54,7 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
 @Component({
   selector: 'app-reader-view',
   imports: [
+    ProgressRailComponent,
     ProxiedImageDirective,
     IconComponent,
     ListActionDirective,

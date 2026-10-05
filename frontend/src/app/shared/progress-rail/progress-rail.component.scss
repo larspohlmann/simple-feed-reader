@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  width: var(--space-1);
+  background: var(--border);
+}
+
+/* Untransitioned: the fill reports the scroll position and has to track it. */
+i {
+  display: block;
+  width: 100%;
+  height: calc(var(--rail-fill, 0) * 1%);
+  background: var(--accent);
+}
