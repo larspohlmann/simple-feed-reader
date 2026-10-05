@@ -29,24 +29,24 @@ final readonly class ProfileRunFailure
         $this->entityManager->flush();
     }
 
-    /** One strike; the run fails at MAX_TRANSPORT_FAILURES. A tick that lost its lock records nothing. */
-    public function recordTransportFailure(ProfileTick $tick, string $failureDetail): void
+    /** No strike and no retry: the same request would be rejected again. */
+    public function failRejected(ProfileTick $tick, string $rejection): void
     {
-        $profileRun = $tick->profileRun;
-        if ($this->keepalive->hasLostTheLock()) {
-            $this->entityManager->refresh($profileRun);
-
+        if ($this->refreshedAfterLosingTheLock($tick->profileRun)) {
             return;
         }
 
-        $this->strike(
-            $profileRun,
-            \sprintf(
-                RecommendationTransportFailureRecorder::PROVIDER_FAILED,
-                $tick->connection->getBaseUrl(),
-                $failureDetail,
-            ),
-        );
+        $this->fail($tick->profileRun, $this->providerFailed($tick, $rejection));
+    }
+
+    /** One strike; the run fails at MAX_TRANSPORT_FAILURES. */
+    public function recordTransportFailure(ProfileTick $tick, string $failureDetail): void
+    {
+        if ($this->refreshedAfterLosingTheLock($tick->profileRun)) {
+            return;
+        }
+
+        $this->strike($tick->profileRun, $this->providerFailed($tick, $failureDetail));
     }
 
     /**
@@ -74,5 +74,26 @@ final readonly class ProfileRunFailure
             $profileRun->fail($failureMessage, $this->clock->now());
         }
         $this->entityManager->flush();
+    }
+
+    /** A tick that lost its lock records nothing: the run is whatever the lock's new holder saved. */
+    private function refreshedAfterLosingTheLock(ProfileRun $profileRun): bool
+    {
+        if (!$this->keepalive->hasLostTheLock()) {
+            return false;
+        }
+
+        $this->entityManager->refresh($profileRun);
+
+        return true;
+    }
+
+    private function providerFailed(ProfileTick $tick, string $failureDetail): string
+    {
+        return \sprintf(
+            RecommendationTransportFailureRecorder::PROVIDER_FAILED,
+            $tick->connection->getBaseUrl(),
+            $failureDetail,
+        );
     }
 }

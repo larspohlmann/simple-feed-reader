@@ -16,6 +16,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\RetryPlanModel;
@@ -275,6 +276,70 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(RunStatus::Failed, $profileRun->getStatus());
         self::assertSame('The AI provider at https://api.example.test/v1 failed: gone', $profileRun->getError());
         self::assertSame('Earlier profile.', $this->storedProfile()->getText());
+    }
+
+    public function testARejectedRequestFailsTheRunAtOnceKeepingTheProfile(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $this->fixtures->storeProfile($this->owner, 'Earlier profile.');
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(new ProviderRejectedRequestException(
+            400,
+            'That provider refused the request (status 400): Unknown parameter.',
+        ));
+
+        $this->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 400): Unknown parameter.',
+            $this->saved($profileRun)->getError(),
+        );
+        self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
+        self::assertCount(1, $this->chat()->calls());
+        self::assertSame('Earlier profile.', $this->storedProfile()->getText());
+    }
+
+    public function testARejectedCallIsSettledInTheRunLogWithTheProvidersReason(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+
+        $this->advance($profileRun, TickDriver::Poll);
+
+        $rows = $this->logs()->listForProfileRun($this->owner, $profileRun->requireId());
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
+        self::assertSame(
+            ['That provider refused the request (status 400): No.'],
+            array_column($rows, 'errorDetail'),
+        );
+    }
+
+    public function testARejectionAfterTheLockWasLostRecordsNothing(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        /** @var TickLockKeepalive $keepalive */
+        $keepalive = self::getContainer()->get(TickLockKeepalive::class);
+        $lock = new RefreshCountingLock();
+        $keepalive->hold($lock, 'profile-run-tick-test');
+        $lock->conflictOnNextRefresh();
+        $this->chat()->duringNextCall(static function () use ($keepalive): void {
+            $keepalive->beat();
+        });
+        $this->chat()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+
+        $this->advance($profileRun, TickDriver::Poll);
+
+        self::assertTrue($keepalive->hasLostTheLock());
+        self::assertSame(RunStatus::Running, $this->saved($profileRun)->getStatus());
+        self::assertNull($this->saved($profileRun)->getError());
     }
 
     public function testADeferringRateLimitIsAStrikeAndTheThirdFailsTheRun(): void

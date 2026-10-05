@@ -10,6 +10,7 @@ use App\Enum\RunStatus;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
@@ -59,6 +60,8 @@ final readonly class ProfileRunTick
             $this->advanceWithin($tick);
         } catch (RecommendationTickLockLostException) {
             $this->entityManager->refresh($tick->profileRun);
+        } catch (ProviderRejectedRequestException $exception) {
+            $this->failure->failRejected($tick, $exception->getMessage());
         } catch (
             ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException
             | ProviderRateLimitedException $exception
