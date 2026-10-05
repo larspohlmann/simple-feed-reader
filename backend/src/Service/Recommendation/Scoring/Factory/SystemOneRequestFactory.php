@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Scoring\Factory;
 
-use App\Entity\AiProviderSettings;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
+use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Scoring\Support\QuestionId;
 use App\Service\Recommendation\Scoring\Support\ScoringArticle;
@@ -16,18 +16,22 @@ final readonly class SystemOneRequestFactory
     public const string QUESTION = 'Judging by the reader\'s profile, favorites and guidance in `state`, would this '
         . 'reader want to read `article`?';
 
-    /**
-     * @param array<string, mixed>   $state
-     * @param list<ArticleLineModel> $articles
-     */
-    public function create(AiProviderSettings $connection, array $state, array $articles): SystemOneRequestModel
+    public function __construct(private ScoringStateFactory $stateFactory)
+    {
+    }
+
+    public function create(ScoringRequestModel $request): SystemOneRequestModel
     {
         $questions = [];
-        foreach ($articles as $article) {
+        foreach ($request->articles as $article) {
             $questions[QuestionId::of($article->entryId)] = $this->question($article);
         }
 
-        return new SystemOneRequestModel($connection->getModel() ?? '', $state, $questions);
+        return new SystemOneRequestModel(
+            $request->model,
+            $this->stateFactory->create($request->reader, $request->budget->stateTokens),
+            $questions,
+        );
     }
 
     /** @return array{type: string, instructions: array{article: array<string, string>, question: string}} */

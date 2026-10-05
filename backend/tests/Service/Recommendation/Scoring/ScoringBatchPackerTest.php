@@ -5,59 +5,32 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Scoring;
 
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
 use App\Service\Recommendation\Scoring\ScoringBatchPacker;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
-use App\Service\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
 final class ScoringBatchPackerTest extends TestCase
 {
-    /** Short Latin articles fit the token budget by far: the question cap closes each request. */
-    public function testShortArticlesFillRequestsUpToTheQuestionCapInPoolOrder(): void
-    {
-        $candidates = $this->candidates(250, 'Short title', 'Short description.');
-
-        $batches = $this->packer()->pack($candidates);
-
-        self::assertSame([100, 100, 50], array_map(\count(...), $batches));
-        self::assertSame(range(1, 250), array_merge(...$batches));
-    }
-
     /**
-     * Three-byte characters in every field, 731 tokens a question: 20,000 tokens (32k less 2k framing and 10k state)
-     * hold 27 of them, so the token budget closes each request before the question cap.
+     * 14 tokens of items, at most 3 a request: 1 and 2 fill it to the token, 3 to 5 stop at the cap with tokens to
+     * spare, and 7, over the budget by itself, still gets a request of its own.
      */
-    public function testHeavyArticlesFillRequestsUpToTheTokenBudget(): void
+    public function testARequestClosesAtTheItemCapOrBeforeTheArticleThatWouldExceedItsTokens(): void
     {
-        $candidates = $this->candidates(120, str_repeat('漢', 300), str_repeat('漢', 600));
-
-        $batches = $this->packer()->pack($candidates);
-
-        self::assertSame([27, 27, 27, 27, 12], array_map(\count(...), $batches));
-        self::assertSame(range(1, 120), array_merge(...$batches));
-        $factory = new SystemOneRequestFactory();
-        foreach ($batches as $batch) {
-            $tokens = 0;
-            foreach ($batch as $entryId) {
-                $tokens += TokenEstimate::of(CompactJson::encode($factory->question($candidates[$entryId - 1])));
-            }
-            self::assertLessThanOrEqual(20_000, $tokens);
-        }
-    }
-
-    /** @return list<ArticleLineModel> entry ids 1…$count */
-    private function candidates(int $count, string $title, string $description): array
-    {
-        return array_map(
+        $tokens = [1 => 5, 2 => 9, 3 => 3, 4 => 8, 5 => 1, 6 => 2, 7 => 20];
+        $candidates = array_map(
             static fn (int $entryId): ArticleLineModel
-                => new ArticleLineModel($entryId, $title, 'Feed', '2026-10-01', $description),
-            range(1, $count),
+                => new ArticleLineModel($entryId, 'Title', 'Feed', '2026-10-01', null),
+            array_keys($tokens),
         );
-    }
 
-    private function packer(): ScoringBatchPacker
-    {
-        return new ScoringBatchPacker(new SystemOneRequestFactory());
+        $batches = (new ScoringBatchPacker())->pack(
+            $candidates,
+            new ScoringBudgetModel(20, 3, 4, 2),
+            static fn (ArticleLineModel $candidate): int => $tokens[$candidate->entryId]
+                ?? throw new \LogicException('Every candidate has its tokens.'),
+        );
+
+        self::assertSame([[1, 2], [3, 4, 5], [6], [7]], $batches);
     }
 }

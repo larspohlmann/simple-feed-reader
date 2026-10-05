@@ -16,25 +16,24 @@ use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\BatchCall;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
-use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
+use App\Service\Recommendation\Scoring\Factory\ScoringBudgetFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
-use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringWave;
-use App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
 
 /**
- * One System One request per batch, each a run-log row.
+ * One scoring request per batch, each a run-log row.
  *
- * @implements BatchWaveEngineInterface<ScoringWave, SystemOneRequestModel, ScoringOutcomeModel>
+ * @implements BatchWaveEngineInterface<ScoringWave, ScoringRequestModel, ScoringOutcomeModel>
  */
 final readonly class ScoringBatchWave implements BatchWaveEngineInterface
 {
     public function __construct(
         private RateLimitedCalls $rateLimitedCalls,
-        private SystemOneClientInterface $client,
+        private ScoringProtocolResolver $protocols,
+        private ScoringBudgetFactory $budgetFactory,
         private AiProviderConfigurator $configurator,
         private RecommendationCallRecorder $callRecorder,
-        private SystemOneRequestFactory $requestFactory,
         private ScoreParser $parser,
     ) {
     }
@@ -42,25 +41,31 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     /**
      * @param ScoringWave $wave
      *
-     * @return BatchCall<SystemOneRequestModel>
+     * @return BatchCall<ScoringRequestModel>
      */
     public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
         $tick = $wave->tick();
+        $protocol = $tick->requireScoringProtocol();
         $waveBatch = $wave->batches()[$position];
-        $request = $this->requestFactory->create($tick->connection, $wave->state, $waveBatch->linesInSnapshotOrder());
+        $request = new ScoringRequestModel(
+            $tick->connection->getModel() ?? '',
+            $wave->reader,
+            $this->budgetFactory->create($protocol),
+            $waveBatch->linesInSnapshotOrder(),
+        );
         $recordedCall = $this->callRecorder->begin(
             $tick->run,
             CallSlotModel::batch($waveBatch->index + 1),
-            $request->toRenderedRequest(),
+            $this->protocols->protocolOf($protocol)->renderedRequest($request),
         );
 
         return new BatchCall($request, $recordedCall);
     }
 
     /**
-     * @param ScoringWave                                          $wave
-     * @param non-empty-list<BatchCall<SystemOneRequestModel>> $calls
+     * @param ScoringWave                                    $wave
+     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
      *
      * @return RateLimitedResultModel<ScoringOutcomeModel>
      */
@@ -68,19 +73,20 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     {
         $tick = $wave->tick();
         $credentials = $this->configurator->credentials($tick->connection);
+        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
 
         return $this->rateLimitedCalls->send(
             $calls,
-            fn (array $subset): array => self::receiveAnswers(
+            static fn (array $subset): array => self::receiveAnswers(
                 $subset,
-                $this->client->evaluateMany($credentials, self::requestsOf($subset)),
+                $protocol->scoreMany($credentials, self::requestsOf($subset)),
             ),
             $tick->retryPlan(),
         );
     }
 
     /**
-     * @param ScoringWave               $wave
+     * @param ScoringWave         $wave
      * @param ScoringOutcomeModel $outcome
      */
     public function judge(
@@ -101,7 +107,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
      * Books each paid answer the moment it arrives, so a sibling's failure or a deferral still bills what it cost. Only
      * a limited request is re-sent, so no answer is booked twice.
      *
-     * @param non-empty-list<BatchCall<SystemOneRequestModel>> $calls
+     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
      * @param list<ScoringOutcomeModel>                      $outcomes aligned to $calls
      *
      * @return list<ScoringOutcomeModel>
@@ -120,13 +126,13 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     }
 
     /**
-     * @param non-empty-list<BatchCall<SystemOneRequestModel>> $calls
+     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
      *
-     * @return non-empty-list<SystemOneRequestModel>
+     * @return non-empty-list<ScoringRequestModel>
      */
     private static function requestsOf(array $calls): array
     {
-        return array_map(static fn (BatchCall $call): SystemOneRequestModel => $call->request, $calls);
+        return array_map(static fn (BatchCall $call): ScoringRequestModel => $call->request, $calls);
     }
 
     /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */

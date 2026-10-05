@@ -44,4 +44,10 @@ final readonly class TickContext
     {
         return $this->connection->getScoringProtocol();
     }
+
+    public function requireScoringProtocol(): ScoringProtocol
+    {
+        return $this->scoringProtocol()
+            ?? throw new \LogicException('This tick\'s connection speaks no scoring protocol.');
+    }
 }

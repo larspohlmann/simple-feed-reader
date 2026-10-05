@@ -16,7 +16,8 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
-use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
+use App\Service\Recommendation\Scoring\Factory\ScoringBudgetFactory;
+use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringWave;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -27,9 +28,9 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
         . 'build one from yet. Read, keep or favourite a few articles, then start a new run.';
 
     public function __construct(
-        private ScoringBatchPacker $packer,
+        private ScoringProtocolResolver $protocols,
+        private ScoringBudgetFactory $budgetFactory,
         private BatchWavePhase $batchWavePhase,
-        private ScoringStateFactory $stateFactory,
         private ScoringBatchWave $wave,
         private BatchWaveRounds $rounds,
         private RecommendationWinnerRanker $ranker,
@@ -41,7 +42,9 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
 
     public function packBatches(array $candidates, TickContext $tick): array
     {
-        return $this->packer->pack($candidates);
+        $protocol = $tick->requireScoringProtocol();
+
+        return $this->protocols->protocolOf($protocol)->pack($this->budgetFactory->create($protocol), $candidates);
     }
 
     public function advance(TickContext $tick): RecommendationRunReportModel
@@ -67,14 +70,16 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
     private function waveOf(TickContext $tick, array $batches): ScoringWave
     {
         $profile = $tick->run->getProfileText()
-            ?? throw new \LogicException('A Jev wave runs only once the run holds a profile.');
+            ?? throw new \LogicException('A scoring wave runs only once the run holds a profile.');
 
-        $state = $this->stateFactory->create(
-            $profile,
-            $tick->settings->guidancePrompt,
-            $this->historyLoader->favorites($tick->userId(), $tick->settings),
+        return new ScoringWave(
+            $tick,
+            new ScoringReaderModel(
+                $profile,
+                $tick->settings->guidancePrompt,
+                $this->historyLoader->favorites($tick->userId(), $tick->settings),
+            ),
+            $batches,
         );
-
-        return new ScoringWave($tick, $state, $batches);
     }
 }

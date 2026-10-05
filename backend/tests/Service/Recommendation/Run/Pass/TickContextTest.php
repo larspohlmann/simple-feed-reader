@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\Pass\TickContext;
@@ -38,6 +40,28 @@ final class TickContextTest extends TestCase
 
         self::assertSame($connection, $route->connection);
         self::assertEquals(RetryPlanModel::blocking(), $route->retryPlan);
+    }
+
+    public function testAScoringConnectionsTickNamesItsProtocol(): void
+    {
+        $connection = $this->connection();
+        $connection->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable(self::AT),
+        );
+
+        self::assertSame(
+            ScoringProtocol::SystemOne,
+            $this->tick($connection, TickDriver::Worker)->requireScoringProtocol(),
+        );
+    }
+
+    public function testAnLlmConnectionsTickHasNoProtocolToRequire(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('This tick\'s connection speaks no scoring protocol.');
+
+        $this->tick($this->connection(), TickDriver::Worker)->requireScoringProtocol();
     }
 
     private function tick(AiProviderSettings $connection, TickDriver $driver): TickContext

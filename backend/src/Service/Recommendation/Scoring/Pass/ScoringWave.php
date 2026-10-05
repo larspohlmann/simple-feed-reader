@@ -7,16 +7,14 @@ namespace App\Service\Recommendation\Scoring\Pass;
 use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 
 final readonly class ScoringWave implements BatchWaveInterface
 {
-    /**
-     * @param array<string, mixed> $state   the reader as System One sees them: profile, guidance and favorites
-     * @param list<WaveBatchModel> $batches the plan's next batches, in plan order
-     */
+    /** @param list<WaveBatchModel> $batches the plan's next batches, in plan order */
     public function __construct(
         private TickContext $tick,
-        public array $state,
+        public ScoringReaderModel $reader,
         private array $batches,
     ) {
     }
