@@ -133,10 +133,8 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
   z-index: 2;
 }
 
-@media (width < bp.$bp-lg) {
-  .rows.has-rail {
-    scrollbar-width: none;
-  }
+.rows.has-rail {
+  scrollbar-width: none;
 }
 
 /* A reload keeps the outgoing list on screen (#254); dimming it is the only

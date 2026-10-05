@@ -319,10 +319,12 @@ export class EntryListComponent implements OnDestroy {
     scroller: this.scroller,
     rail: () => this.railRef()?.nativeElement,
     entries: this.entries,
-    shownEntries: this.content.visibleEntryCount,
+    rendered: this.content.rendered,
+    shownEntries: this.content.renderedVisibleCount,
     hasMore: this.hasMore,
     total: this.listTotal,
     loading: this.loading,
+    isWide: this.screen.isWide,
   });
 
   readonly showRail = computed(() => !this.screen.isWide() && this.progressRail.overflows());

@@ -109,6 +109,14 @@ export class ListContent {
         ).length,
   );
 
+  /** Rows in the DOM the user can still see: `visibleEntryCount` over `rendered()`. */
+  readonly renderedVisibleCount = computed(
+    () =>
+      this.rendered().filter(
+        (entry) => !this.options.leavingIds().has(entry.id) && !this.hiddenAboveIds().has(entry.id),
+      ).length,
+  );
+
   constructor(private readonly options: ListContentOptions) {
     inject(DestroyRef).onDestroy(() => this.cancelReveal());
   }

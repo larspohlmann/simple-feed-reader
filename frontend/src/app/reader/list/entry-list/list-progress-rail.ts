@@ -7,11 +7,14 @@ export interface ListProgressRailOptions {
   readonly scroller: () => HTMLElement | undefined;
   readonly rail: () => HTMLElement | undefined;
   readonly entries: Signal<EntryDto[]>;
+  /** The entries in the DOM, which trail `entries` while an appended page is revealed. */
+  readonly rendered: Signal<EntryDto[]>;
   readonly shownEntries: Signal<number>;
   readonly hasMore: Signal<boolean>;
   /** The list's entry count from its header, or null when it has none. */
   readonly total: Signal<number | null>;
   readonly loading: Signal<boolean>;
+  readonly isWide: Signal<boolean>;
 }
 
 /** The list's length cue on a phone (#1392). Painted straight onto the rail
@@ -22,15 +25,18 @@ export class ListProgressRail {
   readonly overflows = signal(false);
   private highestTotal = 0;
 
-  private readonly _resetOnLoad = effect(() => {
-    if (this.options.loading()) this.highestTotal = 0;
+  private readonly _resetOnLoadEdge = effect(() => {
+    this.options.loading();
+    this.highestTotal = 0;
   });
 
   private readonly _paintAfterRender = effect(() => {
     this.options.entries();
+    this.options.rendered();
     this.options.shownEntries();
     this.options.hasMore();
     this.options.total();
+    this.options.isWide();
     this.overflows();
     afterNextRender(() => this.paint(), { injector: this.injector });
   });
@@ -39,7 +45,7 @@ export class ListProgressRail {
 
   readonly paint = (): void => {
     const scroller = this.options.scroller();
-    if (!scroller) return;
+    if (!scroller || this.options.isWide()) return;
     const bottom = this.estimatedBottom(scroller);
     const overflows = bottom !== null && articleOverflowsViewport(bottom, scroller.clientHeight);
     this.overflows.set(overflows);
@@ -57,10 +63,20 @@ export class ListProgressRail {
       rowsTop: slots[0].getBoundingClientRect().top - origin,
       rowsBottom: slots[slots.length - 1].getBoundingClientRect().bottom - origin,
       shownEntries: this.options.shownEntries(),
-      loadedEntries: this.options.entries().length,
-      totalEntries: this.knownTotal(),
-      hasMore: this.options.hasMore(),
+      loadedEntries: this.options.rendered().length,
+      totalEntries: this.listTotal(),
+      hasMore: this.options.hasMore() || this.revealing(),
     });
+  }
+
+  private revealing(): boolean {
+    return this.options.rendered().length < this.options.entries().length;
+  }
+
+  /** With every page loaded the list's length is known, whatever the header says. */
+  private listTotal(): number | null {
+    const knownTotal = this.knownTotal();
+    return this.options.hasMore() ? knownTotal : this.options.entries().length;
   }
 
   private knownTotal(): number | null {
