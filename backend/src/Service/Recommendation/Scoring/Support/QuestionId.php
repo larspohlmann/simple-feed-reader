@@ -14,6 +14,13 @@ final class QuestionId
         return self::PREFIX . $entryId;
     }
 
+    public static function entryIdOf(string $questionId): ?int
+    {
+        $entryId = (int) substr($questionId, \strlen(self::PREFIX));
+
+        return self::of($entryId) === $questionId ? $entryId : null;
+    }
+
     private function __construct()
     {
     }

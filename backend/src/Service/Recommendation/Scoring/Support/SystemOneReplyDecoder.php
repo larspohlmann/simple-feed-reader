@@ -10,7 +10,7 @@ use App\Service\Ai\Support\ReportedCost;
 use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 
 /**
- * Never throws: a body that is not the documented shape decodes to no Nouls, which the parser rejects as unusable.
+ * Never throws: a body that is not the documented shape decodes to no scores, which the parser rejects as unusable.
  * The request id is TypeSafe's header when sent, else the body's `id` (OpenRouter's generation id).
  */
 final class SystemOneReplyDecoder
@@ -22,7 +22,7 @@ final class SystemOneReplyDecoder
 
         return new ScoringReplyModel(
             $body,
-            self::noulsIn($root['answers'] ?? null),
+            self::scoresIn($root['answers'] ?? null),
             new ProviderCallReceiptModel(
                 self::textIn($requestIdHeader) ?? self::textIn($root['id'] ?? null),
                 self::textIn($root['model'] ?? null),
@@ -31,22 +31,23 @@ final class SystemOneReplyDecoder
         );
     }
 
-    /** @return array<string, float> */
-    private static function noulsIn(mixed $answers): array
+    /** @return array<int, float> each answered question's Noul, by the entry its id names */
+    private static function scoresIn(mixed $answers): array
     {
         if (!\is_array($answers)) {
             return [];
         }
 
-        $nouls = [];
+        $scores = [];
         foreach ($answers as $questionId => $answer) {
+            $entryId = \is_string($questionId) ? QuestionId::entryIdOf($questionId) : null;
             $noul = \is_array($answer) ? ($answer['noul'] ?? null) : null;
-            if (\is_string($questionId) && (\is_float($noul) || \is_int($noul))) {
-                $nouls[$questionId] = (float) $noul;
+            if (null !== $entryId && (\is_float($noul) || \is_int($noul))) {
+                $scores[$entryId] = (float) $noul;
             }
         }
 
-        return $nouls;
+        return $scores;
     }
 
     /** TypeSafe documents `input_tokens`/`output_tokens`; an OpenAI-style gateway may say prompt/completion. */

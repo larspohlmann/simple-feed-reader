@@ -52,7 +52,7 @@ final class HttpSystemOneClientTest extends TestCase
         );
 
         $reply = $outcomes[0]->reply();
-        self::assertSame(['entry-7' => 0.95, 'entry-9' => 0.125], $reply->nouls);
+        self::assertSame([7 => 0.95, 9 => 0.125], $reply->scores);
         self::assertSame('req-77', $reply->receipt->requestId);
         self::assertSame('jev-1.13.0', $reply->receipt->answeringModel);
         self::assertSame(296, $reply->receipt->usage?->promptTokens);
@@ -241,7 +241,7 @@ final class HttpSystemOneClientTest extends TestCase
 
         self::assertCount(2, $outcomes);
         self::assertSame('That address did not answer.', $outcomes[0]->cause()->getMessage());
-        self::assertSame(['entry-9' => 0.3], $outcomes[1]->reply()->nouls);
+        self::assertSame([9 => 0.3], $outcomes[1]->reply()->scores);
     }
 
     public function testARequestThatCannotEvenBeSentIsItsOwnCallsOutcomeAndSparesItsSibling(): void
@@ -255,7 +255,7 @@ final class HttpSystemOneClientTest extends TestCase
             $this->request('entry-9'),
         );
 
-        self::assertSame(['entry-7' => 0.7], $outcomes[0]->reply()->nouls);
+        self::assertSame([7 => 0.7], $outcomes[0]->reply()->scores);
         self::assertSame('That address did not answer.', $outcomes[1]->cause()->getMessage());
         self::assertSame(
             'Could not resolve host: api.typesafe.test',
@@ -275,7 +275,7 @@ final class HttpSystemOneClientTest extends TestCase
             $this->request('entry-9'),
         );
 
-        self::assertSame(['entry-7' => 0.6], $outcomes[0]->reply()->nouls);
+        self::assertSame([7 => 0.6], $outcomes[0]->reply()->scores);
         self::assertSame('That provider sent nothing for more than 120 seconds.', $outcomes[1]->cause()->getMessage());
     }
 
@@ -308,7 +308,7 @@ final class HttpSystemOneClientTest extends TestCase
 
         self::assertSame('That provider sent nothing for more than 120 seconds.', $outcomes[0]->cause()->getMessage());
         self::assertFalse($outcomes[0]->isRetryable());
-        self::assertSame(['entry-9' => 0.3], $outcomes[1]->reply()->nouls);
+        self::assertSame([9 => 0.3], $outcomes[1]->reply()->scores);
     }
 
     /** 305 s in all, yet never 120 s without a chunk: every chunk the provider sends restarts the idle bound. */
@@ -319,7 +319,7 @@ final class HttpSystemOneClientTest extends TestCase
             $this->request('entry-7'),
         );
 
-        self::assertSame(['entry-7' => 0.6], $outcomes[0]->reply()->nouls);
+        self::assertSame([7 => 0.6], $outcomes[0]->reply()->scores);
     }
 
     /**

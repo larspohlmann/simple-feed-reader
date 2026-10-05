@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 final class ProbabilityScoreTest extends TestCase
 {
     /** @return iterable<string, array{float, int}> */
-    public static function nouls(): iterable
+    public static function probabilities(): iterable
     {
         yield 'rounded, not floored' => [0.0737, 74];
         yield 'rounded, not ceiled' => [0.0731, 73];
@@ -20,9 +20,9 @@ final class ProbabilityScoreTest extends TestCase
         yield 'below zero is clamped' => [-0.1, 0];
     }
 
-    #[DataProvider('nouls')]
-    public function testANoulIsAScoreOnTheRunsScale(float $noul, int $score): void
+    #[DataProvider('probabilities')]
+    public function testAProbabilityIsAScoreOnTheRunsScale(float $probability, int $score): void
     {
-        self::assertSame($score, ProbabilityScore::of($noul));
+        self::assertSame($score, ProbabilityScore::of($probability));
     }
 }

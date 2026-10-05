@@ -14,7 +14,7 @@ final class ScoreParserTest extends TestCase
 {
     public function testEveryCandidateIsAWinnerWithItsScoreAndNoReasonInTheBatchsOrder(): void
     {
-        $result = (new ScoreParser())->parse($this->reply(['entry-9' => 0.31, 'entry-4' => 0.875]), [4, 9]);
+        $result = (new ScoreParser())->parse($this->reply([9 => 0.31, 4 => 0.875]), [4, 9]);
 
         self::assertTrue($result->usable);
         self::assertSame(
@@ -23,16 +23,16 @@ final class ScoreParserTest extends TestCase
         );
     }
 
-    public function testAReplyMissingACandidatesNoulIsUnusable(): void
+    public function testAReplyMissingACandidatesScoreIsUnusable(): void
     {
-        $result = (new ScoreParser())->parse($this->reply(['entry-4' => 0.875]), [4, 9]);
+        $result = (new ScoreParser())->parse($this->reply([4 => 0.875]), [4, 9]);
 
         self::assertFalse($result->usable);
         self::assertSame([], $result->winners);
     }
 
     /** @return iterable<string, array{float}> */
-    public static function impossibleNouls(): iterable
+    public static function impossibleScores(): iterable
     {
         yield 'above one' => [1.2];
         yield 'below zero' => [-0.1];
@@ -40,10 +40,10 @@ final class ScoreParserTest extends TestCase
         yield 'infinite' => [\INF];
     }
 
-    #[DataProvider('impossibleNouls')]
-    public function testANoulThatIsNoProbabilityMakesTheReplyUnusable(float $noul): void
+    #[DataProvider('impossibleScores')]
+    public function testAScoreThatIsNoProbabilityMakesTheReplyUnusable(float $score): void
     {
-        $result = (new ScoreParser())->parse($this->reply(['entry-4' => 0.875, 'entry-9' => $noul]), [4, 9]);
+        $result = (new ScoreParser())->parse($this->reply([4 => 0.875, 9 => $score]), [4, 9]);
 
         self::assertFalse($result->usable);
         self::assertSame([], $result->winners);
@@ -51,7 +51,7 @@ final class ScoreParserTest extends TestCase
 
     public function testTheBoundsOfAProbabilityAreUsable(): void
     {
-        $result = (new ScoreParser())->parse($this->reply(['entry-4' => 0.0, 'entry-9' => 1.0]), [4, 9]);
+        $result = (new ScoreParser())->parse($this->reply([4 => 0.0, 9 => 1.0]), [4, 9]);
 
         self::assertTrue($result->usable);
         self::assertSame(
@@ -60,9 +60,9 @@ final class ScoreParserTest extends TestCase
         );
     }
 
-    /** @param array<string, float> $nouls */
-    private function reply(array $nouls): ScoringReplyModel
+    /** @param array<int, float> $scores */
+    private function reply(array $scores): ScoringReplyModel
     {
-        return new ScoringReplyModel('{}', $nouls, new ProviderCallReceiptModel(null, null, null));
+        return new ScoringReplyModel('{}', $scores, new ProviderCallReceiptModel(null, null, null));
     }
 }

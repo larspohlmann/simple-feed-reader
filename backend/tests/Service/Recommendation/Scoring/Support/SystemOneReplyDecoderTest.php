@@ -78,8 +78,19 @@ final class SystemOneReplyDecoderTest extends TestCase
         );
         $listed = SystemOneReplyDecoder::decode('{"answers":[{"type":"noul","noul":0.4}]}', null);
 
-        self::assertSame(['entry-9' => 1.0], $reply->nouls);
-        self::assertSame([], $listed->nouls);
+        self::assertSame([9 => 1.0], $reply->scores);
+        self::assertSame([], $listed->scores);
+    }
+
+    /** Only the ids the request wrote name an entry: a padded twin cannot overwrite the real answer. */
+    public function testAnAnswerUnderAnIdNoQuestionCarriesIsLeftOut(): void
+    {
+        $reply = SystemOneReplyDecoder::decode(
+            '{"answers":{"entry-7":{"type":"noul","noul":0.6},"entry-007":{"type":"noul","noul":0.4}}}',
+            null,
+        );
+
+        self::assertSame([7 => 0.6], $reply->scores);
     }
 
     /** A negative count would subtract from the run's total, which the repository adds in SQL. */
