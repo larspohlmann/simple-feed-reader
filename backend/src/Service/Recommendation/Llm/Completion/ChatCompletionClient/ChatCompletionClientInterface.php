@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
@@ -19,6 +20,7 @@ interface ChatCompletionClientInterface
      * model spoiled (a runaway) is returned for the caller's parser to judge; only an endpoint failure throws.
      *
      * @throws CredentialsRejectedException
+     * @throws ProviderRejectedRequestException
      * @throws ProviderUnreachableException
      */
     public function complete(

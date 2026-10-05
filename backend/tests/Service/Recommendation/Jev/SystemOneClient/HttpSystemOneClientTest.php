@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev\SystemOneClient;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
@@ -64,6 +65,11 @@ final class HttpSystemOneClientTest extends TestCase
         yield 'forbidden key' => [403, CredentialsRejectedException::class, 'That provider refused the API key.'];
         yield 'server error' => [500, ProviderUnreachableException::class, 'That provider answered with status 500.'];
         yield 'gateway' => [503, ProviderUnreachableException::class, 'That provider answered with status 503.'];
+        yield 'a request timeout, no verdict on the request' => [
+            408,
+            ProviderUnreachableException::class,
+            'That provider answered with status 408.',
+        ];
         yield 'a redirect, never followed' => [
             300,
             ProviderUnreachableException::class,
@@ -130,9 +136,14 @@ final class HttpSystemOneClientTest extends TestCase
             '{"detail":"state too long"}',
             'That provider refused the request (status 422): state too long',
         ];
+        yield 'a route that does not exist' => [
+            404,
+            '{"detail":"Not Found"}',
+            'That provider refused the request (status 404): Not Found',
+        ];
         yield 'a proxy page, never echoed' => [
             400,
-            '<html><body>Bad Request: user_2xYz</body></html>',
+            '<html lang="en"><body>Bad Request: user_2xYz</body></html>',
             'That provider refused the request (status 400).',
         ];
         yield 'an error without a message' => [
@@ -153,8 +164,10 @@ final class HttpSystemOneClientTest extends TestCase
             $this->request('entry-7'),
         )[0];
 
-        self::assertInstanceOf(ProviderUnreachableException::class, $outcome->cause());
-        self::assertSame($message, $outcome->cause()->getMessage());
+        $refusal = $outcome->cause();
+        self::assertInstanceOf(ProviderRejectedRequestException::class, $refusal);
+        self::assertSame($status, $refusal->status());
+        self::assertSame($message, $refusal->getMessage());
         self::assertFalse($outcome->isRetryable());
     }
 

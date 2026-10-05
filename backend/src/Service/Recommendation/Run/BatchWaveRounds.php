@@ -35,6 +35,7 @@ final readonly class BatchWaveRounds
      * @param BatchWaveEngineInterface<TWave, TRequest, TOutcome> $engine
      * @param TWave                                               $wave
      *
+     * @throws \App\Service\Ai\Exception\ProviderRejectedRequestException
      * @throws \App\Service\Ai\Exception\ProviderUnreachableException
      * @throws \App\Service\Ai\Exception\CredentialsRejectedException
      * @throws \App\Service\Ai\Exception\RetryableProviderException
