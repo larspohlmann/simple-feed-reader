@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Llm\Run\SuppressedReasoningFallback;
+use App\Tests\Support\AiProviderSettingsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\Rule\InvocationOrder;
@@ -67,7 +67,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection(400)));
     }
 
-    public function testAJevRejectionIsNotAbsorbed(): void
+    public function testARejectionOnAnEngineWithoutASuppressReasoningSettingIsNotAbsorbed(): void
     {
         $connection = $this->connectionOn('jev-latest');
 
@@ -97,13 +97,8 @@ final class SuppressedReasoningFallbackTest extends TestCase
 
     private function connectionOn(string $model): AiProviderSettings
     {
-        $connection = new AiProviderSettings(
+        $connection = AiProviderSettingsFactory::build(
             new User('reader@example.test', new \DateTimeImmutable('2026-10-05 09:00:00')),
-            null,
-            'https://api.example.test/v1',
-            new SealedSecret('Y2lwaGVy', 'bm9uY2U=', 'c2FsdA==', 1),
-            'cdef',
-            new \DateTimeImmutable('2026-10-05 09:30:00'),
         );
         $connection->chooseModel($model, new \DateTimeImmutable('2026-10-05 10:00:00'), 32768);
 
