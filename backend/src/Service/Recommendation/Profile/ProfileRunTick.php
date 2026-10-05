@@ -61,7 +61,7 @@ final readonly class ProfileRunTick
         } catch (RecommendationTickLockLostException) {
             $this->entityManager->refresh($tick->profileRun);
         } catch (ProviderRejectedRequestException $exception) {
-            $this->failure->failRejected($tick, $exception->getMessage());
+            $this->failure->failRejected($tick, $exception);
         } catch (
             ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException
             | ProviderRateLimitedException $exception

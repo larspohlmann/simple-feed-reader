@@ -14,7 +14,6 @@ use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineI
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
-use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
@@ -63,13 +62,7 @@ final readonly class TickPhases
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
         } catch (ProviderRejectedRequestException $exception) {
-            return $this->runFailure->fail(
-                $tick->run,
-                ProviderFailedMessage::of(
-                    $tick->connection->getBaseUrl(),
-                    $exception->getMessage(),
-                ),
-            );
+            return $this->runFailure->failRejected($tick, $exception);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
             $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
 
