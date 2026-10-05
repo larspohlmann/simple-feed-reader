@@ -33,4 +33,24 @@ final class ScoringBatchPackerTest extends TestCase
 
         self::assertSame([[1, 2], [3, 4, 5], [6], [7]], $batches);
     }
+
+    /** 14 tokens of items: 1 and 2 fill one request exactly, 3 and 4 the next; one token more opens another. */
+    public function testAnArticleOneTokenOverTheBudgetOpensTheNextRequest(): void
+    {
+        $tokens = [1 => 5, 2 => 9, 3 => 1, 4 => 13, 5 => 1];
+        $candidates = array_map(
+            static fn (int $entryId): ArticleLineModel
+                => new ArticleLineModel($entryId, 'Title', 'Feed', '2026-10-01', null),
+            array_keys($tokens),
+        );
+
+        $batches = (new ScoringBatchPacker())->pack(
+            $candidates,
+            new ScoringBudgetModel(20, 10, 4, 2),
+            static fn (ArticleLineModel $candidate): int => $tokens[$candidate->entryId]
+                ?? throw new \LogicException('Every candidate has its tokens.'),
+        );
+
+        self::assertSame([[1, 2], [3, 4], [5]], $batches);
+    }
 }

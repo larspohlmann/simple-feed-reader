@@ -118,6 +118,24 @@ final class ScoringStateFactoryTest extends TestCase
         self::assertSame(['profile' => 'Likes Rust and homela'], $state);
     }
 
+    /** The budget holds the first and last favorite exactly; the middle one does not fit, so the last is not tried. */
+    public function testTheFirstFavoriteThatDoesNotFitEndsTheFavorites(): void
+    {
+        $newest = new ArticleLineModel(1, 'Rust 2.0', 'Feed', '2026-10-01', null);
+        $overlong = self::favorite(2, str_repeat('Homelab tour ', 20));
+        $oldest = new ArticleLineModel(3, 'Kernel', 'Feed', '2026-10-01', null);
+        $budget = self::tokensOf(
+            ['profile' => 'Likes Rust.', 'favorites' => array_map(ScoringArticle::of(...), [$newest, $oldest])],
+        );
+
+        $state = (new ScoringStateFactory())->create(
+            new ScoringReaderModel('Likes Rust.', null, [$newest, $overlong, $oldest]),
+            $budget,
+        );
+
+        self::assertSame([ScoringArticle::of($newest)], $state['favorites'] ?? null);
+    }
+
     /**
      * @param list<ArticleLineModel> $favorites
      *
