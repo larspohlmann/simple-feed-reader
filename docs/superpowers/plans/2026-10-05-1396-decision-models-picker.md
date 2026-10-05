@@ -14,17 +14,17 @@
 
 | Task | Title | Status | Commit |
 |---|---|---|---|
-| 0 | Preflight and baselines | ☐ | — |
-| 1 | A scoring model has a family and always a window | ☐ | — |
-| 2 | The listing says what each model is | ☐ | — |
-| 3 | The System One probe is the fallback | ☐ | — |
-| 4 | The budget is the protocol's and scales with the window | ☐ | — |
-| 5 | The API names each model's kind and family | ☐ | — |
-| 6 | `<app-segmented-choice>` can disable an option | ☐ | — |
-| 7 | The picker asks for the kind first | ☐ | — |
-| 8 | General scoring-model copy | ☐ | — |
-| 9 | Playwright smoke of the picker | ☐ | — |
-| 10 | Docs, gates, real runs, the PR | ☐ | — |
+| 0 | Preflight and baselines | ☑ | — (no files changed) |
+| 1 | A scoring model has a family and always a window | ☑ | d8752c077 |
+| 2 | The listing says what each model is | ☑ | 514e85f4c, f067af351 |
+| 3 | The System One probe is the fallback | ☑ | d8b7e303a, d5a1cabce, d4b4bb145, 4a283b27d |
+| 4 | The budget is the protocol's and scales with the window | ☑ | cca034480, 0dbbb91bb |
+| 5 | The API names each model's kind and family | ☑ | 233031e88 |
+| 6 | `<app-segmented-choice>` can disable an option | ☑ | d86f48b5b |
+| 7 | The picker asks for the kind first | ☑ | 28e8a84b1, 226af75f0 |
+| 8 | General scoring-model copy | ☑ | 583e9e913 |
+| 9 | Playwright smoke of the picker | ☑ | e24ef18de |
+| 10 | Docs, gates, real runs, the PR | ☑ | the `docs(#1396)` commit on top of e24ef18de |
 
 ## Global Constraints
 
@@ -66,6 +66,7 @@
 - **D17 — Real runs on connection 8 need Lars's yes.** The spec allows real runs from PR 2 on. Kev (`jaredpalmer/kev-4b`, 8,192 tokens) proves the window-scaled budget, Clef (`cloudflare/clef-flash`, the model that refuses > 64) proves the cap. Every route back to `jev-latest` is closed by D5, so the runs end with connection 8 on `~typesafe/jev-latest` (the path spec D4 names). That is a lasting change to dev data, so Task 10 asks first and skips the runs without a yes.
 - **D18 — Test fixtures named for Jev's capabilities become `SCORING_RECOMMENDATION_CAPABILITIES`** (frontend `src/testing/recommendation-capabilities.ts` and its two importers), with the general copy.
 - **D19 — No guard for windows below the framing and state shares.** The smallest decision model listed has 8,192 tokens (3,735 left for questions); a smaller one would pack one article per request and the provider would refuse it, failing the run as #1387 does. YAGNI until a listed model needs it.
+- **D20 — The decision-model hint shows only while "Scoring model" is picked.** Spec D9 puts the hint under the kind control unconditionally; with no reranker yet it explains only the scoring list, so it shows with that list.
 
 ## File map
 
@@ -3107,3 +3108,4 @@ Expected: the `grep` prints nothing (a closing keyword beside #1394 would close 
 - `AiProviderConfigurator::activate()` re-verifies the model against the catalog, so an OpenRouter connection on the bare `jev-latest` cannot be re-activated after the fallback rule, not only not re-chosen as spec D4 said (D5). This also closes the real run's route back to `jev-latest` (D17).
 - With the cap on the protocol, PR 1's planned `ScoringBudgetFactory` input would only forward the window; the budget moves to the protocol (D7).
 - `<app-field>` cannot hold the two-option control: its `<label>` would press the first button on a label click (D13).
+- Spec D5's Kev example mixed 8,000 and 8,192: at Kev's 8,192-token window the state gets 2,457, framing 2,000 and the questions 3,735 (spec corrected).

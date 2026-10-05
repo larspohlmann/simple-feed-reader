@@ -87,6 +87,8 @@ connection and the run store it (architecture §8). `family()` names what the us
   - no `architecture.output_modalities` → `Llm` (LM Studio, Ollama, OpenAI and every gateway that does not report it,
     exactly as today);
   - `["text"]` → `Llm`; `["decisions"]` → `Scoring`/`SystemOne`; `["rerank"]` → `Scoring`/`Rerank`;
+    superseded by plan #1396 D1: any entry whose outputs include `text` is an `Llm`, since OpenRouter lists
+    image-and-text models that a strict `["text"]` rule would drop;
   - anything else → left out.
   - A `Scoring` entry without a positive context window is left out: the packer cannot budget it (this is what
     excludes Respan, finding 3, by a rule taken from the data rather than a name).
@@ -118,8 +120,8 @@ more, smaller requests, each repeating the state (about 0.003 USD more per 1,000
 
 The context window comes from the connection's stored `modelContextWindow`. The packer's budget scales with it instead
 of the 32k constant: the state (System One) or query (Rerank) gets `min(10_000, 30 % of the window)` tokens, framing
-keeps its 2,000, the questions or each document get the rest. At 8k (Kev) that is 2,400 state + 2,000 framing +
-3,792 for questions, where today's constants would not fit at all.
+keeps its 2,000, the questions or each document get the rest. At Kev's 8,192-token window that is 2,457 state +
+2,000 framing + 3,735 for questions, where today's constants would not fit at all.
 
 ### D6. Module layout
 

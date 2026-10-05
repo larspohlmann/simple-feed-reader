@@ -118,11 +118,10 @@ whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\Rate
 recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
 `models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
-label beside its id (`AiSettingsJson`: `"System One"` for a model the catalog tagged with that protocol, `null` for an LLM), so the picker
-marks a scoring model without the client parsing its id; no client logic branches on the label:
+label beside its id (`"System One"` for a model the catalog tagged with that protocol, `null` for an LLM), its `kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `null` for an LLM); a configuration carries the `kind` and `family` of its saved model. The picker asks for the kind first, lists only that kind's models and tags each scoring model by its family, so no client parses an id or branches on the label:
 
 ```json
-{"models": [{"id": "jev-latest", "label": "System One",
+{"models": [{"id": "~typesafe/jev-latest", "label": "System One", "kind": "scoring", "family": "decision",
   "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
 ```
 
@@ -130,12 +129,11 @@ The scoring engine (`Service/Recommendation/Scoring`) scores every candidate aga
 text. It speaks to the model through a protocol (`ScoringProtocol/ScoringProtocolInterface`, one implementation per
 `App\Enum\ScoringProtocol` case, found by `ScoringProtocolResolver`): the protocol packs the pool, words each request
 and reads each reply as a value in [0, 1] per article. A connection stores the protocol beside the kind when its model
-is chosen (`user_ai_settings.scoring_protocol`); `SystemOneCatalog` offers `jev-latest` as a System One model wherever
-`{base}/systemone` answers.
+is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what each model is: `OpenAiCompatibleCatalog` reads `GET {base}/models?output_modalities=all`; an entry whose `architecture.output_modalities` holds `text`, or that reports none (LM Studio, Ollama, OpenAI), is an LLM; `["decisions"]` is a System One model, listed only with a positive `context_length` (its requests are budgeted from it, which leaves out Respan's `span-01*`); every other output (rerank, image, embeddings, …) is left out. `SystemOneCatalog` probes `{base}/systemone` and offers `jev-latest` (32k) only when no listing named a System One model (TypeSafe direct, whose `/models` is not OpenAI-shaped); OpenRouter lists Jev itself as `~typesafe/jev-latest`.
 
 | Protocol | Request | Per request |
 |---|---|---|
-| System One (`system_one`) | `POST {base}/systemone`, directly or through OpenRouter: `state` = `{profile, guidance?, favorites?}`, one `noul` question per article | at most 100 questions; a 32k-token window less 2k of framing and 10k for the state (`ScoringBudgetFactory`) |
+| System One (`system_one`) | `POST {base}/systemone`, directly or through OpenRouter: `state` = `{profile, guidance?, favorites?}`, one `noul` question per article | at most 64 questions (Cloudflare's Clef refuses more); of the model's stored window, 2k for framing, `min(10k, 30 %)` for the state and the rest for questions (`SystemOneProtocol::budget()`, `ScoringBudgetModel::forWindow()`) |
 
 A run freezes the stored profile when it snapshots; a scoring model needs one and fails with a message that says so
 when there is none (an account with neither reading history nor a saved search). The LLM engine scores without a
