@@ -23,14 +23,9 @@ final class SystemOneWave
 
     public function __construct(
         private readonly ClockInterface $clock,
-        private readonly ProviderCredentialsModel $credentials,
+        public readonly ProviderCredentialsModel $credentials,
     ) {
         $this->positions = new \SplObjectStorage();
-    }
-
-    public function withoutApiKey(string $text): string
-    {
-        return $this->credentials->withoutApiKey($text);
     }
 
     public function await(int $position, ResponseInterface $response): void

@@ -125,7 +125,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 new RetryableProviderException($status, RetryAfter::secondsIn($response)),
             ),
             400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException($wave->withoutApiKey(RefusalMessage::of($status, $body))),
+                new ProviderUnreachableException(RefusalMessage::of($status, $body, $wave->credentials)),
             ),
             $status >= 300 => SystemOneOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
             default => SystemOneOutcomeModel::answered(

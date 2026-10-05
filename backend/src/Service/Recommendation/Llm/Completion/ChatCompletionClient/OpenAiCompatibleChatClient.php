@@ -277,10 +277,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         return $chunk->isLast();
     }
 
-    /**
-     * Symfony's stream() yields content-free framing chunks (isFirst and isLast in particular); appending their empty
-     * content is harmless, but reporting them to the observer would falsely mean "the body grew".
-     */
+    /** stream() also yields empty framing chunks; reporting one would tell the observer the body grew. */
     private function consumeAnswer(CompletionCallSlot $slot, string $content): void
     {
         if ('' === $content) {
@@ -298,7 +295,6 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         ));
     }
 
-    /** Credentials and retryable statuses end the call here; any other error status opens its body for the reason. */
     private function guardStatus(ResponseInterface $response, ErrorBody $errorBody): void
     {
         $status = $response->getStatusCode();
@@ -323,10 +319,8 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
             return false;
         }
 
-        $reason = ProviderErrorReason::in($slot->errorBody->text());
-
         throw $slot->errorBody->failure(
-            null === $reason ? null : $slot->connection->credentials->withoutApiKey($reason),
+            ProviderErrorReason::in($slot->errorBody->text(), $slot->connection->credentials),
         );
     }
 

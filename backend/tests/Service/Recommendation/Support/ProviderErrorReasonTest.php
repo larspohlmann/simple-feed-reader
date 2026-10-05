@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Support;
 
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Support\ProviderErrorReason;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +15,7 @@ final class ProviderErrorReasonTest extends TestCase
     {
         self::assertSame(
             'Reasoning effort "none" is not supported by this model.',
-            ProviderErrorReason::in(
+            self::reasonIn(
                 '{"error":{"message":"Reasoning effort \"none\" is not supported by this model.","code":400},'
                 . '"user_id":"user_2abc"}',
             ),
@@ -23,14 +24,14 @@ final class ProviderErrorReasonTest extends TestCase
 
     public function testItReadsADetailString(): void
     {
-        self::assertSame('state is too long', ProviderErrorReason::in('{"detail":"state is too long"}'));
+        self::assertSame('state is too long', self::reasonIn('{"detail":"state is too long"}'));
     }
 
     public function testAStructuredDetailIsShownAsCompactJson(): void
     {
         self::assertSame(
             '[{"loc":["body","state"],"msg":"too long"}]',
-            ProviderErrorReason::in('{"detail":[{"loc":["body","state"],"msg":"too long"}]}'),
+            self::reasonIn('{"detail":[{"loc":["body","state"],"msg":"too long"}]}'),
         );
     }
 
@@ -48,24 +49,44 @@ final class ProviderErrorReasonTest extends TestCase
     #[DataProvider('bodiesWithoutAReason')]
     public function testABodyWithoutAReasonGivesNone(string $body): void
     {
-        self::assertNull(ProviderErrorReason::in($body));
+        self::assertNull(self::reasonIn($body));
     }
 
-    public function testALongReasonIsClippedToFiveHundredCharacters(): void
+    /** @return iterable<string, array{string, string}> */
+    public static function reasonsAroundTheClip(): iterable
     {
-        $reason = ProviderErrorReason::in(
-            json_encode(['error' => ['message' => str_repeat('ä', 501)]], \JSON_THROW_ON_ERROR),
-        );
-
-        self::assertSame(str_repeat('ä', 500) . '…', $reason);
+        yield 'exactly five hundred characters is kept whole' => [str_repeat('a', 500), str_repeat('a', 500)];
+        yield 'one more is clipped by character' => [str_repeat('ä', 501), str_repeat('ä', 500) . '…'];
     }
 
-    public function testAReasonOfExactlyFiveHundredCharactersIsKeptWhole(): void
+    #[DataProvider('reasonsAroundTheClip')]
+    public function testAReasonIsClippedAfterFiveHundredCharacters(string $message, string $expected): void
     {
-        $reason = ProviderErrorReason::in(
-            json_encode(['error' => ['message' => str_repeat('a', 500)]], \JSON_THROW_ON_ERROR),
+        self::assertSame(
+            $expected,
+            self::reasonIn(json_encode(['error' => ['message' => $message]], \JSON_THROW_ON_ERROR)),
         );
+    }
 
-        self::assertSame(str_repeat('a', 500), $reason);
+    public function testTheApiKeyIsRedactedFromTheReason(): void
+    {
+        self::assertSame('Bad key [redacted].', self::reasonIn('{"detail":"Bad key sk-secret-key."}'));
+    }
+
+    public function testAKeyStraddlingTheClipIsRedactedWhole(): void
+    {
+        $message = str_repeat('x', 490) . 'sk-secret-key and more';
+
+        $reason = self::reasonIn(json_encode(['error' => ['message' => $message]], \JSON_THROW_ON_ERROR));
+
+        self::assertSame(str_repeat('x', 490) . '[redacted]…', $reason);
+    }
+
+    private static function reasonIn(string $body): ?string
+    {
+        return ProviderErrorReason::in(
+            $body,
+            ProviderCredentialsModel::fromStoredConfiguration('https://llm.example.test/v1', 'sk-secret-key'),
+        );
     }
 }
