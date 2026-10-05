@@ -315,18 +315,24 @@ final readonly class RecommendationRunFixtures
         return $this->recommendationSettings($user, false, guidancePrompt: $guidancePrompt);
     }
 
+    public function contextWindowSettings(User $user, int $contextWindow): RecommendationSettings
+    {
+        return $this->recommendationSettings($user, false, contextWindow: $contextWindow);
+    }
+
     private function recommendationSettings(
         User $user,
         bool $debugEnabled,
         bool $showScoreAndReasons = false,
         ?string $guidancePrompt = null,
+        ?int $contextWindow = null,
     ): RecommendationSettings {
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: $guidancePrompt,
             favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             poolLimits: RecommendationPoolLimits::defaults(),
-            contextWindow: null,
+            contextWindow: $contextWindow,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: $debugEnabled,
             showScoreAndReasons: $showScoreAndReasons,

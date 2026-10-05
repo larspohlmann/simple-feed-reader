@@ -42,6 +42,8 @@ final class ScoringRecommendationEngineTest extends DbTestCase
 
     private const string PROFILE = 'Likes Rust and homelab.';
 
+    private const int DISAGREEING_WINDOW_OVERRIDE = 131_072;
+
     private User $owner;
     private RecommendationRunFixtures $fixtures;
 
@@ -334,9 +336,10 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         );
     }
 
-    /** Kev's 8k window gives the reader 2,457 tokens: a longer profile is cut to fit. */
+    /** Kev's 8k window gives the reader 2,457 tokens: a longer profile is cut to fit, whatever the account overrides. */
     public function testTheStateIsFittedToTheConnectionsWindow(): void
     {
+        $this->fixtures->contextWindowSettings($this->owner, self::DISAGREEING_WINDOW_OVERRIDE);
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $connection = $this->owner->getActiveAiProviderSettings();
         self::assertNotNull($connection);
@@ -362,6 +365,8 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** 731-token questions (SystemOneProtocolTest): Kev's 8k window takes five a request, Jev's 32k all twelve. */
     public function testEachRequestIsBoundedByTheConnectionsWindow(): void
     {
+        $this->fixtures->contextWindowSettings($this->owner, self::DISAGREEING_WINDOW_OVERRIDE);
+
         self::assertSame([5, 5, 2], $this->requestSizes(8_192));
         self::assertSame([12], $this->requestSizes(32_000));
     }
