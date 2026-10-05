@@ -47,6 +47,40 @@ final class ScoringHttpTransportTest extends TestCase
         self::assertSame('rank-31', $outcomes[0]->reply()->receipt->requestId);
     }
 
+    public function testItSendsEachRequestWithoutRedirectsOrCompressionAndIdentifiesItself(): void
+    {
+        /** @var array{max_redirects: int, normalized_headers: array<string, list<string>>} $captured */
+        $captured = ['max_redirects' => -1, 'normalized_headers' => []];
+        $httpClient = new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$captured): MockResponse {
+                /** @var array{max_redirects: int, normalized_headers: array<string, list<string>>} $options */
+                $captured = $options;
+
+                return new MockResponse('{}');
+            },
+        );
+
+        (new ScoringHttpTransport(
+            $httpClient,
+            new CountingProviderCallHeartbeat(),
+            new MockClock(),
+            'SimpleFeedReader/1.0',
+        ))->sendAll(
+            new ScoringEndpoint('/rank', [], static fn (): ScoringReplyModel => new ScoringReplyModel(
+                '{}',
+                [],
+                new ProviderCallReceiptModel(null, null, null),
+            )),
+            $this->credentials(),
+            ['{}'],
+        );
+
+        self::assertSame(0, $captured['max_redirects']);
+        self::assertContains('Accept: application/json', $captured['normalized_headers']['accept']);
+        self::assertContains('Accept-Encoding: identity', $captured['normalized_headers']['accept-encoding']);
+        self::assertContains('User-Agent: SimpleFeedReader/1.0', $captured['normalized_headers']['user-agent']);
+    }
+
     /** 529 is System One's own: an endpoint that does not name it gets the shared mapping. */
     public function testOnlyTheEndpointsOwnStatusesAreRetryable(): void
     {
