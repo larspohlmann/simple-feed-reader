@@ -22,7 +22,7 @@ final readonly class ProfileInputsLoader
     {
         return new ProfileInputsModel(
             $this->historyLoader->load($userId, $settings),
-            array_map(self::termAsTyped(...), $this->savedSearches->findForUser($userId)),
+            array_values(array_unique(array_map(self::termAsTyped(...), $this->savedSearches->findForUser($userId)))),
         );
     }
 

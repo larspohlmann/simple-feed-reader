@@ -127,8 +127,8 @@ final class ProfileRunTickTest extends DbTestCase
     public function testTheModelIsShownTheSavedSearchesNewestFirstAPhraseInQuotes(): void
     {
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
-        $this->saveSearch('rust', false);
-        $this->saveSearch('home assistant', true);
+        $this->saveSearch('rust');
+        $this->savePhraseSearch('home assistant');
         $this->chat()->queueContent('{"profile":"Likes maps, Rust and Home Assistant."}');
 
         $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
@@ -152,9 +152,22 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertStringNotContainsString('SAVED SEARCHES', $this->chat()->calls()[0]['messages'][1]['content']);
     }
 
+    public function testATermSavedTwiceIsShownOnce(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $this->saveSearch('rust');
+        $this->entityManager->persist(new SavedSearch($this->owner, 'rust', true));
+        $this->entityManager->flush();
+        $this->chat()->queueContent('{"profile":"Likes maps and Rust."}');
+
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+
+        self::assertSame(1, substr_count($this->chat()->calls()[0]['messages'][1]['content'], '- rust'));
+    }
+
     public function testSavedSearchesAloneAreEnoughToBuildAProfile(): void
     {
-        $this->saveSearch('rust', false);
+        $this->saveSearch('rust');
         $this->chat()->queueContent('{"profile":"Follows Rust."}');
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
 
@@ -169,7 +182,7 @@ final class ProfileRunTickTest extends DbTestCase
         $this->fixtures->seedFavorites($this->owner, 'maps', 2);
         $this->chat()->queueContent('{"profile":"First."}');
         $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
-        $this->saveSearch('rust', false);
+        $this->saveSearch('rust');
         $this->chat()->queueContent('{"profile":"Maps and Rust."}');
         $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
 
@@ -521,9 +534,15 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
     }
 
-    private function saveSearch(string $term, bool $phrase): void
+    private function saveSearch(string $term): void
     {
-        $this->entityManager->persist(new SavedSearch($this->owner, $term, false, $phrase));
+        $this->entityManager->persist(new SavedSearch($this->owner, $term, false));
+        $this->entityManager->flush();
+    }
+
+    private function savePhraseSearch(string $term): void
+    {
+        $this->entityManager->persist(new SavedSearch($this->owner, $term, false, true));
         $this->entityManager->flush();
     }
 

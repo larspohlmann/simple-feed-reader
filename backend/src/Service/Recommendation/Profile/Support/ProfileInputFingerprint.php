@@ -9,7 +9,10 @@ use App\Entity\RecommendationHistoryCaps;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 
-/** What a profile depends on: the history's entry ids per section, the saved-search terms, the caps, and the connection and its model. */
+/**
+ * What a profile depends on: the history's entry ids per section, the saved-search terms, the caps,
+ * and the connection and its model.
+ */
 final class ProfileInputFingerprint
 {
     public static function of(
