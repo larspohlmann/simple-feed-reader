@@ -102,61 +102,33 @@ final class ProfileInputFingerprintTest extends TestCase
 
     public function testASavedSearchChangesIt(): void
     {
-        self::assertNotSame(
-            ProfileInputFingerprint::of($this->inputs([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['rust']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-        );
+        self::assertNotSame($this->fingerprintWith([]), $this->fingerprintWith(['rust']));
     }
 
     public function testASecondSavedSearchChangesIt(): void
     {
-        self::assertNotSame(
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['maps']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['maps', 'rust']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-        );
+        self::assertNotSame($this->fingerprintWith(['maps']), $this->fingerprintWith(['maps', 'rust']));
     }
 
     public function testASearchSavedAsAPhraseChangesIt(): void
     {
-        self::assertNotSame(
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['home assistant']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['"home assistant"']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-        );
+        self::assertNotSame($this->fingerprintWith(['home assistant']), $this->fingerprintWith(['"home assistant"']));
     }
 
     public function testTheOrderOfTheSavedSearchesLeavesItAlone(): void
     {
-        self::assertSame(
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['rust', 'maps']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
-            ProfileInputFingerprint::of(
-                $this->inputs([11], [12], [13], ['maps', 'rust']),
-                $this->caps(),
-                $this->connection(5, 'm'),
-            ),
+        self::assertSame($this->fingerprintWith(['rust', 'maps']), $this->fingerprintWith(['maps', 'rust']));
+    }
+
+    /**
+     * @param list<string> $savedSearchTerms
+     */
+    private function fingerprintWith(array $savedSearchTerms): string
+    {
+        return ProfileInputFingerprint::of(
+            $this->inputs([11], [12], [13], $savedSearchTerms),
+            $this->caps(),
+            $this->connection(5, 'm'),
         );
     }
 
