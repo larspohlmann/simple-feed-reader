@@ -19,8 +19,10 @@ use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Completion\Pass\CompletionCallSlot;
 use App\Service\Recommendation\Llm\Completion\Pass\CompletionStreamReader;
 use App\Service\Recommendation\Llm\Completion\Pass\ConcurrentCompletion;
+use App\Service\Recommendation\Llm\Completion\Pass\ErrorBody;
 use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Recommendation\Support\ProviderErrorReason;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -138,8 +140,9 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
                 $index,
                 new CompletionStreamReader($this->decoder),
                 $call->observer,
-                $connection->timeouts,
+                $connection,
                 $call->request->maxAnswerTokens,
+                new ErrorBody(),
             );
         }
 
@@ -238,8 +241,6 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      */
     private function consumeChunk(ResponseInterface $response, ChunkInterface $chunk, CompletionCallSlot $slot): bool
     {
-        $reader = $slot->reader;
-
         // isTimeout() first: on a timeout chunk the other accessors throw, and on an error chunk isTimeout() throws
         // itself, which is how max_duration exhaustion leaves as the generic "did not answer".
         if ($chunk->isTimeout()) {
@@ -248,35 +249,49 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
             // Shape-neutral: the provider may have gone silent mid-answer or never started.
             throw new ProviderUnreachableException(sprintf(
                 'That provider sent nothing for more than %s seconds.',
-                $slot->timeouts->firstByteSeconds,
+                $slot->connection->timeouts->firstByteSeconds,
             ));
         }
 
         // Headers have arrived: the status is readable here without blocking,
         // which is also the only point the concurrent read can inspect it.
         if ($chunk->isFirst()) {
-            $this->guardStatus($response);
+            $this->guardStatus($response, $slot->errorBody);
         }
 
-        // Symfony's stream() yields content-free framing chunks (isFirst and
-        // isLast in particular); appending their empty content is harmless, but
-        // reporting them to the observer would falsely mean "the body grew".
         $content = $chunk->getContent();
-        if ('' !== $content) {
-            $reader->consume($content);
-            $this->guardRetainedSize($slot);
-            $slot->observer->streamProgressed(new CallProgressModel(
-                $reader->assistantContent() ?? '',
-                $reader->wireBytes(),
-                $reader->finishReason(),
-                $reader->usage(),
-            ));
+        if ($slot->errorBody->isOpen()) {
+            return $this->collectErrorBody($slot, $content, $chunk->isLast());
         }
+
+        $this->consumeAnswer($slot, $content);
 
         return $chunk->isLast();
     }
 
-    private function guardStatus(ResponseInterface $response): void
+    /**
+     * Symfony's stream() yields content-free framing chunks (isFirst and isLast in particular); appending their empty
+     * content is harmless, but reporting them to the observer would falsely mean "the body grew".
+     */
+    private function consumeAnswer(CompletionCallSlot $slot, string $content): void
+    {
+        if ('' === $content) {
+            return;
+        }
+
+        $reader = $slot->reader;
+        $reader->consume($content);
+        $this->guardRetainedSize($slot);
+        $slot->observer->streamProgressed(new CallProgressModel(
+            $reader->assistantContent() ?? '',
+            $reader->wireBytes(),
+            $reader->finishReason(),
+            $reader->usage(),
+        ));
+    }
+
+    /** Credentials and retryable statuses end the call here; any other error status opens its body for the reason. */
+    private function guardStatus(ResponseInterface $response, ErrorBody $errorBody): void
     {
         $status = $response->getStatusCode();
 
@@ -289,8 +304,23 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         }
 
         if ($status >= 300) {
-            throw ProviderUnreachableException::answeredWithStatus($status);
+            $errorBody->open($status);
         }
+    }
+
+    private function collectErrorBody(CompletionCallSlot $slot, string $content, bool $isLast): bool
+    {
+        $slot->errorBody->collect($content);
+        if (!$isLast) {
+            return false;
+        }
+
+        $reason = ProviderErrorReason::in($slot->errorBody->text());
+
+        throw ProviderUnreachableException::answeredWithStatus(
+            $slot->errorBody->status(),
+            null === $reason ? null : $slot->connection->credentials->withoutApiKey($reason),
+        );
     }
 
     /**

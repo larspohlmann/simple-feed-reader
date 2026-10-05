@@ -395,6 +395,127 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
+    public function testAnErrorStatusCarriesTheProvidersReason(): void
+    {
+        $client = $this->clientAnswering(new MockResponse(
+            '{"error":{"message":"Reasoning effort \"none\" is not supported.","code":400},"user_id":"user_2abc"}',
+            ['http_code' => 400],
+        ));
+
+        $this->expectException(ProviderUnreachableException::class);
+        $this->expectExceptionMessage(
+            'That provider answered with status 400: Reasoning effort "none" is not supported.',
+        );
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testAnErrorBodyThatArrivesInPiecesIsReadWhole(): void
+    {
+        $body = static function (): \Generator {
+            yield '{"error":{"message":"Unknown ';
+            yield 'model."}}';
+        };
+        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 404]));
+
+        $this->expectExceptionMessage('That provider answered with status 404: Unknown model.');
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testAnErrorStatusWithoutAReadableReasonKeepsTheBareSentence(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('<html>Bad Request</html>', ['http_code' => 400]));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400.', $exception->getMessage());
+        }
+    }
+
+    public function testAServerErrorCarriesItsReasonToo(): void
+    {
+        $client = $this->clientAnswering(new MockResponse(
+            '{"error":{"message":"Upstream model crashed."}}',
+            ['http_code' => 500],
+        ));
+
+        $this->expectExceptionMessage('That provider answered with status 500: Upstream model crashed.');
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testTheApiKeyIsRedactedFromTheReason(): void
+    {
+        $key = $this->credentials()->apiKey;
+        self::assertNotSame('', $key);
+        $client = $this->clientAnswering(new MockResponse(
+            json_encode(['error' => ['message' => 'Bad key ' . $key . '.']], \JSON_THROW_ON_ERROR),
+            ['http_code' => 400],
+        ));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400: Bad key [redacted].', $exception->getMessage());
+        }
+    }
+
+    public function testAnErrorBodyOneByteOverTheBoundIsNotParsed(): void
+    {
+        $frame = '{"error":{"message":"Too big."},"padding":""}';
+        $oversized = '{"error":{"message":"Too big."},"padding":"' . str_repeat('x', 16_385 - \strlen($frame)) . '"}';
+        self::assertSame(16_385, \strlen($oversized));
+        $client = $this->clientAnswering(new MockResponse($oversized, ['http_code' => 400]));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400.', $exception->getMessage());
+        }
+    }
+
+    public function testAnErrorBodyOfExactlyTheBoundIsParsed(): void
+    {
+        $frame = '{"error":{"message":"Fits."},"padding":""}';
+        $atTheBound = '{"error":{"message":"Fits."},"padding":"' . str_repeat('x', 16_384 - \strlen($frame)) . '"}';
+        self::assertSame(16_384, \strlen($atTheBound));
+        $client = $this->clientAnswering(new MockResponse($atTheBound, ['http_code' => 400]));
+
+        $this->expectExceptionMessage('That provider answered with status 400: Fits.');
+        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+    }
+
+    public function testAnErrorStatusNeverReachesTheObserverOrTheAnswer(): void
+    {
+        $answerShapedBody = "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\ndata: [DONE]\n\n";
+        $client = $this->clientAnswering(new MockResponse($answerShapedBody, ['http_code' => 400]));
+        $seen = $this->recordingObserver();
+
+        $outcome = $client->completeMany($this->connection(), [$this->concurrentCall($seen)])[0];
+
+        self::assertSame([], $seen->reports);
+        self::assertTrue($outcome->isFailure());
+        self::assertSame('That provider answered with status 400.', $outcome->cause()->getMessage());
+    }
+
+    public function testOneCallsErrorStatusLeavesItsSiblingsAnswerAlone(): void
+    {
+        $client = $this->clientReturning([
+            new MockResponse('{"error":{"message":"No."}}', ['http_code' => 400]),
+            $this->sseStream('{"recommendations":[]}'),
+        ]);
+
+        $outcomes = $client->completeMany($this->connection(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertSame('That provider answered with status 400: No.', $outcomes[0]->cause()->getMessage());
+        self::assertSame('{"recommendations":[]}', $outcomes[1]->content());
+    }
+
     /**
      * A redirect is refused, never followed: following would hand the API key to the `Location` host. MockHttpClient
      * never follows redirects, so this does not pin the `max_redirects: 0` option itself.
