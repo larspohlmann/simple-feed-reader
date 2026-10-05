@@ -74,8 +74,8 @@
                 'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
             ],
         },
-        // SystemOneWave::outcomes(): a settled wave holds every position from 0 up, so ksort() already yields a list.
-        UnwrapArrayValues: { ignore: ['App\\Service\\Recommendation\\Jev\\Pass\\SystemOneWave::outcomes'] },
+        // ResponseWave::outcomes(): a settled wave holds every position from 0 up, so ksort() already yields a list.
+        UnwrapArrayValues: { ignore: ['App\\Service\\Recommendation\\Scoring\\Pass\\ResponseWave::outcomes'] },
         // Guard only runs with [], so slicing changes nothing.
         ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
         // A slideshow always has 2+ images, so querySelector('img') never returns

@@ -8,8 +8,8 @@ use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\ScoringProtocol;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
-use App\Service\Recommendation\Jev\JevRecommendationEngine;
 use App\Service\Recommendation\Llm\LlmRecommendationEngine;
+use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
 use App\Tests\Support\AiProviderSettingsFactory;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -45,6 +45,9 @@ final class RecommendationEngineWiringTest extends KernelTestCase
             new \DateTimeImmutable('2026-10-02 09:05:00'),
         );
 
-        self::assertInstanceOf(JevRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
+        self::assertInstanceOf(
+            ScoringRecommendationEngine::class,
+            $resolver->engineOf($resolver->kindFor($connection)),
+        );
     }
 }

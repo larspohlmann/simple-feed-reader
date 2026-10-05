@@ -149,7 +149,7 @@ services:
             $gitHubRepository: '%github_release_repository%'
     App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\CompositeModelCatalog'
     App\Service\Recommendation\Llm\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Recommendation\Llm\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
-    App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface: '@App\Service\Recommendation\Jev\SystemOneClient\HttpSystemOneClient'
+    App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface: '@App\Service\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient'
     # A provider call pings one heartbeat while it runs and must not know who listens: a composite of the run-lock
     # keepalive and the sweep's liveness beat. Both stay injectable by class, as the advancer and the sweep arm them
     # by name. Which beats first is CompositeProviderCallHeartbeat::beat()'s rule.

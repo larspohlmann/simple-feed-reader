@@ -25,7 +25,7 @@ services:
         autowire: true
 
     # Every test talks to StubSystemOneClient, never to a real System One endpoint.
-    App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface:
+    App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface:
         alias: App\Tests\Support\StubSystemOneClient
 
     # No container-wired code path may exec() a real drainer process against the test database.
