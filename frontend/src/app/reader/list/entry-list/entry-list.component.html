@@ -195,8 +195,12 @@
   </div>
 }
 
-@if (showRail()) {
-  <app-progress-rail class="list-rail" [orientation]="railOrientation()" />
+@if (progressRail.overflows()) {
+  <app-progress-rail
+    class="list-rail"
+    [class.side]="sideRail()"
+    [orientation]="railOrientation()"
+  />
 }
 
 @if (entries().length > 0) {

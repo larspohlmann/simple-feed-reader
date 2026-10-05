@@ -2427,13 +2427,12 @@ describe('EntryListComponent', () => {
     const entriesFrom = (from: number, count: number): EntryDto[] =>
       Array.from({ length: count }, (_, index) => entry(from + index));
     const TEN_ENTRIES = entriesFrom(1, 10);
-    const isWide = signal(true);
     const wideLayout: Provider = {
       provide: LayoutService,
-      useValue: { isWide, isNarrow: signal(false), isCoarse: signal(false) },
+      useValue: { isWide: signal(true), isNarrow: signal(false), isCoarse: signal(false) },
     };
 
-    beforeEach(() => isWide.set(true));
+    afterEach(() => jest.restoreAllMocks());
 
     /** jsdom has no layout: give the scroller a height and its row slots a span
      *  from `rowsTop` to `rowsBottom` that moves with `scrollTop`. */
@@ -2477,12 +2476,11 @@ describe('EntryListComponent', () => {
     function appendUnrevealed(
       fixture: ComponentFixture<EntryListComponent>,
       hasMore: boolean,
-    ): () => void {
-      const raf = jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    ): void {
+      jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
       fixture.componentRef.setInput('entries', [...TEN_ENTRIES, ...entriesFrom(11, 10)]);
       fixture.componentRef.setInput('hasMore', hasMore);
       fixture.detectChanges();
-      return () => raf.mockRestore();
     }
 
     const pagedList = {
@@ -2500,7 +2498,7 @@ describe('EntryListComponent', () => {
 
       scrollTo(fixture, scroller, 1300);
 
-      expect(rail(fixture)!.style.getPropertyValue('--rail-fill')).toBe('50');
+      expect(fill(fixture)).toBe('50');
     });
 
     it('runs along the bottom on a wide layout, keeping the scrollbar', () => {
@@ -2550,7 +2548,7 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
       scrollTo(fixture, scroller, 1300);
 
-      expect(rail(fixture)!.style.getPropertyValue('--rail-fill')).toBe('50');
+      expect(fill(fixture)).toBe('50');
     });
 
     it('takes the total afresh on each load', () => {
@@ -2573,26 +2571,18 @@ describe('EntryListComponent', () => {
       const fixture = mount(pagedList);
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 1300);
-      const restore = appendUnrevealed(fixture, true);
-      try {
-        scrollTo(fixture, scroller, 1300);
-        expect(fill(fixture)).toBe('50');
-      } finally {
-        restore();
-      }
+      appendUnrevealed(fixture, true);
+      scrollTo(fixture, scroller, 1300);
+      expect(fill(fixture)).toBe('50');
     });
 
     it('does not take a partly revealed last page for the end of the list', () => {
       const fixture = mount(pagedList);
       const scroller = layOut(fixture, 100, 1100);
       scrollTo(fixture, scroller, 1300);
-      const restore = appendUnrevealed(fixture, false);
-      try {
-        scrollTo(fixture, scroller, 1300);
-        expect(fill(fixture)).toBe('81.25');
-      } finally {
-        restore();
-      }
+      appendUnrevealed(fixture, false);
+      scrollTo(fixture, scroller, 1300);
+      expect(fill(fixture)).toBe('81.25');
     });
   });
 });

@@ -6,19 +6,19 @@ import { estimatedListBottom } from './list-length';
 export interface ListProgressRailOptions {
   readonly scroller: () => HTMLElement | undefined;
   readonly rail: () => HTMLElement | undefined;
-  readonly entries: Signal<EntryDto[]>;
-  /** The entries in the DOM, which trail `entries` while an appended page is revealed. */
+  /** The entries in the DOM, which trail the loaded ones while a page is revealed. */
   readonly rendered: Signal<EntryDto[]>;
   readonly shownEntries: Signal<number>;
-  readonly hasMore: Signal<boolean>;
+  readonly complete: Signal<boolean>;
   /** The list's entry count from its header, or null when it has none. */
   readonly total: Signal<number | null>;
+  /** The exact length once every page is loaded, which overrides the header. */
+  readonly loadedTotal: Signal<number | null>;
   readonly loading: Signal<boolean>;
 }
 
-/** The list's length cue (#1392). Painted straight onto the rail
- *  from the outside-zone scroll handler, so scrolling costs no change detection.
- *  Built in a field initializer, so its effects are created there. */
+/** The list's length cue (#1392), written straight onto the rail from the
+ *  outside-zone scroll handler. Built in a field initializer, for its effects. */
 export class ListProgressRail {
   private readonly injector = inject(Injector);
   readonly overflows = signal(false);
@@ -30,11 +30,11 @@ export class ListProgressRail {
   });
 
   private readonly _paintAfterRender = effect(() => {
-    this.options.entries();
     this.options.rendered();
     this.options.shownEntries();
-    this.options.hasMore();
+    this.options.complete();
     this.options.total();
+    this.options.loadedTotal();
     this.overflows();
     afterNextRender(() => this.paint(), { injector: this.injector });
   });
@@ -61,23 +61,15 @@ export class ListProgressRail {
       rowsTop: slots[0].getBoundingClientRect().top - origin,
       rowsBottom: slots[slots.length - 1].getBoundingClientRect().bottom - origin,
       shownEntries: this.options.shownEntries(),
-      loadedEntries: this.options.rendered().length,
-      totalEntries: this.listTotal(),
-      hasMore: this.options.hasMore() || this.revealing(),
+      renderedEntries: this.options.rendered().length,
+      totalEntries: this.options.loadedTotal() ?? this.raiseHeldTotal(),
+      complete: this.options.complete(),
     });
   }
 
-  private revealing(): boolean {
-    return this.options.rendered().length < this.options.entries().length;
-  }
-
-  /** With every page loaded the list's length is known, whatever the header says. */
-  private listTotal(): number | null {
-    const knownTotal = this.knownTotal();
-    return this.options.hasMore() ? knownTotal : this.options.entries().length;
-  }
-
-  private knownTotal(): number | null {
+  /** Keeps the highest count since the load began: reading lowers an unread count
+   *  while the read rows stay on screen. */
+  private raiseHeldTotal(): number | null {
     this.highestTotal = Math.max(this.highestTotal, this.options.total() ?? 0);
     return this.highestTotal > 0 ? this.highestTotal : null;
   }

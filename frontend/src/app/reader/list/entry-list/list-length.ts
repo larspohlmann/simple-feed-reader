@@ -3,20 +3,20 @@ export interface LoadedRows {
   readonly rowsTop: number;
   /** The last row's bottom, in scroll coordinates. */
   readonly rowsBottom: number;
-  /** Entries rendered between those edges (hidden rows excluded). */
+  /** Entries visible between those edges: the average row height divides by these. */
   readonly shownEntries: number;
-  /** Entries fetched so far. */
-  readonly loadedEntries: number;
-  /** Entries in the whole list, or null when nothing says. */
+  /** Entries rendered, hidden ones included: the remainder of the total starts after these. */
+  readonly renderedEntries: number;
   readonly totalEntries: number | null;
-  readonly hasMore: boolean;
+  /** Every entry is rendered, so the rows' bottom is the list's end. */
+  readonly complete: boolean;
 }
 
 /** Where a paged list would end with every entry loaded, in scroll coordinates. */
 export function estimatedListBottom(rows: LoadedRows): number | null {
-  if (!rows.hasMore) return rows.rowsBottom;
+  if (rows.complete) return rows.rowsBottom;
   if (rows.totalEntries === null || rows.shownEntries === 0) return null;
-  const unloaded = Math.max(0, rows.totalEntries - rows.loadedEntries);
+  const unrendered = Math.max(0, rows.totalEntries - rows.renderedEntries);
   const perEntry = (rows.rowsBottom - rows.rowsTop) / rows.shownEntries;
-  return rows.rowsBottom + unloaded * perEntry;
+  return rows.rowsBottom + unrendered * perEntry;
 }

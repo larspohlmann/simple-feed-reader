@@ -318,24 +318,26 @@ export class EntryListComponent implements OnDestroy {
     return this.selection().kind === 'search' || count === 0 ? null : count;
   });
 
+  private readonly loadedTotal = computed(() => (this.hasMore() ? null : this.entries().length));
+
   readonly progressRail = new ListProgressRail({
     scroller: this.scroller,
     rail: () => this.railRef()?.nativeElement,
-    entries: this.entries,
     rendered: this.content.rendered,
     shownEntries: this.content.renderedVisibleCount,
-    hasMore: this.hasMore,
+    complete: this.content.complete,
     total: this.listTotal,
+    loadedTotal: this.loadedTotal,
     loading: this.loading,
   });
-
-  readonly showRail = this.progressRail.overflows;
 
   readonly railOrientation = computed<ProgressRailOrientation>(() =>
     this.screen.isWide() ? 'horizontal' : 'vertical',
   );
 
-  readonly sideRail = computed(() => this.showRail() && this.railOrientation() === 'vertical');
+  readonly sideRail = computed(
+    () => this.progressRail.overflows() && this.railOrientation() === 'vertical',
+  );
 
   readonly onRowsScroll = (event: Event): void => {
     this.scrolling.onScroll(event);

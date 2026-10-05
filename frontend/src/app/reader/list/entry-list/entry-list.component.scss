@@ -124,18 +124,19 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
   transition: none;
 }
 
-/* The phone's scrollbar (#238), as in the article: under the list header, over the rows. */
+/* As in the article: the bottom hairline, or on a phone the right-edge rail that
+   stands in for the scrollbar (#238). Under the list header, over the rows. */
 .list-rail {
   position: absolute;
-  top: 0;
   right: 0;
   bottom: 0;
+  left: 0;
   z-index: 2;
 }
 
-.list-rail.horizontal {
-  top: auto;
-  left: 0;
+.list-rail.side {
+  top: 0;
+  left: auto;
 }
 
 .rows.has-rail {
