@@ -20,7 +20,7 @@ use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-#[AsTaggedItem(index: RecommendationEngineKind::Jev->value)]
+#[AsTaggedItem(index: RecommendationEngineKind::Scoring->value)]
 final readonly class JevRecommendationEngine implements RecommendationEngineInterface
 {
     public const string NO_PROFILE = 'Jev needs your reading profile, and there is no reading history to build one '

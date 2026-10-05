@@ -35,14 +35,14 @@ final readonly class RecommendationEngineResolver
     private function kindForModel(string $model): RecommendationEngineKind
     {
         return str_starts_with($model, self::JEV_MODEL_PREFIX)
-            ? RecommendationEngineKind::Jev
+            ? RecommendationEngineKind::Scoring
             : self::DEFAULT_KIND;
     }
 
     public function labelForModel(string $model): ?string
     {
         return match ($this->kindForModel($model)) {
-            RecommendationEngineKind::Jev => 'Jev',
+            RecommendationEngineKind::Scoring => 'Jev',
             RecommendationEngineKind::Llm => null,
         };
     }

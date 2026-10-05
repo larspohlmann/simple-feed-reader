@@ -122,7 +122,7 @@ final class TickPhasesTest extends DbTestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $run = $this->runningRun();
 
-        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
 
         self::assertSame('failed', $report->status);
         self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
@@ -137,7 +137,7 @@ final class TickPhasesTest extends DbTestCase
         $run->getRunningThrottle()->deferUntil(new \DateTimeImmutable('2026-08-08 10:10:00'));
         $this->entityManager->flush();
 
-        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        $report = $this->phases($engine)->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
 
         self::assertSame('failed', $report->status);
     }
@@ -164,7 +164,7 @@ final class TickPhasesTest extends DbTestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $run = $this->runningRun();
         $phases = $this->phases($engine);
-        $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
         self::assertSame('failed', $run->getStatus()->value);
 
         $run->resume();
@@ -173,7 +173,7 @@ final class TickPhasesTest extends DbTestCase
         self::assertSame('running', $report->status);
         self::assertCount(1, $engine->advancedTicks);
 
-        $report = $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Jev));
+        $report = $phases->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
         self::assertSame('failed', $report->status);
         self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertCount(1, $engine->advancedTicks);

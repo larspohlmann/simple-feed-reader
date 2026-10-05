@@ -7,8 +7,8 @@ namespace App\Tests\Service\Recommendation\Engine;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -24,9 +24,9 @@ final class RecommendationEngineResolverTest extends TestCase
     /** @return iterable<string, array{?string, RecommendationEngineKind}> */
     public static function models(): iterable
     {
-        yield 'the Jev alias' => ['jev-latest', RecommendationEngineKind::Jev];
-        yield 'the preview alias' => ['jev-preview', RecommendationEngineKind::Jev];
-        yield 'a pinned Jev version' => ['jev-1.13.0', RecommendationEngineKind::Jev];
+        yield 'the Jev alias' => ['jev-latest', RecommendationEngineKind::Scoring];
+        yield 'the preview alias' => ['jev-preview', RecommendationEngineKind::Scoring];
+        yield 'a pinned Jev version' => ['jev-1.13.0', RecommendationEngineKind::Scoring];
         yield 'the TypeSafe chat router' => ['typesafe/jev-router', RecommendationEngineKind::Llm];
         yield 'a chat model' => ['gpt-4o', RecommendationEngineKind::Llm];
         yield 'another case, another id' => ['JEV-latest', RecommendationEngineKind::Llm];
@@ -57,7 +57,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
     public function testTheJevKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
     {
-        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev);
+        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring);
 
         self::assertFalse($capabilities->writesReasons);
         self::assertFalse($capabilities->sendsPrompt);
@@ -72,7 +72,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $account->setActiveAiProviderSettings($this->connection('jev-latest'));
 
         self::assertEquals(
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring),
             $resolver->capabilitiesForAccount($account),
         );
     }

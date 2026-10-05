@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Engine\Model;
+namespace App\Enum;
 
 enum RecommendationProfileSource: string
 {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\ModelCatalog;
 
+use App\Entity\ModelDescriptor;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Support\ResponseByteCap;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
@@ -91,7 +91,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
      *
      * @param array<mixed> $entries
      *
-     * @return list<ModelDescriptorModel> sorted by id, one entry per id
+     * @return list<ModelDescriptor> sorted by id, one entry per id
      */
     private function descriptors(array $entries): array
     {
@@ -101,7 +101,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             if (!\is_array($entry) || !isset($entry['id']) || !\is_string($entry['id']) || '' === $entry['id']) {
                 continue;
             }
-            $byId[$entry['id']] ??= new ModelDescriptorModel($entry['id'], $this->reportedContextWindow($entry));
+            $byId[$entry['id']] ??= new ModelDescriptor($entry['id'], $this->reportedContextWindow($entry));
         }
 
         ksort($byId, SORT_STRING);

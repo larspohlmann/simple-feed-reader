@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\ModelCatalog;
 
+use App\Entity\ModelDescriptor;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\SystemOneCatalog;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -30,7 +31,7 @@ final class SystemOneCatalogTest extends TestCase
         $models = $this->catalogAnswering(new MockResponse('{}', ['http_code' => $status]))
             ->listModels($this->credentials());
 
-        self::assertEquals([new ModelDescriptorModel('jev-latest', 32_000)], $models);
+        self::assertEquals([new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne)], $models);
     }
 
     /** @return iterable<string, array{int}> */

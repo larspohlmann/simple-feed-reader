@@ -360,7 +360,7 @@ final class RecommendationRun
             return false;
         }
 
-        return RecommendationEngineKind::Jev !== $this->engineKind || null !== $this->getProfileText();
+        return RecommendationEngineKind::Scoring !== $this->engineKind || null !== $this->getProfileText();
     }
 
     public function resume(): void

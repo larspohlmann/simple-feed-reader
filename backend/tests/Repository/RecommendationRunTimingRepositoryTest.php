@@ -175,10 +175,10 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $this->finishedLog($llm, CallPhase::Batch, 1, '10:00:00', '10:00:10');
         $legacy = $this->completedRun();
         $this->finishedLog($legacy, CallPhase::Batch, 1, '10:00:00', '10:00:20');
-        $jev = $this->fixtures->createRun($this->user);
-        $jev->snapshot(RecommendationEngineKind::Jev, [[1]]);
-        $jev->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
-        $this->finishedLog($jev, CallPhase::Batch, 1, '10:00:00', '10:00:30');
+        $scoring = $this->fixtures->createRun($this->user);
+        $scoring->snapshot(RecommendationEngineKind::Scoring, [[1]]);
+        $scoring->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
+        $this->finishedLog($scoring, CallPhase::Batch, 1, '10:00:00', '10:00:30');
         $this->entityManager->flush();
         $this->entityManager->getConnection()->executeStatement(
             'UPDATE recommendation_run SET engine_kind = NULL WHERE id = ?',
@@ -189,7 +189,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
             [$llm->requireId(), $legacy->requireId()],
             $this->runIdsOf(RecommendationEngineKind::Llm),
         );
-        self::assertSame([$jev->requireId()], $this->runIdsOf(RecommendationEngineKind::Jev));
+        self::assertSame([$scoring->requireId()], $this->runIdsOf(RecommendationEngineKind::Scoring));
     }
 
     /** @return list<int> */

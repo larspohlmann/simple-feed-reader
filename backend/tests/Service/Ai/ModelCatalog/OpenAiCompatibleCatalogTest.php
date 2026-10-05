@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\ModelCatalog;
 
+use App\Entity\ModelDescriptor;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog;
 use PHPUnit\Framework\TestCase;
@@ -27,13 +27,13 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     }
 
     /**
-     * @param list<ModelDescriptorModel> $models
+     * @param list<ModelDescriptor> $models
      *
      * @return list<string>
      */
     private function ids(array $models): array
     {
-        return array_map(static fn (ModelDescriptorModel $model): string => $model->id, $models);
+        return array_map(static fn (ModelDescriptor $model): string => $model->id, $models);
     }
 
     public function testItReturnsTheOfferedModelsSorted(): void

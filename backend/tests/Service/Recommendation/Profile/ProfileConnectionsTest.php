@@ -55,7 +55,7 @@ final class ProfileConnectionsTest extends DbTestCase
         self::assertNull($this->connections()->usableFor($this->owner));
     }
 
-    public function testAnActiveJevConnectionWithNothingChosenGivesNone(): void
+    public function testAnActiveScoringConnectionWithNothingChosenGivesNone(): void
     {
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
 

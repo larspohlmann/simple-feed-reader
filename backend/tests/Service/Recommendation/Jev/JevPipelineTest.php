@@ -70,7 +70,7 @@ final class JevPipelineTest extends DbTestCase
             static fn (RecommendationItem $item): string => $item->getReason(),
             $items,
         ));
-        self::assertSame(RecommendationEngineKind::Jev, $run->getEngineKind());
+        self::assertSame(RecommendationEngineKind::Scoring, $run->getEngineKind());
         self::assertSame(1, $run->getProgress()->batchesTotal);   // one batch (the LLM: 2)
         self::assertSame([], $this->chat()->calls());
     }

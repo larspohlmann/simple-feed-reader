@@ -122,7 +122,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertFalse($payload['debugEnabled']);
     }
 
-    public function testAJevAccountGetsNoneOfTheLlmsPromptPieces(): void
+    public function testAScoringAccountGetsNoneOfTheLlmsPromptPieces(): void
     {
         $client = static::createClient();
         [$headers, $user] = $this->auth('recsettings-jev@example.test');

@@ -552,14 +552,14 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($snapshotted->isResumable());
     }
 
-    public function testAJevRunThatFrozeNoProfileIsNotResumable(): void
+    public function testAScoringRunThatFrozeNoProfileIsNotResumable(): void
     {
         $withoutProfile = $this->makeRun();
-        $withoutProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withoutProfile->snapshot(RecommendationEngineKind::Scoring, [[1]]);
         $withoutProfile->fail('Jev needs your reading profile.', new \DateTimeImmutable('2026-10-03 09:05:00'));
         $withProfile = $this->makeRun();
         $withProfile->freezeProfile('Likes rail and maps.');
-        $withProfile->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $withProfile->snapshot(RecommendationEngineKind::Scoring, [[1]]);
         $withProfile->fail('The AI provider at x failed: y', new \DateTimeImmutable('2026-10-03 09:05:00'));
 
         self::assertFalse($withoutProfile->isResumable());

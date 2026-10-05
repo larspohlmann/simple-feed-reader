@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
@@ -17,7 +18,6 @@ use App\Service\Ai\Exception\ModelRequiredForActivationException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
@@ -35,8 +35,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
     use SeedsUsers;
 
     /**
-     * @param list<string|ModelDescriptorModel>|\Throwable
-     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $models
+     * @param list<string|ModelDescriptor>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptor> $models
      */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator
     {
@@ -111,8 +111,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
     public function testChoosingAModelStoresItsReportedContextWindow(): void
     {
         $configurator = $this->configurator([
-            new ModelDescriptorModel('big', 200000),
-            new ModelDescriptorModel('small', null),
+            new ModelDescriptor('big', 200000),
+            new ModelDescriptor('small', null),
         ]);
         $user = $this->user('cfg-context-window@example.test');
         $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
