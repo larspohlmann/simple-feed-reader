@@ -7,7 +7,7 @@ namespace App\Service\Recommendation\Llm\Completion\Pass;
 use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 
-/** The per-call state a multiplexed read routes each chunk to: the call's index, reader, observer and bounds. */
+/** The per-call state a multiplexed read routes each chunk to: its place, its answer or error body, its bounds. */
 final readonly class CompletionCallSlot
 {
     public function __construct(

@@ -195,6 +195,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      */
     private function transportFailureOf(CompletionCallSlot $slot, ExceptionInterface $failure): \RuntimeException
     {
+        if ($slot->errorBody->isOpen()) {
+            return $slot->errorBody->failure();
+        }
+
         if (!$slot->reader->hitTokenCeiling()) {
             return ProviderUnreachableException::didNotAnswer($failure);
         }
@@ -230,9 +234,9 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     }
 
     /**
-     * The per-chunk core shared by the single-call and concurrent reads. Feeds
-     * one chunk to the reader and reports it to the observer; returns true once
-     * the response is complete.
+     * The per-chunk core shared by the single-call and concurrent reads. Feeds one chunk to the reader and reports it
+     * to the observer, or to the error body once the status says the call failed; returns true once the answer is
+     * complete.
      *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
@@ -245,6 +249,10 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         // itself, which is how max_duration exhaustion leaves as the generic "did not answer".
         if ($chunk->isTimeout()) {
             $response->cancel();
+
+            if ($slot->errorBody->isOpen()) {
+                throw $slot->errorBody->failure();
+            }
 
             // Shape-neutral: the provider may have gone silent mid-answer or never started.
             throw new ProviderUnreachableException(sprintf(
@@ -317,8 +325,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
 
         $reason = ProviderErrorReason::in($slot->errorBody->text());
 
-        throw ProviderUnreachableException::answeredWithStatus(
-            $slot->errorBody->status(),
+        throw $slot->errorBody->failure(
             null === $reason ? null : $slot->connection->credentials->withoutApiKey($reason),
         );
     }

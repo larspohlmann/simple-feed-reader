@@ -402,11 +402,15 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 400],
         ));
 
-        $this->expectException(ProviderUnreachableException::class);
-        $this->expectExceptionMessage(
-            'That provider answered with status 400: Reasoning effort "none" is not supported.',
-        );
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame(
+                'That provider answered with status 400: Reasoning effort "none" is not supported.',
+                $exception->getMessage(),
+            );
+        }
     }
 
     public function testAnErrorBodyThatArrivesInPiecesIsReadWhole(): void
@@ -440,8 +444,84 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 500],
         ));
 
-        $this->expectExceptionMessage('That provider answered with status 500: Upstream model crashed.');
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame(
+                'That provider answered with status 500: Upstream model crashed.',
+                $exception->getMessage(),
+            );
+        }
+    }
+
+    public function testAnOverflowingErrorBodyEndsWithoutReadingTheRest(): void
+    {
+        $httpClient = new class ([new MockResponse(
+            [str_repeat('x', 16_385), 'the rest'],
+            ['http_code' => 400],
+        )]) extends MockHttpClient {
+            /** @var list<int> where each chunk the client pulled starts in the body */
+            public array $pulledOffsets = [];
+
+            public function stream(
+                ResponseInterface|iterable $responses,
+                ?float $timeout = null,
+            ): ResponseStreamInterface {
+                $inner = parent::stream($responses, $timeout);
+                $pulledOffsets = &$this->pulledOffsets;
+
+                return new ResponseStream((static function () use ($inner, &$pulledOffsets): \Generator {
+                    foreach ($inner as $response => $chunk) {
+                        $pulledOffsets[] = $chunk->getOffset();
+                        yield $response => $chunk;
+                    }
+                })());
+            }
+        };
+
+        try {
+            $this->clientUsing($httpClient)
+                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400.', $exception->getMessage());
+        }
+
+        $pastTheBound = array_filter($httpClient->pulledOffsets, static fn (int $offset): bool => $offset >= 16_385);
+        self::assertSame([], $pastTheBound);
+    }
+
+    public function testAnErrorBodyThatStallsStillNamesTheStatus(): void
+    {
+        $body = static function (): \Generator {
+            yield '{"error":{"message":"Cut';
+            yield '';
+        };
+        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400.', $exception->getMessage());
+        }
+    }
+
+    public function testAnErrorBodyCutByTheTransportStillNamesTheStatus(): void
+    {
+        $body = static function (): \Generator {
+            yield '{"error":{"message":"Cut';
+            yield new TransportException('Connection reset');
+        };
+        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
+
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail('The error status was not reported.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider answered with status 400.', $exception->getMessage());
+        }
     }
 
     public function testTheApiKeyIsRedactedFromTheReason(): void
