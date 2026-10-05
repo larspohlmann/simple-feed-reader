@@ -35,6 +35,14 @@ final class ProviderErrorReasonTest extends TestCase
         );
     }
 
+    public function testAStructuredDetailKeepsSlashesAndNonAsciiCharactersUnescaped(): void
+    {
+        self::assertSame(
+            '[{"loc":["body","a/b"],"msg":"zu lang für Ärger"}]',
+            self::reasonIn('{"detail":[{"loc":["body","a\/b"],"msg":"zu lang f\u00fcr \u00c4rger"}]}'),
+        );
+    }
+
     /** @return iterable<string, array{string}> */
     public static function bodiesWithoutAReason(): iterable
     {

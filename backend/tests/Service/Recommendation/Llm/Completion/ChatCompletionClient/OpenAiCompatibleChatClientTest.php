@@ -479,9 +479,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             yield '{"error":{"message":"Cut';
             yield '';
         };
-        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
+        $client = new ResponseCapturingHttpClient(new MockResponse($body(), ['http_code' => 400]));
 
-        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
+        $this->assertCompletionFailsWith($this->clientUsing($client), 'That provider answered with status 400.');
+
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
     public function testAnErrorBodyCutByTheTransportStillNamesTheStatus(): void
@@ -490,9 +492,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             yield '{"error":{"message":"Cut';
             yield new TransportException('Connection reset');
         };
-        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
+        $client = new ResponseCapturingHttpClient(new MockResponse($body(), ['http_code' => 400]));
 
-        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
+        $this->assertCompletionFailsWith($this->clientUsing($client), 'That provider answered with status 400.');
+
+        self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
     public function testTheApiKeyIsRedactedFromTheReason(): void

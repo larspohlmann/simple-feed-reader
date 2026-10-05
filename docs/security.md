@@ -338,8 +338,8 @@ compression, and `RateLimitGuard` covers the AI settings endpoints that call the
 guard. Do not copy this pattern for any other outbound call.
 
 When a provider answers with an error status (other than 401, 403 and the retryable 429, 502, 503 and 504), the run's
-message carries the provider's reason. The client reads at most 16 KiB of the error body, and a larger body ends the call
-with the bare status sentence. It shows only the JSON `detail` or `error.message` field, never the raw body, because
-OpenRouter's body carries the account's `user_id`. The connection's API key is replaced by `[redacted]` wherever it
-appears in the reason, and only then is the reason clipped to 500 characters,
-so a key the clip would cut leaves no prefix.
+message carries the provider's reason. `OpenAiCompatibleChatClient` reads at most 16 KiB of the error body, and a
+larger body ends the call with the bare status sentence. Both that client and the System One client (for its 400 and
+422 refusals) show only the JSON `detail` or `error.message` field, never the raw body, because OpenRouter's body
+carries the account's `user_id`. The connection's API key is replaced by `[redacted]` wherever it appears in the
+reason, and only then is the reason clipped to 500 characters, so a key the clip would cut leaves no prefix.
