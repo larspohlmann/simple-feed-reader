@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation\Profile;
 
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationSettings;
+use App\Entity\SavedSearch;
 use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\CallVerdict;
@@ -121,6 +122,74 @@ final class ProfileRunTickTest extends DbTestCase
 
         self::assertSame(ProfileRunOutcome::Generated, $manual->getOutcome());
         self::assertSame('Second.', $this->storedProfile()->getText());
+    }
+
+    public function testTheModelIsShownTheSavedSearchesNewestFirstAPhraseInQuotes(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $this->saveSearch('rust');
+        $this->savePhraseSearch('home assistant');
+        $this->chat()->queueContent('{"profile":"Likes maps, Rust and Home Assistant."}');
+
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+
+        self::assertStringStartsWith(
+            "SAVED SEARCHES:\n- \"home assistant\"\n- rust\n\nFAVORITES",
+            $this->chat()->calls()[0]['messages'][1]['content'],
+        );
+    }
+
+    public function testAnotherReadersSavedSearchesStayOutOfThePrompt(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $stranger = $this->user('profile-run-tick-other-reader@example.test');
+        $this->entityManager->persist(new SavedSearch($stranger, 'knitting', false));
+        $this->entityManager->flush();
+        $this->chat()->queueContent('{"profile":"Likes maps."}');
+
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+
+        self::assertStringNotContainsString('SAVED SEARCHES', $this->chat()->calls()[0]['messages'][1]['content']);
+    }
+
+    public function testATermSavedTwiceIsShownOnce(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $this->saveSearch('rust');
+        $this->entityManager->persist(new SavedSearch($this->owner, 'rust', true));
+        $this->entityManager->flush();
+        $this->chat()->queueContent('{"profile":"Likes maps and Rust."}');
+
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+
+        self::assertSame(1, substr_count($this->chat()->calls()[0]['messages'][1]['content'], '- rust'));
+    }
+
+    public function testSavedSearchesAloneAreEnoughToBuildAProfile(): void
+    {
+        $this->saveSearch('rust');
+        $this->chat()->queueContent('{"profile":"Follows Rust."}');
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+
+        $this->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(ProfileRunOutcome::Generated, $profileRun->getOutcome());
+        self::assertSame('Follows Rust.', $this->storedProfile()->getText());
+    }
+
+    public function testAScheduledRunAfterASearchWasSavedCallsTheModel(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 2);
+        $this->chat()->queueContent('{"profile":"First."}');
+        $this->advance($this->profileRun(ProfileRunTrigger::Manual), TickDriver::Poll);
+        $this->saveSearch('rust');
+        $this->chat()->queueContent('{"profile":"Maps and Rust."}');
+        $scheduled = $this->profileRun(ProfileRunTrigger::Scheduled);
+
+        $this->advance($scheduled, TickDriver::Poll);
+
+        self::assertSame(ProfileRunOutcome::Generated, $scheduled->getOutcome());
+        self::assertSame('Maps and Rust.', $this->storedProfile()->getText());
     }
 
     public function testAScheduledRunAfterTheHistoryGrewCallsTheModel(): void
@@ -463,6 +532,18 @@ final class ProfileRunTickTest extends DbTestCase
         $this->advance($profileRun, TickDriver::Poll);
 
         self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
+    }
+
+    private function saveSearch(string $term): void
+    {
+        $this->entityManager->persist(new SavedSearch($this->owner, $term, false));
+        $this->entityManager->flush();
+    }
+
+    private function savePhraseSearch(string $term): void
+    {
+        $this->entityManager->persist(new SavedSearch($this->owner, $term, false, true));
+        $this->entityManager->flush();
     }
 
     private function profileRun(ProfileRunTrigger $trigger): ProfileRun

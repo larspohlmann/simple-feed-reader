@@ -344,7 +344,7 @@
       "generated": "Generated {{when}} by {{model}} at {{host}}",
       "statusRunning": "Building your profile…",
       "statusUnchanged": "Your reading has not changed since the last profile, so the model was not asked again.",
-      "statusNoHistory": "There is no reading history yet to build a profile from.",
+      "statusNoHistory": "There is no reading history and no saved search yet to build a profile from.",
       "statusFailed": "The last attempt failed: {{error}}",
       "statusUnreadable": "The run's status could not be read. Generate now checks it again.",
       "generateNow": "Generate now",

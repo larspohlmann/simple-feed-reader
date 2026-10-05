@@ -14,7 +14,10 @@ use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
-/** Starts a pending profile run; without history, or as a scheduled run with unchanged inputs, it ends right there. */
+/**
+ * Starts a pending profile run; with nothing to build from, or as a scheduled run with unchanged inputs, it ends
+ * right there.
+ */
 final readonly class ProfileRunOpening
 {
     public function __construct(
@@ -28,12 +31,12 @@ final readonly class ProfileRunOpening
     public function open(ProfileTick $tick): void
     {
         $profileRun = $tick->profileRun;
-        $fingerprint = ProfileInputFingerprint::of($tick->history, $tick->settings->historyCaps, $tick->connection);
+        $fingerprint = ProfileInputFingerprint::of($tick->inputs, $tick->settings->historyCaps, $tick->connection);
         $unchanged = $this->isUnchangedScheduledRun($tick, $fingerprint);
 
         $profileRun->start($fingerprint, ProviderHost::of($tick->connection), $this->modelOf($tick));
 
-        if ($tick->history->isEmpty()) {
+        if ($tick->inputs->isEmpty()) {
             $profileRun->complete(ProfileRunOutcome::NoHistory, $this->clock->now());
         } elseif ($unchanged) {
             $profileRun->complete(ProfileRunOutcome::Unchanged, $this->clock->now());

@@ -13,7 +13,6 @@ use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
-use App\Service\Recommendation\Pool\RecommendationHistoryLoader;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
@@ -28,7 +27,7 @@ final readonly class ProfileRunTick
 {
     public function __construct(
         private RecommendationSettingsResolver $settingsResolver,
-        private RecommendationHistoryLoader $historyLoader,
+        private ProfileInputsLoader $inputsLoader,
         private ProfileRunOpening $opening,
         private ProfileGeneration $generation,
         private ProfileRunFailure $failure,
@@ -79,7 +78,7 @@ final readonly class ProfileRunTick
             $profileRun,
             $connection,
             $settings,
-            $this->historyLoader->load($user->requireId(), $settings),
+            $this->inputsLoader->load($user->requireId(), $settings),
             $driver,
         );
     }

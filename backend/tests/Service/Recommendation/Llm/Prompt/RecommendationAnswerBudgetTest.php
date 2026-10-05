@@ -28,7 +28,7 @@ final class RecommendationAnswerBudgetTest extends TestCase
             $this->answerBudget->answerBoundTokens(100, RecommendationResponseSchema::Consolidation),
         );
         self::assertSame(
-            intdiv(max(1024, 1200) * 150, 100),
+            intdiv(max(1024, RecommendationAnswerBudget::PROFILE_ANSWER_TOKENS) * 150, 100),
             $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::Distillation),
         );
     }
