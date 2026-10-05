@@ -19,6 +19,7 @@ import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -70,6 +71,7 @@ const RELOAD_SPINNER_DELAY_MS = 150;
     ToTopButtonComponent,
     ScrollOutsideZoneDirective,
     ProgressRailComponent,
+    ScrollProgressDirective,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -310,33 +312,20 @@ export class EntryListComponent implements OnDestroy {
     onReloaded: () => this.content.clearHidden(),
   });
 
-  private readonly listTotal = computed(() => {
-    const count = this.titleCount().value;
-    return this.selection().kind === 'search' || count === 0 ? null : count;
-  });
-
-  private readonly loadedTotal = computed(() => (this.hasMore() ? null : this.entries().length));
-
   private readonly listBottom = new EstimatedListBottom({
-    rendered: this.content.rendered,
-    shownEntries: this.content.renderedVisibleCount,
-    complete: this.content.complete,
-    total: this.listTotal,
-    loadedTotal: this.loadedTotal,
+    content: this.content,
+    entries: this.entries,
+    hasMore: this.hasMore,
+    titleCount: this.titleCount,
+    isSearch: this.isSearch,
     loading: this.loading,
   });
 
-  readonly progressRail = new ScrollProgressRail({
-    scroller: this.scroller,
+  protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
     contentBottom: this.listBottom.measure,
-    layoutChanges: this.listBottom.layoutChanges,
+    layout: this.listBottom.layout,
   });
-
-  readonly onRowsScroll = (event: Event): void => {
-    this.scrolling.onScroll(event);
-    this.progressRail.paint();
-  };
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
   readonly collapsed = this.scrolling.collapsed;

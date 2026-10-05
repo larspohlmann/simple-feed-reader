@@ -6,13 +6,9 @@ export function overflowsViewport(contentBottom: number, viewportHeight: number)
   return viewportHeight > 0 && contentBottom > viewportHeight;
 }
 
-/**
- * How far through the content the pane has scrolled, from 0 to 1. `contentBottom`
- * is the content's own end, deliberately NOT the scroller's `scrollHeight`: an
- * article carries tail padding below it (`needsReadingTail`) and the list a corner
- * clearance, and folding that dead space into the range would hold a full bar back
- * from the last line. Content that fits its pane reports 1.
- */
+/** How far through the content the pane has scrolled, from 0 to 1. `contentBottom` is
+ *  the content's own end, NOT `scrollHeight`: padding below it would hold a full bar
+ *  back from the last line. Content that fits its pane reports 1. */
 export function scrollProgress(
   scrollTop: number,
   viewportHeight: number,

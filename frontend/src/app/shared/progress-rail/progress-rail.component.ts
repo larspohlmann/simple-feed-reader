@@ -15,7 +15,7 @@ import { ScrollProgressRail } from './scroll-progress-rail';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     'aria-hidden': 'true',
-    '[class.horizontal]': "progress().orientation() === 'horizontal'",
+    '[class.horizontal]': 'progress().horizontal()',
     '[class.idle]': '!progress().overflows()',
   },
   template: '<i></i>',
@@ -28,8 +28,8 @@ export class ProgressRailComponent {
     const host: HTMLElement = inject(ElementRef).nativeElement;
     effect((onCleanup) => {
       const progress = this.progress();
-      progress.attach(host);
-      onCleanup(() => progress.detach(host));
+      progress.attachRail(host);
+      onCleanup(() => progress.detachRail(host));
     });
   }
 }

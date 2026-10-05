@@ -89,7 +89,7 @@
     <div
       #scroller
       class="scroller"
-      [class.scrollbar-hidden]="progressRail.replacesScrollbar()"
+      [appScrollProgress]="progressRail"
       (scroll)="onScroll(scroller.scrollTop)"
     >
       <div
@@ -221,8 +221,7 @@
         }
       </div>
     </div>
-    <!-- Decorative: a stand-in for the scrollbar, so no progressbar role; a screen
-         reader already reports the position, and announcing every frame is noise. -->
+    <!-- No progressbar role: announcing every scroll frame would only be noise. -->
     <app-progress-rail [progress]="progressRail" />
   </div>
   @if (showToTop()) {

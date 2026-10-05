@@ -102,7 +102,9 @@ export class ListContent {
   readonly visibleEntryCount = computed(() => this.countVisible(this.options.entries()));
 
   /** `visibleEntryCount` over the rows already in the DOM. */
-  readonly renderedVisibleCount = computed(() => this.countVisible(this.rendered()));
+  readonly renderedVisibleCount = computed(() =>
+    this.fullyRevealed() ? this.visibleEntryCount() : this.countVisible(this.rendered()),
+  );
 
   /** Every page is loaded and revealed, so the rendered rows are the whole list. */
   readonly complete = computed(() => !this.options.hasMore() && this.fullyRevealed());

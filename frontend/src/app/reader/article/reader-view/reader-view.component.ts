@@ -13,6 +13,7 @@ import {
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
@@ -56,6 +57,7 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
   selector: 'app-reader-view',
   imports: [
     ProgressRailComponent,
+    ScrollProgressDirective,
     ProxiedImageDirective,
     IconComponent,
     ListActionDirective,
@@ -116,10 +118,9 @@ export class ReaderViewComponent {
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
   protected readonly progressRail = new ScrollProgressRail({
-    scroller: this.scroller,
     isWide: this.screen.isWide,
     contentBottom: () => this.scope.contentBottom(),
-    layoutChanges: () => this.scope.contentBottom(),
+    layout: this.scope.contentBottom,
   });
 
   protected readonly formatDuration = formatDuration;
@@ -260,7 +261,6 @@ export class ReaderViewComponent {
   }
 
   protected onScroll(scrollTop: number): void {
-    this.progressRail.paint();
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists

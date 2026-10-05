@@ -3,6 +3,8 @@ import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
+const SIDE_RAIL = 'app-progress-rail:not(.horizontal)';
+const BOTTOM_HAIRLINE = 'app-progress-rail.horizontal';
 // Wide enough for the split layout, where the article shares the main area with
 // the list — the one place a viewport-anchored bar would run on under the list.
 const DESKTOP = { width: 1280, height: 900 };
@@ -80,11 +82,11 @@ test.describe('Article reading progress', () => {
     const pane = await openArticle(page);
     const scroller = pane.locator('.scroller');
 
-    const rail = pane.locator('app-progress-rail:not(.horizontal)');
+    const rail = pane.locator(SIDE_RAIL);
     await expect(rail).toBeVisible();
     // The two cues swap at the breakpoint rather than coexist (#435). Asserting
     // the absent one here is what would have caught this spec going stale.
-    await expect(pane.locator('app-progress-rail.horizontal')).toHaveCount(0);
+    await expect(pane.locator(BOTTOM_HAIRLINE)).toHaveCount(0);
     expect(await railFilledFraction(pane)).toBeLessThan(0.05);
 
     // The end of the text — NOT the end of the scroller, which carries half a
@@ -103,8 +105,8 @@ test.describe('Article reading progress', () => {
 
   // The cue has to survive the reading tail, which is half a viewport of blank
   // space below the last paragraph — exactly where the reader finishes the
-  // article. The rail lies over the scroller rather than in the scrolled content
-  // (#1392), so nothing the text does can carry it away; this pins that placement.
+  // article. The rail must lie over the scroller, not in the scrolled content, or
+  // the text carries it away.
   test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
     const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
@@ -155,9 +157,9 @@ test.describe('Article reading progress on the split layout', () => {
 
     // The wide layout keeps the hairline the split pane was designed for, and
     // shows no rail — the other half of the swap #435 introduced.
-    await expect(pane.locator('app-progress-rail:not(.horizontal)')).toHaveCount(0);
+    await expect(pane.locator(SIDE_RAIL)).toHaveCount(0);
 
-    const box = (await pane.locator('app-progress-rail.horizontal').boundingBox())!;
+    const box = (await pane.locator(BOTTOM_HAIRLINE).boundingBox())!;
     const paneBox = (await pane.locator('.scroller').boundingBox())!;
     expect(box.width).toBeCloseTo(paneBox.width, 0);
     expect(box.width).toBeLessThan(DESKTOP.width);

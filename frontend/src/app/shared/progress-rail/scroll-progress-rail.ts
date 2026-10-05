@@ -1,44 +1,48 @@
-import { Injector, Signal, afterNextRender, computed, effect, inject, signal } from '@angular/core';
+import {
+  Injector,
+  Signal,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { overflowsViewport, scrollProgress } from './scroll-progress';
 
-export type ProgressRailOrientation = 'vertical' | 'horizontal';
-
 export interface ScrollProgressRailOptions {
-  readonly scroller: () => HTMLElement | undefined;
   readonly isWide: Signal<boolean>;
   /** Where the content ends in the scroller's scroll coordinates, or null when unknown. */
   readonly contentBottom: (scroller: HTMLElement) => number | null;
-  /** Reads every signal whose change moves the content's end, so the rail repaints once
-   *  that change has rendered. */
-  readonly layoutChanges: () => void;
+  /** Changes whenever the content's end may have moved; the rail repaints once rendered. */
+  readonly layout: Signal<unknown>;
 }
 
 /** A scroller's length-and-position cue (#238), for the article and the paged list
- *  alike. `paint()` writes straight onto the rail, so a scroll handler outside the
- *  zone costs no change detection (#501). Built in a field initializer. */
+ *  alike: the scroller (`appScrollProgress`) and the rail (`app-progress-rail`) attach
+ *  themselves, and `paint()` writes the fill without change detection (#501). */
 export class ScrollProgressRail {
   private readonly injector = inject(Injector);
+  private readonly scroller = signal<HTMLElement | undefined>(undefined);
   private rail?: HTMLElement;
 
   readonly overflows = signal(false);
 
-  /** A phone gets a rail on the right edge in place of the scrollbar it withholds;
-   *  a wide layout keeps its scrollbar and gets a hairline along the bottom. */
-  readonly orientation = computed<ProgressRailOrientation>(() =>
-    this.options.isWide() ? 'horizontal' : 'vertical',
-  );
+  /** A wide layout keeps its scrollbar and gets a hairline along the bottom; a phone
+   *  gets a rail on the right edge in place of the scrollbar it withholds. */
+  readonly horizontal = computed(() => this.options.isWide());
 
-  /** Fixed by orientation, not by `overflows`: toggling a classic scrollbar resizes
-   *  the content, which could flip `overflows` back and forth. */
-  readonly replacesScrollbar = computed(() => this.orientation() === 'vertical');
+  /** By layout, not by `overflows`: toggling a classic scrollbar resizes the content,
+   *  which could flip `overflows` back and forth. */
+  readonly replacesScrollbar = computed(() => !this.horizontal());
 
   private readonly _paintAfterRender = effect(() => {
-    this.options.layoutChanges();
+    this.options.layout();
     afterNextRender(() => this.paint(), { injector: this.injector });
   });
 
   private readonly _paintOnResize = effect((onCleanup) => {
-    const scroller = this.options.scroller();
+    const scroller = this.scroller();
     if (!scroller || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(() => this.paint());
     observer.observe(scroller);
@@ -47,18 +51,25 @@ export class ScrollProgressRail {
 
   constructor(private readonly options: ScrollProgressRailOptions) {}
 
-  /** The rail element registers itself, so a view never holds a reference to it. */
-  attach(rail: HTMLElement): void {
-    this.rail = rail;
-    this.paint();
+  attachScroller(scroller: HTMLElement): void {
+    this.scroller.set(scroller);
   }
 
-  detach(rail: HTMLElement): void {
+  detachScroller(scroller: HTMLElement): void {
+    if (untracked(this.scroller) === scroller) this.scroller.set(undefined);
+  }
+
+  attachRail(rail: HTMLElement): void {
+    this.rail = rail;
+    untracked(() => this.paint());
+  }
+
+  detachRail(rail: HTMLElement): void {
     if (this.rail === rail) this.rail = undefined;
   }
 
   readonly paint = (): void => {
-    const scroller = this.options.scroller();
+    const scroller = untracked(this.scroller);
     if (!scroller) return;
     const bottom = this.options.contentBottom(scroller);
     const overflows = bottom !== null && overflowsViewport(bottom, scroller.clientHeight);

@@ -473,35 +473,40 @@ describe('ReaderViewComponent', () => {
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
-    it('lays the progress rail over the pane and fills it as the article scrolls', () => {
-      const fixture = mount(entry());
+    /** A 2400-tall article in an 800-tall pane whose geometry follows the scroll. */
+    function scrollingArticle(fixture: ReturnType<typeof mount>) {
       const host = stubGeometry(fixture, 2400, 800);
       fixture.detectChanges();
       const scroller = scrollerOf(fixture);
       const content = host.querySelector('.content') as HTMLElement;
       content.getBoundingClientRect = () =>
         ({ top: -scroller.scrollTop, bottom: 2400 - scroller.scrollTop }) as DOMRect;
+      const scrollTo = (top: number): void => {
+        scroller.scrollTop = top;
+        scroller.dispatchEvent(new Event('scroll'));
+        fixture.detectChanges();
+      };
+      const fill = (): string =>
+        host
+          .querySelector<HTMLElement>('app-progress-rail:not(.idle)')!
+          .style.getPropertyValue('--rail-fill');
+      return { host, scroller, scrollTo, fill };
+    }
 
-      scroller.scrollTop = 800;
-      scroller.dispatchEvent(new Event('scroll'));
-      fixture.detectChanges();
+    it('lays the progress rail over the pane and fills it as the article scrolls', () => {
+      const fixture = mount(entry());
+      const { host, scrollTo, fill } = scrollingArticle(fixture);
 
-      const rail = host.querySelector<HTMLElement>('app-progress-rail:not(.idle)')!;
-      expect(rail.parentElement!.classList).toContain('frame');
-      expect(rail.style.getPropertyValue('--rail-fill')).toBe('50');
+      scrollTo(800);
+
+      expect(host.querySelector('app-progress-rail')!.parentElement!.classList).toContain('frame');
+      expect(fill()).toBe('50');
     });
 
     it('repaints the rail when only the pane changes height', () => {
       const fixture = mount(entry());
-      const host = stubGeometry(fixture, 2400, 800);
-      fixture.detectChanges();
-      const scroller = scrollerOf(fixture);
-      const content = host.querySelector('.content') as HTMLElement;
-      content.getBoundingClientRect = () =>
-        ({ top: -scroller.scrollTop, bottom: 2400 - scroller.scrollTop }) as DOMRect;
-      scroller.scrollTop = 400;
-      scroller.dispatchEvent(new Event('scroll'));
-      fixture.detectChanges();
+      const { scroller, scrollTo, fill } = scrollingArticle(fixture);
+      scrollTo(400);
 
       Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 2000 });
       MockResizeObserver.instances
@@ -509,8 +514,7 @@ describe('ReaderViewComponent', () => {
         .forEach((observer) => observer.fire());
       fixture.detectChanges();
 
-      const rail = host.querySelector<HTMLElement>('app-progress-rail')!;
-      expect(rail.style.getPropertyValue('--rail-fill')).toBe('100');
+      expect(fill()).toBe('100');
     });
 
     it('measures the inner scroller once the article first renders', async () => {

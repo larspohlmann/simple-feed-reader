@@ -8,10 +8,9 @@ describe('ProgressRailComponent', () => {
     const progress = TestBed.runInInjectionContext(
       () =>
         new ScrollProgressRail({
-          scroller: () => undefined,
           isWide: signal(isWide),
           contentBottom: () => null,
-          layoutChanges: () => undefined,
+          layout: signal(0),
         }),
     );
     const fixture = TestBed.createComponent(ProgressRailComponent);
