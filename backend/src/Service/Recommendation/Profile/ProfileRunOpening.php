@@ -9,6 +9,7 @@ use App\Enum\ProfileRunTrigger;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Support\ProviderHost;
+use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,7 +29,8 @@ final readonly class ProfileRunOpening
     public function open(ProfileTick $tick): void
     {
         $profileRun = $tick->profileRun;
-        $fingerprint = ProfileInputFingerprint::of($tick->history, $tick->settings->historyCaps, $tick->connection);
+        $inputs = new ProfileInputsModel($tick->history, []);
+        $fingerprint = ProfileInputFingerprint::of($inputs, $tick->settings->historyCaps, $tick->connection);
         $unchanged = $this->isUnchangedScheduledRun($tick, $fingerprint);
 
         $profileRun->start($fingerprint, ProviderHost::of($tick->connection), $this->modelOf($tick));

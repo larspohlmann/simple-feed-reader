@@ -10,6 +10,7 @@ use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Profile\Support\ProfileInputFingerprint;
 use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
@@ -60,10 +61,13 @@ final class ProfileInputFingerprintTest extends TestCase
 
     public function testAnEntryRetitledByItsFeedLeavesItAlone(): void
     {
-        $retitled = new RecommendationHistoryModel(
-            [new ArticleLineModel(11, 'Corrected title', 'Feed', '2026-10-01', null)],
-            self::lines([12]),
-            self::lines([13]),
+        $retitled = new ProfileInputsModel(
+            new RecommendationHistoryModel(
+                [new ArticleLineModel(11, 'Corrected title', 'Feed', '2026-10-01', null)],
+                self::lines([12]),
+                self::lines([13]),
+            ),
+            [],
         );
 
         self::assertSame(
@@ -96,14 +100,66 @@ final class ProfileInputFingerprintTest extends TestCase
         );
     }
 
-    /**
-     * @param list<int> $favorites
-     * @param list<int> $kept
-     * @param list<int> $viewed
-     */
-    private function history(array $favorites, array $kept, array $viewed): RecommendationHistoryModel
+    public function testASavedSearchChangesIt(): void
     {
-        return new RecommendationHistoryModel(self::lines($favorites), self::lines($kept), self::lines($viewed));
+        self::assertNotSame(
+            ProfileInputFingerprint::of($this->history([11], [12], [13]), $this->caps(), $this->connection(5, 'm')),
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13], ['rust']),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+        );
+    }
+
+    public function testASearchSavedAsAPhraseChangesIt(): void
+    {
+        self::assertNotSame(
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13], ['home assistant']),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13], ['"home assistant"']),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+        );
+    }
+
+    public function testTheOrderOfTheSavedSearchesLeavesItAlone(): void
+    {
+        self::assertSame(
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13], ['rust', 'maps']),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+            ProfileInputFingerprint::of(
+                $this->history([11], [12], [13], ['maps', 'rust']),
+                $this->caps(),
+                $this->connection(5, 'm'),
+            ),
+        );
+    }
+
+    /**
+     * @param list<int>    $favorites
+     * @param list<int>    $kept
+     * @param list<int>    $viewed
+     * @param list<string> $savedSearchTerms
+     */
+    private function history(
+        array $favorites,
+        array $kept,
+        array $viewed,
+        array $savedSearchTerms = [],
+    ): ProfileInputsModel {
+        return new ProfileInputsModel(
+            new RecommendationHistoryModel(self::lines($favorites), self::lines($kept), self::lines($viewed)),
+            $savedSearchTerms,
+        );
     }
 
     /**
