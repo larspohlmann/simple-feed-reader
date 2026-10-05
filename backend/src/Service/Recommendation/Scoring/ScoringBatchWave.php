@@ -16,7 +16,6 @@ use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\Pass\BatchCall;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
-use App\Service\Recommendation\Scoring\Factory\ScoringBudgetFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringWave;
@@ -31,7 +30,6 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     public function __construct(
         private RateLimitedCalls $rateLimitedCalls,
         private ScoringProtocolResolver $protocols,
-        private ScoringBudgetFactory $budgetFactory,
         private AiProviderConfigurator $configurator,
         private RecommendationCallRecorder $callRecorder,
         private ScoreParser $parser,
@@ -46,18 +44,18 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
         $tick = $wave->tick();
-        $protocol = $tick->requireScoringProtocol();
+        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
         $waveBatch = $wave->batches()[$position];
         $request = new ScoringRequestModel(
             $tick->connection->getModel() ?? '',
             $wave->reader,
-            $this->budgetFactory->create($protocol),
+            $protocol->budget($tick->requireScoringContextWindow()),
             $waveBatch->linesInSnapshotOrder(),
         );
         $recordedCall = $this->callRecorder->begin(
             $tick->run,
             CallSlotModel::batch($waveBatch->index + 1),
-            $this->protocols->protocolOf($protocol)->renderedRequest($request),
+            $protocol->renderedRequest($request),
         );
 
         return new BatchCall($request, $recordedCall);

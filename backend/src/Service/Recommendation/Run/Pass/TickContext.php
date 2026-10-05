@@ -50,4 +50,10 @@ final readonly class TickContext
         return $this->scoringProtocol()
             ?? throw new \LogicException('This tick\'s connection speaks no scoring protocol.');
     }
+
+    public function requireScoringContextWindow(): int
+    {
+        return $this->connection->getModelContextWindow()
+            ?? throw new \LogicException('This tick\'s connection stores no context window for its scoring model.');
+    }
 }

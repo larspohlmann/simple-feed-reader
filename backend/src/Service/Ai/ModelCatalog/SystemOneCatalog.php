@@ -20,7 +20,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final readonly class SystemOneCatalog implements ModelCatalogInterface
 {
     /** One System One request, state and every question together, as OpenRouter documents it. */
-    public const int CONTEXT_WINDOW_TOKENS = 32_000;
+    private const int CONTEXT_WINDOW_TOKENS = 32_000;
 
     /** OpenRouter refuses `jev-preview`, and TypeSafe documents only `jev-latest`. */
     private const array MODEL_IDS = ['jev-latest'];
