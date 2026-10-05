@@ -179,7 +179,7 @@
         "namePlaceholder": "Optionaler Name",
         "add": "Konfiguration hinzufügen",
         "reasoning": "Das Modell nicht nachdenken lassen",
-        "reasoningRefused": "Dieses Modell hat die Anfrage abgelehnt und wird deshalb ohne sie gefragt.",
+        "reasoningRefused": "Dieses Modell lehnt die Bitte ab, nicht nachzudenken, deshalb stellt der Reader sie ihm nicht mehr.",
         "slowModel": "Langsames oder lokales Modell",
         "maxBatchSize": "Maximale Batchgröße",
         "batchConcurrency": "Parallele Anfragen",

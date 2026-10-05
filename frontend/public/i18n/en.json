@@ -179,7 +179,7 @@
         "namePlaceholder": "Optional name",
         "add": "Add configuration",
         "reasoning": "Ask the model not to reason",
-        "reasoningRefused": "This model rejected the request, so it is asked without it.",
+        "reasoningRefused": "This model refuses to be asked not to reason, so the reader no longer asks it.",
         "slowModel": "Slow or local model",
         "maxBatchSize": "Maximum batch size",
         "batchConcurrency": "Parallel requests",

@@ -464,24 +464,31 @@ describe('AiSectionComponent', () => {
     expect(setReasoning).toHaveBeenCalledWith(7, false);
   });
 
+  it('shows the refusal note while reasoning is suppressed for a model that refused it', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7, suppressReasoning: true, suppressionRefused: true })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')?.textContent).toContain(
+      'This model refuses to be asked not to reason, so the reader no longer asks it.',
+    );
+  });
+
   it.each([
-    [true, true, true],
-    [false, true, false],
-    [true, false, false],
+    [false, true],
+    [true, false],
   ])(
-    'with reasoning suppression %s and refusal %s the refusal note is shown: %s',
-    (suppressReasoning, suppressionRefused, shown) => {
+    'hides the refusal note with reasoning suppression %s and refusal %s',
+    (suppressReasoning, suppressionRefused) => {
       const fixture = mount();
       ai.configs.set([config({ id: 7, suppressReasoning, suppressionRefused })]);
       fixture.detectChanges();
 
       expandRow(fixture, 0);
 
-      const note: HTMLElement | null = row(fixture, 0).querySelector('.reasoning-refused');
-      expect(note !== null).toBe(shown);
-      if (note) {
-        expect(note.textContent).toContain('This model rejected the request');
-      }
+      expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')).toBeNull();
     },
   );
 
