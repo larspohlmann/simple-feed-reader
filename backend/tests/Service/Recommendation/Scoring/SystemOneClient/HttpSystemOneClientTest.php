@@ -11,6 +11,7 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Scoring\ScoringHttpTransport;
 use App\Service\Recommendation\Scoring\SystemOneClient\HttpSystemOneClient;
 use App\Tests\Support\CountingProviderCallHeartbeat;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -282,12 +283,12 @@ final class HttpSystemOneClientTest extends TestCase
     public function testTheWaitBeatsTheTicksHeartbeat(): void
     {
         $heartbeat = new CountingProviderCallHeartbeat();
-        $client = new HttpSystemOneClient(
+        $client = new HttpSystemOneClient(new ScoringHttpTransport(
             new MockHttpClient([new MockResponse('{"answers":{}}')]),
             $heartbeat,
             new MockClock(),
             'SimpleFeedReader/1.0',
-        );
+        ));
 
         $client->evaluateMany($this->credentials(), [$this->request('entry-7')]);
 
@@ -343,7 +344,12 @@ final class HttpSystemOneClientTest extends TestCase
                 $this->clock->sleep(61);
             }
         };
-        $client = new HttpSystemOneClient(new MockHttpClient($responses), $heartbeat, $clock, 'SimpleFeedReader/1.0');
+        $client = new HttpSystemOneClient(new ScoringHttpTransport(
+            new MockHttpClient($responses),
+            $heartbeat,
+            $clock,
+            'SimpleFeedReader/1.0',
+        ));
 
         return $client->evaluateMany($this->credentials(), [$request, ...array_values($siblings)]);
     }
@@ -358,12 +364,12 @@ final class HttpSystemOneClientTest extends TestCase
         SystemOneRequestModel $request,
         SystemOneRequestModel ...$siblings,
     ): array {
-        $client = new HttpSystemOneClient(
+        $client = new HttpSystemOneClient(new ScoringHttpTransport(
             new MockHttpClient($responses),
             new CountingProviderCallHeartbeat(),
             new MockClock(),
             'SimpleFeedReader/1.0',
-        );
+        ));
 
         return $client->evaluateMany($this->credentials(), [$request, ...array_values($siblings)]);
     }

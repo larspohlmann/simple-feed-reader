@@ -24,6 +24,7 @@ final class ResponseWave
     public function __construct(
         private readonly ClockInterface $clock,
         public readonly ProviderCredentialsModel $credentials,
+        public readonly ScoringEndpoint $endpoint,
     ) {
         $this->positions = new \SplObjectStorage();
     }

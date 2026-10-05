@@ -7,7 +7,10 @@ namespace App\Tests\Service\Recommendation\Scoring\Pass;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 use App\Service\Recommendation\Scoring\Pass\ResponseWave;
+use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
+use App\Service\Recommendation\Scoring\Support\SystemOneReplyDecoder;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -21,7 +24,7 @@ final class ResponseWaveTest extends TestCase
     public function testAResponseSilentForExactlyTheIdleBoundStaysOpenAndFailsJustAfter(): void
     {
         $clock = new MockClock('2026-10-02 09:00:00');
-        $wave = new ResponseWave($clock, $this->credentials());
+        $wave = new ResponseWave($clock, $this->credentials(), self::endpoint());
         $response = $this->response();
         $wave->await(0, $response);
 
@@ -40,7 +43,7 @@ final class ResponseWaveTest extends TestCase
 
     public function testTheOutcomesFollowTheRequestOrderNotTheOrderTheySettled(): void
     {
-        $wave = new ResponseWave(new MockClock(), $this->credentials());
+        $wave = new ResponseWave(new MockClock(), $this->credentials(), self::endpoint());
         $first = ScoringOutcomeModel::failed(new ProviderUnreachableException('first'));
         $second = ScoringOutcomeModel::failed(new ProviderUnreachableException('second'));
 
@@ -53,6 +56,15 @@ final class ResponseWaveTest extends TestCase
     private function response(): ResponseInterface
     {
         return (new MockHttpClient(new MockResponse('{}')))->request('POST', 'https://systemone.example.test');
+    }
+
+    private static function endpoint(): ScoringEndpoint
+    {
+        return new ScoringEndpoint(
+            '/systemone',
+            [429, 529],
+            static fn (string $body): ScoringReplyModel => SystemOneReplyDecoder::decode($body, null),
+        );
     }
 
     private function credentials(): ProviderCredentialsModel
