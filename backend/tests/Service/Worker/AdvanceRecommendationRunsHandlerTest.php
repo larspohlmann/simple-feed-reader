@@ -218,7 +218,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $rejectedUser = $this->user('rejected@example.test');
         $this->fixtures->seedSingleBatchFixture($rejectedUser);
-        $this->stopSuppressingReasoning($rejectedUser);
+        $this->fixtures->stopSuppressingReasoning($rejectedUser);
         $this->startAndSnapshot($rejectedUser);
 
         $healthyUser = $this->user('healthy-after-rejection@example.test');
@@ -636,14 +636,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $config = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
-        $this->entityManager->flush();
-    }
-
-    private function stopSuppressingReasoning(User $user): void
-    {
-        $connection = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
-        self::assertNotNull($connection);
-        $connection->setSuppressReasoning(false);
         $this->entityManager->flush();
     }
 

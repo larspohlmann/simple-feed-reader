@@ -902,7 +902,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(3);
-        $this->stopSuppressingReasoning();
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user, TickDriver::Worker);
@@ -1010,7 +1010,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(3);
-        $this->stopSuppressingReasoning();
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user, TickDriver::Worker);
@@ -2100,7 +2100,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testARejectedConsolidationCallFailsTheRunAtOnce(): void
     {
         $this->seedMultiBatchFixture();
-        $this->stopSuppressingReasoning();
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $run = $this->startAndSnapshot();
         foreach ($run->getCandidateBatches() as $batch) {
             $this->stubChatClient()->queueContent(json_encode([
@@ -2856,12 +2856,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $config = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
-        $this->entityManager->flush();
-    }
-
-    private function stopSuppressingReasoning(): void
-    {
-        $this->persistedConnection()->setSuppressReasoning(false);
         $this->entityManager->flush();
     }
 

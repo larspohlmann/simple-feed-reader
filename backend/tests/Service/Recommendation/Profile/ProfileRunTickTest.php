@@ -282,7 +282,7 @@ final class ProfileRunTickTest extends DbTestCase
 
     public function testARejectedRequestFailsTheRunAtOnceKeepingTheProfile(): void
     {
-        $this->stopSuppressingReasoning();
+        $this->fixtures->stopSuppressingReasoning($this->owner);
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
         $this->fixtures->storeProfile($this->owner, 'Earlier profile.');
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
@@ -306,7 +306,7 @@ final class ProfileRunTickTest extends DbTestCase
 
     public function testARejectedCallIsSettledInTheRunLogWithTheProvidersReason(): void
     {
-        $this->stopSuppressingReasoning();
+        $this->fixtures->stopSuppressingReasoning($this->owner);
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueFailure(
@@ -672,12 +672,6 @@ final class ProfileRunTickTest extends DbTestCase
         $this->entityManager->flush();
 
         return $profileRun;
-    }
-
-    private function stopSuppressingReasoning(): void
-    {
-        $this->connection->setSuppressReasoning(false);
-        $this->entityManager->flush();
     }
 
     private function savedConnection(): AiProviderSettings

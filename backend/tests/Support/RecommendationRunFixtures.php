@@ -86,6 +86,14 @@ final readonly class RecommendationRunFixtures
         $provider->setMaxBatchSize($maximumBatchSize);
     }
 
+    public function stopSuppressingReasoning(User $user): void
+    {
+        $connection = $user->getActiveAiProviderSettings()
+            ?? throw new \LogicException('Cannot stop suppressing reasoning before a provider is seeded.');
+        $connection->setSuppressReasoning(false);
+        $this->entityManager->flush();
+    }
+
     /** The smallest account that can run: a ready AI connection and five candidates, which fit in one batch. */
     public function seedSingleBatchFixture(User $user): void
     {
