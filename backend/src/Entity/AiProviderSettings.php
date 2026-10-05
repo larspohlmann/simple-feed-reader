@@ -19,12 +19,6 @@ final class AiProviderSettings
     use PersistedId;
 
     /**
-     * The hard ceiling on one tick's wave of provider calls; the default stays 1. Only the worker reaches it:
-     * a poll or sweep tick clamps to BatchWavePhase::POLL_MAX_CONCURRENCY.
-     */
-    public const int MAX_BATCH_CONCURRENCY = 8;
-
-    /**
      * The smallest cap an account may set. It may sit below RecommendationPromptBuilder::MINIMUM_BATCH_SIZE (10): that
      * floors only the token-budget split, and the cap closes a batch first (caps 5, 7, 9 over 40 candidates held).
      */
@@ -173,15 +167,9 @@ final class AiProviderSettings
         $this->suppressReasoning = $suppressReasoning;
     }
 
-    public function batchConcurrency(): int
+    public function getRunTuning(): RunTuning
     {
-        return $this->runTuning->batchConcurrency();
-    }
-
-    /** The configured concurrency clamped to the ceiling a direct-DB value could exceed. */
-    public function cappedBatchConcurrency(): int
-    {
-        return min($this->batchConcurrency(), self::MAX_BATCH_CONCURRENCY);
+        return $this->runTuning;
     }
 
     public function setBatchConcurrency(int $batchConcurrency): void
@@ -199,24 +187,9 @@ final class AiProviderSettings
         $this->runTuning->setSlowModel($slowModel);
     }
 
-    public function maxBatchSize(): ?int
-    {
-        return $this->runTuning->maxBatchSize();
-    }
-
     public function setMaxBatchSize(?int $maxBatchSize): void
     {
         $this->runTuning->setMaxBatchSize($maxBatchSize);
-    }
-
-    /**
-     * For AiProviderConfigurator::duplicateConfiguration(): the copy should
-     * start out driven the same way as the connection it was copied from,
-     * not reset to the defaults.
-     */
-    public function copyRunTuningFrom(self $source): void
-    {
-        $this->runTuning->copyFrom($source->runTuning);
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable

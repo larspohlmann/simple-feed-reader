@@ -44,7 +44,7 @@ final class AiConfigurationEditorTest extends DbTestCase
 
         $this->editor()->setBatchConcurrency($settings, 3);
 
-        self::assertSame(3, $this->reload($settings)->batchConcurrency());
+        self::assertSame(3, $this->reload($settings)->getRunTuning()->batchConcurrency());
     }
 
     private function editor(): AiConfigurationEditor

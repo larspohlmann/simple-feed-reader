@@ -153,19 +153,14 @@ final class AiProviderSettingsTest extends TestCase
     public function testBatchConcurrencyDefaultsToOne(): void
     {
         $settings = $this->settings();
-        self::assertSame(1, $settings->batchConcurrency());
+        self::assertSame(1, $settings->getRunTuning()->batchConcurrency());
     }
 
     public function testSetBatchConcurrencyIsReadBack(): void
     {
         $settings = $this->settings();
         $settings->setBatchConcurrency(3);
-        self::assertSame(3, $settings->batchConcurrency());
-    }
-
-    public function testMaxBatchConcurrencyIsEight(): void
-    {
-        self::assertSame(8, AiProviderSettings::MAX_BATCH_CONCURRENCY);
+        self::assertSame(3, $settings->getRunTuning()->batchConcurrency());
     }
 
     public function testReplacingTheConnectionKeepsTheBatchConcurrency(): void
@@ -180,7 +175,7 @@ final class AiProviderSettingsTest extends TestCase
             new \DateTimeImmutable('2026-08-06 11:00:00'),
         );
 
-        self::assertSame(3, $settings->batchConcurrency());
+        self::assertSame(3, $settings->getRunTuning()->batchConcurrency());
     }
 
     public function testANewRowIsNotSlowByDefault(): void
@@ -197,14 +192,14 @@ final class AiProviderSettingsTest extends TestCase
 
     public function testANewRowTakesTheDefaultMaxBatchSize(): void
     {
-        self::assertNull($this->settings()->maxBatchSize());
+        self::assertNull($this->settings()->getRunTuning()->maxBatchSize());
     }
 
     public function testSetMaxBatchSizeIsReadBack(): void
     {
         $settings = $this->settings();
         $settings->setMaxBatchSize(25);
-        self::assertSame(25, $settings->maxBatchSize());
+        self::assertSame(25, $settings->getRunTuning()->maxBatchSize());
     }
 
     public function testSetMaxBatchSizeBackToNullRestoresTheDefault(): void
@@ -214,7 +209,7 @@ final class AiProviderSettingsTest extends TestCase
 
         $settings->setMaxBatchSize(null);
 
-        self::assertNull($settings->maxBatchSize());
+        self::assertNull($settings->getRunTuning()->maxBatchSize());
     }
 
     public function testReplacingTheConnectionKeepsTheMaxBatchSize(): void
@@ -229,6 +224,6 @@ final class AiProviderSettingsTest extends TestCase
             new \DateTimeImmutable('2026-08-06 11:00:00'),
         );
 
-        self::assertSame(25, $settings->maxBatchSize());
+        self::assertSame(25, $settings->getRunTuning()->maxBatchSize());
     }
 }

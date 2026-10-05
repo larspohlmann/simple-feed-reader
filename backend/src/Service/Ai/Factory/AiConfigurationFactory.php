@@ -45,7 +45,7 @@ final readonly class AiConfigurationFactory
             $source->getVerifiedAt() ?? $this->clock->now(),
         );
         $copy->setSuppressReasoning($source->suppressesReasoning());
-        $copy->copyRunTuningFrom($source);
+        $copy->getRunTuning()->copyFrom($source->getRunTuning());
 
         return $copy;
     }
