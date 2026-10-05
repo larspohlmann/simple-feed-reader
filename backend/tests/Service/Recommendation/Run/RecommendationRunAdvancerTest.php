@@ -977,6 +977,33 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
     }
 
+    public function testAWaveOfTransportFailuresReportsTheFirstByIndex(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('first down'));
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('second down'));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        try {
+            $this->advancer()->advance($this->user, TickDriver::Worker);
+            self::fail('The wave transport failure must propagate.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('first down', $exception->getMessage());
+        }
+    }
+
     public function testTransportFailureInWaveAdvancesNothingAndIncrementsCeilingOnce(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
