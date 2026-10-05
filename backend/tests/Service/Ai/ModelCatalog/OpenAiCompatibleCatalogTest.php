@@ -92,7 +92,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
                 'context_length' => 32_000,
                 'architecture' => ['output_modalities' => ['first' => 'decisions']],
             ],
-            new ModelDescriptor('acme/keyed-1', 32_000, ScoringProtocol::SystemOne),
+            null,
         ];
         yield 'a single output that is no string' => [self::entry('acme/numeric-1', 32_000, [42]), null];
     }

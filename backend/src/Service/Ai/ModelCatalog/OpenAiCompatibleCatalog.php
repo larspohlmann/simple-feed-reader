@@ -150,24 +150,27 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private static function scoringProtocolOf(array $entry): ?ScoringProtocol
     {
         $outputs = self::outputModalities($entry);
-        if (null === $outputs || 1 !== \count($outputs) || !\is_string($outputs[0])) {
-            return null;
+
+        foreach (self::SCORING_OUTPUTS as $output => $protocol) {
+            if ([$output] === $outputs) {
+                return $protocol;
+            }
         }
 
-        return self::SCORING_OUTPUTS[$outputs[0]] ?? null;
+        return null;
     }
 
     /**
      * @param array<mixed> $entry
      *
-     * @return list<mixed>|null null when the entry reports none
+     * @return array<mixed>|null null when the entry reports none
      */
     private static function outputModalities(array $entry): ?array
     {
         $architecture = $entry['architecture'] ?? null;
         $outputs = \is_array($architecture) ? ($architecture['output_modalities'] ?? null) : null;
 
-        return \is_array($outputs) ? array_values($outputs) : null;
+        return \is_array($outputs) ? $outputs : null;
     }
 
     /** @param array<mixed> $entry */
