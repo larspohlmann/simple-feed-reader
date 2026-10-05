@@ -14,7 +14,7 @@ use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 /** One composite listing: the models by id, and the failures of the catalogs that did not recognise the provider. */
 final class ModelListing
 {
-    /** @var array<string, ModelDescriptor> */
+    /** @var array<array-key, ModelDescriptor> a numeric id is an int key; read ids from the descriptor */
     private array $byId = [];
 
     /** @var list<CredentialsRejectedException|ProviderUnreachableException> */
@@ -26,13 +26,13 @@ final class ModelListing
 
     public function add(ModelCatalogInterface $catalog): void
     {
-        $this->byId += $this->answerOf($catalog);
+        $this->byId += $this->answerOrRecordedFailureOf($catalog);
     }
 
     /** The catalog's description wins an id this listing holds already. */
     public function addOverriding(ModelCatalogInterface $catalog): void
     {
-        $this->byId = $this->answerOf($catalog) + $this->byId;
+        $this->byId = $this->answerOrRecordedFailureOf($catalog) + $this->byId;
     }
 
     public function offers(ScoringProtocol $protocol): bool
@@ -59,8 +59,8 @@ final class ModelListing
         return array_values($byId);
     }
 
-    /** @return array<string, ModelDescriptor> the catalog's first description per id; none when it failed */
-    private function answerOf(ModelCatalogInterface $catalog): array
+    /** @return array<array-key, ModelDescriptor> the catalog's first description per id; none when it failed */
+    private function answerOrRecordedFailureOf(ModelCatalogInterface $catalog): array
     {
         try {
             $byId = [];
