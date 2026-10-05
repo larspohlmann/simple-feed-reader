@@ -4,6 +4,7 @@
 > superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** The profile distillation call sees the reader's saved-search terms, weighted equal to FAVORITES.
+The profile may run to about 500 words instead of 300 (Lars, 2026-10-05, after the plan was first committed).
 
 **Spec:** GitHub issue #1384.
 
@@ -41,6 +42,7 @@ so toggling it alone would rebuild the profile from an identical request.
 | `src/Service/Recommendation/Llm/Prompt/RecommendationPromptBuilder.php` | `distillMessages(ProfileInputsModel)`, SAVED SEARCHES section |
 | `src/Service/Recommendation/Llm/Prompt/Support/RecommendationPromptText.php` | `DISTILL_ROLE` names the section and its weight |
 | `src/Service/Recommendation/Llm/Run/LlmProfileRunDistiller.php` | Passes `$tick->inputs` |
+| `src/Service/Recommendation/Llm/Prompt/RecommendationAnswerBudget.php` | `PROFILE_ANSWER_TOKENS` sized for 500 words |
 | `frontend/public/i18n/en.json`, `de.json` | `statusNoHistory` copy mentions saved searches |
 | `docs/recommendations-runs.md` | "The profile" and the Jev paragraph |
 
@@ -216,7 +218,7 @@ final readonly class ProfileInputsModel
         . 'first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search terms they '
         . 'saved to keep following a subject. SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least. '
         . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
-        . 'profile, at most about 300 words, that names the reader\'s specific, repeated interests — topics, '
+        . 'profile, at most about 500 words, that names the reader\'s specific, repeated interests — topics, '
         . 'subjects, companies, technologies, people, kinds of story — and what they clearly avoid. Name concrete '
         . 'interests, not broad categories: prefer "self-hosted home automation" over "technology". The profile is '
         . 'used to score unread posts, so it must be specific enough to tell a strong match from a weak one.';
@@ -227,6 +229,55 @@ final readonly class ProfileInputsModel
 
 - [ ] **Step 4: Run the two test files whole, expect green.**
 - [ ] **Step 5: Commit** — `feat(#1384): the distillation prompt lists saved searches beside favourites`.
+
+---
+
+### Task 1b: The profile may run to 500 words
+
+Task 1 already writes "at most about 500 words" into `DISTILL_ROLE`. Two constants were sized for the old
+300-word cap and scale with it by 5/3.
+
+**Files:**
+- Modify: `src/Service/Recommendation/Llm/Prompt/RecommendationAnswerBudget.php` (`PROFILE_ANSWER_TOKENS`)
+- Modify: `src/Service/Recommendation/Llm/Prompt/RecommendationPromptBuilder.php` (`ESTIMATED_PROFILE_TOKENS`)
+- Test: `tests/Service/Recommendation/Llm/Prompt/RecommendationAnswerBudgetTest.php`,
+  `tests/Service/Recommendation/Llm/Prompt/RecommendationPromptBuilderTest.php`
+
+| Constant | Was | Becomes | Why |
+|---|---|---|---|
+| `PROFILE_ANSWER_TOKENS` | 1200 | 2000 | the distillation reply's expected size; the bound is 150 % of it, so 3000 |
+| `ESTIMATED_PROFILE_TOKENS` | 700 | 1200 | what `packBatches()` reserves for the profile in every batch call (1167, rounded up) |
+
+- [ ] **Step 1: Write the failing tests.**
+  - `RecommendationAnswerBudgetTest::testAnswerBoundIsSchemaAware`: the Distillation arm expects
+    `intdiv(max(1024, 2000) * 150, 100)`.
+  - `RecommendationPromptBuilderTest`: add a pin that the cap is in the prompt —
+
+```php
+    public function testTheDistillRoleAllowsAProfileOfAboutFiveHundredWords(): void
+    {
+        self::assertStringContainsString('at most about 500 words', RecommendationPromptText::DISTILL_ROLE);
+    }
+```
+
+  - The packing tests pin a window against `budget = window - 1500 - reply reserve - (profile estimate +
+    FAVORITES tokens)`. Raising the estimate by 500 lowers every such budget by 500, so a test that pins a
+    *positive* budget keeps it by raising its window by 500. Found by reading, not by running:
+    `testTheBatchReplyReserveIsTheProvidersAnswerBound` — window `3865` becomes `4365`, and its docblock's
+    `3865 … 709 profile and favorites` becomes `4365 … 1209`;
+    `testResponseReserveDivisorIsExactlyOneHundred` — window `6850` becomes `7350`.
+    The three tests at windows 3125, 3189 and 3195 pin a budget *below zero* and stay as they are; the 3195
+    test's comment quotes a budget figure — recompute it (`3195 - 1500 - 1536 - 1209`) rather than copy it.
+- [ ] **Step 2: Run both files, expect** the Distillation arm and the new 500-word pin to fail (the latter only
+  if Task 1's text is not in yet).
+- [ ] **Step 3: Change the two constants.** `PROFILE_ANSWER_TOKENS`'s docblock says `~500 words`.
+- [ ] **Step 4: Run the whole `RecommendationPromptBuilderTest`.** Any other packing test that now fails pins a
+  positive budget too: move its window by 500 and check its assertion still means what its name says. Do not
+  change an expected batch shape to make a test pass.
+- [ ] **Step 5: Commit** — `feat(#1384): the profile may run to 500 words`.
+
+**What this costs at run time:** every batch call reserves 500 more tokens for the profile, so on a small
+context window a run packs slightly fewer candidates per batch. The Task 5 real run is where that shows.
 
 ---
 
