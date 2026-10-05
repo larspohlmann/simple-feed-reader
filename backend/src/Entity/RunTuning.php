@@ -14,6 +14,12 @@ use Doctrine\ORM\Mapping as ORM;
 final class RunTuning
 {
     /**
+     * The hard ceiling on one tick's wave of provider calls; the default stays 1. Only the worker reaches it:
+     * a poll or sweep tick clamps to BatchWavePhase::POLL_MAX_CONCURRENCY.
+     */
+    public const int MAX_BATCH_CONCURRENCY = 8;
+
+    /**
      * Default 1 makes parallel batch calls opt-in: a single-GPU local model risks a memory stampede at higher values,
      * where a hosted provider gains wall-clock time. SetBatchConcurrencyRequest enforces the range.
      */
@@ -37,6 +43,12 @@ final class RunTuning
     public function batchConcurrency(): int
     {
         return $this->batchConcurrency;
+    }
+
+    /** The configured concurrency clamped to the ceiling a direct-DB value could exceed. */
+    public function cappedBatchConcurrency(): int
+    {
+        return min($this->batchConcurrency, self::MAX_BATCH_CONCURRENCY);
     }
 
     public function setBatchConcurrency(int $batchConcurrency): void

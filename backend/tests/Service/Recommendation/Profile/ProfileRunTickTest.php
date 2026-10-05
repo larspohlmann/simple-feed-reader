@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Profile;
 
+use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
@@ -42,6 +43,7 @@ final class ProfileRunTickTest extends DbTestCase
 
     private RecommendationRunFixtures $fixtures;
     private User $owner;
+    private AiProviderSettings $connection;
 
     protected function setUp(): void
     {
@@ -50,7 +52,7 @@ final class ProfileRunTickTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('profile-run-tick@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
+        $this->connection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
     }
 
     public function testAManualRunCallsTheModelOnceAndStoresTheProfile(): void
@@ -280,6 +282,7 @@ final class ProfileRunTickTest extends DbTestCase
 
     public function testARejectedRequestFailsTheRunAtOnceKeepingTheProfile(): void
     {
+        $this->fixtures->stopSuppressingReasoning($this->owner);
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
         $this->fixtures->storeProfile($this->owner, 'Earlier profile.');
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
@@ -303,6 +306,7 @@ final class ProfileRunTickTest extends DbTestCase
 
     public function testARejectedCallIsSettledInTheRunLogWithTheProvidersReason(): void
     {
+        $this->fixtures->stopSuppressingReasoning($this->owner);
         $this->fixtures->seedFavorites($this->owner, 'maps', 1);
         $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
         $this->chat()->queueFailure(
@@ -340,6 +344,56 @@ final class ProfileRunTickTest extends DbTestCase
         self::assertTrue($keepalive->hasLostTheLock());
         self::assertSame(RunStatus::Running, $this->saved($profileRun)->getStatus());
         self::assertNull($this->saved($profileRun)->getError());
+        self::assertFalse($this->savedConnection()->refusesSuppressedReasoning());
+    }
+
+    public function testAModelThatRefusesSuppressedReasoningIsAskedAgainWithoutIt(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        $this->chat()->queueFailure(new ProviderRejectedRequestException(
+            400,
+            'That provider refused the request (status 400): Reasoning effort "none" is not supported.',
+        ));
+        $this->chat()->queueContent('{"profile":"Likes maps."}');
+
+        $this->advance($profileRun, TickDriver::Poll);
+
+        self::assertSame(RunStatus::Running, $this->saved($profileRun)->getStatus());
+        self::assertSame(0, $this->saved($profileRun)->getTransportFailures());
+        self::assertSame(0, $this->saved($profileRun)->getAttempts());
+        self::assertTrue($this->savedConnection()->refusesSuppressedReasoning());
+
+        $this->advance($this->saved($profileRun), TickDriver::Poll);
+
+        self::assertSame(ProfileRunOutcome::Generated, $this->saved($profileRun)->getOutcome());
+        $calls = $this->chat()->calls();
+        self::assertTrue($calls[0]['suppressReasoning']);
+        self::assertFalse($calls[1]['suppressReasoning']);
+        self::assertGreaterThan($calls[0]['maxAnswerTokens'], $calls[1]['maxAnswerTokens']);
+    }
+
+    public function testASecondRejectionWithoutSuppressionFailsTheRun(): void
+    {
+        $this->fixtures->seedFavorites($this->owner, 'maps', 1);
+        $profileRun = $this->profileRun(ProfileRunTrigger::Manual);
+        foreach ([1, 2] as $attempt) {
+            $this->chat()->queueFailure(new ProviderRejectedRequestException(
+                400,
+                \sprintf('That provider refused the request (status 400): The schema is not supported (%d).', $attempt),
+            ));
+        }
+
+        $this->advance($profileRun, TickDriver::Poll);
+        $this->advance($this->saved($profileRun), TickDriver::Poll);
+
+        self::assertSame(RunStatus::Failed, $this->saved($profileRun)->getStatus());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 400): The schema is not supported (2).',
+            $this->saved($profileRun)->getError(),
+        );
+        self::assertCount(2, $this->chat()->calls());
     }
 
     public function testADeferringRateLimitIsAStrikeAndTheThirdFailsTheRun(): void
@@ -618,6 +672,15 @@ final class ProfileRunTickTest extends DbTestCase
         $this->entityManager->flush();
 
         return $profileRun;
+    }
+
+    private function savedConnection(): AiProviderSettings
+    {
+        $this->entityManager->clear();
+        $saved = $this->entityManager->find(AiProviderSettings::class, $this->connection->requireId());
+        self::assertInstanceOf(AiProviderSettings::class, $saved);
+
+        return $saved;
     }
 
     private function storedProfile(): StoredProfile

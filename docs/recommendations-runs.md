@@ -93,6 +93,14 @@ retry and no strike spent, and its error carries the provider's reason (`Provide
 run-log row still reads `transport-failed`, with the reason in its error detail. This holds for both engines and for
 profile runs.
 
+One rejection is absorbed instead (`SuppressedReasoningFallback`): a 400 or 422 to a request that asked the model not to
+reason ("Ask the model not to reason" on), on an engine that offers that setting, so never Jev. The run does not fail
+and spends no strike; the connection records the refusing model (`user_ai_settings.suppression_refused_by_model`), and
+the next tick asks the same model again without the field (`Reasoning::preferredBy()` answers `Allowed`). That costs one
+rejected tick (a whole wave on a parallel run), once per model. The mark holds only while that model is chosen, shows a
+note under the setting in Settings → AI, and is forgotten when the setting is toggled or the endpoint or key is
+replaced. A rejection of the resend without the field is an ordinary rejected request and fails the run at once.
+
 When a provider answers with an error status, the message in the run and its log carries the provider's own reason if
 it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for every rejecting
 status.

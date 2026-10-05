@@ -32,14 +32,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             $this->prompt(),
         );
 
-        self::assertSame(
-            $this->answerBudget->outputBoundTokens(
-                45,
-                RecommendationResponseSchema::Consolidation,
-                reasoning: Reasoning::Suppressed,
-            ),
-            $request->maxAnswerTokens,
-        );
+        self::assertSame($this->headroomFor(Reasoning::Suppressed), $request->maxAnswerTokens);
     }
 
     public function testAConnectionThatMayReasonKeepsTheFullReasoningHeadroom(): void
@@ -49,20 +42,25 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             $this->prompt(),
         );
 
-        $full = $this->answerBudget->outputBoundTokens(
-            45,
-            RecommendationResponseSchema::Consolidation,
-            reasoning: Reasoning::Allowed,
-        );
+        $full = $this->headroomFor(Reasoning::Allowed);
         self::assertSame($full, $request->maxAnswerTokens);
-        self::assertGreaterThan(
-            $this->answerBudget->outputBoundTokens(
-                45,
-                RecommendationResponseSchema::Consolidation,
-                reasoning: Reasoning::Suppressed,
-            ),
-            $full,
-        );
+        self::assertGreaterThan($this->headroomFor(Reasoning::Suppressed), $full);
+    }
+
+    public function testAModelThatRefusedSuppressionIsAskedWithTheFullReasoningHeadroom(): void
+    {
+        $connection = $this->settings(suppressReasoning: true);
+        $connection->recordSuppressionRefused();
+
+        $request = $this->factory->create($connection, $this->prompt());
+
+        self::assertSame(Reasoning::Allowed, $request->reasoning);
+        self::assertSame($this->headroomFor(Reasoning::Allowed), $request->maxAnswerTokens);
+    }
+
+    private function headroomFor(Reasoning $reasoning): int
+    {
+        return $this->answerBudget->outputBoundTokens(45, RecommendationResponseSchema::Consolidation, $reasoning);
     }
 
     private function prompt(): CallPromptModel

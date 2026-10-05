@@ -93,10 +93,10 @@ final readonly class BatchWavePhase
     /** Never below 1, like the wave cap: a directly stored concurrency ≤ 0 would wedge the run. */
     private function effectiveCap(TickContext $tick): int
     {
-        $connection = $tick->connection;
+        $runTuning = $tick->connection->getRunTuning();
         $cap = TickDriver::Worker === $tick->driver
-            ? $connection->cappedBatchConcurrency()
-            : min($connection->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
+            ? $runTuning->cappedBatchConcurrency()
+            : min($runTuning->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
 
         return max(1, $cap);
     }

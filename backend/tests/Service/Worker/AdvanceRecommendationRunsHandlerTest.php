@@ -218,6 +218,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     {
         $rejectedUser = $this->user('rejected@example.test');
         $this->fixtures->seedSingleBatchFixture($rejectedUser);
+        $this->fixtures->stopSuppressingReasoning($rejectedUser);
         $this->startAndSnapshot($rejectedUser);
 
         $healthyUser = $this->user('healthy-after-rejection@example.test');

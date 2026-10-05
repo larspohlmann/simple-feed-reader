@@ -70,6 +70,7 @@ final readonly class AccountRecommendationSettings
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {
-        return $provider?->maxBatchSize() ?? RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE;
+        return $provider?->getRunTuning()->maxBatchSize()
+            ?? RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE;
     }
 }

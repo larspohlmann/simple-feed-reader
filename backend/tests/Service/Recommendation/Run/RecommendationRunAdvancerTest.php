@@ -589,6 +589,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             self::assertNotNull($persisted);
             self::assertSame(RunStatus::Running, $persisted->getStatus());
             self::assertNull($persisted->getError());
+            self::assertFalse($this->persistedConnection()->refusesSuppressedReasoning());
         } finally {
             $thief?->release();
         }
@@ -901,6 +902,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(3);
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user, TickDriver::Worker);
@@ -941,10 +943,81 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
     }
 
+    public function testAWaveRejectedForSuppressedReasoningIsAskedAgainWithoutItAndTheRunCompletes(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 90, 'reason' => 'a']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueFailure(new ProviderRejectedRequestException(
+            400,
+            'That provider refused the request (status 400): Reasoning effort "none" is not supported.',
+        ));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Running->value, $report->status);
+        $this->entityManager->clear();
+        $absorbed = $this->activeRun();
+        self::assertSame(0, $absorbed->getTransportFailures());
+        self::assertSame(0, $absorbed->getAttempts());
+        self::assertSame(1, $absorbed->getProgress()->batchesDone);
+        self::assertTrue($this->persistedConnection()->refusesSuppressedReasoning());
+        $waveRows = \array_slice($this->logRowsOfLatestRun(), 1);
+        self::assertSame(
+            [CallVerdict::TransportFailed, CallVerdict::TransportFailed, CallVerdict::TransportFailed],
+            array_column($waveRows, 'verdict'),
+        );
+        self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
+
+        $callsBeforeTheResend = \count($this->stubChatClient()->calls());
+        foreach ([1, 2, 3] as $batchIndex) {
+            $this->stubChatClient()->queueContent(json_encode([
+                'recommendations' => [['id' => $batches[$batchIndex][0], 'score' => 90, 'reason' => 'resent']],
+            ], \JSON_THROW_ON_ERROR));
+        }
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->queueConsolidationReply([
+            ['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm'],
+            ['id' => $batches[1][0], 'score' => 80, 'reason' => 'resent'],
+        ]);
+        $final = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Completed->value, $final->status);
+        $calls = $this->stubChatClient()->calls();
+        self::assertSame(
+            [true, true, true, true],
+            array_column(\array_slice($calls, 0, $callsBeforeTheResend), 'suppressReasoning'),
+        );
+        self::assertSame(
+            [false, false, false, false],
+            array_column(\array_slice($calls, $callsBeforeTheResend), 'suppressReasoning'),
+        );
+        foreach ([0, 1, 2] as $waveIndex) {
+            self::assertGreaterThan(
+                $calls[1 + $waveIndex]['maxAnswerTokens'],
+                $calls[$callsBeforeTheResend + $waveIndex]['maxAnswerTokens'],
+            );
+        }
+    }
+
     public function testAWaveRejectionBeatsAnEarlierUnreachableCallAndFailsTheRunAtOnce(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
         $this->setBatchConcurrency(3);
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $this->storeProfile('a distilled profile');
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user, TickDriver::Worker);
@@ -2034,6 +2107,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testARejectedConsolidationCallFailsTheRunAtOnce(): void
     {
         $this->seedMultiBatchFixture();
+        $this->fixtures->stopSuppressingReasoning($this->user);
         $run = $this->startAndSnapshot();
         foreach ($run->getCandidateBatches() as $batch) {
             $this->stubChatClient()->queueContent(json_encode([
@@ -2790,6 +2864,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
         $this->entityManager->flush();
+    }
+
+    private function persistedConnection(): AiProviderSettings
+    {
+        $connection = $this->entityManager->getRepository(AiProviderSettings::class)
+            ->findOneBy(['user' => $this->user]);
+        self::assertNotNull($connection);
+
+        return $connection;
     }
 
     /** Drives a run through the snapshot tick, pinning the two-batch split on the way. */

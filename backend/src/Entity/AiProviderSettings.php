@@ -19,12 +19,6 @@ final class AiProviderSettings
     use PersistedId;
 
     /**
-     * The hard ceiling on one tick's wave of provider calls; the default stays 1. Only the worker reaches it:
-     * a poll or sweep tick clamps to BatchWavePhase::POLL_MAX_CONCURRENCY.
-     */
-    public const int MAX_BATCH_CONCURRENCY = 8;
-
-    /**
      * The smallest cap an account may set. It may sit below RecommendationPromptBuilder::MINIMUM_BATCH_SIZE (10): that
      * floors only the token-budget split, and the cap closes a batch first (caps 5, 7, 9 over 40 candidates held).
      */
@@ -79,10 +73,12 @@ final class AiProviderSettings
 
     /**
      * Default true: ranking needs no thinking phase, and a reasoning model reasoning here is pure cost (#320, #323).
-     * A strict endpoint that rejects the `reasoning` field, such as a direct OpenAI URL, turns it off.
      */
     #[ORM\Column(options: ['default' => 1])]
     private bool $suppressReasoning = true;
+
+    #[ORM\Column(name: 'suppression_refused_by_model', length: 255, nullable: true)]
+    private ?string $suppressionRefusedByModel = null;
 
     #[ORM\Embedded(class: RunTuning::class, columnPrefix: false)]
     private RunTuning $runTuning;
@@ -171,17 +167,23 @@ final class AiProviderSettings
     public function setSuppressReasoning(bool $suppressReasoning): void
     {
         $this->suppressReasoning = $suppressReasoning;
+        $this->suppressionRefusedByModel = null;
     }
 
-    public function batchConcurrency(): int
+    public function recordSuppressionRefused(): void
     {
-        return $this->runTuning->batchConcurrency();
+        $this->suppressionRefusedByModel = $this->model
+            ?? throw new \LogicException('A connection without a model has sent no request to refuse.');
     }
 
-    /** The configured concurrency clamped to the ceiling a direct-DB value could exceed. */
-    public function cappedBatchConcurrency(): int
+    public function refusesSuppressedReasoning(): bool
     {
-        return min($this->batchConcurrency(), self::MAX_BATCH_CONCURRENCY);
+        return null !== $this->model && $this->model === $this->suppressionRefusedByModel;
+    }
+
+    public function getRunTuning(): RunTuning
+    {
+        return $this->runTuning;
     }
 
     public function setBatchConcurrency(int $batchConcurrency): void
@@ -199,24 +201,9 @@ final class AiProviderSettings
         $this->runTuning->setSlowModel($slowModel);
     }
 
-    public function maxBatchSize(): ?int
-    {
-        return $this->runTuning->maxBatchSize();
-    }
-
     public function setMaxBatchSize(?int $maxBatchSize): void
     {
         $this->runTuning->setMaxBatchSize($maxBatchSize);
-    }
-
-    /**
-     * For AiProviderConfigurator::duplicateConfiguration(): the copy should
-     * start out driven the same way as the connection it was copied from,
-     * not reset to the defaults.
-     */
-    public function copyRunTuningFrom(self $source): void
-    {
-        $this->runTuning->copyFrom($source->runTuning);
     }
 
     public function getVerifiedAt(): ?\DateTimeImmutable
@@ -240,6 +227,7 @@ final class AiProviderSettings
         $this->applySealedKey($sealed);
         $this->model = null;
         $this->modelContextWindow = null;
+        $this->suppressionRefusedByModel = null;
         $this->verifiedAt = $verifiedAt;
     }
 

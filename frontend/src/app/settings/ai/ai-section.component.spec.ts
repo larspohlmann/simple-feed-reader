@@ -50,6 +50,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ready: false,
   active: false,
   suppressReasoning: true,
+  suppressionRefused: false,
   batchConcurrency: 1,
   slowModel: false,
   maxBatchSize: null,
@@ -462,6 +463,34 @@ describe('AiSectionComponent', () => {
 
     expect(setReasoning).toHaveBeenCalledWith(7, false);
   });
+
+  it('shows the refusal note while reasoning is suppressed for a model that refused it', () => {
+    const fixture = mount();
+    ai.configs.set([config({ id: 7, suppressReasoning: true, suppressionRefused: true })]);
+    fixture.detectChanges();
+
+    expandRow(fixture, 0);
+
+    expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')?.textContent).toContain(
+      'This model refuses to be asked not to reason, so the reader no longer asks it.',
+    );
+  });
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])(
+    'hides the refusal note with reasoning suppression %s and refusal %s',
+    (suppressReasoning, suppressionRefused) => {
+      const fixture = mount();
+      ai.configs.set([config({ id: 7, suppressReasoning, suppressionRefused })]);
+      fixture.detectChanges();
+
+      expandRow(fixture, 0);
+
+      expect(row(fixture, 0).querySelector('.reasoning-toggle .hint')).toBeNull();
+    },
+  );
 
   it('toggles the slow-model preference for a row', () => {
     const fixture = mount();

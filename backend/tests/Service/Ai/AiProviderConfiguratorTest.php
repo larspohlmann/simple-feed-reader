@@ -360,13 +360,13 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame('https://api.example.test/v1', $copy->getBaseUrl());
         self::assertSame($added->configuration->getApiKeyHint(), $copy->getApiKeyHint());
         self::assertNull($copy->getModel());
-        self::assertSame(3, $copy->batchConcurrency());
+        self::assertSame(3, $copy->getRunTuning()->batchConcurrency());
         self::assertFalse($copy->suppressesReasoning());
         // A copy of a local endpoint is still that local endpoint: it answers
         // just as slowly, so the profile travels with it.
         self::assertTrue($copy->isSlowModel());
         // A copy left at NULL would silently raise its batch ceiling to the default.
-        self::assertSame(25, $copy->maxBatchSize());
+        self::assertSame(25, $copy->getRunTuning()->maxBatchSize());
         self::assertNotSame($copy, $user->getActiveAiProviderSettings());
         // The re-sealed key opens back to the same plaintext under the copy's own row.
         self::assertSame('sk-abcdef1234', $configurator->credentials($copy)->apiKey);

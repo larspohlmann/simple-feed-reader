@@ -25,6 +25,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ready: false,
   active: false,
   suppressReasoning: true,
+  suppressionRefused: false,
   batchConcurrency: 1,
   slowModel: false,
   maxBatchSize: null,

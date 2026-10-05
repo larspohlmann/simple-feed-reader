@@ -291,6 +291,30 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
     }
 
+    public function testSettingBatchConcurrencyRejectsZero(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-batch-concurrency-zero@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":0}');
+
+        self::assertResponseStatusCodeSame(422);
+    }
+
+    public function testSettingBatchConcurrencyAcceptsTheMinimum(): void
+    {
+        $client = $this->clientAnswering(['gpt-4o']);
+        $this->accountOn($client, 'ai-batch-concurrency-minimum@example.test');
+        $id = $this->addConfiguration($client)['id'];
+        self::assertIsInt($id);
+
+        $this->putJson($client, sprintf('/api/me/ai/configs/%d/batch-concurrency', $id), '{"batchConcurrency":1}');
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testMaxBatchSizeDefaultsToNull(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);
