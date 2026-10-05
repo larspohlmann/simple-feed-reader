@@ -972,6 +972,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->entityManager->clear();
         $absorbed = $this->activeRun();
         self::assertSame(0, $absorbed->getTransportFailures());
+        self::assertSame(0, $absorbed->getAttempts());
         self::assertSame(1, $absorbed->getProgress()->batchesDone);
         self::assertTrue($this->persistedConnection()->refusesSuppressedReasoning());
         $waveRows = \array_slice($this->logRowsOfLatestRun(), 1);
@@ -1004,6 +1005,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             [false, false, false, false],
             array_column(\array_slice($calls, $callsBeforeTheResend), 'suppressReasoning'),
         );
+        foreach ([0, 1, 2] as $waveIndex) {
+            self::assertGreaterThan(
+                $calls[1 + $waveIndex]['maxAnswerTokens'],
+                $calls[$callsBeforeTheResend + $waveIndex]['maxAnswerTokens'],
+            );
+        }
     }
 
     public function testAWaveRejectionBeatsAnEarlierUnreachableCallAndFailsTheRunAtOnce(): void
