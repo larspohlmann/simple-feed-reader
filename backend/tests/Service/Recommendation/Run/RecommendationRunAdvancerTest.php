@@ -563,6 +563,37 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
     }
 
+    public function testATickThatLostItsLockDoesNotFailTheRunOnARejection(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $runId = $run->requireId();
+
+        $thief = null;
+        $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
+            $thief = $this->stealTheTickLock();
+            $this->providerCallHeartbeat()->beat();
+        });
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+
+        try {
+            $report = $this->advancer()->advance($this->user);
+
+            self::assertSame('running', $report->status);
+
+            $this->entityManager->clear();
+            $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
+            self::assertNotNull($persisted);
+            self::assertSame(RunStatus::Running, $persisted->getStatus());
+            self::assertNull($persisted->getError());
+        } finally {
+            $thief?->release();
+        }
+    }
+
     /**
      * The consolidation phase's own checkpoint, after it settles its reply and before the advancer finalizes: a
      * separate statement from the batch wave's, held in place only by this test.
