@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai\Support;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Ai\Support\AiReadiness;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -34,7 +35,7 @@ final class AiReadinessTest extends TestCase
         );
 
         if (null !== $model) {
-            $settings->chooseModel($model, new \DateTimeImmutable('2026-08-06 10:00:00'), null);
+            $settings->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-08-06 10:00:00'));
         }
 
         return $settings;

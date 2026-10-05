@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Http\ActiveAiJson;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -50,7 +51,10 @@ final class ActiveAiJsonTest extends TestCase
         $user = $this->user();
         $this->activate($user, 'Work OpenAI', 'gpt-4o-mini');
         $other = AiProviderSettingsFactory::build($user, 'Personal OpenRouter');
-        $other->chooseModel('claude-3-haiku', new \DateTimeImmutable('2026-08-09T09:06:00Z'), null);
+        $other->chooseModel(
+            new ModelDescriptor('claude-3-haiku', null),
+            new \DateTimeImmutable('2026-08-09T09:06:00Z'),
+        );
 
         self::assertSame(
             ['ready' => true, 'model' => 'gpt-4o-mini', 'capabilities' => RecommendationCapabilitiesJsons::LLM],
@@ -61,7 +65,7 @@ final class ActiveAiJsonTest extends TestCase
     private function activate(User $user, string $name, string $model): void
     {
         $active = AiProviderSettingsFactory::build($user, $name);
-        $active->chooseModel($model, new \DateTimeImmutable('2026-08-09T09:05:00Z'), null);
+        $active->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-08-09T09:05:00Z'));
         $user->setActiveAiProviderSettings($active);
     }
 

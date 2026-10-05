@@ -182,7 +182,7 @@ final class TickPhasesTest extends DbTestCase
     private function runningRun(): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
-        $run->snapshot(RecommendationEngineKind::Llm, [[101, 102]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[101, 102]]);
         $this->entityManager->flush();
 
         return $run;

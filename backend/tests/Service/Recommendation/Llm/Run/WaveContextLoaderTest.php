@@ -87,7 +87,7 @@ final class WaveContextLoaderTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->owner);
         $run->freezeProfile($frozenProfile);
-        $run->snapshot(RecommendationEngineKind::Llm, $plan);
+        $run->snapshot(RecommendationEngineKind::Llm, null, $plan);
         $this->entityManager->flush();
 
         return $run;

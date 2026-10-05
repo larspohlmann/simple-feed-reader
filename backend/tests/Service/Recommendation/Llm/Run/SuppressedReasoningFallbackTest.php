@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Llm\Run;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
@@ -100,7 +101,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
         $connection = AiProviderSettingsFactory::build(
             new User('reader@example.test', new \DateTimeImmutable('2026-10-05 09:00:00')),
         );
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-05 10:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor($model, 32768), new \DateTimeImmutable('2026-10-05 10:00:00'));
 
         return $connection;
     }

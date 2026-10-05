@@ -9,6 +9,8 @@ use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
@@ -120,6 +122,24 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->chooseModel($added->configuration, 'big');
 
         self::assertSame(200000, $added->configuration->getModelContextWindow());
+    }
+
+    public function testChoosingAScoringModelStoresTheKindAndProtocolTheCatalogTaggedItWith(): void
+    {
+        $configurator = $this->configurator([
+            new ModelDescriptor('gpt-4o', 128_000),
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+        ]);
+        $user = $this->user('cfg-scoring-model@example.test');
+        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $configurator->chooseModel($added->configuration, 'acme/decider-2');
+
+        $this->entityManager->clear();
+        $stored = $configurator->settingsFor($this->reload('cfg-scoring-model@example.test'));
+        self::assertNotNull($stored);
+        self::assertSame(RecommendationEngineKind::Scoring, $stored->getModelKind());
+        self::assertSame(ScoringProtocol::SystemOne, $stored->getScoringProtocol());
     }
 
     public function testChoosingAModelTheProviderDoesNotOfferIsRefused(): void

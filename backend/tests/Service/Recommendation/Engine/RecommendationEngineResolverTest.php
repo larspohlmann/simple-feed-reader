@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RecommendationProfileSource;
@@ -41,7 +42,7 @@ final class RecommendationEngineResolverTest extends TestCase
             new User('engine-resolver@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
         if (null !== $model) {
-            $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'), null);
+            $connection->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-10-02 09:05:00'));
         }
 
         self::assertSame($kind, $resolver->kindFor($connection));
@@ -148,7 +149,7 @@ final class RecommendationEngineResolverTest extends TestCase
         $connection = AiProviderSettingsFactory::build(
             new User('engine-resolver@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'), null);
+        $connection->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-10-02 09:05:00'));
 
         return $connection;
     }

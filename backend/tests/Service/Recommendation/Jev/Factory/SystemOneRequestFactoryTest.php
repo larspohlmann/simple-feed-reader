@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev\Factory;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Recommendation\Jev\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
@@ -100,7 +101,7 @@ final class SystemOneRequestFactoryTest extends TestCase
     {
         $owner = new User('system-one-request@example.test', new \DateTimeImmutable(self::AT));
         $connection = AiProviderSettingsFactory::build($owner);
-        $connection->chooseModel($model, new \DateTimeImmutable(self::AT), 32_000);
+        $connection->chooseModel(new ModelDescriptor($model, 32_000), new \DateTimeImmutable(self::AT));
 
         return $connection;
     }

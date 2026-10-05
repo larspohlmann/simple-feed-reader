@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev;
 
 use App\Entity\Entry;
+use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\StoredProfile;
 use App\Entity\User;
 use App\Enum\CallVerdict;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -44,7 +46,7 @@ final class JevRecommendationEngineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-engine@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
     }
 
     /** A poll tick never waits: the 429 defers the run, halves its concurrency and strikes nothing. */
@@ -245,13 +247,16 @@ final class JevRecommendationEngineTest extends DbTestCase
         $this->fixtures->storeProfile($this->owner, self::PROFILE);
         $connection = $this->owner->getActiveAiProviderSettings();
         self::assertNotNull($connection);
-        $connection->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
+        $connection->chooseModel(new ModelDescriptor('gpt-4o', 128_000), new \DateTimeImmutable('2026-10-02 09:00:00'));
         $this->entityManager->flush();
         $this->starter()->start($this->owner);
         $this->advancer()->advance($this->owner);
         $connection = $this->owner->getActiveAiProviderSettings();
         self::assertNotNull($connection);
-        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:10:00'), 32_000);
+        $connection->chooseModel(
+            new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-02 09:10:00'),
+        );
         $this->entityManager->flush();
 
         $this->advancer()->advance($this->owner);
@@ -371,7 +376,7 @@ final class JevRecommendationEngineTest extends DbTestCase
             '1234',
             $now,
         );
-        $connection->chooseModel('jev-latest', $now, 32_000);
+        $connection->chooseModel(new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne), $now);
         $this->entityManager->flush();
     }
 

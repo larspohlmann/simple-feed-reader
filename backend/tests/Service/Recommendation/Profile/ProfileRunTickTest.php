@@ -452,7 +452,7 @@ final class ProfileRunTickTest extends DbTestCase
     public function testWithoutAUsableConnectionTheRunFailsWithoutACall(): void
     {
         $owner = $this->user('profile-run-tick-jev@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($owner);
         $this->fixtures->seedFavorites($owner, 'maps', 1);
         $profileRun = new ProfileRun(
             $owner,
@@ -643,7 +643,7 @@ final class ProfileRunTickTest extends DbTestCase
     public function testARunWithoutAUsableConnectionIsSavedAsFailed(): void
     {
         $owner = $this->user('profile-run-tick-saved-failure@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($owner);
         $profileRun = new ProfileRun($owner, ProfileRunTrigger::Manual, new \DateTimeImmutable('2026-10-03 09:00:00'));
         $this->entityManager->persist($profileRun);
         $this->entityManager->flush();

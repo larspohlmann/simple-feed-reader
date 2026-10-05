@@ -48,7 +48,7 @@ final class TickContextFactoryTest extends DbTestCase
     public function testAScoringConnectionTicksWithTheScoringKind(): void
     {
         $owner = $this->user('tick-context-jev@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($owner);
         $run = $this->fixtures->createRun($owner);
         $this->entityManager->flush();
 

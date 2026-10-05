@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\ScoringProtocol;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
@@ -28,7 +30,10 @@ final class RecommendationCapabilitiesJsonTest extends TestCase
         $connection = AiProviderSettingsFactory::build(
             new User('capabilities-json-jev@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
-        $connection->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:05:00'), 32_000);
+        $connection->chooseModel(
+            new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-02 09:05:00'),
+        );
 
         self::assertSame(
             RecommendationCapabilitiesJsons::JEV,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
@@ -85,7 +86,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $entityManager->persist($settings);
-        $settings->chooseModel('m', $now, $contextWindow);
+        $settings->chooseModel(new ModelDescriptor('m', $contextWindow), $now);
         $user->setActiveAiProviderSettings($settings);
         $entityManager->flush();
     }
@@ -130,7 +131,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        (new RecommendationRunFixtures($entityManager, $cipher))->seedReadyAiSettingsFor($user, 'jev-latest');
+        (new RecommendationRunFixtures($entityManager, $cipher))->seedReadyScoringSettings($user);
 
         $client->request('GET', self::URI, server: $headers);
 

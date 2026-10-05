@@ -134,7 +134,7 @@ final readonly class AiProviderConfigurator
     public function chooseModel(AiProviderSettings $settings, string $model): void
     {
         $descriptor = $this->assertModelStillOffered($settings, $model);
-        $settings->chooseModel($model, $this->clock->now(), $descriptor->contextWindow);
+        $settings->chooseModel($descriptor, $this->clock->now());
         $this->activateWhenNoneActive($settings);
         $this->entityManager->flush();
     }

@@ -23,8 +23,8 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: RecommendationEngineKind::Scoring->value)]
 final readonly class JevRecommendationEngine implements RecommendationEngineInterface
 {
-    public const string NO_PROFILE = 'Jev needs your reading profile, and there is no reading history to build one '
-        . 'from yet. Read, keep or favourite a few articles, then start a new run.';
+    public const string NO_PROFILE = 'A scoring model needs your reading profile, and there is no reading history to '
+        . 'build one from yet. Read, keep or favourite a few articles, then start a new run.';
 
     public function __construct(
         private JevBatchPacker $packer,
@@ -47,7 +47,7 @@ final readonly class JevRecommendationEngine implements RecommendationEngineInte
     public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
-        if (null === $run->getProfileText()) {
+        if ($run->isMissingBorrowedProfile()) {
             return $this->runFailure->fail($run, self::NO_PROFILE);
         }
         if ($run->getProgress()->allBatchCallsDone) {

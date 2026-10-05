@@ -71,7 +71,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
 
         $older = $this->fixtures()->createRun($user);
         $older->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
-        $older->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $older->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $older->recordBatchWinners([]);
         $older->complete(new \DateTimeImmutable('2026-08-16 09:00:10'));
         $this->entityManager()->flush();
@@ -84,7 +84,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
 
         $newer = $this->fixtures()->createRun($user);
         $newer->stampProvider('openrouter.ai', 'x-ai/grok-4-fast');
-        $newer->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $newer->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $newer->recordBatchWinners([]);
         $newer->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
         $this->entityManager()->flush();
@@ -94,7 +94,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         self::assertInstanceOf(User::class, $otherUser);
         $theirRun = $this->fixtures()->createRun($otherUser);
         $theirRun->stampProvider('example.test', 'their-model');
-        $theirRun->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $theirRun->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $theirRun->recordBatchWinners([]);
         $theirRun->complete(new \DateTimeImmutable('2026-08-16 09:05:10'));
         $this->entityManager()->flush();
@@ -174,7 +174,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('run-history-resumed@example.test');
 
         $run = $this->fixtures()->createRun($user);
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->fail('that provider did not answer', new \DateTimeImmutable('2026-08-08 10:00:47'));
         $run->resume();
         $this->entityManager()->flush();

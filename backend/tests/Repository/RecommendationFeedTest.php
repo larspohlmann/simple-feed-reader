@@ -67,7 +67,7 @@ final class RecommendationFeedTest extends DbTestCase
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
 
         if ($status !== RunStatus::Pending) {
-            $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+            $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         }
 
         if ($status === RunStatus::Completed) {
@@ -311,7 +311,7 @@ final class RecommendationFeedTest extends DbTestCase
     private function completedRunAt(string $completedAt): RecommendationRun
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->complete(new \DateTimeImmutable($completedAt));
         $this->entityManager->persist($run);
         $this->entityManager->flush();

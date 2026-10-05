@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
@@ -76,7 +77,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     public function testEachSpanCarriesItsRunsWallClock(): void
     {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-08T10:00:46Z'));
         $this->finishedLog($run, CallPhase::Batch, 1, '10:00:16', '10:00:27');
         $this->finishedLog($run, CallPhase::Consolidate, null, '10:00:32', '10:00:37');
@@ -91,7 +92,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     {
         // A running run of this user: no completed status, so excluded.
         $running = $this->fixtures->createRun($this->user);
-        $running->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $running->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $this->finishedLog($running, CallPhase::Batch, 1, '10:00:00', '10:00:05');
 
         // Another user's completed run.
@@ -176,7 +177,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         $legacy = $this->completedRun();
         $this->finishedLog($legacy, CallPhase::Batch, 1, '10:00:00', '10:00:20');
         $scoring = $this->fixtures->createRun($this->user);
-        $scoring->snapshot(RecommendationEngineKind::Scoring, [[1]]);
+        $scoring->snapshot(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne, [[1]]);
         $scoring->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
         $this->finishedLog($scoring, CallPhase::Batch, 1, '10:00:00', '10:00:30');
         $this->entityManager->flush();
@@ -201,7 +202,7 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
     private function completedRun(?User $user = null): RecommendationRun
     {
         $run = $this->fixtures->createRun($user ?? $this->user);
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-08T11:00:00Z'));
 
         return $run;

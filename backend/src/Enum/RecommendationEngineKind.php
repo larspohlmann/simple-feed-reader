@@ -8,7 +8,7 @@ namespace App\Enum;
 enum RecommendationEngineKind: string
 {
     case Llm = 'llm';
-    case Scoring = 'jev';
+    case Scoring = 'scoring';
 
     /** @return list<CallPhase> the phases a run of this kind calls the provider in, in order */
     public function phases(): array

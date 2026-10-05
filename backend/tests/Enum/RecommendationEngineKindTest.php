@@ -7,6 +7,7 @@ namespace App\Tests\Enum;
 use App\Enum\CallPhase;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RecommendationProfileSource;
+use App\Enum\ScoringProtocol;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationEngineKindTest extends TestCase
@@ -34,5 +35,12 @@ final class RecommendationEngineKindTest extends TestCase
     {
         self::assertSame(RecommendationProfileSource::Borrowed, RecommendationEngineKind::Scoring->profileSource());
         self::assertSame(RecommendationProfileSource::Own, RecommendationEngineKind::Llm->profileSource());
+    }
+
+    /** What a connection and a run store, and what Version20261005140100 writes. */
+    public function testTheStoredValuesAreTheOnesTheBackfillWrites(): void
+    {
+        self::assertSame('scoring', RecommendationEngineKind::Scoring->value);
+        self::assertSame('system_one', ScoringProtocol::SystemOne->value);
     }
 }

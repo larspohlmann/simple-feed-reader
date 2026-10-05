@@ -45,7 +45,7 @@ final class JevPipelineTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('jev-pipeline@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
     }
 
     public function testEveryCandidateIsScoredByItsNoulAndRankedWithoutAReason(): void

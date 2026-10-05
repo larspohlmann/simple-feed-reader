@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
@@ -39,7 +40,7 @@ final class AiSettingsJsonTest extends TestCase
         );
 
         if (null !== $model) {
-            $settings->chooseModel($model, new \DateTimeImmutable('2026-08-06 10:00:00'), null);
+            $settings->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-08-06 10:00:00'));
         }
 
         return $settings;

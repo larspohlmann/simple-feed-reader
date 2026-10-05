@@ -456,7 +456,7 @@ final class EntryPrunerTest extends DbTestCase
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
 
         $run = new RecommendationRun($user, $this->clock->now());
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->complete($this->clock->now());
         $this->entityManager->persist($run);
         $this->entityManager->persist(new RecommendationItem($run, $doomed, 1, 'because'));
@@ -485,7 +485,7 @@ final class EntryPrunerTest extends DbTestCase
 
         for ($index = 0; $index < 3; $index++) {
             $run = new RecommendationRun($user, $this->clock->now());
-            $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+            $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
             $run->complete($this->clock->now());
             $this->entityManager->persist($run);
         }
@@ -501,7 +501,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
         $run = new RecommendationRun($user, $this->clock->now());
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $this->entityManager->persist($run);
         $this->entityManager->flush();
         $runId = $run->getId();

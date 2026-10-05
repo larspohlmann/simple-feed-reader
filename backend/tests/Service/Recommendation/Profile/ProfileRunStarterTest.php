@@ -71,7 +71,7 @@ final class ProfileRunStarterTest extends DbTestCase
 
     public function testAManualStartWithoutAUsableConnectionIsRefused(): void
     {
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
 
         $this->expectException(ProfileConnectionMissingException::class);
         $this->starter()->startManually($this->owner);

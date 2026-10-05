@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
@@ -96,7 +97,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
     {
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1], [2], [3]]);
 
         $forecast = $this->forecasterAt('+20 seconds')->forecast(
             RecommendationRunReportModel::fromRun($run),
@@ -137,7 +138,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
     public function testPredictsTheTimeBetweenCallsOnTheClockElapsedRunsOn(): void
     {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
-        $run->snapshot(RecommendationEngineKind::Scoring, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne, [[1]]);
         for ($batch = 1; $batch <= 5; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, 26, 11);
         }
@@ -166,6 +167,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(
             RecommendationEngineKind::Llm,
+            null,
             array_map(static fn (int $index): array => [$index], range(1, $batches)),
         );
         $run->markFirstBatchStarted();
@@ -181,6 +183,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(
             RecommendationEngineKind::Scoring,
+            ScoringProtocol::SystemOne,
             array_map(static fn (int $index): array => [$index], range(1, $batches)),
         );
         $run->markFirstBatchStarted();
@@ -216,7 +219,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         int $batches,
     ): RecommendationRun {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
-        $run->snapshot($engineKind, [[1]]);
+        $run->snapshot($engineKind, null, [[1]]);
 
         for ($batch = 1; $batch <= $batches; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, $pickup, $batchWall);

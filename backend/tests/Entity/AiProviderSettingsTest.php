@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -32,7 +35,7 @@ final class AiProviderSettingsTest extends TestCase
     private function connectionOn(string $model): AiProviderSettings
     {
         $connection = $this->settings();
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-06 08:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor($model, 32768), new \DateTimeImmutable('2026-10-06 08:00:00'));
 
         return $connection;
     }
@@ -93,7 +96,7 @@ final class AiProviderSettingsTest extends TestCase
         $settings = $this->settings();
         $verifiedAt = new \DateTimeImmutable('2026-08-06 10:00:00');
 
-        $settings->chooseModel('gpt-4o-mini', $verifiedAt, 128000);
+        $settings->chooseModel(new ModelDescriptor('gpt-4o-mini', 128000), $verifiedAt);
 
         self::assertTrue($settings->hasModel());
         self::assertSame('gpt-4o-mini', $settings->getModel());
@@ -104,7 +107,10 @@ final class AiProviderSettingsTest extends TestCase
     {
         $settings = $this->settings();
 
-        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), 128000);
+        $settings->chooseModel(
+            new ModelDescriptor('gpt-4o-mini', 128000),
+            new \DateTimeImmutable('2026-08-06 10:00:00'),
+        );
 
         self::assertSame(128000, $settings->getModelContextWindow());
     }
@@ -113,7 +119,7 @@ final class AiProviderSettingsTest extends TestCase
     {
         $settings = $this->settings();
 
-        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), null);
+        $settings->chooseModel(new ModelDescriptor('gpt-4o-mini', null), new \DateTimeImmutable('2026-08-06 10:00:00'));
 
         self::assertNull($settings->getModelContextWindow());
     }
@@ -121,7 +127,10 @@ final class AiProviderSettingsTest extends TestCase
     public function testReplacingTheConnectionDropsTheChosenModel(): void
     {
         $settings = $this->settings();
-        $settings->chooseModel('gpt-4o-mini', new \DateTimeImmutable('2026-08-06 10:00:00'), 128000);
+        $settings->chooseModel(
+            new ModelDescriptor('gpt-4o-mini', 128000),
+            new \DateTimeImmutable('2026-08-06 10:00:00'),
+        );
 
         $settings->replaceConnection(
             'https://other.example.test/v1',
@@ -267,7 +276,7 @@ final class AiProviderSettingsTest extends TestCase
         $connection = $this->connectionOn('model-a');
         $connection->recordSuppressionRefused();
 
-        $connection->chooseModel('model-b', new \DateTimeImmutable('2026-10-06 09:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor('model-b', 32768), new \DateTimeImmutable('2026-10-06 09:00:00'));
 
         self::assertFalse($connection->refusesSuppressedReasoning());
     }
@@ -276,9 +285,9 @@ final class AiProviderSettingsTest extends TestCase
     {
         $connection = $this->connectionOn('model-a');
         $connection->recordSuppressionRefused();
-        $connection->chooseModel('model-b', new \DateTimeImmutable('2026-10-06 09:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor('model-b', 32768), new \DateTimeImmutable('2026-10-06 09:00:00'));
 
-        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-10-06 09:01:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor('model-a', 32768), new \DateTimeImmutable('2026-10-06 09:01:00'));
 
         self::assertTrue($connection->refusesSuppressedReasoning());
     }
@@ -312,8 +321,56 @@ final class AiProviderSettingsTest extends TestCase
             'wxyz',
             new \DateTimeImmutable('2026-10-06 09:00:00'),
         );
-        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-10-06 09:01:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor('model-a', 32768), new \DateTimeImmutable('2026-10-06 09:01:00'));
 
         self::assertFalse($connection->refusesSuppressedReasoning());
+    }
+
+    public function testChoosingAScoringModelStoresItsKindProtocolAndWindow(): void
+    {
+        $settings = $this->settings();
+
+        $settings->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-05 09:00:00'),
+        );
+
+        self::assertSame('acme/decider-2', $settings->getModel());
+        self::assertSame(16_000, $settings->getModelContextWindow());
+        self::assertSame(RecommendationEngineKind::Scoring, $settings->getModelKind());
+        self::assertSame(ScoringProtocol::SystemOne, $settings->getScoringProtocol());
+    }
+
+    public function testChoosingAnLlmAfterAScoringModelDropsTheProtocol(): void
+    {
+        $settings = $this->settings();
+        $settings->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-05 09:00:00'),
+        );
+
+        $settings->chooseModel(new ModelDescriptor('gpt-4o', 128_000), new \DateTimeImmutable('2026-10-05 09:05:00'));
+
+        self::assertSame(RecommendationEngineKind::Llm, $settings->getModelKind());
+        self::assertNull($settings->getScoringProtocol());
+    }
+
+    public function testANewEndpointForgetsTheModelsKindAndProtocol(): void
+    {
+        $settings = $this->settings();
+        $settings->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-05 09:00:00'),
+        );
+
+        $settings->replaceConnection(
+            'https://other.example.test/v1',
+            $this->sealed('b3RoZXI='),
+            'wxyz',
+            new \DateTimeImmutable('2026-10-05 10:00:00'),
+        );
+
+        self::assertNull($settings->getModelKind());
+        self::assertNull($settings->getScoringProtocol());
     }
 }

@@ -30,7 +30,7 @@ final class RecommendationTickCheckpointTest extends DbTestCase
         $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $this->entityManager->persist($run);
         $this->entityManager->flush();
 
@@ -57,7 +57,7 @@ final class RecommendationTickCheckpointTest extends DbTestCase
         $this->entityManager->flush();
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-16T09:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $run->cancel(new \DateTimeImmutable('2026-08-16T09:05:00Z'));
         $this->entityManager->persist($run);
         $this->entityManager->flush();
