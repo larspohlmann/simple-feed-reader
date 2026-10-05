@@ -12,7 +12,6 @@ use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** The provider's sentence is not parsed: any 400 or 422 to a suppressing request may be the model refusing it. */
 final readonly class SuppressedReasoningFallback implements RejectedRequestFallbackInterface
 {
     private const array STATUSES_A_REFUSED_PARAMETER_EARNS = [400, 422];

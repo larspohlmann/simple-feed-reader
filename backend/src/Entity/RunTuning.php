@@ -76,10 +76,7 @@ final class RunTuning
         $this->maxBatchSize = $maxBatchSize;
     }
 
-    /**
-     * Every run-tuning field, once, for AiProviderConfigurator::duplicateConfiguration(): a copy starts out driven
-     * the same way as its source, not reset to the defaults. Add a new field here.
-     */
+    /** Every run-tuning field, once, for AiProviderConfigurator::duplicateConfiguration(): add a new field here. */
     public function copyFrom(self $source): void
     {
         $this->batchConcurrency = $source->batchConcurrency;
