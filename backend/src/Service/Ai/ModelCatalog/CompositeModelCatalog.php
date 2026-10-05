@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\ModelCatalog;
 
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Pass\ModelListing;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * The catalog every caller sees: each member that recognises the provider adds its models. When none does, the first
- * member's failure is the answer, so an address without System One reads exactly as the OpenAI catalog says.
+ * The catalog every caller sees: each member that recognises the provider adds its models, and the System One probe
+ * adds its alias only when no member listed a System One model, so OpenRouter lists Jev once. When nothing answers,
+ * the first failure is the answer.
  */
 final readonly class CompositeModelCatalog implements ModelCatalogInterface
 {
@@ -21,28 +23,21 @@ final readonly class CompositeModelCatalog implements ModelCatalogInterface
     public function __construct(
         #[AutowireIterator(self::MEMBER_TAG)]
         private iterable $catalogs,
+        #[Autowire(service: SystemOneCatalog::class)]
+        private ModelCatalogInterface $systemOneFallback,
     ) {
     }
 
     public function listModels(ProviderCredentialsModel $credentials): array
     {
-        $byId = [];
-        $failures = [];
+        $listing = new ModelListing($credentials);
         foreach ($this->catalogs as $catalog) {
-            try {
-                foreach ($catalog->listModels($credentials) as $descriptor) {
-                    $byId[$descriptor->id] ??= $descriptor;
-                }
-            } catch (CredentialsRejectedException | ProviderUnreachableException $failure) {
-                $failures[] = $failure;
-            }
+            $listing->add($catalog);
+        }
+        if (!$listing->offers(ScoringProtocol::SystemOne)) {
+            $listing->addOverriding($this->systemOneFallback);
         }
 
-        if ([] === $byId) {
-            throw $failures[0] ?? new ProviderUnreachableException('That provider offers no models.');
-        }
-        ksort($byId, \SORT_STRING);
-
-        return array_values($byId);
+        return $listing->models();
     }
 }
