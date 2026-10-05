@@ -2503,10 +2503,24 @@ describe('EntryListComponent', () => {
       expect(rail(fixture)!.style.getPropertyValue('--rail-fill')).toBe('50');
     });
 
-    it('is not shown on a wide layout', () => {
+    it('runs along the bottom on a wide layout, keeping the scrollbar', () => {
       const fixture = mount(pagedList, [wideLayout]);
-      scrollTo(fixture, layOut(fixture, 100, 1100), 1300);
-      expect(rail(fixture)).toBeNull();
+      const scroller = layOut(fixture, 100, 1100);
+      scrollTo(fixture, scroller, 0);
+      scrollTo(fixture, scroller, 1300);
+
+      expect(rail(fixture)!.classList).toContain('horizontal');
+      expect(fill(fixture)).toBe('50');
+      expect(scroller.classList).not.toContain('has-rail');
+    });
+
+    it('stands on the right edge in place of the scrollbar on a phone', () => {
+      const fixture = mount(pagedList);
+      const scroller = layOut(fixture, 100, 1100);
+      scrollTo(fixture, scroller, 0);
+
+      expect(rail(fixture)!.classList).not.toContain('horizontal');
+      expect(scroller.classList).toContain('has-rail');
     });
 
     it('is not shown for a paged search, which has no total', () => {
@@ -2579,29 +2593,6 @@ describe('EntryListComponent', () => {
       } finally {
         restore();
       }
-    });
-
-    it('measures nothing on a wide layout', () => {
-      const fixture = mount(pagedList, [wideLayout]);
-      const scroller = layOut(fixture, 100, 1100);
-      const measure = jest.spyOn(
-        scroller.querySelector<HTMLElement>('.row-slot')!,
-        'getBoundingClientRect',
-      );
-      scrollTo(fixture, scroller, 1300);
-      expect(measure).not.toHaveBeenCalled();
-    });
-
-    it('paints once a wide layout turns narrow', () => {
-      const fixture = mount(pagedList, [wideLayout]);
-      const scroller = layOut(fixture, 100, 1100);
-      scroller.scrollTop = 1300;
-
-      isWide.set(false);
-      fixture.detectChanges();
-      fixture.detectChanges();
-
-      expect(fill(fixture)).toBe('50');
     });
   });
 });

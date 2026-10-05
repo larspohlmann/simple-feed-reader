@@ -14,10 +14,9 @@ export interface ListProgressRailOptions {
   /** The list's entry count from its header, or null when it has none. */
   readonly total: Signal<number | null>;
   readonly loading: Signal<boolean>;
-  readonly isWide: Signal<boolean>;
 }
 
-/** The list's length cue on a phone (#1392). Painted straight onto the rail
+/** The list's length cue (#1392). Painted straight onto the rail
  *  from the outside-zone scroll handler, so scrolling costs no change detection.
  *  Built in a field initializer, so its effects are created there. */
 export class ListProgressRail {
@@ -36,7 +35,6 @@ export class ListProgressRail {
     this.options.shownEntries();
     this.options.hasMore();
     this.options.total();
-    this.options.isWide();
     this.overflows();
     afterNextRender(() => this.paint(), { injector: this.injector });
   });
@@ -45,7 +43,7 @@ export class ListProgressRail {
 
   readonly paint = (): void => {
     const scroller = this.options.scroller();
-    if (!scroller || this.options.isWide()) return;
+    if (!scroller) return;
     const bottom = this.estimatedBottom(scroller);
     const overflows = bottom !== null && articleOverflowsViewport(bottom, scroller.clientHeight);
     this.overflows.set(overflows);

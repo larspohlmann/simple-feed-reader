@@ -81,16 +81,6 @@
      element with opacity < 1 paints as if it were at z-index 0 — so a dimmed
      paragraph would cover this bar. */
   z-index: 2;
-  height: var(--space-0);
-  background: var(--border);
-}
-
-/* No width transition: the bar reports the scroll position and has to track the
-   finger. Easing it would leave it lagging behind the text through every swipe. */
-.progress i {
-  display: block;
-  height: 100%;
-  background: var(--accent);
 }
 
 /* Same cue for split-pane, on the right edge, full height. Sticky for the

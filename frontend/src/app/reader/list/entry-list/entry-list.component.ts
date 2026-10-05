@@ -18,7 +18,10 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
-import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import {
+  ProgressRailComponent,
+  ProgressRailOrientation,
+} from '../../../shared/progress-rail/progress-rail.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -324,10 +327,15 @@ export class EntryListComponent implements OnDestroy {
     hasMore: this.hasMore,
     total: this.listTotal,
     loading: this.loading,
-    isWide: this.screen.isWide,
   });
 
-  readonly showRail = computed(() => !this.screen.isWide() && this.progressRail.overflows());
+  readonly showRail = this.progressRail.overflows;
+
+  readonly railOrientation = computed<ProgressRailOrientation>(() =>
+    this.screen.isWide() ? 'horizontal' : 'vertical',
+  );
+
+  readonly sideRail = computed(() => this.showRail() && this.railOrientation() === 'vertical');
 
   readonly onRowsScroll = (event: Event): void => {
     this.scrolling.onScroll(event);

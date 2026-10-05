@@ -133,6 +133,11 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
   z-index: 2;
 }
 
+.list-rail.horizontal {
+  top: auto;
+  left: 0;
+}
+
 .rows.has-rail {
   scrollbar-width: none;
 }

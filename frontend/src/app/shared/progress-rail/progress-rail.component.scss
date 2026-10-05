@@ -4,10 +4,20 @@
   background: var(--border);
 }
 
+:host(.horizontal) {
+  width: auto;
+  height: var(--space-0);
+}
+
 /* Untransitioned: the fill reports the scroll position and has to track it. */
 i {
   display: block;
   width: 100%;
   height: calc(var(--rail-fill, 0) * 1%);
   background: var(--accent);
+}
+
+:host(.horizontal) i {
+  width: calc(var(--rail-fill, 0) * 1%);
+  height: 100%;
 }
