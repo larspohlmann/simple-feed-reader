@@ -51,6 +51,11 @@ final readonly class ProviderCredentialsModel
         return ['Authorization' => 'Bearer ' . $this->apiKey];
     }
 
+    public function withoutApiKey(string $text): string
+    {
+        return '' === $this->apiKey ? $text : str_replace($this->apiKey, '[redacted]', $text);
+    }
+
     /**
      * Trims the value and removes trailing slashes, so `…/v1` and `…/v1/`
      * produce one stored form and one request URL.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev\Pass;
 
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -20,8 +21,10 @@ final class SystemOneWave
     /** @var array<int, float> */
     private array $lastHeardAt = [];
 
-    public function __construct(private readonly ClockInterface $clock)
-    {
+    public function __construct(
+        private readonly ClockInterface $clock,
+        public readonly ProviderCredentialsModel $credentials,
+    ) {
         $this->positions = new \SplObjectStorage();
     }
 

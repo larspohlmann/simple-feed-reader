@@ -49,7 +49,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
 
     public function evaluateMany(ProviderCredentialsModel $credentials, array $requests): array
     {
-        $wave = new SystemOneWave($this->clock);
+        $wave = new SystemOneWave($this->clock, $credentials);
         foreach ($requests as $position => $request) {
             try {
                 $wave->await($position, $this->send($credentials, $request));
@@ -104,7 +104,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 return null;
             }
 
-            return $this->outcomeOf($response);
+            return $this->outcomeOf($wave, $response);
         } catch (ExceptionInterface $exception) {
             $response->cancel();
 
@@ -112,7 +112,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
         }
     }
 
-    private function outcomeOf(ResponseInterface $response): SystemOneOutcomeModel
+    private function outcomeOf(SystemOneWave $wave, ResponseInterface $response): SystemOneOutcomeModel
     {
         $status = $response->getStatusCode();
         $body = $response->getContent(false);
@@ -125,7 +125,7 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
                 new RetryableProviderException($status, RetryAfter::secondsIn($response)),
             ),
             400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException(RefusalMessage::of($status, $body)),
+                new ProviderUnreachableException(RefusalMessage::of($status, $body, $wave->credentials)),
             ),
             $status >= 300 => SystemOneOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
             default => SystemOneOutcomeModel::answered(

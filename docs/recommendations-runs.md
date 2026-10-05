@@ -86,6 +86,10 @@ an engine (a model id starting with `jev-` is TypeSafe's System One, any other a
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
+When a provider answers with an error status, the message in the run and its log carries the provider's own reason if
+it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for its 400 and 422
+refusals only.
+
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then scores the batches in
 waves and consolidates the best of them into the final list with reasons. Neither engine builds the interest profile
 (see [The profile](#the-profile)). Each engine kind

@@ -27,4 +27,21 @@ final class ProviderCredentialsModelTest extends TestCase
 
         self::assertSame(['Authorization' => 'Bearer sk-test'], $credentials->authorizationHeaders());
     }
+
+    public function testTheKeyIsRedactedWhereverATextRepeatsIt(): void
+    {
+        $credentials = ProviderCredentialsModel::fromStoredConfiguration('https://llm.example.test/v1', 'sk-secret-1');
+
+        self::assertSame(
+            'Invalid key [redacted] (got [redacted]).',
+            $credentials->withoutApiKey('Invalid key sk-secret-1 (got sk-secret-1).'),
+        );
+    }
+
+    public function testAKeylessEndpointLeavesTheTextAlone(): void
+    {
+        $credentials = ProviderCredentialsModel::fromStoredConfiguration('http://localhost:1234/v1', '');
+
+        self::assertSame('No models loaded.', $credentials->withoutApiKey('No models loaded.'));
+    }
 }

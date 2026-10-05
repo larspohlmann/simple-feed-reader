@@ -16,9 +16,13 @@ final class ProviderUnreachableException extends \RuntimeException
         return new self('That address did not answer.', 0, $transportFailure);
     }
 
-    public static function answeredWithStatus(int $status): self
+    public static function answeredWithStatus(int $status, ?string $reason = null): self
     {
-        return new self(sprintf('That provider answered with status %d.', $status));
+        return new self(
+            null === $reason
+                ? sprintf('That provider answered with status %d.', $status)
+                : sprintf('That provider answered with status %d: %s', $status, $reason),
+        );
     }
 
     public static function answeredMoreThan(int $maximumBytes): self
