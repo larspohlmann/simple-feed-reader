@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, NgZone, TemplateRef, ViewChild, signal } from '@angular/core';
+import { Component, NgZone, Provider, TemplateRef, ViewChild, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
@@ -15,6 +15,7 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../../core/preferences/reading-focus.service';
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
+import { LayoutService } from '../../layout.service';
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];
@@ -89,7 +90,7 @@ const MIXED_SOURCE_RUN: EntryDto[] = [
   entry(12, { subscriptionId: 3, source: 'c', publishedAt: MIXED_SOURCE_RUN_AT }),
 ];
 
-function mount(over: Record<string, unknown> = {}) {
+function mount(over: Record<string, unknown> = {}, providers: Provider[] = []) {
   memory.save.mockClear();
   memory.read.mockClear().mockReturnValue(0);
   TestBed.resetTestingModule();
@@ -101,6 +102,7 @@ function mount(over: Record<string, unknown> = {}) {
       { provide: CatalogStore, useValue: catalog },
       { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
+      ...providers,
     ],
   });
   const fixture = TestBed.createComponent(EntryListComponent);
@@ -2418,6 +2420,103 @@ describe('EntryListComponent', () => {
       fixture.detectChanges();
 
       expect(fixture.componentInstance.content.hiddenAboveIds().size).toBe(0);
+    });
+  });
+
+  describe('the list progress rail (#1392)', () => {
+    const TEN_ENTRIES = Array.from({ length: 10 }, (_, index) => entry(index + 1));
+    const wideLayout: Provider = {
+      provide: LayoutService,
+      useValue: { isWide: signal(true), isNarrow: signal(false), isCoarse: signal(false) },
+    };
+
+    /** jsdom has no layout: give the scroller a height and its row slots a span
+     *  from `rowsTop` to `rowsBottom` that moves with `scrollTop`. */
+    function layOut(
+      fixture: ComponentFixture<EntryListComponent>,
+      rowsTop: number,
+      rowsBottom: number,
+    ): HTMLElement {
+      const scroller = fakeScroller(fixture, 0);
+      Object.defineProperty(scroller, 'clientHeight', { value: 500, configurable: true });
+      scroller.getBoundingClientRect = () => ({ top: 0, bottom: 500 }) as DOMRect;
+      const slots = Array.from(scroller.querySelectorAll<HTMLElement>('.row-slot'));
+      const slotHeight = (rowsBottom - rowsTop) / slots.length;
+      slots.forEach((slot, index) => {
+        slot.getBoundingClientRect = () => {
+          const top = rowsTop + index * slotHeight - scroller.scrollTop;
+          return { top, bottom: top + slotHeight } as DOMRect;
+        };
+      });
+      return scroller;
+    }
+
+    function scrollTo(
+      fixture: ComponentFixture<EntryListComponent>,
+      scroller: HTMLElement,
+      top: number,
+    ): void {
+      scroller.scrollTop = top;
+      scroller.dispatchEvent(new Event('scroll'));
+      fixture.detectChanges();
+    }
+
+    function rail(fixture: ComponentFixture<EntryListComponent>): HTMLElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector('app-progress-rail.list-rail');
+    }
+
+    const pagedList = {
+      entries: TEN_ENTRIES,
+      hasMore: true,
+      titleCount: { value: 30, counts: 'items' },
+    };
+    const search = { kind: 'search', id: null, unread: false, term: 'punk' };
+
+    it('fills by the estimated length of a paged list', () => {
+      const fixture = mount(pagedList);
+      const scroller = layOut(fixture, 100, 1100);
+      scrollTo(fixture, scroller, 0);
+      expect(rail(fixture)).not.toBeNull();
+
+      scrollTo(fixture, scroller, 1300);
+
+      expect(rail(fixture)!.style.getPropertyValue('--rail-fill')).toBe('50');
+    });
+
+    it('is not shown on a wide layout', () => {
+      const fixture = mount(pagedList, [wideLayout]);
+      scrollTo(fixture, layOut(fixture, 100, 1100), 1300);
+      expect(rail(fixture)).toBeNull();
+    });
+
+    it('is not shown for a paged search, which has no total', () => {
+      const fixture = mount({ ...pagedList, selection: search });
+      scrollTo(fixture, layOut(fixture, 100, 1100), 0);
+      expect(rail(fixture)).toBeNull();
+    });
+
+    it('is shown for a search that has loaded every result', () => {
+      const fixture = mount({ ...pagedList, hasMore: false, selection: search });
+      scrollTo(fixture, layOut(fixture, 100, 1100), 0);
+      expect(rail(fixture)).not.toBeNull();
+    });
+
+    it('is not shown when the rows fit the scroller', () => {
+      const fixture = mount({ ...pagedList, hasMore: false });
+      scrollTo(fixture, layOut(fixture, 100, 400), 0);
+      expect(rail(fixture)).toBeNull();
+    });
+
+    it('holds the total while reading lowers the count', () => {
+      const fixture = mount(pagedList);
+      const scroller = layOut(fixture, 100, 1100);
+      scrollTo(fixture, scroller, 0);
+
+      fixture.componentRef.setInput('titleCount', { value: 25, counts: 'items' });
+      fixture.detectChanges();
+      scrollTo(fixture, scroller, 1300);
+
+      expect(rail(fixture)!.style.getPropertyValue('--rail-fill')).toBe('50');
     });
   });
 });

@@ -18,6 +18,7 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
+import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -44,6 +45,7 @@ import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
+import { ListProgressRail } from './list-progress-rail';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -66,6 +68,7 @@ const RELOAD_SPINNER_DELAY_MS = 150;
     ListEmptyStateComponent,
     ToTopButtonComponent,
     ScrollOutsideZoneDirective,
+    ProgressRailComponent,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -193,6 +196,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly sentinel = viewChild<ElementRef<HTMLElement>>('sentinel');
   private readonly listHdr = viewChild<ElementRef<HTMLElement>>('listHdr');
   private readonly header = viewChild(ListHeaderComponent);
+  private readonly railRef = viewChild(ProgressRailComponent, { read: ElementRef });
   private readonly scroller = (): HTMLElement | undefined => this.rows()?.nativeElement;
 
   readonly content = new ListContent({
@@ -305,6 +309,28 @@ export class EntryListComponent implements OnDestroy {
     aboveFold: (scroller) => this.hasEntryAboveFold(scroller),
     onReloaded: () => this.content.clearHidden(),
   });
+
+  private readonly listTotal = computed(() => {
+    const count = this.titleCount().value;
+    return this.selection().kind === 'search' || count === 0 ? null : count;
+  });
+
+  readonly progressRail = new ListProgressRail({
+    scroller: this.scroller,
+    rail: () => this.railRef()?.nativeElement,
+    entries: this.entries,
+    shownEntries: this.content.visibleEntryCount,
+    hasMore: this.hasMore,
+    total: this.listTotal,
+    loading: this.loading,
+  });
+
+  readonly showRail = computed(() => !this.screen.isWide() && this.progressRail.overflows());
+
+  readonly onRowsScroll = (event: Event): void => {
+    this.scrolling.onScroll(event);
+    this.progressRail.paint();
+  };
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */
   readonly collapsed = this.scrolling.collapsed;

@@ -98,8 +98,9 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
+    [class.has-rail]="showRail()"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
+    [appScrollOutsideZone]="onRowsScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -145,8 +146,9 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
+    [class.has-rail]="showRail()"
     #rows
-    [appScrollOutsideZone]="scrolling.onScroll"
+    [appScrollOutsideZone]="onRowsScroll"
   >
     @if (topBlock(); as block) {
       <!-- Wrapped in an element this component owns, so the column's own
@@ -191,6 +193,10 @@
       </div>
     }
   </div>
+}
+
+@if (showRail()) {
+  <app-progress-rail class="list-rail" />
 }
 
 @if (entries().length > 0) {
