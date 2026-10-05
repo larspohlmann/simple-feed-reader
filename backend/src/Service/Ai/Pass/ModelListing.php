@@ -37,13 +37,10 @@ final class ModelListing
 
     public function offers(ScoringProtocol $protocol): bool
     {
-        foreach ($this->byId as $model) {
-            if ($protocol === $model->scoringProtocol) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any(
+            $this->byId,
+            static fn (ModelDescriptor $model): bool => $protocol === $model->scoringProtocol,
+        );
     }
 
     /**
