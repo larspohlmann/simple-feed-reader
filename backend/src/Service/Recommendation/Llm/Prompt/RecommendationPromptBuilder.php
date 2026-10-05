@@ -23,8 +23,12 @@ final readonly class RecommendationPromptBuilder
 {
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
-    /** What packBatches() budgets for the profile. An estimate: DISTILL_ROLE's word cap bounds it to roughly this. */
-    private const int ESTIMATED_PROFILE_TOKENS = 1200;
+    /** Generous for German and proper names, which tokenise worse than plain English prose. */
+    private const int PROFILE_TOKENS_PER_HUNDRED_WORDS = 240;
+
+    /** What packBatches() budgets for the profile, an estimate at the cap DISTILL_ROLE sets. */
+    public const int ESTIMATED_PROFILE_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
+        * self::PROFILE_TOKENS_PER_HUNDRED_WORDS / 100;
 
     /**
      * Consolidation re-scores, reasons and dedups in one pass. The floor (twice the final list) keeps dedup's backfill

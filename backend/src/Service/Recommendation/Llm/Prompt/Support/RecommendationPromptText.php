@@ -36,12 +36,16 @@ final class RecommendationPromptText
         . '[{"id": <candidate id>, "score": <0-1000>}]}. Return one object for every candidate line, in the order '
         . 'the lines appear. Use only ids that appear in the candidate lines.';
 
+    /** The profile's length; the batch packer and the distillation answer budget size themselves from it. */
+    public const int PROFILE_WORD_CAP = 500;
+
     public const string DISTILL_ROLE = 'You read one reader\'s history from an RSS reader and write a short '
         . 'preference profile for them. The user message holds three sections — FAVORITES, KEPT and VIEWED, newest '
         . 'first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search terms they '
         . 'saved to keep following a subject. SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least. '
         . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
-        . 'profile, at most about 500 words, that names the reader\'s specific, repeated interests — topics, '
+        . 'profile, at most about ' . self::PROFILE_WORD_CAP . ' words, that names the reader\'s specific, '
+        . 'repeated interests — topics, '
         . 'subjects, companies, technologies, people, kinds of story — and what they clearly avoid. Name concrete '
         . 'interests, not broad categories: prefer "self-hosted home automation" over "technology". The profile is '
         . 'used to score unread posts, so it must be specific enough to tell a strong match from a weak one.';

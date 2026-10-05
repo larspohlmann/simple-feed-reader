@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Llm\Prompt;
 
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Llm\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 
 /**
  * What the provider may spend answering, per phase. RecommendationPromptBuilder::packBatches() reserves this same
@@ -22,11 +23,12 @@ final readonly class RecommendationAnswerBudget
     /** A score-only batch pick, `{"id":123,"score":843}`: about a fifth of a reasoned one. */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
-    /**
-     * The distillation reply: one `{"profile": "..."}` string of at most ~500 words, sized generously so a reasoning
-     * model still finishes the JSON.
-     */
-    private const int PROFILE_ANSWER_TOKENS = 2000;
+    /** Sized generously so a reasoning model still finishes the `{"profile": "..."}` JSON. */
+    private const int PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS = 400;
+
+    /** The distillation reply: one profile string at the cap DISTILL_ROLE sets. */
+    public const int PROFILE_ANSWER_TOKENS = RecommendationPromptText::PROFILE_WORD_CAP
+        * self::PROFILE_ANSWER_TOKENS_PER_HUNDRED_WORDS / 100;
 
     /**
      * Half again over the mean estimate: a long reply is not a runaway to truncate into one that cannot parse, and
