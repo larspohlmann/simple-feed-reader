@@ -73,7 +73,6 @@ final class AiProviderSettings
 
     /**
      * Default true: ranking needs no thinking phase, and a reasoning model reasoning here is pure cost (#320, #323).
-     * A strict endpoint that rejects the `reasoning` field, such as a direct OpenAI URL, turns it off.
      */
     #[ORM\Column(options: ['default' => 1])]
     private bool $suppressReasoning = true;
