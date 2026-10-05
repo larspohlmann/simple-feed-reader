@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Jev\Pass;
 
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Pass\SystemOneWave;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +21,7 @@ final class SystemOneWaveTest extends TestCase
     public function testAResponseSilentForExactlyTheIdleBoundStaysOpenAndFailsJustAfter(): void
     {
         $clock = new MockClock('2026-10-02 09:00:00');
-        $wave = new SystemOneWave($clock);
+        $wave = new SystemOneWave($clock, $this->credentials());
         $response = $this->response();
         $wave->await(0, $response);
 
@@ -39,7 +40,7 @@ final class SystemOneWaveTest extends TestCase
 
     public function testTheOutcomesFollowTheRequestOrderNotTheOrderTheySettled(): void
     {
-        $wave = new SystemOneWave(new MockClock());
+        $wave = new SystemOneWave(new MockClock(), $this->credentials());
         $first = SystemOneOutcomeModel::failed(new ProviderUnreachableException('first'));
         $second = SystemOneOutcomeModel::failed(new ProviderUnreachableException('second'));
 
@@ -52,5 +53,10 @@ final class SystemOneWaveTest extends TestCase
     private function response(): ResponseInterface
     {
         return (new MockHttpClient(new MockResponse('{}')))->request('POST', 'https://systemone.example.test');
+    }
+
+    private function credentials(): ProviderCredentialsModel
+    {
+        return ProviderCredentialsModel::fromStoredConfiguration('https://api.typesafe.test/v1', 'sk-jev');
     }
 }

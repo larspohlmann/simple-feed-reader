@@ -158,6 +158,19 @@ final class HttpSystemOneClientTest extends TestCase
         self::assertFalse($outcome->isRetryable());
     }
 
+    public function testARefusalThatRepeatsTheApiKeyShowsItRedacted(): void
+    {
+        $outcome = $this->evaluate(
+            [new MockResponse('{"detail":"Bad key sk-jev in header"}', ['http_code' => 400])],
+            $this->request('entry-7'),
+        )[0];
+
+        self::assertSame(
+            'That provider refused the request (status 400): Bad key [redacted] in header',
+            $outcome->cause()->getMessage(),
+        );
+    }
+
     /** The error lands in a utf8mb4 column under MySQL strict mode, where an invalid byte fails the whole tick. */
     public function testAnInvalidByteInARefusalStillYieldsValidText(): void
     {
