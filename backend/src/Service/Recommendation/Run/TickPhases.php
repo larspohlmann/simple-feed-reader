@@ -14,6 +14,7 @@ use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineI
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
@@ -64,7 +65,7 @@ final readonly class TickPhases
         } catch (ProviderRejectedRequestException $exception) {
             return $this->runFailure->fail(
                 $tick->run,
-                RecommendationTransportFailureRecorder::providerFailed(
+                ProviderFailedMessage::of(
                     $tick->connection->getBaseUrl(),
                     $exception->getMessage(),
                 ),

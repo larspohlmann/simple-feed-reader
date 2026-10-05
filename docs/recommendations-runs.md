@@ -88,9 +88,10 @@ the transport-failure strikes, cancelling and finalising stay with the run and a
 
 A rejected request is not a strike. When the provider answers that the request itself is wrong (`RejectingStatus`: any
 4xx except 401 and 403, which mean the credentials, 408 and 425, which are about timing and still strike, and 429, which
-is retried), the same request would earn the same answer, so the run fails on that first answer, with no retry and no
-strike spent, and its error carries the provider's reason (`ProviderRejectedRequestException`). The call's run-log row
-still reads `transport-failed`, with the reason in its error detail. This holds for both engines and for profile runs.
+is retried or deferred), the same request would earn the same answer, so the run fails on that first answer, with no
+retry and no strike spent, and its error carries the provider's reason (`ProviderRejectedRequestException`). The call's
+run-log row still reads `transport-failed`, with the reason in its error detail. This holds for both engines and for
+profile runs.
 
 When a provider answers with an error status, the message in the run and its log carries the provider's own reason if
 it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for every rejecting

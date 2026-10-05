@@ -7,7 +7,7 @@ namespace App\Service\Recommendation\Profile;
 use App\Entity\ProfileRun;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
+use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -37,7 +37,7 @@ final readonly class ProfileRunFailure
 
         $this->fail(
             $tick->profileRun,
-            RecommendationTransportFailureRecorder::providerFailed($tick->connection->getBaseUrl(), $rejection),
+            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $rejection),
         );
     }
 
@@ -50,7 +50,7 @@ final readonly class ProfileRunFailure
 
         $this->strike(
             $tick->profileRun,
-            RecommendationTransportFailureRecorder::providerFailed($tick->connection->getBaseUrl(), $failureDetail),
+            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $failureDetail),
         );
     }
 

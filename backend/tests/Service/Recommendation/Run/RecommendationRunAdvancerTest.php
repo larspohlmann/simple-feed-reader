@@ -941,6 +941,42 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
     }
 
+    public function testAWaveRejectionBeatsAnEarlierUnreachableCallAndFailsTheRunAtOnce(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Failed->value, $report->status);
+        $this->entityManager->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
+        self::assertSame(0, $failed->getTransportFailures());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 400): No.',
+            $failed->getError(),
+        );
+    }
+
     public function testTransportFailureInWaveAdvancesNothingAndIncrementsCeilingOnce(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
