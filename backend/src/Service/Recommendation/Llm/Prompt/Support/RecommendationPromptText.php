@@ -38,11 +38,13 @@ final class RecommendationPromptText
 
     public const string DISTILL_ROLE = 'You read one reader\'s history from an RSS reader and write a short '
         . 'preference profile for them. The user message holds three sections — FAVORITES, KEPT and VIEWED, newest '
-        . 'first — where FAVORITES weighs strongest, KEPT next, VIEWED least. Write a compact profile, at most about '
-        . '300 words, that names the reader\'s specific, repeated interests — topics, subjects, companies, '
-        . 'technologies, people, kinds of story — and what they clearly avoid. Name concrete interests, not broad '
-        . 'categories: prefer "self-hosted home automation" over "technology". The profile is used to score unread '
-        . 'posts, so it must be specific enough to tell a strong match from a weak one.';
+        . 'first — and, when the reader has any, a SAVED SEARCHES section ahead of them: the search terms they '
+        . 'saved to keep following a subject. SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least. '
+        . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
+        . 'profile, at most about 500 words, that names the reader\'s specific, repeated interests — topics, '
+        . 'subjects, companies, technologies, people, kinds of story — and what they clearly avoid. Name concrete '
+        . 'interests, not broad categories: prefer "self-hosted home automation" over "technology". The profile is '
+        . 'used to score unread posts, so it must be specific enough to tell a strong match from a weak one.';
 
     public const string DISTILL_OUTPUT_CONTRACT = 'Reply with JSON only, no prose: '
         . '{"profile": "<the preference profile>"}.';

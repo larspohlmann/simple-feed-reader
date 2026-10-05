@@ -11,6 +11,7 @@ use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Support\ClippedText;
 use App\Service\Recommendation\Support\TokenEstimate;
@@ -194,11 +195,12 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * The only call that sees KEPT and VIEWED; every later phase gets the profile it writes plus FAVORITES.
+     * The only call that sees SAVED SEARCHES, KEPT and VIEWED; every later phase gets the profile it writes plus
+     * FAVORITES.
      *
      * @return list<array{role: string, content: string}>
      */
-    public function distillMessages(RecommendationHistoryModel $history): array
+    public function distillMessages(ProfileInputsModel $inputs): array
     {
         return [
             [
@@ -206,8 +208,28 @@ final readonly class RecommendationPromptBuilder
                 'content' => RecommendationPromptText::DISTILL_ROLE
                     . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT,
             ],
-            ['role' => 'user', 'content' => $this->historySections($history)],
+            ['role' => 'user', 'content' => $this->distillSections($inputs)],
         ];
+    }
+
+    private function distillSections(ProfileInputsModel $inputs): string
+    {
+        $historySections = $this->historySections($inputs->history);
+        if ([] === $inputs->savedSearchTerms) {
+            return $historySections;
+        }
+
+        return $this->savedSearchesSection($inputs->savedSearchTerms) . "\n\n" . $historySections;
+    }
+
+    /**
+     * @param list<string> $savedSearchTerms
+     */
+    private function savedSearchesSection(array $savedSearchTerms): string
+    {
+        $rendered = array_map(static fn (string $term): string => '- ' . $term, $savedSearchTerms);
+
+        return "SAVED SEARCHES:\n" . implode("\n", $rendered);
     }
 
     /**

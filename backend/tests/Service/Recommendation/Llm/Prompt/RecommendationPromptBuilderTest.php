@@ -16,6 +16,7 @@ use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -837,12 +838,35 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewed: [self::line(5, 'Viewed one', 10), self::line(6, 'Viewed two', 10)],
         );
 
-        $messages = $this->builder->distillMessages($history);
+        $messages = $this->builder->distillMessages(new ProfileInputsModel($history, []));
 
         self::assertStringContainsString('FAVORITES', $messages[1]['content']);
         self::assertStringContainsString('KEPT', $messages[1]['content']);
         self::assertStringContainsString('VIEWED', $messages[1]['content']);
         self::assertStringContainsString('"profile"', $messages[0]['content']);
+    }
+
+    public function testDistillMessagesListTheSavedSearchesAheadOfTheHistory(): void
+    {
+        $inputs = new ProfileInputsModel(
+            new RecommendationHistoryModel(favorites: [self::line(1, 'Fav one', 10)], kept: [], viewed: []),
+            ['rust', '"home assistant"'],
+        );
+
+        $user = $this->builder->distillMessages($inputs)[1]['content'];
+
+        self::assertStringStartsWith(
+            "SAVED SEARCHES:\n- rust\n- \"home assistant\"\n\nFAVORITES (newest first):\n- Fav one",
+            $user,
+        );
+    }
+
+    public function testTheDistillRoleWeighsSavedSearchesWithFavourites(): void
+    {
+        self::assertStringContainsString(
+            'SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least',
+            RecommendationPromptText::DISTILL_ROLE,
+        );
     }
 
     public function testDistillMessagesReturnsTheExactRoleContentStructure(): void
@@ -853,7 +877,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewed: [self::line(3, 'Viewed one', 10)],
         );
 
-        $messages = $this->builder->distillMessages($history);
+        $messages = $this->builder->distillMessages(new ProfileInputsModel($history, []));
 
         $expectedSystem = RecommendationPromptText::DISTILL_ROLE
             . "\n\n" . RecommendationPromptText::DISTILL_OUTPUT_CONTRACT;
