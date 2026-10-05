@@ -16,7 +16,6 @@ import { LayoutService } from '../../layout.service';
 import { ARTICLE_FOCUS_CURVE, needsReadingTail, readingBlocks } from './reading-focus';
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { sectionedUnits } from './reading-sections';
-import { articleOverflowsViewport, readingProgress } from './reading-progress';
 import { prefersReducedMotion } from './reduced-motion';
 
 type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
@@ -40,7 +39,7 @@ function isPresent(element: HTMLElement | undefined): element is HTMLElement {
 }
 
 /** The article's reading scope — the body plus its comments: the reading-focus
- *  dimming, the tail space below it and the progress bar. `connect` and
+ *  dimming, the tail space below it and where the progress rail ends. `connect` and
  *  `observeResizes` create its effects, so the host decides where they fall in
  *  its own effect order. */
 @Injectable()
@@ -62,26 +61,16 @@ export class ReadingScope {
 
   // The reading scope's extent, re-measured whenever the content, the comments
   // or the pane changes size — see measureScrollRange(). The tail keys on the
-  // scope's bottom (body + comments); the progress bar keys on the body alone.
-  private readonly contentBottom = signal(0);
+  // scope's bottom (body + comments); the progress rail keys on the body alone.
+  private readonly measuredContentBottom = signal(0);
   private readonly readingBottom = signal(0);
   private readonly viewportHeight = signal(0);
-  private readonly scrollTop = signal(0);
+
+  /** Where the article body ends inside the pane, for the progress rail. */
+  readonly contentBottom = this.measuredContentBottom.asReadonly();
 
   /** Whether the article carries tail space below it. */
   readonly hasTail = computed(() => needsReadingTail(this.readingBottom(), this.viewportHeight()));
-
-  /**
-   * The article's length-and-position cue. On a phone it's the only one there is:
-   * a mobile browser paints no scrollbar for the shell's nested scroller, so the
-   * reader had no way to judge how long an article was (#238).
-   */
-  readonly showProgress = computed(() =>
-    articleOverflowsViewport(this.contentBottom(), this.viewportHeight()),
-  );
-  readonly progressPercent = computed(
-    () => readingProgress(this.scrollTop(), this.viewportHeight(), this.contentBottom()) * 100,
-  );
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -162,14 +151,6 @@ export class ReadingScope {
     this.measureScrollRange();
   }
 
-  trackScroll(top: number): void {
-    this.scrollTop.set(top);
-  }
-
-  reset(): void {
-    this.scrollTop.set(0);
-  }
-
   /**
    * Measure how far the article and its comments reach inside the pane. Takes
    * the article's own content box — never the panel's, which already includes
@@ -180,12 +161,12 @@ export class ReadingScope {
     const content = untracked(this.content)?.nativeElement;
     if (!scroller || !content) {
       this.viewportHeight.set(0);
-      this.contentBottom.set(0);
+      this.measuredContentBottom.set(0);
       this.readingBottom.set(0);
       return;
     }
     this.viewportHeight.set(scroller.clientHeight);
-    this.contentBottom.set(bottomWithin(scroller, content));
+    this.measuredContentBottom.set(bottomWithin(scroller, content));
     this.readingBottom.set(bottomWithin(scroller, this.commentsHost() ?? content));
   }
 

@@ -1,0 +1,35 @@
+/* Over the scroller, never inside it, so nothing that scrolls paints over it. No
+   z-index: the host's own chrome, positioned later or higher, stays on top. */
+:host {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--space-1);
+  pointer-events: none;
+  background: var(--border);
+}
+
+:host(.horizontal) {
+  top: auto;
+  left: 0;
+  width: auto;
+  height: var(--space-0);
+}
+
+:host(.idle) {
+  display: none;
+}
+
+/* Untransitioned: the fill reports the scroll position and has to track it. */
+i {
+  display: block;
+  width: 100%;
+  height: calc(var(--rail-fill, 0) * 1%);
+  background: var(--accent);
+}
+
+:host(.horizontal) i {
+  width: calc(var(--rail-fill, 0) * 1%);
+  height: 100%;
+}

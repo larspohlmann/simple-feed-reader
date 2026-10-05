@@ -98,6 +98,7 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
+    [appScrollProgress]="progressRail"
     #rows
     [appScrollOutsideZone]="scrolling.onScroll"
   >
@@ -145,6 +146,7 @@
     [attr.aria-busy]="loading() ? 'true' : null"
     [class.dragging]="pull.dragging()"
     [style.transform]="pull.revealTransform()"
+    [appScrollProgress]="progressRail"
     #rows
     [appScrollOutsideZone]="scrolling.onScroll"
   >
@@ -192,6 +194,8 @@
     }
   </div>
 }
+
+<app-progress-rail [progress]="progressRail" />
 
 @if (entries().length > 0) {
   <!-- Held in the DOM rather than switched in, so the fade plays on the way out

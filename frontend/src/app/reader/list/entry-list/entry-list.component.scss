@@ -124,6 +124,11 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
   transition: none;
 }
 
+/* Over the rows, under the list header (z-index 3). */
+app-progress-rail {
+  z-index: 2;
+}
+
 /* A reload keeps the outgoing list on screen (#254); dimming it is the only
    signal that fresher content is on the way. Opacity joins transform in the
    transition so the dim eases in rather than snapping. */

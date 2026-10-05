@@ -99,15 +99,15 @@ export class ListContent {
   /** Rows the user can still see — loaded set minus the collapsed and the
    *  mark-above-hidden ones. The empty state keys on this, not `entries().length`,
    *  so removing the last row shows "nothing here" immediately. */
-  readonly visibleEntryCount = computed(
-    () =>
-      this.options
-        .entries()
-        .filter(
-          (entry) =>
-            !this.options.leavingIds().has(entry.id) && !this.hiddenAboveIds().has(entry.id),
-        ).length,
+  readonly visibleEntryCount = computed(() => this.countVisible(this.options.entries()));
+
+  /** `visibleEntryCount` over the rows already in the DOM. */
+  readonly renderedVisibleCount = computed(() =>
+    this.fullyRevealed() ? this.visibleEntryCount() : this.countVisible(this.rendered()),
   );
+
+  /** Every page is loaded and revealed, so the rendered rows are the whole list. */
+  readonly complete = computed(() => !this.options.hasMore() && this.fullyRevealed());
 
   constructor(private readonly options: ListContentOptions) {
     inject(DestroyRef).onDestroy(() => this.cancelReveal());
@@ -126,6 +126,12 @@ export class ListContent {
 
   clearHidden(): void {
     this.hiddenAboveIds.set(new Set());
+  }
+
+  private countVisible(entries: EntryDto[]): number {
+    const leaving = this.options.leavingIds();
+    const hidden = this.hiddenAboveIds();
+    return entries.filter((entry) => !leaving.has(entry.id) && !hidden.has(entry.id)).length;
   }
 
   private startReveal(previous: EntryDto[], next: EntryDto[]): void {

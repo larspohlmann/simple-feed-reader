@@ -1,7 +1,7 @@
 // Pure math for the article reading-focus effect, kept out of the component so
 // the fade curve is unit-testable (jsdom can't measure layout for the DOM part).
 
-import { articleOverflowsViewport } from './reading-progress';
+import { overflowsViewport } from '../../../shared/progress-rail/scroll-progress';
 
 /** How steeply a surface's reading focus falls away from the reading centre. */
 export interface FocusCurve {
@@ -98,7 +98,7 @@ export function readingBlocks(root: Element): HTMLElement[] {
  * gesture otherwise available right away.
  */
 export function needsReadingTail(contentBottom: number, viewportHeight: number): boolean {
-  return articleOverflowsViewport(contentBottom, viewportHeight);
+  return overflowsViewport(contentBottom, viewportHeight);
 }
 
 export interface BlockSpan {

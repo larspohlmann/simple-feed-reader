@@ -86,21 +86,18 @@
         </button>
       </div>
     </div>
-    <div #scroller class="scroller" (scroll)="onScroll(scroller.scrollTop)">
+    <div
+      #scroller
+      class="scroller"
+      [appScrollProgress]="progressRail"
+      (scroll)="onScroll(scroller.scrollTop)"
+    >
       <div
         class="reader"
         [class.with-tail]="scope.hasTail()"
         [style.transform]="gestures.pullTransform()"
         [style.transition]="gestures.snapTransition()"
       >
-        @if (scope.showProgress() && !screen.isWide()) {
-          <!-- The same cue as the split pane's hairline, stood up on the right edge and
-               run the full height: 2px along a phone's bottom is easy to miss, with no
-               scrollbar to fall back on (#238). Decorative; leads the article for sticky positioning. -->
-          <div class="progress-rail" aria-hidden="true">
-            <i [style.height.%]="scope.progressPercent()"></i>
-          </div>
-        }
         <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
             <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
@@ -222,16 +219,10 @@
             <app-spinner [size]="22" />
           </div>
         }
-        @if (scope.showProgress() && screen.isWide()) {
-          <!-- Decorative: a visual stand-in for the scrollbar a phone withholds, so
-               it carries no progressbar role — a screen reader already reports the
-               reading position, and announcing every scroll frame would be noise. -->
-          <div class="progress" aria-hidden="true">
-            <i [style.width.%]="scope.progressPercent()"></i>
-          </div>
-        }
       </div>
     </div>
+    <!-- No progressbar role: announcing every scroll frame would only be noise. -->
+    <app-progress-rail [progress]="progressRail" />
   </div>
   @if (showToTop()) {
     <app-to-top-button (activate)="scrollToTop()" />

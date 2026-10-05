@@ -18,6 +18,8 @@ import { ErrorBannerComponent } from '../../../shared/error-banner/error-banner.
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../../shared/loading-overlay/loading-overlay.component';
 import { ToTopButtonComponent } from '../../../shared/to-top-button/to-top-button.component';
+import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
@@ -44,6 +46,8 @@ import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
 import { ListScrollState } from './list-scroll-state';
 import { ListReadingFocus } from './list-reading-focus';
+import { EstimatedListBottom } from './estimated-list-bottom';
+import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 
 // How long a reload may run before it earns a spinner. A switch that lands
 // sooner would only flash one, which reads as a glitch rather than as progress.
@@ -66,6 +70,8 @@ const RELOAD_SPINNER_DELAY_MS = 150;
     ListEmptyStateComponent,
     ToTopButtonComponent,
     ScrollOutsideZoneDirective,
+    ProgressRailComponent,
+    ScrollProgressDirective,
   ],
   templateUrl: './entry-list.component.html',
   styleUrl: './entry-list.component.scss',
@@ -304,6 +310,21 @@ export class EntryListComponent implements OnDestroy {
     reduceMotion: this.reduceMotion,
     aboveFold: (scroller) => this.hasEntryAboveFold(scroller),
     onReloaded: () => this.content.clearHidden(),
+  });
+
+  private readonly listBottom = new EstimatedListBottom({
+    content: this.content,
+    entries: this.entries,
+    hasMore: this.hasMore,
+    titleCount: this.titleCount,
+    isSearch: this.isSearch,
+    loading: this.loading,
+  });
+
+  protected readonly progressRail = new ScrollProgressRail({
+    isWide: this.screen.isWide,
+    contentBottom: this.listBottom.measure,
+    layout: this.listBottom.layout,
   });
 
   /** The list header's collapsed state; the shell's app bar mirrors it (#630). */

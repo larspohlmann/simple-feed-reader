@@ -3,6 +3,8 @@ import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
 const PHONE = { width: 375, height: 667 };
+const SIDE_RAIL = 'app-progress-rail:not(.horizontal)';
+const BOTTOM_HAIRLINE = 'app-progress-rail.horizontal';
 // Wide enough for the split layout, where the article shares the main area with
 // the list — the one place a viewport-anchored bar would run on under the list.
 const DESKTOP = { width: 1280, height: 900 };
@@ -58,7 +60,7 @@ async function openArticle(page: Page) {
  *  cue fills downward — the horizontal hairline is the wide layout's alone. */
 async function railFilledFraction(pane: ReturnType<Page['locator']>): Promise<number> {
   return pane.evaluate((el) => {
-    const rail = el.querySelector('.progress-rail')!;
+    const rail = el.querySelector('app-progress-rail')!;
     const fill = rail.querySelector('i')!;
     return fill.getBoundingClientRect().height / rail.getBoundingClientRect().height;
   });
@@ -80,11 +82,11 @@ test.describe('Article reading progress', () => {
     const pane = await openArticle(page);
     const scroller = pane.locator('.scroller');
 
-    const rail = pane.locator('.progress-rail');
+    const rail = pane.locator(SIDE_RAIL);
     await expect(rail).toBeVisible();
     // The two cues swap at the breakpoint rather than coexist (#435). Asserting
     // the absent one here is what would have caught this spec going stale.
-    await expect(pane.locator('.progress')).toHaveCount(0);
+    await expect(pane.locator(BOTTOM_HAIRLINE)).toHaveCount(0);
     expect(await railFilledFraction(pane)).toBeLessThan(0.05);
 
     // The end of the text — NOT the end of the scroller, which carries half a
@@ -103,12 +105,8 @@ test.describe('Article reading progress', () => {
 
   // The cue has to survive the reading tail, which is half a viewport of blank
   // space below the last paragraph — exactly where the reader finishes the
-  // article. The hairline this replaced was stranded there by its containing
-  // block (#238); the rail is immune to that one, because its negative margin
-  // leaves it a zero-height margin box that can travel anywhere. What it is not
-  // immune to is losing `position: sticky`: drop that and the rail scrolls away
-  // with the text, which is the whole defect in a different disguise. Verified
-  // by making the rail static — this test then misses the scrollport by 3178px.
+  // article. The rail must lie over the scroller, not in the scrolled content, or
+  // the text carries it away.
   test('the rail spans the scrollport, including over the reading tail', async ({ page }) => {
     const signedIn = await signInWithLayout(page, 'list');
     test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
@@ -120,7 +118,7 @@ test.describe('Article reading progress', () => {
     await page.waitForTimeout(300);
 
     const gaps = await scroller.evaluate((el) => {
-      const rail = el.querySelector('.progress-rail')!.getBoundingClientRect();
+      const rail = el.parentElement!.querySelector('app-progress-rail')!.getBoundingClientRect();
       const scrollport = el.getBoundingClientRect();
       return {
         fromTop: rail.top - scrollport.top,
@@ -140,7 +138,7 @@ test.describe('Article reading progress', () => {
     await page.reload();
     const pane = await openArticle(page);
 
-    await expect(pane.locator('.progress-rail')).toHaveCount(0);
+    await expect(pane.locator('app-progress-rail:not(.idle)')).toHaveCount(0);
   });
 });
 
@@ -159,9 +157,9 @@ test.describe('Article reading progress on the split layout', () => {
 
     // The wide layout keeps the hairline the split pane was designed for, and
     // shows no rail — the other half of the swap #435 introduced.
-    await expect(pane.locator('.progress-rail')).toHaveCount(0);
+    await expect(pane.locator(SIDE_RAIL)).toHaveCount(0);
 
-    const box = (await pane.locator('.progress').boundingBox())!;
+    const box = (await pane.locator(BOTTOM_HAIRLINE).boundingBox())!;
     const paneBox = (await pane.locator('.scroller').boundingBox())!;
     expect(box.width).toBeCloseTo(paneBox.width, 0);
     expect(box.width).toBeLessThan(DESKTOP.width);

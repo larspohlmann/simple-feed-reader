@@ -473,6 +473,50 @@ describe('ReaderViewComponent', () => {
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
+    /** A 2400-tall article in an 800-tall pane whose geometry follows the scroll. */
+    function scrollingArticle(fixture: ReturnType<typeof mount>) {
+      const host = stubGeometry(fixture, 2400, 800);
+      fixture.detectChanges();
+      const scroller = scrollerOf(fixture);
+      const content = host.querySelector('.content') as HTMLElement;
+      content.getBoundingClientRect = () =>
+        ({ top: -scroller.scrollTop, bottom: 2400 - scroller.scrollTop }) as DOMRect;
+      const scrollTo = (top: number): void => {
+        scroller.scrollTop = top;
+        scroller.dispatchEvent(new Event('scroll'));
+        fixture.detectChanges();
+      };
+      const fill = (): string =>
+        host
+          .querySelector<HTMLElement>('app-progress-rail:not(.idle)')!
+          .style.getPropertyValue('--rail-fill');
+      return { host, scroller, scrollTo, fill };
+    }
+
+    it('lays the progress rail over the pane and fills it as the article scrolls', () => {
+      const fixture = mount(entry());
+      const { host, scrollTo, fill } = scrollingArticle(fixture);
+
+      scrollTo(800);
+
+      expect(host.querySelector('app-progress-rail')!.parentElement!.classList).toContain('frame');
+      expect(fill()).toBe('50');
+    });
+
+    it('repaints the rail when only the pane changes height', () => {
+      const fixture = mount(entry());
+      const { scroller, scrollTo, fill } = scrollingArticle(fixture);
+      scrollTo(400);
+
+      Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 2000 });
+      MockResizeObserver.instances
+        .filter((observer) => observer.targets.has(scroller))
+        .forEach((observer) => observer.fire());
+      fixture.detectChanges();
+
+      expect(fill()).toBe('100');
+    });
+
     it('measures the inner scroller once the article first renders', async () => {
       const fixture = mount(entry());
       const host = pinGeometry(fixture, 2400, 800);
@@ -500,7 +544,7 @@ describe('ReaderViewComponent', () => {
       const host = stubGeometry(fixture, 400, 800);
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
-      expect(host.querySelector('.progress-rail, .progress')).toBeNull();
+      expect(host.querySelector('app-progress-rail:not(.idle)')).toBeNull();
     });
 
     it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {

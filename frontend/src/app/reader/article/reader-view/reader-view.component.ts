@@ -12,6 +12,9 @@ import {
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
+import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
+import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
@@ -53,6 +56,8 @@ import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachme
 @Component({
   selector: 'app-reader-view',
   imports: [
+    ProgressRailComponent,
+    ScrollProgressDirective,
     ProxiedImageDirective,
     IconComponent,
     ListActionDirective,
@@ -104,7 +109,7 @@ export class ReaderViewComponent {
   private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
-  protected readonly screen = inject(LayoutService);
+  private readonly screen = inject(LayoutService);
   private readonly audioPlayer = inject(AudioPlayerService);
   private readonly injector = inject(Injector);
   private readonly reduceMotion = prefersReducedMotion();
@@ -112,6 +117,11 @@ export class ReaderViewComponent {
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
+  protected readonly progressRail = new ScrollProgressRail({
+    isWide: this.screen.isWide,
+    contentBottom: () => this.scope.contentBottom(),
+    layout: this.scope.contentBottom,
+  });
 
   protected readonly formatDuration = formatDuration;
 
@@ -181,7 +191,6 @@ export class ReaderViewComponent {
       this.showToTop.set(false);
       this.toolbarHidden.set(false);
       this.lastToolbarScrollTop = 0;
-      this.scope.reset();
       this.source.open(entry);
     });
 
@@ -252,7 +261,6 @@ export class ReaderViewComponent {
   }
 
   protected onScroll(scrollTop: number): void {
-    this.scope.trackScroll(scrollTop);
     this.showToTop.set(scrollTop > BACK_TO_TOP_AFTER_PX);
     if (this.fullscreen()) {
       // `isWide` is false by definition here: full-screen reading only exists
