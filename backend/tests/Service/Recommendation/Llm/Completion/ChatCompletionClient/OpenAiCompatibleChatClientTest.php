@@ -122,6 +122,16 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return new ConcurrentCompletion($this->request(), $observer);
     }
 
+    private function assertCompletionFailsWith(OpenAiCompatibleChatClient $client, string $message): void
+    {
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame($message, $exception->getMessage());
+        }
+    }
+
     public function testReturnsTheAssistantContentJoinedFromTheStream(): void
     {
         $seen = [];
@@ -330,15 +340,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = new ResponseCapturingHttpClient(new MockResponse($body()));
 
-        // try/catch rather than expectException, unlike the rest of this file,
-        // because the cancel assertion below has to run after the throw.
-        try {
-            $this->clientUsing($client)
-                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail(ProviderUnreachableException::class . ' was not thrown.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider sent nothing for more than 180 seconds.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith(
+            $this->clientUsing($client),
+            'That provider sent nothing for more than 180 seconds.',
+        );
 
         // A stalled response is canceled rather than left open — leaving it
         // running would hold the connection past the exception that already
@@ -402,15 +407,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 400],
         ));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame(
-                'That provider answered with status 400: Reasoning effort "none" is not supported.',
-                $exception->getMessage(),
-            );
-        }
+        $this->assertCompletionFailsWith(
+            $client,
+            'That provider answered with status 400: Reasoning effort "none" is not supported.',
+        );
     }
 
     public function testAnErrorBodyThatArrivesInPiecesIsReadWhole(): void
@@ -429,12 +429,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     {
         $client = $this->clientAnswering(new MockResponse('<html>Bad Request</html>', ['http_code' => 400]));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
     }
 
     public function testAServerErrorCarriesItsReasonToo(): void
@@ -444,15 +439,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 500],
         ));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame(
-                'That provider answered with status 500: Upstream model crashed.',
-                $exception->getMessage(),
-            );
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 500: Upstream model crashed.');
     }
 
     public function testAnOverflowingErrorBodyEndsWithoutReadingTheRest(): void
@@ -480,13 +467,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             }
         };
 
-        try {
-            $this->clientUsing($httpClient)
-                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($this->clientUsing($httpClient), 'That provider answered with status 400.');
 
         $pastTheBound = array_filter($httpClient->pulledOffsets, static fn (int $offset): bool => $offset >= 16_385);
         self::assertSame([], $pastTheBound);
@@ -500,12 +481,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
     }
 
     public function testAnErrorBodyCutByTheTransportStillNamesTheStatus(): void
@@ -516,12 +492,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 400]));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
     }
 
     public function testTheApiKeyIsRedactedFromTheReason(): void
@@ -533,12 +504,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 400],
         ));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400: Bad key [redacted].', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 400: Bad key [redacted].');
     }
 
     public function testAnErrorBodyOneByteOverTheBoundIsNotParsed(): void
@@ -548,12 +514,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame(16_385, \strlen($oversized));
         $client = $this->clientAnswering(new MockResponse($oversized, ['http_code' => 400]));
 
-        try {
-            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail('The error status was not reported.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That provider answered with status 400.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
     }
 
     public function testAnErrorBodyOfExactlyTheBoundIsParsed(): void
@@ -709,13 +670,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         // The exact message: contentOf() raises the same exception type of its own for an empty reader.
-        try {
-            $this->clientUsing($client)
-                ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
-            self::fail(ProviderUnreachableException::class . ' was not thrown.');
-        } catch (ProviderUnreachableException $exception) {
-            self::assertSame('That address did not answer.', $exception->getMessage());
-        }
+        $this->assertCompletionFailsWith($this->clientUsing($client), 'That address did not answer.');
     }
 
     public function testObserverSeesTheAnswerAndTheWireCountGrow(): void
