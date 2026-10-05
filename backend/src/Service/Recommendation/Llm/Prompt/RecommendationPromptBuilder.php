@@ -24,7 +24,7 @@ final readonly class RecommendationPromptBuilder
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
     /** What packBatches() budgets for the profile. An estimate: DISTILL_ROLE's word cap bounds it to roughly this. */
-    private const int ESTIMATED_PROFILE_TOKENS = 700;
+    private const int ESTIMATED_PROFILE_TOKENS = 1200;
 
     /**
      * Consolidation re-scores, reasons and dedups in one pass. The floor (twice the final list) keeps dedup's backfill

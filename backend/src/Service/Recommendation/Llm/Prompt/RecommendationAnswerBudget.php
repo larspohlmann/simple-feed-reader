@@ -23,10 +23,10 @@ final readonly class RecommendationAnswerBudget
     private const int TOKENS_PER_SCORE_PICK = 15;
 
     /**
-     * The distillation reply: one `{"profile": "..."}` string of at most ~300 words, sized generously so a reasoning
+     * The distillation reply: one `{"profile": "..."}` string of at most ~500 words, sized generously so a reasoning
      * model still finishes the JSON.
      */
-    private const int PROFILE_ANSWER_TOKENS = 1200;
+    private const int PROFILE_ANSWER_TOKENS = 2000;
 
     /**
      * Half again over the mean estimate: a long reply is not a runaway to truncate into one that cannot parse, and

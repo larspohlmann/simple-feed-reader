@@ -192,7 +192,7 @@ final class RecommendationPromptBuilderTest extends TestCase
                 range(1, 80),
             ),
         );
-        $settings = $this->settings(10000, 50, batchSize: RecommendationBatchSize::Large);
+        $settings = $this->settings(10500, 50, batchSize: RecommendationBatchSize::Large);
 
         $batches = $this->builder->packBatches($candidates, $history, $settings);
 
@@ -209,7 +209,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             static fn (int $id): ArticleLineModel => self::line($id, "Candidate $id", 1000),
             range(1, 60),
         );
-        $settings = $this->settings(8192, 50);
+        $settings = $this->settings(8692, 50);
 
         $clipped = $this->builder->packBatches($tenThousandChars, $this->emptyHistory(), $settings);
         $whole = $this->builder->packBatches($thousandChars, $this->emptyHistory(), $settings);
@@ -751,7 +751,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3195 leaves a budget of -1264 tokens, so the minimum batch size splits 10 and 10. Flipping the sign
+        // Window 3195 leaves a budget of -1050 tokens, so the minimum batch size splits 10 and 10. Flipping the sign
         // of any term (overhead, reply reserve, history) lifts it past the 120 tokens that fit all 20 in one batch.
         $candidates = array_map(
             static fn (int $id): ArticleLineModel => new ArticleLineModel($id, 'T', 'F', 'D', null),
@@ -804,7 +804,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches(
             $candidates,
             $this->emptyHistory(),
-            $this->settings(6850, 1, maximumBatchSize: 200),
+            $this->settings(7350, 1, maximumBatchSize: 200),
         );
 
         self::assertSame([23, 23, 23, 23, 8], array_map('count', $batches));
@@ -812,7 +812,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     /**
      * Below the 1024-token floor the provider may spend the floor plus half (RecommendationAnswerBudget), and the
-     * packer reserves exactly that: 3865 - 1500 overhead - 1536 bound - 709 profile and favorites = 120 tokens.
+     * packer reserves exactly that: 4365 - 1500 overhead - 1536 bound - 1209 profile and favorites = 120 tokens.
      */
     public function testTheBatchReplyReserveIsTheProvidersAnswerBound(): void
     {
@@ -824,7 +824,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $batches = $this->builder->packBatches(
             $candidates,
             $this->emptyHistory(),
-            $this->settings(3865, 1, maximumBatchSize: 50),
+            $this->settings(4365, 1, maximumBatchSize: 50),
         );
 
         self::assertSame([20, 10], array_map('count', $batches));
@@ -867,6 +867,11 @@ final class RecommendationPromptBuilderTest extends TestCase
             'SAVED SEARCHES and FAVORITES weigh strongest, KEPT next, VIEWED least',
             RecommendationPromptText::DISTILL_ROLE,
         );
+    }
+
+    public function testTheDistillRoleAllowsAProfileOfAboutFiveHundredWords(): void
+    {
+        self::assertStringContainsString('at most about 500 words', RecommendationPromptText::DISTILL_ROLE);
     }
 
     public function testDistillMessagesReturnsTheExactRoleContentStructure(): void
