@@ -8,6 +8,13 @@ import {
 import { API_BASE_URL } from '../../core/api';
 import { AiFailureScope, ScopedAiFailure, aiFailure } from './ai-failure';
 
+/** An LLM writes a list with reasons; a scoring model rates each article. */
+export type ModelKind = 'llm' | 'scoring';
+
+export const MODEL_KINDS: readonly ModelKind[] = ['llm', 'scoring'];
+
+export type ScoringFamily = 'decision';
+
 /**
  * One saved provider connection, as the multi-config endpoints report it.
  * The API key is never part of this shape — `apiKeyHint` is the last four
@@ -19,6 +26,8 @@ export interface AiConfig {
   readonly baseUrl: string;
   readonly apiKeyHint: string | null;
   readonly model: string | null;
+  /** The kind of the saved model; `llm` while none is saved. */
+  readonly kind: ModelKind;
   readonly ready: boolean;
   readonly active: boolean;
   readonly suppressReasoning: boolean;
@@ -32,8 +41,8 @@ export interface AiConfig {
 /** A model the provider offers, with what a connection could do once it saves that model. */
 export interface AiModel {
   readonly id: string;
-  /** Shown beside the id as the server words it; null for an LLM. */
-  readonly label: string | null;
+  readonly kind: ModelKind;
+  readonly family: ScoringFamily | null;
   readonly capabilities: RecommendationCapabilities;
 }
 

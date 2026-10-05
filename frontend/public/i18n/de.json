@@ -151,6 +151,19 @@
         "noReasons": "bewertet Artikel, schreibt keine Begründungen",
         "borrowedProfile": "übernimmt das Profil aus Einstellungen → KI"
       },
+      "modelKind": {
+        "label": "Modelltyp",
+        "llm": "LLM",
+        "scoring": "Bewertungsmodell",
+        "scoringHint": "Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. Die Bewertung eines Entscheidungsmodells ist die Wahrscheinlichkeit, dass du den Artikel lesen willst.",
+        "noneOffered": {
+          "llm": "Dieser Anbieter bietet keine LLMs an.",
+          "scoring": "Dieser Anbieter bietet keine Bewertungsmodelle an."
+        }
+      },
+      "modelFamily": {
+        "decision": "Entscheidungsmodell"
+      },
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
       "provider": {

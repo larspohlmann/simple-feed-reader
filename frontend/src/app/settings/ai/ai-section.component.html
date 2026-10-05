@@ -162,6 +162,26 @@
 
                     @if (ai.choosingModelFor() === config.id && ai.models().length) {
                       <div class="model-picker">
+                        <div class="model-kind">
+                          <app-segmented-choice
+                            [options]="modelKinds"
+                            [selected]="modelKind()"
+                            [disabledOptions]="unofferedKinds()"
+                            ariaLabelKey="settings.ai.modelKind.label"
+                            labelPrefix="settings.ai.modelKind."
+                            (pick)="modelKind.set($event)"
+                          />
+                          @for (kind of unofferedKinds(); track kind) {
+                            <p class="hint">
+                              {{ 'settings.ai.modelKind.noneOffered.' + kind | transloco }}
+                            </p>
+                          }
+                          @if (modelKind() === 'scoring') {
+                            <p class="hint scoring-hint">
+                              {{ 'settings.ai.modelKind.scoringHint' | transloco }}
+                            </p>
+                          }
+                        </div>
                         <app-field
                           [label]="'settings.ai.model' | transloco"
                           [info]="'settings.ai.info.modelPicker' | transloco"

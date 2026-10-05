@@ -151,6 +151,19 @@
         "noReasons": "scores articles, writes no reasons",
         "borrowedProfile": "takes its profile from Settings → AI"
       },
+      "modelKind": {
+        "label": "Model type",
+        "llm": "LLM",
+        "scoring": "Scoring model",
+        "scoringHint": "A scoring model rates every article for you instead of writing a list with reasons. A decision model's score is the probability that you want to read the article.",
+        "noneOffered": {
+          "llm": "This provider offers no LLMs.",
+          "scoring": "This provider offers no scoring models."
+        }
+      },
+      "modelFamily": {
+        "decision": "Decision model"
+      },
       "saveModel": "Save model",
       "ready": "AI features are available and use {{model}}.",
       "provider": {

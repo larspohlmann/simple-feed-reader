@@ -22,6 +22,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   baseUrl: 'https://api.example.test/v1',
   apiKeyHint: '1234',
   model: null,
+  kind: 'llm',
   ready: false,
   active: false,
   suppressReasoning: true,
@@ -35,7 +36,8 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
 
 const offered = (id: string): AiModel => ({
   id,
-  label: null,
+  kind: 'llm',
+  family: null,
   capabilities: EVERY_RECOMMENDATION_CAPABILITY,
 });
 

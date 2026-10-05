@@ -6,6 +6,7 @@ import {
   inject,
   linkedSignal,
   signal,
+  untracked,
 } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import {
@@ -26,14 +27,25 @@ import {
   SearchableSelectComponent,
   SelectOption,
 } from '../../shared/searchable-select/searchable-select.component';
+import { SegmentedChoiceComponent } from '../../shared/segmented-choice/segmented-choice.component';
 import { SettingsGroupComponent } from '../../shared/settings/settings-group/settings-group.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { ProfileSectionComponent } from '../profile/profile-section.component';
 import { AiFailure, SERVER_TEXT_KINDS } from './ai-failure';
-import { AiConfig, AiSettingsService } from './ai-settings.service';
+import {
+  AiConfig,
+  AiModel,
+  AiSettingsService,
+  MODEL_KINDS,
+  ModelKind,
+} from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
 import { RecommendationSettingsCardComponent } from '../recommendations/recommendation-settings-card.component';
+
+function offeredKinds(models: readonly AiModel[]): readonly ModelKind[] {
+  return MODEL_KINDS.filter((kind) => models.some((model) => model.kind === kind));
+}
 
 /** The AI provider list: every saved configuration, one row each, plus the
  *  add form below. Each row carries its own model and readiness, at most
@@ -57,6 +69,7 @@ import { RecommendationSettingsCardComponent } from '../recommendations/recommen
     RecommendationRunHistoryComponent,
     RecommendationSettingsCardComponent,
     SearchableSelectComponent,
+    SegmentedChoiceComponent,
     SettingsGroupComponent,
     SettingsStackComponent,
     TranslocoPipe,
@@ -77,11 +90,26 @@ export class AiSectionComponent {
   readonly renamingId = signal<number | null>(null);
   readonly renameText = signal('');
 
-  /** Whichever row is fetching or showing a model list; unset once a
-   *  different row starts, so a stale pick from one row can never be sent
-   *  for another. */
-  readonly chosenModel = linkedSignal<number | null, string | null>({
-    source: () => this.ai.choosingModelFor(),
+  readonly modelKinds = MODEL_KINDS;
+
+  /** The kinds the open model list holds none of: their option is disabled and says so. */
+  readonly unofferedKinds = computed(() => {
+    const offered = offeredKinds(this.ai.models());
+    return MODEL_KINDS.filter((kind) => !offered.includes(kind));
+  });
+
+  /** Opens on the kind of the row's saved model, or on the only kind offered. The rows
+   *  are read untracked, so a write to any row keeps the reader's pick. */
+  readonly modelKind = linkedSignal<readonly AiModel[], ModelKind>({
+    source: () => this.ai.models(),
+    computation: (models) => untracked(() => this.openingKind(models)),
+  });
+
+  /** The pick in whichever row and kind is showing a model list; unset once
+   *  another row starts or the kind changes, so a stale pick can never be
+   *  sent for another row or from the other kind's list. */
+  readonly chosenModel = linkedSignal<{ row: number | null; kind: ModelKind }, string | null>({
+    source: () => ({ row: this.ai.choosingModelFor(), kind: this.modelKind() }),
     computation: () => null,
   });
 
@@ -100,11 +128,14 @@ export class AiSectionComponent {
   });
 
   readonly modelOptions = computed<SelectOption[]>(() =>
-    this.ai.models().map((model) => ({
-      value: model.id,
-      label: [model.id, model.label].filter(Boolean).join(' · '),
-      hint: this.modelHint(model.capabilities),
-    })),
+    this.ai
+      .models()
+      .filter((model) => model.kind === this.modelKind())
+      .map((model) => ({
+        value: model.id,
+        label: [model.id, this.familyTag(model)].filter(Boolean).join(' · '),
+        hint: this.modelHint(model.capabilities),
+      })),
   );
 
   readonly chosenModelHint = computed(
@@ -140,6 +171,18 @@ export class AiSectionComponent {
     ].filter((key) => key !== null);
 
     return differences.map((key) => this.i18n.translate(key)).join(' · ') || undefined;
+  }
+
+  private familyTag(model: AiModel): string | null {
+    return model.family ? this.i18n.translate(`settings.ai.modelFamily.${model.family}`) : null;
+  }
+
+  private openingKind(models: readonly AiModel[]): ModelKind {
+    const row = this.ai.configs().find((config) => config.id === this.ai.choosingModelFor());
+    const current = row?.kind ?? 'llm';
+    const offered = offeredKinds(models);
+
+    return offered.includes(current) ? current : (offered[0] ?? current);
   }
 
   rowFailure(configId: number): string | null {
