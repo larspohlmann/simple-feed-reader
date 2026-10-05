@@ -20,8 +20,8 @@ use Symfony\Component\Clock\ClockInterface;
 final readonly class TickPhases
 {
     /**
-     * A run belongs to the engine and the scoring protocol whose batches it froze. Failed, not cancelled: the error
-     * says why, and switching back to that connection makes the run resumable where it stopped.
+     * A run belongs to the engine and the scoring protocol whose batches it froze, and a scoring run to the model whose
+     * window sized them. Failed, not cancelled: the error says why, and switching back makes the run resumable.
      */
     public const string ENGINE_SWITCH = 'This run was started with a different recommendation engine than the active '
         . 'AI connection uses. Start a new run, or switch back to that connection to resume this one.';
@@ -73,6 +73,13 @@ final readonly class TickPhases
 
     private static function switchedEngines(RecommendationRun $run, TickContext $tick): bool
     {
-        return $run->getEngineKind() !== $tick->engineKind || $run->getScoringProtocol() !== $tick->scoringProtocol();
+        return $run->getEngineKind() !== $tick->engineKind
+            || $run->getScoringProtocol() !== $tick->scoringProtocol()
+            || self::switchedScoringModels($run, $tick);
+    }
+
+    private static function switchedScoringModels(RecommendationRun $run, TickContext $tick): bool
+    {
+        return null !== $run->getScoringProtocol() && $run->getModel() !== $tick->connection->getModel();
     }
 }

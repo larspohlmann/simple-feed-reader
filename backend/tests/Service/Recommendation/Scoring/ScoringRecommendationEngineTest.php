@@ -276,6 +276,26 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         self::assertSame([], $this->systemOne()->requests());
     }
 
+    /** The run's batches were packed for 32k; an 8k sibling model must not receive them. */
+    public function testAScoringRunWhoseConnectionSwitchedToAnotherSystemOneModelFailsWithoutAnotherCall(): void
+    {
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel(
+            new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-05 09:10:00'),
+        );
+        $this->entityManager->flush();
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->latestRun();
+        self::assertSame('failed', $run->getStatus()->value);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertCount(1, $this->systemOne()->requests());   // the warm-up only
+    }
+
     /** No history, so no profile: the account's to fix, so the run fails with the reason and never strikes. */
     public function testARunWithoutAProfileFailsWithTheReasonAndNeverAsksSystemOne(): void
     {
