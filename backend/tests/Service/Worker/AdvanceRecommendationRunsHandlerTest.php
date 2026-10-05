@@ -16,6 +16,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Profile\ProfileRunSweep;
 use App\Service\Recommendation\Run\Factory\TickContextFactory;
@@ -210,6 +211,33 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotCount(0, $this->recommendationItems($advanced));
 
         $this->assertSoleProviderFailureWarningLogged($logSpy, $strugglingRun->getId());
+    }
+
+    /** A rejection fails its run inside the tick: the sweep logs nothing and goes on to the next user's run. */
+    public function testARejectedRequestFailsItsRunSilentlyAndTheSweepGoesOn(): void
+    {
+        $rejectedUser = $this->user('rejected@example.test');
+        $this->fixtures->seedSingleBatchFixture($rejectedUser);
+        $this->startAndSnapshot($rejectedUser);
+
+        $healthyUser = $this->user('healthy-after-rejection@example.test');
+        $this->fixtures->seedSingleBatchFixture($healthyUser);
+        $healthyRun = $this->startAndSnapshot($healthyUser);
+
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+        $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
+
+        $logSpy = new TestHandler();
+        $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
+
+        $this->entityManager->clear();
+        $rejected = $this->runs()->findLatestForUser($rejectedUser);
+        self::assertNotNull($rejected);
+        self::assertSame(RunStatus::Failed, $rejected->getStatus());
+        self::assertSame(1, $this->activeRun($healthyUser)->getProgress()->batchesDone);
+        self::assertSame([], $logSpy->getRecords());
     }
 
     /** WorkerRunSweep catches a union of two types; this pins the arm the unreachable-provider case above cannot. */

@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Run;
 use App\Enum\RunStatus;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
@@ -60,6 +61,12 @@ final readonly class TickPhases
             return $engine->advance($tick);
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
+        } catch (ProviderRejectedRequestException $exception) {
+            return $this->runFailure->fail($tick->run, \sprintf(
+                RecommendationTransportFailureRecorder::PROVIDER_FAILED,
+                $tick->connection->getBaseUrl(),
+                $exception->getMessage(),
+            ));
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
             $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
 

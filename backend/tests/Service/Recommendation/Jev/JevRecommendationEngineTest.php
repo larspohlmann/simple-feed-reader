@@ -14,6 +14,7 @@ use App\Enum\CallVerdict;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Jev\JevRecommendationEngine;
@@ -187,25 +188,31 @@ final class JevRecommendationEngineTest extends DbTestCase
         self::assertSame('The stored API key cannot be opened.', $this->lastLog()->getErrorDetail());
     }
 
-    /** A refused request repeats, so the run fails after its strikes with what the provider objected to. */
-    public function testARejectedRequestFailsTheRunWithTheProvidersDetail(): void
+    /** A refused request would be refused again, so the first refusal fails the run with what the provider said. */
+    public function testARejectedRequestFailsTheRunAtOnceWithTheProvidersDetail(): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, 5);
         $this->startAndSnapshot(TickDriver::Poll);
-        for ($strike = 0; $strike < RecommendationRun::MAX_TRANSPORT_FAILURES; $strike++) {
-            $this->systemOne()->queueFailure(new ProviderUnreachableException(
-                'That provider refused the request (status 400): Model typesafe/jev-preview does not exist',
-            ));
-            try {
-                $this->advancer()->advance($this->owner);
-            } catch (ProviderUnreachableException) {
-            }
-        }
+        $this->systemOne()->queueFailure(new ProviderRejectedRequestException(
+            400,
+            'That provider refused the request (status 400): Model typesafe/jev-preview does not exist',
+        ));
+
+        $report = $this->advancer()->advance($this->owner);
 
         $run = $this->latestRun();
+        self::assertSame('failed', $report->status);
         self::assertSame('failed', $run->getStatus()->value);
-        self::assertStringContainsString('status 400', (string) $run->getError());
-        self::assertStringContainsString('jev-preview does not exist', (string) $run->getError());
+        self::assertSame(
+            \sprintf(
+                'The AI provider at %s failed: That provider refused the request (status 400): '
+                . 'Model typesafe/jev-preview does not exist',
+                $this->owner->getActiveAiProviderSettings()?->getBaseUrl(),
+            ),
+            $run->getError(),
+        );
+        self::assertSame(0, $run->getTransportFailures());
+        self::assertSame(CallVerdict::TransportFailed, $this->lastLog()->getVerdict());
     }
 
     /** A reply missing a candidate's Noul is retried in the tick; after MAX_ATTEMPTS the batch yields no winners. */
