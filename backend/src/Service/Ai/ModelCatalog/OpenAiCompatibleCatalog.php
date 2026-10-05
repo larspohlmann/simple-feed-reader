@@ -101,18 +101,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     {
         $byId = [];
 
-        foreach ($entries as $entry) {
-            if (!\is_array($entry) || !isset($entry['id']) || !\is_string($entry['id']) || '' === $entry['id']) {
-                continue;
-            }
-            if (!self::isUsableModel($entry)) {
-                continue;
-            }
-            $byId[$entry['id']] ??= new ModelDescriptor(
-                $entry['id'],
-                self::reportedContextWindow($entry),
-                self::scoringProtocolOf($entry),
-            );
+        foreach (self::listableModels($entries) as $model) {
+            $byId[$model->id] ??= $model;
         }
 
         ksort($byId, SORT_STRING);
@@ -121,36 +111,43 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     }
 
     /**
-     * A scoring model without a window is left out: its requests could not be budgeted.
+     * @param array<mixed> $entries
      *
-     * @param array<mixed> $entry
+     * @return \Generator<ModelDescriptor>
      */
-    private static function isUsableModel(array $entry): bool
+    private static function listableModels(array $entries): \Generator
     {
-        if (self::isTextModel($entry)) {
-            return true;
+        foreach ($entries as $entry) {
+            if (!\is_array($entry) || !isset($entry['id']) || !\is_string($entry['id']) || '' === $entry['id']) {
+                continue;
+            }
+            $outputs = self::outputModalities($entry);
+            $protocol = self::scoringProtocolOf($outputs);
+            $window = self::reportedContextWindow($entry);
+            if (self::isTextModel($outputs) || self::isBudgetableScoringModel($protocol, $window)) {
+                yield new ModelDescriptor($entry['id'], $window, $protocol);
+            }
         }
-
-        return null !== self::scoringProtocolOf($entry) && null !== self::reportedContextWindow($entry);
     }
 
     /**
      * Text among the outputs, or no outputs reported at all (LM Studio, Ollama, OpenAI): what the plain listing offers.
      *
-     * @param array<mixed> $entry
+     * @param array<mixed>|null $outputs
      */
-    private static function isTextModel(array $entry): bool
+    private static function isTextModel(?array $outputs): bool
     {
-        $outputs = self::outputModalities($entry);
-
         return null === $outputs || \in_array(self::TEXT_OUTPUT, $outputs, true);
     }
 
-    /** @param array<mixed> $entry */
-    private static function scoringProtocolOf(array $entry): ?ScoringProtocol
+    private static function isBudgetableScoringModel(?ScoringProtocol $protocol, ?int $contextWindow): bool
     {
-        $outputs = self::outputModalities($entry);
+        return null !== $protocol && null !== $contextWindow;
+    }
 
+    /** @param array<mixed>|null $outputs */
+    private static function scoringProtocolOf(?array $outputs): ?ScoringProtocol
+    {
         foreach (self::SCORING_OUTPUTS as $output => $protocol) {
             if ([$output] === $outputs) {
                 return $protocol;

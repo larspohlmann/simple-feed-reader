@@ -10,7 +10,6 @@ use App\Service\Ai\Pass\ModelListing;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-/** The System One probe adds its alias only when no member listed a System One model, so OpenRouter lists Jev once. */
 final readonly class CompositeModelCatalog implements ModelCatalogInterface
 {
     public const string MEMBER_TAG = 'app.model_catalog';
