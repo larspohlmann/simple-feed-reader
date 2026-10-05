@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -87,11 +88,20 @@ final readonly class RecommendationRunStarter
         }
 
         $latest->resume();
-        // Re-stamped: an account that switched model since the failure calls the new one, and its history must say so.
-        $this->stampProvider($latest, $user);
+        $this->restampAnLlmRun($latest, $user);
         $this->entityManager->flush();
 
         return RecommendationRunReportModel::fromRun($latest);
+    }
+
+    /** LLM: the run calls the newly chosen model, so its history names it. Scoring: batches fit the stamped model. */
+    private function restampAnLlmRun(RecommendationRun $run, User $user): void
+    {
+        if (RecommendationEngineKind::Scoring === $run->getEngineKind()) {
+            return;
+        }
+
+        $this->stampProvider($run, $user);
     }
 
     /** Copied onto the run, never read back from the editable configuration, so the history keeps each run's model. */

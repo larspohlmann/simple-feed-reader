@@ -280,13 +280,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     public function testAScoringRunWhoseConnectionSwitchedToAnotherSystemOneModelFailsWithoutAnotherCall(): void
     {
         $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
-        $connection = $this->owner->getActiveAiProviderSettings();
-        self::assertNotNull($connection);
-        $connection->chooseModel(
-            new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne),
-            new \DateTimeImmutable('2026-10-05 09:10:00'),
-        );
-        $this->entityManager->flush();
+        $this->chooseScoringModel(new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne));
 
         $this->advancer()->advance($this->owner, TickDriver::Poll);
 
@@ -294,6 +288,28 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         self::assertSame('failed', $run->getStatus()->value);
         self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertCount(1, $this->systemOne()->requests());   // the warm-up only
+    }
+
+    /** Resume keeps the stamped model: the batches fit only its window, so the run waits for the switch back. */
+    public function testAResumedScoringRunFailsAgainOnAnotherModelAndProceedsOnItsOwn(): void
+    {
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
+        $this->chooseScoringModel(new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne));
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $this->starter()->resume($this->owner);
+        self::assertSame('jev-latest', $this->latestRun()->getModel());
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $this->latestRun()->getError());
+
+        $this->chooseScoringModel(new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
+        $this->starter()->resume($this->owner);
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.6);
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->latestRun();
+        self::assertNotSame('failed', $run->getStatus()->value);
+        self::assertSame(2, $run->getProgress()->batchesDone);
     }
 
     /** No history, so no profile: the account's to fix, so the run fails with the reason and never strikes. */
@@ -452,6 +468,14 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
         $this->advancer()->advance($this->owner, $driver);
         self::assertSame(1, $this->activeRun()->getProgress()->batchesDone);
+    }
+
+    private function chooseScoringModel(ModelDescriptor $model): void
+    {
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-05 09:10:00'));
+        $this->entityManager->flush();
     }
 
     private function startAndSnapshot(TickDriver $driver): void
