@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Profile\Pass;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\ProfileRun;
-use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
+use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
@@ -19,7 +19,7 @@ final readonly class ProfileTick
         public ProfileRun $profileRun,
         public AiProviderSettings $connection,
         public EffectiveRecommendationSettingsModel $settings,
-        public RecommendationHistoryModel $history,
+        public ProfileInputsModel $inputs,
         public TickDriver $driver,
     ) {
     }

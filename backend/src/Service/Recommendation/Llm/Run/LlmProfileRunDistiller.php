@@ -10,7 +10,6 @@ use App\Service\Recommendation\Llm\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Llm\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Llm\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Profile\Model\ProfileDistillationOutcomeModel;
-use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface;
 
@@ -29,7 +28,7 @@ final readonly class LlmProfileRunDistiller implements ProfileRunDistillerInterf
     {
         $request = $this->requestFactory->create($tick->connection, CallPromptModel::distillation(
             $this->promptBuilder->messagesWithCorrectiveTail(
-                $this->promptBuilder->distillMessages(new ProfileInputsModel($tick->history, [])),
+                $this->promptBuilder->distillMessages($tick->inputs),
                 $tick->profileRun->getLastInvalidReply(),
                 RecommendationPromptText::DISTILL_CORRECTIVE,
             ),
