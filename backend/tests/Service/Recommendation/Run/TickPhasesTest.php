@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -179,10 +180,41 @@ final class TickPhasesTest extends DbTestCase
         self::assertCount(1, $engine->advancedTicks);
     }
 
+    /** One protocol exists today: a scoring run recorded without one stands in for a run of another protocol. */
+    public function testARunPackedForAnotherScoringProtocolFailsWithoutBeingAdvanced(): void
+    {
+        $this->fixtures->seedReadyScoringSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, null);
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
+    public function testARunOnItsConnectionsScoringProtocolIsAdvanced(): void
+    {
+        $this->fixtures->seedReadyScoringSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne);
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('running', $report->status);
+        self::assertCount(1, $engine->advancedTicks);
+    }
+
     private function runningRun(): RecommendationRun
     {
+        return $this->runningRunOn(RecommendationEngineKind::Llm, null);
+    }
+
+    private function runningRunOn(RecommendationEngineKind $kind, ?ScoringProtocol $protocol): RecommendationRun
+    {
         $run = $this->fixtures->createRun($this->owner);
-        $run->snapshot(RecommendationEngineKind::Llm, null, [[101, 102]]);
+        $run->snapshot($kind, $protocol, [[101, 102]]);
         $this->entityManager->flush();
 
         return $run;
