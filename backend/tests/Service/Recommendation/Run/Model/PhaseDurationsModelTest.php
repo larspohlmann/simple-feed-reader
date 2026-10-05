@@ -57,7 +57,7 @@ final class PhaseDurationsModelTest extends TestCase
     {
         $durations = PhaseDurationsModel::fromCompletedRunSpans([
             $this->span(1, CallPhase::Batch, 0.0, 1, 0.0),
-        ], RecommendationEngineKind::Jev);
+        ], RecommendationEngineKind::Scoring);
 
         self::assertNotNull($durations);
         self::assertSame(0.0, $durations->finishedShare(1, 1));
@@ -78,7 +78,7 @@ final class PhaseDurationsModelTest extends TestCase
         self::assertNull(PhaseDurationsModel::fromCompletedRunSpans([], RecommendationEngineKind::Llm));
     }
 
-    /** Run 1 is a Jev run (60 s over 3 batches), run 2 an LLM run: each kind learns from its own runs only. */
+    /** Run 1 is a scoring run (60 s over 3 batches), run 2 an LLM run: each kind learns from its own runs only. */
     public function testEachKindAveragesOnlyRunsWithExactlyItsPhases(): void
     {
         $spans = [
@@ -87,11 +87,11 @@ final class PhaseDurationsModelTest extends TestCase
             $this->span(2, CallPhase::Consolidate, 30.0, 0, 80.0),
         ];
 
-        $jev = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Jev);
+        $scoring = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Scoring);
         $llm = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Llm);
 
-        self::assertNotNull($jev);
-        self::assertSame(105.0, $jev->predictedTotalSeconds(5));   // 5 × 20 + 5 between calls
+        self::assertNotNull($scoring);
+        self::assertSame(105.0, $scoring->predictedTotalSeconds(5));   // 5 × 20 + 5 between calls
         self::assertNotNull($llm);
         self::assertSame(70.0, $llm->predictedTotalSeconds(3));    // 3 × 10 + 30 + 10 between calls
     }
@@ -105,7 +105,7 @@ final class PhaseDurationsModelTest extends TestCase
         $durations = PhaseDurationsModel::fromCompletedRunSpans([
             $this->span(1, CallPhase::Batch, 11.0, 5, 46.0),
             $this->span(2, CallPhase::Batch, 16.0, 5, 40.0),
-        ], RecommendationEngineKind::Jev);
+        ], RecommendationEngineKind::Scoring);
 
         self::assertNotNull($durations);
         self::assertSame(43.0, $durations->predictedTotalSeconds(5));
@@ -122,7 +122,7 @@ final class PhaseDurationsModelTest extends TestCase
             $spans[] = $this->span($runId, CallPhase::Batch, 10.0, 5, 15.0 + $betweenCalls);
         }
 
-        $durations = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Jev);
+        $durations = PhaseDurationsModel::fromCompletedRunSpans($spans, RecommendationEngineKind::Scoring);
 
         self::assertNotNull($durations);
         self::assertSame(48.0, $durations->predictedTotalSeconds(5));

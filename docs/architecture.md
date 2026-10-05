@@ -211,7 +211,7 @@ A `Service/*` module is the first directory under `backend/src/Service`: `Reader
 on each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
 
 A directory below a module can be declared a **sub-module** by adding it, relative to `Service/`, to
-`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm` and `Recommendation\Jev`). A
+`serviceSubModules` in `backend/phpstan.dist.neon` (#1344; today `Recommendation\Llm` and `Recommendation\Scoring`). A
 sub-module is a module of its own wherever a rule asks for one: it is its own node in the cycle graph, and a class in
 it implementing its parent's interface is another module's implementation (§10). It may depend on its parent; the
 reverse closes a cycle, and when a cycle runs through a parent's import of its own sub-module, that import is the one
@@ -220,13 +220,13 @@ longest declared directory wins, so a sub-module may declare one of its own. The
 they cover a module's sub-modules too.
 So `Service/Recommendation/Llm` holds the LLM engine, which depends on `Recommendation` and `Ai`, while
 `Recommendation` never names it: `Recommendation\Llm → Recommendation → Ai`.
-`Service/Recommendation/Jev` holds the System One engine the same way (`Recommendation\Jev → Recommendation → Ai`);
+`Service/Recommendation/Scoring` holds the scoring engine the same way (`Recommendation\Scoring → Recommendation → Ai`);
 the two sub-modules never name each other.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
   (`Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface`, implemented in `Recommendation\Llm`
-  and `Recommendation\Jev`; `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the
+  and `Recommendation\Scoring`; `Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface`, which the
   `Recommendation\Llm` transport calls; and `Recommendation\Profile\ProfileRunDistiller\ProfileRunDistillerInterface`,
   implemented by `Recommendation\Llm`'s `LlmProfileRunDistiller`, the only way a profile run reaches the LLM).
 - **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no

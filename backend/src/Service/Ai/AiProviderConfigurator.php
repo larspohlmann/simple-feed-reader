@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Repository\RecommendationSettingsRepository;
@@ -18,7 +19,6 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Ai\Factory\AiConfigurationFactory;
 use App\Service\Ai\Model\AddedConfigurationModel;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Crypto\Exception\SecretUnreadableException;
@@ -95,7 +95,7 @@ final readonly class AiProviderConfigurator
         $this->entityManager->persist($configuration);
         $this->entityManager->flush();
 
-        return new AddedConfigurationModel($configuration, $this->ids($descriptors));
+        return new AddedConfigurationModel($configuration, $descriptors);
     }
 
     /**
@@ -123,18 +123,18 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @return list<string>
+     * @return list<ModelDescriptor>
      */
     public function listModels(AiProviderSettings $settings): array
     {
-        return $this->ids($this->catalog->listModels($this->credentials($settings)));
+        return $this->catalog->listModels($this->credentials($settings));
     }
 
     /** With no active sibling, a configuration becomes active as soon as it has a model: no separate activation. */
     public function chooseModel(AiProviderSettings $settings, string $model): void
     {
         $descriptor = $this->assertModelStillOffered($settings, $model);
-        $settings->chooseModel($model, $this->clock->now(), $descriptor->contextWindow);
+        $settings->chooseModel($descriptor, $this->clock->now());
         $this->activateWhenNoneActive($settings);
         $this->entityManager->flush();
     }
@@ -208,7 +208,7 @@ final readonly class AiProviderConfigurator
      * @throws ModelNotOfferedException
      * @throws ProviderUnreachableException
      */
-    private function assertModelStillOffered(AiProviderSettings $settings, string $model): ModelDescriptorModel
+    private function assertModelStillOffered(AiProviderSettings $settings, string $model): ModelDescriptor
     {
         $offered = $this->catalog->listModels($this->credentials($settings));
 
@@ -216,9 +216,9 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @param list<ModelDescriptorModel> $offered
+     * @param list<ModelDescriptor> $offered
      */
-    private function offeredDescriptor(array $offered, string $model): ModelDescriptorModel
+    private function offeredDescriptor(array $offered, string $model): ModelDescriptor
     {
         foreach ($offered as $descriptor) {
             if ($descriptor->id === $model) {
@@ -227,15 +227,5 @@ final readonly class AiProviderConfigurator
         }
 
         throw new ModelNotOfferedException(sprintf('That provider does not offer "%s".', $model));
-    }
-
-    /**
-     * @param list<ModelDescriptorModel> $descriptors
-     *
-     * @return list<string>
-     */
-    private function ids(array $descriptors): array
-    {
-        return array_map(static fn (ModelDescriptorModel $descriptor): string => $descriptor->id, $descriptors);
     }
 }

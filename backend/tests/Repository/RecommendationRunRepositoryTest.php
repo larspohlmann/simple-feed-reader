@@ -139,7 +139,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
 
         if ($status !== RunStatus::Pending) {
-            $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+            $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         }
 
         if ($status === RunStatus::Completed) {

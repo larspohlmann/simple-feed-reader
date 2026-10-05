@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\AiProviderSettingsRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -60,16 +62,8 @@ final class AiProviderSettings
     #[ORM\Column(options: ['default' => 1])]
     private int $keyVersion;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $model = null;
-
-    /**
-     * The chosen model's context window as /models reported it at choose time,
-     * tokens. Null when the provider did not report one. Cleared with the model
-     * on replaceConnection() — a new endpoint may be a different gateway.
-     */
-    #[ORM\Column(nullable: true)]
-    private ?int $modelContextWindow = null;
+    #[ORM\Embedded(class: ChosenModel::class, columnPrefix: false)]
+    private ChosenModel $chosenModel;
 
     /**
      * Default true: ranking needs no thinking phase, and a reasoning model reasoning here is pure cost (#320, #323).
@@ -101,6 +95,7 @@ final class AiProviderSettings
         $this->user = $user;
         $this->name = $name;
         $this->runTuning = new RunTuning();
+        $this->chosenModel = new ChosenModel();
         $this->replaceConnection($baseUrl, $sealed, $apiKeyHint, $verifiedAt);
     }
 
@@ -146,17 +141,27 @@ final class AiProviderSettings
 
     public function getModel(): ?string
     {
-        return $this->model;
+        return $this->chosenModel->getModel();
     }
 
     public function getModelContextWindow(): ?int
     {
-        return $this->modelContextWindow;
+        return $this->chosenModel->getModelContextWindow();
+    }
+
+    public function getModelKind(): ?RecommendationEngineKind
+    {
+        return $this->chosenModel->getModelKind();
+    }
+
+    public function getScoringProtocol(): ?ScoringProtocol
+    {
+        return $this->chosenModel->getScoringProtocol();
     }
 
     public function hasModel(): bool
     {
-        return null !== $this->model;
+        return null !== $this->getModel();
     }
 
     public function suppressesReasoning(): bool
@@ -172,13 +177,15 @@ final class AiProviderSettings
 
     public function recordSuppressionRefused(): void
     {
-        $this->suppressionRefusedByModel = $this->model
+        $this->suppressionRefusedByModel = $this->getModel()
             ?? throw new \LogicException('A connection without a model has sent no request to refuse.');
     }
 
     public function refusesSuppressedReasoning(): bool
     {
-        return null !== $this->model && $this->model === $this->suppressionRefusedByModel;
+        $model = $this->getModel();
+
+        return null !== $model && $model === $this->suppressionRefusedByModel;
     }
 
     public function getRunTuning(): RunTuning
@@ -225,16 +232,14 @@ final class AiProviderSettings
         $this->baseUrl = $baseUrl;
         $this->apiKeyHint = $apiKeyHint;
         $this->applySealedKey($sealed);
-        $this->model = null;
-        $this->modelContextWindow = null;
+        $this->chosenModel->forget();
         $this->suppressionRefusedByModel = null;
         $this->verifiedAt = $verifiedAt;
     }
 
-    public function chooseModel(string $model, \DateTimeImmutable $verifiedAt, ?int $contextWindow): void
+    public function chooseModel(ModelDescriptor $model, \DateTimeImmutable $verifiedAt): void
     {
-        $this->model = $model;
-        $this->modelContextWindow = $contextWindow;
+        $this->chosenModel->choose($model);
         $this->verifiedAt = $verifiedAt;
     }
 

@@ -72,8 +72,8 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
             ->andWhere('r.status = :completed')
             ->setParameter('completed', RunStatus::Completed)
             ->andWhere(RecommendationEngineKind::Llm === $engineKind
-                ? '(r.engineKind = :kind OR r.engineKind IS NULL)'
-                : 'r.engineKind = :kind')
+                ? '(r.engine.engineKind = :kind OR r.engine.engineKind IS NULL)'
+                : 'r.engine.engineKind = :kind')
             ->setParameter('kind', $engineKind)
             ->orderBy('r.id', 'DESC')
             ->setMaxResults($limit)

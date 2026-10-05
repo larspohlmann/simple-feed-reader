@@ -47,7 +47,7 @@ final class RecommendationSettingsJsonTest extends TestCase
     {
         $state = RecommendationSettingsJson::state(
             $this->effectiveSettings(),
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring),
             workerAlive: true,
         );
 

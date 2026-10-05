@@ -10,6 +10,7 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
@@ -96,7 +97,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
     {
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
-        $run->snapshot(RecommendationEngineKind::Llm, [[1], [2], [3]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1], [2], [3]]);
 
         $forecast = $this->forecasterAt('+20 seconds')->forecast(
             RecommendationRunReportModel::fromRun($run),
@@ -116,16 +117,16 @@ final class RecommendationRunForecasterTest extends DbTestCase
     }
 
     /**
-     * History: an LLM run (10 s pickup + 4 × 10 + 30), a Jev run (15 s pickup + 3 × 25) and an LLM run that skipped
-     * consolidation, whose phases look like Jev's. 4 Jev batches, 20 s in: 15 + 4 × 25 − 20.
+     * History: an LLM run (10 s pickup + 4 × 10 + 30), a scoring run (15 s pickup + 3 × 25) and an LLM run that skipped
+     * consolidation, whose phases look like a scoring run's. 4 scoring batches, 20 s in: 15 + 4 × 25 − 20.
      */
-    public function testAJevRunIsPredictedFromJevRunsAlone(): void
+    public function testAScoringRunIsPredictedFromScoringRunsAlone(): void
     {
         $this->seedHistoricalRun(pickup: 10, batchWall: 40, batches: 4, consolidate: 30);
-        $this->seedHistoricalJevRun(pickup: 15, batchWall: 75, batches: 3);
+        $this->seedHistoricalScoringRun(pickup: 15, batchWall: 75, batches: 3);
         $this->seedHistoricalLlmRunWithoutConsolidation(pickup: 10, batchWall: 40, batches: 4);
         $eta = $this->forecasterAt('+20 seconds')
-            ->forecast($this->liveJevReportWithBatches(4), $this->user)?->etaSeconds;
+            ->forecast($this->liveScoringReportWithBatches(4), $this->user)?->etaSeconds;
 
         self::assertSame(95, $eta);
     }
@@ -137,7 +138,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
     public function testPredictsTheTimeBetweenCallsOnTheClockElapsedRunsOn(): void
     {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
-        $run->snapshot(RecommendationEngineKind::Jev, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne, [[1]]);
         for ($batch = 1; $batch <= 5; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, 26, 11);
         }
@@ -145,7 +146,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $this->entityManager->flush();
 
         $eta = $this->forecasterAt('+28 seconds')
-            ->forecast($this->liveJevReportWithBatches(5), $this->user)?->etaSeconds;
+            ->forecast($this->liveScoringReportWithBatches(5), $this->user)?->etaSeconds;
 
         self::assertSame(18, $eta);
     }
@@ -166,6 +167,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(
             RecommendationEngineKind::Llm,
+            null,
             array_map(static fn (int $index): array => [$index], range(1, $batches)),
         );
         $run->markFirstBatchStarted();
@@ -176,11 +178,12 @@ final class RecommendationRunForecasterTest extends DbTestCase
         return RecommendationRunReportModel::fromRun($run);
     }
 
-    private function liveJevReportWithBatches(int $batches): RecommendationRunReportModel
+    private function liveScoringReportWithBatches(int $batches): RecommendationRunReportModel
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(
-            RecommendationEngineKind::Jev,
+            RecommendationEngineKind::Scoring,
+            ScoringProtocol::SystemOne,
             array_map(static fn (int $index): array => [$index], range(1, $batches)),
         );
         $run->markFirstBatchStarted();
@@ -195,16 +198,16 @@ final class RecommendationRunForecasterTest extends DbTestCase
         $this->completeAfter($run, $pickup + $batchWall + $consolidate);
     }
 
-    /** An LLM run whose pool was empty at consolidation: no consolidate row, so its phases are Jev's. */
+    /** An LLM run whose pool was empty at consolidation: no consolidate row, so its phases are a scoring run's. */
     private function seedHistoricalLlmRunWithoutConsolidation(int $pickup, int $batchWall, int $batches): void
     {
         $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Llm, $pickup, $batchWall, $batches);
         $this->completeAfter($run, $pickup + $batchWall);
     }
 
-    private function seedHistoricalJevRun(int $pickup, int $batchWall, int $batches): void
+    private function seedHistoricalScoringRun(int $pickup, int $batchWall, int $batches): void
     {
-        $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Jev, $pickup, $batchWall, $batches);
+        $run = $this->runWithPickupAndBatches(RecommendationEngineKind::Scoring, $pickup, $batchWall, $batches);
         $this->completeAfter($run, $pickup + $batchWall);
     }
 
@@ -216,7 +219,7 @@ final class RecommendationRunForecasterTest extends DbTestCase
         int $batches,
     ): RecommendationRun {
         $run = $this->fixtures->persistRunAt($this->user, new \DateTimeImmutable(self::HISTORY_START));
-        $run->snapshot($engineKind, [[1]]);
+        $run->snapshot($engineKind, null, [[1]]);
 
         for ($batch = 1; $batch <= $batches; $batch++) {
             $this->finishedLog($run, CallPhase::Batch, $batch, $pickup, $batchWall);

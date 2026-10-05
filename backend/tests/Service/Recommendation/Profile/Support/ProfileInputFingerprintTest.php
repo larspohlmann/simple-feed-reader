@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Profile\Support;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\SealedSecret;
 use App\Entity\User;
@@ -180,7 +181,7 @@ final class ProfileInputFingerprintTest extends TestCase
             'ab12',
             new \DateTimeImmutable('2026-10-01 06:00:00'),
         );
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-01 06:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor($model, 32768), new \DateTimeImmutable('2026-10-01 06:00:00'));
 
         return self::withId($connection, $id);
     }

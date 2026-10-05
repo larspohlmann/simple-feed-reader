@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Llm\Completion\Model;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -38,7 +39,7 @@ final class ReasoningTest extends TestCase
         $connection = AiProviderSettingsFactory::build(
             new User('reasoning@example.test', new \DateTimeImmutable('2026-08-16 09:00:00')),
         );
-        $connection->chooseModel('model-a', new \DateTimeImmutable('2026-08-16 09:00:00'), 32768);
+        $connection->chooseModel(new ModelDescriptor('model-a', 32768), new \DateTimeImmutable('2026-08-16 09:00:00'));
 
         return $connection;
     }

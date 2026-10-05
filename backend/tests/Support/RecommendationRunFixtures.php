@@ -9,6 +9,7 @@ use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
@@ -20,6 +21,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\ScoringProtocol;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -44,32 +46,47 @@ final readonly class RecommendationRunFixtures
 
     public function seedReadyAiSettingsFor(User $user, string $model): AiProviderSettings
     {
-        $settings = $this->seedInactiveAiSettingsFor($user, $model);
+        return $this->activated($user, $this->seedInactiveAiSettingsFor($user, $model));
+    }
+
+    /** A ready connection on the default endpoint that the account has not activated. */
+    public function seedInactiveAiSettingsFor(User $user, string $model): AiProviderSettings
+    {
+        return $this->seedConnection($user, new ModelDescriptor($model, 32768));
+    }
+
+    /** An active System One connection on `jev-latest`. */
+    public function seedReadyScoringSettings(User $user): AiProviderSettings
+    {
+        return $this->activated($user, $this->seedInactiveScoringSettings($user));
+    }
+
+    public function seedInactiveScoringSettings(User $user): AiProviderSettings
+    {
+        return $this->seedConnection($user, new ModelDescriptor('jev-latest', 32768, ScoringProtocol::SystemOne));
+    }
+
+    private function activated(User $user, AiProviderSettings $settings): AiProviderSettings
+    {
         $user->setActiveAiProviderSettings($settings);
         $this->entityManager->flush();
 
         return $settings;
     }
 
-    /** A ready connection on the default endpoint that the account has not activated. */
-    public function seedInactiveAiSettingsFor(User $user, string $model): AiProviderSettings
-    {
-        return $this->seedConnection($user, null, 'https://api.example.test/v1', $model);
-    }
-
-    private function seedConnection(User $owner, ?string $name, string $baseUrl, string $model): AiProviderSettings
+    private function seedConnection(User $owner, ModelDescriptor $model): AiProviderSettings
     {
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
         $connection = new AiProviderSettings(
             $owner,
-            $name,
-            $baseUrl,
+            null,
+            'https://api.example.test/v1',
             $this->cipher->seal($owner->requireId(), 'sk-throwaway1234'),
             '1234',
             $now,
         );
         $this->entityManager->persist($connection);
-        $connection->chooseModel($model, $now, 32768);
+        $connection->chooseModel($model, $now);
         $this->entityManager->flush();
 
         return $connection;

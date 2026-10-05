@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Support\AiReadiness;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
@@ -16,10 +17,8 @@ use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel
  */
 final readonly class AiSettingsJson
 {
-    public function __construct(
-        private RecommendationCapabilitiesJson $capabilities,
-        private RecommendationEngineResolver $engines,
-    ) {
+    public function __construct(private RecommendationCapabilitiesJson $capabilities)
+    {
     }
 
     /**
@@ -71,7 +70,7 @@ final readonly class AiSettingsJson
     }
 
     /**
-     * @param list<string> $models
+     * @param list<ModelDescriptor> $models
      *
      * @return array<string, mixed>
      */
@@ -81,7 +80,7 @@ final readonly class AiSettingsJson
     }
 
     /**
-     * @param list<string> $models
+     * @param list<ModelDescriptor> $models
      *
      * @return array{models: list<array{id: string, label: ?string, capabilities: array<string, mixed>}>}
      */
@@ -89,13 +88,21 @@ final readonly class AiSettingsJson
     {
         return [
             'models' => array_map(
-                fn (string $model): array => [
-                    'id' => $model,
-                    'label' => $this->engines->labelForModel($model),
-                    'capabilities' => $this->capabilities->ofModel($model),
+                fn (ModelDescriptor $model): array => [
+                    'id' => $model->id,
+                    'label' => self::labelOf($model->scoringProtocol),
+                    'capabilities' => $this->capabilities->ofKind($model->kind()),
                 ],
                 $models,
             ),
         ];
+    }
+
+    private static function labelOf(?ScoringProtocol $protocol): ?string
+    {
+        return match ($protocol) {
+            ScoringProtocol::SystemOne => 'System One',
+            null => null,
+        };
     }
 }

@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Run\Pass;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Model\RetryPlanModel;
 use App\Service\Recommendation\Run\Model\ProviderCallRouteModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
@@ -37,5 +38,16 @@ final readonly class TickContext
     public function callRoute(): ProviderCallRouteModel
     {
         return new ProviderCallRouteModel($this->connection, $this->retryPlan());
+    }
+
+    public function scoringProtocol(): ?ScoringProtocol
+    {
+        return $this->connection->getScoringProtocol();
+    }
+
+    public function requireScoringProtocol(): ScoringProtocol
+    {
+        return $this->scoringProtocol()
+            ?? throw new \LogicException('This tick\'s connection speaks no scoring protocol.');
     }
 }

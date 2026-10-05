@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Engine;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
+use App\Enum\RecommendationProfileSource;
+use App\Enum\ScoringProtocol;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
-use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -21,43 +23,39 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class RecommendationEngineResolverTest extends TestCase
 {
-    /** @return iterable<string, array{?string, RecommendationEngineKind}> */
-    public static function models(): iterable
+    /** @return iterable<string, array{?ModelDescriptor, RecommendationEngineKind}> */
+    public static function chosenModels(): iterable
     {
-        yield 'the Jev alias' => ['jev-latest', RecommendationEngineKind::Jev];
-        yield 'the preview alias' => ['jev-preview', RecommendationEngineKind::Jev];
-        yield 'a pinned Jev version' => ['jev-1.13.0', RecommendationEngineKind::Jev];
-        yield 'the TypeSafe chat router' => ['typesafe/jev-router', RecommendationEngineKind::Llm];
-        yield 'a chat model' => ['gpt-4o', RecommendationEngineKind::Llm];
-        yield 'another case, another id' => ['JEV-latest', RecommendationEngineKind::Llm];
+        yield 'a scoring model whose id names no Jev' => [
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            RecommendationEngineKind::Scoring,
+        ];
+        yield 'an LLM whose id starts like Jev' => [
+            new ModelDescriptor('jev-latest', 128_000),
+            RecommendationEngineKind::Llm,
+        ];
         yield 'no model yet' => [null, RecommendationEngineKind::Llm];
     }
 
-    #[DataProvider('models')]
-    public function testTheModelIdDecidesTheKind(?string $model, RecommendationEngineKind $kind): void
-    {
+    #[DataProvider('chosenModels')]
+    public function testTheStoredKindDecidesTheEngineNeverTheModelId(
+        ?ModelDescriptor $model,
+        RecommendationEngineKind $kind,
+    ): void {
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
         $connection = AiProviderSettingsFactory::build(
             new User('engine-resolver@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
         if (null !== $model) {
-            $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'), null);
+            $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'));
         }
 
         self::assertSame($kind, $resolver->kindFor($connection));
     }
 
-    public function testAJevModelIsLabelledJevAndAnLlmModelCarriesNoLabel(): void
+    public function testTheScoringKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
     {
-        $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
-
-        self::assertSame('Jev', $resolver->labelForModel('jev-latest'));
-        self::assertNull($resolver->labelForModel('typesafe/jev-router'));
-    }
-
-    public function testTheJevKindWritesNoReasonsSendsNoPromptAndReadsOnlyTheBatchConcurrency(): void
-    {
-        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev);
+        $capabilities = RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring);
 
         self::assertFalse($capabilities->writesReasons);
         self::assertFalse($capabilities->sendsPrompt);
@@ -68,11 +66,13 @@ final class RecommendationEngineResolverTest extends TestCase
     public function testAnAccountsCapabilitiesAreItsActiveConnections(): void
     {
         $resolver = new RecommendationEngineResolver(new ServiceLocator([]));
-        $account = new User('jev-account@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
-        $account->setActiveAiProviderSettings($this->connection('jev-latest'));
+        $account = new User('scoring-account@example.test', new \DateTimeImmutable('2026-10-02 09:00:00'));
+        $account->setActiveAiProviderSettings(
+            $this->connection(new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne)),
+        );
 
         self::assertEquals(
-            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Jev),
+            RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Scoring),
             $resolver->capabilitiesForAccount($account),
         );
     }
@@ -106,7 +106,7 @@ final class RecommendationEngineResolverTest extends TestCase
 
         self::assertEquals(
             RecommendationEngineCapabilitiesModel::of(RecommendationEngineKind::Llm),
-            $resolver->capabilitiesFor($this->connection('gpt-4o-mini')),
+            $resolver->capabilitiesFor($this->connection(new ModelDescriptor('gpt-4o-mini', null))),
         );
     }
 
@@ -143,12 +143,12 @@ final class RecommendationEngineResolverTest extends TestCase
         }
     }
 
-    private function connection(string $model): AiProviderSettings
+    private function connection(ModelDescriptor $model): AiProviderSettings
     {
         $connection = AiProviderSettingsFactory::build(
             new User('engine-resolver@example.test', new \DateTimeImmutable('2026-10-02 09:00:00')),
         );
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'), null);
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-02 09:05:00'));
 
         return $connection;
     }

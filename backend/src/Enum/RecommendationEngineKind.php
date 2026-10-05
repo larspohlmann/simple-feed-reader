@@ -8,14 +8,14 @@ namespace App\Enum;
 enum RecommendationEngineKind: string
 {
     case Llm = 'llm';
-    case Jev = 'jev';
+    case Scoring = 'scoring';
 
     /** @return list<CallPhase> the phases a run of this kind calls the provider in, in order */
     public function phases(): array
     {
         return match ($this) {
             self::Llm => [CallPhase::Batch, CallPhase::Consolidate],
-            self::Jev => [CallPhase::Batch],
+            self::Scoring => [CallPhase::Batch],
         };
     }
 
@@ -31,5 +31,13 @@ enum RecommendationEngineKind: string
             $this->phases(),
             static fn (CallPhase $phase): bool => CallPhase::Batch !== $phase,
         ));
+    }
+
+    public function profileSource(): RecommendationProfileSource
+    {
+        return match ($this) {
+            self::Llm => RecommendationProfileSource::Own,
+            self::Scoring => RecommendationProfileSource::Borrowed,
+        };
     }
 }

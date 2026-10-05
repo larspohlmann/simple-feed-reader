@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
+use App\Enum\RecommendationEngineKind;
+use App\Enum\ScoringProtocol;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
@@ -17,7 +20,6 @@ use App\Service\Ai\Exception\ModelRequiredForActivationException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
@@ -35,8 +37,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
     use SeedsUsers;
 
     /**
-     * @param list<string|ModelDescriptorModel>|\Throwable
-     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $models
+     * @param list<string|ModelDescriptor>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptor> $models
      */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator
     {
@@ -111,8 +113,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
     public function testChoosingAModelStoresItsReportedContextWindow(): void
     {
         $configurator = $this->configurator([
-            new ModelDescriptorModel('big', 200000),
-            new ModelDescriptorModel('small', null),
+            new ModelDescriptor('big', 200000),
+            new ModelDescriptor('small', null),
         ]);
         $user = $this->user('cfg-context-window@example.test');
         $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
@@ -120,6 +122,24 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->chooseModel($added->configuration, 'big');
 
         self::assertSame(200000, $added->configuration->getModelContextWindow());
+    }
+
+    public function testChoosingAScoringModelStoresTheKindAndProtocolTheCatalogTaggedItWith(): void
+    {
+        $configurator = $this->configurator([
+            new ModelDescriptor('gpt-4o', 128_000),
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+        ]);
+        $user = $this->user('cfg-scoring-model@example.test');
+        $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
+
+        $configurator->chooseModel($added->configuration, 'acme/decider-2');
+
+        $this->entityManager->clear();
+        $stored = $configurator->settingsFor($this->reload('cfg-scoring-model@example.test'));
+        self::assertNotNull($stored);
+        self::assertSame(RecommendationEngineKind::Scoring, $stored->getModelKind());
+        self::assertSame(ScoringProtocol::SystemOne, $stored->getScoringProtocol());
     }
 
     public function testChoosingAModelTheProviderDoesNotOfferIsRefused(): void
@@ -181,7 +201,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $added = $configurator->addConfiguration($user, 'Work OpenAI', 'https://api.example.test/v1/', 'sk-abcdef1234');
 
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added->modelIds);
+        self::assertSame(
+            ['gpt-4o', 'gpt-4o-mini'],
+            array_map(static fn (ModelDescriptor $model): string => $model->id, $added->models),
+        );
         self::assertSame('Work OpenAI', $added->configuration->getName());
         self::assertSame('https://api.example.test/v1', $added->configuration->getBaseUrl());
         self::assertSame('1234', $added->configuration->getApiKeyHint());

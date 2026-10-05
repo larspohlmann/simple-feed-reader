@@ -40,7 +40,7 @@ final readonly class SnapshotPhase
         $candidates = $this->candidatesFor($tick);
 
         if ([] === $candidates) {
-            $run->snapshot($tick->engineKind, []);
+            $run->snapshot($tick->engineKind, $tick->scoringProtocol(), []);
             $run->complete($this->clock->now());
             $this->entityManager->flush();
 
@@ -66,6 +66,7 @@ final readonly class SnapshotPhase
         $run->freezeProfile($profileText);
         $run->snapshot(
             $tick->engineKind,
+            $tick->scoringProtocol(),
             $this->engines->engineOf($tick->engineKind)->packBatches($candidates, $tick),
         );
         $this->entityManager->flush();

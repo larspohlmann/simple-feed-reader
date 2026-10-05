@@ -19,7 +19,7 @@ parameters:
     # Directories below a src/Service module that are modules of their own (docs/architecture.md §9).
     serviceSubModules:
         - Recommendation\Llm
-        - Recommendation\Jev
+        - Recommendation\Scoring
 
 parametersSchema:
     serviceSubModules: listOf(string())

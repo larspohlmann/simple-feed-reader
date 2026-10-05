@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
@@ -80,10 +82,13 @@ final class AiSettingsControllerTest extends ApiTestCase
         );
     }
 
-    public function testListingModelsMarksAJevModelByTheCapabilitiesItWouldGive(): void
+    public function testListingModelsMarksAScoringModelByTheLabelAndCapabilitiesItWouldGive(): void
     {
-        $client = $this->clientAnswering(['gpt-4o', 'jev-latest']);
-        $this->accountOn($client, 'ai-models-jev@example.test');
+        $client = $this->clientAnswering([
+            'gpt-4o',
+            new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
+        ]);
+        $this->accountOn($client, 'ai-models-scoring@example.test');
         $id = $this->addConfiguration($client)['id'];
         self::assertIsInt($id);
 
@@ -94,7 +99,11 @@ final class AiSettingsControllerTest extends ApiTestCase
             [
                 'models' => [
                     ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                    [
+                        'id' => 'jev-latest',
+                        'label' => 'System One',
+                        'capabilities' => RecommendationCapabilitiesJsons::SCORING,
+                    ],
                 ],
             ],
             $this->payload($client),

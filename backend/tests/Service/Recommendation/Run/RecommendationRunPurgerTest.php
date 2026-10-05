@@ -82,7 +82,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
     public function testPurgeRemovesTheUsersRunsItemsAndLogsButLeavesAnotherUsersAlone(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $item = new RecommendationItem($run, $this->entry('mine'), 1, 'reason');
         $this->entityManager->persist($item);
         $log = $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'req');
@@ -96,7 +96,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
         self::assertNotNull($logId);
 
         $otherRun = $this->fixtures->createRun($this->otherUser);
-        $otherRun->snapshot(RecommendationEngineKind::Llm, [[1]]);
+        $otherRun->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
         $otherItem = new RecommendationItem($otherRun, $this->entry('theirs'), 1, 'reason');
         $this->entityManager->persist($otherItem);
         $otherLog = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'req');

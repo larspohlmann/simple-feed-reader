@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
+use App\Enum\ScoringProtocol;
 use App\Http\AiSettingsJson;
-use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class AiSettingsJsonTest extends TestCase
 {
@@ -21,10 +21,7 @@ final class AiSettingsJsonTest extends TestCase
 
     private function json(): AiSettingsJson
     {
-        return new AiSettingsJson(
-            RecommendationCapabilitiesJsons::ofTheKind(),
-            new RecommendationEngineResolver(new ServiceLocator([])),
-        );
+        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
     }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
@@ -39,7 +36,7 @@ final class AiSettingsJsonTest extends TestCase
         );
 
         if (null !== $model) {
-            $settings->chooseModel($model, new \DateTimeImmutable('2026-08-06 10:00:00'), null);
+            $settings->chooseModel(new ModelDescriptor($model, null), new \DateTimeImmutable('2026-08-06 10:00:00'));
         }
 
         return $settings;
@@ -168,7 +165,10 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testAddedCarriesTheOfferedModelsAlongsideTheConfiguration(): void
     {
-        $shape = $this->json()->added($this->settings(null, 'Work OpenAI'), ['gpt-4o', 'gpt-4o-mini']);
+        $shape = $this->json()->added(
+            $this->settings(null, 'Work OpenAI'),
+            [new ModelDescriptor('gpt-4o', null), new ModelDescriptor('gpt-4o-mini', null)],
+        );
 
         self::assertSame(
             [
@@ -181,16 +181,24 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['ready']);
     }
 
-    public function testEachOfferedModelCarriesTheCapabilitiesItWouldGiveTheConnection(): void
+    /** The catalog's tag decides, never the id: `jev-router` is an LLM, `acme/decider-2` a System One model. */
+    public function testEachOfferedModelCarriesTheLabelAndCapabilitiesOfItsTag(): void
     {
         self::assertSame(
             [
                 'models' => [
-                    ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                    ['id' => 'jev-latest', 'label' => 'Jev', 'capabilities' => RecommendationCapabilitiesJsons::JEV],
+                    ['id' => 'jev-router', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    [
+                        'id' => 'acme/decider-2',
+                        'label' => 'System One',
+                        'capabilities' => RecommendationCapabilitiesJsons::SCORING,
+                    ],
                 ],
             ],
-            $this->json()->models(['gpt-4o', 'jev-latest']),
+            $this->json()->models([
+                new ModelDescriptor('jev-router', 128_000),
+                new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            ]),
         );
     }
 

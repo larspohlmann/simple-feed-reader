@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -147,9 +149,12 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     public function testForAConnectionTheWindowAndTheCeilingAreThatConnections(): void
     {
         $active = AiProviderSettingsFactory::build($this->user);
-        $active->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-02 09:00:00'), 32_000);
+        $active->chooseModel(
+            new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-02 09:00:00'),
+        );
         $profile = AiProviderSettingsFactory::build($this->user, 'Profile', 'https://profile.example.test/v1');
-        $profile->chooseModel('gpt-4o', new \DateTimeImmutable('2026-10-02 09:00:00'), 128_000);
+        $profile->chooseModel(new ModelDescriptor('gpt-4o', 128_000), new \DateTimeImmutable('2026-10-02 09:00:00'));
         $profile->setMaxBatchSize(30);
         $this->entityManager->persist($active);
         $this->entityManager->persist($profile);
@@ -215,7 +220,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
         $this->entityManager->persist($settings);
-        $settings->chooseModel('m', $now, $contextWindow);
+        $settings->chooseModel(new ModelDescriptor('m', $contextWindow), $now);
         $settings->setMaxBatchSize($maxBatchSize);
         $user->setActiveAiProviderSettings($settings);
         $this->entityManager->flush();

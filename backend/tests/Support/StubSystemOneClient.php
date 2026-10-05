@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
-use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
-use App\Service\Recommendation\Jev\SystemOneClient\SystemOneClientInterface;
+use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
+use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Scoring\Support\SystemOneReplyDecoder;
+use App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
 
 /**
  * The test container's SystemOneClientInterface: records every request and answers each from one FIFO queue, so
@@ -22,7 +22,7 @@ final class StubSystemOneClient implements SystemOneClientInterface
     public const int INPUT_TOKENS = 1200;
     public const int COST_NANO_CREDITS = 4_200_000;
 
-    /** @var list<\Closure(SystemOneRequestModel): SystemOneOutcomeModel> */
+    /** @var list<\Closure(SystemOneRequestModel): ScoringOutcomeModel> */
     private array $queue = [];
 
     /** @var list<SystemOneRequestModel> */
@@ -33,21 +33,21 @@ final class StubSystemOneClient implements SystemOneClientInterface
     /** @param \Closure(int): float $nouls each question's Noul, by the candidate's entry id */
     public function queueNouls(\Closure $nouls): void
     {
-        $this->queue[] = static fn (SystemOneRequestModel $request): SystemOneOutcomeModel
-            => SystemOneOutcomeModel::answered(
+        $this->queue[] = static fn (SystemOneRequestModel $request): ScoringOutcomeModel
+            => ScoringOutcomeModel::answered(
                 SystemOneReplyDecoder::decode(self::replyBody($request, $nouls), null),
             );
     }
 
     public function queueBody(string $body): void
     {
-        $this->queue[] = static fn (): SystemOneOutcomeModel
-            => SystemOneOutcomeModel::answered(SystemOneReplyDecoder::decode($body, null));
+        $this->queue[] = static fn (): ScoringOutcomeModel
+            => ScoringOutcomeModel::answered(SystemOneReplyDecoder::decode($body, null));
     }
 
     public function queueFailure(\RuntimeException $failure): void
     {
-        $this->queue[] = static fn (): SystemOneOutcomeModel => SystemOneOutcomeModel::failed($failure);
+        $this->queue[] = static fn (): ScoringOutcomeModel => ScoringOutcomeModel::failed($failure);
     }
 
     /** Runs inside the next evaluateMany(), before it answers: the provider call is where a tick can change underneath. */
@@ -70,7 +70,7 @@ final class StubSystemOneClient implements SystemOneClientInterface
             $hook();
         }
 
-        return array_map(function (SystemOneRequestModel $request): SystemOneOutcomeModel {
+        return array_map(function (SystemOneRequestModel $request): ScoringOutcomeModel {
             $this->requests[] = $request;
             $script = array_shift($this->queue) ?? throw new \LogicException('No System One reply is queued.');
 

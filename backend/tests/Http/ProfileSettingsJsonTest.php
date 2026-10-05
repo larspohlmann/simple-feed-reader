@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileSettingsValues;
 use App\Entity\StoredProfile;
 use App\Entity\User;
@@ -59,7 +60,10 @@ final class ProfileSettingsJsonTest extends TestCase
             'Local',
             'https://llm.example.test/v1',
         );
-        $connection->chooseModel('qwen3-14b', new \DateTimeImmutable('2026-10-03 07:00:00'), 32_000);
+        $connection->chooseModel(
+            new ModelDescriptor('qwen3-14b', 32_000),
+            new \DateTimeImmutable('2026-10-03 07:00:00'),
+        );
 
         $json = ProfileSettingsJson::state(new ProfileSettingsModel(
             StoredProfile::none(),

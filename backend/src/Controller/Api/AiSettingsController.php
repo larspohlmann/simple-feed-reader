@@ -61,7 +61,7 @@ final readonly class AiSettingsController
         $added = $this->configurator->addConfiguration($user, $request->name, $request->baseUrl, $request->apiKey);
 
         return new JsonResponse(
-            $this->settingsJson->added($added->configuration, $added->modelIds),
+            $this->settingsJson->added($added->configuration, $added->models),
             Response::HTTP_CREATED,
         );
     }

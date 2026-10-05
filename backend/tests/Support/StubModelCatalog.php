@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Entity\ModelDescriptor;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 
@@ -14,12 +14,12 @@ use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
  */
 final readonly class StubModelCatalog implements ModelCatalogInterface
 {
-    /** @var \Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> */
+    /** @var \Closure(ProviderCredentialsModel): list<string|ModelDescriptor> */
     private \Closure $answer;
 
     /**
-     * @param list<string|ModelDescriptorModel>|\Throwable
-     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $answer
+     * @param list<string|ModelDescriptor>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptor> $answer
      */
     public function __construct(array|\Throwable|\Closure $answer)
     {
@@ -33,10 +33,10 @@ final readonly class StubModelCatalog implements ModelCatalogInterface
     public function listModels(ProviderCredentialsModel $credentials): array
     {
         return array_map(
-            static fn (string|ModelDescriptorModel $entry): ModelDescriptorModel
-                => $entry instanceof ModelDescriptorModel
+            static fn (string|ModelDescriptor $entry): ModelDescriptor
+                => $entry instanceof ModelDescriptor
                     ? $entry
-                    : new ModelDescriptorModel($entry, null),
+                    : new ModelDescriptor($entry, null),
             ($this->answer)($credentials),
         );
     }

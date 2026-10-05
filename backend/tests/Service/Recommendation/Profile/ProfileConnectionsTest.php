@@ -49,22 +49,22 @@ final class ProfileConnectionsTest extends DbTestCase
         $this->fixtures->seedReadyAiSettingsFor($this->owner, 'qwen3-14b');
         $this->fixtures->chooseProfileConnection(
             $this->owner,
-            $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest'),
+            $this->fixtures->seedInactiveScoringSettings($this->owner),
         );
 
         self::assertNull($this->connections()->usableFor($this->owner));
     }
 
-    public function testAnActiveJevConnectionWithNothingChosenGivesNone(): void
+    public function testAnActiveScoringConnectionWithNothingChosenGivesNone(): void
     {
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
 
         self::assertNull($this->connections()->usableFor($this->owner));
     }
 
     public function testTheCandidatesAreTheConnectionsThatCanBuildAProfile(): void
     {
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
         $llm = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'gpt-4o');
 
         self::assertSame(

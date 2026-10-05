@@ -24,7 +24,7 @@ final class RecommendationCapabilitiesJsons
         ],
     ];
 
-    public const array JEV = [
+    public const array SCORING = [
         'reasons' => false,
         'prompt' => false,
         'profile' => 'borrowed',

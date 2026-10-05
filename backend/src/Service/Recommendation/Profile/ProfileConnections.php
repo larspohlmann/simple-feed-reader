@@ -7,10 +7,10 @@ namespace App\Service\Recommendation\Profile;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
+use App\Enum\RecommendationProfileSource;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Support\AiReadiness;
-use App\Service\Recommendation\Engine\Model\RecommendationProfileSource;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 
 /** Which saved connection builds the account's profile. */

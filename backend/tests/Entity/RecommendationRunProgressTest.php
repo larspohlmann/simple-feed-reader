@@ -50,10 +50,10 @@ final class RecommendationRunProgressTest extends TestCase
         self::assertNull($unplanned->batchCount);
     }
 
-    public function testAJevPlanCountsOnlyItsBatchesAndHasNoConsolidation(): void
+    public function testAScoringPlanCountsOnlyItsBatchesAndHasNoConsolidation(): void
     {
-        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, RecommendationEngineKind::Jev);
-        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, RecommendationEngineKind::Jev);
+        $pending = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 0, 0, RecommendationEngineKind::Scoring);
+        $done = RecommendationRunProgress::forBatchPlan([[1], [2], [3]], 3, 0, RecommendationEngineKind::Scoring);
 
         self::assertSame(3, $pending->batchesTotal);
         self::assertTrue($done->allBatchCallsDone);

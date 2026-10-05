@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Engine\Model;
 
 use App\Enum\RecommendationEngineKind;
+use App\Enum\RecommendationProfileSource;
 
 /** What an engine can do, so a client offers only the settings that apply to it. */
 final readonly class RecommendationEngineCapabilitiesModel
@@ -25,13 +26,13 @@ final readonly class RecommendationEngineCapabilitiesModel
             RecommendationEngineKind::Llm => new self(
                 writesReasons: true,
                 sendsPrompt: true,
-                profileSource: RecommendationProfileSource::Own,
+                profileSource: $kind->profileSource(),
                 tuningFields: RecommendationTuningField::cases(),
             ),
-            RecommendationEngineKind::Jev => new self(
+            RecommendationEngineKind::Scoring => new self(
                 writesReasons: false,
                 sendsPrompt: false,
-                profileSource: RecommendationProfileSource::Borrowed,
+                profileSource: $kind->profileSource(),
                 tuningFields: [RecommendationTuningField::BatchConcurrency],
             ),
         };

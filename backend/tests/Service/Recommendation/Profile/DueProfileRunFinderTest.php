@@ -80,7 +80,7 @@ final class DueProfileRunFinderTest extends DbTestCase
     public function testSkippedWithoutAConnectionThatCanBuildTheProfile(): void
     {
         $owner = $this->user('profile-due-jev@example.test');
-        $this->fixtures->seedReadyAiSettingsFor($owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($owner);
         $this->schedule($owner, 6);
 
         self::assertSame([], $this->dueEmails());

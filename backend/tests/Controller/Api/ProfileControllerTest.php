@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\ProfileRunTrigger;
+use App\Enum\ScoringProtocol;
 use App\Repository\ProfileRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\ApiTestCase;
@@ -92,7 +94,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         [$headers, $user] = $this->auth('profile-jev@example.test');
-        $jev = $this->fixtures()->seedReadyAiSettingsFor($user, 'jev-latest');
+        $jev = $this->fixtures()->seedReadyScoringSettings($user);
 
         $this->put(
             $client,
@@ -119,7 +121,10 @@ final class ProfileControllerTest extends ApiTestCase
 
         $stale = $this->entityManager()->find(AiProviderSettings::class, $chosen->getId());
         self::assertNotNull($stale);
-        $stale->chooseModel('jev-latest', new \DateTimeImmutable('2026-10-03 09:00:00'), null);
+        $stale->chooseModel(
+            new ModelDescriptor('jev-latest', null, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-03 09:00:00'),
+        );
         $this->entityManager()->flush();
 
         $this->put(
@@ -190,7 +195,7 @@ final class ProfileControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         [$headers, $user] = $this->auth('profile-start-jev@example.test');
-        $this->fixtures()->seedReadyAiSettingsFor($user, 'jev-latest');
+        $this->fixtures()->seedReadyScoringSettings($user);
 
         $client->request('POST', self::URI . '/runs', server: $headers);
 
@@ -228,7 +233,7 @@ final class ProfileControllerTest extends ApiTestCase
         $client = static::createClient();
         $client->disableReboot();
         [$headers, $user] = $this->auth('profile-refused-free@example.test');
-        $this->fixtures()->seedReadyAiSettingsFor($user, 'jev-latest');
+        $this->fixtures()->seedReadyScoringSettings($user);
 
         for ($click = 1; $click <= self::START_BUDGET + 1; ++$click) {
             $client->request('POST', self::URI . '/runs', server: $headers);

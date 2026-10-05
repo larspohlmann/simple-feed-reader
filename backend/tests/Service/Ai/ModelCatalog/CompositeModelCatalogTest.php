@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\ModelCatalog;
 
+use App\Entity\ModelDescriptor;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\CompositeModelCatalog;
 use App\Tests\Support\StubModelCatalog;
@@ -19,20 +19,20 @@ final class CompositeModelCatalogTest extends TestCase
     {
         $catalog = new CompositeModelCatalog([
             new StubModelCatalog([
-                new ModelDescriptorModel('qwen/qwen3.7', 131_072),
-                new ModelDescriptorModel('jev-latest', 1_000),
+                new ModelDescriptor('qwen/qwen3.7', 131_072),
+                new ModelDescriptor('jev-latest', 1_000),
             ]),
             new StubModelCatalog([
-                new ModelDescriptorModel('jev-latest', 32_000),
-                new ModelDescriptorModel('anthropic/claude-sonnet', 200_000),
+                new ModelDescriptor('jev-latest', 32_000),
+                new ModelDescriptor('anthropic/claude-sonnet', 200_000),
             ]),
         ]);
 
         self::assertEquals(
             [
-                new ModelDescriptorModel('anthropic/claude-sonnet', 200_000),
-                new ModelDescriptorModel('jev-latest', 1_000),
-                new ModelDescriptorModel('qwen/qwen3.7', 131_072),
+                new ModelDescriptor('anthropic/claude-sonnet', 200_000),
+                new ModelDescriptor('jev-latest', 1_000),
+                new ModelDescriptor('qwen/qwen3.7', 131_072),
             ],
             $catalog->listModels($this->credentials()),
         );
@@ -49,7 +49,7 @@ final class CompositeModelCatalogTest extends TestCase
         self::assertSame(
             ['jev-latest'],
             array_map(
-                static fn (ModelDescriptorModel $model): string => $model->id,
+                static fn (ModelDescriptor $model): string => $model->id,
                 $catalog->listModels($this->credentials()),
             ),
         );

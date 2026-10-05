@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
+use App\Entity\RecommendationRun;
 use App\Enum\RunStatus;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
@@ -19,8 +20,8 @@ use Symfony\Component\Clock\ClockInterface;
 final readonly class TickPhases
 {
     /**
-     * A run belongs to the engine whose batches it froze. Failed, not cancelled: the error says why, and switching back
-     * to that connection makes the run resumable where it stopped.
+     * A run belongs to the engine and the scoring protocol whose batches it froze. Failed, not cancelled: the error
+     * says why, and switching back to that connection makes the run resumable where it stopped.
      */
     public const string ENGINE_SWITCH = 'This run was started with a different recommendation engine than the active '
         . 'AI connection uses. Start a new run, or switch back to that connection to resume this one.';
@@ -42,7 +43,7 @@ final readonly class TickPhases
             return $this->snapshot->advance($tick);
         }
 
-        if ($run->getEngineKind() !== $tick->engineKind) {
+        if (self::switchedEngines($run, $tick)) {
             return $this->runFailure->fail($run, self::ENGINE_SWITCH);
         }
 
@@ -68,5 +69,10 @@ final readonly class TickPhases
 
             throw $exception;
         }
+    }
+
+    private static function switchedEngines(RecommendationRun $run, TickContext $tick): bool
+    {
+        return $run->getEngineKind() !== $tick->engineKind || $run->getScoringProtocol() !== $tick->scoringProtocol();
     }
 }

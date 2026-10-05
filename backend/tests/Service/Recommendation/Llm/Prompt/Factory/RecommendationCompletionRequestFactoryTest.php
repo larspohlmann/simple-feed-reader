@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Llm\Prompt\Factory;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\ModelDescriptor;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
@@ -82,7 +83,10 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             'cdef',
             new \DateTimeImmutable('2026-08-16 09:30:00'),
         );
-        $settings->chooseModel('qwen/qwen3-4b-2507', new \DateTimeImmutable('2026-08-16 09:30:00'), null);
+        $settings->chooseModel(
+            new ModelDescriptor('qwen/qwen3-4b-2507', null),
+            new \DateTimeImmutable('2026-08-16 09:30:00'),
+        );
         $settings->setSuppressReasoning($suppressReasoning);
 
         return $settings;

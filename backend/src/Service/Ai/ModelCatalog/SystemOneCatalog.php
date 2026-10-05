@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\ModelCatalog;
 
+use App\Entity\ModelDescriptor;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Model\ModelDescriptorModel;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -38,7 +39,8 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
         self::assertTheEndpointAnswered($this->probeStatus($credentials));
 
         return array_map(
-            static fn (string $id): ModelDescriptorModel => new ModelDescriptorModel($id, self::CONTEXT_WINDOW_TOKENS),
+            static fn (string $id): ModelDescriptor
+                => new ModelDescriptor($id, self::CONTEXT_WINDOW_TOKENS, ScoringProtocol::SystemOne),
             self::MODEL_IDS,
         );
     }

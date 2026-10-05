@@ -35,7 +35,7 @@ final class TickLockTtlTest extends DbTestCase
 
     public function testASlowActiveConnectionGetsTheSlowBound(): void
     {
-        $this->fixtures->seedReadyAiSettingsFor($this->owner, 'jev-latest');
+        $this->fixtures->seedReadyScoringSettings($this->owner);
         $this->owner->getActiveAiProviderSettings()?->setSlowModel(true);
         $this->entityManager->flush();
 

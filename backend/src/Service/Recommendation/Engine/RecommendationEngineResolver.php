@@ -18,9 +18,6 @@ final readonly class RecommendationEngineResolver
 {
     private const RecommendationEngineKind DEFAULT_KIND = RecommendationEngineKind::Llm;
 
-    /** TypeSafe names its decision models `jev-…`; its chat router `typesafe/jev-router` is an LLM. Case-sensitive. */
-    private const string JEV_MODEL_PREFIX = 'jev-';
-
     public function __construct(
         #[AutowireLocator('app.recommendation_engine')]
         private ContainerInterface $engines,
@@ -29,32 +26,12 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return $this->kindForModel($connection->getModel() ?? '');
-    }
-
-    private function kindForModel(string $model): RecommendationEngineKind
-    {
-        return str_starts_with($model, self::JEV_MODEL_PREFIX)
-            ? RecommendationEngineKind::Jev
-            : self::DEFAULT_KIND;
-    }
-
-    public function labelForModel(string $model): ?string
-    {
-        return match ($this->kindForModel($model)) {
-            RecommendationEngineKind::Jev => 'Jev',
-            RecommendationEngineKind::Llm => null,
-        };
+        return $connection->getModelKind() ?? self::DEFAULT_KIND;
     }
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel
     {
-        return $this->capabilitiesForModel($connection->getModel() ?? '');
-    }
-
-    public function capabilitiesForModel(string $model): RecommendationEngineCapabilitiesModel
-    {
-        return RecommendationEngineCapabilitiesModel::of($this->kindForModel($model));
+        return RecommendationEngineCapabilitiesModel::of($this->kindFor($connection));
     }
 
     /** An account with no active connection reads as the default kind, as a model-less connection does. */
