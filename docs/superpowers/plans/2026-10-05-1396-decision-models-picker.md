@@ -24,7 +24,7 @@
 | 7 | The picker asks for the kind first | ☑ | 28e8a84b1, 226af75f0 |
 | 8 | General scoring-model copy | ☑ | 583e9e913 |
 | 9 | Playwright smoke of the picker | ☑ | e24ef18de |
-| 10 | Docs, gates, real runs, the PR | ☑ | the `docs(#1396)` commit on top of e24ef18de |
+| 10 | Docs, gates, real runs, the PR | ☑ | afd83e98c; final-review fixes 94c37427d 5c71b0b96 2797221ff 06e7ab179 |
 
 ## Global Constraints
 
