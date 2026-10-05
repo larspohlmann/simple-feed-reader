@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -178,7 +179,12 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
             $response->cancel();
 
             return CompletionOutcomeModel::unusableReply($spoiledReply);
-        } catch (CredentialsRejectedException | ProviderUnreachableException | RetryableProviderException $failure) {
+        } catch (
+            CredentialsRejectedException
+            | ProviderRejectedRequestException
+            | ProviderUnreachableException
+            | RetryableProviderException $failure
+        ) {
             $response->cancel();
 
             return CompletionOutcomeModel::failure($failure);
@@ -239,6 +245,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      * complete.
      *
      * @throws CredentialsRejectedException
+     * @throws ProviderRejectedRequestException
      * @throws ProviderUnreachableException
      * @throws RetryableProviderException
      * @throws ExceptionInterface

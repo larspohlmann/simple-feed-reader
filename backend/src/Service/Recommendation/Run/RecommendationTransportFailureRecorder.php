@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -16,8 +17,6 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class RecommendationTransportFailureRecorder
 {
-    public const string PROVIDER_FAILED = 'The AI provider at %s failed: %s';
-
     public function __construct(
         private RecommendationTickCheckpoint $checkpoint,
         private EntityManagerInterface $entityManager,
@@ -32,10 +31,7 @@ final readonly class RecommendationTransportFailureRecorder
         $run->getRunningCallAttempts()->recordTransportFailure();
         if ($run->hasExhaustedTransportRetries()) {
             // The call's own detail, not a flat "unreachable", which hid a fixable 400 behind a network story (#329).
-            $run->fail(
-                sprintf(self::PROVIDER_FAILED, $settings->getBaseUrl(), $failureDetail),
-                $this->clock->now(),
-            );
+            $run->fail(ProviderFailedMessage::of($settings->getBaseUrl(), $failureDetail), $this->clock->now());
         }
         $this->entityManager->flush();
     }

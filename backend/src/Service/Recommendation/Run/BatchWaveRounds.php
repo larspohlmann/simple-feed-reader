@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Model\RateLimitedResultModel;
 use App\Service\Recommendation\Run\BatchCallOutcome\BatchCallOutcomeInterface;
 use App\Service\Recommendation\Run\BatchWave\BatchWaveInterface;
@@ -35,6 +36,7 @@ final readonly class BatchWaveRounds
      * @param BatchWaveEngineInterface<TWave, TRequest, TOutcome> $engine
      * @param TWave                                               $wave
      *
+     * @throws \App\Service\Ai\Exception\ProviderRejectedRequestException
      * @throws \App\Service\Ai\Exception\ProviderUnreachableException
      * @throws \App\Service\Ai\Exception\CredentialsRejectedException
      * @throws \App\Service\Ai\Exception\RetryableProviderException
@@ -192,16 +194,25 @@ final readonly class BatchWaveRounds
         return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
     }
 
-    /** @param list<BatchCallOutcomeInterface> $outcomes */
+    /**
+     * A refusal wins over any other cause, since retrying it earns the same answer; otherwise the first by index.
+     *
+     * @param list<BatchCallOutcomeInterface> $outcomes
+     */
     private static function firstFailureIn(array $outcomes): ?\Throwable
     {
+        $first = null;
         foreach ($outcomes as $outcome) {
-            if ($outcome->isFailure()) {
+            if (!$outcome->isFailure()) {
+                continue;
+            }
+            if ($outcome->cause() instanceof ProviderRejectedRequestException) {
                 return $outcome->cause();
             }
+            $first ??= $outcome->cause();
         }
 
-        return null;
+        return $first;
     }
 
     /**

@@ -86,9 +86,16 @@ an engine (a model id starting with `jev-` is TypeSafe's System One, any other a
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
+A rejected request is not a strike. When the provider answers that the request itself is wrong (`RejectingStatus`: any
+4xx except 401 and 403, which mean the credentials, 408 and 425, which are about timing and still strike, and 429, which
+is retried or deferred), the same request would earn the same answer, so the run fails on that first answer, with no
+retry and no strike spent, and its error carries the provider's reason (`ProviderRejectedRequestException`). The call's
+run-log row still reads `transport-failed`, with the reason in its error detail. This holds for both engines and for
+profile runs.
+
 When a provider answers with an error status, the message in the run and its log carries the provider's own reason if
-it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for its 400 and 422
-refusals only.
+it gave one: the LLM engine for any non-retryable, non-credential error status, the Jev engine for every rejecting
+status.
 
 The LLM engine (`Service/Recommendation/Llm`) packs by the connection's context window, then scores the batches in
 waves and consolidates the best of them into the final list with reasons. Neither engine builds the interest profile
@@ -130,9 +137,10 @@ caps) and the saved-search terms (the terms, not their results; a phrase in quot
 weighs with the favourites), fingerprints it together with the caps and the connection and model, and makes one LLM call
 through the profile connection (Settings → AI; the active connection when none is chosen; a Jev connection can never be
 one). A usable reply replaces the stored profile (`user_recommendation_settings.profile_text` with its time, host and
-model); three unusable replies or three transport failures fail the run and leave the stored profile alone. Neither
-history nor a saved search completes the run (`no_history`) without a call. A scheduled run whose fingerprint equals the
-newest completed run's completes as `unchanged` without a call; "Generate now" always calls the model.
+model); three unusable replies or three transport failures fail the run and leave the stored profile alone, and so
+does one rejected request (see [Engines](#engines)), which spends no strike. Neither history nor a saved search
+completes the run (`no_history`) without a call. A scheduled run whose fingerprint equals the newest completed run's
+completes as `unchanged` without a call; "Generate now" always calls the model.
 
 A recommendation run never builds a profile. At its snapshot it asks the profile module (`ProfileForRunInterface`) for
 one: the stored profile is frozen into the run; with none stored, a profile run is started and the run stays `pending`

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Llm\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
@@ -128,6 +129,20 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
         } catch (ProviderUnreachableException $exception) {
+            self::assertSame($message, $exception->getMessage());
+        }
+    }
+
+    private function assertCompletionIsRejectedWith(
+        OpenAiCompatibleChatClient $client,
+        int $status,
+        string $message,
+    ): void {
+        try {
+            $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+            self::fail(ProviderRejectedRequestException::class . ' was not thrown.');
+        } catch (ProviderRejectedRequestException $exception) {
+            self::assertSame($status, $exception->status());
             self::assertSame($message, $exception->getMessage());
         }
     }
@@ -400,17 +415,25 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
-    public function testAnErrorStatusCarriesTheProvidersReason(): void
+    public function testARejectingStatusIsARejectedRequestNotAnUnreachableProvider(): void
     {
         $client = $this->clientAnswering(new MockResponse(
             '{"error":{"message":"Reasoning effort \"none\" is not supported.","code":400},"user_id":"user_2abc"}',
             ['http_code' => 400],
         ));
 
-        $this->assertCompletionFailsWith(
+        $this->assertCompletionIsRejectedWith(
             $client,
-            'That provider answered with status 400: Reasoning effort "none" is not supported.',
+            400,
+            'That provider refused the request (status 400): Reasoning effort "none" is not supported.',
         );
+    }
+
+    public function testARequestTimeoutStaysAnUnreachableProvider(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('{"error":{"message":"Too slow."}}', ['http_code' => 408]));
+
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 408: Too slow.');
     }
 
     public function testAnErrorBodyThatArrivesInPiecesIsReadWhole(): void
@@ -421,15 +444,18 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 404]));
 
-        $this->expectExceptionMessage('That provider answered with status 404: Unknown model.');
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        $this->assertCompletionIsRejectedWith(
+            $client,
+            404,
+            'That provider refused the request (status 404): Unknown model.',
+        );
     }
 
-    public function testAnErrorStatusWithoutAReadableReasonKeepsTheBareSentence(): void
+    public function testARejectionWithoutAReadableReasonStillNamesTheStatus(): void
     {
-        $client = $this->clientAnswering(new MockResponse('Bad Request', ['http_code' => 400]));
+        $client = $this->clientAnswering(new MockResponse('Not Found', ['http_code' => 404]));
 
-        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
+        $this->assertCompletionIsRejectedWith($client, 404, 'That provider refused the request (status 404).');
     }
 
     public function testAServerErrorCarriesItsReasonToo(): void
@@ -467,7 +493,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             }
         };
 
-        $this->assertCompletionFailsWith($this->clientUsing($httpClient), 'That provider answered with status 400.');
+        $this->assertCompletionIsRejectedWith(
+            $this->clientUsing($httpClient),
+            400,
+            'That provider refused the request (status 400).',
+        );
 
         $pastTheBound = array_filter($httpClient->pulledOffsets, static fn (int $offset): bool => $offset >= 16_385);
         self::assertSame([], $pastTheBound);
@@ -481,7 +511,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = new ResponseCapturingHttpClient(new MockResponse($body(), ['http_code' => 400]));
 
-        $this->assertCompletionFailsWith($this->clientUsing($client), 'That provider answered with status 400.');
+        $this->assertCompletionIsRejectedWith(
+            $this->clientUsing($client),
+            400,
+            'That provider refused the request (status 400).',
+        );
 
         self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
@@ -494,9 +528,24 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         };
         $client = new ResponseCapturingHttpClient(new MockResponse($body(), ['http_code' => 400]));
 
-        $this->assertCompletionFailsWith($this->clientUsing($client), 'That provider answered with status 400.');
+        $this->assertCompletionIsRejectedWith(
+            $this->clientUsing($client),
+            400,
+            'That provider refused the request (status 400).',
+        );
 
         self::assertTrue($client->lastResponse?->getInfo('canceled'));
+    }
+
+    public function testAServerErrorBodyCutByTheTransportStaysUnreachable(): void
+    {
+        $body = static function (): \Generator {
+            yield '{"error":{"message":"Cut';
+            yield new TransportException('Connection reset');
+        };
+        $client = $this->clientAnswering(new MockResponse($body(), ['http_code' => 500]));
+
+        $this->assertCompletionFailsWith($client, 'That provider answered with status 500.');
     }
 
     public function testTheApiKeyIsRedactedFromTheReason(): void
@@ -508,7 +557,11 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ['http_code' => 400],
         ));
 
-        $this->assertCompletionFailsWith($client, 'That provider answered with status 400: Bad key [redacted].');
+        $this->assertCompletionIsRejectedWith(
+            $client,
+            400,
+            'That provider refused the request (status 400): Bad key [redacted].',
+        );
     }
 
     public function testAnErrorBodyOneByteOverTheBoundIsNotParsed(): void
@@ -518,7 +571,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame(16_385, \strlen($oversized));
         $client = $this->clientAnswering(new MockResponse($oversized, ['http_code' => 400]));
 
-        $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
+        $this->assertCompletionIsRejectedWith($client, 400, 'That provider refused the request (status 400).');
     }
 
     public function testAnErrorBodyOfExactlyTheBoundIsParsed(): void
@@ -528,8 +581,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame(16_384, \strlen($atTheBound));
         $client = $this->clientAnswering(new MockResponse($atTheBound, ['http_code' => 400]));
 
-        $this->expectExceptionMessage('That provider answered with status 400: Fits.');
-        $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
+        $this->assertCompletionIsRejectedWith($client, 400, 'That provider refused the request (status 400): Fits.');
     }
 
     public function testAnErrorStatusNeverReachesTheObserverOrTheAnswer(): void
@@ -542,7 +594,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
         self::assertSame([], $seen->reports);
         self::assertTrue($outcome->isFailure());
-        self::assertSame('That provider answered with status 400.', $outcome->cause()->getMessage());
+        self::assertSame('That provider refused the request (status 400).', $outcome->cause()->getMessage());
     }
 
     public function testOneCallsErrorStatusLeavesItsSiblingsAnswerAlone(): void
@@ -557,7 +609,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->concurrentCall(new NullCompletionStreamObserver()),
         ]);
 
-        self::assertSame('That provider answered with status 400: No.', $outcomes[0]->cause()->getMessage());
+        self::assertInstanceOf(ProviderRejectedRequestException::class, $outcomes[0]->cause());
+        self::assertSame('That provider refused the request (status 400): No.', $outcomes[0]->cause()->getMessage());
         self::assertSame('{"recommendations":[]}', $outcomes[1]->content());
     }
 
@@ -642,6 +695,17 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertTrue($outcome->isFailure());
         self::assertFalse($outcome->isRetryable());
         self::assertInstanceOf(ProviderUnreachableException::class, $outcome->cause());
+    }
+
+    public function testARejectedCallIsAFailedOutcomeThatIsNotRetryable(): void
+    {
+        $client = $this->clientAnswering(new MockResponse('{"error":{"message":"No."}}', ['http_code' => 400]));
+
+        $outcome = $this->soleOutcomeOf($client, $this->request());
+
+        self::assertTrue($outcome->isFailure());
+        self::assertFalse($outcome->isRetryable());
+        self::assertInstanceOf(ProviderRejectedRequestException::class, $outcome->cause());
     }
 
     public function testANonNumericRetryAfterFallsBackToNoHint(): void

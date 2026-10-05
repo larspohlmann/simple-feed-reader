@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Jev\SystemOneClient;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\RejectingStatus;
 use App\Service\Ai\Support\ResponseByteCap;
 use App\Service\Ai\Support\RetryAfter;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Recommendation\Jev\Model\SystemOneOutcomeModel;
 use App\Service\Recommendation\Jev\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Jev\Pass\SystemOneWave;
-use App\Service\Recommendation\Jev\Support\RefusalMessage;
 use App\Service\Recommendation\Jev\Support\SystemOneReplyDecoder;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
+use App\Service\Recommendation\Support\ProviderErrorReason;
+use App\Service\Recommendation\Support\RefusalMessage;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -124,9 +127,10 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
             \in_array($status, self::RETRYABLE_STATUSES, true) => SystemOneOutcomeModel::failed(
                 new RetryableProviderException($status, RetryAfter::secondsIn($response)),
             ),
-            400 === $status, 422 === $status => SystemOneOutcomeModel::failed(
-                new ProviderUnreachableException(RefusalMessage::of($status, $body, $wave->credentials)),
-            ),
+            RejectingStatus::matches($status) => SystemOneOutcomeModel::failed(new ProviderRejectedRequestException(
+                $status,
+                RefusalMessage::of($status, ProviderErrorReason::in($body, $wave->credentials)),
+            )),
             $status >= 300 => SystemOneOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
             default => SystemOneOutcomeModel::answered(
                 SystemOneReplyDecoder::decode($body, ResponseHeader::first($response, 'x-typesafe-request-id')),

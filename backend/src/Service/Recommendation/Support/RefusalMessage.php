@@ -2,17 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Jev\Support;
-
-use App\Service\Ai\Model\ProviderCredentialsModel;
-use App\Service\Recommendation\Support\ProviderErrorReason;
+namespace App\Service\Recommendation\Support;
 
 final class RefusalMessage
 {
-    public static function of(int $status, string $body, ProviderCredentialsModel $credentials): string
+    public static function of(int $status, ?string $reason): string
     {
-        $reason = ProviderErrorReason::in($body, $credentials);
-
         return null === $reason
             ? sprintf('That provider refused the request (status %d).', $status)
             : sprintf('That provider refused the request (status %d): %s', $status, $reason);

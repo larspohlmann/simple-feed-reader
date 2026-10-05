@@ -27,6 +27,7 @@ use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
@@ -562,6 +563,37 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
     }
 
+    public function testATickThatLostItsLockDoesNotFailTheRunOnARejection(): void
+    {
+        $this->recordLocksOverTheRealStore();
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        $runId = $run->requireId();
+
+        $thief = null;
+        $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
+            $thief = $this->stealTheTickLock();
+            $this->providerCallHeartbeat()->beat();
+        });
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+
+        try {
+            $report = $this->advancer()->advance($this->user);
+
+            self::assertSame('running', $report->status);
+
+            $this->entityManager->clear();
+            $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
+            self::assertNotNull($persisted);
+            self::assertSame(RunStatus::Running, $persisted->getStatus());
+            self::assertNull($persisted->getError());
+        } finally {
+            $thief?->release();
+        }
+    }
+
     /**
      * The consolidation phase's own checkpoint, after it settles its reply and before the advancer finalizes: a
      * separate statement from the batch wave's, held in place only by this test.
@@ -863,6 +895,113 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
         // The stubborn batch degraded to an empty winner set, not fatal.
         self::assertSame([], $persisted->getWinners()[2]);
+    }
+
+    public function testARejectedBatchCallFailsTheRunAtOnceAndSettlesEveryCallOfTheWave(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 90, 'reason' => 'a']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Failed->value, $report->status);
+        $this->entityManager->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 400): No.',
+            $failed->getError(),
+        );
+        self::assertSame(0, $failed->getTransportFailures());
+        $waveRows = \array_slice($this->logRowsOfLatestRun(), 1);
+        self::assertSame(
+            [CallVerdict::TransportFailed, CallVerdict::TransportFailed, CallVerdict::TransportFailed],
+            array_column($waveRows, 'verdict'),
+        );
+        self::assertNotContains(null, array_column($waveRows, 'finishedAt'));
+    }
+
+    public function testAWaveRejectionBeatsAnEarlierUnreachableCallAndFailsTheRunAtOnce(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(400, 'That provider refused the request (status 400): No.'),
+        );
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(RunStatus::Failed->value, $report->status);
+        $this->entityManager->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
+        self::assertSame(0, $failed->getTransportFailures());
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 400): No.',
+            $failed->getError(),
+        );
+    }
+
+    public function testAWaveOfTransportFailuresReportsTheFirstByIndex(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(3);
+        $this->storeProfile('a distilled profile');
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('first down'));
+        $this->stubChatClient()->queueFailure(new ProviderUnreachableException('second down'));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 90, 'reason' => 'c']],
+        ], \JSON_THROW_ON_ERROR));
+
+        try {
+            $this->advancer()->advance($this->user, TickDriver::Worker);
+            self::fail('The wave transport failure must propagate.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('first down', $exception->getMessage());
+        }
     }
 
     public function testTransportFailureInWaveAdvancesNothingAndIncrementsCeilingOnce(): void
@@ -1890,6 +2029,36 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             'A failed consolidation call leaves the phase to retry.',
         );
         self::assertSame([], $this->recommendationItems($persisted));
+    }
+
+    public function testARejectedConsolidationCallFailsTheRunAtOnce(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startAndSnapshot();
+        foreach ($run->getCandidateBatches() as $batch) {
+            $this->stubChatClient()->queueContent(json_encode([
+                'recommendations' => [['id' => $batch[0], 'score' => 80, 'reason' => 'kept']],
+            ], \JSON_THROW_ON_ERROR));
+            $this->advancer()->advance($this->user);
+        }
+        self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
+        $this->stubChatClient()->queueFailure(
+            new ProviderRejectedRequestException(422, 'That provider refused the request (status 422): No.'),
+        );
+
+        $report = $this->advancer()->advance($this->user);
+
+        self::assertSame(RunStatus::Failed->value, $report->status);
+        $this->entityManager->clear();
+        $failed = $this->runs()->findLatestForUser($this->user);
+        self::assertNotNull($failed);
+        self::assertSame(
+            'The AI provider at https://api.example.test/v1 failed: '
+            . 'That provider refused the request (status 422): No.',
+            $failed->getError(),
+        );
+        self::assertSame(0, $failed->getTransportFailures());
+        self::assertSame([], $this->recommendationItems($failed));
     }
 
     /**

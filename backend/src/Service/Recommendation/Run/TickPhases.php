@@ -7,12 +7,14 @@ namespace App\Service\Recommendation\Run;
 use App\Enum\RunStatus;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Engine\RecommendationEngine\RecommendationEngineInterface;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
+use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
@@ -60,6 +62,14 @@ final readonly class TickPhases
             return $engine->advance($tick);
         } catch (ProviderRateLimitedException $exception) {
             return $this->deferral->defer($tick->run, $exception);
+        } catch (ProviderRejectedRequestException $exception) {
+            return $this->runFailure->fail(
+                $tick->run,
+                ProviderFailedMessage::of(
+                    $tick->connection->getBaseUrl(),
+                    $exception->getMessage(),
+                ),
+            );
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
             $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
 

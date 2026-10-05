@@ -7,7 +7,7 @@ namespace App\Service\Recommendation\Profile;
 use App\Entity\ProfileRun;
 use App\Service\Recommendation\Profile\Pass\ProfileTick;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\TickLockKeepalive;
-use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
+use App\Service\Recommendation\Run\Support\ProviderFailedMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -29,23 +29,28 @@ final readonly class ProfileRunFailure
         $this->entityManager->flush();
     }
 
-    /** One strike; the run fails at MAX_TRANSPORT_FAILURES. A tick that lost its lock records nothing. */
+    public function failRejected(ProfileTick $tick, string $rejection): void
+    {
+        if ($this->refreshIfTheLockWasLost($tick->profileRun)) {
+            return;
+        }
+
+        $this->fail(
+            $tick->profileRun,
+            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $rejection),
+        );
+    }
+
+    /** One strike; the run fails at MAX_TRANSPORT_FAILURES. */
     public function recordTransportFailure(ProfileTick $tick, string $failureDetail): void
     {
-        $profileRun = $tick->profileRun;
-        if ($this->keepalive->hasLostTheLock()) {
-            $this->entityManager->refresh($profileRun);
-
+        if ($this->refreshIfTheLockWasLost($tick->profileRun)) {
             return;
         }
 
         $this->strike(
-            $profileRun,
-            \sprintf(
-                RecommendationTransportFailureRecorder::PROVIDER_FAILED,
-                $tick->connection->getBaseUrl(),
-                $failureDetail,
-            ),
+            $tick->profileRun,
+            ProviderFailedMessage::of($tick->connection->getBaseUrl(), $failureDetail),
         );
     }
 
@@ -74,5 +79,17 @@ final readonly class ProfileRunFailure
             $profileRun->fail($failureMessage, $this->clock->now());
         }
         $this->entityManager->flush();
+    }
+
+    /** A tick that lost its lock records nothing: the run is whatever the lock's new holder saved. */
+    private function refreshIfTheLockWasLost(ProfileRun $profileRun): bool
+    {
+        if (!$this->keepalive->hasLostTheLock()) {
+            return false;
+        }
+
+        $this->entityManager->refresh($profileRun);
+
+        return true;
     }
 }
