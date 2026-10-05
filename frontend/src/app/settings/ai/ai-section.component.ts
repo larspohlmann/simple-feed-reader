@@ -92,7 +92,6 @@ export class AiSectionComponent {
 
   readonly modelKinds = MODEL_KINDS;
 
-  /** The kinds the open model list holds none of: their option is disabled and says so. */
   readonly unofferedKinds = computed(() => {
     const offered = offeredKinds(this.ai.models());
     return MODEL_KINDS.filter((kind) => !offered.includes(kind));
@@ -171,6 +170,15 @@ export class AiSectionComponent {
     ].filter((key) => key !== null);
 
     return differences.map((key) => this.i18n.translate(key)).join(' · ') || undefined;
+  }
+
+  noneOfferedId(configId: number, kind: ModelKind): string {
+    return `model-kind-none-${configId}-${kind}`;
+  }
+
+  noneOfferedIds(configId: number): string | null {
+    const ids = this.unofferedKinds().map((kind) => this.noneOfferedId(configId, kind));
+    return ids.length ? ids.join(' ') : null;
   }
 
   private familyTag(model: AiModel): string | null {

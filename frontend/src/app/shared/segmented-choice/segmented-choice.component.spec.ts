@@ -9,6 +9,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
     [options]="['en', 'de']"
     [selected]="selected()"
     [disabledOptions]="disabled()"
+    [describedBy]="describedBy()"
     ariaLabelKey="lang.label"
     labelPrefix="lang."
     (pick)="picked = $event"
@@ -17,6 +18,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 class HostComponent {
   readonly selected = signal<'en' | 'de'>('en');
   readonly disabled = signal<readonly ('en' | 'de')[]>([]);
+  readonly describedBy = signal<string | null>(null);
   picked: string | null = null;
 }
 
@@ -42,6 +44,16 @@ describe('SegmentedChoiceComponent', () => {
   it('names the group for assistive tech', () => {
     const group = create().nativeElement.querySelector('[role="group"]') as HTMLElement;
     expect(group.getAttribute('aria-label')).toBe('Language');
+  });
+
+  it('points the group at the text that describes it, and at nothing without one', () => {
+    const fixture = create();
+    const group = fixture.nativeElement.querySelector('[role="group"]') as HTMLElement;
+    expect(group.hasAttribute('aria-describedby')).toBe(false);
+
+    fixture.componentInstance.describedBy.set('why-disabled');
+    fixture.detectChanges();
+    expect(group.getAttribute('aria-describedby')).toBe('why-disabled');
   });
 
   it('marks only the selected option', () => {

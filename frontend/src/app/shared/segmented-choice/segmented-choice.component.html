@@ -1,4 +1,9 @@
-<div class="seg" role="group" [attr.aria-label]="ariaLabelKey() | transloco">
+<div
+  class="seg"
+  role="group"
+  [attr.aria-label]="ariaLabelKey() | transloco"
+  [attr.aria-describedby]="describedBy()"
+>
   @for (option of options(); track option) {
     <button
       type="button"

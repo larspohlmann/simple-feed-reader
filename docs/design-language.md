@@ -819,6 +819,7 @@ clicked option; the consumer owns the selection and passes it back as
 | `ariaLabelKey` | `string` (required) | — the group's accessible name, as a translation key |
 | `labelPrefix` | `string` (required) | — |
 | `disabledOptions` | `readonly T[]` | `[]` — options that cannot be picked now |
+| `describedBy` | `string \| null` | `null` — the id of the text that says why an option is disabled |
 
 ```html
 <app-segmented-choice
@@ -832,7 +833,8 @@ clicked option; the consumer owns the selection and passes it back as
 
 A disabled option stays visible at the shared disabled look; say why in a
 hint beside the control (the AI model picker's "This provider offers no
-LLMs.").
+LLMs.") and pass that hint's id as `describedBy`, since a disabled button
+takes no focus and a keyboard user would otherwise never hear the reason.
 
 **Not inside `<app-field>`.** The field wraps its control in a `<label>`, and a
 click on the label's text presses the first button of the group. Name the group

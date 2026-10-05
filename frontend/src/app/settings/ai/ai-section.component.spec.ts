@@ -186,8 +186,28 @@ describe('AiSectionComponent', () => {
   const kindButtons = (picker: HTMLElement): HTMLButtonElement[] =>
     Array.from(picker.querySelectorAll('.model-kind button'));
 
-  const optionLabels = (fixture: ComponentFixture<AiSectionComponent>): string[] =>
-    fixture.componentInstance.modelOptions().map((option) => option.label);
+  /** Opens the picker's dropdown, reads each option's label and hint as rendered, and closes it. */
+  const renderedOptions = (
+    fixture: ComponentFixture<AiSectionComponent>,
+    picker: HTMLElement,
+  ): { label: string; hint: string | undefined }[] => {
+    const trigger = picker.querySelector('app-searchable-select .trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const options = Array.from(picker.querySelectorAll('[role="option"]')).map((option) => {
+      const hint = option.querySelector('.option-hint')?.textContent?.trim();
+      const label = option.textContent?.replace(hint ?? '', '').trim() ?? '';
+      return { label, hint };
+    });
+    trigger.click();
+    fixture.detectChanges();
+    return options;
+  };
+
+  const optionLabels = (
+    fixture: ComponentFixture<AiSectionComponent>,
+    picker: HTMLElement,
+  ): string[] => renderedOptions(fixture, picker).map((option) => option.label);
 
   const banners = (host: HTMLElement): string[] =>
     Array.from(host.querySelectorAll('app-error-banner')).map((banner) =>
@@ -393,7 +413,7 @@ describe('AiSectionComponent', () => {
       decisionModel('jev-latest'),
     ]);
     const hints = (): (string | undefined)[] =>
-      fixture.componentInstance.modelOptions().map((option) => option.hint);
+      renderedOptions(fixture, picker).map((option) => option.hint);
 
     expect(hints()).toEqual([undefined]);
 
@@ -449,7 +469,7 @@ describe('AiSectionComponent', () => {
       'false',
       'true',
     ]);
-    expect(optionLabels(fixture)).toEqual(['~typesafe/jev-latest · Decision model']);
+    expect(optionLabels(fixture, picker)).toEqual(['~typesafe/jev-latest · Decision model']);
   });
 
   it('lists the other kind once it is picked, and drops the model picked under the first', () => {
@@ -458,13 +478,13 @@ describe('AiSectionComponent', () => {
       offered('gpt-4o'),
       decisionModel('~typesafe/jev-latest'),
     ]);
-    expect(optionLabels(fixture)).toEqual(['gpt-4o']);
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
     fixture.componentInstance.chosenModel.set('gpt-4o');
 
     kindButtons(picker)[1].click();
     fixture.detectChanges();
 
-    expect(optionLabels(fixture)).toEqual(['~typesafe/jev-latest · Decision model']);
+    expect(optionLabels(fixture, picker)).toEqual(['~typesafe/jev-latest · Decision model']);
     expect(fixture.componentInstance.chosenModel()).toBeNull();
   });
 
@@ -480,6 +500,63 @@ describe('AiSectionComponent', () => {
     expect(picker.querySelector('.model-kind')?.textContent).toContain(
       'This provider offers no LLMs.',
     );
+  });
+
+  it('says so when the provider offers no scoring models, and ties the reason to the kind control', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [offered('gpt-4o')]);
+    const reason = picker.querySelector('.model-kind .hint') as HTMLElement;
+
+    expect(kindButtons(picker).map((button) => button.disabled)).toEqual([false, true]);
+    expect(reason.textContent?.trim()).toBe('This provider offers no scoring models.');
+    expect(
+      picker.querySelector('.model-kind [role="group"]')?.getAttribute('aria-describedby'),
+    ).toBe(reason.id);
+  });
+
+  it('describes no reason on the kind control while the provider offers both kinds', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+
+    expect(
+      picker.querySelector('.model-kind [role="group"]')?.hasAttribute('aria-describedby'),
+    ).toBe(false);
+  });
+
+  it("opens another row's picker on that row's kind, whatever the last row showed", () => {
+    const fixture = mount();
+    const scoringRow = config({ id: 1, model: 'jev-latest', kind: 'scoring' });
+    openPicker(fixture, scoringRow, [offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    expect(fixture.componentInstance.modelKind()).toBe('scoring');
+
+    ai.configs.set([scoringRow, config({ id: 2, model: 'gpt-4o' })]);
+    ai.models.set([offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    ai.choosingModelFor.set(2);
+    fixture.detectChanges();
+    expandRow(fixture, 1);
+    const picker = row(fixture, 1).querySelector('.model-picker') as HTMLElement;
+
+    expect(fixture.componentInstance.modelKind()).toBe('llm');
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
+  });
+
+  it("reopens a row's picker on its saved kind after the reader switched kinds", () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+
+    ai.models.set([offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modelKind()).toBe('llm');
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
   });
 
   it("explains a scoring model's score only while scoring models are listed", () => {
