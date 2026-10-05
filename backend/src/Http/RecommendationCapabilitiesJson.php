@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Enum\RecommendationEngineKind;
 use App\Service\Recommendation\Engine\Model\RecommendationEngineCapabilitiesModel;
 use App\Service\Recommendation\Engine\Model\RecommendationTuningField;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
@@ -23,9 +24,9 @@ final readonly class RecommendationCapabilitiesJson
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */
-    public function ofModel(string $model): array
+    public function ofKind(RecommendationEngineKind $kind): array
     {
-        return self::shape($this->engines->capabilitiesForModel($model));
+        return self::shape(RecommendationEngineCapabilitiesModel::of($kind));
     }
 
     /** @return array{reasons: bool, prompt: bool, profile: string, tuningFields: list<string>} */

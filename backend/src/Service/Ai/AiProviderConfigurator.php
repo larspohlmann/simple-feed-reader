@@ -95,7 +95,7 @@ final readonly class AiProviderConfigurator
         $this->entityManager->persist($configuration);
         $this->entityManager->flush();
 
-        return new AddedConfigurationModel($configuration, $this->ids($descriptors));
+        return new AddedConfigurationModel($configuration, $descriptors);
     }
 
     /**
@@ -123,11 +123,11 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @return list<string>
+     * @return list<ModelDescriptor>
      */
     public function listModels(AiProviderSettings $settings): array
     {
-        return $this->ids($this->catalog->listModels($this->credentials($settings)));
+        return $this->catalog->listModels($this->credentials($settings));
     }
 
     /** With no active sibling, a configuration becomes active as soon as it has a model: no separate activation. */
@@ -227,15 +227,5 @@ final readonly class AiProviderConfigurator
         }
 
         throw new ModelNotOfferedException(sprintf('That provider does not offer "%s".', $model));
-    }
-
-    /**
-     * @param list<ModelDescriptor> $descriptors
-     *
-     * @return list<string>
-     */
-    private function ids(array $descriptors): array
-    {
-        return array_map(static fn (ModelDescriptor $descriptor): string => $descriptor->id, $descriptors);
     }
 }

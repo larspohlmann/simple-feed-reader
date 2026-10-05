@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Llm\Run;
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Llm\Run\SuppressedReasoningFallback;
@@ -70,7 +71,7 @@ final class SuppressedReasoningFallbackTest extends TestCase
 
     public function testARejectionOnAnEngineWithoutASuppressReasoningSettingIsNotAbsorbed(): void
     {
-        $connection = $this->connectionOn('jev-latest');
+        $connection = $this->connectionOn('jev-latest', ScoringProtocol::SystemOne);
 
         self::assertTrue($connection->suppressesReasoning());
         self::assertFalse($this->fallbackFlushing($this->never())->absorbs($connection, $this->rejection(400)));
@@ -96,12 +97,15 @@ final class SuppressedReasoningFallbackTest extends TestCase
         );
     }
 
-    private function connectionOn(string $model): AiProviderSettings
+    private function connectionOn(string $model, ?ScoringProtocol $protocol = null): AiProviderSettings
     {
         $connection = AiProviderSettingsFactory::build(
             new User('reader@example.test', new \DateTimeImmutable('2026-10-05 09:00:00')),
         );
-        $connection->chooseModel(new ModelDescriptor($model, 32768), new \DateTimeImmutable('2026-10-05 10:00:00'));
+        $connection->chooseModel(
+            new ModelDescriptor($model, 32768, $protocol),
+            new \DateTimeImmutable('2026-10-05 10:00:00'),
+        );
 
         return $connection;
     }

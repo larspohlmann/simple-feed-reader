@@ -201,7 +201,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $added = $configurator->addConfiguration($user, 'Work OpenAI', 'https://api.example.test/v1/', 'sk-abcdef1234');
 
-        self::assertSame(['gpt-4o', 'gpt-4o-mini'], $added->modelIds);
+        self::assertSame(
+            ['gpt-4o', 'gpt-4o-mini'],
+            array_map(static fn (ModelDescriptor $model): string => $model->id, $added->models),
+        );
         self::assertSame('Work OpenAI', $added->configuration->getName());
         self::assertSame('https://api.example.test/v1', $added->configuration->getBaseUrl());
         self::assertSame('1234', $added->configuration->getApiKeyHint());

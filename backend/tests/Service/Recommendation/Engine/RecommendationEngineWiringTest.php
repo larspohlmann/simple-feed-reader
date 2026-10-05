@@ -32,7 +32,7 @@ final class RecommendationEngineWiringTest extends KernelTestCase
         self::assertInstanceOf(LlmRecommendationEngine::class, $resolver->engineOf($resolver->kindFor($connection)));
     }
 
-    public function testTheContainerResolvesAJevConnectionToTheJevEngine(): void
+    public function testTheContainerResolvesAScoringConnectionToTheScoringEngine(): void
     {
         self::bootKernel();
         $resolver = self::getContainer()->get(RecommendationEngineResolver::class);
