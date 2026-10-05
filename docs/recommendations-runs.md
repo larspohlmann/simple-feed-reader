@@ -129,7 +129,7 @@ The scoring engine (`Service/Recommendation/Scoring`) scores every candidate aga
 text. It speaks to the model through a protocol (`ScoringProtocol/ScoringProtocolInterface`, one implementation per
 `App\Enum\ScoringProtocol` case, found by `ScoringProtocolResolver`): the protocol packs the pool, words each request
 and reads each reply as a value in [0, 1] per article. A connection stores the protocol beside the kind when its model
-is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what each model is: `OpenAiCompatibleCatalog` reads `GET {base}/models?output_modalities=all`; an entry whose `architecture.output_modalities` holds `text`, or that reports none (LM Studio, Ollama, OpenAI), is an LLM; `["decisions"]` is a System One model, listed only with a positive `context_length` (its requests are budgeted from it, which leaves out Respan's `span-01*`); every other output (rerank, image, embeddings, …) is left out. `SystemOneCatalog` probes `{base}/systemone` and offers `jev-latest` (32k) only when no listing named a System One model (TypeSafe direct, whose `/models` is not OpenAI-shaped); OpenRouter lists Jev itself as `~typesafe/jev-latest`.
+is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what each model is: `OpenAiCompatibleCatalog` reads `GET {base}/models?output_modalities=all`; an entry whose `architecture.output_modalities` holds `text`, or that reports none (LM Studio, Ollama, OpenAI), is an LLM; `["decisions"]` is a System One model, listed only with a positive window (`context_length`, else `max_context_length`; its requests are budgeted from it, which leaves out Respan's `span-01*`); every other output (rerank, embeddings, image alone, …) is left out, while a model that outputs text beside images is an LLM. `SystemOneCatalog` probes `{base}/systemone` and offers `jev-latest` (32k) only when no listing named a System One model (TypeSafe direct, whose `/models` is not OpenAI-shaped); OpenRouter lists Jev itself as `~typesafe/jev-latest`.
 
 | Protocol | Request | Per request |
 |---|---|---|
@@ -142,8 +142,9 @@ best-scored picks once every batch is in. The engine reads only the batch-concur
 request id, answering model and cost in the run log. `ScoringHttpTransport` sends a protocol's requests (its own idle
 and wall-clock timeouts, the tick heartbeat, a 1 MiB reply cap) and maps the statuses every protocol shares; a
 protocol adds only its retryable statuses (System One: 429 and 529). A run records the engine kind and the scoring
-protocol it was packed for; a tick that finds the active connection on another kind or protocol fails the run with an
-error that says so (switch back to resume it).
+protocol it was packed for; a tick that finds the active connection on another kind or protocol, or a scoring run's
+connection on another model (its batches were packed for that model's window), fails the run with an error that says
+so (switch back to resume it). An LLM run follows a model change.
 
 ### The profile
 
