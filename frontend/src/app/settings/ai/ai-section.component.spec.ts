@@ -3,6 +3,7 @@ import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import {
@@ -1258,30 +1259,41 @@ describe('AiSectionComponent', () => {
     expect(steps.length).toBe(15);
   });
 
-  it('walks through setting up Jev in the guide', () => {
+  it('walks through setting up a scoring model in the guide', () => {
     const fixture = mountWithConfigs([]);
 
     const guide = fixture.nativeElement.querySelector('.guide') as HTMLElement;
     const titles = Array.from(guide.querySelectorAll('h3')).map((title) =>
       title.textContent?.trim(),
     );
-    expect(titles).toContain('Use Jev (TypeSafe System One)');
+    expect(titles).toContain('Use a scoring model');
 
-    const jevSteps = Array.from(guide.querySelectorAll('.guide-jev li')).map((step) =>
+    const scoringSteps = Array.from(guide.querySelectorAll('.guide-scoring li')).map((step) =>
       step.textContent?.trim(),
     );
-    expect(jevSteps).toHaveLength(5);
-    expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
-    expect(jevSteps[2]).toContain('jev-latest');
-    expect(jevSteps[3]).toContain('Open Settings → AI');
+    expect(scoringSteps).toHaveLength(5);
+    expect(scoringSteps[1]).toContain('https://openrouter.ai/api/v1');
+    expect(scoringSteps[2]).toContain('“Scoring model”');
+    expect(scoringSteps[2]).toContain('“Decision model”');
+    expect(scoringSteps[3]).toContain('Open Settings → AI');
   });
 
-  it('says in the add form that Jev models are supported alongside LLMs', () => {
+  it('says in the add form that scoring models are supported alongside LLMs', () => {
     const fixture = mountWithConfigs([]);
 
     const intro = fixture.nativeElement.querySelector('.add-group .add-intro') as HTMLElement;
-    expect(intro.textContent).toContain('OpenAI-compatible LLM endpoint and with Jev');
-    expect(intro.textContent).toContain('jev-latest');
+    expect(intro.textContent).toContain('OpenAI-compatible LLM endpoint and with scoring models');
+    expect(intro.textContent).not.toContain('jev-latest');
+  });
+
+  it('names no single scoring model in its German copy', () => {
+    const fixture = mountWithConfigs([]);
+    TestBed.inject(TranslocoService).setActiveLang('de');
+    fixture.detectChanges();
+
+    const guide = fixture.nativeElement.querySelector('.guide') as HTMLElement;
+    expect(guide.textContent).toContain('Ein Bewertungsmodell verwenden');
+    expect(guide.textContent).not.toContain('Jev verwenden');
   });
 
   it('explains the row actions with one tip and each connection checkbox with its own', () => {
