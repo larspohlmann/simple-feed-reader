@@ -427,7 +427,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     public function testAnErrorStatusWithoutAReadableReasonKeepsTheBareSentence(): void
     {
-        $client = $this->clientAnswering(new MockResponse('<html>Bad Request</html>', ['http_code' => 400]));
+        $client = $this->clientAnswering(new MockResponse('Bad Request', ['http_code' => 400]));
 
         $this->assertCompletionFailsWith($client, 'That provider answered with status 400.');
     }

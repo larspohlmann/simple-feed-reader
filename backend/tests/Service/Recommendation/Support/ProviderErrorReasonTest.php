@@ -46,7 +46,7 @@ final class ProviderErrorReasonTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function bodiesWithoutAReason(): iterable
     {
-        yield 'not json' => ['<html>Bad Request</html>'];
+        yield 'not json' => ['Bad Request'];
         yield 'empty' => [''];
         yield 'a json string' => ['"nope"'];
         yield 'an error that is a bare string' => ['{"error":"nope"}'];
