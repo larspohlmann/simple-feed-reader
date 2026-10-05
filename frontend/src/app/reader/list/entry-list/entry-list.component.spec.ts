@@ -2527,6 +2527,25 @@ describe('EntryListComponent', () => {
       expect(rail(fixture)).toBeNull();
     });
 
+    it('keeps the scrollbar of a paged search, which never gets a rail', () => {
+      const fixture = mount({ ...pagedList, selection: search });
+      const scroller = layOut(fixture, 100, 1100);
+      scrollTo(fixture, scroller, 0);
+      expect(scroller.classList).not.toContain('scrollbar-hidden');
+    });
+
+    it('goes idle when the rows give way to the empty state', () => {
+      const fixture = mount(pagedList);
+      scrollTo(fixture, layOut(fixture, 100, 1100), 0);
+      expect(rail(fixture)).not.toBeNull();
+
+      fixture.componentRef.setInput('entries', []);
+      fixture.componentRef.setInput('hasMore', false);
+      fixture.detectChanges();
+
+      expect(rail(fixture)).toBeNull();
+    });
+
     it('is shown for a search that has loaded every result', () => {
       const fixture = mount({ ...pagedList, hasMore: false, selection: search });
       scrollTo(fixture, layOut(fixture, 100, 1100), 0);

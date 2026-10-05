@@ -27,14 +27,16 @@ export class ScrollProgressRail {
   private rail?: HTMLElement;
 
   readonly overflows = signal(false);
+  /** Whether the content's end is known; a paged search, with no total, never is. */
+  private readonly knowsLength = signal(false);
 
   /** A wide layout keeps its scrollbar and gets a hairline along the bottom; a phone
    *  gets a rail on the right edge in place of the scrollbar it withholds. */
   readonly horizontal = computed(() => this.options.isWide());
 
-  /** By layout, not by `overflows`: toggling a classic scrollbar resizes the content,
-   *  which could flip `overflows` back and forth. */
-  readonly replacesScrollbar = computed(() => !this.horizontal());
+  /** By whether a rail can show, not by `overflows`: toggling a classic scrollbar
+   *  resizes the content, which could flip `overflows` back and forth. */
+  readonly replacesScrollbar = computed(() => !this.horizontal() && this.knowsLength());
 
   private readonly _paintAfterRender = effect(() => {
     this.options.layout();
@@ -56,7 +58,10 @@ export class ScrollProgressRail {
   }
 
   detachScroller(scroller: HTMLElement): void {
-    if (untracked(this.scroller) === scroller) this.scroller.set(undefined);
+    if (untracked(this.scroller) !== scroller) return;
+    this.scroller.set(undefined);
+    this.overflows.set(false);
+    this.knowsLength.set(false);
   }
 
   attachRail(rail: HTMLElement): void {
@@ -72,6 +77,7 @@ export class ScrollProgressRail {
     const scroller = untracked(this.scroller);
     if (!scroller) return;
     const bottom = this.options.contentBottom(scroller);
+    this.knowsLength.set(bottom !== null);
     const overflows = bottom !== null && overflowsViewport(bottom, scroller.clientHeight);
     this.overflows.set(overflows);
     if (!overflows || !this.rail) return;
