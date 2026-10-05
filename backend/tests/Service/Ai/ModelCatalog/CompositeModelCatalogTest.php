@@ -89,7 +89,10 @@ final class CompositeModelCatalogTest extends TestCase
     {
         $catalog = new CompositeModelCatalog(
             [
-                new StubModelCatalog([new ModelDescriptor('qwen/qwen3.7', 131_072), new ModelDescriptor('gpt-4o', 1_000)]),
+                new StubModelCatalog([
+                    new ModelDescriptor('qwen/qwen3.7', 131_072),
+                    new ModelDescriptor('gpt-4o', 1_000),
+                ]),
                 new StubModelCatalog([
                     new ModelDescriptor('gpt-4o', 128_000),
                     new ModelDescriptor('anthropic/claude-sonnet', 200_000),
