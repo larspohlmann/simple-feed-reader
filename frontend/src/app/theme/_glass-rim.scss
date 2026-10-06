@@ -5,6 +5,7 @@
 // The Liquid Glass rim (#1402) is tuned here and only here: every token and gradient derives from these.
 $strength: 0.3;
 $control-boost: 1.9;
+$image-boost: 3;
 $faint-ratio: 0.55;
 $modes: (
   light: (
@@ -29,6 +30,10 @@ $-tiers: (
     infix: 'control-',
     boost: $control-boost,
   ),
+  image: (
+    infix: 'image-',
+    boost: $image-boost,
+  ),
 );
 
 @function one-decimal($amount) {
@@ -37,7 +42,7 @@ $-tiers: (
 
 @function -tier-token-name($tier, $name) {
   @if not map.has-key($-tiers, $tier) {
-    @error 'Unknown glass-rim tier `#{$tier}`: use surface or control.';
+    @error 'Unknown glass-rim tier `#{$tier}`: use surface, control or image.';
   }
 
   @return --rim-#{map.get($-tiers, $tier, infix)}#{$name};
