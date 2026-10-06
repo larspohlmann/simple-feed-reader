@@ -24,10 +24,10 @@ final readonly class TickPhases
         . 'connection uses: an LLM, a decision model and a reranker score articles differently. Start a new run, or '
         . 'switch back to a connection of that kind to resume this one.';
 
-    /** A scoring run also belongs to the model whose window sized its batches. */
+    /** A scoring run also belongs to its model: two models' scores do not compare within one run. */
     public const string SCORING_MODEL_SWITCH = 'This run was started with a different scoring model than the active AI '
-        . 'connection uses, and its requests were sized for that model. Start a new run, or switch back to that model '
-        . 'to resume this one.';
+        . 'connection uses, and scores from two models cannot be compared within one run. Start a new run, or switch '
+        . 'back to that model to resume this one.';
 
     public function __construct(
         private SnapshotPhase $snapshot,
