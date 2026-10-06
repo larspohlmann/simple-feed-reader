@@ -223,6 +223,36 @@ final class TickPhasesTest extends DbTestCase
         self::assertSame([], $engine->advancedTicks);
     }
 
+    public function testARerankRunWhoseConnectionSwitchedToAnotherRerankerFailsWithoutBeingAdvanced(): void
+    {
+        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
+        $voyage = new ModelDescriptor('voyageai/rerank-2.5-lite', 32_000, ScoringProtocol::Rerank);
+        $this->chooseModel($connection, $voyage);
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
+    /** The model changed too, but the protocol is the bigger switch and names the kinds of model. */
+    public function testARerankRunWhoseConnectionMovedToADecisionModelFailsAsAnEngineSwitch(): void
+    {
+        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
+        $this->chooseModel($connection, new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
     public function testAnLlmRunWhoseConnectionSwitchedModelKeepsRunning(): void
     {
         $connection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'gpt-4o');
