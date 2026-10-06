@@ -173,7 +173,9 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
 
   it.each(STEPS[theme])('step %i redefines every colour token and nothing else', (step) => {
     const mediaToken = step < 0 ? ['media-brightness'] : [];
-    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual([...SCALED, ...mediaToken].sort());
+    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
+      [...SCALED, 'rim-light', ...mediaToken].sort(),
+    );
   });
 
   it.each(STEPS[theme])('step %i moves the canvas and the text with the step', (step) => {
@@ -195,6 +197,21 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
       else expect(now).toBeGreaterThanOrEqual(today - TOLERANCE);
     },
   );
+
+  it.each(STEPS[theme])('step %i keeps the rim highlight at the lightest surface', (step) => {
+    const palette = paletteAt(theme, step);
+    if (theme === 'light') {
+      expect(rgb(palette['rim-light'])).toEqual(rgb(palette['surface-1']));
+    } else if (step > 0) {
+      expect(rgb(palette['rim-light'])).toEqual([255, 255, 255]);
+    } else {
+      expect(luminance(rgb(palette['rim-light']))).toBeLessThan(1);
+    }
+  });
+
+  it('keeps the rim highlight white at step 0', () => {
+    expect(base['rim-light']).toBe('white');
+  });
 
   it.each(STEPS[theme])('step %i dims media only when dimming', (step) => {
     expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step]);

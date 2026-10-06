@@ -47,11 +47,11 @@ $-tiers: (
 
   @return linear-gradient(
     $angle,
-    color-mix(in oklab, $base, white tier-token($tier, glint)),
+    color-mix(in oklab, $base, var(--rim-light) tier-token($tier, glint)),
     $base $base-from,
     color-mix(in oklab, $base, black tier-token($tier, shade)) $shade-at,
     $base $base-to,
-    color-mix(in oklab, $base, white tier-token($tier, glint-faint))
+    color-mix(in oklab, $base, var(--rim-light) tier-token($tier, glint-faint))
   );
 }
 
@@ -62,6 +62,8 @@ $-tiers: (
 
   $glint: map.get($modes, $mode, glint) * $strength;
   $shade: map.get($modes, $mode, shade) * $strength;
+
+  --rim-light: white;
 
   @each $settings in map.values($-tiers) {
     $infix: map.get($settings, infix);

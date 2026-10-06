@@ -71,9 +71,9 @@ const mix = (toward: string, token: string): string =>
   `color-mix(in oklab, var(--rim-base), ${toward} var(--${token}))`;
 
 const rim = (prefix: string): string =>
-  `linear-gradient(${KNOBS['angle']}, ${mix('white', `${prefix}glint`)}, ` +
+  `linear-gradient(${KNOBS['angle']}, ${mix('var(--rim-light)', `${prefix}glint`)}, ` +
   `var(--rim-base) ${KNOBS['base-from']}, ${mix('black', `${prefix}shade`)} ${KNOBS['shade-at']}, ` +
-  `var(--rim-base) ${KNOBS['base-to']}, ${mix('white', `${prefix}glint-faint`)}) border-box`;
+  `var(--rim-base) ${KNOBS['base-to']}, ${mix('var(--rim-light)', `${prefix}glint-faint`)}) border-box`;
 
 /** Sass rounds each amount to one decimal; the exact product may sit on a .x5 boundary. */
 function expectOneDecimalOf(emitted: string, exact: number): void {
@@ -101,6 +101,10 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
   it('gives controls the boosted surface amounts', () => {
     expectOneDecimalOf(tokens['--rim-control-glint'], glint * boost);
     expectOneDecimalOf(tokens['--rim-control-shade'], shade * boost);
+  });
+
+  it('emits white as the step-0 highlight colour', () => {
+    expect(tokens['--rim-light']).toBe('white');
   });
 
   it('lands in the theme block of tokens.scss', () => {

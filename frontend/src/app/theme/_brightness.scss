@@ -86,6 +86,8 @@ $text: text-primary, text-secondary, text-muted;
     --#{$name}: #{toward-extreme(map.get($palette, $name), $step, $range)};
   }
 
+  --rim-light: #{scale(white, $step, $surface-dim, $surface-brighten)};
+
   // Only dimming steps carry a media factor; every consumer is guarded to them.
   @if $step < 0 {
     --media-brightness: #{1 - $media-dim * math.abs($step)};
