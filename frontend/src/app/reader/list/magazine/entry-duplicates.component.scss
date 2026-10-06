@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 // The template renders nothing without duplicates, so the host must hold no box
 // either: as a plain flex item it still takes a slot, and its parent card's gap
 // then reserves dead space below the meta row (#496 regressed the split card's
@@ -13,7 +15,7 @@
   flex-wrap: wrap;
   margin-top: var(--space-2);
   padding-top: var(--space-2);
-  border-top: var(--card-border);
+  border-top: var(--card-border-width) solid var(--border);
   font-size: var(--fs-xs);
   color: var(--text-muted);
 }
@@ -50,12 +52,12 @@
 }
 
 .dup-popover {
+  @include glass-rim.filled(var(--surface-2));
+
   display: block;
   width: min(24rem, calc(100vw - var(--space-4)));
   padding: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-2);
   box-shadow: var(--panel-shadow);
 }
 

@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 .row {
   display: flex;
   gap: var(--space-3);
@@ -19,12 +21,14 @@
   margin-left: var(--space-2);
   border-radius: 50%;
   vertical-align: middle;
-  border: 1px solid var(--border-strong);
+
+  @include glass-rim.ring(var(--border-strong), control);
 }
 
 .dot.on {
+  --rim-base: var(--accent);
+
   background: var(--accent);
-  border-color: var(--accent);
 }
 
 .body {

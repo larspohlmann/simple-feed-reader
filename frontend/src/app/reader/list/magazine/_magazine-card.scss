@@ -1,0 +1,8 @@
+@use '../../../theme/glass-rim';
+
+@mixin chrome {
+  @include glass-rim.filled(var(--card-bg));
+
+  border-width: var(--card-border-width);
+  border-radius: var(--card-radius);
+}

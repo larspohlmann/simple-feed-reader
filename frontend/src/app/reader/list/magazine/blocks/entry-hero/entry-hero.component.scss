@@ -1,11 +1,12 @@
+@use '../../magazine-card';
+
 :host {
   display: block;
 }
 
 .hero {
-  background: var(--card-bg);
-  border: var(--card-border);
-  border-radius: var(--card-radius);
+  @include magazine-card.chrome;
+
   overflow: hidden;
   cursor: pointer;
 }
@@ -14,7 +15,7 @@
    during a drag-scroll (#704). */
 @media (hover: hover) {
   .hero:hover {
-    border-color: var(--border-strong);
+    --rim-base: var(--border-strong);
   }
 
   .hero:hover .title {
