@@ -13,6 +13,7 @@ import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { routes } from './app.routes';
 import { API_BASE_URL } from './core/api';
 import { authInterceptor } from './core/auth/auth.interceptor';
+import { transientGatewayRetryInterceptor } from './core/http/retry-transient-gateway-errors';
 import { preloadInitialLanguage } from './core/i18n/boot-language';
 import { ReportingErrorHandler } from './core/errors/global-error-handler';
 import { NavigationFailureReporter } from './core/errors/navigation-failure';
@@ -50,7 +51,7 @@ export const appConfig: ApplicationConfig = {
     // Every navigation writes the document title, so a page can never keep the
     // title of the page before it.
     { provide: TitleStrategy, useExisting: TranslatedTitleStrategy },
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, transientGatewayRetryInterceptor])),
     { provide: API_BASE_URL, useValue: environment.apiBaseUrl },
     // LOCALE_WRITER defaults to a no-op (see locale-writer.ts) so most of the
     // app never needs HttpClient just to construct LanguageService; the running

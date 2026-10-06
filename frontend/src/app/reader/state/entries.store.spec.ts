@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   HttpTestingController,
   TestRequest,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
+import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
@@ -47,7 +48,7 @@ describe('EntriesStore', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withInterceptors([transientGatewayRetryInterceptor])),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
@@ -158,7 +159,7 @@ describe('EntriesStore', () => {
   // their responses can arrive out of order. The store must apply only the
   // newest load's result; an older, partial reload that lands late must not
   // clobber the freshly-fetched items back off the list.
-  it('ignores a superseded load whose response arrives after a newer load', () => {
+  it('cancels a superseded load so its response can never land after a newer one', () => {
     store.load({ view: 'unread' }); // an earlier reload (e.g. a partial slice)
     store.load({ view: 'unread' }); // a newer reload supersedes it
     const reqs = ctrl.match((request) => request.url === 'https://api.test/api/entries');
@@ -166,8 +167,8 @@ describe('EntriesStore', () => {
 
     // The newer request returns first, with the full, fresh set...
     reqs[1].flush({ entries: [entry(1), entry(2)], nextCursor: null });
-    // ...then the older request lands LATE with a stale, partial set.
-    reqs[0].flush({ entries: [entry(1)], nextCursor: 'C1' });
+    // ...and the older one can never land late with a stale, partial set.
+    expect(reqs[0].cancelled).toBe(true);
 
     expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1, 2]);
     expect(store.nextCursor()).toBeNull();
@@ -177,7 +178,7 @@ describe('EntriesStore', () => {
   // #158: the same race across the load/loadMore boundary — a fresh load()
   // (a refresh reload) started while a loadMore page is still on the wire must
   // win; the late page must not append stale entries onto the reloaded list.
-  it('drops an in-flight loadMore page once a fresh load has superseded it', () => {
+  it('cancels an in-flight loadMore page once a fresh load supersedes it', () => {
     store.load({ view: 'unread' });
     ctrl
       .expectOne((request) => request.url === 'https://api.test/api/entries')
@@ -192,8 +193,8 @@ describe('EntriesStore', () => {
       .expectOne((request) => !request.params.get('cursor'))
       .flush({ entries: [entry(3), entry(4)], nextCursor: null });
 
-    // The stale page 2 lands late — it must be ignored, not appended.
-    more.flush({ entries: [entry(2)], nextCursor: 'C2' });
+    // The stale page 2 can never land late and append itself.
+    expect(more.cancelled).toBe(true);
 
     expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([3, 4]);
     expect(store.nextCursor()).toBeNull();
@@ -533,6 +534,77 @@ describe('EntriesStore', () => {
     });
   });
 
+  describe('transient gateway failures (#1420)', () => {
+    const flushStatus = (testRequest: TestRequest, status: number): void =>
+      testRequest.flush({ type: 'x', title: 't', status }, { status, statusText: 'err' });
+    const listRequest =
+      (view: string) => (request: { params: { get(name: string): string | null } }) =>
+        request.params.get('view') === view;
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('retries a 504 without showing the banner and lands the retried page', () => {
+      store.load({ view: 'unread' });
+      flushStatus(ctrl.expectOne(listRequest('unread')), 504);
+      expect(store.error()).toBeNull();
+      expect(store.loading()).toBe(true);
+
+      jest.advanceTimersByTime(2000);
+      ctrl.expectOne(listRequest('unread')).flush({ entries: [entry(1)], nextCursor: null });
+
+      expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([1]);
+      expect(store.error()).toBeNull();
+      expect(store.loading()).toBe(false);
+    });
+
+    it('shows the banner once three retries have failed too', () => {
+      store.load({ view: 'unread' });
+      flushStatus(ctrl.expectOne(listRequest('unread')), 504);
+      for (const delay of [2000, 5000, 10000]) {
+        jest.advanceTimersByTime(delay);
+        expect(store.error()).toBeNull();
+        flushStatus(ctrl.expectOne(listRequest('unread')), 504);
+      }
+
+      expect(store.error()?.status).toBe(504);
+      expect(store.loading()).toBe(false);
+      jest.advanceTimersByTime(60000);
+      ctrl.expectNone(() => true);
+    });
+
+    it('shows a 500 at once', () => {
+      store.load({ view: 'unread' });
+      flushStatus(ctrl.expectOne(listRequest('unread')), 500);
+
+      expect(store.error()?.status).toBe(500);
+    });
+
+    it('drops a pending retry when the user switches lists', () => {
+      store.load({ view: 'unread' });
+      flushStatus(ctrl.expectOne(listRequest('unread')), 503);
+
+      store.load({ view: 'all' });
+      ctrl.expectOne(listRequest('all')).flush({ entries: [entry(2)], nextCursor: null });
+      jest.advanceTimersByTime(20000);
+
+      ctrl.expectNone(listRequest('unread'));
+      expect(store.entries().map((listedEntry) => listedEntry.id)).toEqual([2]);
+      expect(store.error()).toBeNull();
+    });
+
+    it('drops a pending retry when the signed-in identity changes', () => {
+      store.load({ view: 'unread' });
+      flushStatus(ctrl.expectOne(listRequest('unread')), 503);
+
+      tokens.set('account-b.jwt');
+      TestBed.tick();
+      jest.advanceTimersByTime(20000);
+
+      ctrl.expectNone(listRequest('unread'));
+    });
+  });
+
   describe('when the signed-in identity changes (#1135)', () => {
     const entriesRequest = (request: { url: string }): boolean =>
       request.url === 'https://api.test/api/entries';
@@ -581,13 +653,14 @@ describe('EntriesStore', () => {
       ctrl.expectNone(entriesRequest);
     });
 
-    it('ignores a list response that lands after the previous account signed out', () => {
+    it('cancels a list request still on the wire when the previous account signs out', () => {
       store.load({ view: 'all' });
       const late = ctrl.expectOne(entriesRequest);
 
       tokens.clear();
       TestBed.tick();
-      late.flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+      expect(late.cancelled).toBe(true);
 
       expect(store.entries()).toEqual([]);
       expect(store.loading()).toBe(false);

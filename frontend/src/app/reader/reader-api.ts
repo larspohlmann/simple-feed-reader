@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
 import { RefreshScope } from './query/query';
 import {
@@ -47,12 +48,16 @@ export class ReaderApi {
   private readonly base = inject(API_BASE_URL);
 
   subscriptions(): Observable<SubscriptionsResponse> {
-    return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`);
+    return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`, {
+      context: retryingTransientGatewayErrors(),
+    });
   }
 
   /** The sidebar poll's cheap tick (#720): counts only, no feeds or tags. */
   subscriptionCounts(): Observable<SubscriptionCountsResponse> {
-    return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`);
+    return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`, {
+      context: retryingTransientGatewayErrors(),
+    });
   }
 
   subscribe(request: SubscribeRequest): Observable<SubscribeResult> {
@@ -74,24 +79,29 @@ export class ReaderApi {
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
     const params = this.pageParams(query, cursor);
+    const context = retryingTransientGatewayErrors();
     if (query.savedSearchId != null) {
       return this.http.get<EntriesPage>(
         `${this.base}/api/entries/saved-searches/${query.savedSearchId}`,
-        { params },
+        { params, context },
       );
     }
     if (query.q) {
       return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, {
         params: params.set('q', query.q),
+        context,
       });
     }
     if (query.view === 'saved-searches') {
-      return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, { params });
+      return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, {
+        params,
+        context,
+      });
     }
     let listParams = params.set('view', query.view);
     if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
     if (query.tag != null) listParams = listParams.set('tag', query.tag);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams });
+    return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams, context });
   }
 
   private pageParams(query: EntryQuery, cursor?: string | null): HttpParams {
@@ -229,7 +239,9 @@ export class ReaderApi {
   }
 
   savedSearches(): Observable<{ savedSearches: SavedSearchWire[] }> {
-    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`);
+    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`, {
+      context: retryingTransientGatewayErrors(),
+    });
   }
 
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {

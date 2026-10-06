@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
+import { transientGatewayRetryInterceptor } from '../core/http/retry-transient-gateway-errors';
 import { ReaderApi } from './reader-api';
 import { PAGE_SIZE } from './list/paging';
 import { ReaderContent } from './models';
+import { Observable } from 'rxjs';
 import { refreshReport } from '../../testing/refresh-report';
 
 describe('ReaderApi', () => {
@@ -14,7 +16,7 @@ describe('ReaderApi', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withInterceptors([transientGatewayRetryInterceptor])),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
@@ -30,6 +32,40 @@ describe('ReaderApi', () => {
     const testRequest = ctrl.expectOne('https://api.test/api/subscriptions');
     expect(testRequest.request.method).toBe('GET');
     testRequest.flush({ subscriptions: [] });
+  });
+
+  describe('transient gateway failures (#1420)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it.each<[string, () => Observable<unknown>, string]>([
+      ['subscriptions', () => api.subscriptions(), 'https://api.test/api/subscriptions'],
+      ['counts', () => api.subscriptionCounts(), 'https://api.test/api/subscriptions/counts'],
+      ['saved searches', () => api.savedSearches(), 'https://api.test/api/saved-searches'],
+    ])('retries the sidebar %s read after a 503', (_name, read, url) => {
+      const responses: unknown[] = [];
+      read().subscribe((response) => responses.push(response));
+
+      ctrl.expectOne(url).flush(null, { status: 503, statusText: 'Service Unavailable' });
+      jest.advanceTimersByTime(2000);
+      ctrl.expectOne(url).flush({});
+
+      expect(responses).toEqual([{}]);
+    });
+
+    it('never retries a write', () => {
+      const errors: unknown[] = [];
+      api
+        .subscribe({ url: 'https://example.com/feed' })
+        .subscribe({ error: (error) => errors.push(error) });
+
+      ctrl
+        .expectOne('https://api.test/api/subscriptions')
+        .flush(null, { status: 504, statusText: 'x' });
+      jest.advanceTimersByTime(20000);
+
+      expect(errors).toHaveLength(1);
+    });
   });
 
   it('POSTs a subscribe URL', () => {
