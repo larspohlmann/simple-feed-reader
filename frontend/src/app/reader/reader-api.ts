@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
+import { retryTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
 import { RefreshScope } from './query/query';
 import {
@@ -47,12 +48,16 @@ export class ReaderApi {
   private readonly base = inject(API_BASE_URL);
 
   subscriptions(): Observable<SubscriptionsResponse> {
-    return this.http.get<SubscriptionsResponse>(`${this.base}/api/subscriptions`);
+    return this.http
+      .get<SubscriptionsResponse>(`${this.base}/api/subscriptions`)
+      .pipe(retryTransientGatewayErrors());
   }
 
   /** The sidebar poll's cheap tick (#720): counts only, no feeds or tags. */
   subscriptionCounts(): Observable<SubscriptionCountsResponse> {
-    return this.http.get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`);
+    return this.http
+      .get<SubscriptionCountsResponse>(`${this.base}/api/subscriptions/counts`)
+      .pipe(retryTransientGatewayErrors());
   }
 
   subscribe(request: SubscribeRequest): Observable<SubscribeResult> {
@@ -73,6 +78,10 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    return this.entriesPage(query, cursor).pipe(retryTransientGatewayErrors());
+  }
+
+  private entriesPage(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
     const params = this.pageParams(query, cursor);
     if (query.savedSearchId != null) {
       return this.http.get<EntriesPage>(
@@ -229,7 +238,9 @@ export class ReaderApi {
   }
 
   savedSearches(): Observable<{ savedSearches: SavedSearchWire[] }> {
-    return this.http.get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`);
+    return this.http
+      .get<{ savedSearches: SavedSearchWire[] }>(`${this.base}/api/saved-searches`)
+      .pipe(retryTransientGatewayErrors());
   }
 
   createSavedSearch(body: SavedSearchDraft): Observable<{ savedSearch: SavedSearchWire }> {

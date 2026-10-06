@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, finalize } from 'rxjs';
+import { Observable, Subscription, finalize } from 'rxjs';
 import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
@@ -51,21 +51,19 @@ export class EntriesStore {
    *  state PATCH. Cleared when any fresh operation starts, so a stale failure
    *  never lingers behind a later success (#996). */
   private readonly failedOperation = accountSignal<(() => void) | null>(null);
-  /** Monotonic token stamped on every load/loadMore request; a stale response is
-   *  dropped so it can't clobber a fresher result — refresh fires overlapping
-   *  reloads that can arrive out of order (#158). Mirrors the shell's id-guard. */
-  private loadSeq = 0;
+  /** The list request on the wire, cancelled once a newer load or another account supersedes it: a stale
+   *  response can't clobber a fresher one (#158), nor a pending gateway retry fire for a list the user left. */
+  private listRequest: Subscription | null = null;
 
   constructor() {
     onIdentityChange(() => {
-      this.loadSeq++;
+      this.listRequest?.unsubscribe();
       this.inFlightPatches.clear();
     });
   }
 
   load(query: EntryQuery): void {
     this.query.set(query);
-    const seq = ++this.loadSeq;
     // The outgoing list stays rendered until the response lands (#254) — a
     // blank pane made every view switch feel like the full round trip. Only
     // the cursor is dropped, so no pagination can extend the stale list.
@@ -76,16 +74,15 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
     this.loadedAt.set(new Date().toISOString());
-    this.api.entries(query).subscribe({
+    this.listRequest?.unsubscribe();
+    this.listRequest = this.api.entries(query).subscribe({
       next: (page) => {
-        if (seq !== this.loadSeq) return;
         this.rawEntries.set(this.withInFlightPatches(page.entries));
         this.nextCursor.set(page.nextCursor);
         this.matchedWords.set(page.matchedWords ?? []);
         this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        if (seq !== this.loadSeq) return;
         // Drop the retained rows: loading ends here, so they would un-dim and
         // turn interactive again while belonging to a view the user has left.
         this.rawEntries.set([]);
@@ -109,12 +106,10 @@ export class EntriesStore {
     const cursor = this.nextCursor();
     const query = this.query();
     if (!cursor || !query || this.loading() || this.loadingMore()) return;
-    const seq = this.loadSeq;
     this.loadingMore.set(true);
     this.failedOperation.set(null);
-    this.api.entries(query, cursor).subscribe({
+    this.listRequest = this.api.entries(query, cursor).subscribe({
       next: (page) => {
-        if (seq !== this.loadSeq) return; // a load() has since replaced the list
         this.rawEntries.update((current) => [
           ...current,
           ...this.withInFlightPatches(page.entries),
@@ -129,7 +124,6 @@ export class EntriesStore {
         this.loadingMore.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        if (seq !== this.loadSeq) return;
         this.error.set(parseProblem(error));
         this.failedOperation.set(() => this.loadMore());
         this.loadingMore.set(false);
