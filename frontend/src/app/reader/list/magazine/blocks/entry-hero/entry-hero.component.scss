@@ -49,6 +49,8 @@
 
 /* Boxed clips the image's corners via the card's own overflow: hidden. */
 :host-context(.airy) .img {
+  @include magazine-card.image-rim;
+
   border-radius: var(--radius-lg);
 }
 

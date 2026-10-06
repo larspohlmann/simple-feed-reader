@@ -91,3 +91,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+:host-context(.airy) .img {
+  @include magazine-card.image-rim;
+}
