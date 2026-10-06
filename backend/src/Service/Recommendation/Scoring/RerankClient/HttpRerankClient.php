@@ -9,6 +9,7 @@ use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
 use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
 use App\Service\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Recommendation\Scoring\Support\CompactJson;
 use App\Service\Recommendation\Scoring\Support\RerankReplyDecoder;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -33,7 +34,10 @@ final readonly class HttpRerankClient implements RerankClientInterface
                     => RerankReplyDecoder::decode($body, $requests[$position]->entryIds()),
             ),
             $credentials,
-            array_map(static fn (RerankRequestModel $request): string => $request->toRequestBody(), $requests),
+            array_map(
+                static fn (RerankRequestModel $request): string => CompactJson::encode($request->payload()),
+                $requests,
+            ),
         );
     }
 }

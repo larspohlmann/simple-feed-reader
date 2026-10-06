@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Scoring\Model;
 
 use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
+use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\PrettyJson;
 use PHPUnit\Framework\TestCase;
 
 final class RerankRequestModelTest extends TestCase
@@ -15,7 +17,7 @@ final class RerankRequestModelTest extends TestCase
         self::assertSame(
             '{"model":"cohere/rerank-4-fast","query":"Likes Rust.","documents":["Kernel 6.18 — LWN, 2026-10-01.",'
             . '"Soup — Kitchen, 2026-10-02."]}',
-            self::request()->toRequestBody(),
+            CompactJson::encode(self::request()->payload()),
         );
     }
 
@@ -37,7 +39,7 @@ final class RerankRequestModelTest extends TestCase
                     ]
                 }
                 JSON,
-            self::request()->toRenderedRequest(),
+            PrettyJson::of(self::request()->payload()),
         );
     }
 

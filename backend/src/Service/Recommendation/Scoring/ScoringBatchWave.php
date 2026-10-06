@@ -23,7 +23,7 @@ use App\Service\Recommendation\Scoring\Pass\ScoringWave;
 /**
  * One scoring request per batch, each a run-log row.
  *
- * @implements BatchWaveEngineInterface<ScoringWave, ScoringRequestModel, ScoringOutcomeModel>
+ * @implements BatchWaveEngineInterface<ScoringWave, object, ScoringOutcomeModel>
  */
 final readonly class ScoringBatchWave implements BatchWaveEngineInterface
 {
@@ -39,19 +39,19 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     /**
      * @param ScoringWave $wave
      *
-     * @return BatchCall<ScoringRequestModel>
+     * @return BatchCall<object>
      */
     public function open(BatchWaveInterface $wave, int $position): BatchCall
     {
         $tick = $wave->tick();
         $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
         $waveBatch = $wave->batches()[$position];
-        $request = new ScoringRequestModel(
+        $request = $protocol->word(new ScoringRequestModel(
             $tick->connection->getModel() ?? '',
             $wave->reader,
             $protocol->budget($tick->requireScoringContextWindow()),
             $waveBatch->requireLinesInSnapshotOrder(),
-        );
+        ));
         $recordedCall = $this->callRecorder->begin(
             $tick->run,
             CallSlotModel::batch($waveBatch->index + 1),
@@ -63,7 +63,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
 
     /**
      * @param ScoringWave                                    $wave
-     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
+     * @param non-empty-list<BatchCall<object>> $calls
      *
      * @return RateLimitedResultModel<ScoringOutcomeModel>
      */
@@ -105,7 +105,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
      * Books each paid answer the moment it arrives, so a sibling's failure or a deferral still bills what it cost. Only
      * a limited request is re-sent, so no answer is booked twice.
      *
-     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
+     * @param non-empty-list<BatchCall<object>> $calls
      * @param list<ScoringOutcomeModel>                      $outcomes aligned to $calls
      *
      * @return list<ScoringOutcomeModel>
@@ -124,13 +124,13 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
     }
 
     /**
-     * @param non-empty-list<BatchCall<ScoringRequestModel>> $calls
+     * @param non-empty-list<BatchCall<object>> $calls
      *
-     * @return non-empty-list<ScoringRequestModel>
+     * @return non-empty-list<object>
      */
     private static function requestsOf(array $calls): array
     {
-        return array_map(static fn (BatchCall $call): ScoringRequestModel => $call->request, $calls);
+        return array_map(static fn (BatchCall $call): object => $call->request, $calls);
     }
 
     /** A gateway's invalid byte must not reach a utf8mb4 column: MySQL strict mode would fail the tick's write. */

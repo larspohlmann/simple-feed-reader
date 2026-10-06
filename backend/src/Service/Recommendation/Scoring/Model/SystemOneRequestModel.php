@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Scoring\Model;
 
-use App\Service\Recommendation\Scoring\Support\CompactJson;
-use App\Service\Recommendation\Support\PrettyJson;
-
 final readonly class SystemOneRequestModel
 {
     /**
@@ -20,18 +17,8 @@ final readonly class SystemOneRequestModel
     ) {
     }
 
-    public function toRequestBody(): string
-    {
-        return CompactJson::encode($this->payload());
-    }
-
-    public function toRenderedRequest(): string
-    {
-        return PrettyJson::of($this->payload());
-    }
-
     /** @return array{model: string, state: array<string, mixed>, questions: array<string, array<string, mixed>>} */
-    private function payload(): array
+    public function payload(): array
     {
         return ['model' => $this->model, 'state' => $this->state, 'questions' => $this->questions];
     }

@@ -10,6 +10,7 @@ use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
 use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
+use App\Service\Recommendation\Scoring\Support\CompactJson;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestFactoryTest extends TestCase
@@ -85,7 +86,7 @@ final class SystemOneRequestFactoryTest extends TestCase
             ['title' => 'Caf? au lait', 'feedName' => 'Feed?', 'date' => '2026-10-01', 'description' => '? ok'],
             $factory->question($article)['instructions']['article'],
         );
-        self::assertJson($factory->create(self::request('jev-latest', [$article]))->toRequestBody());
+        self::assertJson(CompactJson::encode($factory->create(self::request('jev-latest', [$article]))->payload()));
     }
 
     public function testTheRequestAsksTheRequestsModel(): void

@@ -10,6 +10,7 @@ use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
 use App\Service\Recommendation\Scoring\ScoringHttpTransport;
+use App\Service\Recommendation\Scoring\Support\CompactJson;
 use App\Service\Recommendation\Scoring\Support\SystemOneReplyDecoder;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -31,7 +32,10 @@ final readonly class HttpSystemOneClient implements SystemOneClientInterface
         return $this->transport->sendAll(
             new ScoringEndpoint(self::PATH, self::RETRYABLE_STATUSES, self::decode(...)),
             $credentials,
-            array_map(static fn (SystemOneRequestModel $request): string => $request->toRequestBody(), $requests),
+            array_map(
+                static fn (SystemOneRequestModel $request): string => CompactJson::encode($request->payload()),
+                $requests,
+            ),
         );
     }
 

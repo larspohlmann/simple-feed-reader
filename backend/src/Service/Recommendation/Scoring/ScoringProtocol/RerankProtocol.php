@@ -9,11 +9,17 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Scoring\Factory\RerankRequestFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Recommendation\Scoring\Model\RerankRequestModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\RerankClient\RerankClientInterface;
+use App\Service\Recommendation\Support\PrettyJson;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** A reranker: the reader as the query, one document per article, each ranked by its relevance to the query. */
+/**
+ * A reranker: the reader as the query, one document per article, each ranked by its relevance to the query.
+ *
+ * @implements ScoringProtocolInterface<RerankRequestModel>
+ */
 #[AsTaggedItem(index: ScoringProtocol::Rerank->value)]
 final readonly class RerankProtocol implements ScoringProtocolInterface
 {
@@ -38,13 +44,18 @@ final readonly class RerankProtocol implements ScoringProtocolInterface
         );
     }
 
-    public function renderedRequest(ScoringRequestModel $request): string
+    public function word(ScoringRequestModel $request): RerankRequestModel
     {
-        return $this->requestFactory->create($request)->toRenderedRequest();
+        return $this->requestFactory->create($request);
+    }
+
+    public function renderedRequest(object $request): string
+    {
+        return PrettyJson::of($request->payload());
     }
 
     public function scoreMany(ProviderCredentialsModel $credentials, array $requests): array
     {
-        return $this->client->rerankMany($credentials, array_map($this->requestFactory->create(...), $requests));
+        return $this->client->rerankMany($credentials, $requests);
     }
 }

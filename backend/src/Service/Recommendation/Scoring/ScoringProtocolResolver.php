@@ -18,6 +18,7 @@ final readonly class ScoringProtocolResolver
     ) {
     }
 
+    /** @return ScoringProtocolInterface<object> */
     public function protocolOf(ScoringProtocol $protocol): ScoringProtocolInterface
     {
         try {

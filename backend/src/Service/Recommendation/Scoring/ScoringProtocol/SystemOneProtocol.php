@@ -9,14 +9,20 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
+use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\ScoringBatchPacker;
 use App\Service\Recommendation\Scoring\Support\CompactJson;
 use App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface;
 use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Recommendation\Support\PrettyJson;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/** TypeSafe's System One: the reader once per request in `state`, one `noul` question per article. */
+/**
+ * TypeSafe's System One: the reader once per request in `state`, one `noul` question per article.
+ *
+ * @implements ScoringProtocolInterface<SystemOneRequestModel>
+ */
 #[AsTaggedItem(index: ScoringProtocol::SystemOne->value)]
 final readonly class SystemOneProtocol implements ScoringProtocolInterface
 {
@@ -40,14 +46,19 @@ final readonly class SystemOneProtocol implements ScoringProtocolInterface
         return $this->packer->pack($candidates, $budget, $this->questionTokens(...));
     }
 
-    public function renderedRequest(ScoringRequestModel $request): string
+    public function word(ScoringRequestModel $request): SystemOneRequestModel
     {
-        return $this->requestFactory->create($request)->toRenderedRequest();
+        return $this->requestFactory->create($request);
+    }
+
+    public function renderedRequest(object $request): string
+    {
+        return PrettyJson::of($request->payload());
     }
 
     public function scoreMany(ProviderCredentialsModel $credentials, array $requests): array
     {
-        return $this->client->evaluateMany($credentials, array_map($this->requestFactory->create(...), $requests));
+        return $this->client->evaluateMany($credentials, $requests);
     }
 
     private function questionTokens(ArticleLineModel $candidate): int
