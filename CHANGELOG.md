@@ -10,6 +10,21 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**More models can score your feed.** For You now works with rerankers and other
+scoring models from any provider, not just Jev.
+
+**Pick models by what they do.** The AI settings first ask whether you want a chat
+model or a scoring model, then tag each option and explain what its score means.
+
+**A new glass rim look.** Cards, dialogs, settings and the reader all share a
+subtle glass rim, with a matching treatment for magazine images and a darker
+shade in dark mode.
+
+**Small fixes.** Dropdowns draw their chevron cleanly, fields keep their focus
+ring, and the debug logs are easier to read.
+
 ## [v1.1.2] - 2026-10-05
 
 ## What's Changed
