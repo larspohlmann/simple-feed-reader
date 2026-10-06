@@ -167,9 +167,10 @@ interface ScoringProtocolInterface
 
 - **System One:** state `{profile, guidance?}`, one `noul` question per article (today's request, byte for byte).
   Packing: the state once, the questions summed, at most 64.
-- **Rerank:** `query` = profile + guidance + the question sentence, fitted to the query budget; `documents` = one compact
-  line per article ("title — feed, date. description", `ScoringArticle`'s caps), each cut to what is left of the window
-  after the query; no `top_n`. Packing: at most 100 documents; the window bounds each document, not their sum.
+- **Rerank:** `query` = the question sentence, then the guidance, then the profile, fitted to the query budget;
+  `documents` = one compact line per article ("title — feed, date. description", `ScoringArticle`'s caps), each cut to
+  what is left of the window after the query; no `top_n`. Packing: at most 100 documents; the window bounds each
+  document, not their sum.
 
 Each protocol decodes its reply to `article id → value in [0,1]` plus the receipt:
 

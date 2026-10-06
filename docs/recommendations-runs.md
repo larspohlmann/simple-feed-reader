@@ -118,7 +118,7 @@ whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\Rate
 recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
 `models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
-label beside its id (`"System One"` for a model the catalog tagged with that protocol, `null` for an LLM), its `kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `null` for an LLM); a configuration carries the `kind` and `family` of its saved model. The picker asks for the kind first, lists only that kind's models and tags each scoring model by its family, so no client parses an id or branches on the label:
+label beside its id (`"System One"` or `"Rerank"` for a model the catalog tagged with that protocol, `null` for an LLM), its `kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `reranker` for Rerank, `null` for an LLM); a configuration carries the `kind` and `family` of its saved model. The picker asks for the kind first, lists only that kind's models and tags each scoring model by its family, so no client parses an id or branches on the label:
 
 ```json
 {"models": [{"id": "~typesafe/jev-latest", "label": "System One", "kind": "scoring", "family": "decision",
@@ -129,22 +129,25 @@ The scoring engine (`Service/Recommendation/Scoring`) scores every candidate aga
 text. It speaks to the model through a protocol (`ScoringProtocol/ScoringProtocolInterface`, one implementation per
 `App\Enum\ScoringProtocol` case, found by `ScoringProtocolResolver`): the protocol packs the pool, words each request
 and reads each reply as a value in [0, 1] per article. A connection stores the protocol beside the kind when its model
-is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what each model is: `OpenAiCompatibleCatalog` reads `GET {base}/models?output_modalities=all`; an entry whose `architecture.output_modalities` holds `text`, or that reports none (LM Studio, Ollama, OpenAI), is an LLM; `["decisions"]` is a System One model, listed only with a positive window (`context_length`, else `max_context_length`; its requests are budgeted from it, which leaves out Respan's `span-01*`); every other output (rerank, embeddings, image alone, …) is left out, while a model that outputs text beside images is an LLM. `SystemOneCatalog` probes `{base}/systemone` and offers `jev-latest` (32k) only when no listing named a System One model (TypeSafe direct, whose `/models` is not OpenAI-shaped); OpenRouter lists Jev itself as `~typesafe/jev-latest`.
+is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what each model is: `OpenAiCompatibleCatalog` reads `GET {base}/models?output_modalities=all`; an entry whose `architecture.output_modalities` holds `text`, or that reports none (LM Studio, Ollama, OpenAI), is an LLM; `["decisions"]` is a System One model and `["rerank"]` a Rerank model, each listed only with a positive window (`context_length`, else `max_context_length`; its requests are budgeted from it, which leaves out Respan's `span-01*`); every other output (embeddings, image alone, …) is left out, while a model that outputs text beside images is an LLM. `SystemOneCatalog` probes `{base}/systemone` and offers `jev-latest` (32k) only when no listing named a System One model (TypeSafe direct, whose `/models` is not OpenAI-shaped); OpenRouter lists Jev itself as `~typesafe/jev-latest`.
 
 | Protocol | Request | Per request |
 |---|---|---|
 | System One (`system_one`) | `POST {base}/systemone`, directly or through OpenRouter: `state` = `{profile, guidance?, favorites?}`, one `noul` question per article | at most 64 questions (Cloudflare's Clef refuses more); of the model's stored window, 2k for framing, `min(10k, 30 %)` for the state and the rest for questions (`SystemOneProtocol::budget()`, `ScoringBudgetModel::forWindow()`) |
+| Rerank (`rerank`) | `POST {base}/rerank` through OpenRouter: `query` = the question, the guidance and the profile; `documents` = one line per article ("title — feed, date. description"); no `top_n`. Results come back sorted by relevance and are mapped to articles by `index` | at most 100 documents (one Cohere search unit); the query gets `min(10k, 30 %)` of the model's stored window, and each document what is left after that and 2k of framing — the window bounds each document, not their sum (`RerankProtocol::budget()`) |
 
-A run freezes the stored profile when it snapshots; a scoring model needs one and fails with a message that says so
-when there is none (an account with neither reading history nor a saved search). The LLM engine scores without a
-profile in that case. The value is the score (× 1000); there are no reasons and no consolidation, so the list is the
-best-scored picks once every batch is in. The engine reads only the batch-concurrency setting and records each call's
-request id, answering model and cost in the run log. `ScoringHttpTransport` sends a protocol's requests (its own idle
-and wall-clock timeouts, the tick heartbeat, a 1 MiB reply cap) and maps the statuses every protocol shares; a
-protocol adds only its retryable statuses (System One: 429 and 529). A run records the engine kind and the scoring
-protocol it was packed for; a tick that finds the active connection on another kind or protocol, or a scoring run's
-connection on another model (its batches were packed for that model's window), fails the run with an error that says
-so (switch back to resume it). An LLM run follows a model change.
+A run freezes the stored profile when it snapshots; a scoring model needs one and fails with a message that says so when
+there is none (an account with neither reading history nor a saved search). The LLM engine scores without a profile in
+that case. The value is the score (× 1000): a decision model's probability, or a reranker's relevance, which only ranks
+the articles of one run against each other (the for-you feed orders by run, then position, and never compares scores
+across runs); there are no reasons and no consolidation, so the list is the best-scored picks once every batch is in.
+The engine reads only the batch-concurrency setting and records each call's request id, answering model and cost in the
+run log. `ScoringHttpTransport` sends a protocol's requests (its own idle and wall-clock timeouts, the tick heartbeat, a
+1 MiB reply cap) and maps the statuses every protocol shares; a protocol adds only its retryable statuses (System One
+and Rerank: 429 and 529). A run records the engine kind and the scoring protocol it was packed for; a tick that finds
+the active connection on another kind or protocol fails the run with an error naming the kinds of model; a scoring run
+whose connection holds another model of its protocol (its batches were packed for that model's window) fails with an
+error naming the model switch. Switching back resumes either. An LLM run follows a model change.
 
 ### The profile
 
