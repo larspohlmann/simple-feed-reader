@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/corner-circle-button' as circle;
+@use '../../../theme/glass-rim';
 
 /* What every scroller/overlay branch below reserves before its own content:
    app bar + list header + gap. Was 4 independent copies of this calc
@@ -83,13 +84,13 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
 }
 
 .pull-indicator .pill {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
   box-shadow: var(--shadow-1, 0 1px 4px rgb(0 0 0 / 15%));
   color: var(--text-secondary);
   font-size: var(--fs-sm);
@@ -100,8 +101,9 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
 }
 
 .pull-indicator.armed .pill {
+  --rim-base: var(--accent);
+
   color: var(--accent);
-  border-color: var(--accent);
 }
 
 .rows {
@@ -211,7 +213,7 @@ app-progress-rail {
   /* The card's chrome in one place, so airy is a different set of VALUES
      rather than a branch in seven block components (#723). */
   --card-bg: var(--surface-2);
-  --card-border: 1px solid var(--border);
+  --card-border-width: 1px;
   --card-radius: var(--radius-lg);
   --card-pad: var(--space-3);
   --card-pad-x: var(--space-4);
@@ -248,8 +250,9 @@ app-progress-rail {
 /* The gap grows because it is now the block's only padding AND the bed the rule
    sits in: centred in the gap, the rule reads as a strikethrough (#723). */
 .rows.magazine.airy {
+  /* `none`, never `transparent`: it voids the cards' whole rim background. */
   --card-bg: none;
-  --card-border: 0;
+  --card-border-width: 0;
   --card-radius: 0;
   --card-pad: 0;
   --card-pad-x: 0;
@@ -375,10 +378,10 @@ app-loading-overlay {
 }
 
 .load-more {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   cursor: pointer;
 }

@@ -1,11 +1,14 @@
+@use 'glass-rim';
+
 // The sidebar's segmented-control frame: the view-controls groups and the
 // brightness stepper share it so the foot reads as one family. Each consumer
 // adds its own button sizing and active/disabled states.
 @mixin frame {
   .seg {
+    @include glass-rim.filled(var(--surface-2), var(--border), control);
+
     display: inline-flex;
     flex: 1 1 auto;
-    border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
   }

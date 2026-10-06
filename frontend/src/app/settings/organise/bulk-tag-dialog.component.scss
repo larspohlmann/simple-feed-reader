@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 .hint,
 .effect {
   margin: 0 0 var(--space-3);
@@ -13,21 +15,22 @@
 }
 
 .pill {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   cursor: pointer;
 }
 
 .pill.chosen {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  --rim-base: var(--accent);
+  --rim-fill: var(--accent-soft);
+
   color: var(--accent);
   font-weight: 600;
 }
@@ -40,6 +43,6 @@
 
 @media (hover: hover) {
   .pill:hover {
-    border-color: var(--accent);
+    --rim-base: var(--accent);
   }
 }

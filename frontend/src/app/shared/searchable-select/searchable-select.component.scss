@@ -1,9 +1,13 @@
+@use '../../theme/glass-rim';
+
 .wrap {
   position: relative;
   width: 100%;
 }
 
 .trigger {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -11,16 +15,14 @@
   width: 100%;
   height: var(--control-h);
   padding: 0 var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   cursor: pointer;
 }
 
 .trigger.open,
 .trigger:hover {
-  border-color: var(--border-strong);
+  --rim-base: var(--border-strong);
 }
 
 .trigger:disabled {
@@ -39,33 +41,25 @@
 }
 
 .panel {
+  @include glass-rim.filled(var(--surface-2));
+
   position: absolute;
   z-index: 20;
   inset-inline: 0;
   margin-top: var(--space-1);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-2);
   box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
 }
 
-/* A real bordered text input, not a bare line: same chrome as `.trigger`
-   above, so the filter reads as a control immediately, with the app's usual
-   focus ring. */
 .search {
+  --field-rim-base: var(--border-strong);
+
   display: block;
   width: auto;
   margin: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
 }
 
 .search:focus {
-  border-color: var(--accent);
-  outline: none;
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 

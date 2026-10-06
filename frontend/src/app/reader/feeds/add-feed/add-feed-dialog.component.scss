@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 // The frame is app-overlay-panel's; `display: contents` on host and form
 // removes the boxes CDK can't centre/stretch. Discovery can return many
 // candidate cards, so the panel caps at 90dvh and scrolls its body (#85).
@@ -68,6 +70,8 @@ app-tag-picker {
 }
 
 .card {
+  @include glass-rim.filled(var(--surface-1));
+
   /* A card inside a flex column must keep its natural height rather than
      compress to make the list fit. */
   flex: none;
@@ -75,8 +79,6 @@ app-tag-picker {
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
@@ -103,6 +105,8 @@ app-tag-picker {
 }
 
 .preview-toggle {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   /* The explicit affordance: a pill that reads "Preview ›", so the reader
      knows the card opens — a bare chevron was too easy to miss. */
   flex: none;
@@ -110,9 +114,7 @@ app-tag-picker {
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -121,7 +123,8 @@ app-tag-picker {
 }
 
 .preview-toggle:hover {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+
   color: var(--text-primary);
 }
 
@@ -149,13 +152,15 @@ app-tag-picker {
 .badge {
   font-size: var(--fs-sm);
   padding: 0 var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-secondary);
+
+  @include glass-rim.ring(var(--border), control);
 }
 
 .badge.format {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+
   color: var(--accent);
   font-weight: 600;
   text-transform: uppercase;
@@ -164,13 +169,13 @@ app-tag-picker {
 
 .badge.experimental {
   background: var(--surface-2);
-  border-color: var(--border);
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .preview-rows {
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-1));
+
   border-radius: var(--radius);
   overflow: hidden;
 }

@@ -2,6 +2,7 @@
 // unread switch, Mark all read, Refresh, Save search. Global because several
 // are projected through the list header's outlets (view encapsulation).
 @use '../app/theme/breakpoints' as bp;
+@use '../app/theme/glass-rim';
 
 .list-action {
   display: inline-flex;
@@ -49,8 +50,9 @@
   #{$action} app-icon {
     display: inline-flex;
     padding: var(--space-2);
-    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+
+    @include glass-rim.ring(var(--border), control);
   }
 }
 

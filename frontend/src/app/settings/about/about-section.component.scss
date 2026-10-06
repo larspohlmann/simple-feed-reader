@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
 
 // Every direct child of the group panel pads itself: the panel is unpadded by
 // design (its rows pad themselves), so these blocks read the same inset the
@@ -24,9 +25,9 @@
 }
 
 .tile {
+  @include glass-rim.filled(var(--surface-2));
+
   padding: var(--space-3) var(--space-4);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
 
@@ -118,12 +119,12 @@
 }
 
 .chart-tip {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   position: absolute;
   top: 0;
   transform: translateX(-50%);
   padding: var(--space-0) var(--space-2);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--panel-shadow);
   font-size: var(--fs-xs);

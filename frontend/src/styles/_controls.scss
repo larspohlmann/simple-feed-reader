@@ -1,13 +1,15 @@
+@use '../app/theme/glass-rim';
+
 // Styles for the native controls projected into <app-field>. Global because
 // ViewEncapsulation doesn't style projected content. Checkbox/radio/colour
 // inputs are excluded: the user agent paints those, and a border distorts them.
 input:not([type='checkbox'], [type='radio'], [type='color']),
 select,
 textarea {
+  @include glass-rim.filled(var(--surface-1), var(--field-rim-base, var(--border)), control);
+
   padding: 0 var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   font: inherit;
 }
@@ -20,6 +22,40 @@ select {
 textarea {
   padding: var(--space-2) var(--space-3);
   line-height: var(--lh-normal);
+}
+
+$chevron-leg: 4px;
+
+// Room below the tip for the stroke's mitred point; a square box clips it flat.
+$chevron-box-height: $chevron-leg + 4px;
+
+@function chevron-leg($angle, $offset) {
+  $ink: var(--text-secondary);
+
+  @return linear-gradient(
+      $angle,
+      transparent calc(50% - 1px),
+      $ink calc(50% - 0.4px) calc(50% + 0.4px),
+      transparent calc(50% + 1px)
+    )
+    right $offset center / $chevron-leg $chevron-box-height no-repeat padding-box;
+}
+
+// Chrome's native arrow ignores padding-inline-end, so the app draws its own.
+select {
+  --select-inset: var(--space-3);
+
+  @include glass-rim.layers(
+    control,
+    (
+      chevron-leg(45deg, calc(var(--select-inset) + #{$chevron-leg})),
+      chevron-leg(-45deg, var(--select-inset))
+    )
+  );
+
+  appearance: none;
+  padding-inline: var(--select-inset)
+    calc(var(--select-inset) + #{2 * $chevron-leg} + var(--space-2));
 }
 
 // Width is layout, not chrome, so it belongs to the field: inside <app-field>
@@ -45,7 +81,8 @@ app-password-input input {
 input:not([type='checkbox'], [type='radio'], [type='color']):focus,
 select:focus,
 textarea:focus {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+
   outline: none;
 }
 
@@ -55,7 +92,7 @@ textarea:focus {
 input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true'],
 select[aria-invalid='true'],
 textarea[aria-invalid='true'] {
-  border-color: var(--danger);
+  --rim-base: var(--danger);
 }
 
 input:disabled,

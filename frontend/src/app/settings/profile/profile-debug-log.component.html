@@ -1,23 +1,16 @@
 @if (entries().length > 0) {
-  <ol class="profile-log" data-testid="profile-log">
-    @for (entry of entries(); track entry.id) {
-      <li class="profile-log__entry">
-        <button type="button" class="profile-log__head" (click)="toggle(entry)">
-          {{ 'settings.ai.recommendations.debugAttempt' | transloco: { n: entry.attempt } }} ·
-          {{ entry.verdict ?? '…' }}
-        </button>
-        @if (entry.streamingText; as text) {
-          <pre class="profile-log__body">{{ text }}</pre>
-        }
-        @if (details().get(entry.id); as detail) {
-          <pre class="profile-log__body" data-testid="profile-log-request">{{
-            detail.requestBody
-          }}</pre>
-          <pre class="profile-log__body" data-testid="profile-log-response">{{
-            detail.responseText
-          }}</pre>
-        }
-      </li>
-    }
-  </ol>
+  <div class="profile-log" data-testid="profile-log">
+    <ol class="profile-log__list">
+      @for (entry of entries(); track entry.id) {
+        <li>
+          <app-debug-log-entry
+            [entry]="entry"
+            [expanded]="details.isExpanded(entry.id)"
+            [detail]="details.detailFor(entry.id)"
+            (toggled)="details.toggle(entry.id)"
+          />
+        </li>
+      }
+    </ol>
+  </div>
 }

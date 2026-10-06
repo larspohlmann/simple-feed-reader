@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 // Layout glue only: `app-settings-row` draws the line/title/description now.
 // The save-error banners are panel-level blocks taking their inset from the
 // shared `.state` utility, so nothing about them lives here either.
@@ -6,10 +8,11 @@
 // row's `[rowTitleTip]` slot.
 .badge {
   padding: 0 var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   color: var(--text-secondary);
   font-size: var(--fs-xs);
   text-transform: uppercase;
   white-space: nowrap;
+
+  @include glass-rim.ring(var(--border), control);
 }

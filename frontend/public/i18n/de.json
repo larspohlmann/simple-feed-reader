@@ -332,6 +332,7 @@
         "debugPanelTitle": "Debug-Protokoll",
         "debugBatch": "Batch {{ n }}",
         "debugDedup": "Dedup",
+        "debugDistill": "Destillation",
         "debugAttempt": "Versuch {{ n }}",
         "debugRequest": "Anfrage",
         "debugResponse": "Antwort",

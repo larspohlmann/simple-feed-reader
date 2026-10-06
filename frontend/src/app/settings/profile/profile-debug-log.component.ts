@@ -10,16 +10,18 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { DebugLogDetails } from '../debug-log/debug-log-details.service';
+import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { SettingsApi } from '../settings-api';
-import { DebugLogDetail, DebugLogEntry } from '../settings.models';
+import { DebugLogEntry } from '../settings.models';
 
 const POLL_MS = 2000;
 
 /** The newest profile run's provider calls, polled while the run is active; a row opens to its bodies. */
 @Component({
   selector: 'app-profile-debug-log',
-  imports: [TranslocoPipe],
+  imports: [DebugLogEntryComponent],
+  providers: [DebugLogDetails],
   templateUrl: './profile-debug-log.component.html',
   styleUrl: './profile-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,12 +30,12 @@ export class ProfileDebugLogComponent {
   private readonly api = inject(SettingsApi);
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
+  readonly details = inject(DebugLogDetails);
 
   readonly running = input(false);
   readonly runId = input<number | null>(null);
 
   readonly entries = signal<DebugLogEntry[]>([]);
-  readonly details = signal<ReadonlyMap<number, DebugLogDetail>>(new Map());
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -46,26 +48,16 @@ export class ProfileDebugLogComponent {
     this.destroyRef.onDestroy(() => this.stop());
   }
 
-  toggle(entry: DebugLogEntry): void {
-    if (this.details().has(entry.id)) {
-      const without = new Map(this.details());
-      without.delete(entry.id);
-      this.details.set(without);
-      return;
-    }
-    this.api
-      .debugLogEntry(entry.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((detail) => this.details.set(new Map(this.details()).set(entry.id, detail)));
-  }
-
   private fetch(running: boolean): void {
     this.stop();
     this.api
       .profileDebugLog()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (payload) => this.entries.set(payload.entries),
+        next: (payload) => {
+          this.details.observe(payload.entries);
+          this.entries.set(payload.entries);
+        },
         // A failed read keeps the last entries; the next poll tries again.
         error: () => undefined,
       });

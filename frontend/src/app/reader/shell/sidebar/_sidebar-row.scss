@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 // Row styles the sidebar shares with its feed-row and saved-search children.
 // Each consumer includes them first, then adds its own rules.
 @mixin nav-row {
@@ -116,8 +118,9 @@
   .chevzone app-icon {
     display: inline-flex;
     padding: var(--space-2);
-    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+
+    @include glass-rim.ring(var(--border), control);
   }
 
   /* Touch: the whole button becomes a 44px tap target, its spare room the margin
@@ -158,12 +161,12 @@
   }
 
   .pop {
+    @include glass-rim.filled(var(--surface-2));
+
     position: absolute;
     right: 0;
     top: 28px;
     z-index: 2;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
     border-radius: var(--radius);
 
     /* stylelint-disable-next-line declaration-property-unit-allowed-list --

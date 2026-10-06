@@ -1,7 +1,9 @@
+@use '../../theme/glass-rim';
+
 :host {
+  @include glass-rim.filled(var(--surface-2));
+
   display: block;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
   border-bottom: none;
   border-top-left-radius: var(--radius-lg);
   border-top-right-radius: var(--radius-lg);

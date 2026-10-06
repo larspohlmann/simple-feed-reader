@@ -1,3 +1,4 @@
+@use '../../../theme/glass-rim';
 @use 'sidebar-row' as row;
 @include row.nav-row;
 @include row.tag-head;
@@ -92,8 +93,9 @@
 .savedsearch-item .digest-toggle app-icon {
   display: inline-flex;
   padding: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+
+  @include glass-rim.ring(var(--border), control);
 }
 
 /* The "Show more/less" control: a subdued text link, indented to the same

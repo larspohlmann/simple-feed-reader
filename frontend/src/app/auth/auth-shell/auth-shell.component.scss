@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 main {
   min-height: 100dvh;
   display: flex;
@@ -8,13 +10,13 @@ main {
 }
 
 .card {
+  @include glass-rim.filled(var(--surface-2));
+
   width: 100%;
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned component dimension, not a spacing value. */
   max-width: 380px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
 }

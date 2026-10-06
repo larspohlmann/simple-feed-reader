@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 /* Anchors a floating popover (#541). Host stays `display: contents` so it adds
    no box; `.wrap` is the positioning context, so opening never shifts sibling
    layout (reverses the earlier in-flow arrangement, #433/#372). */
@@ -30,6 +32,8 @@
 }
 
 .panel {
+  @include glass-rim.filled(var(--surface-2));
+
   /* Fixed to the viewport and positioned by the component on open: its top,
      left and max-width are computed from the trigger's rect and clamped to the
      screen, so the panel never clips off either edge on a narrow phone. */
@@ -37,9 +41,7 @@
   z-index: 30;
   width: max-content;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-2);
   box-shadow: var(--panel-shadow);
   color: var(--text-primary);
   font-size: var(--fs-sm);

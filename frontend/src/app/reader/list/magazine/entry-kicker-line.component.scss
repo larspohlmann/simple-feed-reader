@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
 
 /* `width` is load-bearing, not belt-and-braces: the kicker card's parent sets
    `align-items: flex-start`, so an unstretched nowrap row would take its
@@ -81,11 +82,13 @@
   width: var(--space-2);
   height: var(--space-2);
   flex: none;
-  border: 1px solid var(--border-strong);
   border-radius: 50%;
+
+  @include glass-rim.ring(var(--border-strong), control);
 }
 
 .dot.on {
+  --rim-base: var(--accent);
+
   background: var(--accent);
-  border-color: var(--accent);
 }

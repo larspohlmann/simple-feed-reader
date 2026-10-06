@@ -2,6 +2,7 @@
 // (design-language.md §2, §3, #541); the tree/list don't, to avoid nesting a
 // second card inside the group's own (#659). `.tools` reads the panel insets itself.
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
 
 // Buttons in this header row need a real gap, not `.g-actions`'s tight 8px
 // default, which read as one crowded cluster on a phone (#659). `flex-wrap`
@@ -64,13 +65,9 @@
 }
 
 .filter {
-  height: var(--control-h);
+  --field-rim-base: var(--border-strong);
+
   min-width: 12rem;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
   font-size: var(--fs-sm);
 }
 
@@ -89,8 +86,9 @@
 }
 
 .seg {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   display: inline-flex;
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   overflow: hidden;
 }
@@ -112,14 +110,14 @@
 }
 
 .chip {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   height: var(--control-h);
   padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   cursor: pointer;
@@ -134,12 +132,9 @@
 }
 
 .sort {
-  height: var(--control-h);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  color: var(--text-primary);
+  --field-rim-base: var(--border-strong);
+  --select-inset: var(--space-2);
+
   font-size: var(--fs-sm);
 }
 
@@ -151,6 +146,8 @@
 // dropdown opens in the toolbar directly over that bar, so a lower layer let
 // the bar cover it.
 .menu .pop {
+  @include glass-rim.filled(var(--surface-2), var(--border-strong));
+
   position: absolute;
   left: 0;
   z-index: 21;
@@ -161,9 +158,7 @@
   max-height: 18rem;
   overflow-y: auto;
   padding: var(--space-2);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-2);
   box-shadow: var(--panel-shadow);
 }
 
@@ -212,14 +207,14 @@
 // floats directly over scrolling rows with no gap. A second, tighter shadow
 // plus a visible border gives it a real edge, so it reads as hovering.
 .bulk {
+  @include glass-rim.filled(var(--surface-2), var(--border-strong));
+
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--surface-2);
   box-shadow:
     var(--panel-shadow),
     0 2px 8px rgb(0 0 0 / 18%);
@@ -248,9 +243,9 @@
 // is the page's one box for that view -- the same card treatment a tag panel
 // gives itself below.
 .list {
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-1));
+
   border-radius: var(--radius-lg);
-  background: var(--surface-1);
   box-shadow: var(--panel-shadow);
   overflow: hidden;
 }
@@ -277,9 +272,9 @@
 // "N need attention" row. The header sits a step lighter than the content below
 // it (surface-1 over surface-0), so the rows read as the recessed body.
 .health-card {
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-1));
+
   border-radius: var(--radius-lg);
-  background: var(--surface-1);
   box-shadow: var(--panel-shadow);
   overflow: hidden;
 }

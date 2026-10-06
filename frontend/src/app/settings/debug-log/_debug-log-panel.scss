@@ -1,0 +1,18 @@
+/* Inset to the drill-in label's measure; the gap is the one rhythm between blocks. */
+@mixin panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+@mixin list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

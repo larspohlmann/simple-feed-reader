@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 .g-head {
   display: flex;
   flex-wrap: wrap;
@@ -49,8 +51,8 @@
 }
 
 .panel {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-1));
+
   border-radius: var(--radius-lg);
   box-shadow: var(--panel-shadow);
 }

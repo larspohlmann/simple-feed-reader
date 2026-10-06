@@ -1,3 +1,5 @@
+@use 'glass-rim';
+
 // Global utility classes that belong beside the tokens, not any one
 // component's stylesheet.
 
@@ -44,11 +46,12 @@
    a count is read-only unlike the actionable `--accent-soft` badges above. */
 .count-pill {
   padding: 0 var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   font-size: var(--fs-xs);
   color: var(--text-secondary);
   white-space: nowrap;
+
+  @include glass-rim.ring(var(--border), control);
 }
 
 /* The glyph and prose of a note projected into an `app-warning-box`. */

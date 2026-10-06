@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import * as sass from 'sass';
 import { BRIGHTNESS_MAX, BRIGHTNESS_MIN } from './brightness';
+import { compileScssFile, cssRules } from './sass-testing';
 
 type Palette = Record<string, string>;
 type Rgb = [number, number, number];
@@ -64,18 +64,16 @@ interface Block {
 }
 
 function compileBlocks(): Block[] {
-  const css = sass
-    .compile(join(__dirname, 'tokens.scss'), { style: 'expanded' })
-    .css.replace(/\/\*[\s\S]*?\*\//g, '');
-  return Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g), ([, selector, body]) => {
-    const tokens: Palette = {};
-    for (const declaration of body.split(';')) {
-      const colon = declaration.indexOf(':');
-      const name = declaration.slice(0, colon).trim();
-      if (name.startsWith('--')) tokens[name.slice(2)] = declaration.slice(colon + 1).trim();
-    }
-    return { selector: selector.trim(), tokens };
-  });
+  return cssRules(compileScssFile(join(__dirname, 'tokens.scss'))).map(
+    ({ selector, declarations }) => ({
+      selector,
+      tokens: Object.fromEntries(
+        Object.entries(declarations)
+          .filter(([name]) => name.startsWith('--'))
+          .map(([name, value]) => [name.slice(2), value]),
+      ),
+    }),
+  );
 }
 
 const BLOCKS = compileBlocks();
@@ -173,7 +171,9 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
 
   it.each(STEPS[theme])('step %i redefines every colour token and nothing else', (step) => {
     const mediaToken = step < 0 ? ['media-brightness'] : [];
-    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual([...SCALED, ...mediaToken].sort());
+    expect(Object.keys(paletteAt(theme, step)).sort()).toEqual(
+      [...SCALED, 'rim-light', ...mediaToken].sort(),
+    );
   });
 
   it.each(STEPS[theme])('step %i moves the canvas and the text with the step', (step) => {
@@ -195,6 +195,24 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
       else expect(now).toBeGreaterThanOrEqual(today - TOLERANCE);
     },
   );
+
+  it.each(STEPS[theme])(
+    'step %i holds the rim highlight at surface-1 in light, and in dark at white when brightening, below white when dimming',
+    (step) => {
+      const palette = paletteAt(theme, step);
+      if (theme === 'light') {
+        expect(rgb(palette['rim-light'])).toEqual(rgb(palette['surface-1']));
+      } else if (step > 0) {
+        expect(rgb(palette['rim-light'])).toEqual([255, 255, 255]);
+      } else {
+        expect(luminance(rgb(palette['rim-light']))).toBeLessThan(1);
+      }
+    },
+  );
+
+  it('keeps the rim highlight white at step 0', () => {
+    expect(base['rim-light']).toBe('white');
+  });
 
   it.each(STEPS[theme])('step %i dims media only when dimming', (step) => {
     expect(paletteAt(theme, step)['media-brightness']).toBe(MEDIA[step]);

@@ -1,0 +1,131 @@
+@use 'sass:list';
+@use 'sass:map';
+@use 'sass:math';
+
+// The Liquid Glass rim (#1402) is tuned here and only here: every token and gradient derives from these.
+$strength: 0.3;
+$control-boost: 1.9;
+$faint-ratio: 0.55;
+$modes: (
+  light: (
+    glint: 75%,
+    shade: 8%,
+  ),
+  dark: (
+    glint: 22%,
+    shade: 15%,
+  ),
+);
+$angle: 135deg;
+$base-from: 28%;
+$shade-at: 50%;
+$base-to: 72%;
+$-tiers: (
+  surface: (
+    infix: '',
+    boost: 1,
+  ),
+  control: (
+    infix: 'control-',
+    boost: $control-boost,
+  ),
+);
+
+@function one-decimal($amount) {
+  @return math.div(math.round($amount * 10), 10);
+}
+
+@function -tier-token-name($tier, $name) {
+  @if not map.has-key($-tiers, $tier) {
+    @error 'Unknown glass-rim tier `#{$tier}`: use surface or control.';
+  }
+
+  @return --rim-#{map.get($-tiers, $tier, infix)}#{$name};
+}
+
+@function -tier-token($tier, $name) {
+  @return var(-tier-token-name($tier, $name));
+}
+
+@function -gradient($tier) {
+  $base: var(--rim-base);
+
+  @return linear-gradient(
+    $angle,
+    color-mix(in oklab, $base, var(--rim-light) -tier-token($tier, glint)),
+    $base $base-from,
+    color-mix(in oklab, $base, black -tier-token($tier, shade)) $shade-at,
+    $base $base-to,
+    color-mix(in oklab, $base, var(--rim-light) -tier-token($tier, glint-faint))
+  );
+}
+
+// Declared on every element so each resolves var(--rim-base) against its own.
+@mixin gradients {
+  :where(*) {
+    @each $tier in map.keys($-tiers) {
+      #{-tier-token-name($tier, gradient)}: #{-gradient($tier)};
+    }
+  }
+}
+
+@mixin tokens($mode) {
+  @if not map.has-key($modes, $mode) {
+    @error 'Unknown glass-rim mode `#{$mode}`: use light or dark.';
+  }
+
+  $glint: map.get($modes, $mode, glint) * $strength;
+  $shade: map.get($modes, $mode, shade) * $strength;
+
+  --rim-light: white;
+
+  @each $settings in map.values($-tiers) {
+    $infix: map.get($settings, infix);
+    $boost: map.get($settings, boost);
+
+    --rim-#{$infix}glint: #{one-decimal($glint * $boost)};
+    --rim-#{$infix}glint-faint: #{one-decimal($glint * $boost * $faint-ratio)};
+    --rim-#{$infix}shade: #{one-decimal($shade * $boost)};
+  }
+}
+
+// A state sets --rim-fill / --rim-base; a `background` or `border-color` there erases the rim.
+@mixin filled($fill, $base: var(--border), $tier: surface) {
+  --rim-base: #{$base};
+  --rim-fill: #{$fill};
+
+  border: 1px solid transparent;
+
+  @include layers($tier);
+}
+
+// $overlays paint above the fill, so a control can add a glyph without erasing the rim.
+@mixin layers($tier: surface, $overlays: ()) {
+  $rim: (
+    linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box,
+    -tier-token($tier, gradient) border-box
+  );
+
+  background: list.join($overlays, $rim, $separator: comma);
+}
+
+// The ring sits in the border area, so the host must not clip it with overflow: hidden.
+@mixin ring($base: var(--border), $tier: surface) {
+  --rim-base: #{$base};
+
+  position: relative;
+  border: 1px solid transparent;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: -tier-token($tier, gradient) border-box;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+}

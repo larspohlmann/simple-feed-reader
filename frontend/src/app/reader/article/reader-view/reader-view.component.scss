@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
 
 /* `clip`, not `hidden`: the return swipe's overflow is cut without the host
    becoming a scroller the chrome would sit in (#1332). */
@@ -296,22 +297,22 @@ article {
 }
 
 .listen {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-4);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
 }
 
 .listen:hover {
-  background: var(--surface-2);
+  --rim-fill: var(--surface-2);
 }
 
 .listen-label {
@@ -367,10 +368,10 @@ article {
 }
 
 .reader-error pre {
+  @include glass-rim.filled(var(--surface-0));
+
   margin: var(--space-2) 0 0;
   padding: var(--space-3);
-  background: var(--surface-0);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   font-family: ui-monospace, monospace;
   font-size: var(--fs-xs);
