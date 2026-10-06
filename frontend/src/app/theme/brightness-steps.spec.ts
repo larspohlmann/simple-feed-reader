@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import * as sass from 'sass';
 import { BRIGHTNESS_MAX, BRIGHTNESS_MIN } from './brightness';
+import { compileScssFile, cssRules } from './sass-testing';
 
 type Palette = Record<string, string>;
 type Rgb = [number, number, number];
@@ -64,18 +64,16 @@ interface Block {
 }
 
 function compileBlocks(): Block[] {
-  const css = sass
-    .compile(join(__dirname, 'tokens.scss'), { style: 'expanded' })
-    .css.replace(/\/\*[\s\S]*?\*\//g, '');
-  return Array.from(css.matchAll(/([^{}]+)\{([^{}]*)\}/g), ([, selector, body]) => {
-    const tokens: Palette = {};
-    for (const declaration of body.split(';')) {
-      const colon = declaration.indexOf(':');
-      const name = declaration.slice(0, colon).trim();
-      if (name.startsWith('--')) tokens[name.slice(2)] = declaration.slice(colon + 1).trim();
-    }
-    return { selector: selector.trim(), tokens };
-  });
+  return cssRules(compileScssFile(join(__dirname, 'tokens.scss'))).map(
+    ({ selector, declarations }) => ({
+      selector,
+      tokens: Object.fromEntries(
+        Object.entries(declarations)
+          .filter(([name]) => name.startsWith('--'))
+          .map(([name, value]) => [name.slice(2), value]),
+      ),
+    }),
+  );
 }
 
 const BLOCKS = compileBlocks();

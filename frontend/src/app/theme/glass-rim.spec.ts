@@ -1,7 +1,5 @@
 import { join } from 'node:path';
-import * as sass from 'sass';
-
-type Declarations = Record<string, string>;
+import { compileScssFile, compileScssSource, rulesBySelector } from './sass-testing';
 
 const PROBE = `
 @use 'sass:map';
@@ -46,28 +44,9 @@ dark {
 }
 `;
 
-function compile(source: string): string {
-  return sass.compileString(source, { loadPaths: [__dirname], style: 'expanded' }).css;
-}
+const compile = (source: string): string => compileScssSource(source, [__dirname]);
 
-function blocks(css: string): Record<string, Declarations> {
-  const parsed: Record<string, Declarations> = {};
-  const bare = css.replace(/^@charset [^;]*;/, '').replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const [, selector, body] of bare.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const declarations: Declarations = {};
-    for (const declaration of body.split(';')) {
-      const colon = declaration.indexOf(':');
-      if (colon > 0) {
-        const value = declaration.slice(colon + 1).replace(/\s+/g, ' ');
-        declarations[declaration.slice(0, colon).trim()] = value.trim();
-      }
-    }
-    parsed[selector.replace(/\s+/g, ' ').trim()] = declarations;
-  }
-  return parsed;
-}
-
-const PROBED = blocks(compile(PROBE));
+const PROBED = rulesBySelector(compile(PROBE));
 const KNOBS = PROBED['knobs'];
 const knob = (name: string): number => Number.parseFloat(KNOBS[name]);
 
@@ -114,7 +93,7 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
   });
 
   it('lands in the theme block of tokens.scss', () => {
-    const themed = blocks(sass.compile(join(__dirname, 'tokens.scss'), { style: 'expanded' }).css);
+    const themed = rulesBySelector(compileScssFile(join(__dirname, 'tokens.scss')));
     const selector = mode === 'light' ? ':root, :root[data-theme=light]' : ':root[data-theme=dark]';
     for (const [name, value] of Object.entries(tokens)) {
       expect(`${name}: ${themed[selector][name]}`).toBe(`${name}: ${value}`);
@@ -129,17 +108,14 @@ it('refuses an unknown mode', () => {
 });
 
 describe('gradients', () => {
-  const global = sass
-    .compile(join(__dirname, '..', '..', 'styles.scss'), {
-      loadPaths: [join(__dirname, '..', '..', '..', 'node_modules')],
-      style: 'expanded',
-    })
-    .css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const global = compileScssFile(join(__dirname, '..', '..', 'styles.scss'), [
+    join(__dirname, '..', '..', '..', 'node_modules'),
+  ]);
 
   it('declares both tier gradients once, on every element, in the global stylesheet', () => {
     expect(global.match(/--rim-gradient:/g)).toHaveLength(1);
     expect(global.match(/--rim-control-gradient:/g)).toHaveLength(1);
-    expect(Object.keys(blocks(global)[':where(*)'])).toEqual([
+    expect(Object.keys(rulesBySelector(global)[':where(*)'])).toEqual([
       '--rim-gradient',
       '--rim-control-gradient',
     ]);
@@ -149,7 +125,7 @@ describe('gradients', () => {
     ['surface', 'rim-'],
     ['control', 'rim-control-'],
   ])('glints the %s rim toward the light and shades it toward black', (_tier, prefix) => {
-    expect(blocks(global)[':where(*)'][`--${prefix}gradient`]).toBe(gradient(prefix));
+    expect(rulesBySelector(global)[':where(*)'][`--${prefix}gradient`]).toBe(gradient(prefix));
   });
 });
 
