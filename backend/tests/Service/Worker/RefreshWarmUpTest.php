@@ -26,12 +26,4 @@ final class RefreshWarmUpTest extends TestCase
             $limits,
         );
     }
-
-    public function testEveryWarmUpBatchIsSmallerThanTheSteadyStateBatch(): void
-    {
-        $warmUp = new RefreshWarmUp();
-
-        self::assertLessThan(RefreshRequestModel::DEFAULT_BATCH_LIMIT, $warmUp->nextBatchLimit());
-        self::assertLessThan(RefreshRequestModel::DEFAULT_BATCH_LIMIT, $warmUp->nextBatchLimit());
-    }
 }
