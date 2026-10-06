@@ -74,9 +74,18 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             self::entry('respan/span-01', 0, ['decisions']),
             null,
         ];
-        yield 'a reranker, until its protocol exists' => [
+        yield 'a reranker' => [
             self::entry('cohere/rerank-4-fast', 32_768, ['rerank']),
-            null,
+            new ModelDescriptor('cohere/rerank-4-fast', 32_768, ScoringProtocol::Rerank),
+        ];
+        yield 'a reranker without a window' => [self::entry('acme/rerank-0', 0, ['rerank']), null];
+        yield 'a reranker reporting max_context_length' => [
+            [
+                'id' => 'acme/rerank-1',
+                'max_context_length' => 4_096,
+                'architecture' => ['output_modalities' => ['rerank']],
+            ],
+            new ModelDescriptor('acme/rerank-1', 4_096, ScoringProtocol::Rerank),
         ];
         yield 'an image model' => [self::entry('bytedance-seed/seedream-5-0-flash', 0, ['image']), null];
         yield 'an embedding model' => [self::entry('liquid/lfm-2.5-embedding-350m:free', 512, ['embeddings']), null];
