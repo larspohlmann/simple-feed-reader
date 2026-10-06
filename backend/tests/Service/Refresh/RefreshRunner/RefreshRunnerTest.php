@@ -855,6 +855,24 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->remaining);
     }
 
+    public function testARequestLimitedToOneFeedLeavesTheOtherDueFeedRemaining(): void
+    {
+        $first = $this->dueFeed('https://first.example.com/feed');
+        $second = $this->dueFeed('https://second.example.com/feed');
+        $this->entityManager->flush();
+        foreach ([$first, $second] as $feed) {
+            $this->fetcher->willReturn(
+                $feed->getUrl(),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+            );
+        }
+
+        $report = $this->runner()->run(RefreshRequestModel::allDue(60)->limitedTo(1));
+
+        self::assertSame(1, $report->total);
+        self::assertSame(1, $report->remaining);
+    }
+
     /**
      * A 429 leaves lastFetchedAt untouched, so `remaining` must not be derived from it: the feed would stay due and
      * the client's poll loop would hammer the site that asked for less (89 requests to one feed in production, #302).

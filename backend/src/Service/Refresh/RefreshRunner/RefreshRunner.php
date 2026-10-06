@@ -28,7 +28,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 {
     private const string LOCK_NAME = 'feed-refresh';
     private const float LOCK_TTL_SECONDS = 60.0;
-    private const int BATCH_LIMIT = 50;
     private const int COOLDOWN_MINUTES = 5;
 
     public function __construct(
@@ -66,7 +65,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
 
         $now = $this->clock->now();
         $criteria = $this->dueCriteria($request, $now);
-        $feeds = $this->feeds->findDue($criteria, self::BATCH_LIMIT);
+        $feeds = $this->feeds->findDue($criteria, $request->batchLimit);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
         $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $this->persistOutcomes($pass, $now);

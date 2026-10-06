@@ -6,6 +6,8 @@ namespace App\Service\Refresh\Model;
 
 final readonly class RefreshRequestModel
 {
+    public const int DEFAULT_BATCH_LIMIT = 50;
+
     private function __construct(
         public ?int $userId,
         public ?int $feedId,
@@ -13,6 +15,7 @@ final readonly class RefreshRequestModel
         public bool $force,
         public int $budgetSeconds,
         public bool $prune,
+        public int $batchLimit = self::DEFAULT_BATCH_LIMIT,
     ) {
     }
 
@@ -43,11 +46,40 @@ final readonly class RefreshRequestModel
 
     public function withoutPruning(): self
     {
-        return new self($this->userId, $this->feedId, $this->tagId, $this->force, $this->budgetSeconds, false);
+        return new self(
+            $this->userId,
+            $this->feedId,
+            $this->tagId,
+            $this->force,
+            $this->budgetSeconds,
+            false,
+            $this->batchLimit,
+        );
     }
 
     public function ignoringSchedule(): self
     {
-        return new self($this->userId, $this->feedId, $this->tagId, true, $this->budgetSeconds, $this->prune);
+        return new self(
+            $this->userId,
+            $this->feedId,
+            $this->tagId,
+            true,
+            $this->budgetSeconds,
+            $this->prune,
+            $this->batchLimit,
+        );
+    }
+
+    public function limitedTo(int $batchLimit): self
+    {
+        return new self(
+            $this->userId,
+            $this->feedId,
+            $this->tagId,
+            $this->force,
+            $this->budgetSeconds,
+            $this->prune,
+            $batchLimit,
+        );
     }
 }
