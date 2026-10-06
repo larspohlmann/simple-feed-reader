@@ -286,8 +286,23 @@ final class ScoringRecommendationEngineTest extends DbTestCase
 
         $run = $this->latestRun();
         self::assertSame('failed', $run->getStatus()->value);
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
+        self::assertCount(1, $this->systemOne()->requests());   // the warm-up only
+    }
+
+    /** Model and protocol both changed: the kind of score changed, which the engine message names first. */
+    public function testADecisionModelRunWhoseConnectionSwitchedToARerankerFailsWithoutAnotherCall(): void
+    {
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
+        $this->chooseScoringModel(new ModelDescriptor('cohere/rerank-4-fast', 32_768, ScoringProtocol::Rerank));
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->latestRun();
+        self::assertSame('failed', $run->getStatus()->value);
         self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
         self::assertCount(1, $this->systemOne()->requests());   // the warm-up only
+        self::assertSame([], $this->rerank()->requests());
     }
 
     /** Resume keeps the stamped model: the batches fit only its window, so the run waits for the switch back. */
@@ -300,7 +315,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $this->starter()->resume($this->owner);
         self::assertSame('jev-latest', $this->latestRun()->getModel());
         $this->advancer()->advance($this->owner, TickDriver::Poll);
-        self::assertSame(TickPhases::ENGINE_SWITCH, $this->latestRun()->getError());
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $this->latestRun()->getError());
 
         $this->chooseScoringModel(new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
         $this->starter()->resume($this->owner);

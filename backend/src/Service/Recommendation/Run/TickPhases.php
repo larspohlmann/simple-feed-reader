@@ -19,12 +19,15 @@ use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
 {
-    /**
-     * A run belongs to the engine and the scoring protocol whose batches it froze, and a scoring run to the model whose
-     * window sized them. Failed, not cancelled: the error says why, and switching back makes the run resumable.
-     */
-    public const string ENGINE_SWITCH = 'This run was started with a different recommendation engine than the active '
-        . 'AI connection uses. Start a new run, or switch back to that connection to resume this one.';
+    /** A run belongs to the engine and protocol that froze its batches. Failed, not cancelled: switching back resumes. */
+    public const string ENGINE_SWITCH = 'This run was started with a different kind of model than the active AI '
+        . 'connection uses: an LLM, a decision model and a reranker score articles differently. Start a new run, or '
+        . 'switch back to a connection of that kind to resume this one.';
+
+    /** A scoring run also belongs to the model whose window sized its batches. */
+    public const string SCORING_MODEL_SWITCH = 'This run was started with a different scoring model than the active AI '
+        . 'connection uses, and its requests were sized for that model. Start a new run, or switch back to that model '
+        . 'to resume this one.';
 
     public function __construct(
         private SnapshotPhase $snapshot,
@@ -45,6 +48,10 @@ final readonly class TickPhases
 
         if (self::switchedEngines($run, $tick)) {
             return $this->runFailure->fail($run, self::ENGINE_SWITCH);
+        }
+
+        if (self::switchedScoringModels($run, $tick)) {
+            return $this->runFailure->fail($run, self::SCORING_MODEL_SWITCH);
         }
 
         if ($run->isRetryDeferredAt($this->clock->now())) {
@@ -74,8 +81,7 @@ final readonly class TickPhases
     private static function switchedEngines(RecommendationRun $run, TickContext $tick): bool
     {
         return $run->getEngineKind() !== $tick->engineKind
-            || $run->getScoringProtocol() !== $tick->scoringProtocol()
-            || self::switchedScoringModels($run, $tick);
+            || $run->getScoringProtocol() !== $tick->scoringProtocol();
     }
 
     private static function switchedScoringModels(RecommendationRun $run, TickContext $tick): bool

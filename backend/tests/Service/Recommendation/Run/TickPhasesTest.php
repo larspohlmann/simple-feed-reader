@@ -182,12 +182,12 @@ final class TickPhasesTest extends DbTestCase
         self::assertCount(1, $engine->advancedTicks);
     }
 
-    /** One protocol exists today: a scoring run recorded without one stands in for a run of another protocol. */
+    /** The run's model is the connection's own: only the protocol differs, so only the protocol check can fail it. */
     public function testARunPackedForAnotherScoringProtocolFailsWithoutBeingAdvanced(): void
     {
         $this->fixtures->seedReadyScoringSettings($this->owner);
         $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, null);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
 
         $report = $this->phases($engine)->advance($this->tick($run));
 
@@ -219,7 +219,7 @@ final class TickPhasesTest extends DbTestCase
         $report = $this->phases($engine)->advance($this->tick($run));
 
         self::assertSame('failed', $report->status);
-        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
         self::assertSame([], $engine->advancedTicks);
     }
 
