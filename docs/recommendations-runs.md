@@ -134,7 +134,7 @@ is chosen (`user_ai_settings.scoring_protocol`). The model catalog says what eac
 | Protocol | Request | Per request |
 |---|---|---|
 | System One (`system_one`) | `POST {base}/systemone`, directly or through OpenRouter: `state` = `{profile, guidance?, favorites?}`, one `noul` question per article | at most 64 questions (Cloudflare's Clef refuses more); of the model's stored window, 2k for framing, `min(10k, 30 %)` for the state and the rest for questions (`SystemOneProtocol::budget()`, `ScoringBudgetModel::forWindow()`) |
-| Rerank (`rerank`) | `POST {base}/rerank` through OpenRouter: `query` = the question, the guidance and the profile; `documents` = one line per article ("title — feed, date. description"); no `top_n`. Results come back sorted by relevance and are mapped to articles by `index` | at most 100 documents (one Cohere search unit); the query gets `min(10k, 30 %)` of the model's stored window, and each document what is left after that and 2k of framing — the window bounds each document, not their sum (`RerankProtocol::budget()`) |
+| Rerank (`rerank`) | `POST {base}/rerank` through OpenRouter: `query` = the question, the guidance and the profile; `documents` = one line per article ("title — feed, date. description"); no `top_n`. Results come back sorted by relevance and are mapped to articles by `index` | at most 100 documents (Cohere bills 2–3 search units for such a request, since the query counts toward each unit); the query gets `min(10k, 30 %)` of the model's stored window, and each document what is left after that and 2k of framing — the window bounds each document, not their sum (`RerankProtocol::budget()`) |
 
 A run freezes the stored profile when it snapshots; a scoring model needs one and fails with a message that says so when
 there is none (an account with neither reading history nor a saved search). The LLM engine scores without a profile in
@@ -146,8 +146,8 @@ run log. `ScoringHttpTransport` sends a protocol's requests (its own idle and wa
 1 MiB reply cap) and maps the statuses every protocol shares; a protocol adds only its retryable statuses (System One
 and Rerank: 429 and 529). A run records the engine kind and the scoring protocol it was packed for; a tick that finds
 the active connection on another kind or protocol fails the run with an error naming the kinds of model; a scoring run
-whose connection holds another model of its protocol (its batches were packed for that model's window) fails with an
-error naming the model switch. Switching back resumes either. An LLM run follows a model change.
+whose connection holds another model of its protocol fails with an error naming the model switch (scores from two
+models do not compare within one run, and a decision model's batches were packed for its window). Switching back resumes either. An LLM run follows a model change.
 
 ### The profile
 
