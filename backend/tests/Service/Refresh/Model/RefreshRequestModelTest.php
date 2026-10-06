@@ -60,4 +60,33 @@ final class RefreshRequestModelTest extends TestCase
         self::assertFalse($request->prune);
         self::assertSame(30, $request->budgetSeconds);
     }
+
+    public function testARequestTakesTheDefaultBatchLimit(): void
+    {
+        self::assertSame(
+            RefreshRequestModel::DEFAULT_BATCH_LIMIT,
+            RefreshRequestModel::forUser(7, 30)->batchLimit,
+        );
+    }
+
+    public function testLimitedToChangesOnlyTheBatchLimit(): void
+    {
+        $request = RefreshRequestModel::forUserTag(7, 13, 30)->limitedTo(5);
+
+        self::assertSame(5, $request->batchLimit);
+        self::assertSame(7, $request->userId);
+        self::assertSame(13, $request->tagId);
+        self::assertNull($request->feedId);
+        self::assertTrue($request->force);
+        self::assertFalse($request->prune);
+        self::assertSame(30, $request->budgetSeconds);
+    }
+
+    public function testWithoutPruningAndIgnoringScheduleKeepTheBatchLimit(): void
+    {
+        $request = RefreshRequestModel::allDue(45)->limitedTo(5);
+
+        self::assertSame(5, $request->withoutPruning()->batchLimit);
+        self::assertSame(5, $request->ignoringSchedule()->batchLimit);
+    }
 }

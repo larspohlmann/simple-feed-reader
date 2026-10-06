@@ -11,6 +11,7 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
+use App\Service\Worker\RefreshWarmUp;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubFeedFetcher;
@@ -64,6 +65,38 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
         self::assertNotNull($refreshed->getLastFetchedAt());
     }
 
+    public function testAFreshWorkersFirstFiringTakesOnlyTheWarmUpBatch(): void
+    {
+        $subscriber = $this->user('backlog@example.com');
+        $fetcher = new StubFeedFetcher();
+        foreach (range(1, 11) as $index) {
+            $feed = new Feed(sprintf('https://example.com/backlog/%d.xml', $index));
+            $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
+            $this->entityManager->persist($feed);
+            $this->entityManager->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable('-1 day')));
+            $fetcher->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
+        }
+        $this->entityManager->flush();
+        $fetcher->willReturn(
+            'https://example.com',
+            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
+        );
+        self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
+        $logSpy = new TestHandler();
+        $handler = new RefreshDueFeedsHandler(
+            $this->refreshRunner(),
+            new RefreshWarmUp(),
+            new Logger('test', [$logSpy]),
+        );
+
+        $handler->__invoke(new RefreshDueFeeds());
+
+        $report = $logSpy->getRecords()[0]->context['report'];
+        self::assertIsArray($report);
+        self::assertSame(10, $report['total']);
+        self::assertSame(1, $report['remaining']);
+    }
+
     /**
      * The handler's whole job past delegating to RefreshRunner is logging its
      * report -- this pins the exact shape of that log line, not just that
@@ -74,6 +107,7 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
         $logSpy = new TestHandler();
         $handler = new RefreshDueFeedsHandler(
             $this->refreshRunner(),
+            new RefreshWarmUp(),
             new Logger('test', [$logSpy]),
         );
 

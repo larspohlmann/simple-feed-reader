@@ -7,6 +7,7 @@ namespace App\Service\Worker\Handler;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Message\RefreshDueFeeds;
+use App\Service\Worker\RefreshWarmUp;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -23,13 +24,15 @@ final readonly class RefreshDueFeedsHandler
 
     public function __construct(
         private RefreshRunner $refreshRunner,
+        private RefreshWarmUp $warmUp,
         private LoggerInterface $logger,
     ) {
     }
 
     public function __invoke(RefreshDueFeeds $message): void
     {
-        $report = $this->refreshRunner->run(RefreshRequestModel::allDue(self::BUDGET_SECONDS));
+        $request = RefreshRequestModel::allDue(self::BUDGET_SECONDS)->limitedTo($this->warmUp->nextBatchLimit());
+        $report = $this->refreshRunner->run($request);
 
         // 'busy' is healthy here: a user-driven refresh holds the global lock
         // and is doing the same work; this firing simply yields to it.
