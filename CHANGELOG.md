@@ -10,6 +10,15 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.2.1] - 2026-10-06
+
+## What's Changed
+* fix(#1419): ramp the worker's refresh batch up after a restart by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1421
+* feat(#1420): retry list reads that fail with 502, 503 or 504 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1422
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.2.0...v1.2.1
+
 ## [v1.2.0] - 2026-10-06
 
 ### Highlights
