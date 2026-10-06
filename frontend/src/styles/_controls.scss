@@ -1,13 +1,15 @@
+@use '../app/theme/glass-rim';
+
 // Styles for the native controls projected into <app-field>. Global because
 // ViewEncapsulation doesn't style projected content. Checkbox/radio/colour
 // inputs are excluded: the user agent paints those, and a border distorts them.
 input:not([type='checkbox'], [type='radio'], [type='color']),
 select,
 textarea {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   padding: 0 var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   font: inherit;
 }
@@ -45,7 +47,8 @@ app-password-input input {
 input:not([type='checkbox'], [type='radio'], [type='color']):focus,
 select:focus,
 textarea:focus {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+
   outline: none;
 }
 
@@ -55,7 +58,7 @@ textarea:focus {
 input:not([type='checkbox'], [type='radio'], [type='color'])[aria-invalid='true'],
 select[aria-invalid='true'],
 textarea[aria-invalid='true'] {
-  border-color: var(--danger);
+  --rim-base: var(--danger);
 }
 
 input:disabled,

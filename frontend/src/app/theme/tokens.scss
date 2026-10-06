@@ -1,5 +1,6 @@
 @use './breakpoints' as bp;
 @use './brightness';
+@use './glass-rim';
 @use './type-scale';
 @use './themes/graphite';
 
@@ -10,6 +11,7 @@
   color-scheme: light;
 
   @include graphite.emit(graphite.$light);
+  @include glass-rim.tokens(light);
 
   /* Soft elevation for a raised card surface (#541). Mode-specific: a light
      UI needs only a hair of shadow, a dark one a deeper cast to lift the
@@ -39,6 +41,7 @@
   color-scheme: dark;
 
   @include graphite.emit(graphite.$dark);
+  @include glass-rim.tokens(dark);
 
   --panel-shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 30%);
 
