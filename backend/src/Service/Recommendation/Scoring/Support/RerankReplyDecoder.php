@@ -68,7 +68,7 @@ final class RerankReplyDecoder
     {
         $relevance = \is_array($result) ? ($result['relevance_score'] ?? null) : null;
 
-        return \is_float($relevance) || \is_int($relevance) ? (float) $relevance : null;
+        return \is_float($relevance) || \is_int($relevance) ? $relevance : null;
     }
 
     private static function usageIn(mixed $usage): ?ProviderCallUsageModel
@@ -79,7 +79,7 @@ final class RerankReplyDecoder
         $totalTokens = $usage['total_tokens'] ?? null;
 
         return new ProviderCallUsageModel(
-            promptTokens: \is_int($totalTokens) && $totalTokens >= 0 ? $totalTokens : 0,
+            promptTokens: \is_int($totalTokens) ? max(0, $totalTokens) : 0,
             completionTokens: 0,
             reasoningTokens: 0,
             cachedTokens: 0,
