@@ -133,7 +133,7 @@ describe('RecommendationDebugLogComponent', () => {
   }
 
   function expanderFor(element: HTMLElement, index = 0): HTMLButtonElement {
-    return element.querySelectorAll('.debug-panel__expander')[index] as HTMLButtonElement;
+    return element.querySelectorAll('.debug-entry__expander')[index] as HTMLButtonElement;
   }
 
   beforeEach(() => {
@@ -212,7 +212,7 @@ describe('RecommendationDebugLogComponent', () => {
     expander.click();
     fixture.detectChanges();
     expect(debugLogEntry).toHaveBeenCalledTimes(1);
-    expect(element.querySelector('.debug-panel__body')).toBeNull();
+    expect(element.querySelector('.debug-entry__body')).toBeNull();
   });
 
   it('does not re-fetch a request body still in flight from an earlier toggle', () => {
@@ -244,7 +244,7 @@ describe('RecommendationDebugLogComponent', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [STREAMING_ENTRY] }));
     const fixture = mount();
     const element = fixture.nativeElement as HTMLElement;
-    expect(element.querySelector('.debug-panel__stream')!.textContent).toContain('partial…');
+    expect(element.querySelector('.debug-entry__stream')!.textContent).toContain('partial…');
     expect(debugLogEntry).not.toHaveBeenCalled();
   });
 
@@ -377,7 +377,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-entry__wire');
     expect(wire!.textContent).toContain('1855');
     expect(wire!.textContent).toContain('no answer');
   });
@@ -387,7 +387,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire');
+    const wire = (fixture.nativeElement as HTMLElement).querySelector('.debug-entry__wire');
     expect(wire!.textContent).toContain('16');
     expect(wire!.textContent).not.toContain('no answer');
   });
@@ -397,7 +397,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__wire')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-entry__wire')).toBeNull();
   });
 
   it('names max_tokens truncation when the provider stopped on length', () => {
@@ -405,9 +405,9 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-entry__finish');
     expect(finish!.textContent).toContain('max_tokens');
-    expect(finish!.classList).toContain('debug-panel__finish--truncated');
+    expect(finish!.classList).toContain('debug-entry__finish--truncated');
   });
 
   it('reports a natural stop without the truncation styling', () => {
@@ -415,9 +415,9 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish');
+    const finish = (fixture.nativeElement as HTMLElement).querySelector('.debug-entry__finish');
     expect(finish!.textContent).toContain('stop');
-    expect(finish!.classList).not.toContain('debug-panel__finish--truncated');
+    expect(finish!.classList).not.toContain('debug-entry__finish--truncated');
   });
 
   it('shows no finish line until the provider stamps a reason', () => {
@@ -425,7 +425,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = TestBed.createComponent(RecommendationDebugLogComponent);
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__finish')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-entry__finish')).toBeNull();
   });
 
   it('renders the summary strip from a completed run', () => {
@@ -482,7 +482,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = mount();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('.debug-panel__error')!.textContent).toContain(
+    expect(element.querySelector('.debug-entry__error')!.textContent).toContain(
       'cURL error 28: Operation timed out',
     );
   });
@@ -490,7 +490,7 @@ describe('RecommendationDebugLogComponent', () => {
   it('shows no error line for a completed call', () => {
     debugLog.mockReturnValue(of({ run: null, runs: [], entries: [DEDUP_ENTRY] }));
     const fixture = mount();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-panel__error')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.debug-entry__error')).toBeNull();
   });
 
   it('renders a settled call’s duration on the row, in seconds, without expanding', () => {
@@ -498,7 +498,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = mount();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('.debug-panel__dur')!.textContent).toContain('5 s');
+    expect(element.querySelector('.debug-entry__dur')!.textContent).toContain('5 s');
   });
 
   it('leaves the duration cell empty for the row still streaming (no NaN, no negative)', () => {
@@ -506,7 +506,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = mount();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('.debug-panel__dur')!.textContent?.trim()).toBe('');
+    expect(element.querySelector('.debug-entry__dur')!.textContent?.trim()).toBe('');
   });
 
   it('renders a sub-second settled call as 0 s, not an empty cell', () => {
@@ -519,7 +519,7 @@ describe('RecommendationDebugLogComponent', () => {
     const fixture = mount();
     const element = fixture.nativeElement as HTMLElement;
 
-    expect(element.querySelector('.debug-panel__dur')!.textContent).toContain('0 s');
+    expect(element.querySelector('.debug-entry__dur')!.textContent).toContain('0 s');
   });
 
   it('clusters entries by run, newest run first, under one header each', () => {

@@ -62,6 +62,7 @@ describe('ProfileDebugLogComponent', () => {
     http.expectOne(LOG).flush({ entries: [entry()] });
     fixture.detectChanges();
 
+    expect(text(fixture)).toContain('Distill');
     expect(text(fixture)).toContain('attempt 2');
     expect(text(fixture)).toContain('usable');
   });
@@ -102,16 +103,14 @@ describe('ProfileDebugLogComponent', () => {
     http.expectNone(LOG);
   });
 
-  it("opens a call's request and response", () => {
+  it("opens a call's request and response, and closes it again", () => {
     const fixture = mount(false);
     http.expectOne(LOG).flush({ entries: [entry()] });
     fixture.detectChanges();
+    const element = fixture.nativeElement as HTMLElement;
+    const expander = element.querySelector('.debug-entry__expander') as HTMLButtonElement;
 
-    (
-      (fixture.nativeElement as HTMLElement).querySelector(
-        '.profile-log__head',
-      ) as HTMLButtonElement
-    ).click();
+    expander.click();
     http.expectOne('/api/recommendations/runs/debug-log/31').flush({
       id: 31,
       phase: 'distill',
@@ -125,9 +124,11 @@ describe('ProfileDebugLogComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(
-      (fixture.nativeElement as HTMLElement).querySelector('[data-testid="profile-log-response"]')
-        ?.textContent,
-    ).toContain('Likes maps.');
+    expect(element.querySelector('.debug-entry__body')?.textContent).toContain('Likes maps.');
+
+    expander.click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.debug-entry__body')).toBeNull();
   });
 });

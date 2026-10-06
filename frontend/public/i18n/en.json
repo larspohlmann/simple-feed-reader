@@ -332,6 +332,7 @@
         "debugPanelTitle": "Debug log",
         "debugBatch": "Batch {{ n }}",
         "debugDedup": "Dedup",
+        "debugDistill": "Distill",
         "debugAttempt": "attempt {{ n }}",
         "debugRequest": "Request",
         "debugResponse": "Response",

@@ -12,8 +12,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslocoModule } from '@jsverse/transloco';
+import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
+import { debugLogTime } from '../debug-log/debug-log-time';
 import { SettingsApi } from '../settings-api';
-import { bytesToKb, formatDayInMonth, formatTime } from '../../reader/format';
 import { LanguageService } from '../../core/i18n/language.service';
 import {
   DebugLogDetail,
@@ -42,7 +43,7 @@ export interface DebugLogRunGroup {
 @Component({
   selector: 'app-recommendation-debug-log',
   standalone: true,
-  imports: [TranslocoModule],
+  imports: [TranslocoModule, DebugLogEntryComponent],
   templateUrl: './recommendation-debug-log.component.html',
   styleUrl: './recommendation-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -134,37 +135,8 @@ export class RecommendationDebugLogComponent implements OnInit {
     return this.expandedRequests().has(id);
   }
 
-  copy(text: string): void {
-    void navigator.clipboard.writeText(text);
-  }
-
-  requestText(entry: DebugLogEntry): string | null {
-    return this.details().get(entry.id)?.requestBody ?? null;
-  }
-
-  responseText(entry: DebugLogEntry): string | null {
-    if (entry.verdict === null) return entry.streamingText;
-    return this.details().get(entry.id)?.responseText ?? null;
-  }
-
-  kb(bytes: number): number {
-    return bytesToKb(bytes);
-  }
-
-  /** Date and clock time together, e.g. "21 Aug 22:54": the debug log spans
-   *  several days of runs, so the day is shown beside every time (#541). */
   time(iso: string): string {
-    return `${formatDayInMonth(iso, this.language.lang())} ${formatTime(iso)}`;
-  }
-
-  /** Seconds a settled call took, or null while it is still streaming --
-   *  `finishedAt` is null then, and rendering a duration from a moving
-   *  target would show a nonsensical or negative figure. Clamped at 0 for
-   *  the same reason: a clock skew must never surface as a negative time. */
-  durationSeconds(entry: DebugLogEntry): number | null {
-    if (entry.finishedAt === null) return null;
-    const elapsedMs = new Date(entry.finishedAt).getTime() - new Date(entry.createdAt).getTime();
-    return Math.max(0, Math.round(elapsedMs / 1000));
+    return debugLogTime(iso, this.language.lang());
   }
 
   /** When a run group's first call went out. */

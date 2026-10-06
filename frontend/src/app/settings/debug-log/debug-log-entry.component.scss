@@ -1,0 +1,188 @@
+@use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
+
+/* An aligned grid (time | call | duration | verdict | req/resp KB | expander)
+   in a rimmed box, with the call's notes and bodies under it. */
+:host {
+  @include glass-rim.filled(var(--surface-0));
+
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius);
+}
+
+.debug-entry {
+  &__row {
+    display: grid;
+    grid-template-columns: 3rem 1fr 3.5rem 5rem 5.5rem 1.75rem;
+    align-items: center;
+    column-gap: var(--space-2);
+    font-weight: 600;
+  }
+
+  /* On a phone the six fixed columns overflowed the viewport (size/expander
+     columns fell off the edge), so the row wraps instead. */
+  @media (width <= bp.$bp-sm) {
+    &__row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      row-gap: var(--space-1);
+    }
+
+    &__call {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__time,
+  &__dur,
+  &__sizes {
+    font-variant-numeric: tabular-nums;
+  }
+
+  // How long the call took, on the row itself rather than behind the expander:
+  // for a reasoning model a batch runs for many seconds, and that number is
+  // the first thing a reader checks.
+  &__dur {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: right;
+  }
+
+  &__time {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+  }
+
+  &__call {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__attempt {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+  }
+
+  &__sizes {
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: right;
+  }
+
+  &__verdict {
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--surface-1);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    text-align: center;
+
+    &--usable {
+      background: var(--bg-success);
+      color: var(--success);
+    }
+
+    &--unusable,
+    &--transport-failed {
+      background: var(--bg-danger);
+      color: var(--danger);
+    }
+  }
+
+  &__expander {
+    padding: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--accent);
+    font-size: var(--fs-sm);
+    line-height: 1;
+    cursor: pointer;
+    aspect-ratio: 1;
+
+    @include glass-rim.ring(var(--border), control);
+  }
+
+  // What the provider sent, as opposed to what it answered. A thinking model
+  // spends megabytes here before the first answer token (#320), so this line
+  // is the difference between "provider is silent" and "provider is busy".
+  &__wire {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+  }
+
+  &__error {
+    margin: var(--space-1) 0 0;
+    color: var(--danger);
+    font-size: var(--fs-xs);
+  }
+
+  // Why the provider stopped. Muted for a natural `stop`, but `length` means
+  // the answer was truncated by max_tokens (#327) -- the reason a run failed,
+  // so it reads in the danger colour like an error.
+  &__finish {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+
+    &--truncated {
+      color: var(--danger);
+    }
+  }
+
+  &__body {
+    margin-top: var(--space-1);
+  }
+
+  &__section {
+    margin-bottom: var(--space-1);
+
+    button {
+      display: block;
+      margin: 0 0 var(--space-1);
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--accent);
+      font-size: var(--fs-xs);
+      cursor: pointer;
+    }
+  }
+
+  &__section-label {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+  }
+
+  &__stream {
+    margin: var(--space-1) 0 0;
+  }
+}
+
+pre {
+  @include glass-rim.filled(var(--surface-0));
+
+  margin: 0;
+  padding: var(--space-2);
+  max-height: calc(var(--space-7) * 3);
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

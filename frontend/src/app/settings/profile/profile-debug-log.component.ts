@@ -10,7 +10,7 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { SettingsApi } from '../settings-api';
 import { DebugLogDetail, DebugLogEntry } from '../settings.models';
 
@@ -19,7 +19,7 @@ const POLL_MS = 2000;
 /** The newest profile run's provider calls, polled while the run is active; a row opens to its bodies. */
 @Component({
   selector: 'app-profile-debug-log',
-  imports: [TranslocoPipe],
+  imports: [DebugLogEntryComponent],
   templateUrl: './profile-debug-log.component.html',
   styleUrl: './profile-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,6 +33,7 @@ export class ProfileDebugLogComponent {
   readonly runId = input<number | null>(null);
 
   readonly entries = signal<DebugLogEntry[]>([]);
+  readonly expanded = signal<ReadonlySet<number>>(new Set());
   readonly details = signal<ReadonlyMap<number, DebugLogDetail>>(new Map());
 
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -46,17 +47,23 @@ export class ProfileDebugLogComponent {
     this.destroyRef.onDestroy(() => this.stop());
   }
 
-  toggle(entry: DebugLogEntry): void {
-    if (this.details().has(entry.id)) {
-      const without = new Map(this.details());
-      without.delete(entry.id);
-      this.details.set(without);
-      return;
+  toggle(id: number): void {
+    const next = new Set(this.expanded());
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+      this.ensureDetail(id);
     }
+    this.expanded.set(next);
+  }
+
+  private ensureDetail(id: number): void {
+    if (this.details().has(id)) return;
     this.api
-      .debugLogEntry(entry.id)
+      .debugLogEntry(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((detail) => this.details.set(new Map(this.details()).set(entry.id, detail)));
+      .subscribe((detail) => this.details.set(new Map(this.details()).set(id, detail)));
   }
 
   private fetch(running: boolean): void {

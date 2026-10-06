@@ -1,0 +1,102 @@
+@let call = entry();
+<!-- verdict renders the API's own wire vocabulary, not translated copy: the log's
+     value is matching what the backend and its logs say. -->
+<div class="debug-entry__row">
+  <span class="debug-entry__time">{{ time() }}</span>
+  <span class="debug-entry__call">
+    @switch (call.phase) {
+      @case ('batch') {
+        {{ 'settings.ai.recommendations.debugBatch' | transloco: { n: call.batchNumber } }}
+      }
+      @case ('distill') {
+        {{ 'settings.ai.recommendations.debugDistill' | transloco }}
+      }
+      @default {
+        {{ 'settings.ai.recommendations.debugDedup' | transloco }}
+      }
+    }
+    @if (call.attempt > 1) {
+      <span class="debug-entry__attempt">{{
+        'settings.ai.recommendations.debugAttempt' | transloco: { n: call.attempt }
+      }}</span>
+    }
+  </span>
+  <span class="debug-entry__dur">
+    @let seconds = durationSeconds();
+    @if (seconds !== null) {
+      {{ 'settings.ai.recommendations.debugDuration' | transloco: { s: seconds } }}
+    }
+  </span>
+  @if (call.verdict; as verdict) {
+    <span class="debug-entry__verdict debug-entry__verdict--{{ verdict }}">{{ verdict }}</span>
+  } @else {
+    <span class="debug-entry__verdict"></span>
+  }
+  <span class="debug-entry__sizes">{{ requestKb() }}/{{ responseKb() }} KB</span>
+  <button
+    type="button"
+    class="debug-entry__expander"
+    [attr.aria-expanded]="expanded()"
+    [attr.aria-label]="'settings.ai.recommendations.debugDetails' | transloco"
+    (click)="toggled.emit()"
+  >
+    {{ expanded() ? '−' : '+' }}
+  </button>
+</div>
+
+@if (call.wireBytes > 0) {
+  <p class="debug-entry__wire">
+    {{
+      (call.responseBytes === 0
+        ? 'settings.ai.recommendations.debugStreamedNoAnswer'
+        : 'settings.ai.recommendations.debugStreamed'
+      ) | transloco: { kb: wireKb() }
+    }}
+  </p>
+}
+
+@if (call.finishReason; as finishReason) {
+  <p class="debug-entry__finish" [class.debug-entry__finish--truncated]="finishReason === 'length'">
+    {{
+      (finishReason === 'length'
+        ? 'settings.ai.recommendations.debugFinishTruncated'
+        : 'settings.ai.recommendations.debugFinishReason'
+      ) | transloco: { reason: finishReason }
+    }}
+  </p>
+}
+
+@if (call.verdict === 'transport-failed' && call.errorDetail; as errorDetail) {
+  <p class="debug-entry__error">{{ errorDetail }}</p>
+}
+
+@if (call.verdict === null && call.streamingText !== null) {
+  <pre class="debug-entry__stream">{{ call.streamingText }}</pre>
+}
+
+@if (expanded()) {
+  <div class="debug-entry__body">
+    @if (detail()?.requestBody; as text) {
+      <div class="debug-entry__section">
+        <span class="debug-entry__section-label">{{
+          'settings.ai.recommendations.debugRequest' | transloco
+        }}</span>
+        <button type="button" (click)="copy(text)">
+          {{ 'settings.ai.recommendations.debugCopy' | transloco }}
+        </button>
+        <pre>{{ text }}</pre>
+      </div>
+    }
+    @if (call.verdict !== null && detail()?.responseText; as text) {
+      <div class="debug-entry__section">
+        <span class="debug-entry__section-label">{{
+          'settings.ai.recommendations.debugResponse' | transloco
+        }}</span>
+        <button type="button" (click)="copy(text)">
+          {{ 'settings.ai.recommendations.debugCopy' | transloco }}
+        </button>
+        <pre>{{ text }}</pre>
+      </div>
+    }
+  </div>
+}
