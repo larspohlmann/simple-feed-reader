@@ -198,16 +198,19 @@ describe.each(['light', 'dark'] as const)('%s brightness steps', (theme) => {
     },
   );
 
-  it.each(STEPS[theme])('step %i keeps the rim highlight at the lightest surface', (step) => {
-    const palette = paletteAt(theme, step);
-    if (theme === 'light') {
-      expect(rgb(palette['rim-light'])).toEqual(rgb(palette['surface-1']));
-    } else if (step > 0) {
-      expect(rgb(palette['rim-light'])).toEqual([255, 255, 255]);
-    } else {
-      expect(luminance(rgb(palette['rim-light']))).toBeLessThan(1);
-    }
-  });
+  it.each(STEPS[theme])(
+    'step %i holds the rim highlight at surface-1 in light, and in dark at white when brightening, below white when dimming',
+    (step) => {
+      const palette = paletteAt(theme, step);
+      if (theme === 'light') {
+        expect(rgb(palette['rim-light'])).toEqual(rgb(palette['surface-1']));
+      } else if (step > 0) {
+        expect(rgb(palette['rim-light'])).toEqual([255, 255, 255]);
+      } else {
+        expect(luminance(rgb(palette['rim-light']))).toBeLessThan(1);
+      }
+    },
+  );
 
   it('keeps the rim highlight white at step 0', () => {
     expect(base['rim-light']).toBe('white');
