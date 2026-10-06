@@ -29,7 +29,7 @@ final readonly class ScoringBudgetModel
             $contextWindowTokens,
             $maxItemsPerRequest,
             min(self::MAXIMUM_READER_TOKENS, intdiv($contextWindowTokens * self::READER_SHARE_PERCENT, 100)),
-            self::FRAMING_TOKENS,
+            min(self::FRAMING_TOKENS, intdiv($contextWindowTokens, 2)),
         );
     }
 
