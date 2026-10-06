@@ -16,7 +16,6 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationRunFailure;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationWinnerRanker;
-use App\Service\Recommendation\Scoring\Factory\ScoringBudgetFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 use App\Service\Recommendation\Scoring\Pass\ScoringWave;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -29,7 +28,6 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
 
     public function __construct(
         private ScoringProtocolResolver $protocols,
-        private ScoringBudgetFactory $budgetFactory,
         private BatchWavePhase $batchWavePhase,
         private ScoringBatchWave $wave,
         private BatchWaveRounds $rounds,
@@ -42,9 +40,9 @@ final readonly class ScoringRecommendationEngine implements RecommendationEngine
 
     public function packBatches(array $candidates, TickContext $tick): array
     {
-        $protocol = $tick->requireScoringProtocol();
+        $protocol = $this->protocols->protocolOf($tick->requireScoringProtocol());
 
-        return $this->protocols->protocolOf($protocol)->pack($this->budgetFactory->create($protocol), $candidates);
+        return $protocol->pack($protocol->budget($tick->requireScoringContextWindow()), $candidates);
     }
 
     public function advance(TickContext $tick): RecommendationRunReportModel

@@ -24,6 +24,8 @@ const EXISTING = {
   baseUrl: 'https://existing.example.test/v1',
   apiKeyHint: '9876',
   model: 'some-model',
+  kind: 'llm',
+  family: null,
   ready: true,
   active: true,
   suppressReasoning: true,

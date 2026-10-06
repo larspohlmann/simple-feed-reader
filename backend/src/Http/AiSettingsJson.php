@@ -9,6 +9,7 @@ use App\Entity\ModelDescriptor;
 use App\Entity\User;
 use App\Enum\ScoringProtocol;
 use App\Service\Ai\Support\AiReadiness;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
@@ -17,8 +18,10 @@ use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel
  */
 final readonly class AiSettingsJson
 {
-    public function __construct(private RecommendationCapabilitiesJson $capabilities)
-    {
+    public function __construct(
+        private RecommendationCapabilitiesJson $capabilities,
+        private RecommendationEngineResolver $engines,
+    ) {
     }
 
     /**
@@ -32,6 +35,8 @@ final readonly class AiSettingsJson
             'baseUrl' => $settings->getBaseUrl(),
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
+            'kind' => $this->engines->kindFor($settings)->value,
+            'family' => self::familyOf($settings->getScoringProtocol()),
             'suppressReasoning' => $settings->suppressesReasoning(),
             'suppressionRefused' => $settings->refusesSuppressedReasoning(),
             'batchConcurrency' => $settings->getRunTuning()->batchConcurrency(),
@@ -82,7 +87,9 @@ final readonly class AiSettingsJson
     /**
      * @param list<ModelDescriptor> $models
      *
-     * @return array{models: list<array{id: string, label: ?string, capabilities: array<string, mixed>}>}
+     * @return array{models: list<array{
+     *     id: string, label: ?string, kind: string, family: ?string, capabilities: array<string, mixed>
+     * }>}
      */
     public function models(array $models): array
     {
@@ -91,6 +98,8 @@ final readonly class AiSettingsJson
                 fn (ModelDescriptor $model): array => [
                     'id' => $model->id,
                     'label' => self::labelOf($model->scoringProtocol),
+                    'kind' => $model->kind()->value,
+                    'family' => self::familyOf($model->scoringProtocol),
                     'capabilities' => $this->capabilities->ofKind($model->kind()),
                 ],
                 $models,
@@ -104,5 +113,10 @@ final readonly class AiSettingsJson
             ScoringProtocol::SystemOne => 'System One',
             null => null,
         };
+    }
+
+    private static function familyOf(?ScoringProtocol $protocol): ?string
+    {
+        return $protocol?->family()->value;
     }
 }

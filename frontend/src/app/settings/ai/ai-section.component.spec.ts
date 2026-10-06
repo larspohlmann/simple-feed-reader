@@ -3,11 +3,12 @@ import { WritableSignal, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TranslocoService } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import {
   EVERY_RECOMMENDATION_CAPABILITY,
-  JEV_RECOMMENDATION_CAPABILITIES,
+  SCORING_RECOMMENDATION_CAPABILITIES,
 } from '../../../testing/recommendation-capabilities';
 import { NO_RECOMMENDATION_CAPABILITIES } from '../../core/ai-availability.service';
 import { API_BASE_URL } from '../../core/api';
@@ -47,6 +48,7 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   baseUrl: 'https://api.example.test/v1',
   apiKeyHint: '1234',
   model: null,
+  kind: 'llm',
   ready: false,
   active: false,
   suppressReasoning: true,
@@ -58,11 +60,20 @@ const config = (over: Partial<AiConfig> = {}): AiConfig => ({
   ...over,
 });
 
-const offered = (
-  id: string,
-  capabilities = EVERY_RECOMMENDATION_CAPABILITY,
-  label: string | null = null,
-): AiModel => ({ id, label, capabilities });
+const offered = (id: string, over: Partial<AiModel> = {}): AiModel => ({
+  id,
+  kind: 'llm',
+  family: null,
+  capabilities: EVERY_RECOMMENDATION_CAPABILITY,
+  ...over,
+});
+
+const decisionModel = (id: string): AiModel =>
+  offered(id, {
+    kind: 'scoring',
+    family: 'decision',
+    capabilities: SCORING_RECOMMENDATION_CAPABILITIES,
+  });
 
 const RECOMMENDATIONS: RecommendationSettingsState = {
   guidancePrompt: null,
@@ -158,6 +169,46 @@ describe('AiSectionComponent', () => {
     (row(fixture, index).querySelector('summary') as HTMLElement).click();
     fixture.detectChanges();
   };
+
+  /** Opens the row's picker on these models; the row's own model decides the kind it opens on. */
+  const openPicker = (
+    fixture: ComponentFixture<AiSectionComponent>,
+    rowConfig: AiConfig,
+    models: readonly AiModel[],
+  ): HTMLElement => {
+    ai.configs.set([rowConfig]);
+    ai.choosingModelFor.set(rowConfig.id);
+    ai.models.set(models);
+    fixture.detectChanges();
+    expandRow(fixture, 0);
+    return row(fixture, 0).querySelector('.model-picker') as HTMLElement;
+  };
+
+  const kindButtons = (picker: HTMLElement): HTMLButtonElement[] =>
+    Array.from(picker.querySelectorAll('.model-kind button'));
+
+  /** Opens the picker's dropdown, reads each option's label and hint as rendered, and closes it. */
+  const renderedOptions = (
+    fixture: ComponentFixture<AiSectionComponent>,
+    picker: HTMLElement,
+  ): { label: string; hint: string | undefined }[] => {
+    const trigger = picker.querySelector('app-searchable-select .trigger') as HTMLButtonElement;
+    trigger.click();
+    fixture.detectChanges();
+    const options = Array.from(picker.querySelectorAll('[role="option"]')).map((option) => {
+      const hint = option.querySelector('.option-hint')?.textContent?.trim();
+      const label = option.textContent?.replace(hint ?? '', '').trim() ?? '';
+      return { label, hint };
+    });
+    trigger.click();
+    fixture.detectChanges();
+    return options;
+  };
+
+  const optionLabels = (
+    fixture: ComponentFixture<AiSectionComponent>,
+    picker: HTMLElement,
+  ): string[] => renderedOptions(fixture, picker).map((option) => option.label);
 
   const banners = (host: HTMLElement): string[] =>
     Array.from(host.querySelectorAll('app-error-banner')).map((banner) =>
@@ -356,56 +407,186 @@ describe('AiSectionComponent', () => {
     expect(ai.chooseModel).toHaveBeenCalledWith(1, 'gpt-4o');
   });
 
-  it('marks a model that would borrow its profile and write no reasons, and leaves an LLM bare', () => {
+  it('marks a scoring model that would borrow its profile and write no reasons, and leaves an LLM bare', () => {
     const fixture = mount();
-    ai.configs.set([config({ id: 1 })]);
-    ai.choosingModelFor.set(1);
-    ai.models.set([offered('gpt-4o'), offered('jev-latest', JEV_RECOMMENDATION_CAPABILITIES)]);
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('jev-latest'),
+    ]);
+    const hints = (): (string | undefined)[] =>
+      renderedOptions(fixture, picker).map((option) => option.hint);
+
+    expect(hints()).toEqual([undefined]);
+
+    kindButtons(picker)[1].click();
     fixture.detectChanges();
 
-    expandRow(fixture, 0);
-    (row(fixture, 0).querySelector('app-searchable-select .trigger') as HTMLButtonElement).click();
-    fixture.detectChanges();
-
-    const options = Array.from(row(fixture, 0).querySelectorAll('[role="option"]'));
-    expect(
-      options.map((option) => option.querySelector('.option-hint')?.textContent?.trim()),
-    ).toEqual([
-      undefined,
+    expect(hints()).toEqual([
       'scores articles, writes no reasons · takes its profile from Settings → AI',
     ]);
   });
 
-  it("shows the server's label beside a model's id, and keeps it and the hint once chosen", () => {
+  it("shows the family beside a scoring model's id, and keeps it and the hint once chosen", () => {
     const fixture = mount();
-    ai.configs.set([config({ id: 1 })]);
-    ai.choosingModelFor.set(1);
-    ai.models.set([
+    const picker = openPicker(fixture, config({ id: 1, model: 'jev-latest', kind: 'scoring' }), [
       offered('gpt-4o'),
-      offered('jev-latest', JEV_RECOMMENDATION_CAPABILITIES, 'Jev'),
+      decisionModel('jev-latest'),
     ]);
-    fixture.detectChanges();
-    expandRow(fixture, 0);
-    const picker = row(fixture, 0).querySelector('.model-picker') as HTMLElement;
 
     (picker.querySelector('app-searchable-select .trigger') as HTMLButtonElement).click();
     fixture.detectChanges();
-    (picker.querySelectorAll('[role="option"]')[1] as HTMLElement).click();
+    (picker.querySelectorAll('[role="option"]')[0] as HTMLElement).click();
     fixture.detectChanges();
 
     expect(picker.querySelector('app-searchable-select .current')?.textContent?.trim()).toBe(
-      'jev-latest · Jev',
+      'jev-latest · Decision model',
     );
     expect(picker.querySelector('app-field .hint')?.textContent?.trim()).toBe(
       'scores articles, writes no reasons · takes its profile from Settings → AI',
     );
 
+    kindButtons(picker)[0].click();
+    fixture.detectChanges();
     fixture.componentInstance.chosenModel.set('gpt-4o');
     fixture.detectChanges();
     expect(picker.querySelector('app-searchable-select .current')?.textContent?.trim()).toBe(
       'gpt-4o',
     );
     expect(picker.querySelector('app-field .hint')).toBeNull();
+  });
+
+  it("opens on the kind of the row's model and lists only that kind", () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1, model: 'jev-latest', kind: 'scoring' }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+
+    expect(kindButtons(picker).map((button) => button.textContent?.trim())).toEqual([
+      'LLM',
+      'Scoring model',
+    ]);
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(optionLabels(fixture, picker)).toEqual(['~typesafe/jev-latest · Decision model']);
+  });
+
+  it('lists the other kind once it is picked, and drops the model picked under the first', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
+    fixture.componentInstance.chosenModel.set('gpt-4o');
+
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+
+    expect(optionLabels(fixture, picker)).toEqual(['~typesafe/jev-latest · Decision model']);
+    expect(fixture.componentInstance.chosenModel()).toBeNull();
+  });
+
+  it('disables a kind the provider offers none of, says so, and opens on the kind it offers', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [decisionModel('~typesafe/jev-latest')]);
+
+    expect(kindButtons(picker).map((button) => button.disabled)).toEqual([true, false]);
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(picker.querySelector('.model-kind')?.textContent).toContain(
+      'This provider offers no LLMs.',
+    );
+  });
+
+  it('says so when the provider offers no scoring models, and ties the reason to the kind control', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [offered('gpt-4o')]);
+    const reason = picker.querySelector('.model-kind .hint') as HTMLElement;
+
+    expect(kindButtons(picker).map((button) => button.disabled)).toEqual([false, true]);
+    expect(reason.textContent?.trim()).toBe('This provider offers no scoring models.');
+    expect(
+      picker.querySelector('.model-kind [role="group"]')?.getAttribute('aria-describedby'),
+    ).toBe(reason.id);
+  });
+
+  it('describes no reason on the kind control while the provider offers both kinds', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+
+    expect(
+      picker.querySelector('.model-kind [role="group"]')?.hasAttribute('aria-describedby'),
+    ).toBe(false);
+  });
+
+  it("opens another row's picker on that row's kind, whatever the last row showed", () => {
+    const fixture = mount();
+    const scoringRow = config({ id: 1, model: 'jev-latest', kind: 'scoring' });
+    openPicker(fixture, scoringRow, [offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    expect(fixture.componentInstance.modelKind()).toBe('scoring');
+
+    ai.configs.set([scoringRow, config({ id: 2, model: 'gpt-4o' })]);
+    ai.models.set([offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    ai.choosingModelFor.set(2);
+    fixture.detectChanges();
+    expandRow(fixture, 1);
+    const picker = row(fixture, 1).querySelector('.model-picker') as HTMLElement;
+
+    expect(fixture.componentInstance.modelKind()).toBe('llm');
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
+  });
+
+  it("reopens a row's picker on its saved kind after the reader switched kinds", () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+
+    ai.models.set([offered('gpt-4o'), decisionModel('~typesafe/jev-latest')]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modelKind()).toBe('llm');
+    expect(optionLabels(fixture, picker)).toEqual(['gpt-4o']);
+  });
+
+  it("explains a scoring model's score only while scoring models are listed", () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    expect(picker.querySelector('.scoring-hint')).toBeNull();
+
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+
+    expect(picker.querySelector('.scoring-hint')?.textContent).toContain('probability');
+  });
+
+  it("keeps the reader's kind while a row is written", () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+
+    ai.configs.set([config({ id: 1 }), config({ id: 2, name: 'Sibling' })]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.modelKind()).toBe('scoring');
   });
 
   it('resets the picked model whenever a different row starts choosing', () => {
@@ -1078,30 +1259,41 @@ describe('AiSectionComponent', () => {
     expect(steps.length).toBe(15);
   });
 
-  it('walks through setting up Jev in the guide', () => {
+  it('walks through setting up a scoring model in the guide', () => {
     const fixture = mountWithConfigs([]);
 
     const guide = fixture.nativeElement.querySelector('.guide') as HTMLElement;
     const titles = Array.from(guide.querySelectorAll('h3')).map((title) =>
       title.textContent?.trim(),
     );
-    expect(titles).toContain('Use Jev (TypeSafe System One)');
+    expect(titles).toContain('Use a scoring model');
 
-    const jevSteps = Array.from(guide.querySelectorAll('.guide-jev li')).map((step) =>
+    const scoringSteps = Array.from(guide.querySelectorAll('.guide-scoring li')).map((step) =>
       step.textContent?.trim(),
     );
-    expect(jevSteps).toHaveLength(5);
-    expect(jevSteps[1]).toContain('https://openrouter.ai/api/v1');
-    expect(jevSteps[2]).toContain('jev-latest');
-    expect(jevSteps[3]).toContain('Open Settings → AI');
+    expect(scoringSteps).toHaveLength(5);
+    expect(scoringSteps[1]).toContain('https://openrouter.ai/api/v1');
+    expect(scoringSteps[2]).toContain('“Scoring model”');
+    expect(scoringSteps[2]).toContain('“Decision model”');
+    expect(scoringSteps[3]).toContain('Open Settings → AI');
   });
 
-  it('says in the add form that Jev models are supported alongside LLMs', () => {
+  it('says in the add form that scoring models are supported alongside LLMs', () => {
     const fixture = mountWithConfigs([]);
 
     const intro = fixture.nativeElement.querySelector('.add-group .add-intro') as HTMLElement;
-    expect(intro.textContent).toContain('OpenAI-compatible LLM endpoint and with Jev');
-    expect(intro.textContent).toContain('jev-latest');
+    expect(intro.textContent).toContain('OpenAI-compatible LLM endpoint and with scoring models');
+    expect(intro.textContent).not.toContain('jev-latest');
+  });
+
+  it('names no single scoring model in its German copy', () => {
+    const fixture = mountWithConfigs([]);
+    TestBed.inject(TranslocoService).setActiveLang('de');
+    fixture.detectChanges();
+
+    const guide = fixture.nativeElement.querySelector('.guide') as HTMLElement;
+    expect(guide.textContent).toContain('Ein Bewertungsmodell verwenden');
+    expect(guide.textContent).not.toContain('Jev verwenden');
   });
 
   it('explains the row actions with one tip and each connection checkbox with its own', () => {
@@ -1129,7 +1321,7 @@ describe('AiSectionComponent', () => {
     expect(body.querySelector('.reasoning-toggle .hint')).toBeNull();
   });
 
-  it('offers no profile picker on a Jev connection', () => {
+  it('offers no profile picker on a scoring connection', () => {
     const fixture = mount();
     ai.configs.set([
       config({
@@ -1137,7 +1329,8 @@ describe('AiSectionComponent', () => {
         ready: true,
         active: true,
         model: 'jev-latest',
-        capabilities: JEV_RECOMMENDATION_CAPABILITIES,
+        kind: 'scoring',
+        capabilities: SCORING_RECOMMENDATION_CAPABILITIES,
       }),
     ]);
     fixture.detectChanges();

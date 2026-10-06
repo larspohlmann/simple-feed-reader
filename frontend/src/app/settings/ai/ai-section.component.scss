@@ -176,6 +176,16 @@ app-disclosure {
   width: 100%;
 }
 
+.model-kind {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.model-kind .hint {
+  margin: 0;
+}
+
 .add-group {
   display: flex;
   flex-direction: column;

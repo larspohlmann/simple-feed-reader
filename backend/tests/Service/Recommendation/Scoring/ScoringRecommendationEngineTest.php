@@ -19,10 +19,16 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRejectedRequestException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
+use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\TickPhases;
+use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
 use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
+use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\TokenEstimate;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\DrivesRecommendationRuns;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
@@ -30,10 +36,13 @@ use App\Tests\Support\StubSystemOneClient;
 
 final class ScoringRecommendationEngineTest extends DbTestCase
 {
+    use BuildsTickContexts;
     use DrivesRecommendationRuns;
     use SeedsUsers;
 
     private const string PROFILE = 'Likes Rust and homelab.';
+
+    private const int DISAGREEING_WINDOW_OVERRIDE = 131_072;
 
     private User $owner;
     private RecommendationRunFixtures $fixtures;
@@ -52,7 +61,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** A poll tick never waits: the 429 defers the run, halves its concurrency and strikes nothing. */
     public function testAPollWaveThatMeetsA429DefersWithoutAStrike(): void
     {
-        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
         $this->systemOne()->queueFailure(new RetryableProviderException(429, 20));
 
         $report = $this->advancer()->advance($this->owner, TickDriver::Poll);
@@ -69,7 +78,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** A deferral settles the wave unbanked, yet the sibling that already answered bills its paid reply. */
     public function testAPollWaveThatDefersStillBillsTheAnswerItGot(): void
     {
-        $this->startRunAfterTheWarmUp(301, TickDriver::Poll);
+        $this->startRunAfterTheWarmUp(3 * SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.7);
         $this->systemOne()->queueFailure(new RetryableProviderException(429, 20));
 
@@ -86,7 +95,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** A worker tick waits a 529 out, re-sends only the limited request, and banks the wave. */
     public function testAWorkerWaveWaitsOutA529AndBanksTheRetry(): void
     {
-        $this->startRunAfterTheWarmUp(101, TickDriver::Worker);
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Worker);
         $this->systemOne()->queueFailure(new RetryableProviderException(529, 0));
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.8);
 
@@ -103,7 +112,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** Three batches in one worker wave: every reply is judged, not only the first usable one. */
     public function testAWorkerWaveBanksEveryBatchItSent(): void
     {
-        $this->startRunAfterTheWarmUp(301, TickDriver::Worker);
+        $this->startRunAfterTheWarmUp(3 * SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Worker);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.7);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.6);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
@@ -116,7 +125,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** One failure in the middle of a wave banks nothing, yet every answered sibling still bills what it cost. */
     public function testAFailureAmidAWaveBanksNothingAndBillsEveryAnswer(): void
     {
-        $this->startRunAfterTheWarmUp(301, TickDriver::Worker);
+        $this->startRunAfterTheWarmUp(3 * SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Worker);
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.7);
         $this->systemOne()->queueFailure(new ProviderUnreachableException('That provider is down.'));
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
@@ -267,6 +276,42 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         self::assertSame([], $this->systemOne()->requests());
     }
 
+    /** The run's batches were packed for 32k; an 8k sibling model must not receive them. */
+    public function testAScoringRunWhoseConnectionSwitchedToAnotherSystemOneModelFailsWithoutAnotherCall(): void
+    {
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
+        $this->chooseScoringModel(new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne));
+
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->latestRun();
+        self::assertSame('failed', $run->getStatus()->value);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
+        self::assertCount(1, $this->systemOne()->requests());   // the warm-up only
+    }
+
+    /** Resume keeps the stamped model: the batches fit only its window, so the run waits for the switch back. */
+    public function testAResumedScoringRunFailsAgainOnAnotherModelAndProceedsOnItsOwn(): void
+    {
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
+        $this->chooseScoringModel(new ModelDescriptor('typesafe/kev-latest', 8_192, ScoringProtocol::SystemOne));
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $this->starter()->resume($this->owner);
+        self::assertSame('jev-latest', $this->latestRun()->getModel());
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+        self::assertSame(TickPhases::ENGINE_SWITCH, $this->latestRun()->getError());
+
+        $this->chooseScoringModel(new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
+        $this->starter()->resume($this->owner);
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.6);
+        $this->advancer()->advance($this->owner, TickDriver::Poll);
+
+        $run = $this->latestRun();
+        self::assertNotSame('failed', $run->getStatus()->value);
+        self::assertSame(2, $run->getProgress()->batchesDone);
+    }
+
     /** No history, so no profile: the account's to fix, so the run fails with the reason and never strikes. */
     public function testARunWithoutAProfileFailsWithTheReasonAndNeverAsksSystemOne(): void
     {
@@ -291,7 +336,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** The profile is the run's frozen copy: a later wave sends what this run froze, not the settings' copy. */
     public function testEveryWaveSendsTheProfileThisRunFroze(): void
     {
-        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
         $this->settingsWriter()->storeProfile(
             $this->owner,
             new StoredProfile('Rewritten elsewhere.', null, null, null),
@@ -309,7 +354,7 @@ final class ScoringRecommendationEngineTest extends DbTestCase
     /** Favorites go beside the profile, newest first, in the shape the candidates take. */
     public function testEveryWaveSendsTheReadersFavorites(): void
     {
-        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
         $favorites = $this->fixtures->seedFavorites($this->owner, 'liked', 2);
         usort($favorites, static fn (Entry $left, Entry $right): int
             => $right->getEffectiveDate() <=> $left->getEffectiveDate());
@@ -327,10 +372,45 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         );
     }
 
+    /** Kev's 8k window gives the reader 2,457 tokens: a longer profile is cut to fit, whatever the account overrides. */
+    public function testTheStateIsFittedToTheConnectionsWindow(): void
+    {
+        $this->fixtures->contextWindowSettings($this->owner, self::DISAGREEING_WINDOW_OVERRIDE);
+        $this->fixtures->seedFeedWithEntries($this->owner, 5);
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel(
+            new ModelDescriptor('jaredpalmer/kev-4b', 8_192, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-10-05 09:00:00'),
+        );
+        $this->entityManager->flush();
+        $this->fixtures->storeProfile($this->owner, str_repeat('Likes Rust and homelab. ', 1_000));
+        $this->starter()->start($this->owner);
+        $this->advancer()->advance($this->owner);   // the snapshot
+        $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.5);
+
+        $this->advancer()->advance($this->owner);
+
+        $requests = $this->systemOne()->requests();
+        self::assertCount(1, $requests);
+        $stateTokens = TokenEstimate::of(CompactJson::encode($requests[0]->state));
+        self::assertLessThanOrEqual(2_457, $stateTokens);
+        self::assertGreaterThan(2_000, $stateTokens);
+    }
+
+    /** 731-token questions (SystemOneProtocolTest): Kev's 8k window takes five a request, Jev's 32k all twelve. */
+    public function testEachRequestIsBoundedByTheConnectionsWindow(): void
+    {
+        $this->fixtures->contextWindowSettings($this->owner, self::DISAGREEING_WINDOW_OVERRIDE);
+
+        self::assertSame([5, 5, 2], $this->requestSizes(8_192));
+        self::assertSame([12], $this->requestSizes(32_000));
+    }
+
     /** A gateway's invalid byte: the reply is unusable, and the run log still holds valid UTF-8 (MySQL strict). */
     public function testAnInvalidByteInAReplyNeverReachesTheRunLog(): void
     {
-        $this->startRunAfterTheWarmUp(101, TickDriver::Poll);
+        $this->startRunAfterTheWarmUp(SystemOneProtocol::QUESTIONS_PER_REQUEST + 1, TickDriver::Poll);
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
             $this->systemOne()->queueBody("{\"model\":\"jev-1.13.0\",\"answers\":{},\"note\":\"\xC3\"}");
         }
@@ -342,7 +422,41 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         }
     }
 
-    /** Snapshot, then the one-request warm-up wave banks the first 100-question batch. */
+    /** @return list<int> */
+    private function requestSizes(int $contextWindowTokens): array
+    {
+        $now = new \DateTimeImmutable('2026-10-05 09:00:00');
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel(
+            new ModelDescriptor('acme/decider-2', $contextWindowTokens, ScoringProtocol::SystemOne),
+            $now,
+        );
+        $tick = $this->tick(new RecommendationRun($this->owner, $now));
+        $engines = self::getContainer()->get(RecommendationEngineResolver::class);
+        self::assertInstanceOf(RecommendationEngineResolver::class, $engines);
+
+        $batches = $engines->engineOf($tick->engineKind)->packBatches(self::heavyCandidates(12), $tick);
+
+        return array_map(\count(...), $batches);
+    }
+
+    /** @return list<ArticleLineModel> entry ids 1…$count, three-byte characters in every field */
+    private static function heavyCandidates(int $count): array
+    {
+        return array_map(
+            static fn (int $entryId): ArticleLineModel => new ArticleLineModel(
+                $entryId,
+                str_repeat('漢', 300),
+                'Feed',
+                '2026-10-01',
+                str_repeat('漢', 600),
+            ),
+            range(1, $count),
+        );
+    }
+
+    /** Snapshot, then the one-request warm-up wave banks the first full batch. */
     private function startRunAfterTheWarmUp(int $candidateCount, TickDriver $driver): void
     {
         $this->fixtures->seedFeedWithEntries($this->owner, $candidateCount);
@@ -354,6 +468,14 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         $this->systemOne()->queueNouls(static fn (int $entryId): float => 0.4);
         $this->advancer()->advance($this->owner, $driver);
         self::assertSame(1, $this->activeRun()->getProgress()->batchesDone);
+    }
+
+    private function chooseScoringModel(ModelDescriptor $model): void
+    {
+        $connection = $this->owner->getActiveAiProviderSettings();
+        self::assertNotNull($connection);
+        $connection->chooseModel($model, new \DateTimeImmutable('2026-10-05 09:10:00'));
+        $this->entityManager->flush();
     }
 
     private function startAndSnapshot(TickDriver $driver): void

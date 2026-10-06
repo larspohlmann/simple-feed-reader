@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai\ModelCatalog;
 
 use App\Entity\ModelDescriptor;
+use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -47,6 +49,83 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             ['claude-sonnet', 'gpt-4o', 'gpt-4o-mini'],
             $this->ids($catalog->listModels($this->credentials())),
         );
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, ?ModelDescriptor}> */
+    public static function listedEntries(): iterable
+    {
+        yield 'no architecture (LM Studio, OpenAI)' => [
+            ['id' => 'qwen3-14b', 'context_length' => 32_768],
+            new ModelDescriptor('qwen3-14b', 32_768),
+        ];
+        yield 'a text model' => [
+            self::entry('inclusionai/ling-3.1-flash', 262_144, ['text']),
+            new ModelDescriptor('inclusionai/ling-3.1-flash', 262_144),
+        ];
+        yield 'a model that writes images beside text' => [
+            self::entry('google/gemini-3.1-flash-lite-image', 65_536, ['image', 'text']),
+            new ModelDescriptor('google/gemini-3.1-flash-lite-image', 65_536),
+        ];
+        yield 'a decision model' => [
+            self::entry('~typesafe/jev-latest', 32_000, ['decisions']),
+            new ModelDescriptor('~typesafe/jev-latest', 32_000, ScoringProtocol::SystemOne),
+        ];
+        yield 'a decision model without a window (Respan)' => [
+            self::entry('respan/span-01', 0, ['decisions']),
+            null,
+        ];
+        yield 'a reranker, until its protocol exists' => [
+            self::entry('cohere/rerank-4-fast', 32_768, ['rerank']),
+            null,
+        ];
+        yield 'an image model' => [self::entry('bytedance-seed/seedream-5-0-flash', 0, ['image']), null];
+        yield 'an embedding model' => [self::entry('liquid/lfm-2.5-embedding-350m:free', 512, ['embeddings']), null];
+        yield 'decisions beside another output' => [self::entry('acme/mixed-1', 32_000, ['decisions', 'rerank']), null];
+        yield 'no output at all' => [self::entry('acme/silent-1', 32_000, []), null];
+        yield 'an architecture that is no object' => [
+            ['id' => 'acme/plain-1', 'context_length' => 32_000, 'architecture' => 'text'],
+            new ModelDescriptor('acme/plain-1', 32_000),
+        ];
+        yield 'outputs keyed instead of listed' => [
+            [
+                'id' => 'acme/keyed-1',
+                'context_length' => 32_000,
+                'architecture' => ['output_modalities' => ['first' => 'decisions']],
+            ],
+            null,
+        ];
+        yield 'a single output that is no string' => [self::entry('acme/numeric-1', 32_000, [42]), null];
+    }
+
+    /**
+     * A second, plain entry keeps the listing from coming back empty when the entry under test is left out.
+     *
+     * @param array<string, mixed> $entry
+     */
+    #[DataProvider('listedEntries')]
+    public function testTheListedOutputsDecideWhatAModelIs(array $entry, ?ModelDescriptor $expected): void
+    {
+        $catalog = $this->catalogAnswering(new MockResponse(json_encode(
+            ['data' => [$entry, ['id' => 'anchor-model']]],
+            JSON_THROW_ON_ERROR,
+        )));
+
+        $models = array_values(array_filter(
+            $catalog->listModels($this->credentials()),
+            static fn (ModelDescriptor $model): bool => 'anchor-model' !== $model->id,
+        ));
+
+        self::assertEquals(null === $expected ? [] : [$expected], $models);
+    }
+
+    /**
+     * @param list<mixed> $outputs
+     *
+     * @return array<string, mixed>
+     */
+    private static function entry(string $id, int $contextLength, array $outputs): array
+    {
+        return ['id' => $id, 'context_length' => $contextLength, 'architecture' => ['output_modalities' => $outputs]];
     }
 
     public function testCapturesContextLengthWhenTheProviderReportsOne(): void
@@ -94,7 +173,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
         /** @var array{method: string, url: string, headers: array<int, string>} $seen */
         self::assertSame('GET', $seen['method']);
-        self::assertSame('https://api.example.test/v1/models', $seen['url']);
+        self::assertSame('https://api.example.test/v1/models?output_modalities=all', $seen['url']);
         self::assertContains('Authorization: Bearer sk-test', $seen['headers']);
     }
 
@@ -138,11 +217,20 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         self::assertContains('Accept-Encoding: identity', $seen['headers']);
     }
 
+    public function testABodyPastTheOldOneMebibyteCapIsStillRead(): void
+    {
+        // OpenRouter's all-modalities listing alone is about 1 MB; chunked, so the wire cap sees its progress.
+        $body = '{"data":[{"id":"' . str_repeat('a', 2_000_000) . '"}]}';
+        $catalog = $this->catalogAnswering(new MockResponse(str_split($body, 50_000)));
+
+        self::assertCount(1, $catalog->listModels($this->credentials()));
+    }
+
     public function testAnOversizedBodyIsUnreachable(): void
     {
         // Valid JSON padded past MAXIMUM_RESPONSE_BYTES: only the wire cap refuses it. Chunked, because MockHttpClient
         // reports a single string's progress only once it is complete.
-        $body = '{"data":[{"id":"' . str_repeat('a', 2_000_000) . '"}]}';
+        $body = '{"data":[{"id":"' . str_repeat('a', 4_500_000) . '"}]}';
         $catalog = $this->catalogAnswering(new MockResponse(str_split($body, 50_000)));
 
         $this->expectException(ProviderUnreachableException::class);

@@ -8,6 +8,8 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
   template: `<app-segmented-choice
     [options]="['en', 'de']"
     [selected]="selected()"
+    [disabledOptions]="disabled()"
+    [describedBy]="describedBy()"
     ariaLabelKey="lang.label"
     labelPrefix="lang."
     (pick)="picked = $event"
@@ -15,6 +17,8 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 })
 class HostComponent {
   readonly selected = signal<'en' | 'de'>('en');
+  readonly disabled = signal<readonly ('en' | 'de')[]>([]);
+  readonly describedBy = signal<string | null>(null);
   picked: string | null = null;
 }
 
@@ -42,6 +46,16 @@ describe('SegmentedChoiceComponent', () => {
     expect(group.getAttribute('aria-label')).toBe('Language');
   });
 
+  it('points the group at the text that describes it, and at nothing without one', () => {
+    const fixture = create();
+    const group = fixture.nativeElement.querySelector('[role="group"]') as HTMLElement;
+    expect(group.hasAttribute('aria-describedby')).toBe(false);
+
+    fixture.componentInstance.describedBy.set('why-disabled');
+    fixture.detectChanges();
+    expect(group.getAttribute('aria-describedby')).toBe('why-disabled');
+  });
+
   it('marks only the selected option', () => {
     const fixture = create();
     expect(buttons(fixture).map((button) => button.getAttribute('aria-pressed'))).toEqual([
@@ -61,5 +75,17 @@ describe('SegmentedChoiceComponent', () => {
     const fixture = create();
     buttons(fixture)[1].click();
     expect(fixture.componentInstance.picked).toBe('de');
+  });
+
+  it('disables only the options it is told to, and a disabled one emits nothing', () => {
+    const fixture = create();
+    expect(buttons(fixture).map((button) => button.disabled)).toEqual([false, false]);
+
+    fixture.componentInstance.disabled.set(['de']);
+    fixture.detectChanges();
+    buttons(fixture)[1].click();
+
+    expect(buttons(fixture).map((button) => button.disabled)).toEqual([false, true]);
+    expect(fixture.componentInstance.picked).toBeNull();
   });
 });

@@ -20,11 +20,19 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(index: ScoringProtocol::SystemOne->value)]
 final readonly class SystemOneProtocol implements ScoringProtocolInterface
 {
+    /** Cloudflare's Clef refuses more, the smallest cap measured (#1394); every System One model takes 64. */
+    public const int QUESTIONS_PER_REQUEST = 64;
+
     public function __construct(
         private ScoringBatchPacker $packer,
         private SystemOneRequestFactory $requestFactory,
         private SystemOneClientInterface $client,
     ) {
+    }
+
+    public function budget(int $contextWindowTokens): ScoringBudgetModel
+    {
+        return ScoringBudgetModel::forWindow($contextWindowTokens, self::QUESTIONS_PER_REQUEST);
     }
 
     public function pack(ScoringBudgetModel $budget, array $candidates): array

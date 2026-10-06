@@ -9,19 +9,18 @@ use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Offers TypeSafe's `jev-latest` alias wherever `{base}/systemone` exists: OpenRouter's `/models` does not list it and
- * TypeSafe's own is not OpenAI-shaped. An alias, never a pinned version; the run log records which one answered.
+ * Offers TypeSafe's `jev-latest` alias wherever `{base}/systemone` exists, for a provider whose listing names no System
+ * One model (TypeSafe's own `/models` is not OpenAI-shaped). An alias, never a pinned version; the run log records
+ * which one answered.
  */
-#[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 0])]
 final readonly class SystemOneCatalog implements ModelCatalogInterface
 {
     /** One System One request, state and every question together, as OpenRouter documents it. */
-    public const int CONTEXT_WINDOW_TOKENS = 32_000;
+    private const int CONTEXT_WINDOW_TOKENS = 32_000;
 
     /** OpenRouter refuses `jev-preview`, and TypeSafe documents only `jev-latest`. */
     private const array MODEL_IDS = ['jev-latest'];

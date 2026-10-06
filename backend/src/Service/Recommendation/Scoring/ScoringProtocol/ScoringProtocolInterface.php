@@ -15,6 +15,9 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.scoring_protocol')]
 interface ScoringProtocolInterface
 {
+    /** What one request may carry for a model with this context window. */
+    public function budget(int $contextWindowTokens): ScoringBudgetModel;
+
     /**
      * @param list<ArticleLineModel> $candidates
      *

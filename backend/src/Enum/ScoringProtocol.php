@@ -8,4 +8,11 @@ namespace App\Enum;
 enum ScoringProtocol: string
 {
     case SystemOne = 'system_one';
+
+    public function family(): ScoringFamily
+    {
+        return match ($this) {
+            self::SystemOne => ScoringFamily::Decision,
+        };
+    }
 }

@@ -162,6 +162,27 @@
 
                     @if (ai.choosingModelFor() === config.id && ai.models().length) {
                       <div class="model-picker">
+                        <div class="model-kind">
+                          <app-segmented-choice
+                            [options]="modelKinds"
+                            [selected]="modelKind()"
+                            [disabledOptions]="unofferedKinds()"
+                            [describedBy]="noneOfferedIds(config.id)"
+                            ariaLabelKey="settings.ai.modelKind.label"
+                            labelPrefix="settings.ai.modelKind."
+                            (pick)="modelKind.set($event)"
+                          />
+                          @for (kind of unofferedKinds(); track kind) {
+                            <p class="hint" [id]="noneOfferedId(config.id, kind)">
+                              {{ 'settings.ai.modelKind.noneOffered.' + kind | transloco }}
+                            </p>
+                          }
+                          @if (modelKind() === 'scoring') {
+                            <p class="hint scoring-hint">
+                              {{ 'settings.ai.modelKind.scoringHint' | transloco }}
+                            </p>
+                          }
+                        </div>
                         <app-field
                           [label]="'settings.ai.model' | transloco"
                           [info]="'settings.ai.info.modelPicker' | transloco"
@@ -327,13 +348,13 @@
             <li>{{ 'settings.ai.guide.recommendationsStep5' | transloco }}</li>
           </ol>
 
-          <h3>{{ 'settings.ai.guide.jevTitle' | transloco }}</h3>
-          <ol class="guide-jev">
-            <li>{{ 'settings.ai.guide.jevStep1' | transloco }}</li>
-            <li>{{ 'settings.ai.guide.jevStep2' | transloco }}</li>
-            <li>{{ 'settings.ai.guide.jevStep3' | transloco }}</li>
-            <li>{{ 'settings.ai.guide.jevStep4' | transloco }}</li>
-            <li>{{ 'settings.ai.guide.jevStep5' | transloco }}</li>
+          <h3>{{ 'settings.ai.guide.scoringTitle' | transloco }}</h3>
+          <ol class="guide-scoring">
+            <li>{{ 'settings.ai.guide.scoringStep1' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.scoringStep2' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.scoringStep3' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.scoringStep4' | transloco }}</li>
+            <li>{{ 'settings.ai.guide.scoringStep5' | transloco }}</li>
           </ol>
         </div>
       </app-disclosure>

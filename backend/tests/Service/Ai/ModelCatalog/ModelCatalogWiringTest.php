@@ -10,10 +10,10 @@ use App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog;
 use App\Service\Ai\ModelCatalog\SystemOneCatalog;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/** Only the compiled container proves the tag and the order: the OpenAI catalog first, so its failures speak first. */
+/** Only the compiled container proves the tag and the fallback: the listing is a member, the probe is not. */
 final class ModelCatalogWiringTest extends KernelTestCase
 {
-    public function testEveryCallerGetsTheCompositeOverBothCatalogsInPriorityOrder(): void
+    public function testEveryCallerGetsTheCompositeOverTheListingWithTheProbeAsItsFallback(): void
     {
         self::bootKernel();
         $catalog = self::getContainer()->get(ModelCatalogInterface::class);
@@ -26,6 +26,10 @@ final class ModelCatalogWiringTest extends KernelTestCase
             $classes[] = $member::class;
         }
 
-        self::assertSame([OpenAiCompatibleCatalog::class, SystemOneCatalog::class], $classes);
+        self::assertSame([OpenAiCompatibleCatalog::class], $classes);
+        self::assertInstanceOf(
+            SystemOneCatalog::class,
+            (new \ReflectionProperty(CompositeModelCatalog::class, 'systemOneFallback'))->getValue($catalog),
+        );
     }
 }

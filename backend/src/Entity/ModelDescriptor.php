@@ -19,6 +19,11 @@ final readonly class ModelDescriptor
         public ?int $contextWindow,
         public ?ScoringProtocol $scoringProtocol = null,
     ) {
+        if (null !== $scoringProtocol && (null === $contextWindow || $contextWindow <= 0)) {
+            throw new \InvalidArgumentException(
+                sprintf('The scoring model "%s" needs a positive context window.', $id),
+            );
+        }
     }
 
     public function kind(): RecommendationEngineKind

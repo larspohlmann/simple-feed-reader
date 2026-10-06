@@ -64,6 +64,25 @@ final class TickContextTest extends TestCase
         $this->tick($this->connection(), TickDriver::Worker)->requireScoringProtocol();
     }
 
+    public function testAScoringConnectionsTickNamesItsModelsWindow(): void
+    {
+        $connection = $this->connection();
+        $connection->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable(self::AT),
+        );
+
+        self::assertSame(16_000, $this->tick($connection, TickDriver::Worker)->requireScoringContextWindow());
+    }
+
+    public function testATickWhoseConnectionStoresNoWindowHasNoneToRequire(): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('This tick\'s connection stores no context window for its scoring model.');
+
+        $this->tick($this->connection(), TickDriver::Worker)->requireScoringContextWindow();
+    }
+
     private function tick(AiProviderSettings $connection, TickDriver $driver): TickContext
     {
         return new TickContext(

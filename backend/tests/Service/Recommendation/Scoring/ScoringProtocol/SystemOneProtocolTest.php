@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Scoring\ScoringProtocol;
 
-use App\Enum\ScoringProtocol;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Scoring\Factory\ScoringBudgetFactory;
 use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
 use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
@@ -23,26 +21,35 @@ use PHPUnit\Framework\TestCase;
 
 final class SystemOneProtocolTest extends TestCase
 {
+    /** Clef refuses more than 64 questions; the reader's share scales with the model's window. */
+    public function testARequestCarriesAtMost64QuestionsAndTheReaderAShareOfTheWindow(): void
+    {
+        $protocol = self::protocol(new StubSystemOneClient());
+
+        self::assertEquals(new ScoringBudgetModel(32_000, 64, 9_600, 2_000), $protocol->budget(32_000));
+        self::assertEquals(new ScoringBudgetModel(8_192, 64, 2_457, 2_000), $protocol->budget(8_192));
+    }
+
     /** Short Latin articles fit the token budget by far: the question cap closes each request. */
     public function testShortArticlesFillRequestsUpToTheQuestionCapInPoolOrder(): void
     {
-        $candidates = $this->candidates(250, 'Short title', 'Short description.');
+        $candidates = self::candidates(250, 'Short title', 'Short description.');
 
-        $batches = $this->protocol(new StubSystemOneClient())->pack(self::budget(), $candidates);
+        $batches = self::protocol(new StubSystemOneClient())->pack(self::jevBudget(), $candidates);
 
-        self::assertSame([100, 100, 50], array_map(\count(...), $batches));
+        self::assertSame([64, 64, 64, 58], array_map(\count(...), $batches));
         self::assertSame(range(1, 250), array_merge(...$batches));
     }
 
     /**
-     * Three-byte characters in every field, 731 tokens a question: 20,000 tokens (32k less 2k framing and 10k state)
+     * Three-byte characters in every field, 731 tokens a question: 20,400 tokens (32k less 2k framing and 9.6k state)
      * hold 27 of them, so the token budget closes each request before the question cap.
      */
     public function testHeavyArticlesFillRequestsUpToTheTokenBudget(): void
     {
-        $candidates = $this->candidates(120, str_repeat('漢', 300), str_repeat('漢', 600));
+        $candidates = self::candidates(120, str_repeat('漢', 300), str_repeat('漢', 600));
 
-        $batches = $this->protocol(new StubSystemOneClient())->pack(self::budget(), $candidates);
+        $batches = self::protocol(new StubSystemOneClient())->pack(self::jevBudget(), $candidates);
 
         self::assertSame([27, 27, 27, 27, 12], array_map(\count(...), $batches));
         self::assertSame(range(1, 120), array_merge(...$batches));
@@ -52,7 +59,7 @@ final class SystemOneProtocolTest extends TestCase
             foreach ($batch as $entryId) {
                 $tokens += TokenEstimate::of(CompactJson::encode($factory->question($candidates[$entryId - 1])));
             }
-            self::assertLessThanOrEqual(20_000, $tokens);
+            self::assertLessThanOrEqual(20_400, $tokens);
         }
     }
 
@@ -62,7 +69,7 @@ final class SystemOneProtocolTest extends TestCase
 
         self::assertSame(
             self::requestFactory()->create($request)->toRenderedRequest(),
-            $this->protocol(new StubSystemOneClient())->renderedRequest($request),
+            self::protocol(new StubSystemOneClient())->renderedRequest($request),
         );
     }
 
@@ -72,7 +79,7 @@ final class SystemOneProtocolTest extends TestCase
         $client->queueNouls(static fn (int $entryId): float => 0.25);
         $client->queueNouls(static fn (int $entryId): float => 0.75);
 
-        $outcomes = $this->protocol($client)->scoreMany(
+        $outcomes = self::protocol($client)->scoreMany(
             ProviderCredentialsModel::fromStoredConfiguration('https://api.typesafe.test/v1', 'sk-jev'),
             [self::request([self::article(41)]), self::request([self::article(7), self::article(9)])],
         );
@@ -88,7 +95,7 @@ final class SystemOneProtocolTest extends TestCase
         self::assertSame([7 => 0.75, 9 => 0.75], $outcomes[1]->reply()->scores);
     }
 
-    private function protocol(StubSystemOneClient $client): SystemOneProtocol
+    private static function protocol(StubSystemOneClient $client): SystemOneProtocol
     {
         return new SystemOneProtocol(new ScoringBatchPacker(), self::requestFactory(), $client);
     }
@@ -98,9 +105,9 @@ final class SystemOneProtocolTest extends TestCase
         return new SystemOneRequestFactory(new ScoringStateFactory());
     }
 
-    private static function budget(): ScoringBudgetModel
+    private static function jevBudget(): ScoringBudgetModel
     {
-        return (new ScoringBudgetFactory())->create(ScoringProtocol::SystemOne);
+        return self::protocol(new StubSystemOneClient())->budget(32_000);
     }
 
     /** @param list<ArticleLineModel> $articles */
@@ -109,7 +116,7 @@ final class SystemOneProtocolTest extends TestCase
         return new ScoringRequestModel(
             'jev-latest',
             new ScoringReaderModel('Likes Rust.', null, []),
-            self::budget(),
+            self::jevBudget(),
             $articles,
         );
     }
@@ -120,7 +127,7 @@ final class SystemOneProtocolTest extends TestCase
     }
 
     /** @return list<ArticleLineModel> entry ids 1…$count */
-    private function candidates(int $count, string $title, string $description): array
+    private static function candidates(int $count, string $title, string $description): array
     {
         return array_map(
             static fn (int $entryId): ArticleLineModel

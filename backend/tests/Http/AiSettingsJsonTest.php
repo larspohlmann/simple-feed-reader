@@ -10,10 +10,12 @@ use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Enum\ScoringProtocol;
 use App\Http\AiSettingsJson;
+use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\RecommendationCapabilitiesJsons;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class AiSettingsJsonTest extends TestCase
 {
@@ -21,7 +23,10 @@ final class AiSettingsJsonTest extends TestCase
 
     private function json(): AiSettingsJson
     {
-        return new AiSettingsJson(RecommendationCapabilitiesJsons::ofTheKind());
+        return new AiSettingsJson(
+            RecommendationCapabilitiesJsons::ofTheKind(),
+            new RecommendationEngineResolver(new ServiceLocator([])),
+        );
     }
 
     private function settings(?string $model, ?string $name = null): AiProviderSettings
@@ -61,6 +66,29 @@ final class AiSettingsJsonTest extends TestCase
         $shape = $this->json()->configuration($this->settings('gpt-4o'), null);
 
         self::assertSame(RecommendationCapabilitiesJsons::LLM, $shape['capabilities']);
+    }
+
+    public function testAConfigurationNamesTheKindAndFamilyOfItsModel(): void
+    {
+        $settings = $this->settings(null);
+        $settings->chooseModel(
+            new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+            new \DateTimeImmutable('2026-08-06 10:00:00'),
+        );
+
+        $shape = $this->json()->configuration($settings, null);
+
+        self::assertSame('scoring', $shape['kind']);
+        self::assertSame('decision', $shape['family']);
+    }
+
+    /** No model yet: the default kind, as its capabilities already say, and no family. */
+    public function testAConfigurationWithoutAModelIsAnLlmWithoutAFamily(): void
+    {
+        $shape = $this->json()->configuration($this->settings(null), null);
+
+        self::assertSame('llm', $shape['kind']);
+        self::assertNull($shape['family']);
     }
 
     public function testConfigurationIsActiveWhenItsIdMatchesTheActiveId(): void
@@ -172,8 +200,20 @@ final class AiSettingsJsonTest extends TestCase
 
         self::assertSame(
             [
-                ['id' => 'gpt-4o', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
-                ['id' => 'gpt-4o-mini', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                [
+                    'id' => 'gpt-4o',
+                    'label' => null,
+                    'kind' => 'llm',
+                    'family' => null,
+                    'capabilities' => RecommendationCapabilitiesJsons::LLM,
+                ],
+                [
+                    'id' => 'gpt-4o-mini',
+                    'label' => null,
+                    'kind' => 'llm',
+                    'family' => null,
+                    'capabilities' => RecommendationCapabilitiesJsons::LLM,
+                ],
             ],
             $shape['models'],
         );
@@ -181,16 +221,24 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['ready']);
     }
 
-    /** The catalog's tag decides, never the id: `jev-router` is an LLM, `acme/decider-2` a System One model. */
-    public function testEachOfferedModelCarriesTheLabelAndCapabilitiesOfItsTag(): void
+    /** The catalog's tag decides, never the id: `jev-router` is an LLM, `acme/decider-2` a decision model. */
+    public function testEachOfferedModelCarriesTheLabelKindFamilyAndCapabilitiesOfItsTag(): void
     {
         self::assertSame(
             [
                 'models' => [
-                    ['id' => 'jev-router', 'label' => null, 'capabilities' => RecommendationCapabilitiesJsons::LLM],
+                    [
+                        'id' => 'jev-router',
+                        'label' => null,
+                        'kind' => 'llm',
+                        'family' => null,
+                        'capabilities' => RecommendationCapabilitiesJsons::LLM,
+                    ],
                     [
                         'id' => 'acme/decider-2',
                         'label' => 'System One',
+                        'kind' => 'scoring',
+                        'family' => 'decision',
                         'capabilities' => RecommendationCapabilitiesJsons::SCORING,
                     ],
                 ],

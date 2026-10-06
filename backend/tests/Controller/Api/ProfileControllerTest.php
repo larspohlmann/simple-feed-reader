@@ -122,7 +122,7 @@ final class ProfileControllerTest extends ApiTestCase
         $stale = $this->entityManager()->find(AiProviderSettings::class, $chosen->getId());
         self::assertNotNull($stale);
         $stale->chooseModel(
-            new ModelDescriptor('jev-latest', null, ScoringProtocol::SystemOne),
+            new ModelDescriptor('jev-latest', 32_000, ScoringProtocol::SystemOne),
             new \DateTimeImmutable('2026-10-03 09:00:00'),
         );
         $this->entityManager()->flush();

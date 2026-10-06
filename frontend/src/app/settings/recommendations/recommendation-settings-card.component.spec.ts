@@ -11,7 +11,7 @@ import {
 import { API_BASE_URL } from '../../core/api';
 import {
   EVERY_RECOMMENDATION_CAPABILITY,
-  JEV_RECOMMENDATION_CAPABILITIES,
+  SCORING_RECOMMENDATION_CAPABILITIES,
 } from '../../../testing/recommendation-capabilities';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
@@ -251,7 +251,7 @@ describe('RecommendationSettingsCardComponent', () => {
 
   describe("the prompt capability's read-only pieces", () => {
     it('shows no fixed prompt or guidance default to an engine that sends no prompt', () => {
-      const fixture = mount(STATE, JEV_RECOMMENDATION_CAPABILITIES);
+      const fixture = mount(STATE, SCORING_RECOMMENDATION_CAPABILITIES);
       const guidance = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
 
       expect(fixture.nativeElement.querySelector('details pre.fixed')).toBeNull();
