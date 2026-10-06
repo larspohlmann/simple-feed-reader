@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
   HttpTestingController,
   TestRequest,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../core/api';
+import { transientGatewayRetryInterceptor } from '../../core/http/retry-transient-gateway-errors';
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
@@ -47,7 +48,7 @@ describe('EntriesStore', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(),
+        provideHttpClient(withInterceptors([transientGatewayRetryInterceptor])),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],

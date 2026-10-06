@@ -1,11 +1,27 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import {
+  HttpContext,
+  HttpContextToken,
+  HttpErrorResponse,
+  HttpInterceptorFn,
+} from '@angular/common/http';
 import { MonoTypeOperatorFunction, retry, throwError, timer } from 'rxjs';
 
 const TRANSIENT_GATEWAY_STATUSES = new Set([502, 503, 504]);
 const RETRY_DELAYS_MS = [2000, 5000, 10000];
 
-/** Retries a read the gateway gave up on — a busy backend right after a restart (#1419) answers it a few
- *  seconds later. Every other failure is not transient, and retrying it would only delay the message. */
+const RETRIES_TRANSIENT_GATEWAY_ERRORS = new HttpContextToken<boolean>(() => false);
+
+/** Opts a read into the gateway retry: a busy backend right after a restart answers it seconds later (#1419). */
+export function retryingTransientGatewayErrors(): HttpContext {
+  return new HttpContext().set(RETRIES_TRANSIENT_GATEWAY_ERRORS, true);
+}
+
+/** Sits inside authInterceptor, so only the error that outlasts every retry reaches its client-error report. */
+export const transientGatewayRetryInterceptor: HttpInterceptorFn = (request, next) =>
+  request.context.get(RETRIES_TRANSIENT_GATEWAY_ERRORS)
+    ? next(request).pipe(retryTransientGatewayErrors())
+    : next(request);
+
 export function retryTransientGatewayErrors<T>(): MonoTypeOperatorFunction<T> {
   return retry({
     count: RETRY_DELAYS_MS.length,

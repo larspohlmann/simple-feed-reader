@@ -10,8 +10,11 @@ once. The banner's manual retry stays as the fallback.
   `retryTransientGatewayErrors<T>()`: `retry({ count: 3, delay })`, where `delay` re-throws anything
   that is not an `HttpErrorResponse` with status 502/503/504 and otherwise waits
   `TRANSIENT_RETRY_DELAYS_MS[retryCount - 1]` (2000, 5000, 10000).
-- `ReaderApi` pipes it onto `entries()`, `subscriptions()`, `subscriptionCounts()` and
-  `savedSearches()`, so every caller of those reads gets it from one place. Writes are never retried.
+- `ReaderApi` opts `entries()`, `subscriptions()`, `subscriptionCounts()` and `savedSearches()` in with
+  an `HttpContext` flag; `transientGatewayRetryInterceptor`, registered after `authInterceptor`, applies
+  the operator to flagged requests. Sitting inside the auth interceptor means only the error that outlasts
+  every retry reaches its client-error report, so a recovered load reports nothing (review finding).
+  Writes are never retried.
 - `EntriesStore` keeps the subscription of its current list request and unsubscribes it when a newer
   `load()` starts or the identity changes, so a retry pending for a list the user has left is cancelled
   rather than fired and discarded. `SubscriptionsStore` and `SavedSearchesStore` already unsubscribe a
@@ -26,4 +29,5 @@ once. The banner's manual retry stays as the fallback.
    504s show the banner after the last one (4 requests); switching lists while a retry is pending sends
    no stale request and lands the new list.
 3. `ReaderApi` spec: subscriptions, counts and saved searches retry a 503.
-4. Gates: `npm run check` inside the Docker frontend container.
+4. `authInterceptor` spec: a recovered retry reports nothing; an exhausted one reports once.
+5. Gates: `npm run check` inside the Docker frontend container.

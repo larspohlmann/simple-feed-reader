@@ -8,6 +8,10 @@ import { ClientErrorReporter } from '../errors/client-error-reporter';
 import { httpMethodOf } from '../errors/client-error-http-method';
 import { TokenStore } from './token.store';
 import { authInterceptor } from './auth.interceptor';
+import {
+  retryingTransientGatewayErrors,
+  transientGatewayRetryInterceptor,
+} from '../http/retry-transient-gateway-errors';
 import { CatalogStore } from '../../reader/feeds/catalog/catalog.store';
 import { AiAvailabilityService } from '../ai-availability.service';
 import { AuthService, CurrentUser } from './auth.service';
@@ -209,5 +213,70 @@ describe('authInterceptor', () => {
       .flush('boom', { status: 500, statusText: 'Server Error' });
 
     expect(reportSpy).not.toHaveBeenCalled();
+  });
+
+  describe('behind the transient gateway retry (#1420)', () => {
+    let retryingHttp: HttpClient;
+    let retryingCtrl: HttpTestingController;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(withInterceptors([authInterceptor, transientGatewayRetryInterceptor])),
+          provideHttpClientTesting(),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          { provide: Router, useValue: { events, navigate } },
+          { provide: ClientErrorReporter, useValue: { report: reportSpy } },
+        ],
+      });
+      retryingHttp = TestBed.inject(HttpClient);
+      retryingCtrl = TestBed.inject(HttpTestingController);
+      ctrl = retryingCtrl;
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const getRetrying = (): void => {
+      retryingHttp
+        .get('https://api.test/api/entries', { context: retryingTransientGatewayErrors() })
+        .subscribe({ error: () => undefined });
+    };
+    const failWith504 = (): void =>
+      retryingCtrl
+        .expectOne('https://api.test/api/entries')
+        .flush(null, { status: 504, statusText: 'Gateway Timeout' });
+
+    it('reports nothing when a retry recovers the read', () => {
+      getRetrying();
+      failWith504();
+      jest.advanceTimersByTime(2000);
+      retryingCtrl.expectOne('https://api.test/api/entries').flush({});
+
+      expect(reportSpy).not.toHaveBeenCalled();
+    });
+
+    it('reports once when the read outlasts every retry', () => {
+      getRetrying();
+      failWith504();
+      for (const delay of [2000, 5000, 10000]) {
+        jest.advanceTimersByTime(delay);
+        failWith504();
+      }
+
+      expect(reportSpy).toHaveBeenCalledTimes(1);
+      expect(reportSpy.mock.calls[0][0].status).toBe(504);
+    });
+
+    it('leaves a read that did not opt in to fail at once', () => {
+      retryingHttp.get('https://api.test/api/me').subscribe({ error: () => undefined });
+      retryingCtrl
+        .expectOne('https://api.test/api/me')
+        .flush(null, { status: 504, statusText: 'Gateway Timeout' });
+      jest.advanceTimersByTime(20000);
+
+      expect(reportSpy).toHaveBeenCalledTimes(1);
+    });
   });
 });
