@@ -90,7 +90,7 @@ final class SystemOneRequestFactoryTest extends TestCase
 
     public function testTheRequestAsksTheRequestsModel(): void
     {
-        self::assertSame('jev-1.13', $this->factory()->create(self::request('jev-1.13', []))->model);
+        self::assertSame('jev-1.13', $this->factory()->create(self::request('jev-1.13', [self::article()]))->model);
     }
 
     /** 9 tokens of state hold 21 characters of this profile (ScoringStateFactoryTest). */
@@ -100,7 +100,7 @@ final class SystemOneRequestFactoryTest extends TestCase
             'jev-latest',
             new ScoringReaderModel('Likes Rust and homelab posts.', null, []),
             new ScoringBudgetModel(32_000, 100, 9, 2_000),
-            [],
+            [self::article()],
         ));
 
         self::assertSame(['profile' => 'Likes Rust and homela'], $request->state);
@@ -111,7 +111,12 @@ final class SystemOneRequestFactoryTest extends TestCase
         return new SystemOneRequestFactory(new ScoringStateFactory());
     }
 
-    /** @param list<ArticleLineModel> $articles */
+    private static function article(): ArticleLineModel
+    {
+        return new ArticleLineModel(41, 'Kernel 6.18', 'LWN', '2026-10-01', null);
+    }
+
+    /** @param non-empty-list<ArticleLineModel> $articles */
     private static function request(string $model, array $articles): ScoringRequestModel
     {
         return new ScoringRequestModel(

@@ -18,4 +18,18 @@ final class WaveBatchModelTest extends TestCase
 
         self::assertSame([$three, $one], $batch->linesInSnapshotOrder());
     }
+
+    public function testAnUnprunedBatchRequiresItsLines(): void
+    {
+        $one = new ArticleLineModel(1, 'One', 'F', 'D', null);
+
+        self::assertSame([$one], (new WaveBatchModel(0, [2, 1], [1 => $one]))->requireLinesInSnapshotOrder());
+    }
+
+    public function testAFullyPrunedBatchHasNoLinesToRequire(): void
+    {
+        $this->expectExceptionObject(new \LogicException('Batch 4 was pruned to nothing and makes no call.'));
+
+        (new WaveBatchModel(4, [2, 1], []))->requireLinesInSnapshotOrder();
+    }
 }

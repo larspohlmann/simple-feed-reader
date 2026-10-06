@@ -41,6 +41,20 @@ final readonly class WaveBatchModel
         return array_values(array_map(fn (int $id): ArticleLineModel => $this->linesById[$id], $present));
     }
 
+    /**
+     * @return non-empty-list<ArticleLineModel>
+     *
+     * @throws \LogicException when the batch was pruned to nothing, which makes no call
+     */
+    public function requireLinesInSnapshotOrder(): array
+    {
+        $lines = $this->linesInSnapshotOrder();
+
+        return [] === $lines
+            ? throw new \LogicException(sprintf('Batch %d was pruned to nothing and makes no call.', $this->index))
+            : $lines;
+    }
+
     public function isFullyPruned(): bool
     {
         return [] === $this->linesById;
