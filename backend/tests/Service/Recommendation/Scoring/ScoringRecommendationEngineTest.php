@@ -530,23 +530,6 @@ final class ScoringRecommendationEngineTest extends DbTestCase
         return $last;
     }
 
-    /**
-     * Refreshed: the recorder settles each row by an UPDATE, behind the copy the identity map holds.
-     *
-     * @return list<RecommendationRunLog>
-     */
-    private function logs(RecommendationRun $run): array
-    {
-        /** @var list<RecommendationRunLog> $logs */
-        $logs = $this->entityManager->getRepository(RecommendationRunLog::class)
-            ->findBy(['run' => $run->requireId()], ['id' => 'ASC']);
-        foreach ($logs as $log) {
-            $this->entityManager->refresh($log);
-        }
-
-        return $logs;
-    }
-
     private function itemCount(RecommendationRun $run): int
     {
         return $this->entityManager->getRepository(RecommendationItem::class)->count(['run' => $run->requireId()]);

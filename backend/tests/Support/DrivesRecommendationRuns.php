@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\Entry;
 use App\Entity\ProfileRun;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\ProfileRunRepository;
 use App\Repository\RecommendationRunRepository;
@@ -78,6 +80,28 @@ trait DrivesRecommendationRuns
             ->findBy(['run' => $run->requireId()], ['position' => 'ASC']);
 
         return $items;
+    }
+
+    /** @return list<RecommendationRunLog> */
+    private function logs(RecommendationRun $run): array
+    {
+        $this->entityManager->clear();
+
+        /** @var list<RecommendationRunLog> $logs */
+        $logs = $this->entityManager->getRepository(RecommendationRunLog::class)
+            ->findBy(['run' => $run->requireId()], ['id' => 'ASC']);
+
+        return $logs;
+    }
+
+    /**
+     * @param list<Entry> $entries
+     *
+     * @return list<int>
+     */
+    private function entryIds(array $entries): array
+    {
+        return array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
     }
 
     private function runs(): RecommendationRunRepository

@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Scoring;
 
-use App\Entity\Entry;
 use App\Entity\RecommendationItem;
-use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
@@ -101,9 +99,7 @@ final class ScoringPipelineTest extends DbTestCase
 
         $run = $this->runToCompletion($this->owner);
 
-        $this->entityManager->clear();
-        $logs = $this->entityManager->getRepository(RecommendationRunLog::class)
-            ->findBy(['run' => $run->requireId()], ['id' => 'ASC']);
+        $logs = $this->logs($run);
         self::assertCount(1, $logs);
         $log = $logs[0];
         self::assertSame(CallPhase::Batch, $log->getPhase());
@@ -192,15 +188,5 @@ final class ScoringPipelineTest extends DbTestCase
     private function storeProfile(string $profileText): void
     {
         $this->fixtures->storeProfile($this->owner, $profileText);
-    }
-
-    /**
-     * @param list<Entry> $entries
-     *
-     * @return list<int>
-     */
-    private function entryIds(array $entries): array
-    {
-        return array_map(static fn (Entry $entry): int => $entry->requireId(), $entries);
     }
 }
