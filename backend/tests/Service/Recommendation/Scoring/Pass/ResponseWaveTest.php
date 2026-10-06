@@ -62,7 +62,6 @@ final class ResponseWaveTest extends TestCase
     {
         return new ScoringEndpoint(
             '/systemone',
-            [429, 529],
             static fn (string $body): ScoringReplyModel => SystemOneReplyDecoder::decode($body, null),
         );
     }

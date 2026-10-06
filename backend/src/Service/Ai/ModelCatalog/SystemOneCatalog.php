@@ -62,7 +62,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
     private function probeStatus(ProviderCredentialsModel $credentials): int
     {
         try {
-            return $this->httpClient->request('POST', $credentials->baseUrl . '/systemone', [
+            return $this->httpClient->request('POST', $credentials->baseUrl . ScoringProtocol::SystemOne->path(), [
                 'headers' => [
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',

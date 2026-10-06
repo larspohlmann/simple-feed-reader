@@ -25,7 +25,7 @@ use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\TickPhases;
 use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
 use App\Service\Recommendation\Scoring\ScoringRecommendationEngine;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\CompactJson;
 use App\Service\Recommendation\Support\TokenEstimate;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;

@@ -39,6 +39,8 @@ final readonly class ScoringHttpTransport
 
     private const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
 
+    private const array RETRYABLE_STATUSES = [429, 529];
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private ProviderCallHeartbeatInterface $heartbeat,
@@ -131,7 +133,7 @@ final readonly class ScoringHttpTransport
             401 === $status, 403 === $status => ScoringOutcomeModel::failed(
                 CredentialsRejectedException::refusedKey(),
             ),
-            $wave->endpoint->retries($status) => ScoringOutcomeModel::failed(
+            \in_array($status, self::RETRYABLE_STATUSES, true) => ScoringOutcomeModel::failed(
                 new RetryableProviderException($status, RetryAfter::secondsIn($response)),
             ),
             RejectingStatus::matches($status) => ScoringOutcomeModel::failed(new ProviderRejectedRequestException(

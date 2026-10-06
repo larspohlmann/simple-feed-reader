@@ -27,7 +27,6 @@ final class ScoringHttpTransportTest extends TestCase
         $outcomes = $this->transport([$response])->sendAll(
             new ScoringEndpoint(
                 '/rank',
-                [],
                 static fn (string $body, ResponseInterface $reply): ScoringReplyModel => new ScoringReplyModel(
                     $body,
                     [31 => 0.4],
@@ -66,7 +65,7 @@ final class ScoringHttpTransportTest extends TestCase
             new MockClock(),
             'SimpleFeedReader/1.0',
         ))->sendAll(
-            new ScoringEndpoint('/rank', [], static fn (): ScoringReplyModel => new ScoringReplyModel(
+            new ScoringEndpoint('/rank', static fn (): ScoringReplyModel => new ScoringReplyModel(
                 '{}',
                 [],
                 new ProviderCallReceiptModel(null, null, null),
@@ -81,25 +80,23 @@ final class ScoringHttpTransportTest extends TestCase
         self::assertContains('User-Agent: SimpleFeedReader/1.0', $captured['normalized_headers']['user-agent']);
     }
 
-    /** 529 is System One's own: an endpoint that does not name it gets the shared mapping. */
-    public function testOnlyTheEndpointsOwnStatusesAreRetryable(): void
+    /** 503 is no rate limit: only 429 and 529 are waited out, for every protocol. */
+    public function testOnlyA429OrA529IsRetryable(): void
     {
         $outcomes = $this->transport([
-            new MockResponse('{}', ['http_code' => 503]),
+            new MockResponse('{}', ['http_code' => 429]),
             new MockResponse('{}', ['http_code' => 529]),
+            new MockResponse('{}', ['http_code' => 503]),
         ])->sendAll(
-            new ScoringEndpoint(
-                '/rank',
-                [503],
-                static fn (): ScoringReplyModel => throw new \LogicException('No reply was expected.'),
-            ),
+            new ScoringEndpoint('/rank', static fn (): ScoringReplyModel => throw new \LogicException('No reply.')),
             $this->credentials(),
-            ['{}', '{}'],
+            ['{}', '{}', '{}'],
         );
 
         self::assertTrue($outcomes[0]->isRetryable());
-        self::assertFalse($outcomes[1]->isRetryable());
-        self::assertSame('That provider answered with status 529.', $outcomes[1]->cause()->getMessage());
+        self::assertTrue($outcomes[1]->isRetryable());
+        self::assertFalse($outcomes[2]->isRetryable());
+        self::assertSame('That provider answered with status 503.', $outcomes[2]->cause()->getMessage());
     }
 
     /** Rerank results name documents by index, so each reply must be read against its own request. */
@@ -110,7 +107,6 @@ final class ScoringHttpTransportTest extends TestCase
         $outcomes = $transport->sendAll(
             new ScoringEndpoint(
                 '/rank',
-                [],
                 static fn (string $body, ResponseInterface $reply, int $position): ScoringReplyModel
                     => new ScoringReplyModel($body, [$position => 1.0], new ProviderCallReceiptModel(null, null, null)),
             ),

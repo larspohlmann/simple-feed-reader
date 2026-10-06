@@ -10,7 +10,7 @@ use App\Service\Recommendation\Scoring\Factory\SystemOneRequestFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
 use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\CompactJson;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestFactoryTest extends TestCase

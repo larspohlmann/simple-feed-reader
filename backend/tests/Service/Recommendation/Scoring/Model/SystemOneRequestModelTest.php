@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Scoring\Model;
 
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\CompactJson;
 use App\Service\Recommendation\Support\PrettyJson;
 use PHPUnit\Framework\TestCase;
 

@@ -14,7 +14,7 @@ use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Scoring\ScoringBatchPacker;
 use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\CompactJson;
 use App\Service\Recommendation\Support\PrettyJson;
 use App\Service\Recommendation\Support\TokenEstimate;
 use App\Tests\Support\StubSystemOneClient;

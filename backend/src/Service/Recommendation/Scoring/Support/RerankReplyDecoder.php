@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Scoring\Support;
 
 use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Ai\Support\ReplyField;
 use App\Service\Ai\Support\ReportedCost;
 use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 
@@ -22,8 +23,8 @@ final class RerankReplyDecoder
             $body,
             self::scoresIn($root['results'] ?? null, $entryIds),
             new ProviderCallReceiptModel(
-                self::textIn($root['id'] ?? null),
-                self::textIn($root['model'] ?? null),
+                ReplyField::text($root['id'] ?? null),
+                ReplyField::text($root['model'] ?? null),
                 self::usageIn($root['usage'] ?? null),
             ),
         );
@@ -75,20 +76,13 @@ final class RerankReplyDecoder
         if (!\is_array($usage)) {
             return null;
         }
-        $totalTokens = $usage['total_tokens'] ?? null;
-
         return new ProviderCallUsageModel(
-            promptTokens: \is_int($totalTokens) ? max(0, $totalTokens) : 0,
+            promptTokens: ReplyField::count($usage['total_tokens'] ?? null),
             completionTokens: 0,
             reasoningTokens: 0,
             cachedTokens: 0,
             costNanoCredits: ReportedCost::nanoCreditsOf($usage['cost'] ?? null),
         );
-    }
-
-    private static function textIn(mixed $value): ?string
-    {
-        return \is_string($value) && '' !== $value ? $value : null;
     }
 
     private function __construct()

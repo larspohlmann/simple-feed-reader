@@ -7,8 +7,8 @@ namespace App\Tests\Service\Recommendation\Scoring\Factory;
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 use App\Service\Recommendation\Scoring\Factory\ScoringStateFactory;
 use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
 use App\Service\Recommendation\Scoring\Support\ScoringArticle;
+use App\Service\Recommendation\Support\CompactJson;
 use App\Service\Recommendation\Support\TokenEstimate;
 use PHPUnit\Framework\TestCase;
 
