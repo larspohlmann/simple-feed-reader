@@ -11,6 +11,9 @@ const GUARDED = [
   'app/reader/entry',
   'app/reader/list',
   'app/reader/article',
+  'app/settings/organise',
+  'app/settings/preferences',
+  'app/settings/about',
 ];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;
@@ -53,6 +56,11 @@ const EXEMPT: readonly Exemption[] = [
     file: 'app/reader/feeds/add-feed/add-feed-dialog.component.scss',
     selector: '.subscribe',
     reason: 'a solid accent button: its border is its fill colour, flat like primary',
+  },
+  {
+    file: 'app/settings/about/about-section.component.scss',
+    selector: '.chart-marker',
+    reason: 'a 2px surface ring that lifts the marker dot off the chart line',
   },
 ];
 

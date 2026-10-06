@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
 
 :host {
   display: block;
@@ -8,9 +9,9 @@
 // tree is a bare region, so a tag panel is the page's one repeated box, using
 // the same `--radius-lg`/`--panel-shadow` as the group's own panel (§1).
 .panel {
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-1));
+
   border-radius: var(--radius-lg);
-  background: var(--surface-1);
   box-shadow: var(--panel-shadow);
   overflow: hidden;
 }
