@@ -355,7 +355,7 @@ final class AiProviderSettingsTest extends TestCase
         self::assertNull($settings->getScoringProtocol());
     }
 
-    public function testANewEndpointForgetsTheModelsKindAndProtocol(): void
+    public function testANewEndpointForgetsTheModelsProtocolAndReadsAsAnLlm(): void
     {
         $settings = $this->settings();
         $settings->chooseModel(
@@ -370,7 +370,7 @@ final class AiProviderSettingsTest extends TestCase
             new \DateTimeImmutable('2026-10-05 10:00:00'),
         );
 
-        self::assertNull($settings->getModelKind());
+        self::assertSame(RecommendationEngineKind::Llm, $settings->getModelKind());
         self::assertNull($settings->getScoringProtocol());
     }
 }

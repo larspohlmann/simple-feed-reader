@@ -26,7 +26,7 @@ final readonly class RecommendationEngineResolver
 
     public function kindFor(AiProviderSettings $connection): RecommendationEngineKind
     {
-        return $connection->getModelKind() ?? self::DEFAULT_KIND;
+        return $connection->getModelKind();
     }
 
     public function capabilitiesFor(AiProviderSettings $connection): RecommendationEngineCapabilitiesModel

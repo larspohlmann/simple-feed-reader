@@ -13,7 +13,7 @@ final class Version20261006120000 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'Drop a run\'s scoring protocol: a run no longer guards against its connection switching models (#1394).';
+        return 'Drop a run\'s scoring protocol and a connection\'s model kind, which its protocol says (#1394).';
     }
 
     public function up(Schema $schema): void
@@ -23,7 +23,9 @@ final class Version20261006120000 extends AbstractMigration
             'recommendation_run.scoring_protocol is already gone.',
         );
 
-        $this->addSql(\sprintf('ALTER TABLE recommendation_run %s scoring_protocol', $this->mysql() ? 'DROP' : 'DROP COLUMN'));
+        $drop = $this->mysql() ? 'DROP' : 'DROP COLUMN';
+        $this->addSql(\sprintf('ALTER TABLE recommendation_run %s scoring_protocol', $drop));
+        $this->addSql(\sprintf('ALTER TABLE user_ai_settings %s model_kind', $drop));
     }
 
     public function down(Schema $schema): void
@@ -33,10 +35,9 @@ final class Version20261006120000 extends AbstractMigration
             'recommendation_run.scoring_protocol already exists.',
         );
 
-        $this->addSql(\sprintf(
-            'ALTER TABLE recommendation_run %s scoring_protocol VARCHAR(16) DEFAULT NULL',
-            $this->mysql() ? 'ADD' : 'ADD COLUMN',
-        ));
+        $add = $this->mysql() ? 'ADD' : 'ADD COLUMN';
+        $this->addSql(\sprintf('ALTER TABLE recommendation_run %s scoring_protocol VARCHAR(16) DEFAULT NULL', $add));
+        $this->addSql(\sprintf('ALTER TABLE user_ai_settings %s model_kind VARCHAR(16) DEFAULT NULL', $add));
     }
 
     public function isTransactional(): bool

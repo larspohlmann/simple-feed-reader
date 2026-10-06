@@ -82,7 +82,7 @@ How the fast path is provided depends on the deployment:
 ### Engines
 
 A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
-an engine: the kind the connection stored when its model was chosen (`user_ai_settings.model_kind`, `llm` or `scoring`, as the model catalog tagged the model; the model id is never read); `SnapshotPhase` asks that engine to pack the candidate pool
+an engine: the connection's kind, `scoring` when its chosen model speaks a scoring protocol (`user_ai_settings.scoring_protocol`, as the model catalog tagged the model) and `llm` otherwise; the model id is never read; `SnapshotPhase` asks that engine to pack the candidate pool
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 

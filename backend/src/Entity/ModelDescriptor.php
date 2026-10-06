@@ -28,6 +28,6 @@ final readonly class ModelDescriptor
 
     public function kind(): RecommendationEngineKind
     {
-        return null === $this->scoringProtocol ? RecommendationEngineKind::Llm : RecommendationEngineKind::Scoring;
+        return RecommendationEngineKind::of($this->scoringProtocol);
     }
 }
