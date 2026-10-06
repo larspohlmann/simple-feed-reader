@@ -29,7 +29,7 @@ final readonly class SystemOneRequestFactory
 
         return new SystemOneRequestModel(
             $request->model,
-            $this->stateFactory->create($request->reader, $request->budget->stateTokens),
+            $this->stateFactory->create($request->reader, $request->budget->readerTokens),
             $questions,
         );
     }

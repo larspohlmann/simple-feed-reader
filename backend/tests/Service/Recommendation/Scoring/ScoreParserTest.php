@@ -41,7 +41,7 @@ final class ScoreParserTest extends TestCase
     }
 
     #[DataProvider('impossibleScores')]
-    public function testAScoreThatIsNoProbabilityMakesTheReplyUnusable(float $score): void
+    public function testAScoreOutsideZeroToOneMakesTheReplyUnusable(float $score): void
     {
         $result = (new ScoreParser())->parse($this->reply([4 => 0.875, 9 => $score]), [4, 9]);
 
@@ -49,7 +49,7 @@ final class ScoreParserTest extends TestCase
         self::assertSame([], $result->winners);
     }
 
-    public function testTheBoundsOfAProbabilityAreUsable(): void
+    public function testTheBoundsOfZeroToOneAreUsable(): void
     {
         $result = (new ScoreParser())->parse($this->reply([4 => 0.0, 9 => 1.0]), [4, 9]);
 
