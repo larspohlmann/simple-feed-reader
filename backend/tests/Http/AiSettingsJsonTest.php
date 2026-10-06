@@ -82,6 +82,20 @@ final class AiSettingsJsonTest extends TestCase
         self::assertSame('decision', $shape['family']);
     }
 
+    public function testARerankConfigurationNamesTheRerankerFamily(): void
+    {
+        $settings = $this->settings(null);
+        $settings->chooseModel(
+            new ModelDescriptor('acme/rerank-2', 8_000, ScoringProtocol::Rerank),
+            new \DateTimeImmutable('2026-08-06 10:00:00'),
+        );
+
+        $shape = $this->json()->configuration($settings, null);
+
+        self::assertSame('scoring', $shape['kind']);
+        self::assertSame('reranker', $shape['family']);
+    }
+
     /** No model yet: the default kind, as its capabilities already say, and no family. */
     public function testAConfigurationWithoutAModelIsAnLlmWithoutAFamily(): void
     {
@@ -241,11 +255,19 @@ final class AiSettingsJsonTest extends TestCase
                         'family' => 'decision',
                         'capabilities' => RecommendationCapabilitiesJsons::SCORING,
                     ],
+                    [
+                        'id' => 'acme/rerank-2',
+                        'label' => 'Rerank',
+                        'kind' => 'scoring',
+                        'family' => 'reranker',
+                        'capabilities' => RecommendationCapabilitiesJsons::SCORING,
+                    ],
                 ],
             ],
             $this->json()->models([
                 new ModelDescriptor('jev-router', 128_000),
                 new ModelDescriptor('acme/decider-2', 16_000, ScoringProtocol::SystemOne),
+                new ModelDescriptor('acme/rerank-2', 8_000, ScoringProtocol::Rerank),
             ]),
         );
     }

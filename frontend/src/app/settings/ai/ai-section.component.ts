@@ -14,6 +14,7 @@ import {
   RecommendationCapabilities,
   RecommendationTuningField,
 } from '../../core/ai-availability.service';
+import { LanguageService } from '../../core/i18n/language.service';
 import { ButtonComponent } from '../../shared/button/button.component';
 import { ConfirmData } from '../../shared/confirm-dialog/confirm-dialog.component';
 import { ConfirmService } from '../../shared/confirm-dialog/confirm.service';
@@ -38,6 +39,7 @@ import {
   AiSettingsService,
   MODEL_KINDS,
   ModelKind,
+  SCORING_FAMILIES,
 } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
@@ -83,6 +85,7 @@ export class AiSectionComponent {
   readonly ai = inject(AiSettingsService);
   private readonly confirm = inject(ConfirmService);
   private readonly i18n = inject(TranslocoService);
+  private readonly language = inject(LanguageService);
 
   readonly newName = signal('');
   readonly newBaseUrl = signal('');
@@ -126,20 +129,27 @@ export class AiSectionComponent {
     return value === null ? '' : String(value);
   });
 
-  readonly modelOptions = computed<SelectOption[]>(() =>
-    this.ai
+  readonly modelOptions = computed<SelectOption[]>(() => {
+    // translate() is one-shot: reading the language re-runs this on a switch.
+    this.language.lang();
+    return this.ai
       .models()
       .filter((model) => model.kind === this.modelKind())
       .map((model) => ({
         value: model.id,
         label: [model.id, this.familyTag(model)].filter(Boolean).join(' · '),
         hint: this.modelHint(model.capabilities),
-      })),
-  );
+      }));
+  });
 
   readonly chosenModelHint = computed(
     () => this.modelOptions().find((option) => option.value === this.chosenModel())?.hint ?? null,
   );
+
+  readonly offeredScoringFamilies = computed(() => {
+    const models = this.ai.models();
+    return SCORING_FAMILIES.filter((family) => models.some((model) => model.family === family));
+  });
 
   /** The key is optional — a local model server needs none — so only the
    *  address gates the button. */

@@ -50,7 +50,7 @@ final readonly class ScoringBatchWave implements BatchWaveEngineInterface
             $tick->connection->getModel() ?? '',
             $wave->reader,
             $protocol->budget($tick->requireScoringContextWindow()),
-            $waveBatch->linesInSnapshotOrder(),
+            $waveBatch->requireLinesInSnapshotOrder(),
         );
         $recordedCall = $this->callRecorder->begin(
             $tick->run,

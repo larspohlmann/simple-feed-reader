@@ -17,7 +17,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Reads `GET {baseUrl}/models?output_modalities=all`, which every OpenAI-compatible provider answers alike; the
- * parameter makes OpenRouter list its decision models beside the text ones. The caps are no SSRF boundary
+ * parameter makes OpenRouter list its decision models and rerankers beside the text ones. The caps are no SSRF boundary
  * (docs/security.md#ai-provider-endpoints); they stop one endpoint holding a request open or filling memory.
  */
 #[AutoconfigureTag(CompositeModelCatalog::MEMBER_TAG, ['priority' => 10])]
@@ -26,7 +26,10 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     private const float TIMEOUT_SECONDS = 10.0;
     private const int MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
     private const string TEXT_OUTPUT = 'text';
-    private const array SCORING_OUTPUTS = ['decisions' => ScoringProtocol::SystemOne];
+    private const array SCORING_OUTPUTS = [
+        'decisions' => ScoringProtocol::SystemOne,
+        'rerank' => ScoringProtocol::Rerank,
+    ];
 
     public function __construct(
         private HttpClientInterface $httpClient,

@@ -155,14 +155,19 @@
         "label": "Model type",
         "llm": "LLM",
         "scoring": "Scoring model",
-        "scoringHint": "A scoring model rates every article for you instead of writing a list with reasons. A decision model's score is the probability that you want to read the article.",
+        "scoringHint": "A scoring model rates every article for you instead of writing a list with reasons.",
         "noneOffered": {
           "llm": "This provider offers no LLMs.",
           "scoring": "This provider offers no scoring models."
         }
       },
       "modelFamily": {
-        "decision": "Decision model"
+        "decision": "Decision model",
+        "reranker": "Reranker"
+      },
+      "modelFamilyHint": {
+        "decision": "A decision model's score is the probability that you want to read the article.",
+        "reranker": "A reranker's score only ranks the articles of one run against each other."
       },
       "saveModel": "Save model",
       "ready": "AI features are available and use {{model}}.",
@@ -257,7 +262,7 @@
         "scoringTitle": "Use a scoring model",
         "scoringStep1": "A scoring model rates every article for you instead of writing a list with reasons. It needs an LLM connection for your reading profile, so set one up first as above.",
         "scoringStep2": "Open “Add a configuration” and enter https://openrouter.ai/api/v1 with your OpenRouter key, or TypeSafe's own endpoint with a TypeSafe key.",
-        "scoringStep3": "Press “Add configuration”, choose “Scoring model” above the model list that opens, pick a model tagged “Decision model” — for example ~typesafe/jev-latest — and save it.",
+        "scoringStep3": "Press “Add configuration”, choose “Scoring model” above the model list that opens, pick a model tagged “Decision model” (for example ~typesafe/jev-latest) or “Reranker” (for example cohere/rerank-4-fast), and save it.",
         "scoringStep4": "Open Settings → AI and choose your LLM connection under Profile.",
         "scoringStep5": "Press “Use this one”. The picks then carry a score but no reasons."
       },

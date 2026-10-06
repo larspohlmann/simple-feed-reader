@@ -182,12 +182,12 @@ final class TickPhasesTest extends DbTestCase
         self::assertCount(1, $engine->advancedTicks);
     }
 
-    /** One protocol exists today: a scoring run recorded without one stands in for a run of another protocol. */
+    /** The run's model is the connection's own: only the protocol differs, so only the protocol check can fail it. */
     public function testARunPackedForAnotherScoringProtocolFailsWithoutBeingAdvanced(): void
     {
         $this->fixtures->seedReadyScoringSettings($this->owner);
         $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, null);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
 
         $report = $this->phases($engine)->advance($this->tick($run));
 
@@ -215,6 +215,36 @@ final class TickPhasesTest extends DbTestCase
         $engine = ScriptedRecommendationEngine::packing([]);
         $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne);
         $this->chooseModel($connection, new ModelDescriptor('kev-latest', 8_192, ScoringProtocol::SystemOne));
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
+    public function testARerankRunWhoseConnectionSwitchedToAnotherRerankerFailsWithoutBeingAdvanced(): void
+    {
+        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
+        $voyage = new ModelDescriptor('voyageai/rerank-2.5-lite', 32_000, ScoringProtocol::Rerank);
+        $this->chooseModel($connection, $voyage);
+
+        $report = $this->phases($engine)->advance($this->tick($run));
+
+        self::assertSame('failed', $report->status);
+        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
+        self::assertSame([], $engine->advancedTicks);
+    }
+
+    /** The model changed too, but the protocol is the bigger switch and names the kinds of model. */
+    public function testARerankRunWhoseConnectionMovedToADecisionModelFailsAsAnEngineSwitch(): void
+    {
+        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
+        $engine = ScriptedRecommendationEngine::packing([]);
+        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
+        $this->chooseModel($connection, new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
 
         $report = $this->phases($engine)->advance($this->tick($run));
 

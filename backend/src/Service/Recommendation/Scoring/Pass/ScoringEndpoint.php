@@ -12,7 +12,7 @@ final readonly class ScoringEndpoint
 {
     /**
      * @param list<int> $retryableStatuses the protocol's own, beside the transport's shared mapping
-     * @param \Closure(string, ResponseInterface): ScoringReplyModel $decoder
+     * @param \Closure(string, ResponseInterface, int): ScoringReplyModel $decoder the int is the request's position
      */
     public function __construct(
         public string $path,
@@ -26,8 +26,8 @@ final readonly class ScoringEndpoint
         return \in_array($status, $this->retryableStatuses, true);
     }
 
-    public function decode(string $body, ResponseInterface $response): ScoringReplyModel
+    public function decode(string $body, ResponseInterface $response, int $position): ScoringReplyModel
     {
-        return ($this->decoder)($body, $response);
+        return ($this->decoder)($body, $response, $position);
     }
 }

@@ -102,6 +102,26 @@ final class ScoringHttpTransportTest extends TestCase
         self::assertSame('That provider answered with status 529.', $outcomes[1]->cause()->getMessage());
     }
 
+    /** Rerank results name documents by index, so each reply must be read against its own request. */
+    public function testEachReplyIsReadKnowingItsRequestsPosition(): void
+    {
+        $transport = $this->transport([new MockResponse('{"first":true}'), new MockResponse('{"second":true}')]);
+
+        $outcomes = $transport->sendAll(
+            new ScoringEndpoint(
+                '/rank',
+                [],
+                static fn (string $body, ResponseInterface $reply, int $position): ScoringReplyModel
+                    => new ScoringReplyModel($body, [$position => 1.0], new ProviderCallReceiptModel(null, null, null)),
+            ),
+            $this->credentials(),
+            ['{}', '{}'],
+        );
+
+        self::assertSame([0 => 1.0], $outcomes[0]->reply()->scores);
+        self::assertSame([1 => 1.0], $outcomes[1]->reply()->scores);
+    }
+
     /** @param list<MockResponse> $responses */
     private function transport(array $responses): ScoringHttpTransport
     {

@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ScoringBudgetModelTest extends TestCase
 {
-    public function testTheItemsGetTheWindowLessTheFramingAndTheState(): void
+    public function testTheItemsGetTheWindowLessTheFramingAndTheReader(): void
     {
         self::assertSame(6_800, (new ScoringBudgetModel(9_000, 7, 1_500, 700))->itemTokens());
     }
@@ -25,8 +25,8 @@ final class ScoringBudgetModelTest extends TestCase
 
     public function testTheReadersShareStopsAtTenThousandTokens(): void
     {
-        self::assertSame(9_999, ScoringBudgetModel::forWindow(33_333, 7)->stateTokens);
-        self::assertSame(10_000, ScoringBudgetModel::forWindow(33_334, 7)->stateTokens);
-        self::assertSame(10_000, ScoringBudgetModel::forWindow(65_536, 7)->stateTokens);
+        self::assertSame(9_999, ScoringBudgetModel::forWindow(33_333, 7)->readerTokens);
+        self::assertSame(10_000, ScoringBudgetModel::forWindow(33_334, 7)->readerTokens);
+        self::assertSame(10_000, ScoringBudgetModel::forWindow(65_536, 7)->readerTokens);
     }
 }

@@ -167,9 +167,10 @@ interface ScoringProtocolInterface
 
 - **System One:** state `{profile, guidance?}`, one `noul` question per article (today's request, byte for byte).
   Packing: the state once, the questions summed, at most 64.
-- **Rerank:** `query` = profile + guidance + the question sentence, fitted to the query budget; `documents` = one compact
-  line per article ("title — feed, date. description", `ScoringArticle`'s caps), each cut to what is left of the window
-  after the query; no `top_n`. Packing: at most 100 documents; the window bounds each document, not their sum.
+- **Rerank:** `query` = the question sentence, then the guidance, then the profile, fitted to the query budget;
+  `documents` = one compact line per article ("title — feed, date. description", `ScoringArticle`'s caps), each cut to
+  what is left of the window after the query; no `top_n`. Packing: at most 100 documents; the window bounds each
+  document, not their sum.
 
 Each protocol decodes its reply to `article id → value in [0,1]` plus the receipt:
 
@@ -183,8 +184,8 @@ Each protocol decodes its reply to `article id → value in [0,1]` plus the rece
   column, backfilled `system_one` for those rows. The snapshot records the connection's protocol beside the kind.
 - The engine-switch guard (`TickPhases`, D27 of #1345) fires when the connection's kind **or protocol** differs from
   the run's: one run never mixes calibrated probabilities with relative relevance. The run stays resumable.
-- A model switch within one protocol is allowed, as for the LLM engine. Batches packed for the old window that no
-  longer fit the new one are refused by the provider and fail the run as #1387 does.
+- A model switch within one protocol fails a scoring run with its own message (`SCORING_MODEL_SWITCH`, #1397 D12); an
+  LLM run follows the switch. Switching back resumes the run.
 - "Needs a profile" becomes a capability check: `RecommendationRun::isResumable()` and the engine's `NO_PROFILE` failure
   ask `RecommendationEngineCapabilitiesModel::of(kind)->profileSource === Borrowed`, not the Jev case; the failure text
   names no model.

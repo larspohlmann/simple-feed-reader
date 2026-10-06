@@ -66,6 +66,15 @@ final readonly class RecommendationRunFixtures
         return $this->seedConnection($user, new ModelDescriptor('jev-latest', 32768, ScoringProtocol::SystemOne));
     }
 
+    /** An active rerank connection on `cohere/rerank-4-fast`. */
+    public function seedReadyRerankSettings(User $user): AiProviderSettings
+    {
+        return $this->activated(
+            $user,
+            $this->seedConnection($user, new ModelDescriptor('cohere/rerank-4-fast', 32_768, ScoringProtocol::Rerank)),
+        );
+    }
+
     private function activated(User $user, AiProviderSettings $settings): AiProviderSettings
     {
         $user->setActiveAiProviderSettings($settings);

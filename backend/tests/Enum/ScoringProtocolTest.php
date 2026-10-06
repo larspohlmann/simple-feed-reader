@@ -14,4 +14,11 @@ final class ScoringProtocolTest extends TestCase
     {
         self::assertSame(ScoringFamily::Decision, ScoringProtocol::SystemOne->family());
     }
+
+    public function testARerankModelIsAReranker(): void
+    {
+        self::assertSame(ScoringFamily::Reranker, ScoringProtocol::Rerank->family());
+        self::assertSame('rerank', ScoringProtocol::Rerank->value);
+        self::assertSame('reranker', ScoringFamily::Reranker->value);
+    }
 }

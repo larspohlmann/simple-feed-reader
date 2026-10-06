@@ -9,7 +9,7 @@ use App\Service\Recommendation\Pool\Model\ArticleLineModel;
 /** One request before a protocol words it. */
 final readonly class ScoringRequestModel
 {
-    /** @param list<ArticleLineModel> $articles the batch's candidates, in snapshot order */
+    /** @param non-empty-list<ArticleLineModel> $articles the batch's candidates, in snapshot order */
     public function __construct(
         public string $model,
         public ScoringReaderModel $reader,

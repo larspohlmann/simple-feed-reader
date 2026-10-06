@@ -111,6 +111,7 @@ final readonly class AiSettingsJson
     {
         return match ($protocol) {
             ScoringProtocol::SystemOne => 'System One',
+            ScoringProtocol::Rerank => 'Rerank',
             null => null,
         };
     }

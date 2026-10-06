@@ -110,7 +110,7 @@ final class SystemOneProtocolTest extends TestCase
         return self::protocol(new StubSystemOneClient())->budget(32_000);
     }
 
-    /** @param list<ArticleLineModel> $articles */
+    /** @param non-empty-list<ArticleLineModel> $articles */
     private static function request(array $articles): ScoringRequestModel
     {
         return new ScoringRequestModel(

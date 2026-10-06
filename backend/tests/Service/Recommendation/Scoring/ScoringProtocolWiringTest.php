@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Scoring;
 
 use App\Enum\ScoringProtocol;
+use App\Service\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
 use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
 use App\Service\Recommendation\Scoring\ScoringProtocolResolver;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -24,6 +25,9 @@ final class ScoringProtocolWiringTest extends KernelTestCase
             $wired[$protocol->value] = $implementation::class;
         }
 
-        self::assertSame(['system_one' => SystemOneProtocol::class], $wired);
+        self::assertSame(
+            ['system_one' => SystemOneProtocol::class, 'rerank' => RerankProtocol::class],
+            $wired,
+        );
     }
 }

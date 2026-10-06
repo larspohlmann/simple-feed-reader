@@ -17,14 +17,36 @@ final class ScoringArticle
     public static function of(ArticleLineModel $line): array
     {
         $article = [
-            'title' => ClippedText::ofScrubbed($line->title, self::TITLE_CHARACTERS),
-            'feedName' => ClippedText::ofScrubbed($line->feedName, self::FEED_NAME_CHARACTERS),
+            'title' => self::title($line),
+            'feedName' => self::feedName($line),
             'date' => $line->date,
         ];
 
         return null === $line->description
             ? $article
-            : $article + ['description' => ClippedText::ofScrubbed($line->description, self::DESCRIPTION_CHARACTERS)];
+            : $article + ['description' => self::description($line->description)];
+    }
+
+    public static function line(ArticleLineModel $line): string
+    {
+        $heading = sprintf('%s — %s, %s.', self::title($line), self::feedName($line), $line->date);
+
+        return null === $line->description ? $heading : $heading . ' ' . self::description($line->description);
+    }
+
+    private static function title(ArticleLineModel $line): string
+    {
+        return ClippedText::ofScrubbed($line->title, self::TITLE_CHARACTERS);
+    }
+
+    private static function feedName(ArticleLineModel $line): string
+    {
+        return ClippedText::ofScrubbed($line->feedName, self::FEED_NAME_CHARACTERS);
+    }
+
+    private static function description(string $description): string
+    {
+        return ClippedText::ofScrubbed($description, self::DESCRIPTION_CHARACTERS);
     }
 
     private function __construct()

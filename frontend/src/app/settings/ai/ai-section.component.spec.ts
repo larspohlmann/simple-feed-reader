@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TranslocoService } from '@jsverse/transloco';
+import { LanguageService } from '../../core/i18n/language.service';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import {
@@ -72,6 +73,13 @@ const decisionModel = (id: string): AiModel =>
   offered(id, {
     kind: 'scoring',
     family: 'decision',
+    capabilities: SCORING_RECOMMENDATION_CAPABILITIES,
+  });
+
+const rerankerModel = (id: string): AiModel =>
+  offered(id, {
+    kind: 'scoring',
+    family: 'reranker',
     capabilities: SCORING_RECOMMENDATION_CAPABILITIES,
   });
 
@@ -245,7 +253,10 @@ describe('AiSectionComponent', () => {
   };
 
   beforeEach(() => dialogStub.open.mockReset());
-  afterEach(() => http.verify());
+  afterEach(() => {
+    localStorage.clear();
+    http.verify();
+  });
 
   it('loads the configurations on construction', () => {
     mount();
@@ -571,7 +582,110 @@ describe('AiSectionComponent', () => {
     kindButtons(picker)[1].click();
     fixture.detectChanges();
 
-    expect(picker.querySelector('.scoring-hint')?.textContent).toContain('probability');
+    expect(picker.querySelector('.scoring-hint')?.textContent?.trim()).toBe(
+      'A scoring model rates every article for you instead of writing a list with reasons. ' +
+        "A decision model's score is the probability that you want to read the article.",
+    );
+  });
+
+  it('explains a reranker only where the provider lists one', () => {
+    const fixture = mount();
+    const picker = openPicker(
+      fixture,
+      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
+      [rerankerModel('cohere/rerank-4-fast')],
+    );
+
+    expect(picker.querySelector('.scoring-hint')?.textContent?.trim()).toBe(
+      'A scoring model rates every article for you instead of writing a list with reasons. ' +
+        "A reranker's score only ranks the articles of one run against each other.",
+    );
+  });
+
+  it('explains both families, decision model first, where the provider lists both', () => {
+    const fixture = mount();
+    const picker = openPicker(
+      fixture,
+      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
+      [rerankerModel('cohere/rerank-4-fast'), decisionModel('~typesafe/jev-latest')],
+    );
+
+    expect(picker.querySelector('.scoring-hint')?.textContent?.trim()).toBe(
+      'A scoring model rates every article for you instead of writing a list with reasons. ' +
+        "A decision model's score is the probability that you want to read the article. " +
+        "A reranker's score only ranks the articles of one run against each other.",
+    );
+  });
+
+  it('explains each family again in the language the reader switches to', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      rerankerModel('cohere/rerank-4-fast'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+    fixture.componentInstance.chosenModel.set('cohere/rerank-4-fast');
+
+    TestBed.inject(TranslocoService).setActiveLang('de');
+    fixture.detectChanges();
+
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(fixture.componentInstance.chosenModel()).toBe('cohere/rerank-4-fast');
+
+    expect(picker.querySelector('.scoring-hint')?.textContent?.trim()).toBe(
+      'Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. ' +
+        'Die Bewertung eines Entscheidungsmodells ist die Wahrscheinlichkeit, dass du den Artikel lesen willst. ' +
+        'Die Bewertung eines Rerankers ordnet nur die Artikel eines Laufs untereinander.',
+    );
+  });
+
+  it('tags each scoring model with its family again in the language the reader switches to', () => {
+    const fixture = mount();
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      rerankerModel('cohere/rerank-4-fast'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+    fixture.componentInstance.chosenModel.set('cohere/rerank-4-fast');
+
+    TestBed.inject(LanguageService).set('de');
+    fixture.detectChanges();
+
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(fixture.componentInstance.chosenModel()).toBe('cohere/rerank-4-fast');
+
+    expect(optionLabels(fixture, picker)).toEqual([
+      'cohere/rerank-4-fast · Reranker',
+      '~typesafe/jev-latest · Entscheidungsmodell',
+    ]);
+  });
+
+  it('tags each scoring model with its family beside its id', () => {
+    const fixture = mount();
+    const picker = openPicker(
+      fixture,
+      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
+      [
+        offered('gpt-4o'),
+        rerankerModel('cohere/rerank-4-fast'),
+        decisionModel('~typesafe/jev-latest'),
+      ],
+    );
+
+    expect(optionLabels(fixture, picker)).toEqual([
+      'cohere/rerank-4-fast · Reranker',
+      '~typesafe/jev-latest · Decision model',
+    ]);
   });
 
   it("keeps the reader's kind while a row is written", () => {

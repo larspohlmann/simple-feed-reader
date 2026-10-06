@@ -179,7 +179,12 @@
                           }
                           @if (modelKind() === 'scoring') {
                             <p class="hint scoring-hint">
-                              {{ 'settings.ai.modelKind.scoringHint' | transloco }}
+                              <span>{{ 'settings.ai.modelKind.scoringHint' | transloco }}</span>
+                              @for (family of offeredScoringFamilies(); track family) {
+                                @let familyHint =
+                                  'settings.ai.modelFamilyHint.' + family | transloco;
+                                <span>{{ ' ' + familyHint }}</span>
+                              }
                             </p>
                           }
                         </div>
