@@ -4,6 +4,8 @@
 // move up/down, edit, delete. Global because ViewEncapsulation doesn't let
 // sibling components share a scoped stylesheet (same reasoning as _list-action.scss).
 .ib {
+  --rim-fill: transparent;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11,7 +13,7 @@
   height: var(--icon-lg);
   border: 0;
   border-radius: var(--radius-sm);
-  background: transparent;
+  background: var(--rim-fill);
   color: var(--text-muted);
   cursor: pointer;
 }
@@ -40,12 +42,9 @@
    style sticks until something else is tapped (#704). */
 @media (hover: hover) {
   .ib:hover:not(:disabled) {
-    background-color: var(--surface-0);
-    color: var(--text-primary);
-  }
-
-  .ib.boxed:hover:not(:disabled) {
     --rim-fill: var(--surface-0);
+
+    color: var(--text-primary);
   }
 
   .ib.danger:hover:not(:disabled) {

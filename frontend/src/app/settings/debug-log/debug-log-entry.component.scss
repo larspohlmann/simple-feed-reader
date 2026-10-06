@@ -42,9 +42,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  // How long the call took, on the row itself rather than behind the expander:
-  // for a reasoning model a batch runs for many seconds, and that number is
-  // the first thing a reader checks.
   &__dur {
     color: var(--text-muted);
     font-size: var(--fs-xs);
@@ -114,9 +111,6 @@
     @include glass-rim.ring(var(--border), control);
   }
 
-  // What the provider sent, as opposed to what it answered. A thinking model
-  // spends megabytes here before the first answer token (#320), so this line
-  // is the difference between "provider is silent" and "provider is busy".
   &__wire {
     margin: var(--space-1) 0 0;
     color: var(--text-muted);
@@ -129,9 +123,6 @@
     font-size: var(--fs-xs);
   }
 
-  // Why the provider stopped. Muted for a natural `stop`, but `length` means
-  // the answer was truncated by max_tokens (#327) -- the reason a run failed,
-  // so it reads in the danger colour like an error.
   &__finish {
     margin: var(--space-1) 0 0;
     color: var(--text-muted);
