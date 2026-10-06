@@ -1,3 +1,4 @@
+@use '../../../theme/glass-rim';
 @use 'sidebar-row' as row;
 @include row.nav-row;
 @include row.tag-head;
@@ -41,15 +42,15 @@
 }
 
 .act {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
   padding: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-2);
   color: var(--text-primary);
   cursor: pointer;
   font-size: var(--fs-sm);
@@ -57,7 +58,7 @@
 
 @media (hover: hover) {
   .act:hover:not(:disabled) {
-    background: var(--surface-0);
+    --rim-fill: var(--surface-0);
   }
 }
 
@@ -243,8 +244,8 @@
 /* Drag visuals — the clone is appended to <body>, but Angular emulated
          styles still match it via its retained content attribute. */
 .cdk-drag-preview {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   border-radius: var(--radius);
   box-shadow: 0 6px 20px rgb(0 0 0 / 35%);
 }

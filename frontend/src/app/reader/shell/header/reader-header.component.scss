@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../theme/glass-rim';
 
 /* Opaque backing shared by the transparent header row and tag row, spanning
    their seam: each is its own compositing layer, and their bounds can round
@@ -47,14 +48,14 @@ header {
 }
 
 .chip {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--surface-2);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   text-decoration: none;
@@ -63,8 +64,9 @@ header {
 }
 
 .chip.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+  --rim-fill: var(--accent-soft);
+
   color: var(--accent);
 }
 
@@ -172,6 +174,8 @@ header {
 }
 
 .menu {
+  @include glass-rim.filled(var(--surface-2));
+
   position: absolute;
   right: 0;
 
@@ -179,8 +183,6 @@ header {
      the account button's top edge. It is deliberately NOT --tap-target. */
   top: 44px;
   z-index: 30;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
 
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --

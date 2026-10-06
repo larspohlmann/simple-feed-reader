@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 /* An unbreakable pill name has nothing to wrap on, so without a min-width: 0
    chain from here down to .name it widened the card and pushed the magazine
    list scroller sideways. Every link in that chain is load-bearing. */
@@ -9,14 +11,14 @@
 }
 
 .pill {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
   padding: var(--space-0) var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-xs, 0.72rem);
   line-height: 1.5;
@@ -25,7 +27,8 @@
 }
 
 .pill:hover {
-  border-color: var(--border-strong);
+  --rim-base: var(--border-strong);
+
   color: var(--text-primary);
 }
 

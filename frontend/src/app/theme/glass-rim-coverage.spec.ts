@@ -2,7 +2,14 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SOURCE_ROOT = join(__dirname, '..', '..');
-const GUARDED = ['app/theme', 'styles', 'app/shared'];
+const GUARDED = [
+  'app/theme',
+  'styles',
+  'app/shared',
+  'app/reader/shell',
+  'app/reader/feeds',
+  'app/reader/entry',
+];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;
 
@@ -34,6 +41,16 @@ const EXEMPT: readonly Exemption[] = [
     file: 'app/shared/color-field/color-field.component.scss',
     selector: '.swatch',
     reason: 'a 2px selection ring around a user colour, not chrome',
+  },
+  {
+    file: 'app/reader/shell/sidebar/sidebar.component.scss',
+    selector: '.section-chevron app-icon',
+    reason: 'a transparent border that only matches the .chevzone glyph box metrics',
+  },
+  {
+    file: 'app/reader/feeds/add-feed/add-feed-dialog.component.scss',
+    selector: '.subscribe',
+    reason: 'a solid accent button: its border is its fill colour, flat like primary',
   },
 ];
 
