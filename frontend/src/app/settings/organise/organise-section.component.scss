@@ -65,13 +65,9 @@
 }
 
 .filter {
-  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+  --field-rim-base: var(--border-strong);
 
-  height: var(--control-h);
   min-width: 12rem;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius);
-  color: var(--text-primary);
   font-size: var(--fs-sm);
 }
 
@@ -136,7 +132,7 @@
 }
 
 .sort {
-  --rim-base: var(--border-strong);
+  --field-rim-base: var(--border-strong);
   --select-inset: var(--space-2);
 
   font-size: var(--fs-sm);

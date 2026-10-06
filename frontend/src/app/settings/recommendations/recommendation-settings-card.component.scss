@@ -57,14 +57,6 @@ app-field {
   width: 100%;
 }
 
-input[aria-invalid='true'] {
-  --rim-base: var(--danger);
-}
-
-input[aria-invalid='true']:focus {
-  --rim-base: var(--danger);
-}
-
 textarea {
   min-height: 6em;
   resize: vertical;
