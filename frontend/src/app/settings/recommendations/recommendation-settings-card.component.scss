@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
 
 // Layout glue only: Grouped chrome comes from the shared primitives. What
 // stays here is the two-column caps grid, drill-in body padding, and the
@@ -28,14 +29,14 @@
 // inset to align with the card content box. Boxed so the Expert section's
 // start/end are unmistakable against the rows above and save bar below.
 .expert-body {
+  @include glass-rim.filled(var(--surface-0));
+
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   margin: var(--space-3) var(--space-4) var(--space-4);
   padding: var(--panel-inset-y) var(--panel-inset-x);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-0);
 }
 
 .group {
@@ -57,11 +58,11 @@ app-field {
 }
 
 input[aria-invalid='true'] {
-  border-color: var(--danger);
+  --rim-base: var(--danger);
 }
 
 input[aria-invalid='true']:focus {
-  border-color: var(--danger);
+  --rim-base: var(--danger);
 }
 
 textarea {
@@ -100,11 +101,11 @@ textarea {
 
 .fixed,
 .cron-example {
+  @include glass-rim.filled(var(--surface-1));
+
   margin: 0;
   padding: var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-muted);
   font-size: var(--fs-sm);
   white-space: pre-wrap;
@@ -140,9 +141,9 @@ textarea {
 
 // The debug switch sits in a soft well, set apart from the fields above it.
 .inset {
-  border: 1px solid var(--border);
+  @include glass-rim.filled(var(--surface-0));
+
   border-radius: var(--radius);
-  background: var(--surface-0);
 }
 
 // The external-cron help note, shown only when no worker heartbeat is fresh.

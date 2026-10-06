@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 .divider {
   text-align: center;
   color: var(--text-muted);
@@ -6,12 +8,12 @@
 }
 
 .oauth {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   width: 100%;
   height: var(--control-h);
   margin-bottom: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   cursor: pointer;
 }

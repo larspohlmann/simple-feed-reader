@@ -1,4 +1,5 @@
 @use '../theme/breakpoints' as bp;
+@use '../theme/glass-rim';
 
 /* The host is the sticky element, not .chips: a sticky child of a
    content-height host has no room to travel and scrolls away with it.
@@ -37,14 +38,14 @@
 }
 
 button {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: inline-flex;
   flex: none;
   gap: var(--space-1);
   align-items: center;
   padding: var(--row-pad-y) var(--row-pad-x);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   white-space: nowrap;

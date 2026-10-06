@@ -14,6 +14,9 @@ const GUARDED = [
   'app/settings/organise',
   'app/settings/preferences',
   'app/settings/about',
+  'app/settings/recommendations',
+  'app/discover',
+  'app/auth',
 ];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;

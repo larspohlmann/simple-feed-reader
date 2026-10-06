@@ -1,4 +1,5 @@
 @use '../theme/breakpoints' as bp;
+@use '../theme/glass-rim';
 
 // The picker is a route, not a CDK dialog, so nothing else supplies the scrim
 // — this host is it. The frame inside is app-overlay-panel's; only the width
@@ -35,21 +36,22 @@
 }
 
 .close {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
   width: var(--control-h);
   height: var(--control-h);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   cursor: pointer;
 
   &:hover {
+    --rim-fill: var(--surface-2);
+
     color: var(--text-primary);
-    background: var(--surface-2);
   }
 }
 
@@ -113,10 +115,10 @@ app-category-chips {
   margin-left: auto;
 
   button {
+    @include glass-rim.filled(var(--accent-soft), var(--border), control);
+
     padding: var(--space-1) var(--space-3);
-    border: 1px solid var(--border);
     border-radius: var(--radius-pill);
-    background: var(--accent-soft);
     color: var(--accent);
     font-size: var(--fs-sm);
     cursor: pointer;
@@ -135,25 +137,25 @@ app-category-chips {
 // A whole card is the control — click anywhere to pick it. The tick in the
 // trailing slot is the only "checked" affordance; there is no checkbox.
 .card {
+  @include glass-rim.filled(var(--surface-1));
+
   display: flex;
   gap: var(--space-2);
   align-items: flex-start;
   width: 100%;
   height: 100%;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   text-align: left;
   cursor: pointer;
 
   &:hover:not(.locked) {
-    border-color: var(--border-strong);
+    --rim-base: var(--border-strong);
   }
 
   &.on {
-    border-color: var(--accent);
-    background: var(--accent-soft);
+    --rim-base: var(--accent);
+    --rim-fill: var(--accent-soft);
   }
 
   &.locked {
