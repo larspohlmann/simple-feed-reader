@@ -19,21 +19,21 @@ final readonly class RerankQueryFactory
 
     public function create(ScoringReaderModel $reader, int $tokenBudget): string
     {
-        $fits = static fn (int $bytes): bool => TokenEstimate::ofLength($bytes) <= $tokenBudget;
-        $opening = self::QUESTION . self::guidanceLine($reader->guidance, $fits) . self::PROFILE_LABEL;
+        $bytesFit = static fn (int $bytes): bool => TokenEstimate::ofLength($bytes) <= $tokenBudget;
+        $opening = self::QUESTION . self::guidanceLine($reader->guidance, $bytesFit) . self::PROFILE_LABEL;
 
         return $opening . FittingPrefix::of(
             mb_scrub($reader->profile, 'UTF-8'),
-            static fn (string $prefix): bool => $fits(\strlen($opening) + \strlen($prefix)),
+            static fn (string $prefix): bool => $bytesFit(\strlen($opening) + \strlen($prefix)),
         );
     }
 
     /**
      * Fitted beside an empty profile: the profile's label must still fit once the guidance has taken the budget.
      *
-     * @param \Closure(int): bool $fits
+     * @param \Closure(int): bool $bytesFit
      */
-    private static function guidanceLine(?string $guidance, \Closure $fits): string
+    private static function guidanceLine(?string $guidance, \Closure $bytesFit): string
     {
         if (null === $guidance) {
             return '';
@@ -43,7 +43,7 @@ final readonly class RerankQueryFactory
 
         return self::GUIDANCE_LABEL . FittingPrefix::of(
             mb_scrub($guidance, 'UTF-8'),
-            static fn (string $prefix): bool => $fits($framing + \strlen($prefix)),
+            static fn (string $prefix): bool => $bytesFit($framing + \strlen($prefix)),
         );
     }
 }

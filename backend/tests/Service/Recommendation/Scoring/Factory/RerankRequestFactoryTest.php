@@ -43,7 +43,7 @@ final class RerankRequestFactoryTest extends TestCase
         $request = self::factory()->create(new ScoringRequestModel(
             'cohere/rerank-4-fast',
             new ScoringReaderModel(str_repeat('p', 1_000), null, []),
-            new ScoringBudgetModel(2_150, 100, 50, 2_000),
+            new ScoringBudgetModel(2_150, 64, 50, 2_000),
             [new ArticleLineModel(7, 'T', 'F', '2026-10-01', str_repeat('d', 600))],
         ));
 
