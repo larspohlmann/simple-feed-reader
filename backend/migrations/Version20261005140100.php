@@ -25,15 +25,14 @@ final class Version20261005140100 extends AbstractMigration
         );
         $this->addSql("UPDATE user_ai_settings SET model_kind = 'llm' WHERE model IS NOT NULL AND model_kind IS NULL");
         $this->addSql(
-            "UPDATE recommendation_run SET engine_kind = 'scoring', scoring_protocol = 'system_one' "
-            . "WHERE engine_kind = 'jev'",
+            "UPDATE recommendation_run SET engine_kind = 'scoring' WHERE engine_kind = 'jev'",
         );
     }
 
     public function down(Schema $schema): void
     {
         $this->addSql(
-            "UPDATE recommendation_run SET engine_kind = 'jev', scoring_protocol = NULL WHERE engine_kind = 'scoring'",
+            "UPDATE recommendation_run SET engine_kind = 'jev' WHERE engine_kind = 'scoring'",
         );
         $this->addSql('UPDATE user_ai_settings SET model_kind = NULL, scoring_protocol = NULL');
     }

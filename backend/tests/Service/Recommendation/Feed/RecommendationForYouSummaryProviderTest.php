@@ -62,7 +62,7 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
     private function seedRun(RunStatus $status, string $completedAt): RecommendationRun
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
 
         if ($status === RunStatus::Completed) {
             $run->complete(new \DateTimeImmutable($completedAt));

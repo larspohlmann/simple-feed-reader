@@ -124,30 +124,6 @@ final class SnapshotPhaseTest extends DbTestCase
         self::assertSame('scoring', $this->storedEngineKind($run));
     }
 
-    public function testAScoringTickRecordsItsConnectionsProtocolWithAPlan(): void
-    {
-        $this->fixtures->storeProfile($this->owner, 'a stored profile');
-        $this->fixtures->seedFeedWithEntries($this->owner, 2);
-        $this->fixtures->seedReadyScoringSettings($this->owner);
-        $run = $this->pendingRun();
-
-        $this->snapshot(ScriptedRecommendationEngine::packing([[1]]))
-            ->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
-
-        self::assertSame('system_one', $this->storedScoringProtocol($run));
-    }
-
-    public function testAScoringTickRecordsItsConnectionsProtocolForAnEmptyPool(): void
-    {
-        $this->fixtures->seedReadyScoringSettings($this->owner);
-        $run = $this->pendingRun();
-
-        $this->snapshot(ScriptedRecommendationEngine::packing([[999]]))
-            ->advance($this->tickOfKind($run, RecommendationEngineKind::Scoring));
-
-        self::assertSame('system_one', $this->storedScoringProtocol($run));
-    }
-
     public function testTheStoredProfileIsFrozenIntoTheRun(): void
     {
         $this->fixtures->storeProfile($this->owner, 'Likes rail and maps.');
@@ -192,14 +168,6 @@ final class SnapshotPhaseTest extends DbTestCase
     {
         return $this->entityManager->getConnection()->fetchOne(
             'SELECT engine_kind FROM recommendation_run WHERE id = ?',
-            [$run->requireId()],
-        );
-    }
-
-    private function storedScoringProtocol(RecommendationRun $run): mixed
-    {
-        return $this->entityManager->getConnection()->fetchOne(
-            'SELECT scoring_protocol FROM recommendation_run WHERE id = ?',
             [$run->requireId()],
         );
     }

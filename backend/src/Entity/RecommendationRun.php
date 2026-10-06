@@ -7,7 +7,6 @@ namespace App\Entity;
 use App\Entity\Exception\InvalidRunStatusException;
 use App\Enum\RecommendationEngineKind;
 use App\Enum\RunStatus;
-use App\Enum\ScoringProtocol;
 use App\Repository\RecommendationRunRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -60,8 +59,9 @@ final class RecommendationRun
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $candidateBatches = null;
 
-    #[ORM\Embedded(class: RunEngine::class, columnPrefix: false)]
-    private RunEngine $engine;
+    /** The engine the frozen plan was packed for; null on runs from before the column. */
+    #[ORM\Column(length: 16, nullable: true, enumType: RecommendationEngineKind::class)]
+    private ?RecommendationEngineKind $engineKind = null;
 
     /** @var list<list<array{id: int, score?: int, reason: string}>> */
     #[ORM\Column(type: Types::JSON)]
@@ -99,7 +99,6 @@ final class RecommendationRun
         $this->batchProgress = new RunBatchProgress();
         $this->throttle = new RunThrottle();
         $this->callAttempts = new RunCallAttempts();
-        $this->engine = new RunEngine();
     }
 
     public function getId(): ?int
@@ -135,14 +134,11 @@ final class RecommendationRun
     /**
      * @param list<list<int>> $candidateBatches
      */
-    public function snapshot(
-        RecommendationEngineKind $engineKind,
-        ?ScoringProtocol $scoringProtocol,
-        array $candidateBatches,
-    ): void {
+    public function snapshot(RecommendationEngineKind $engineKind, array $candidateBatches): void
+    {
         $this->guardStatus(RunStatus::Pending, 'snapshot');
 
-        $this->engine->record($engineKind, $scoringProtocol);
+        $this->engineKind = $engineKind;
         $this->candidateBatches = $candidateBatches;
         $this->status = RunStatus::Running;
     }
@@ -155,14 +151,10 @@ final class RecommendationRun
         return $this->candidateBatches ?? [];
     }
 
+    /** A run without a recorded kind predates the column and ran on the LLM, the only engine there was. */
     public function getEngineKind(): RecommendationEngineKind
     {
-        return $this->engine->getEngineKind();
-    }
-
-    public function getScoringProtocol(): ?ScoringProtocol
-    {
-        return $this->engine->getScoringProtocol();
+        return $this->engineKind ?? RecommendationEngineKind::Llm;
     }
 
     public function getProgress(): RecommendationRunProgress

@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
-use App\Entity\ModelDescriptor;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationEngineKind;
-use App\Enum\ScoringProtocol;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -182,106 +179,11 @@ final class TickPhasesTest extends DbTestCase
         self::assertCount(1, $engine->advancedTicks);
     }
 
-    /** The run's model is the connection's own: only the protocol differs, so only the protocol check can fail it. */
-    public function testARunPackedForAnotherScoringProtocolFailsWithoutBeingAdvanced(): void
-    {
-        $this->fixtures->seedReadyScoringSettings($this->owner);
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('failed', $report->status);
-        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
-        self::assertSame([], $engine->advancedTicks);
-    }
-
-    public function testARunOnItsConnectionsScoringProtocolIsAdvanced(): void
-    {
-        $this->fixtures->seedReadyScoringSettings($this->owner);
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne);
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('running', $report->status);
-        self::assertCount(1, $engine->advancedTicks);
-    }
-
-    /** Its batches were packed for the old model's window, so another System One model must not take them over. */
-    public function testAScoringRunWhoseConnectionSwitchedToAnotherSystemOneModelFailsWithoutBeingAdvanced(): void
-    {
-        $connection = $this->fixtures->seedReadyScoringSettings($this->owner);
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::SystemOne);
-        $this->chooseModel($connection, new ModelDescriptor('kev-latest', 8_192, ScoringProtocol::SystemOne));
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('failed', $report->status);
-        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
-        self::assertSame([], $engine->advancedTicks);
-    }
-
-    public function testARerankRunWhoseConnectionSwitchedToAnotherRerankerFailsWithoutBeingAdvanced(): void
-    {
-        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
-        $voyage = new ModelDescriptor('voyageai/rerank-2.5-lite', 32_000, ScoringProtocol::Rerank);
-        $this->chooseModel($connection, $voyage);
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('failed', $report->status);
-        self::assertSame(TickPhases::SCORING_MODEL_SWITCH, $run->getError());
-        self::assertSame([], $engine->advancedTicks);
-    }
-
-    /** The model changed too, but the protocol is the bigger switch and names the kinds of model. */
-    public function testARerankRunWhoseConnectionMovedToADecisionModelFailsAsAnEngineSwitch(): void
-    {
-        $connection = $this->fixtures->seedReadyRerankSettings($this->owner);
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRunOn(RecommendationEngineKind::Scoring, ScoringProtocol::Rerank);
-        $this->chooseModel($connection, new ModelDescriptor('jev-latest', 32_768, ScoringProtocol::SystemOne));
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('failed', $report->status);
-        self::assertSame(TickPhases::ENGINE_SWITCH, $run->getError());
-        self::assertSame([], $engine->advancedTicks);
-    }
-
-    public function testAnLlmRunWhoseConnectionSwitchedModelKeepsRunning(): void
-    {
-        $connection = $this->fixtures->seedReadyAiSettingsFor($this->owner, 'gpt-4o');
-        $engine = ScriptedRecommendationEngine::packing([]);
-        $run = $this->runningRun();
-        $this->chooseModel($connection, new ModelDescriptor('gpt-4.1', 128_000));
-
-        $report = $this->phases($engine)->advance($this->tick($run));
-
-        self::assertSame('running', $report->status);
-        self::assertCount(1, $engine->advancedTicks);
-    }
-
-    private function chooseModel(AiProviderSettings $connection, ModelDescriptor $model): void
-    {
-        $connection->chooseModel($model, new \DateTimeImmutable('2026-08-08 10:04:00'));
-        $this->entityManager->flush();
-    }
-
     private function runningRun(): RecommendationRun
-    {
-        return $this->runningRunOn(RecommendationEngineKind::Llm, null);
-    }
-
-    private function runningRunOn(RecommendationEngineKind $kind, ?ScoringProtocol $protocol): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->owner);
         $run->stampProvider('api.example.test', $this->owner->getActiveAiProviderSettings()?->getModel());
-        $run->snapshot($kind, $protocol, [[101, 102]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[101, 102]]);
         $this->entityManager->flush();
 
         return $run;

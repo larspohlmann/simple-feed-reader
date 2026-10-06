@@ -144,10 +144,9 @@ across runs); there are no reasons and no consolidation, so the list is the best
 The engine reads only the batch-concurrency setting and records each call's request id, answering model and cost in the
 run log. `ScoringHttpTransport` sends a protocol's requests (its own idle and wall-clock timeouts, the tick heartbeat, a
 1 MiB reply cap) and maps the statuses every protocol shares; a protocol adds only its retryable statuses (System One
-and Rerank: 429 and 529). A run records the engine kind and the scoring protocol it was packed for; a tick that finds
-the active connection on another kind or protocol fails the run with an error naming the kinds of model; a scoring run
-whose connection holds another model of its protocol fails with an error naming the model switch (scores from two
-models do not compare within one run, and a decision model's batches were packed for its window). Switching back resumes either. An LLM run follows a model change.
+and Rerank: 429 and 529). A run records the engine kind it was packed for; a tick that finds the
+active connection on the other kind fails the run, and switching back resumes it. Any other change of model while a
+run is pending or running is not guarded: the run carries on with the model the connection now holds.
 
 ### The profile
 
