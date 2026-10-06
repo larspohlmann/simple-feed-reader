@@ -58,6 +58,8 @@ export class SavedSearchesStore {
           (read) => new Set([...read].filter((id) => !readsWhenSent.has(id))),
         );
       },
+      // The badges keep their last counts; the next tick past the window asks again.
+      error: () => (this.inFlight = null),
     });
     // A response that came back synchronously has already left; parking its
     // closed subscription here would jam the in-flight guard for good.

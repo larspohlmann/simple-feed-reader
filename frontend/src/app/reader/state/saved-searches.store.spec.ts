@@ -253,5 +253,30 @@ describe('SavedSearchesStore', () => {
 
       expect(savedSearches).toHaveBeenCalledTimes(1);
     });
+
+    it('asks again once the window has elapsed after a load failed (#1423)', () => {
+      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const savedSearches = jest.fn(() => responses);
+      const store = setup({ savedSearches });
+      store.load();
+      responses.error(new Error('504'));
+      jest.advanceTimersByTime(SIDEBAR_RELOAD_INTERVAL_MS);
+
+      store.reloadIfStale();
+
+      expect(savedSearches).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the last known badges when a reload fails (#1423)', () => {
+      const responses = new Subject<{ savedSearches: SavedSearchWire[] }>();
+      const store = setup({ savedSearches: () => responses });
+      store.load();
+      responses.next({ savedSearches: rows });
+
+      store.load();
+      responses.error(new Error('504'));
+
+      expect(store.savedSearches()).toEqual(rows.map((wire) => view(wire)));
+    });
   });
 });
