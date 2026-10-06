@@ -136,12 +136,9 @@
 }
 
 .sort {
-  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+  --rim-base: var(--border-strong);
+  --select-inset: var(--space-2);
 
-  height: var(--control-h);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius);
-  color: var(--text-primary);
   font-size: var(--fs-sm);
 }
 
