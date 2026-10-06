@@ -13,6 +13,7 @@ use App\Service\Recommendation\Scoring\Model\ScoringBudgetModel;
 use App\Service\Recommendation\Scoring\Model\ScoringReaderModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\ScoringProtocol\RerankProtocol;
+use App\Service\Recommendation\Support\PrettyJson;
 use App\Tests\Support\StubRerankClient;
 use PHPUnit\Framework\TestCase;
 
@@ -50,14 +51,15 @@ final class RerankProtocolTest extends TestCase
         self::assertSame([100, 20], array_map(\count(...), $batches));
     }
 
-    public function testTheRunLogGetsTheRerankBodyPrettyPrinted(): void
+    public function testTheRequestIsWordedOnceAsARerankRequestAndPrettyPrintedForTheRunLog(): void
     {
         $request = self::request([self::article(41)]);
 
-        self::assertSame(
-            self::requestFactory()->create($request)->toRenderedRequest(),
-            self::protocol(new StubRerankClient())->renderedRequest($request),
-        );
+        $protocol = self::protocol(new StubRerankClient());
+        $worded = $protocol->word($request);
+
+        self::assertEquals(self::requestFactory()->create($request), $worded);
+        self::assertSame(PrettyJson::of($worded->payload()), $protocol->renderedRequest($worded));
     }
 
     public function testEveryRequestIsAskedAsItsRerankRequestAndAnsweredInItsPlace(): void
@@ -66,9 +68,14 @@ final class RerankProtocolTest extends TestCase
         $client->queueRelevances(static fn (int $entryId): float => 0.25);
         $client->queueRelevances(static fn (int $entryId): float => 7 === $entryId ? 0.75 : 0.5);
 
-        $outcomes = self::protocol($client)->scoreMany(
+        $protocol = self::protocol($client);
+
+        $outcomes = $protocol->scoreMany(
             ProviderCredentialsModel::fromStoredConfiguration('https://openrouter.test/api/v1', 'sk-or'),
-            [self::request([self::article(41)]), self::request([self::article(9), self::article(7)])],
+            [
+                $protocol->word(self::request([self::article(41)])),
+                $protocol->word(self::request([self::article(9), self::article(7)])),
+            ],
         );
 
         self::assertSame(

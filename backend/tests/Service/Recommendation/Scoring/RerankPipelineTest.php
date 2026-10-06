@@ -9,7 +9,6 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Enum\CallVerdict;
-use App\Enum\ScoringProtocol;
 use App\Http\RecommendationFeedJson;
 use App\Repository\ForYouFeedQuery;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -63,7 +62,6 @@ final class RerankPipelineTest extends DbTestCase
             \array_slice($items, 0, 2),
         ));
         self::assertSame('', $items[0]->getReason());
-        self::assertSame(ScoringProtocol::Rerank, $run->getScoringProtocol());
         self::assertSame([], $this->systemOne()->requests());
     }
 

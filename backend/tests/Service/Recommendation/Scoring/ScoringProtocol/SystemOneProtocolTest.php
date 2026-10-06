@@ -14,7 +14,8 @@ use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
 use App\Service\Recommendation\Scoring\ScoringBatchPacker;
 use App\Service\Recommendation\Scoring\ScoringProtocol\SystemOneProtocol;
-use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\CompactJson;
+use App\Service\Recommendation\Support\PrettyJson;
 use App\Service\Recommendation\Support\TokenEstimate;
 use App\Tests\Support\StubSystemOneClient;
 use PHPUnit\Framework\TestCase;
@@ -63,14 +64,15 @@ final class SystemOneProtocolTest extends TestCase
         }
     }
 
-    public function testTheRunLogGetsTheSystemOneBodyPrettyPrinted(): void
+    public function testTheRequestIsWordedOnceAsASystemOneRequestAndPrettyPrintedForTheRunLog(): void
     {
         $request = self::request([new ArticleLineModel(41, 'Kernel 6.18', 'LWN', '2026-10-01', null)]);
 
-        self::assertSame(
-            self::requestFactory()->create($request)->toRenderedRequest(),
-            self::protocol(new StubSystemOneClient())->renderedRequest($request),
-        );
+        $protocol = self::protocol(new StubSystemOneClient());
+        $worded = $protocol->word($request);
+
+        self::assertEquals(self::requestFactory()->create($request), $worded);
+        self::assertSame(PrettyJson::of($worded->payload()), $protocol->renderedRequest($worded));
     }
 
     public function testEveryRequestIsAskedAsItsSystemOneRequestAndAnsweredInItsPlace(): void
@@ -79,9 +81,14 @@ final class SystemOneProtocolTest extends TestCase
         $client->queueNouls(static fn (int $entryId): float => 0.25);
         $client->queueNouls(static fn (int $entryId): float => 0.75);
 
-        $outcomes = self::protocol($client)->scoreMany(
+        $protocol = self::protocol($client);
+
+        $outcomes = $protocol->scoreMany(
             ProviderCredentialsModel::fromStoredConfiguration('https://api.typesafe.test/v1', 'sk-jev'),
-            [self::request([self::article(41)]), self::request([self::article(7), self::article(9)])],
+            [
+                $protocol->word(self::request([self::article(41)])),
+                $protocol->word(self::request([self::article(7), self::article(9)])),
+            ],
         );
 
         self::assertSame(

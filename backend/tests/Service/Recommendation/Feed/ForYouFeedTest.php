@@ -49,7 +49,7 @@ final class ForYouFeedTest extends DbTestCase
         );
 
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
-        $run->snapshot(RecommendationEngineKind::Llm, null, [[1]]);
+        $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         $this->entityManager->persist($run);
 

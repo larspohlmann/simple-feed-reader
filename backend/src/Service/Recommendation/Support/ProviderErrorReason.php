@@ -35,15 +35,9 @@ final class ProviderErrorReason
 
         return match (true) {
             \is_string($reason) => $reason,
-            \is_array($reason) => self::compactJson($reason),
+            \is_array($reason) => CompactJson::encode($reason),
             default => null,
         };
-    }
-
-    /** @param array<mixed> $structure */
-    private static function compactJson(array $structure): string
-    {
-        return json_encode($structure, \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR);
     }
 
     private function __construct()

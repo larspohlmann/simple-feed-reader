@@ -11,7 +11,11 @@ use App\Service\Recommendation\Scoring\Model\ScoringOutcomeModel;
 use App\Service\Recommendation\Scoring\Model\ScoringRequestModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-/** How one family of scoring models is asked, keyed in ScoringProtocolResolver's locator by its ScoringProtocol value. */
+/**
+ * How one family of scoring models is asked, keyed in ScoringProtocolResolver's locator by its ScoringProtocol value.
+ *
+ * @template TWorded of object a request in this protocol's own words
+ */
 #[AutoconfigureTag('app.scoring_protocol')]
 interface ScoringProtocolInterface
 {
@@ -25,11 +29,18 @@ interface ScoringProtocolInterface
      */
     public function pack(ScoringBudgetModel $budget, array $candidates): array;
 
-    /** The request as this protocol sends it, pretty-printed for the run log. */
-    public function renderedRequest(ScoringRequestModel $request): string;
+    /** @return TWorded */
+    public function word(ScoringRequestModel $request): object;
 
     /**
-     * @param non-empty-list<ScoringRequestModel> $requests
+     * The request as this protocol sends it, pretty-printed for the run log.
+     *
+     * @param TWorded $request
+     */
+    public function renderedRequest(object $request): string;
+
+    /**
+     * @param non-empty-list<TWorded> $requests
      *
      * @return list<ScoringOutcomeModel> aligned by index; a failed call is an outcome, never a throw
      */

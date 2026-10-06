@@ -10,6 +10,15 @@ enum ScoringProtocol: string
     case SystemOne = 'system_one';
     case Rerank = 'rerank';
 
+    /** Where a provider answers this protocol, below its base URL. */
+    public function path(): string
+    {
+        return match ($this) {
+            self::SystemOne => '/systemone',
+            self::Rerank => '/rerank',
+        };
+    }
+
     public function family(): ScoringFamily
     {
         return match ($this) {

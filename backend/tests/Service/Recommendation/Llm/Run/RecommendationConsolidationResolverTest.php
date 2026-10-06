@@ -426,7 +426,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     private function runWithWinners(array $winners): RecommendationRun
     {
         $run = $this->fixtures->createRun($this->user);
-        $run->snapshot(RecommendationEngineKind::Llm, null, [array_column($winners, 'id')]);
+        $run->snapshot(RecommendationEngineKind::Llm, [array_column($winners, 'id')]);
         $run->recordBatchWinners($winners);
         $this->entityManager->flush();
 

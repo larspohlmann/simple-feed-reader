@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Llm\Completion;
 
 use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Ai\Support\ReplyField;
 use App\Service\Ai\Support\ReportedCost;
 
 /**
@@ -195,16 +196,9 @@ final readonly class CompletionBodyDecoder
         return \is_array($details) ? $details : [];
     }
 
-    /**
-     * One usage counter; absent, non-integer or negative reads 0. A negative one would subtract from the per-run total
-     * it is banked onto with SQL arithmetic.
-     *
-     * @param array<mixed> $fields
-     */
+    /** @param array<mixed> $fields */
     private function intField(array $fields, string $key): int
     {
-        $value = $fields[$key] ?? null;
-
-        return \is_int($value) && $value >= 0 ? $value : 0;
+        return ReplyField::count($fields[$key] ?? null);
     }
 }

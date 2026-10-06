@@ -10,6 +10,12 @@ enum RecommendationEngineKind: string
     case Llm = 'llm';
     case Scoring = 'scoring';
 
+    /** A model that speaks a scoring protocol is a scoring model; any other is an LLM. */
+    public static function of(?ScoringProtocol $protocol): self
+    {
+        return null === $protocol ? self::Llm : self::Scoring;
+    }
+
     /** @return list<CallPhase> the phases a run of this kind calls the provider in, in order */
     public function phases(): array
     {

@@ -11,6 +11,7 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderConnectionModel;
+use App\Service\Ai\Support\RejectingStatus;
 use App\Service\Ai\Support\RetryAfter;
 use App\Service\Recommendation\Llm\Completion\CompletionBodyDecoder;
 use App\Service\Recommendation\Llm\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
@@ -306,7 +307,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     {
         $status = $response->getStatusCode();
 
-        if (401 === $status || 403 === $status) {
+        if (RejectingStatus::refusesKey($status)) {
             throw CredentialsRejectedException::refusedKey();
         }
 

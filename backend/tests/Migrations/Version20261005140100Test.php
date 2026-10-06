@@ -33,7 +33,7 @@ final class Version20261005140100Test extends DbTestCase
         $this->owner = $this->user('kind-backfill@example.test');
     }
 
-    public function testAJevConnectionAndAJevRunBecomeSystemOneScoringAndEveryOtherModelAnLlm(): void
+    public function testAJevConnectionSpeaksSystemOneAndAJevRunBecomesScoring(): void
     {
         $jev = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'jev-latest')->requireId();
         $shouting = $this->fixtures->seedInactiveAiSettingsFor($this->owner, 'JEV-latest')->requireId();
@@ -41,28 +41,28 @@ final class Version20261005140100Test extends DbTestCase
         $modelless = AiProviderSettingsFactory::build($this->owner);
         $this->entityManager->persist($modelless);
         $jevRun = $this->fixtures->createRun($this->owner);
-        $jevRun->snapshot(RecommendationEngineKind::Scoring, null, [[1]]);
+        $jevRun->snapshot(RecommendationEngineKind::Scoring, [[1]]);
         $llmRun = $this->fixtures->createRun($this->owner);
-        $llmRun->snapshot(RecommendationEngineKind::Llm, null, [[2]]);
+        $llmRun->snapshot(RecommendationEngineKind::Llm, [[2]]);
         $this->entityManager->flush();
         $this->setBackToBeforeTheBackfill($jevRun->requireId());
 
         $this->backfill();
 
-        self::assertSame(['scoring', 'system_one'], $this->connectionTag($jev));
-        self::assertSame(['llm', null], $this->connectionTag($shouting));
-        self::assertSame(['llm', null], $this->connectionTag($chat));
-        self::assertSame([null, null], $this->connectionTag($modelless->requireId()));
-        self::assertSame(['scoring', 'system_one'], $this->runTag($jevRun->requireId()));
-        self::assertSame(['llm', null], $this->runTag($llmRun->requireId()));
+        self::assertSame('system_one', $this->connectionProtocol($jev));
+        self::assertNull($this->connectionProtocol($shouting));
+        self::assertNull($this->connectionProtocol($chat));
+        self::assertNull($this->connectionProtocol($modelless->requireId()));
+        self::assertSame('scoring', $this->runKind($jevRun->requireId()));
+        self::assertSame('llm', $this->runKind($llmRun->requireId()));
     }
 
     private function setBackToBeforeTheBackfill(int $jevRunId): void
     {
         $connection = $this->entityManager->getConnection();
-        $connection->executeStatement('UPDATE user_ai_settings SET model_kind = NULL, scoring_protocol = NULL');
+        $connection->executeStatement('UPDATE user_ai_settings SET scoring_protocol = NULL');
         $connection->executeStatement(
-            "UPDATE recommendation_run SET engine_kind = 'jev', scoring_protocol = NULL WHERE id = ?",
+            "UPDATE recommendation_run SET engine_kind = 'jev' WHERE id = ?",
             [$jevRunId],
         );
         $this->entityManager->clear();
@@ -80,27 +80,19 @@ final class Version20261005140100Test extends DbTestCase
         }
     }
 
-    /** @return list<mixed> the connection's kind and protocol as stored */
-    private function connectionTag(int $connectionId): array
+    private function connectionProtocol(int $connectionId): mixed
     {
-        $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT model_kind, scoring_protocol FROM user_ai_settings WHERE id = ?',
+        return $this->entityManager->getConnection()->fetchOne(
+            'SELECT scoring_protocol FROM user_ai_settings WHERE id = ?',
             [$connectionId],
         );
-        self::assertIsArray($row);
-
-        return [$row['model_kind'], $row['scoring_protocol']];
     }
 
-    /** @return list<mixed> the run's kind and protocol as stored */
-    private function runTag(int $runId): array
+    private function runKind(int $runId): mixed
     {
-        $row = $this->entityManager->getConnection()->fetchAssociative(
-            'SELECT engine_kind, scoring_protocol FROM recommendation_run WHERE id = ?',
+        return $this->entityManager->getConnection()->fetchOne(
+            'SELECT engine_kind FROM recommendation_run WHERE id = ?',
             [$runId],
         );
-        self::assertIsArray($row);
-
-        return [$row['engine_kind'], $row['scoring_protocol']];
     }
 }

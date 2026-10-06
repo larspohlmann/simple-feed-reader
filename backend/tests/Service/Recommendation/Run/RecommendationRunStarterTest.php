@@ -216,7 +216,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $startedAt = new \DateTimeImmutable(\sprintf('2026-08-08T09:%02d:00Z', $minute));
         $run = new RecommendationRun($this->user, $startedAt);
-        $run->snapshot(RecommendationEngineKind::Llm, null, []);
+        $run->snapshot(RecommendationEngineKind::Llm, []);
         $run->complete($startedAt->modify('+30 seconds'));
         $this->entityManager->persist($run);
         $this->entityManager->persist(RecommendationRunLog::forRun(
@@ -235,7 +235,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
-        $failed->snapshot(RecommendationEngineKind::Llm, null, [[1], [2]]);
+        $failed->snapshot(RecommendationEngineKind::Llm, [[1], [2]]);
         $failed->fail('provider gone', new \DateTimeImmutable('2026-08-08T09:01:00Z'));
         $this->entityManager->persist($failed);
         $this->entityManager->persist(RecommendationRunLog::forRun(
@@ -337,7 +337,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     private function failedRunFor(User $user): RecommendationRun
     {
         $failed = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07 09:00:00'));
-        $failed->snapshot(RecommendationEngineKind::Llm, null, [[1, 2], [3]]);
+        $failed->snapshot(RecommendationEngineKind::Llm, [[1, 2], [3]]);
         $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
         $this->entityManager->persist($failed);

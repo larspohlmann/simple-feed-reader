@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Scoring\Support;
 
 use App\Service\Ai\Model\ProviderCallReceiptModel;
 use App\Service\Ai\Model\ProviderCallUsageModel;
+use App\Service\Ai\Support\ReplyField;
 use App\Service\Ai\Support\ReportedCost;
 use App\Service\Recommendation\Scoring\Model\ScoringReplyModel;
 
@@ -24,8 +25,8 @@ final class SystemOneReplyDecoder
             $body,
             self::scoresIn($root['answers'] ?? null),
             new ProviderCallReceiptModel(
-                self::textIn($requestIdHeader) ?? self::textIn($root['id'] ?? null),
-                self::textIn($root['model'] ?? null),
+                ReplyField::text($requestIdHeader) ?? ReplyField::text($root['id'] ?? null),
+                ReplyField::text($root['model'] ?? null),
                 self::usageIn($root['usage'] ?? null),
             ),
         );
@@ -66,21 +67,10 @@ final class SystemOneReplyDecoder
         );
     }
 
-    /**
-     * The first of the keys the reply carries; absent, non-integer or negative reads 0.
-     *
-     * @param array<mixed> $usage
-     */
+    /** @param array<mixed> $usage */
     private static function countIn(array $usage, string $documentedKey, string $gatewayKey): int
     {
-        $value = $usage[$documentedKey] ?? $usage[$gatewayKey] ?? null;
-
-        return \is_int($value) && $value >= 0 ? $value : 0;
-    }
-
-    private static function textIn(mixed $value): ?string
-    {
-        return \is_string($value) && '' !== $value ? $value : null;
+        return ReplyField::count($usage[$documentedKey] ?? $usage[$gatewayKey] ?? null);
     }
 
     private function __construct()

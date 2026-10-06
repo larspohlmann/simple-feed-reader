@@ -40,14 +40,9 @@ final readonly class TickContext
         return new ProviderCallRouteModel($this->connection, $this->retryPlan());
     }
 
-    public function scoringProtocol(): ?ScoringProtocol
-    {
-        return $this->connection->getScoringProtocol();
-    }
-
     public function requireScoringProtocol(): ScoringProtocol
     {
-        return $this->scoringProtocol()
+        return $this->connection->getScoringProtocol()
             ?? throw new \LogicException('This tick\'s connection speaks no scoring protocol.');
     }
 

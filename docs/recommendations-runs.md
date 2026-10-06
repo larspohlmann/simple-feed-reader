@@ -82,7 +82,7 @@ How the fast path is provided depends on the deployment:
 ### Engines
 
 A run does not know which engine scores it. `RecommendationEngineResolver` is the one place that maps a connection to
-an engine: the kind the connection stored when its model was chosen (`user_ai_settings.model_kind`, `llm` or `scoring`, as the model catalog tagged the model; the model id is never read); `SnapshotPhase` asks that engine to pack the candidate pool
+an engine: the connection's kind, `scoring` when its chosen model speaks a scoring protocol (`user_ai_settings.scoring_protocol`, as the model catalog tagged the model) and `llm` otherwise; the model id is never read; `SnapshotPhase` asks that engine to pack the candidate pool
 into batches, and `TickPhases` hands it every later tick of a running run. The lock, the deferral after a rate limit,
 the transport-failure strikes, cancelling and finalising stay with the run and are the same for every engine.
 
@@ -117,11 +117,13 @@ rounds: an unusable batch retries alone, a deferring 429 settles every call, and
 whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\RateLimitedCalls`) and the run-log
 recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
-`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
-label beside its id (`"System One"` or `"Rerank"` for a model the catalog tagged with that protocol, `null` for an LLM), its `kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `reranker` for Rerank, `null` for an LLM); a configuration carries the `kind` and `family` of its saved model. The picker asks for the kind first, lists only that kind's models and tags each scoring model by its family, so no client parses an id or branches on the label:
+`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give, its
+`kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `reranker` for Rerank, `null` for an LLM); a
+configuration carries the `kind` of its saved model. The picker asks for the kind first, lists only that kind's models
+and tags each scoring model by its family, so no client parses an id:
 
 ```json
-{"models": [{"id": "~typesafe/jev-latest", "label": "System One", "kind": "scoring", "family": "decision",
+{"models": [{"id": "~typesafe/jev-latest", "kind": "scoring", "family": "decision",
   "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
 ```
 
@@ -144,10 +146,9 @@ across runs); there are no reasons and no consolidation, so the list is the best
 The engine reads only the batch-concurrency setting and records each call's request id, answering model and cost in the
 run log. `ScoringHttpTransport` sends a protocol's requests (its own idle and wall-clock timeouts, the tick heartbeat, a
 1 MiB reply cap) and maps the statuses every protocol shares; a protocol adds only its retryable statuses (System One
-and Rerank: 429 and 529). A run records the engine kind and the scoring protocol it was packed for; a tick that finds
-the active connection on another kind or protocol fails the run with an error naming the kinds of model; a scoring run
-whose connection holds another model of its protocol fails with an error naming the model switch (scores from two
-models do not compare within one run, and a decision model's batches were packed for its window). Switching back resumes either. An LLM run follows a model change.
+and Rerank: 429 and 529). A run records the engine kind it was packed for; a tick that finds the
+active connection on the other kind fails the run, and switching back resumes it. Any other change of model while a
+run is pending or running is not guarded: the run carries on with the model the connection now holds.
 
 ### The profile
 

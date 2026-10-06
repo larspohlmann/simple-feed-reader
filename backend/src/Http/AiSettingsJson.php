@@ -7,7 +7,6 @@ namespace App\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\ModelDescriptor;
 use App\Entity\User;
-use App\Enum\ScoringProtocol;
 use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
@@ -36,7 +35,6 @@ final readonly class AiSettingsJson
             'apiKeyHint' => $settings->getApiKeyHint(),
             'model' => $settings->getModel(),
             'kind' => $this->engines->kindFor($settings)->value,
-            'family' => self::familyOf($settings->getScoringProtocol()),
             'suppressReasoning' => $settings->suppressesReasoning(),
             'suppressionRefused' => $settings->refusesSuppressedReasoning(),
             'batchConcurrency' => $settings->getRunTuning()->batchConcurrency(),
@@ -87,9 +85,7 @@ final readonly class AiSettingsJson
     /**
      * @param list<ModelDescriptor> $models
      *
-     * @return array{models: list<array{
-     *     id: string, label: ?string, kind: string, family: ?string, capabilities: array<string, mixed>
-     * }>}
+     * @return array{models: list<array{id: string, kind: string, family: ?string, capabilities: array<string, mixed>}>}
      */
     public function models(array $models): array
     {
@@ -97,27 +93,12 @@ final readonly class AiSettingsJson
             'models' => array_map(
                 fn (ModelDescriptor $model): array => [
                     'id' => $model->id,
-                    'label' => self::labelOf($model->scoringProtocol),
                     'kind' => $model->kind()->value,
-                    'family' => self::familyOf($model->scoringProtocol),
+                    'family' => $model->scoringProtocol?->family()->value,
                     'capabilities' => $this->capabilities->ofKind($model->kind()),
                 ],
                 $models,
             ),
         ];
-    }
-
-    private static function labelOf(?ScoringProtocol $protocol): ?string
-    {
-        return match ($protocol) {
-            ScoringProtocol::SystemOne => 'System One',
-            ScoringProtocol::Rerank => 'Rerank',
-            null => null,
-        };
-    }
-
-    private static function familyOf(?ScoringProtocol $protocol): ?string
-    {
-        return $protocol?->family()->value;
     }
 }

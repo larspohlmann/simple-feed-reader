@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Scoring\Model;
 
 use App\Service\Recommendation\Scoring\Model\SystemOneRequestModel;
+use App\Service\Recommendation\Support\CompactJson;
+use App\Service\Recommendation\Support\PrettyJson;
 use PHPUnit\Framework\TestCase;
 
 final class SystemOneRequestModelTest extends TestCase
@@ -13,7 +15,7 @@ final class SystemOneRequestModelTest extends TestCase
     {
         self::assertSame(
             '{"model":"jev-latest","state":{"profile":"Kernel/Rust, Größe"},"questions":{"entry-1":{"type":"noul"}}}',
-            $this->request()->toRequestBody(),
+            CompactJson::encode($this->request()->payload()),
         );
     }
 
@@ -22,7 +24,7 @@ final class SystemOneRequestModelTest extends TestCase
         self::assertSame(
             "{\n    \"model\": \"jev-latest\",\n    \"state\": {\n        \"profile\": \"Kernel/Rust, Größe\"\n    },\n"
             . "    \"questions\": {\n        \"entry-1\": {\n            \"type\": \"noul\"\n        }\n    }\n}",
-            $this->request()->toRenderedRequest(),
+            PrettyJson::of($this->request()->payload()),
         );
     }
 

@@ -9,6 +9,7 @@ use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\RejectingStatus;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -50,7 +51,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
      */
     private static function assertTheEndpointAnswered(int $status): void
     {
-        if (401 === $status || 403 === $status) {
+        if (RejectingStatus::refusesKey($status)) {
             throw CredentialsRejectedException::refusedKey();
         }
 
@@ -62,7 +63,7 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
     private function probeStatus(ProviderCredentialsModel $credentials): int
     {
         try {
-            return $this->httpClient->request('POST', $credentials->baseUrl . '/systemone', [
+            return $this->httpClient->request('POST', $credentials->baseUrl . ScoringProtocol::SystemOne->path(), [
                 'headers' => [
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
