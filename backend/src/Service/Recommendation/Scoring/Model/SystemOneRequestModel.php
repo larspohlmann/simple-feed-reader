@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Scoring\Model;
 
 use App\Service\Recommendation\Scoring\Support\CompactJson;
+use App\Service\Recommendation\Support\PrettyJson;
 
 final readonly class SystemOneRequestModel
 {
@@ -27,10 +28,7 @@ final readonly class SystemOneRequestModel
     /** Pretty-printed for the human the debug view exists for: the body as sent, minus transport framing. */
     public function toRenderedRequest(): string
     {
-        return json_encode(
-            $this->payload(),
-            \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR,
-        );
+        return PrettyJson::of($this->payload());
     }
 
     /** @return array{model: string, state: array<string, mixed>, questions: array<string, array<string, mixed>>} */
