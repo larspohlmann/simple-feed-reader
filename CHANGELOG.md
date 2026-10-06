@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.2.0] - 2026-10-06
+
 ### Highlights
 
 **More models can score your feed.** For You now works with rerankers and other
@@ -24,6 +26,24 @@ shade in dark mode.
 
 **Small fixes.** Dropdowns draw their chevron cleanly, fields keep their focus
 ring, and the debug logs are easier to read.
+
+## What's Changed
+* refactor(#1395): the scoring protocol seam by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1398
+* feat(#1396): decision models from any provider and a kind-first model picker by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1399
+* feat(#1397): rerankers through the rerank protocol by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1400
+* refactor(#1394): review and simplify pass over the scoring-providers series by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1401
+* feat(#1402): Liquid Glass rim on bordered surfaces by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1403
+* feat(#1404): glass rim on magazine images in airy style by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1405
+* feat(#1406): stronger glass rim on airy magazine images by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1407
+* feat(#1408): raise the airy image rim strength by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1409
+* feat(#1410): soften the airy image rim to 4x by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1411
+* feat(#1412): darker dark-mode shade on the airy image rim by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1413
+* fix(#1414): airy images get the same rim as boxed cards by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1415
+* docs: refresh the screenshot collection on a demo account by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1416
+* docs(#1417): prepare v1.2.0 release highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1418
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.1.2...v1.2.0
 
 ## [v1.1.2] - 2026-10-05
 
