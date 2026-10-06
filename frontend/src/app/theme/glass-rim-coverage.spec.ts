@@ -2,22 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SOURCE_ROOT = join(__dirname, '..', '..');
-const GUARDED = [
-  'app/theme',
-  'styles',
-  'app/shared',
-  'app/reader/shell',
-  'app/reader/feeds',
-  'app/reader/entry',
-  'app/reader/list',
-  'app/reader/article',
-  'app/settings/organise',
-  'app/settings/preferences',
-  'app/settings/about',
-  'app/settings/recommendations',
-  'app/discover',
-  'app/auth',
-];
+const GUARDED = ['.'];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;
 

@@ -249,7 +249,92 @@ and any element carrying `.user-colour` (an inline colour the palette cannot
 reach, e.g. a tag glyph), and squared to `audio`, whose light native chrome must
 recede harder than a photo. To retune, edit the rate constants and `$ranges`
 (the Sass mirror of `brightness.ts`) in `_brightness.scss`; never hand-tune a
-step block.
+step block. Each step also emits `--rim-light`, white scaled like a surface, so
+the [glass rim](#glass-rim-1402) highlight dims with the panels.
+
+### Glass rim (#1402)
+
+Every full border — all four sides — is a Liquid Glass rim: a 1px border
+painted as a 135° gradient over its base colour, brightest at the top-left
+corner, a fainter glint at the bottom-right, a hair darker at the other two.
+Single-side dividers stay flat.
+
+**Tune it in one place: `theme/_glass-rim.scss`.** Its knobs — `$strength`,
+`$control-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
+geometry (`$angle`, `$base-from`, `$shade-at`, `$base-to`) — derive every token
+at build time; `tokens.scss` only calls `glass-rim.tokens(light)`,
+`glass-rim.tokens(dark)` and `glass-rim.gradients`. Never hand-edit one of
+the tokens below.
+
+| Token | Derivation |
+|---|---|
+| `--rim-light` | the highlight colour: white at step 0; each brightness step scales it like a surface, so the highlight dims with the panels (in light it equals `--surface-1` at every step) |
+| `--rim-glint` | the mode's glint × `$strength`, mixed toward `--rim-light` at the top-left |
+| `--rim-glint-faint` | `--rim-glint` × `$faint-ratio`, toward `--rim-light` at the bottom-right |
+| `--rim-shade` | the mode's shade × `$strength`, toward black at the middle stop |
+| `--rim-control-*` | each of the three amounts × `$control-boost` |
+| `--rim-gradient`, `--rim-control-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
+
+Each amount is rounded to one decimal and mixed with `color-mix(in oklab, …)`
+from the element's own border colour, so the brightness steps carry over.
+
+**The gradient is declared once.** `glass-rim.gradients()` emits a single
+`:where(*) { --rim-gradient: …; --rim-control-gradient: … }` rule (zero
+specificity, from `tokens.scss`), so every element resolves `var(--rim-base)`
+against its own value; `filled` and `ring` only paint
+`var(--rim[-control]-gradient)`. A copy of the gradient at every site blew the
+component-style budget. Never declare the gradient in a component — set
+`--rim-base` and let the global rule resolve it.
+
+**Two tiers.** `surface` (the default): magazine cards, source groups, settings
+cards and panels, popovers and menus, dialogs (shadow unchanged), toasts, article
+boxes, tiles, list containers. `control`: bordered buttons, inputs, selects and
+textareas, the search field, icon buttons and glyph boxes, pills, chips, badges,
+the count pill, unread dots, segmented frames — a small element shows the same
+shift over a few pixels, so it carries `$control-boost` times the amount. When
+in doubt, an element at or below control height is a `control`.
+
+**Two mixins.**
+
+| Mixin | For | Where in the rule |
+|---|---|---|
+| `glass-rim.filled($fill, $base: var(--border), $tier: surface)` | an element with a solid fill: the fill rides the padding box, the rim the border box beneath it | first |
+| `glass-rim.ring($base: var(--border), $tier: surface)` | a see-through element: a masked `::after` paints the rim | last (it nests `&::after`) |
+
+`ring` sets `position: relative` and owns `::after`, so its host must not be
+`overflow: hidden` (the ring sits in the border area and would be clipped) or
+need an `::after` of its own. A clipped see-through element takes `filled` with
+the fill of the surface it sits on (organise's `.seg`, add-feed's
+`.preview-rows`, the colour field's `.picker`). `<app-segmented-choice>` sits on
+varying surfaces, so it dropped its clip and rounds its end buttons instead. A
+translucent fill (the toast, the loading card) rings too: under `filled` the rim
+layer would show through it.
+
+**States set the variables, never the properties.** Hover, focus, error and
+selected states write `--rim-base` (the border colour) or `--rim-fill` (the
+fill). A `background` on a `filled` element replaces the rim and leaves a
+transparent border; a `border-color` paints it flat.
+
+**Stays flat:** single-side dividers; solid-filled buttons and pills —
+`<app-button>`'s `primary`, `danger` and `ghost`, add-feed's `.subscribe`,
+tag-picker's `.on`, discover's active category chip (their own `background` and
+`border-color` replace the rim); the sidebar dropzone's dashed hint;
+`.section-chevron app-icon` (a transparent alignment border); the colour field's
+`.swatch` and the about chart's `.chart-marker` (2px rings).
+
+**Magazine.** Blocks and source groups share `magazine-card.chrome`
+(`reader/list/magazine/_magazine-card.scss`). Airy stays borderless:
+`--card-border-width: 0` drops the border and `--card-bg: none` invalidates the
+cards' whole background, rim included — `transparent` would let the rim fill
+the card.
+
+**Admin.** Stylesheets under `app/admin/` and `app/settings/admin/` keep their
+flat borders; shared components rendered there carry the rim.
+
+**Enforced** by `theme/glass-rim-coverage.spec.ts` (Jest, part of
+`npm run check`): it fails, naming `file:line [selector]`, on any
+`border: <n>px solid …` outside admin. Each exception is listed in its `EXEMPT`
+array with a reason.
 
 ---
 
@@ -1699,7 +1784,10 @@ matches the disclosure look without the component.
    scroller `overscroll-behavior: contain`.
 6. **Styles go in a sibling `.scss` file**, never inline in the `.ts` — inline
    styles are invisible to Stylelint.
-7. **Run `npm run check`** from `frontend/`.
+7. **Give a full border the glass rim** — `glass-rim.filled(…)` or
+   `glass-rim.ring(…)` ([§1 Glass rim](#glass-rim-1402)), never a bare
+   `border: 1px solid`; the coverage spec rejects one.
+8. **Run `npm run check`** from `frontend/`.
 
 ## 8. Adding a new settings section
 
