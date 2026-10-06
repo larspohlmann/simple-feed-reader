@@ -124,13 +124,22 @@ describe('DebugLogEntryComponent', () => {
     expect(pill!.classList).toContain(modifier);
   });
 
-  it('copies a body to the clipboard', () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    const fixture = mount(SETTLED, true, DETAIL);
+  describe('copy', () => {
+    const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 
-    (element(fixture).querySelector('.debug-entry__section button') as HTMLElement).click();
+    afterEach(() => {
+      if (original) Object.defineProperty(navigator, 'clipboard', original);
+      else Reflect.deleteProperty(navigator, 'clipboard');
+    });
 
-    expect(writeText).toHaveBeenCalledWith('{"prompt":"x"}');
+    it('copies a body to the clipboard', () => {
+      const writeText = jest.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+      const fixture = mount(SETTLED, true, DETAIL);
+
+      (element(fixture).querySelector('.debug-entry__section button') as HTMLElement).click();
+
+      expect(writeText).toHaveBeenCalledWith('{"prompt":"x"}');
+    });
   });
 });

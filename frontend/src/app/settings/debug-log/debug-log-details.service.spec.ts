@@ -99,4 +99,31 @@ describe('DebugLogDetails', () => {
 
     expect(details.detailFor(3)).toBeNull();
   });
+
+  it('drops a detail requested mid-stream that lands after its call settled', () => {
+    const midStream = new Subject<DebugLogDetail>();
+    debugLogEntry.mockReturnValue(midStream.asObservable());
+    details.observe([STREAMING]);
+    details.toggle(3);
+    debugLogEntry.mockReturnValue(of(detail('final answer')));
+
+    details.observe([SETTLED]);
+    midStream.next(detail('partial…'));
+    midStream.complete();
+
+    expect(debugLogEntry).toHaveBeenCalledTimes(2);
+    expect(details.detailFor(3)?.responseText).toBe('final answer');
+  });
+
+  it('discards a detail still in flight when cleared', () => {
+    const pending = new Subject<DebugLogDetail>();
+    debugLogEntry.mockReturnValue(pending.asObservable());
+    details.toggle(3);
+
+    details.clear();
+    pending.next(detail('from the old run'));
+
+    expect(details.detailFor(3)).toBeNull();
+    expect(details.isExpanded(3)).toBe(false);
+  });
 });

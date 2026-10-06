@@ -1,5 +1,6 @@
 import { DestroyRef, Injectable, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { SettingsApi } from '../settings-api';
 import { DebugLogDetail, DebugLogEntry } from '../settings.models';
 
@@ -12,9 +13,8 @@ export class DebugLogDetails {
 
   private readonly expanded = signal<ReadonlySet<number>>(new Set());
   private readonly details = signal<ReadonlyMap<number, DebugLogDetail>>(new Map());
-  /** Guards a rapid open/close/open before the first response lands: no
-   *  detail is cached yet, so without it a second request would race the first. */
-  private readonly pendingIds = new Set<number>();
+  /** A response is kept only while its request is still the one recorded here. */
+  private readonly inFlight = new Map<number, symbol>();
   private priorVerdicts = new Map<number, DebugLogEntry['verdict']>();
 
   isExpanded(id: number): boolean {
@@ -36,10 +36,7 @@ export class DebugLogDetails {
     this.expanded.set(next);
   }
 
-  /** Takes each poll's entries. A detail cached while its call was still
-   *  streaming holds a partial response, so the poll that settles the verdict
-   *  evicts it, and refetches it when the row is open. Untracked because the
-   *  caller may poll from inside an effect. */
+  /** Evicts any detail fetched while its call streamed, once a poll settles the call. */
   observe(entries: readonly DebugLogEntry[]): void {
     untracked(() => {
       for (const entry of entries) {
@@ -52,11 +49,14 @@ export class DebugLogDetails {
   }
 
   clear(): void {
+    this.inFlight.clear();
+    this.expanded.set(new Set());
     this.details.set(new Map());
   }
 
   private evict(id: number): void {
-    if (!this.details().has(id)) return;
+    const wasInFlight = this.inFlight.delete(id);
+    if (!wasInFlight && !this.details().has(id)) return;
     const next = new Map(this.details());
     next.delete(id);
     this.details.set(next);
@@ -64,15 +64,23 @@ export class DebugLogDetails {
   }
 
   private ensureDetail(id: number): void {
-    if (this.details().has(id) || this.pendingIds.has(id)) return;
-    this.pendingIds.add(id);
+    if (this.details().has(id) || this.inFlight.has(id)) return;
+    const request = Symbol(id);
+    const isCurrent = (): boolean => this.inFlight.get(id) === request;
+    this.inFlight.set(id, request);
     this.api
       .debugLogEntry(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          if (isCurrent()) this.inFlight.delete(id);
+        }),
+      )
       .subscribe({
-        next: (detail) => this.details.set(new Map(this.details()).set(id, detail)),
-        complete: () => this.pendingIds.delete(id),
-        error: () => this.pendingIds.delete(id),
+        next: (detail) => {
+          if (isCurrent()) this.details.set(new Map(this.details()).set(id, detail));
+        },
+        error: () => undefined,
       });
   }
 }
