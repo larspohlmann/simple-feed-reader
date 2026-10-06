@@ -10,6 +10,7 @@ const GUARDED = [
   'app/reader/feeds',
   'app/reader/entry',
   'app/reader/list',
+  'app/reader/article',
 ];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;

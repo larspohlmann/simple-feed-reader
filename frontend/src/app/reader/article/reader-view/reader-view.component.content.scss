@@ -1,3 +1,5 @@
+@use '../../../theme/glass-rim';
+
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
    need ::ng-deep (scoped under .content). The sanitizer strips default
    margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
@@ -100,11 +102,11 @@
    the running text. Detected in the post-render pass (reader-cards.ts) and
    given the same quiet-card surface as a blockquote, reading as an aside. */
 .content ::ng-deep .reader-card {
+  @include glass-rim.filled(var(--surface-1));
+
   margin: var(--space-5) 0;
   padding: var(--space-4);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
 }
 
 /* The card supplies the outer rhythm; its first and last blocks must not add
@@ -230,10 +232,10 @@
 }
 
 .content ::ng-deep pre {
+  @include glass-rim.filled(var(--surface-1));
+
   margin: 0 0 var(--space-4);
   padding: var(--space-3);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow-x: auto;
   line-height: 1.5;
@@ -384,10 +386,10 @@
    and tags it, replacing the near-invisible default marker with a bordered card,
    an accent question and a clear accent chevron (inheriting the summary colour). */
 .content ::ng-deep details.reader-faq {
+  @include glass-rim.filled(var(--surface-1));
+
   margin: var(--space-3) 0;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
 }
 
 .content ::ng-deep details.reader-faq summary {
@@ -504,14 +506,14 @@
 
 .content ::ng-deep .reader-slideshow__prev,
 .content ::ng-deep .reader-slideshow__next {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--tap-target);
   height: var(--tap-target);
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--surface-2);
   color: var(--text-secondary);
   font-size: var(--fs-xl);
   line-height: 1;
@@ -525,14 +527,14 @@
   margin: var(--space-5) 0;
 
   dl {
+    @include glass-rim.filled(var(--surface-1));
+
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3) var(--space-5);
     margin: 0;
     padding: var(--space-4);
-    border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--surface-1);
   }
 
   dl > div {
