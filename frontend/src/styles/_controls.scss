@@ -24,6 +24,37 @@ textarea {
   line-height: var(--lh-normal);
 }
 
+$chevron-leg: 6px;
+
+@function chevron-leg($angle, $offset) {
+  $ink: var(--text-secondary);
+
+  @return linear-gradient(
+      $angle,
+      transparent calc(50% - 1.2px),
+      $ink calc(50% - 0.5px) calc(50% + 0.5px),
+      transparent calc(50% + 1.2px)
+    )
+    right $offset center / $chevron-leg $chevron-leg no-repeat padding-box;
+}
+
+// Chrome's native arrow ignores padding and Safari drops author backgrounds, so the app draws its own.
+select {
+  --select-inset: var(--space-3);
+
+  @include glass-rim.layers(
+    control,
+    (
+      chevron-leg(45deg, calc(var(--select-inset) + #{$chevron-leg})),
+      chevron-leg(-45deg, var(--select-inset))
+    )
+  );
+
+  appearance: none;
+  padding-inline: var(--select-inset)
+    calc(var(--select-inset) + #{2 * $chevron-leg} + var(--space-2));
+}
+
 // Width is layout, not chrome, so it belongs to the field: inside <app-field>
 // the control fills the row, but a bare control in a dense row (admin-catalog's
 // grid) stays sized by its container. Global width pushed selects onto their own line.

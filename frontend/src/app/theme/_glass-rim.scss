@@ -1,3 +1,4 @@
+@use 'sass:list';
 @use 'sass:map';
 @use 'sass:math';
 
@@ -94,9 +95,18 @@ $-tiers: (
   --rim-fill: #{$fill};
 
   border: 1px solid transparent;
-  background:
+
+  @include layers($tier);
+}
+
+// $overlays paint above the fill, so a control can add a glyph without erasing the rim.
+@mixin layers($tier: surface, $overlays: ()) {
+  $rim: (
     linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box,
-    tier-token($tier, gradient) border-box;
+    tier-token($tier, gradient) border-box
+  );
+
+  background: list.join($overlays, $rim, $separator: comma);
 }
 
 // The ring sits in the border area, so the host must not clip it with overflow: hidden.

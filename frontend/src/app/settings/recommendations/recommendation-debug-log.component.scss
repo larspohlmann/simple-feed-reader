@@ -291,7 +291,9 @@
 }
 
 .debug-panel__runs-select {
+  --select-inset: var(--space-2);
+
   border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  padding-block: var(--space-1);
   font: inherit;
 }

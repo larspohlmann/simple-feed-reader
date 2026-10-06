@@ -40,6 +40,10 @@ dark {
 .dot {
   @include glass-rim.ring(var(--border-strong), control);
 }
+
+.picker {
+  @include glass-rim.layers(control, (linear-gradient(red, red) right / 4px 4px no-repeat, linear-gradient(blue, blue)));
+}
 `;
 
 function compile(source: string): string {
@@ -172,6 +176,22 @@ describe('filled', () => {
     expect(() =>
       compile(`@use 'glass-rim'; x { @include glass-rim.filled(red, red, loud); }`),
     ).toThrow(/tier/);
+  });
+});
+
+describe('layers', () => {
+  it('stacks the overlays above the fill and the rim without touching the rim tokens', () => {
+    expect(PROBED['.picker']).toEqual({
+      background:
+        'linear-gradient(red, red) right/4px 4px no-repeat, linear-gradient(blue, blue), ' +
+        `linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box, ${rim('rim-control-')}`,
+    });
+  });
+
+  it('refuses an unknown tier', () => {
+    expect(() => compile(`@use 'glass-rim'; x { @include glass-rim.layers(loud); }`)).toThrow(
+      /tier/,
+    );
   });
 });
 
