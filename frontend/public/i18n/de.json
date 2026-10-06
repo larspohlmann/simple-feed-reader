@@ -155,14 +155,19 @@
         "label": "Modelltyp",
         "llm": "LLM",
         "scoring": "Bewertungsmodell",
-        "scoringHint": "Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. Die Bewertung eines Entscheidungsmodells ist die Wahrscheinlichkeit, dass du den Artikel lesen willst.",
+        "scoringHint": "Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben.",
         "noneOffered": {
           "llm": "Dieser Anbieter bietet keine LLMs an.",
           "scoring": "Dieser Anbieter bietet keine Bewertungsmodelle an."
         }
       },
       "modelFamily": {
-        "decision": "Entscheidungsmodell"
+        "decision": "Entscheidungsmodell",
+        "reranker": "Reranker"
+      },
+      "modelFamilyHint": {
+        "decision": "Die Bewertung eines Entscheidungsmodells ist die Wahrscheinlichkeit, dass du den Artikel lesen willst.",
+        "reranker": "Die Bewertung eines Rerankers ordnet nur die Artikel eines Laufs untereinander."
       },
       "saveModel": "Modell speichern",
       "ready": "KI-Funktionen sind verfügbar und nutzen {{model}}.",
@@ -257,7 +262,7 @@
         "scoringTitle": "Ein Bewertungsmodell verwenden",
         "scoringStep1": "Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. Für dein Leseprofil braucht es eine LLM-Verbindung — richte also zuerst wie oben eine ein.",
         "scoringStep2": "Öffne „Konfiguration hinzufügen“ und trage https://openrouter.ai/api/v1 mit deinem OpenRouter-Schlüssel ein oder den eigenen Endpunkt von TypeSafe mit einem TypeSafe-Schlüssel.",
-        "scoringStep3": "Drücke „Konfiguration hinzufügen“, wähle über der Modellliste, die sich öffnet, „Bewertungsmodell“, wähle ein Modell mit dem Hinweis „Entscheidungsmodell“ — zum Beispiel ~typesafe/jev-latest — und speichere es.",
+        "scoringStep3": "Drücke „Konfiguration hinzufügen“, wähle über der Modellliste, die sich öffnet, „Bewertungsmodell“, wähle ein Modell mit dem Hinweis „Entscheidungsmodell“ (zum Beispiel ~typesafe/jev-latest) oder „Reranker“ (zum Beispiel cohere/rerank-4-fast) und speichere es.",
         "scoringStep4": "Öffne Einstellungen → KI und wähle unter Profil deine LLM-Verbindung.",
         "scoringStep5": "Drücke „Diesen verwenden“. Die Empfehlungen tragen dann eine Bewertung, aber keine Begründung."
       },

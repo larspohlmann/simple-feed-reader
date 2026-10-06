@@ -13,7 +13,9 @@ export type ModelKind = 'llm' | 'scoring';
 
 export const MODEL_KINDS: readonly ModelKind[] = ['llm', 'scoring'];
 
-export type ScoringFamily = 'decision';
+export type ScoringFamily = 'decision' | 'reranker';
+
+export const SCORING_FAMILIES: readonly ScoringFamily[] = ['decision', 'reranker'];
 
 /**
  * One saved provider connection, as the multi-config endpoints report it.

@@ -38,6 +38,7 @@ import {
   AiSettingsService,
   MODEL_KINDS,
   ModelKind,
+  SCORING_FAMILIES,
 } from './ai-settings.service';
 import { RecommendationDebugLogComponent } from '../recommendations/recommendation-debug-log.component';
 import { RecommendationRunHistoryComponent } from '../recommendations/recommendation-run-history.component';
@@ -140,6 +141,12 @@ export class AiSectionComponent {
   readonly chosenModelHint = computed(
     () => this.modelOptions().find((option) => option.value === this.chosenModel())?.hint ?? null,
   );
+
+  /** A provider without rerankers never explains one. */
+  readonly offeredScoringFamilies = computed(() => {
+    const models = this.ai.models();
+    return SCORING_FAMILIES.filter((family) => models.some((model) => model.family === family));
+  });
 
   /** The key is optional — a local model server needs none — so only the
    *  address gates the button. */
