@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TranslocoService } from '@jsverse/transloco';
+import { LanguageService } from '../../core/i18n/language.service';
 import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import {
@@ -252,7 +253,10 @@ describe('AiSectionComponent', () => {
   };
 
   beforeEach(() => dialogStub.open.mockReset());
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    localStorage.clear();
+  });
 
   it('loads the configurations on construction', () => {
     mount();
@@ -629,6 +633,23 @@ describe('AiSectionComponent', () => {
         'Die Bewertung eines Entscheidungsmodells ist die Wahrscheinlichkeit, dass du den Artikel lesen willst. ' +
         'Die Bewertung eines Rerankers ordnet nur die Artikel eines Laufs untereinander.',
     );
+  });
+
+  it('tags each scoring model with its family again in the language the reader switches to', () => {
+    const fixture = mount();
+    const picker = openPicker(
+      fixture,
+      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
+      [rerankerModel('cohere/rerank-4-fast'), decisionModel('~typesafe/jev-latest')],
+    );
+
+    TestBed.inject(LanguageService).set('de');
+    fixture.detectChanges();
+
+    expect(optionLabels(fixture, picker)).toEqual([
+      'cohere/rerank-4-fast · Reranker',
+      '~typesafe/jev-latest · Entscheidungsmodell',
+    ]);
   });
 
   it('tags each scoring model with its family beside its id', () => {
