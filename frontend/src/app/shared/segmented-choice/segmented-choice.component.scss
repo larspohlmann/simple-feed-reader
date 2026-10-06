@@ -1,8 +1,10 @@
+@use '../../theme/glass-rim';
+
 .seg {
   display: inline-flex;
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  overflow: hidden;
+
+  @include glass-rim.ring(var(--border-strong), control);
 }
 
 .seg button {
@@ -12,6 +14,17 @@
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+// The end buttons round themselves: an overflow clip on .seg would clip the rim's ring too.
+.seg button:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+.seg button:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
 }
 
 .seg button + button {

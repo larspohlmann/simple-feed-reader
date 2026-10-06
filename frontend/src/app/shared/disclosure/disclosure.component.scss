@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 // The shared chrome for a native <details>/<summary> pair, consolidated from
 // two hand-rolled copies. The debug log's own panel-level layout (margin,
 // list content) is host-specific, so it stays local to that file.
@@ -10,13 +12,13 @@
 // control. Changing `display` drops the native triangle (and iOS Safari
 // needs the -webkit marker hidden too), so a CSS chevron stands in instead.
 summary {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   font-weight: 600;
@@ -44,7 +46,7 @@ details[open] > summary::before {
 }
 
 summary:hover {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
 }
 
 // Row appearance: a flat, full-width summary for stacked list items, where

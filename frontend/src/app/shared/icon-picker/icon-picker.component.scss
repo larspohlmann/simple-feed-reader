@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 :host {
   position: relative;
   display: inline-block;
@@ -12,21 +14,21 @@
 }
 
 .trigger {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: inline-flex;
   gap: var(--space-1);
   align-items: center;
   height: var(--space-5);
   padding: 0 var(--space-1) 0 var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-muted);
   cursor: pointer;
 }
 
 .trigger.open,
 .trigger:hover {
-  border-color: var(--border-strong);
+  --rim-base: var(--border-strong);
 }
 
 .glyph {
@@ -44,6 +46,8 @@
 }
 
 .pop {
+  @include glass-rim.filled(var(--surface-2));
+
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -57,9 +61,7 @@
      tuned popover max-height, not a spacing value. */
   max-height: 220px;
   padding: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-2);
   box-shadow: 0 12px 32px rgb(0 0 0 / 24%);
 }
 
@@ -74,17 +76,18 @@
 }
 
 .opt {
+  @include glass-rim.filled(var(--surface-1), var(--border), control);
+
   display: inline-flex;
   padding: var(--space-2);
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   cursor: pointer;
 }
 
 .opt.on {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  --rim-base: var(--accent);
+  --rim-fill: var(--accent-soft);
+
   color: var(--accent);
 }

@@ -1,18 +1,21 @@
+@use '../../theme/glass-rim';
+
 .toast {
   display: flex;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-4);
   background: var(--surface-2);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
 
   /* The drop shadow is the whole separation in light mode, none in dark,
      where a near-black shadow leaves no edge (#398). The accent border
      doubles as the run's signal, at 40% to stay a hairline, not a frame. */
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  border-radius: var(--radius-lg);
   box-shadow: 0 10px 32px rgb(0 0 0 / 22%);
-  color: var(--text-primary);
-  font-size: var(--fs-sm);
+
+  @include glass-rim.ring(color-mix(in srgb, var(--accent) 40%, transparent));
 }
 
 .msg {

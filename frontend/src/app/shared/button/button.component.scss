@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 // The host hugs its label so a button can sit in a footer row, a toolbar or a
 // table cell without a wrapper; `block` (below) is the opt-in for the auth
 // forms, where the button spans the form.
@@ -15,15 +17,15 @@
 }
 
 button {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   display: inline-flex;
   gap: var(--space-1);
   align-items: center;
   justify-content: center;
   height: var(--control-h);
   padding: 0 var(--space-4);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-primary);
   font: inherit;
   cursor: pointer;
@@ -49,14 +51,16 @@ button.primary {
 // surface-1 fill; this is the transparent one.
 button.outline {
   background: transparent;
-  border-color: var(--border-strong);
   color: var(--text-secondary);
+
+  @include glass-rim.ring(var(--border-strong), control);
 }
 
 // The accent counterpart to danger-outline: live, but not the surface's one
 // action. Used where a primary fill is already spoken for elsewhere on the card.
 button.accent-outline {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
+
   color: var(--accent);
 }
 
@@ -71,7 +75,8 @@ button.danger {
 // Outlined danger only *initiates* one: a Delete sitting on every row of a
 // list, which opens a confirmation rather than destroying anything itself.
 button.danger-outline {
-  border-color: var(--danger);
+  --rim-base: var(--danger);
+
   color: var(--danger);
 }
 
@@ -88,7 +93,7 @@ button.ghost {
 // and would repaint the danger border in the accent colour on hover.
 button.default:hover:not(:disabled),
 button.outline:hover:not(:disabled) {
-  border-color: var(--accent);
+  --rim-base: var(--accent);
 }
 
 button.primary:hover:not(:disabled),
@@ -97,11 +102,11 @@ button.danger:hover:not(:disabled) {
 }
 
 button.accent-outline:hover:not(:disabled) {
-  background: var(--accent-soft);
+  --rim-fill: var(--accent-soft);
 }
 
 button.danger-outline:hover:not(:disabled) {
-  background: var(--bg-danger);
+  --rim-fill: var(--bg-danger);
 }
 
 button.ghost:hover:not(:disabled) {

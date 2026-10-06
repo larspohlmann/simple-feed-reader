@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SOURCE_ROOT = join(__dirname, '..', '..');
-const GUARDED = ['app/theme', 'styles'];
+const GUARDED = ['app/theme', 'styles', 'app/shared'];
 const UNGUARDED = ['app/admin', 'app/settings/admin'];
 const FULL_BORDER = /^\s*border\s*:\s*(\d+px\s+solid\b|var\(--card-border\))/;
 
@@ -29,6 +29,11 @@ const EXEMPT: readonly Exemption[] = [
     file: 'app/theme/_glass-rim.scss',
     selector: '@mixin ring($base: var(--border), $tier: surface)',
     reason: 'the rim itself: its ::after paints over this transparent border',
+  },
+  {
+    file: 'app/shared/color-field/color-field.component.scss',
+    selector: '.swatch',
+    reason: 'a 2px selection ring around a user colour, not chrome',
   },
 ];
 

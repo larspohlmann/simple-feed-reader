@@ -1,4 +1,5 @@
 @use '../../theme/breakpoints' as bp;
+@use '../../theme/glass-rim';
 
 // The host box would sit between the frame's container (CDK's dialog
 // container, or discover's scrim host) and .panel, and neither centres a
@@ -8,6 +9,10 @@
 }
 
 .panel {
+  /* surface-2 by default; a dialog that wants its own body a step darker (so
+     raised tiles read against it) sets --panel-bg. */
+  @include glass-rim.filled(var(--panel-bg, var(--surface-2)));
+
   // Positioned so a sibling scrim (discover, which is a route rather than a CDK
   // overlay) paints below the panel instead of over it.
   position: relative;
@@ -30,12 +35,7 @@
      with --panel-body-container below, when a descendant must size to the body. */
   height: var(--panel-h, auto);
   overflow: hidden;
-  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-
-  /* surface-2 by default; a dialog that wants its own body a step darker (so
-     raised tiles read against it) sets --panel-bg. */
-  background: var(--panel-bg, var(--surface-2));
   box-shadow: 0 24px 60px rgb(0 0 0 / 28%);
 }
 

@@ -1,3 +1,5 @@
+@use '../../theme/glass-rim';
+
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -20,20 +22,20 @@
 /* Colour inputs are painted by the user agent, so styles/_controls.scss leaves
    them alone; size this one to match the swatches beside it. */
 .picker {
+  @include glass-rim.filled(var(--surface-2), var(--border), control);
+
   width: var(--space-6);
   height: var(--space-5);
   padding: 0;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: none;
   cursor: pointer;
 }
 
 .clear {
+  @include glass-rim.filled(var(--surface-1), var(--border-strong), control);
+
   padding: 0 var(--space-2);
-  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  background: var(--surface-1);
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   cursor: pointer;
