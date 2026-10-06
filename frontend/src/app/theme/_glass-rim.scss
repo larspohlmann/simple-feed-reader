@@ -43,7 +43,7 @@ $-tiers: (
   @return --rim-#{map.get($-tiers, $tier, infix)}#{$name};
 }
 
-@function tier-token($tier, $name) {
+@function -tier-token($tier, $name) {
   @return var(-tier-token-name($tier, $name));
 }
 
@@ -52,11 +52,11 @@ $-tiers: (
 
   @return linear-gradient(
     $angle,
-    color-mix(in oklab, $base, var(--rim-light) tier-token($tier, glint)),
+    color-mix(in oklab, $base, var(--rim-light) -tier-token($tier, glint)),
     $base $base-from,
-    color-mix(in oklab, $base, black tier-token($tier, shade)) $shade-at,
+    color-mix(in oklab, $base, black -tier-token($tier, shade)) $shade-at,
     $base $base-to,
-    color-mix(in oklab, $base, var(--rim-light) tier-token($tier, glint-faint))
+    color-mix(in oklab, $base, var(--rim-light) -tier-token($tier, glint-faint))
   );
 }
 
@@ -103,7 +103,7 @@ $-tiers: (
 @mixin layers($tier: surface, $overlays: ()) {
   $rim: (
     linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box,
-    tier-token($tier, gradient) border-box
+    -tier-token($tier, gradient) border-box
   );
 
   background: list.join($overlays, $rim, $separator: comma);
@@ -123,7 +123,7 @@ $-tiers: (
     padding: 1px;
     border-radius: inherit;
     pointer-events: none;
-    background: tier-token($tier, gradient) border-box;
+    background: -tier-token($tier, gradient) border-box;
     mask:
       linear-gradient(#000 0 0) content-box exclude,
       linear-gradient(#000 0 0);
