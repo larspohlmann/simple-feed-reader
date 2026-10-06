@@ -131,4 +131,72 @@ describe('ProfileDebugLogComponent', () => {
 
     expect(element.querySelector('.debug-entry__body')).toBeNull();
   });
+
+  describe('a detail cached while its call was streaming', () => {
+    const DETAIL = '/api/recommendations/runs/debug-log/31';
+    const streaming = entry({ verdict: null, finishedAt: null, streamingText: '{"prof' });
+
+    function detail(responseText: string) {
+      return {
+        id: 31,
+        phase: 'distill',
+        batchNumber: null,
+        attempt: 2,
+        verdict: null,
+        requestBody: '{"messages":[]}',
+        responseText,
+        wireBytes: 90,
+        finishReason: null,
+      };
+    }
+
+    function openMidStream(): ComponentFixture<ProfileDebugLogComponent> {
+      const fixture = mount(true);
+      http.expectOne(LOG).flush({ entries: [streaming] });
+      fixture.detectChanges();
+      expander(fixture).click();
+      http.expectOne(DETAIL).flush(detail('{"prof'));
+      fixture.detectChanges();
+      return fixture;
+    }
+
+    const expander = (fixture: ComponentFixture<ProfileDebugLogComponent>): HTMLButtonElement =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        '.debug-entry__expander',
+      ) as HTMLButtonElement;
+
+    const preTexts = (fixture: ComponentFixture<ProfileDebugLogComponent>): string[] =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('pre')).map(
+        (pre) => pre.textContent ?? '',
+      );
+
+    it('is replaced by the finished text once the poll settles the verdict', () => {
+      const fixture = openMidStream();
+
+      jest.advanceTimersByTime(2000);
+      http.expectOne(LOG).flush({ entries: [entry()] });
+      http.expectOne(DETAIL).flush(detail('{"profile":"Likes maps."}'));
+      fixture.detectChanges();
+
+      expect(preTexts(fixture).some((text) => text.includes('Likes maps.'))).toBe(true);
+      expect(preTexts(fixture).some((text) => text === '{"prof')).toBe(false);
+      fixture.destroy();
+    });
+
+    it('is refetched when its row reopens after the call settled', () => {
+      const fixture = openMidStream();
+      expander(fixture).click();
+      fixture.detectChanges();
+
+      jest.advanceTimersByTime(2000);
+      http.expectOne(LOG).flush({ entries: [entry()] });
+      fixture.detectChanges();
+      expander(fixture).click();
+      http.expectOne(DETAIL).flush(detail('{"profile":"Likes maps."}'));
+      fixture.detectChanges();
+
+      expect(preTexts(fixture).some((text) => text.includes('Likes maps.'))).toBe(true);
+      fixture.destroy();
+    });
+  });
 });

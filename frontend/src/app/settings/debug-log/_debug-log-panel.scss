@@ -1,6 +1,4 @@
-/* The frame both debug logs share in their "Debug log" drill-in (#541): the drill-in
-   does not pad its body, so the panel insets to its label's measure (`--space-5`),
-   and its gap is the one rhythm between the panel's blocks. */
+/* Inset to the drill-in label's measure; the gap is the one rhythm between blocks. */
 @mixin panel {
   display: flex;
   flex-direction: column;

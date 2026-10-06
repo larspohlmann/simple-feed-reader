@@ -10,9 +10,10 @@ import {
   untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DebugLogDetails } from '../debug-log/debug-log-details.service';
 import { DebugLogEntryComponent } from '../debug-log/debug-log-entry.component';
 import { SettingsApi } from '../settings-api';
-import { DebugLogDetail, DebugLogEntry } from '../settings.models';
+import { DebugLogEntry } from '../settings.models';
 
 const POLL_MS = 2000;
 
@@ -20,6 +21,7 @@ const POLL_MS = 2000;
 @Component({
   selector: 'app-profile-debug-log',
   imports: [DebugLogEntryComponent],
+  providers: [DebugLogDetails],
   templateUrl: './profile-debug-log.component.html',
   styleUrl: './profile-debug-log.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -28,13 +30,12 @@ export class ProfileDebugLogComponent {
   private readonly api = inject(SettingsApi);
   private readonly zone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
+  readonly details = inject(DebugLogDetails);
 
   readonly running = input(false);
   readonly runId = input<number | null>(null);
 
   readonly entries = signal<DebugLogEntry[]>([]);
-  readonly expanded = signal<ReadonlySet<number>>(new Set());
-  readonly details = signal<ReadonlyMap<number, DebugLogDetail>>(new Map());
 
   private timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -47,32 +48,16 @@ export class ProfileDebugLogComponent {
     this.destroyRef.onDestroy(() => this.stop());
   }
 
-  toggle(id: number): void {
-    const next = new Set(this.expanded());
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-      this.ensureDetail(id);
-    }
-    this.expanded.set(next);
-  }
-
-  private ensureDetail(id: number): void {
-    if (this.details().has(id)) return;
-    this.api
-      .debugLogEntry(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((detail) => this.details.set(new Map(this.details()).set(id, detail)));
-  }
-
   private fetch(running: boolean): void {
     this.stop();
     this.api
       .profileDebugLog()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (payload) => this.entries.set(payload.entries),
+        next: (payload) => {
+          this.details.observe(payload.entries);
+          this.entries.set(payload.entries);
+        },
         // A failed read keeps the last entries; the next poll tries again.
         error: () => undefined,
       });

@@ -113,4 +113,24 @@ describe('DebugLogEntryComponent', () => {
       'partial…',
     );
   });
+
+  it.each([
+    ['usable', 'debug-entry__verdict--usable'],
+    ['unusable', 'debug-entry__verdict--unusable'],
+    ['transport-failed', 'debug-entry__verdict--transport-failed'],
+  ] as const)('marks a %s verdict with its modifier', (verdict, modifier) => {
+    const pill = element(mount({ ...SETTLED, verdict })).querySelector('.debug-entry__verdict');
+
+    expect(pill!.classList).toContain(modifier);
+  });
+
+  it('copies a body to the clipboard', () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const fixture = mount(SETTLED, true, DETAIL);
+
+    (element(fixture).querySelector('.debug-entry__section button') as HTMLElement).click();
+
+    expect(writeText).toHaveBeenCalledWith('{"prompt":"x"}');
+  });
 });

@@ -60,9 +60,9 @@
               <li>
                 <app-debug-log-entry
                   [entry]="entry"
-                  [expanded]="isRowExpanded(entry.id)"
-                  [detail]="details().get(entry.id) ?? null"
-                  (toggled)="toggleRow(entry.id)"
+                  [expanded]="details.isExpanded(entry.id)"
+                  [detail]="details.detailFor(entry.id)"
+                  (toggled)="details.toggle(entry.id)"
                 />
               </li>
             }
