@@ -263,7 +263,7 @@ Single-side dividers stay flat.
 `$control-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
 geometry (`$angle`, `$base-from`, `$shade-at`, `$base-to`) — derive every token
 at build time; `tokens.scss` only calls `glass-rim.tokens(light)`,
-`glass-rim.tokens(dark)` and `glass-rim.gradients`. Never hand-edit one of
+`glass-rim.tokens(dark)` and `glass-rim.gradients()`. Never hand-edit one of
 the tokens below.
 
 | Token | Derivation |
@@ -305,15 +305,22 @@ in doubt, an element at or below control height is a `control`.
 `overflow: hidden` (the ring sits in the border area and would be clipped) or
 need an `::after` of its own. A clipped see-through element takes `filled` with
 the fill of the surface it sits on (organise's `.seg`, add-feed's
-`.preview-rows`, the colour field's `.picker`). `<app-segmented-choice>` sits on
-varying surfaces, so it dropped its clip and rounds its end buttons instead. A
-translucent fill (the toast, the loading card) rings too: under `filled` the rim
-layer would show through it.
+`.preview-rows`), and so does an `<input>`, which renders no `::after` (the
+colour field's `.picker`, the global field rule). `<app-segmented-choice>` sits on
+varying surfaces, so it dropped its clip and rounds its end buttons instead. An
+element with a translucent fill or border (the loading card's fill, the toast's
+40%-accent border) rings too: under `filled` the rim layer would show through a
+translucent fill.
 
 **States set the variables, never the properties.** Hover, focus, error and
 selected states write `--rim-base` (the border colour) or `--rim-fill` (the
 fill). A `background` on a `filled` element replaces the rim and leaves a
-transparent border; a `border-color` paints it flat.
+transparent border; a `border-color` paints it flat. A component tunes a
+field's (input, select, textarea) resting border through `--field-rim-base`,
+never `--rim-base`: the global field rule maps it, so `:focus` and
+`[aria-invalid]` still win. A component never sets a select's `background` or
+`padding`: the global rule draws its token-coloured chevron as `glass-rim.layers`
+overlays inset by `--select-inset`, so it tunes that and `--field-rim-base`.
 
 **Stays flat:** single-side dividers; solid-filled buttons and pills —
 `<app-button>`'s `primary`, `danger` and `ghost`, add-feed's `.subscribe`,
