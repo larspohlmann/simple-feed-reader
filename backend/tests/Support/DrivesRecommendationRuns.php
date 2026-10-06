@@ -127,4 +127,12 @@ trait DrivesRecommendationRuns
 
         return $client;
     }
+
+    private function rerank(): StubRerankClient
+    {
+        /** @var StubRerankClient $client */
+        $client = self::getContainer()->get(StubRerankClient::class);
+
+        return $client;
+    }
 }

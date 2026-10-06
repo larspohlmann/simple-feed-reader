@@ -28,6 +28,13 @@ services:
     App\Service\Recommendation\Scoring\SystemOneClient\SystemOneClientInterface:
         alias: App\Tests\Support\StubSystemOneClient
 
+    App\Tests\Support\StubRerankClient:
+        autowire: true
+
+    # Every test talks to StubRerankClient, never to a real rerank endpoint.
+    App\Service\Recommendation\Scoring\RerankClient\RerankClientInterface:
+        alias: App\Tests\Support\StubRerankClient
+
     # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
