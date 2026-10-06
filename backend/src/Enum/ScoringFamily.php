@@ -7,4 +7,5 @@ namespace App\Enum;
 enum ScoringFamily: string
 {
     case Decision = 'decision';
+    case Reranker = 'reranker';
 }

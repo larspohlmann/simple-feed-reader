@@ -13,6 +13,7 @@ final readonly class ScoringBudgetModel
     /** The request's own framing and the estimate's error. */
     private const int FRAMING_TOKENS = 2_000;
 
+    /** @param positive-int $maxItemsPerRequest */
     public function __construct(
         public int $contextWindowTokens,
         public int $maxItemsPerRequest,
@@ -21,6 +22,7 @@ final readonly class ScoringBudgetModel
     ) {
     }
 
+    /** @param positive-int $maxItemsPerRequest */
     public static function forWindow(int $contextWindowTokens, int $maxItemsPerRequest): self
     {
         return new self(
