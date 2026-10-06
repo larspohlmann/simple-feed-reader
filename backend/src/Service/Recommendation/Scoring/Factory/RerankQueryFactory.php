@@ -19,19 +19,19 @@ final readonly class RerankQueryFactory
 
     public function create(ScoringReaderModel $reader, int $tokenBudget): string
     {
-        $fits = static fn (string $query): bool => TokenEstimate::of($query) <= $tokenBudget;
+        $fits = static fn (int $bytes): bool => TokenEstimate::ofLength($bytes) <= $tokenBudget;
         $opening = self::QUESTION . self::guidanceLine($reader->guidance, $fits) . self::PROFILE_LABEL;
 
         return $opening . FittingPrefix::of(
             mb_scrub($reader->profile, 'UTF-8'),
-            static fn (string $prefix): bool => $fits($opening . $prefix),
+            static fn (string $prefix): bool => $fits(\strlen($opening) + \strlen($prefix)),
         );
     }
 
     /**
      * Fitted beside an empty profile: the profile's label must still fit once the guidance has taken the budget.
      *
-     * @param \Closure(string): bool $fits
+     * @param \Closure(int): bool $fits
      */
     private static function guidanceLine(?string $guidance, \Closure $fits): string
     {
@@ -39,10 +39,11 @@ final readonly class RerankQueryFactory
             return '';
         }
 
+        $framing = \strlen(self::QUESTION) + \strlen(self::GUIDANCE_LABEL) + \strlen(self::PROFILE_LABEL);
+
         return self::GUIDANCE_LABEL . FittingPrefix::of(
             mb_scrub($guidance, 'UTF-8'),
-            static fn (string $prefix): bool
-                => $fits(self::QUESTION . self::GUIDANCE_LABEL . $prefix . self::PROFILE_LABEL),
+            static fn (string $prefix): bool => $fits($framing + \strlen($prefix)),
         );
     }
 }
