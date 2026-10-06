@@ -139,7 +139,9 @@ final readonly class ScoringHttpTransport
                 RefusalMessage::of($status, ProviderErrorReason::in($body, $wave->credentials)),
             )),
             $status >= 300 => ScoringOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
-            default => ScoringOutcomeModel::answered($wave->endpoint->decode($body, $response)),
+            default => ScoringOutcomeModel::answered(
+                $wave->endpoint->decode($body, $response, $wave->positionOf($response)),
+            ),
         };
     }
 
