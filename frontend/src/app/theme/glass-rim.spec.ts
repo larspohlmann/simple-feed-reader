@@ -14,6 +14,8 @@ knobs {
   light-shade: map.get(glass-rim.$modes, light, shade);
   dark-glint: map.get(glass-rim.$modes, dark, glint);
   dark-shade: map.get(glass-rim.$modes, dark, shade);
+  light-image-shade-boost: map.get(glass-rim.$modes, light, shade-boosts, image);
+  dark-image-shade-boost: map.get(glass-rim.$modes, dark, shade-boosts, image);
   angle: glass-rim.$angle;
   base-from: glass-rim.$base-from;
   shade-at: glass-rim.$shade-at;
@@ -91,6 +93,8 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
 
   it('gives images their own, stronger boost', () => {
     const imageBoost = knob('image-boost');
+    const override = `${mode}-image-shade-boost`;
+    const imageShadeBoost = override in KNOBS ? knob(override) : imageBoost;
 
     expect(imageBoost).toBeGreaterThan(boost);
     expectOneDecimalOf(tokens['--rim-image-glint'], Math.min(100, glint * imageBoost));
@@ -98,7 +102,7 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
       tokens['--rim-image-glint-faint'],
       Math.min(100, glint * imageBoost * faint),
     );
-    expectOneDecimalOf(tokens['--rim-image-shade'], Math.min(100, shade * imageBoost));
+    expectOneDecimalOf(tokens['--rim-image-shade'], Math.min(100, shade * imageShadeBoost));
   });
 
   it('caps every amount at 100%, a valid color-mix share', () => {
@@ -120,6 +124,11 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
       expect(`${name}: ${themed[selector][name]}`).toBe(`${name}: ${value}`);
     }
   });
+});
+
+it('darkens only the dark-mode image shade beyond the image boost', () => {
+  expect(knob('dark-image-shade-boost')).toBeGreaterThan(knob('image-boost'));
+  expect('light-image-shade-boost' in KNOBS).toBe(false);
 });
 
 it('refuses an unknown mode', () => {
