@@ -15,6 +15,9 @@ $modes: (
   dark: (
     glint: 22%,
     shade: 15%,
+    shade-boosts: (
+      image: 5.5,
+    ),
   ),
 );
 $angle: 135deg;
@@ -88,13 +91,14 @@ $-tiers: (
 
   --rim-light: white;
 
-  @each $settings in map.values($-tiers) {
+  @each $tier, $settings in $-tiers {
     $infix: map.get($settings, infix);
     $boost: map.get($settings, boost);
+    $shade-boost: map.get($modes, $mode, shade-boosts, $tier) or $boost;
 
     --rim-#{$infix}glint: #{-mix-amount($glint * $boost)};
     --rim-#{$infix}glint-faint: #{-mix-amount($glint * $boost * $faint-ratio)};
-    --rim-#{$infix}shade: #{-mix-amount($shade * $boost)};
+    --rim-#{$infix}shade: #{-mix-amount($shade * $shade-boost)};
   }
 }
 

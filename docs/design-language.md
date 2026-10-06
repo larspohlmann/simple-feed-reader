@@ -274,6 +274,7 @@ the tokens below.
 | `--rim-shade` | the mode's shade × `$strength`, toward black at the middle stop |
 | `--rim-control-*` | each of the three amounts × `$control-boost` |
 | `--rim-image-*` | each of the three amounts × `$image-boost` |
+| (per mode) | a `$modes` entry may give one tier its own shade boost via `shade-boosts` — dark mode darkens the image shade to 5.5× |
 | `--rim-gradient`, `--rim-control-gradient`, `--rim-image-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
 
 Each amount is capped at 100% (a boosted light glint would overshoot), rounded
