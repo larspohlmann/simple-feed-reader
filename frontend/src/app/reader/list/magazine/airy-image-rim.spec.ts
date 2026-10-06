@@ -12,7 +12,7 @@ describe.each(IMAGE_BLOCKS)('%s image', (block) => {
 
     expect(airy['border']).toBe('1px solid transparent');
     expect(airy['background']).toBe(
-      'linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box, var(--rim-gradient) border-box',
+      'linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box, var(--rim-image-gradient) border-box',
     );
     expect(airy['--rim-fill']).toBe('var(--airy-sheet-fill)');
     expect(airy['--rim-base']).toBe('var(--airy-rule)');

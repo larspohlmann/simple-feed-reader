@@ -8,6 +8,7 @@ const PROBE = `
 knobs {
   strength: glass-rim.$strength;
   control-boost: glass-rim.$control-boost;
+  image-boost: glass-rim.$image-boost;
   faint-ratio: glass-rim.$faint-ratio;
   light-glint: map.get(glass-rim.$modes, light, glint);
   light-shade: map.get(glass-rim.$modes, light, shade);
@@ -88,6 +89,15 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
     expectOneDecimalOf(tokens['--rim-control-shade'], shade * boost);
   });
 
+  it('gives images their own, stronger boost', () => {
+    const imageBoost = knob('image-boost');
+
+    expect(imageBoost).toBeGreaterThan(boost);
+    expectOneDecimalOf(tokens['--rim-image-glint'], glint * imageBoost);
+    expectOneDecimalOf(tokens['--rim-image-glint-faint'], glint * imageBoost * faint);
+    expectOneDecimalOf(tokens['--rim-image-shade'], shade * imageBoost);
+  });
+
   it('emits white as the step-0 highlight colour', () => {
     expect(tokens['--rim-light']).toBe('white');
   });
@@ -112,18 +122,21 @@ describe('gradients', () => {
     join(__dirname, '..', '..', '..', 'node_modules'),
   ]);
 
-  it('declares both tier gradients once, on every element, in the global stylesheet', () => {
+  it('declares every tier gradient once, on every element, in the global stylesheet', () => {
     expect(global.match(/--rim-gradient:/g)).toHaveLength(1);
     expect(global.match(/--rim-control-gradient:/g)).toHaveLength(1);
+    expect(global.match(/--rim-image-gradient:/g)).toHaveLength(1);
     expect(Object.keys(rulesBySelector(global)[':where(*)'])).toEqual([
       '--rim-gradient',
       '--rim-control-gradient',
+      '--rim-image-gradient',
     ]);
   });
 
   it.each([
     ['surface', 'rim-'],
     ['control', 'rim-control-'],
+    ['image', 'rim-image-'],
   ])('glints the %s rim toward the light and shades it toward black', (_tier, prefix) => {
     expect(rulesBySelector(global)[':where(*)'][`--${prefix}gradient`]).toBe(gradient(prefix));
   });

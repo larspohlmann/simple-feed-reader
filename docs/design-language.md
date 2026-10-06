@@ -260,7 +260,7 @@ corner, a fainter glint at the bottom-right, a hair darker at the other two.
 Single-side dividers stay flat.
 
 **Tune it in one place: `theme/_glass-rim.scss`.** Its knobs — `$strength`,
-`$control-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
+`$control-boost`, `$image-boost`, `$faint-ratio`, the per-mode `$modes` amounts and the gradient
 geometry (`$angle`, `$base-from`, `$shade-at`, `$base-to`) — derive every token
 at build time; `tokens.scss` only calls `glass-rim.tokens(light)`,
 `glass-rim.tokens(dark)` and `glass-rim.gradients()`. Never hand-edit one of
@@ -273,26 +273,29 @@ the tokens below.
 | `--rim-glint-faint` | `--rim-glint` × `$faint-ratio`, toward `--rim-light` at the bottom-right |
 | `--rim-shade` | the mode's shade × `$strength`, toward black at the middle stop |
 | `--rim-control-*` | each of the three amounts × `$control-boost` |
-| `--rim-gradient`, `--rim-control-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
+| `--rim-image-*` | each of the three amounts × `$image-boost` |
+| `--rim-gradient`, `--rim-control-gradient`, `--rim-image-gradient` | the painted gradient of each tier, built from the amounts above and `--rim-base` |
 
 Each amount is rounded to one decimal and mixed with `color-mix(in oklab, …)`
 from the element's own border colour, so the brightness steps carry over.
 
 **The gradient is declared once.** `glass-rim.gradients()` emits a single
-`:where(*) { --rim-gradient: …; --rim-control-gradient: … }` rule (zero
+`:where(*)` rule with one gradient per tier (zero
 specificity, from `tokens.scss`), so every element resolves `var(--rim-base)`
 against its own value; `filled` and `ring` only paint
-`var(--rim[-control]-gradient)`. A copy of the gradient at every site blew the
+their tier's gradient. A copy of the gradient at every site blew the
 component-style budget. Never declare the gradient in a component — set
 `--rim-base` and let the global rule resolve it.
 
-**Two tiers.** `surface` (the default): magazine cards, source groups, settings
+**Three tiers.** `surface` (the default): magazine cards, source groups, settings
 cards and panels, popovers and menus, dialogs (shadow unchanged), toasts, article
 boxes, tiles, list containers. `control`: bordered buttons, inputs, selects and
 textareas, the search field, icon buttons and glyph boxes, pills, chips, badges,
 the count pill, unread dots, segmented frames — a small element shows the same
 shift over a few pixels, so it carries `$control-boost` times the amount. When
-in doubt, an element at or below control height is a `control`.
+in doubt, an element at or below control height is a `control`. `image`: a
+photo's busy edge swallows a surface-strength glint, so an image carries
+`$image-boost` times the amount (airy's magazine images).
 
 **Two mixins.**
 
@@ -333,7 +336,9 @@ tag-picker's `.on`, discover's active category chip (their own `background` and
 (`reader/list/magazine/_magazine-card.scss`). Airy stays borderless:
 `--card-border-width: 0` drops the border and `--card-bg: none` invalidates the
 cards' whole background, rim included — `transparent` would let the rim fill
-the card.
+the card. With no card rim left, airy's hero, wide, split and thumb images carry
+their own (`magazine-card.image-rim`, the `image` tier on `--airy-rule`, which
+stays visible on the dark sheet where `--border` vanishes).
 
 **Admin.** Stylesheets under `app/admin/` and `app/settings/admin/` keep their
 flat borders; shared components rendered there carry the rim.
