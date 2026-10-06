@@ -1,7 +1,10 @@
-/* The frame both debug logs share inside their "Debug log" drill-in (#541). The
-   drill-in does not pad its projected body, so the panel insets itself to the
-   same horizontal measure as the drill-in label above it (`--space-5`). */
+/* The frame both debug logs share in their "Debug log" drill-in (#541): the drill-in
+   does not pad its body, so the panel insets to its label's measure (`--space-5`),
+   and its gap is the one rhythm between the panel's blocks. */
 @mixin panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-5) var(--space-5);
   font-size: var(--fs-sm);
   color: var(--text-secondary);

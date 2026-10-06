@@ -18,7 +18,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-1) var(--space-3);
-    margin: var(--space-2) 0 0;
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius);
   }
@@ -60,6 +59,9 @@
   }
 
   &__grid-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
     overflow-x: auto;
   }
 
@@ -68,14 +70,10 @@
   // that silently spans two runs.
   &__group {
     min-width: 30rem;
-
-    & + & {
-      margin-top: var(--space-3);
-    }
   }
 
   &__group-head {
-    margin: var(--space-3) 0 var(--space-1);
+    margin: 0 0 var(--space-1);
     color: var(--text-muted);
     font-size: var(--fs-xs);
     font-weight: 600;
@@ -99,12 +97,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
 }
 
 .debug-panel__runs-select {
   --select-inset: var(--space-2);
 
+  height: auto;
   border-radius: var(--radius-sm);
   padding-block: var(--space-1);
   font: inherit;
