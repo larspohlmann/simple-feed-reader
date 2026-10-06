@@ -55,6 +55,13 @@ const MODELS = [
     family: 'decision',
     capabilities: SCORING_CAPABILITIES,
   },
+  {
+    id: 'acme/reranker-1',
+    label: 'Rerank',
+    kind: 'scoring',
+    family: 'reranker',
+    capabilities: SCORING_CAPABILITIES,
+  },
 ];
 
 async function stubAi(page: Page): Promise<void> {
@@ -96,7 +103,11 @@ test('the model picker asks for the kind first and lists only that kind', async 
   await kinds.getByRole('button', { name: 'Scoring model', exact: true }).click();
 
   await expect(row.locator('.scoring-hint')).toContainText('probability');
+  await expect(row.locator('.scoring-hint')).toContainText('only ranks the articles of one run');
   await select.locator('.trigger').click();
-  await expect(select.getByRole('option')).toHaveCount(1);
-  await expect(select.getByRole('option')).toContainText(['acme/decider-1 · Decision model']);
+  await expect(select.getByRole('option')).toHaveCount(2);
+  await expect(select.getByRole('option')).toContainText([
+    'acme/decider-1 · Decision model',
+    'acme/reranker-1 · Reranker',
+  ]);
 });
