@@ -64,6 +64,7 @@
 
 @include brightness.theme-steps('light', graphite.$light);
 @include brightness.theme-steps('dark', graphite.$dark);
+@include glass-rim.gradients;
 
 // Mode-invariant tokens (same in every theme).
 :root {

@@ -70,10 +70,12 @@ const knob = (name: string): number => Number.parseFloat(KNOBS[name]);
 const mix = (toward: string, token: string): string =>
   `color-mix(in oklab, var(--rim-base), ${toward} var(--${token}))`;
 
-const rim = (prefix: string): string =>
+const gradient = (prefix: string): string =>
   `linear-gradient(${KNOBS['angle']}, ${mix('var(--rim-light)', `${prefix}glint`)}, ` +
   `var(--rim-base) ${KNOBS['base-from']}, ${mix('black', `${prefix}shade`)} ${KNOBS['shade-at']}, ` +
-  `var(--rim-base) ${KNOBS['base-to']}, ${mix('var(--rim-light)', `${prefix}glint-faint`)}) border-box`;
+  `var(--rim-base) ${KNOBS['base-to']}, ${mix('var(--rim-light)', `${prefix}glint-faint`)})`;
+
+const rim = (prefix: string): string => `var(--${prefix}gradient) border-box`;
 
 /** Sass rounds each amount to one decimal; the exact product may sit on a .x5 boundary. */
 function expectOneDecimalOf(emitted: string, exact: number): void {
@@ -120,6 +122,31 @@ it('refuses an unknown mode', () => {
   expect(() => compile(`@use 'glass-rim'; x { @include glass-rim.tokens(sepia); }`)).toThrow(
     /mode/,
   );
+});
+
+describe('gradients', () => {
+  const global = sass
+    .compile(join(__dirname, '..', '..', 'styles.scss'), {
+      loadPaths: [join(__dirname, '..', '..', '..', 'node_modules')],
+      style: 'expanded',
+    })
+    .css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('declares both tier gradients once, on every element, in the global stylesheet', () => {
+    expect(global.match(/--rim-gradient:/g)).toHaveLength(1);
+    expect(global.match(/--rim-control-gradient:/g)).toHaveLength(1);
+    expect(Object.keys(blocks(global)[':where(*)'])).toEqual([
+      '--rim-gradient',
+      '--rim-control-gradient',
+    ]);
+  });
+
+  it.each([
+    ['surface', 'rim-'],
+    ['control', 'rim-control-'],
+  ])('glints the %s rim toward the light and shades it toward black', (_tier, prefix) => {
+    expect(blocks(global)[':where(*)'][`--${prefix}gradient`]).toBe(gradient(prefix));
+  });
 });
 
 describe('filled', () => {

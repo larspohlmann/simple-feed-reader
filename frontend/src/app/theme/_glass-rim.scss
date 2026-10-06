@@ -34,15 +34,19 @@ $-tiers: (
   @return math.div(math.round($amount * 10), 10);
 }
 
-@function tier-token($tier, $name) {
+@function -tier-token-name($tier, $name) {
   @if not map.has-key($-tiers, $tier) {
     @error 'Unknown glass-rim tier `#{$tier}`: use surface or control.';
   }
 
-  @return var(--rim-#{map.get($-tiers, $tier, infix)}#{$name});
+  @return --rim-#{map.get($-tiers, $tier, infix)}#{$name};
 }
 
-@function gradient($tier) {
+@function tier-token($tier, $name) {
+  @return var(-tier-token-name($tier, $name));
+}
+
+@function -gradient($tier) {
   $base: var(--rim-base);
 
   @return linear-gradient(
@@ -53,6 +57,15 @@ $-tiers: (
     $base $base-to,
     color-mix(in oklab, $base, var(--rim-light) tier-token($tier, glint-faint))
   );
+}
+
+// Declared on every element so each resolves var(--rim-base) against its own.
+@mixin gradients {
+  :where(*) {
+    @each $tier in map.keys($-tiers) {
+      #{-tier-token-name($tier, gradient)}: #{-gradient($tier)};
+    }
+  }
 }
 
 @mixin tokens($mode) {
@@ -83,7 +96,7 @@ $-tiers: (
   border: 1px solid transparent;
   background:
     linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box,
-    gradient($tier) border-box;
+    tier-token($tier, gradient) border-box;
 }
 
 // The ring sits in the border area, so the host must not clip it with overflow: hidden.
@@ -100,7 +113,7 @@ $-tiers: (
     padding: 1px;
     border-radius: inherit;
     pointer-events: none;
-    background: gradient($tier) border-box;
+    background: tier-token($tier, gradient) border-box;
     mask:
       linear-gradient(#000 0 0) content-box exclude,
       linear-gradient(#000 0 0);
