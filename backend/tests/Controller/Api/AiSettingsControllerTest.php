@@ -77,14 +77,12 @@ final class AiSettingsControllerTest extends ApiTestCase
             [
                 [
                     'id' => 'gpt-4o',
-                    'label' => null,
                     'kind' => 'llm',
                     'family' => null,
                     'capabilities' => RecommendationCapabilitiesJsons::LLM,
                 ],
                 [
                     'id' => 'gpt-4o-mini',
-                    'label' => null,
                     'kind' => 'llm',
                     'family' => null,
                     'capabilities' => RecommendationCapabilitiesJsons::LLM,
@@ -112,14 +110,12 @@ final class AiSettingsControllerTest extends ApiTestCase
                 'models' => [
                     [
                         'id' => 'gpt-4o',
-                        'label' => null,
                         'kind' => 'llm',
                         'family' => null,
                         'capabilities' => RecommendationCapabilitiesJsons::LLM,
                     ],
                     [
                         'id' => 'jev-latest',
-                        'label' => 'System One',
                         'kind' => 'scoring',
                         'family' => 'decision',
                         'capabilities' => RecommendationCapabilitiesJsons::SCORING,

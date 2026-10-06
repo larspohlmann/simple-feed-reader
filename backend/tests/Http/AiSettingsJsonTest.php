@@ -68,7 +68,7 @@ final class AiSettingsJsonTest extends TestCase
         self::assertSame(RecommendationCapabilitiesJsons::LLM, $shape['capabilities']);
     }
 
-    public function testAConfigurationNamesTheKindAndFamilyOfItsModel(): void
+    public function testAConfigurationNamesTheKindOfItsModel(): void
     {
         $settings = $this->settings(null);
         $settings->chooseModel(
@@ -79,30 +79,14 @@ final class AiSettingsJsonTest extends TestCase
         $shape = $this->json()->configuration($settings, null);
 
         self::assertSame('scoring', $shape['kind']);
-        self::assertSame('decision', $shape['family']);
     }
 
-    public function testARerankConfigurationNamesTheRerankerFamily(): void
-    {
-        $settings = $this->settings(null);
-        $settings->chooseModel(
-            new ModelDescriptor('acme/rerank-2', 8_000, ScoringProtocol::Rerank),
-            new \DateTimeImmutable('2026-08-06 10:00:00'),
-        );
-
-        $shape = $this->json()->configuration($settings, null);
-
-        self::assertSame('scoring', $shape['kind']);
-        self::assertSame('reranker', $shape['family']);
-    }
-
-    /** No model yet: the default kind, as its capabilities already say, and no family. */
-    public function testAConfigurationWithoutAModelIsAnLlmWithoutAFamily(): void
+    /** No model yet: the default kind, as its capabilities already say. */
+    public function testAConfigurationWithoutAModelIsAnLlm(): void
     {
         $shape = $this->json()->configuration($this->settings(null), null);
 
         self::assertSame('llm', $shape['kind']);
-        self::assertNull($shape['family']);
     }
 
     public function testConfigurationIsActiveWhenItsIdMatchesTheActiveId(): void
@@ -216,14 +200,12 @@ final class AiSettingsJsonTest extends TestCase
             [
                 [
                     'id' => 'gpt-4o',
-                    'label' => null,
                     'kind' => 'llm',
                     'family' => null,
                     'capabilities' => RecommendationCapabilitiesJsons::LLM,
                 ],
                 [
                     'id' => 'gpt-4o-mini',
-                    'label' => null,
                     'kind' => 'llm',
                     'family' => null,
                     'capabilities' => RecommendationCapabilitiesJsons::LLM,
@@ -243,21 +225,18 @@ final class AiSettingsJsonTest extends TestCase
                 'models' => [
                     [
                         'id' => 'jev-router',
-                        'label' => null,
                         'kind' => 'llm',
                         'family' => null,
                         'capabilities' => RecommendationCapabilitiesJsons::LLM,
                     ],
                     [
                         'id' => 'acme/decider-2',
-                        'label' => 'System One',
                         'kind' => 'scoring',
                         'family' => 'decision',
                         'capabilities' => RecommendationCapabilitiesJsons::SCORING,
                     ],
                     [
                         'id' => 'acme/rerank-2',
-                        'label' => 'Rerank',
                         'kind' => 'scoring',
                         'family' => 'reranker',
                         'capabilities' => RecommendationCapabilitiesJsons::SCORING,

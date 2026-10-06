@@ -35,7 +35,6 @@ const CONFIG = {
   apiKeyHint: '9876',
   model: 'acme/chat-1',
   kind: 'llm',
-  family: null,
   ready: true,
   active: true,
   suppressReasoning: true,
@@ -47,17 +46,15 @@ const CONFIG = {
 };
 
 const MODELS = [
-  { id: 'acme/chat-1', label: null, kind: 'llm', family: null, capabilities: LLM_CAPABILITIES },
+  { id: 'acme/chat-1', kind: 'llm', family: null, capabilities: LLM_CAPABILITIES },
   {
     id: 'acme/decider-1',
-    label: 'System One',
     kind: 'scoring',
     family: 'decision',
     capabilities: SCORING_CAPABILITIES,
   },
   {
     id: 'acme/reranker-1',
-    label: 'Rerank',
     kind: 'scoring',
     family: 'reranker',
     capabilities: SCORING_CAPABILITIES,

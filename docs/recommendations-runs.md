@@ -117,11 +117,13 @@ rounds: an unusable batch retries alone, a deferring 429 settles every call, and
 whole round unbanked (the atomic-wave rule). They, the rate-limit loop (`Ai\RateLimitedCalls`) and the run-log
 recorder are shared, so an engine supplies only its `BatchWaveEngineInterface`: it opens, sends and judges its calls. Each kind also declares its capabilities (`reasons`, `prompt`, and which tuning fields it reads); the API passes them to the client,
 which shows only the settings that apply. A connection's model list (`GET /api/me/ai/configs/{id}/models`, and
-`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give and a display
-label beside its id (`"System One"` or `"Rerank"` for a model the catalog tagged with that protocol, `null` for an LLM), its `kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `reranker` for Rerank, `null` for an LLM); a configuration carries the `kind` and `family` of its saved model. The picker asks for the kind first, lists only that kind's models and tags each scoring model by its family, so no client parses an id or branches on the label:
+`models` in the answer to `POST /api/me/ai/configs`) carries, per model, the capabilities it would give, its
+`kind` (`llm` or `scoring`) and its `family` (`decision` for System One, `reranker` for Rerank, `null` for an LLM); a
+configuration carries the `kind` of its saved model. The picker asks for the kind first, lists only that kind's models
+and tags each scoring model by its family, so no client parses an id:
 
 ```json
-{"models": [{"id": "~typesafe/jev-latest", "label": "System One", "kind": "scoring", "family": "decision",
+{"models": [{"id": "~typesafe/jev-latest", "kind": "scoring", "family": "decision",
   "capabilities": {"reasons": false, "prompt": false, "profile": "borrowed", "tuningFields": ["batchConcurrency"]}}]}
 ```
 
