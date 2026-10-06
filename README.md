@@ -5,16 +5,16 @@
 A web-based RSS/Atom feed reader you run yourself — for you alone or for
 several users. Free and open source (MIT).
 
-![The magazine layout: varied cards in one reading column](docs/screenshots/screen_01.png)
+![The magazine layout: varied cards in one reading column](docs/screenshots/magazine-light.webp)
 
 <p>
-  <img src="docs/screenshots/screen_02.png" alt="Two-pane view with the reader pane" width="66%">
-  <img src="docs/screenshots/screen_04.png" alt="Card view on mobile" width="29%">
+  <img src="docs/screenshots/pane-dark.webp" alt="Two-pane view with the reader pane, dark theme" width="66%">
+  <img src="docs/screenshots/mobile-magazine-light.webp" alt="The magazine on a phone" width="29%">
 </p>
 
 <p>
-  <img src="docs/screenshots/screen_08.png" alt="Guided feed discovery" width="49%">
-  <img src="docs/screenshots/screen_10.png" alt="Organise your feeds" width="49%">
+  <img src="docs/screenshots/onboarding-light.webp" alt="Guided feed discovery" width="49%">
+  <img src="docs/screenshots/organise-light.webp" alt="Organise your feeds" width="49%">
 </p>
 
 More in the [screenshot gallery](docs/screenshots.md).
