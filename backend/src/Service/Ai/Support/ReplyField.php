@@ -18,7 +18,7 @@ final class ReplyField
      */
     public static function count(mixed $value): int
     {
-        return \is_int($value) && $value >= 0 ? $value : 0;
+        return \is_int($value) ? max(0, $value) : 0;
     }
 
     private function __construct()
