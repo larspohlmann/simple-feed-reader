@@ -93,9 +93,20 @@ describe.each(['light', 'dark'] as const)('%s rim tokens', (mode) => {
     const imageBoost = knob('image-boost');
 
     expect(imageBoost).toBeGreaterThan(boost);
-    expectOneDecimalOf(tokens['--rim-image-glint'], glint * imageBoost);
-    expectOneDecimalOf(tokens['--rim-image-glint-faint'], glint * imageBoost * faint);
-    expectOneDecimalOf(tokens['--rim-image-shade'], shade * imageBoost);
+    expectOneDecimalOf(tokens['--rim-image-glint'], Math.min(100, glint * imageBoost));
+    expectOneDecimalOf(
+      tokens['--rim-image-glint-faint'],
+      Math.min(100, glint * imageBoost * faint),
+    );
+    expectOneDecimalOf(tokens['--rim-image-shade'], Math.min(100, shade * imageBoost));
+  });
+
+  it('caps every amount at 100%, a valid color-mix share', () => {
+    for (const [name, value] of Object.entries(tokens)) {
+      if (name !== '--rim-light') {
+        expect(Number.parseFloat(value)).toBeLessThanOrEqual(100);
+      }
+    }
   });
 
   it('emits white as the step-0 highlight colour', () => {
