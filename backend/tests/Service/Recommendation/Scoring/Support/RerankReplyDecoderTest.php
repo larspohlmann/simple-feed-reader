@@ -11,10 +11,10 @@ use PHPUnit\Framework\TestCase;
 
 final class RerankReplyDecoderTest extends TestCase
 {
-    private const string COHERE = '{"id":"gen-rerank-1759740000-cohere","model":"cohere/rerank-4-fast-20260901",'
-        . '"provider":"Cohere","results":[{"index":1,"relevance_score":0.874,"document":{"text":"Postgres 19"}},'
-        . '{"index":0,"relevance_score":0.0731,"document":{"text":"Pumpkin soup"}}],'
-        . '"usage":{"search_units":1,"total_tokens":38,"cost":0.002}}';
+    private const string COHERE = '{"id":"gen-rerank-1759740000-cohere","model":"rerank-v4.0-fast",'
+        . '"usage":{"cost":0.002,"search_units":1},'
+        . '"results":[{"index":1,"document":{"text":"Postgres 19"},"relevance_score":0.874},'
+        . '{"index":0,"document":{"text":"Pumpkin soup"},"relevance_score":0.0731}],"provider":"Cohere"}';
 
     private const string VOYAGE = '{"id":"gen-rerank-1759740001-voyage","model":"voyageai/rerank-3",'
         . '"provider":"Voyage","results":[{"index":0,"relevance_score":0.6523,"document":{"text":"Pumpkin soup"}}],'
@@ -34,15 +34,16 @@ final class RerankReplyDecoderTest extends TestCase
         $receipt = RerankReplyDecoder::decode(self::COHERE, [7, 9])->receipt;
 
         self::assertSame('gen-rerank-1759740000-cohere', $receipt->requestId);
-        self::assertSame('cohere/rerank-4-fast-20260901', $receipt->answeringModel);
+        self::assertSame('rerank-v4.0-fast', $receipt->answeringModel);
         self::assertSame(2_000_000, $receipt->usage?->costNanoCredits);
     }
 
-    public function testTheTotalTokensAreThePromptTokensWhateverElseIsBilled(): void
+    public function testASearchUnitBilledRerankerReportsNoTokensButItsCost(): void
     {
         $usage = self::usageOf(self::COHERE);
 
-        self::assertSame(38, $usage->promptTokens);
+        self::assertSame(0, $usage->promptTokens);
+        self::assertSame(2_000_000, $usage->costNanoCredits);
     }
 
     public function testATokenBilledRerankerReportsItsTotalAsPromptTokens(): void
@@ -62,7 +63,6 @@ final class RerankReplyDecoderTest extends TestCase
         yield 'a total of zero' => ['{"usage":{"total_tokens":0,"cost":0.002}}'];
         yield 'a negative total' => ['{"usage":{"total_tokens":-5,"cost":0.002}}'];
         yield 'a total that is no integer' => ['{"usage":{"total_tokens":"412","cost":0.002}}'];
-        yield 'search units only' => ['{"usage":{"search_units":1,"cost":0.002}}'];
     }
 
     #[DataProvider('usagesWithoutUsableTotal')]
