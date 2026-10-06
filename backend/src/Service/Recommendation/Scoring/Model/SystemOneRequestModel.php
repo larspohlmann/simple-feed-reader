@@ -25,7 +25,6 @@ final readonly class SystemOneRequestModel
         return CompactJson::encode($this->payload());
     }
 
-    /** Pretty-printed for the human the debug view exists for: the body as sent, minus transport framing. */
     public function toRenderedRequest(): string
     {
         return PrettyJson::of($this->payload());

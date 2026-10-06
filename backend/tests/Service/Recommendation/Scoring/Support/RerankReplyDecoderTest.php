@@ -107,9 +107,16 @@ final class RerankReplyDecoderTest extends TestCase
             '{"results":[{"index":0,"relevance_score":0.9},{"index":1,"relevance_score":0.4},'
             . '{"index":0,"relevance_score":0.2}]}',
         ];
+        yield 'a repeated index whose first result has no number' => [
+            '{"results":[{"index":0,"relevance_score":"x"},{"index":0,"relevance_score":0.5},'
+            . '{"index":1,"relevance_score":0.4}]}',
+        ];
+        yield 'results that are an object' => [
+            '{"results":{"a":{"index":0,"relevance_score":0.5},"b":{"index":1,"relevance_score":0.4}}}',
+        ];
         yield 'no results' => ['{"model":"cohere/rerank-4-fast"}'];
         yield 'results that are no list' => ['{"results":"none"}'];
-        yield 'no JSON' => ['<html>Bad Gateway</html>'];
+        yield 'no JSON' => ['<html lang="en">Bad Gateway</html>'];
     }
 
     #[DataProvider('spoiledReplies')]

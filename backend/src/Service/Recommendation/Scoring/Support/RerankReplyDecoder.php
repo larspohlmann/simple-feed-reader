@@ -32,28 +32,27 @@ final class RerankReplyDecoder
     /**
      * @param list<int> $entryIds
      *
-     * @return array<int, float> by entry id; none at all when an index repeats
+     * @return array<int, float> by entry id; none at all when an entry is answered twice
      */
     private static function scoresIn(mixed $results, array $entryIds): array
     {
-        if (!\is_array($results)) {
+        if (!\is_array($results) || !array_is_list($results)) {
             return [];
         }
 
-        $scores = [];
+        $relevances = [];
         foreach ($results as $result) {
             $entryId = self::entryIdOf($result, $entryIds);
-            $relevance = self::relevanceOf($result);
-            if (null === $entryId || null === $relevance) {
+            if (null === $entryId) {
                 continue;
             }
-            if (isset($scores[$entryId])) {
+            if (\array_key_exists($entryId, $relevances)) {
                 return [];
             }
-            $scores[$entryId] = $relevance;
+            $relevances[$entryId] = self::relevanceOf($result);
         }
 
-        return $scores;
+        return array_filter($relevances, static fn (?float $relevance): bool => null !== $relevance);
     }
 
     /** @param list<int> $entryIds */

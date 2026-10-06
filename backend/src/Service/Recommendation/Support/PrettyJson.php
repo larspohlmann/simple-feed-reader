@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Support;
 
-/** Indented UTF-8 with slashes and non-ASCII as they are: a payload shown to a human, as it was sent. */
 final class PrettyJson
 {
     public static function of(mixed $value): string
