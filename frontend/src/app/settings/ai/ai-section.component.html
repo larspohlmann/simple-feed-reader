@@ -181,9 +181,9 @@
                             <p class="hint scoring-hint">
                               <span>{{ 'settings.ai.modelKind.scoringHint' | transloco }}</span>
                               @for (family of offeredScoringFamilies(); track family) {
-                                <span>
-                                  {{ 'settings.ai.modelFamilyHint.' + family | transloco }}</span
-                                >
+                                @let familyHint =
+                                  'settings.ai.modelFamilyHint.' + family | transloco;
+                                <span>{{ ' ' + familyHint }}</span>
                               }
                             </p>
                           }

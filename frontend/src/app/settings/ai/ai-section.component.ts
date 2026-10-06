@@ -146,7 +146,6 @@ export class AiSectionComponent {
     () => this.modelOptions().find((option) => option.value === this.chosenModel())?.hint ?? null,
   );
 
-  /** A provider without rerankers never explains one. */
   readonly offeredScoringFamilies = computed(() => {
     const models = this.ai.models();
     return SCORING_FAMILIES.filter((family) => models.some((model) => model.family === family));

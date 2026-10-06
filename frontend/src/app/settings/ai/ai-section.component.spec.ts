@@ -254,8 +254,8 @@ describe('AiSectionComponent', () => {
 
   beforeEach(() => dialogStub.open.mockReset());
   afterEach(() => {
-    http.verify();
     localStorage.clear();
+    http.verify();
   });
 
   it('loads the configurations on construction', () => {
@@ -619,14 +619,23 @@ describe('AiSectionComponent', () => {
 
   it('explains each family again in the language the reader switches to', () => {
     const fixture = mount();
-    const picker = openPicker(
-      fixture,
-      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
-      [rerankerModel('cohere/rerank-4-fast'), decisionModel('~typesafe/jev-latest')],
-    );
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      rerankerModel('cohere/rerank-4-fast'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+    fixture.componentInstance.chosenModel.set('cohere/rerank-4-fast');
 
     TestBed.inject(TranslocoService).setActiveLang('de');
     fixture.detectChanges();
+
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(fixture.componentInstance.chosenModel()).toBe('cohere/rerank-4-fast');
 
     expect(picker.querySelector('.scoring-hint')?.textContent?.trim()).toBe(
       'Ein Bewertungsmodell bewertet jeden Artikel für dich, statt eine Liste mit Begründungen zu schreiben. ' +
@@ -637,14 +646,23 @@ describe('AiSectionComponent', () => {
 
   it('tags each scoring model with its family again in the language the reader switches to', () => {
     const fixture = mount();
-    const picker = openPicker(
-      fixture,
-      config({ id: 1, model: 'cohere/rerank-4-fast', kind: 'scoring' }),
-      [rerankerModel('cohere/rerank-4-fast'), decisionModel('~typesafe/jev-latest')],
-    );
+    const picker = openPicker(fixture, config({ id: 1 }), [
+      offered('gpt-4o'),
+      rerankerModel('cohere/rerank-4-fast'),
+      decisionModel('~typesafe/jev-latest'),
+    ]);
+    kindButtons(picker)[1].click();
+    fixture.detectChanges();
+    fixture.componentInstance.chosenModel.set('cohere/rerank-4-fast');
 
     TestBed.inject(LanguageService).set('de');
     fixture.detectChanges();
+
+    expect(kindButtons(picker).map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'false',
+      'true',
+    ]);
+    expect(fixture.componentInstance.chosenModel()).toBe('cohere/rerank-4-fast');
 
     expect(optionLabels(fixture, picker)).toEqual([
       'cohere/rerank-4-fast · Reranker',
