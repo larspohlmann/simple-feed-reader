@@ -7,15 +7,15 @@ const compiledRules = (block: string) =>
   rulesBySelector(compileScssFile(join(__dirname, 'blocks', block, `${block}.component.scss`)));
 
 describe.each(IMAGE_BLOCKS)('%s image', (block) => {
-  it('carries the glass rim in the airy rule colour over the sheet', () => {
+  it('carries the same glass rim as a boxed card, over the airy sheet', () => {
     const airy = compiledRules(block)[':host-context(.airy) .img'];
 
     expect(airy['border']).toBe('1px solid transparent');
     expect(airy['background']).toBe(
-      'linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box, var(--rim-image-gradient) border-box',
+      'linear-gradient(var(--rim-fill), var(--rim-fill)) padding-box, var(--rim-gradient) border-box',
     );
     expect(airy['--rim-fill']).toBe('var(--airy-sheet-fill)');
-    expect(airy['--rim-base']).toBe('var(--airy-rule)');
+    expect(airy['--rim-base']).toBe('var(--border)');
   });
 
   it('stays bare in boxed, where the card carries the rim', () => {

@@ -8,5 +8,5 @@
 }
 
 @mixin image-rim {
-  @include glass-rim.filled(var(--airy-sheet-fill), var(--airy-rule), image);
+  @include glass-rim.filled(var(--airy-sheet-fill));
 }
