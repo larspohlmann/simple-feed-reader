@@ -130,7 +130,7 @@ final readonly class ScoringHttpTransport
         $body = $response->getContent(false);
 
         return match (true) {
-            401 === $status, 403 === $status => ScoringOutcomeModel::failed(
+            RejectingStatus::refusesKey($status) => ScoringOutcomeModel::failed(
                 CredentialsRejectedException::refusedKey(),
             ),
             \in_array($status, self::RETRYABLE_STATUSES, true) => ScoringOutcomeModel::failed(

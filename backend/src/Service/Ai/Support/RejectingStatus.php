@@ -6,7 +6,13 @@ namespace App\Service\Ai\Support;
 
 final class RejectingStatus
 {
-    private const array NOT_A_VERDICT_ON_THE_REQUEST = [401, 403, 408, 425, 429];
+    private const array REFUSING_THE_KEY = [401, 403];
+    private const array NOT_A_VERDICT_ON_THE_REQUEST = [...self::REFUSING_THE_KEY, 408, 425, 429];
+
+    public static function refusesKey(int $status): bool
+    {
+        return \in_array($status, self::REFUSING_THE_KEY, true);
+    }
 
     public static function matches(int $status): bool
     {

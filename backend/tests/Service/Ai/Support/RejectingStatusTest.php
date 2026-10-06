@@ -44,4 +44,13 @@ final class RejectingStatusTest extends TestCase
     {
         self::assertFalse(RejectingStatus::matches($status));
     }
+
+    public function testOnlyA401OrA403RefusesTheKey(): void
+    {
+        self::assertTrue(RejectingStatus::refusesKey(401));
+        self::assertTrue(RejectingStatus::refusesKey(403));
+        self::assertFalse(RejectingStatus::refusesKey(400));
+        self::assertFalse(RejectingStatus::refusesKey(402));
+        self::assertFalse(RejectingStatus::refusesKey(404));
+    }
 }

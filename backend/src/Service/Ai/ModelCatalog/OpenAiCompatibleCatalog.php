@@ -9,6 +9,7 @@ use App\Enum\ScoringProtocol;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Support\RejectingStatus;
 use App\Service\Ai\Support\ResponseByteCap;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -61,7 +62,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             $response = $this->request($credentials);
             $status = $response->getStatusCode();
 
-            if (401 === $status || 403 === $status) {
+            if (RejectingStatus::refusesKey($status)) {
                 throw CredentialsRejectedException::refusedKey();
             }
 
