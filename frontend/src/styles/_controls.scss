@@ -24,21 +24,24 @@ textarea {
   line-height: var(--lh-normal);
 }
 
-$chevron-leg: 6px;
+$chevron-leg: 4px;
+
+// Room below the tip for the stroke's mitred point; a square box clips it flat.
+$chevron-box-height: $chevron-leg + 4px;
 
 @function chevron-leg($angle, $offset) {
   $ink: var(--text-secondary);
 
   @return linear-gradient(
       $angle,
-      transparent calc(50% - 1.2px),
-      $ink calc(50% - 0.5px) calc(50% + 0.5px),
-      transparent calc(50% + 1.2px)
+      transparent calc(50% - 1px),
+      $ink calc(50% - 0.4px) calc(50% + 0.4px),
+      transparent calc(50% + 1px)
     )
-    right $offset center / $chevron-leg $chevron-leg no-repeat padding-box;
+    right $offset center / $chevron-leg $chevron-box-height no-repeat padding-box;
 }
 
-// Chrome's native arrow ignores padding and Safari drops author backgrounds, so the app draws its own.
+// Chrome's native arrow ignores padding-inline-end, so the app draws its own.
 select {
   --select-inset: var(--space-3);
 
