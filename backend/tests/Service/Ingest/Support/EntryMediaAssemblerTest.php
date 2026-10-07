@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ingest\Support;
 
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\EntryMediaAssembler;
+use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedAttachmentModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
@@ -74,8 +75,15 @@ final class EntryMediaAssemblerTest extends TestCase
             null,
             [],
             [
-                new ParsedAttachmentModel('http://cdn/insecure.mp3', 'audio/mpeg'),
-                new ParsedAttachmentModel('https://cdn/ok.mp3', 'audio/mpeg', 3723, 4200000, 'Ep 1'),
+                new ParsedAttachmentModel('http://cdn/insecure.mp3', FeedMediaKind::Audio, 'audio/mpeg'),
+                new ParsedAttachmentModel(
+                    'https://cdn/ok.mp3',
+                    FeedMediaKind::Audio,
+                    'audio/mpeg',
+                    3723,
+                    4200000,
+                    'Ep 1',
+                ),
             ],
         );
 

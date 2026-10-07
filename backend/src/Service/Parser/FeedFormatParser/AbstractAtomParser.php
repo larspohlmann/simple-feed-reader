@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
-use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -61,7 +60,6 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
         $title = XmlHelper::childText($root, 'title', $this->namespaceUri());
 
-        $showArtwork = PodcastArtwork::of($root);
         $entries = [];
         foreach ($root->childNodes as $child) {
             if (
@@ -69,7 +67,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
                 && $child->localName === 'entry'
                 && $child->namespaceURI === $this->namespaceUri()
             ) {
-                $entry = $this->parseEntry($child, $showArtwork);
+                $entry = $this->parseEntry($child);
                 if ($entry !== null) {
                     $entries[] = $entry;
                 }
@@ -83,16 +81,16 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             throw new FeedParseException('Atom feed had neither a title nor any entries');
         }
 
-        return new ParsedFeedModel(
+        return (new ParsedFeedModel(
             PlainText::from($title),
             $this->alternateLink($root),
             XmlHelper::childText($root, $this->descriptionElement(), $this->namespaceUri()),
             FeedImageExtractor::fromAtomFeed($root, $this->namespaceUri()),
             $entries,
-        );
+        ))->withShowArtwork(PodcastArtwork::of($root));
     }
 
-    private function parseEntry(\DOMElement $entry, ?DeclaredImageModel $showArtwork): ?ParsedEntryModel
+    private function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
         $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());
@@ -119,7 +117,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
             contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry)),
-            media: ParsedEntryMediaModel::withShowArtworkFallback($image, $mediaBundle, $showArtwork),
+            media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
             discussion: AtomDiscussion::from($entry, $this->namespaceUri()),
             authorUrl: $this->authorUri($entry),

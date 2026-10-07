@@ -15,15 +15,12 @@ final readonly class ParsedEntryMediaModel
     }
 
     /** An episode without artwork of its own shows the show's; any other item stays without an image. */
-    public static function withShowArtworkFallback(
-        ?DeclaredImageModel $image,
-        ParsedMediaBundleModel $mediaBundle,
-        ?DeclaredImageModel $showArtwork,
-    ): self {
-        if ($image === null && $mediaBundle->isEpisode()) {
-            return new self($showArtwork, $mediaBundle);
+    public function withShowArtwork(?DeclaredImageModel $showArtwork): self
+    {
+        if ($this->image !== null || !($this->mediaBundle?->isEpisode() ?? false)) {
+            return $this;
         }
 
-        return new self($image, $mediaBundle);
+        return new self($showArtwork, $this->mediaBundle);
     }
 }

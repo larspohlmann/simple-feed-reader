@@ -8,6 +8,7 @@ use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedAttachmentModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\FeedMediaClassifier;
 use App\Service\Parser\Support\MediaDuration;
 
@@ -66,11 +67,11 @@ final readonly class FeedMediaNode
     {
         return new ParsedAttachmentModel(
             $this->url(),
+            $this->kind(),
             self::nonEmpty($this->element->getAttribute('type')),
             MediaDuration::seconds($this->element->getAttribute('duration')) ?? $fallbackDuration,
             $this->intAttribute('length') ?? $this->intAttribute('fileSize'),
             $this->title(),
-            $this->kind(),
         );
     }
 
@@ -94,9 +95,7 @@ final readonly class FeedMediaNode
 
     private function intAttribute(string $name): ?int
     {
-        $value = filter_var(trim($this->element->getAttribute($name)), FILTER_VALIDATE_INT);
-
-        return \is_int($value) && $value > 0 ? $value : null;
+        return DeclaredImages::positiveDimension($this->element->getAttribute($name));
     }
 
     private static function nonEmpty(string $value): ?string

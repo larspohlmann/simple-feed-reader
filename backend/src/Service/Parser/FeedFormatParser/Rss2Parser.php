@@ -6,7 +6,6 @@ namespace App\Service\Parser\FeedFormatParser;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -45,25 +44,24 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             throw new FeedParseException('RSS document without <channel>');
         }
 
-        $showArtwork = PodcastArtwork::of($channel);
         $entries = [];
         foreach ($document->getElementsByTagName('item') as $item) {
-            $entry = $this->parseItem($item, $showArtwork);
+            $entry = $this->parseItem($item);
             if ($entry !== null) {
                 $entries[] = $entry;
             }
         }
 
-        return new ParsedFeedModel(
+        return (new ParsedFeedModel(
             PlainText::from(XmlHelper::childText($channel, 'title')),
             XmlHelper::childText($channel, 'link'),
             XmlHelper::childText($channel, 'description'),
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
-        );
+        ))->withShowArtwork(PodcastArtwork::of($channel));
     }
 
-    private function parseItem(\DOMElement $item, ?DeclaredImageModel $showArtwork): ?ParsedEntryModel
+    private function parseItem(\DOMElement $item): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($item, 'title');
         $link = XmlHelper::childText($item, 'link');
@@ -87,7 +85,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
-            media: ParsedEntryMediaModel::withShowArtworkFallback($image, $mediaBundle, $showArtwork),
+            media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );

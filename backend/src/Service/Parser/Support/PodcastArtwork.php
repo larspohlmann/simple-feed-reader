@@ -8,10 +8,6 @@ use App\Service\Html\Support\Srcset;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Url\Support\HttpsImageUrl;
 
-/**
- * The artwork the podcast namespaces declare on a channel or an item, best first: Podcasting 2.0's <podcast:image>,
- * its deprecated <podcast:images srcset>, then <itunes:image> and <googleplay:image>.
- */
 final class PodcastArtwork
 {
     private const string PODCAST_NS = 'https://podcastindex.org/namespace/1.0';

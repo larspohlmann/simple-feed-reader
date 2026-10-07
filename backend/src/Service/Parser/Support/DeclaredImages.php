@@ -6,7 +6,6 @@ namespace App\Service\Parser\Support;
 
 use App\Service\Image\Model\DeclaredImageModel;
 
-/** Builds and ranks the images feed elements declare by attribute. */
 final class DeclaredImages
 {
     public static function fromElement(\DOMElement $element, string $url): DeclaredImageModel

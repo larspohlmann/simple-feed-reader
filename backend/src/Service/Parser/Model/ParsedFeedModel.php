@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Model;
 
+use App\Service\Image\Model\DeclaredImageModel;
+
 final readonly class ParsedFeedModel
 {
     /**
@@ -26,5 +28,13 @@ final readonly class ParsedFeedModel
     public function withEntries(array $entries): self
     {
         return new self($this->title, $this->siteUrl, $this->description, $this->imageUrl, $entries);
+    }
+
+    public function withShowArtwork(?DeclaredImageModel $showArtwork): self
+    {
+        return $this->withEntries(array_map(
+            static fn (ParsedEntryModel $entry): ParsedEntryModel => $entry->withShowArtwork($showArtwork),
+            $this->entries,
+        ));
     }
 }

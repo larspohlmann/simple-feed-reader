@@ -16,9 +16,10 @@ final class FeedImageExtractor
     public static function fromRss2Channel(\DOMElement $channel): ?string
     {
         foreach (XmlHelper::childElements($channel, 'image', null) as $image) {
-            $url = $image->namespaceURI === $channel->namespaceURI
-                ? HttpsImageUrl::orNull(XmlHelper::childText($image, 'url'))
-                : null;
+            if ($image->namespaceURI !== $channel->namespaceURI) {
+                continue;
+            }
+            $url = HttpsImageUrl::orNull(XmlHelper::childText($image, 'url'));
             if ($url !== null) {
                 return $url;
             }
@@ -53,9 +54,7 @@ final class FeedImageExtractor
 
     private static function podcastArtwork(\DOMElement $parent): ?string
     {
-        $artwork = PodcastArtwork::of($parent);
-
-        return $artwork === null ? null : HttpsImageUrl::orNull($artwork->url);
+        return HttpsImageUrl::orNull(PodcastArtwork::of($parent)?->url);
     }
 
     private function __construct()

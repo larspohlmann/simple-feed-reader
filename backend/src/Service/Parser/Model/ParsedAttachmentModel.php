@@ -13,11 +13,11 @@ final readonly class ParsedAttachmentModel
 {
     public function __construct(
         public string $url,
+        public FeedMediaKind $kind,
         public ?string $mimeType = null,
         public ?int $durationInSeconds = null,
         public ?int $sizeInBytes = null,
         public ?string $title = null,
-        public FeedMediaKind $kind = FeedMediaKind::Other,
     ) {
     }
 }
