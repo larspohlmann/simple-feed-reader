@@ -5,6 +5,7 @@
    becoming a scroller the chrome would sit in (#1332). */
 :host {
   display: block;
+  position: relative;
   height: 100%;
   overflow: clip;
 }
@@ -77,11 +78,11 @@
   color: var(--accent);
 }
 
-/* Back-to-top affordance, pinned to the viewport corner. */
+/* Back-to-top affordance, pinned to the pane's corner, so it sits clear of the audio player. */
 app-to-top-button {
-  position: fixed;
+  position: absolute;
   right: 24px;
-  bottom: 24px;
+  bottom: calc(24px + var(--toast-lift, 0px));
   z-index: 20;
 }
 
@@ -89,7 +90,7 @@ app-to-top-button {
    (#641). `--app-toast-height` is the live toast's measured height; its
    fallback is zero so the button keeps its base offset when none is up. */
 :host-context(.is-narrow) app-to-top-button {
-  bottom: calc(24px + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+  --toast-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
 }
 
 /* Standing nameplate: the toolbar retracts, leaving nothing naming a
@@ -302,13 +303,27 @@ article {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-4);
   border-radius: var(--radius);
   color: var(--accent);
   cursor: pointer;
   font-size: var(--fs-sm);
+}
+
+.listen-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.listen.queue {
+  flex: none;
+}
+
+.listen.queue.queued {
+  --rim-fill: var(--accent-soft);
 }
 
 .listen:hover {

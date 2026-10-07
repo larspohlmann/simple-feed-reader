@@ -1,58 +1,166 @@
 @if (player.current(); as track) {
   <div class="player" role="group" [attr.aria-label]="'reader.audioPlayer.label' | transloco">
-    <button
-      class="ctrl back"
-      type="button"
-      [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
-      (click)="player.skip(-skipStep)"
-    >
-      <app-icon name="replay" size="md" />
-    </button>
-    <button
-      class="ctrl play"
-      type="button"
-      [attr.aria-label]="
-        (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
-      "
-      (click)="player.toggle()"
-    >
-      <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
-    </button>
-    <button
-      class="ctrl forward"
-      type="button"
-      [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
-      (click)="player.skip(skipStep)"
-    >
-      <app-icon name="forward_media" size="md" />
-    </button>
-    <div class="meta">
-      <span class="title">
-        <app-favicon [url]="track.faviconUrl" [size]="14" />
-        {{ track.title }}
-      </span>
-      <div class="track">
-        <span class="time">{{ format(player.position()) }}</span>
-        <input
-          class="scrubber"
-          type="range"
-          min="0"
-          step="1"
-          [max]="player.duration()"
-          [value]="player.position()"
-          [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
-          (input)="onScrub($event)"
-        />
-        <span class="time">{{ format(player.duration()) }}</span>
+    @if (playlistOpen()) {
+      <section
+        id="audio-playlist"
+        class="playlist"
+        [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
+      >
+        <ol
+          class="rows"
+          cdkDropList
+          [cdkDropListData]="player.tracks()"
+          cdkDropListLockAxis="y"
+          (cdkDropListDropped)="onDrop($event)"
+        >
+          @for (row of rows(); track row.track.url; let index = $index, last = $last) {
+            @let queued = row.track;
+            <li
+              class="row"
+              cdkDrag
+              [cdkDragStartDelay]="dragDelay"
+              [class.current]="row.current"
+              [class.played]="row.played"
+              [attr.aria-current]="row.current ? 'true' : null"
+            >
+              <span class="handle" cdkDragHandle aria-hidden="true">
+                <app-icon name="drag_indicator" size="sm" />
+              </span>
+              <button
+                class="pick"
+                type="button"
+                [attr.aria-label]="
+                  'reader.audioPlayer.playTrack' | transloco: { title: queued.title }
+                "
+                (click)="player.playAt(index)"
+              >
+                <app-audio-artwork [track]="queued" />
+                <span class="row-title">{{ queued.title }}</span>
+                @if (row.durationInSeconds; as seconds) {
+                  <span class="time row-time">{{ format(seconds) }}</span>
+                }
+              </button>
+              <button
+                type="button"
+                appIconButton
+                class="up"
+                [disabled]="index === 0"
+                [attr.aria-label]="'reader.audioPlayer.moveUp' | transloco: { title: queued.title }"
+                (click)="player.move(index, index - 1)"
+              >
+                <app-icon name="arrow_upward" size="sm" />
+              </button>
+              <button
+                type="button"
+                appIconButton
+                class="down"
+                [disabled]="last"
+                [attr.aria-label]="
+                  'reader.audioPlayer.moveDown' | transloco: { title: queued.title }
+                "
+                (click)="player.move(index, index + 1)"
+              >
+                <app-icon name="arrow_downward" size="sm" />
+              </button>
+              <button
+                type="button"
+                appIconButton
+                class="remove"
+                [attr.aria-label]="'reader.audioPlayer.remove' | transloco: { title: queued.title }"
+                (click)="player.dequeue(queued.url)"
+              >
+                <app-icon name="close" size="sm" />
+              </button>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+    <div class="controls">
+      <app-audio-artwork class="artwork" [track]="track" />
+      <button
+        class="ctrl previous"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
+        (click)="player.previous()"
+      >
+        <app-icon name="skip_previous" size="md" />
+      </button>
+      <button
+        class="ctrl back"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
+        (click)="player.skip(-skipStep)"
+      >
+        <app-icon name="replay" size="md" />
+      </button>
+      <button
+        class="ctrl play"
+        type="button"
+        [attr.aria-label]="
+          (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+        "
+        (click)="player.toggle()"
+      >
+        <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
+      </button>
+      <button
+        class="ctrl forward"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
+        (click)="player.skip(skipStep)"
+      >
+        <app-icon name="forward_media" size="md" />
+      </button>
+      <button
+        class="ctrl next"
+        type="button"
+        [disabled]="!player.hasNext()"
+        [attr.aria-label]="'reader.audioPlayer.next' | transloco"
+        (click)="player.next()"
+      >
+        <app-icon name="skip_next" size="md" />
+      </button>
+      <div class="meta">
+        <span class="title">{{ track.title }}</span>
+        <div class="track">
+          <span class="time">{{ format(player.position()) }}</span>
+          <input
+            class="scrubber"
+            type="range"
+            min="0"
+            step="1"
+            [max]="player.duration()"
+            [value]="player.position()"
+            [style.--played]="progress().played"
+            [style.--cached]="progress().cached"
+            [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
+            (input)="onScrub($event)"
+          />
+          <span class="time">{{ format(player.duration()) }}</span>
+        </div>
       </div>
+      <button
+        class="ctrl toggle-playlist"
+        type="button"
+        [attr.aria-controls]="playlistOpen() ? 'audio-playlist' : null"
+        [attr.aria-expanded]="playlistOpen()"
+        [attr.aria-label]="
+          'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
+        "
+        (click)="playlistOpen.set(!playlistOpen())"
+      >
+        <app-icon name="queue_music" size="md" />
+        <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>
+      </button>
+      <button
+        class="ctrl close"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.close' | transloco"
+        (click)="player.stop()"
+      >
+        <app-icon name="close" size="md" />
+      </button>
     </div>
-    <button
-      class="ctrl close"
-      type="button"
-      [attr.aria-label]="'reader.audioPlayer.close' | transloco"
-      (click)="player.stop()"
-    >
-      <app-icon name="close" size="md" />
-    </button>
   </div>
 }

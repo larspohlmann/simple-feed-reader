@@ -139,10 +139,27 @@ export class ReaderViewComponent {
       !(this.audioAttachment() && this.source.pageHoldsNoArticle()),
   );
 
-  protected listen(): void {
+  private readonly audioTrack = computed(() => {
     const entry = this.entry();
     const attachment = this.audioAttachment();
-    if (entry && attachment) this.audioPlayer.play(toAudioTrack(entry, attachment));
+    return entry && attachment ? toAudioTrack(entry, attachment) : null;
+  });
+
+  protected readonly queued = computed(() => {
+    const track = this.audioTrack();
+    return track !== null && this.audioPlayer.isQueued(track.url);
+  });
+
+  protected listen(): void {
+    const track = this.audioTrack();
+    if (track) this.audioPlayer.play(track);
+  }
+
+  protected toggleQueued(): void {
+    const track = this.audioTrack();
+    if (!track) return;
+    if (this.queued()) this.audioPlayer.dequeue(track.url);
+    else this.audioPlayer.enqueue(track);
   }
 
   // The open entry's reference changes on every optimistic flag update, but its

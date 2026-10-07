@@ -996,7 +996,17 @@
       "back": "Back {{ seconds }} seconds",
       "forward": "Forward {{ seconds }} seconds",
       "seek": "Seek",
-      "close": "Close player"
+      "close": "Close player",
+      "previous": "Previous track",
+      "next": "Next track",
+      "playlist": "Playlist",
+      "playTrack": "Play {{ title }}",
+      "moveUp": "Move {{ title }} up",
+      "moveDown": "Move {{ title }} down",
+      "remove": "Remove {{ title }} from the playlist",
+      "addToPlaylist": "Add to playlist",
+      "inPlaylist": "In playlist",
+      "playlistCount": "Playlist ({{ count }})"
     },
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",

@@ -46,6 +46,7 @@ import { AiAvailabilityService } from '../../../core/ai-availability.service';
 import { LayoutService } from '../../layout.service';
 import { SidebarVisibilityService } from '../sidebar-visibility.service';
 import { ManageActions } from '../../feeds/manage/manage-actions.service';
+import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 
 /** What a sidebar drop source or target represents: a tag, or the untagged bucket. */
 export type DropData = { kind: 'tag'; tag: TagDto } | { kind: 'untagged' };
@@ -206,7 +207,7 @@ export class SidebarComponent {
   /** Hold-to-drag on touch so a normal swipe still scrolls the sidebar. Desktop
    *  keeps the long-press guard; while organising, drags start from the explicit
    *  handle so no guard is needed. */
-  readonly dragDelay = computed(() => (this.organising() ? 0 : { touch: 180, mouse: 0 }));
+  readonly dragDelay = computed(() => (this.organising() ? 0 : TOUCH_DRAG_START_DELAY));
 
   /** Coarse pointers may drag only in Organise mode; navigation is read-only. */
   readonly dragLocked = computed(() => this.screen.isCoarse() && !this.organising());

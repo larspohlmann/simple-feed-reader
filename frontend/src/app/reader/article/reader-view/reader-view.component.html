@@ -141,13 +141,27 @@
           <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
           <app-entry-actions class="actions" size="md" [entry]="e" />
           @if (audioAttachment(); as audio) {
-            <button class="listen" type="button" (click)="listen()">
-              <app-icon name="play_circle" size="lg" />
-              <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
-              @if (audio.durationInSeconds; as seconds) {
-                <span class="listen-duration">{{ formatDuration(seconds) }}</span>
-              }
-            </button>
+            <div class="listen-row">
+              <button class="listen" type="button" (click)="listen()">
+                <app-icon name="play_circle" size="lg" />
+                <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
+                @if (audio.durationInSeconds; as seconds) {
+                  <span class="listen-duration">{{ formatDuration(seconds) }}</span>
+                }
+              </button>
+              <button
+                class="listen queue"
+                type="button"
+                [class.queued]="queued()"
+                (click)="toggleQueued()"
+              >
+                <app-icon [name]="queued() ? 'playlist_add_check' : 'playlist_add'" size="md" />
+                <span class="listen-label">{{
+                  (queued() ? 'reader.audioPlayer.inPlaylist' : 'reader.audioPlayer.addToPlaylist')
+                    | transloco
+                }}</span>
+              </button>
+            </div>
           }
           <app-reader-toc [entries]="toc()" [(open)]="tocOpen" (jump)="scrollToHeading($event)" />
           @if (!source.loading()) {

@@ -1439,6 +1439,11 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('audio attachment', () => {
+    afterEach(() => {
+      localStorage.clear();
+      jest.restoreAllMocks();
+    });
+
     it('offers a listen control for an audio enclosure and plays it', () => {
       const fixture = mount(
         entry({
@@ -1462,6 +1467,30 @@ describe('ReaderViewComponent', () => {
       expect(play).toHaveBeenCalledWith(
         expect.objectContaining({ url: 'https://x.test/ep.mp3', title: 'Ep 1' }),
       );
+    });
+
+    it('adds the episode to the playlist and, once queued, takes it out again', () => {
+      const fixture = mount(
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] }),
+      );
+      const player = TestBed.inject(AudioPlayerService);
+      for (const method of ['pause', 'load'] as const) {
+        jest.spyOn(HTMLMediaElement.prototype, method).mockImplementation(() => {
+          /* jsdom implements no media playback. */
+        });
+      }
+      const queue = (): HTMLButtonElement =>
+        fixture.debugElement.query(By.css('.listen.queue')).nativeElement;
+      expect(queue().textContent).toContain('Add to playlist');
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.isQueued('https://x.test/ep.mp3')).toBe(true);
+      expect(queue().textContent).toContain('In playlist');
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.isQueued('https://x.test/ep.mp3')).toBe(false);
     });
 
     it('shows no listen control when the entry has no audio enclosure', () => {
