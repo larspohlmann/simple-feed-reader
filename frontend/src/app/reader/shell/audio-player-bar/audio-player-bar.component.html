@@ -132,6 +132,8 @@
             step="1"
             [max]="player.duration()"
             [value]="player.position()"
+            [style.--played]="progress().played"
+            [style.--cached]="progress().cached"
             [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
             (input)="onScrub($event)"
           />

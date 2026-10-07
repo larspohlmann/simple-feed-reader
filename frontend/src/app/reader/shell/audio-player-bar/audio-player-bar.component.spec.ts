@@ -15,6 +15,7 @@ function stub() {
     playing: signal(false),
     position: signal(0),
     duration: signal(0),
+    buffered: signal(0),
     toggle: jest.fn(),
     seek: jest.fn(),
     skip: jest.fn(),
@@ -86,6 +87,22 @@ describe('AudioPlayerBarComponent', () => {
 
     expect(scrubber.max).toBe('120');
     expect(scrubber.value).toBe('30');
+  });
+
+  it('draws how much of the stream is cached ahead of the playhead', () => {
+    const fixture = render();
+    service.current.set(track);
+    service.duration.set(200);
+    service.position.set(50);
+    service.buffered.set(120);
+    fixture.detectChanges();
+
+    const scrubber: HTMLInputElement = fixture.debugElement.query(
+      By.css('.scrubber'),
+    ).nativeElement;
+
+    expect(scrubber.style.getPropertyValue('--played')).toBe('25%');
+    expect(scrubber.style.getPropertyValue('--cached')).toBe('60%');
   });
 
   it('seeks when the scrubber is moved', () => {

@@ -64,6 +64,7 @@ export class AudioPlayerService {
   private readonly _playing = signal(false);
   private readonly _position = signal(0);
   private readonly _duration = signal(0);
+  private readonly _buffered = signal(0);
 
   readonly tracks = computed(() => this._playlist().tracks);
   readonly index = computed(() => this._playlist().index);
@@ -73,6 +74,8 @@ export class AudioPlayerService {
   readonly playing = this._playing.asReadonly();
   readonly position = this._position.asReadonly();
   readonly duration = this._duration.asReadonly();
+  /** How far ahead of the playhead the stream is cached, in seconds from the start. */
+  readonly buffered = this._buffered.asReadonly();
 
   private lastPersistAt = 0;
   private pendingSeek: number | null = null;
@@ -146,6 +149,7 @@ export class AudioPlayerService {
     this._playing.set(false);
     this._position.set(0);
     this._duration.set(0);
+    this._buffered.set(0);
     this.forget();
     this.clearMediaMetadata();
   }
@@ -171,6 +175,7 @@ export class AudioPlayerService {
     this.pendingSeek = null;
     this._duration.set(track.durationInSeconds ?? 0);
     this._position.set(0);
+    this._buffered.set(0);
     this.setMediaMetadata(track);
   }
 
@@ -184,6 +189,8 @@ export class AudioPlayerService {
   }
 
   private bindElement(): void {
+    this.element.preload = 'auto';
+    this.element.addEventListener('progress', () => this.onProgress());
     this.element.addEventListener('timeupdate', () => this.onTimeUpdate());
     this.element.addEventListener('loadedmetadata', () => this.onMetadata());
     this.element.addEventListener('durationchange', () => this.onMetadata());
@@ -195,8 +202,20 @@ export class AudioPlayerService {
 
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
+    this.onProgress();
     this.persistThrottled();
     this.updatePositionState();
+  }
+
+  /** The end of the cached range the playhead sits in; a range elsewhere (after a seek) is not ahead of it. */
+  private onProgress(): void {
+    const ranges = this.element.buffered;
+    const playhead = this.element.currentTime;
+    let end = playhead;
+    for (let index = 0; index < ranges.length; index++) {
+      if (ranges.start(index) <= playhead && playhead <= ranges.end(index)) end = ranges.end(index);
+    }
+    this._buffered.set(end);
   }
 
   private onMetadata(): void {

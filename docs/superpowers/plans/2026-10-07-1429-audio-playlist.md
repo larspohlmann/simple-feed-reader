@@ -23,6 +23,7 @@
 - **Removing the current track:** the next track takes its place (the previous one when it was last), keeping the play/pause state; removing the last remaining track stops the player.
 - **Close (✕):** stops and clears the whole playlist, as it cleared the single track before.
 - **Media Session:** `previoustrack` / `nexttrack` bound to `previous()` / `next()` only while there is a track to step to: iOS replaces the lock screen's ±15 s buttons with track buttons once a handler is set.
+- **Pre-caching (owner):** the element preloads `auto`, so the current stream buffers ahead even while paused; the scrubber draws the cached range the playhead sits in. How far ahead is the browser's call (Chrome keeps a window, not the whole file); forcing a full download would need a CORS-dependent fetch into memory and is not done.
 - **A failed track** (an expired enclosure) is skipped like an ended one while playing; a paused one stays put.
 - **Layering (owner, visual round):** the player and playlist win over every shell layer; the narrow drawer ends above the player; the bar publishes `--audio-player-height` so the reader's to-top button sits clear of it. No drop shadow above the player. Rows show the track length.
 - **Drop lists:** the bar is a sibling of the shell, outside every other `cdkDropList`; the panel owns one flat list.

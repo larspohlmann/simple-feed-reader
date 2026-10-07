@@ -10,9 +10,19 @@ import { TokenStore } from '../core/auth/token.store';
 const SRC_NOT_SUPPORTED = 4;
 const NETWORK = 2;
 
+function ranges(...spans: [number, number][]): TimeRanges {
+  return {
+    length: spans.length,
+    start: (index: number) => spans[index][0],
+    end: (index: number) => spans[index][1],
+  };
+}
+
 class FakeAudio {
   error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
   currentTime = 0;
+  preload = '';
+  buffered: TimeRanges = ranges();
   load = jest.fn();
   private source = '';
 
@@ -492,6 +502,47 @@ describe('AudioPlayerService', () => {
       } finally {
         delete (navigator as { mediaSession?: unknown }).mediaSession;
       }
+    });
+  });
+
+  describe('pre-caching', () => {
+    it('asks the element to buffer ahead', () => {
+      make();
+
+      expect(audio.preload).toBe('auto');
+    });
+
+    it('reports the end of the cached range the playhead is in', () => {
+      const service = make();
+      service.play(track());
+      audio.currentTime = 30;
+      audio.buffered = ranges([0, 10], [20, 75], [90, 100]);
+
+      audio.fire('progress');
+
+      expect(service.buffered()).toBe(75);
+    });
+
+    it('reports nothing ahead when the playhead sits outside every cached range', () => {
+      const service = make();
+      service.play(track());
+      audio.currentTime = 50;
+      audio.buffered = ranges([0, 10]);
+
+      audio.fire('progress');
+
+      expect(service.buffered()).toBe(50);
+    });
+
+    it('starts a new track with nothing cached', () => {
+      const service = make();
+      service.play(track());
+      audio.buffered = ranges([0, 80]);
+      audio.fire('progress');
+
+      service.play(track({ url: 'https://x.test/other.mp3' }));
+
+      expect(service.buffered()).toBe(0);
     });
   });
 });

@@ -55,6 +55,14 @@ export class AudioPlayerBarComponent {
     }));
   });
 
+  /** The scrubber's track: played, then cached ahead of the playhead, as percentages. */
+  protected readonly progress = computed(() => {
+    const duration = this.player.duration();
+    const percent = (seconds: number): string =>
+      `${duration > 0 ? Math.min(100, (seconds / duration) * 100) : 0}%`;
+    return { played: percent(this.player.position()), cached: percent(this.player.buffered()) };
+  });
+
   protected onScrub(event: Event): void {
     this.player.seek((event.target as HTMLInputElement).valueAsNumber);
   }

@@ -89,11 +89,59 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* A hand-drawn track, since a native range has no buffered segment: played in
+   the accent, cached-ahead muted, the rest a hairline. */
 .scrubber {
+  --track: linear-gradient(
+    to right,
+    var(--accent) var(--played, 0%),
+    var(--text-muted) var(--played, 0%) var(--cached, 0%),
+    var(--border) var(--cached, 0%)
+  );
+
   flex: 1;
   min-width: 0;
-  accent-color: var(--accent);
+  height: var(--space-4);
+  margin: 0;
+  appearance: none;
+  background: transparent;
   cursor: pointer;
+}
+
+.scrubber::-webkit-slider-runnable-track {
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+}
+
+.scrubber::-moz-range-track {
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+}
+
+.scrubber::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--space-3);
+  height: var(--space-3);
+  margin-top: calc((var(--space-1) - var(--space-3)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.scrubber::-moz-range-thumb {
+  width: var(--space-3);
+  height: var(--space-3);
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.scrubber:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-pill);
 }
 
 .playlist {
