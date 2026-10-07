@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery;
+namespace App\Service\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
 use App\Service\Discovery\Model\FeedCandidateModel;
@@ -18,7 +18,7 @@ use Dom\HTMLDocument;
  * `rel="https://api.w.org/"`, else `{origin}/wp-json/` on a page with a WordPress fingerprint; only a root whose
  * posts endpoint answers a non-empty JSON array becomes a candidate.
  */
-final readonly class WordPressRestProbe
+final readonly class WordPressRestProbe implements FeedOfferInterface
 {
     private const string REST_ROOT_REL = 'https://api.w.org/';
 

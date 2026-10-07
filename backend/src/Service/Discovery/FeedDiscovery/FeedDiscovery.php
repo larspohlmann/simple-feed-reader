@@ -7,6 +7,7 @@ namespace App\Service\Discovery\FeedDiscovery;
 use App\Enum\SourceFormat;
 use App\Service\Discovery\BotChallengePage;
 use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Discovery\FeedOffer\FeedOfferInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Model\FeedDiscoveryResultModel;
@@ -14,7 +15,6 @@ use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
-use App\Service\Discovery\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
@@ -22,11 +22,13 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Turns an entered URL into something to subscribe to, most certain source first: the URL as a feed, the feeds the
- * page links (then WordPress REST), a feed under a conventional path, and last a 'scraped' candidate from the page.
+ * page links, then the feeds it implies, a feed under a conventional path, and last a 'scraped' candidate from
+ * the page.
  * Never throws for a bad address: a failure is a scrapeFailureReason, so the subscribe endpoint can always answer.
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
@@ -38,6 +40,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      */
     private const array BLOCKED_STATUSES = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
+    /** @param iterable<FeedOfferInterface> $offers */
     public function __construct(
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
@@ -46,7 +49,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private WellKnownFeedProbe $wellKnownFeeds,
         private BotChallengePage $botChallenge,
         private SubstackProfileFeed $substackProfile,
-        private WordPressRestProbe $wordPressRest,
+        #[AutowireIterator('app.feed_offer')]
+        private iterable $offers,
     ) {
     }
 
@@ -89,17 +93,43 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Blocked);
         }
 
-        // The page's own advertised feeds lead, and the dialog opens the first one expanded; WordPress REST follows
-        // for sites whose RSS is truncated.
-        $restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
-        $candidates = array_values(array_filter([
+        // The page's own advertised feeds lead, and the dialog opens the first one expanded.
+        $candidates = $this->firstPerUrl([
             ...$this->links->scan($body, $response->finalUrl),
-            $restCandidate,
-        ]));
+            ...$this->offered($body, $response->finalUrl),
+        ]);
 
         return [] !== $candidates
             ? FeedDiscoveryResultModel::candidates($candidates)
             : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+    }
+
+    /**
+     * @param list<FeedCandidateModel> $candidates
+     * @return list<FeedCandidateModel>
+     */
+    private function firstPerUrl(array $candidates): array
+    {
+        $byUrl = [];
+        foreach ($candidates as $candidate) {
+            $byUrl[$candidate->url] ??= $candidate;
+        }
+
+        return array_values($byUrl);
+    }
+
+    /** @return list<FeedCandidateModel> */
+    private function offered(string $body, string $pageUrl): array
+    {
+        $candidates = [];
+        foreach ($this->offers as $offer) {
+            $candidate = $offer->offer($body, $pageUrl);
+            if (null !== $candidate) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        return $candidates;
     }
 
     /**

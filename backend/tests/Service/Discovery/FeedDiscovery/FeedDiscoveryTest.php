@@ -96,6 +96,60 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertSame('wp-json', $result->candidates[1]->format);
     }
 
+    public function testEveryOfferThePageImpliesIsListed(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html lang="en"><head><title>Both</title>
+              <link rel="https://api.w.org/" href="https://wp.example/wp-json/">
+              <meta property="al:ios:url" content="soundcloud://users:42">
+            </head><body>Hi</body></html>
+            HTML;
+
+        $postsUrl = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+            . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
+
+        $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
+        $fetcher->willReturn(
+            $postsUrl,
+            FetchResponseModel::fetched(
+                $postsUrl,
+                permanentRedirect: false,
+                body: '[{"id":1}]',
+                etag: null,
+                lastModified: null,
+            ),
+        );
+
+        $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
+
+        self::assertSame(
+            [
+                $postsUrl => 'wp-json',
+                'https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss' => 'rss',
+            ],
+            array_column($result->candidates, 'format', 'url'),
+        );
+    }
+
+    public function testAnOfferedFeedThePageAlsoAdvertisesIsListedOnceWithThePagesLabel(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html lang="en"><head><title>Mobitex</title>
+              <link rel="alternate" type="application/rss+xml" title="Mobitex"
+                    href="https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss">
+              <meta property="al:ios:url" content="soundcloud://users:42">
+            </head><body>Hi</body></html>
+            HTML;
+
+        $fetcher = $this->fetcherReturning('https://sc.example/', 'https://sc.example/', $html);
+
+        $result = $this->discovery($fetcher)->discover('https://sc.example/', ScrapeFallback::Enabled);
+
+        self::assertCount(1, $result->candidates);
+        self::assertSame('Mobitex', $result->candidates[0]->title);
+        self::assertSame('rss', $result->candidates[0]->format);
+    }
+
     public function testAGatedRestApiLeavesOnlyTheRssCandidate(): void
     {
         // @lang TEXT
