@@ -17,10 +17,16 @@ final readonly class SoundCloudProfileFeed implements FeedOfferInterface
 {
     private const string USER_DEEP_LINK = '#^soundcloud://users:(\d+)$#';
 
+    private const string USER_DEEP_LINK_PREFIX = 'soundcloud://users:';
+
     private const string FEED_URL = 'https://feeds.soundcloud.com/users/soundcloud:users:%s/sounds.rss';
 
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
+        if (!str_contains($body, self::USER_DEEP_LINK_PREFIX)) {
+            return null;
+        }
+
         $document = HtmlDocumentParser::parseOrEmpty($body);
         $userId = $this->deepLinkedUserId($document);
         if (null === $userId) {

@@ -122,12 +122,37 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
 
-        self::assertCount(2, $result->candidates);
-        self::assertSame('wp-json', $result->candidates[0]->format);
+        $formatsByUrl = [];
+        foreach ($result->candidates as $candidate) {
+            $formatsByUrl[$candidate->url] = $candidate->format;
+        }
+
         self::assertSame(
-            'https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss',
-            $result->candidates[1]->url,
+            [
+                $postsUrl => 'wp-json',
+                'https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss' => 'rss',
+            ],
+            $formatsByUrl,
         );
+    }
+
+    public function testAnOfferedFeedThePageAlsoAdvertisesIsListedOnceWithThePagesLabel(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html lang="en"><head><title>Mobitex</title>
+              <link rel="alternate" type="application/rss+xml" title="Mobitex"
+                    href="https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss">
+              <meta property="al:ios:url" content="soundcloud://users:42">
+            </head><body>Hi</body></html>
+            HTML;
+
+        $fetcher = $this->fetcherReturning('https://sc.example/', 'https://sc.example/', $html);
+
+        $result = $this->discovery($fetcher)->discover('https://sc.example/', ScrapeFallback::Enabled);
+
+        self::assertCount(1, $result->candidates);
+        self::assertSame('Mobitex', $result->candidates[0]->title);
+        self::assertSame('rss', $result->candidates[0]->format);
     }
 
     public function testAGatedRestApiLeavesOnlyTheRssCandidate(): void

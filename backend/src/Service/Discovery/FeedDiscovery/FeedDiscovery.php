@@ -93,14 +93,28 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         }
 
         // The page's own advertised feeds lead, and the dialog opens the first one expanded.
-        $candidates = [
+        $candidates = $this->firstPerUrl([
             ...$this->links->scan($body, $response->finalUrl),
             ...$this->offered($body, $response->finalUrl),
-        ];
+        ]);
 
         return [] !== $candidates
             ? FeedDiscoveryResultModel::candidates($candidates)
             : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+    }
+
+    /**
+     * @param list<FeedCandidateModel> $candidates
+     * @return list<FeedCandidateModel>
+     */
+    private function firstPerUrl(array $candidates): array
+    {
+        $byUrl = [];
+        foreach ($candidates as $candidate) {
+            $byUrl[$candidate->url] ??= $candidate;
+        }
+
+        return array_values($byUrl);
     }
 
     /** @return list<FeedCandidateModel> */
