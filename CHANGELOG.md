@@ -10,6 +10,18 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**A full podcast experience.** The audio player now plays a playlist with
+episode artwork, previous and next, and a panel to reorder or remove episodes.
+The next episode loads ahead of time, so it starts the moment the current one
+ends. Play and Add to playlist buttons sit right on each audio entry in the
+list, magazine and compact views. Episodes and feeds show the artwork their
+podcast declares.
+
+**SoundCloud feeds.** Paste a SoundCloud profile link into "Add feed" and the
+reader offers that account's RSS feed.
+
 ## [v1.2.1] - 2026-10-06
 
 ## What's Changed
