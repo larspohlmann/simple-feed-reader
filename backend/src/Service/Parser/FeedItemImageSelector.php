@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Support\PodcastArtwork;
 
 /** Each format's image order; the body image stands in for a missing declared one, or lends it its renditions. */
 final readonly class FeedItemImageSelector
@@ -17,7 +18,7 @@ final readonly class FeedItemImageSelector
     {
         $declared = $this->extractor->fromMedia($item)
             ?? $this->extractor->fromRssEnclosure($item)
-            ?? $this->extractor->fromCustomImageElement($item);
+            ?? $this->extensionImage($item);
 
         return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
     }
@@ -37,9 +38,15 @@ final readonly class FeedItemImageSelector
     ): ?DeclaredImageModel {
         $declared = $this->extractor->fromMedia($entry)
             ?? $this->extractor->fromAtomEnclosure($entry, $namespace)
-            ?? $this->extractor->fromCustomImageElement($entry);
+            ?? $this->extensionImage($entry);
 
         return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates));
+    }
+
+    /** An image an extension declares: a custom <image url>, else the podcast artwork. */
+    private function extensionImage(\DOMElement $element): ?DeclaredImageModel
+    {
+        return $this->extractor->fromCustomImageElement($element) ?? PodcastArtwork::of($element);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */

@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+      <channel>
+        <atom:link href="https://feeds.soundcloud.com/users/soundcloud:users:19838136/sounds.rss" rel="self" type="application/rss+xml"/>
+        <title>Mobitex (PCT rec)</title>
+        <link>https://soundcloud.com/mobitex</link>
+        <language>en</language>
+        <description>Chillgressive music.</description>
+        <itunes:author>Mobitex (PCT rec)</itunes:author>
+        <itunes:image href="https://i1.sndcdn.com/avatars-CJw9fKUiJYURN68j-qm5fdw-original.jpg"/>
+        <image>
+          <url>https://i1.sndcdn.com/avatars-CJw9fKUiJYURN68j-qm5fdw-original.jpg</url>
+          <title>Mobitex (PCT rec)</title>
+          <link>https://soundcloud.com/mobitex</link>
+        </image>
+        <itunes:category text="Music"/>
+        <item>
+      <guid isPermaLink="false">tag:soundcloud,2010:tracks/2413513476</guid>
+      <title>Mobitex Autumn 2026 Chillgressive Set</title>
+      <pubDate>Wed, 07 Oct 2026 04:12:57 +0000</pubDate>
+      <link>https://soundcloud.com/mobitex/mobitex-autumn-2026</link>
+      <itunes:duration>01:00:01</itunes:duration>
+      <description>Track list: nine tracks.</description>
+      <enclosure type="audio/mpeg" url="https://feeds.soundcloud.com/stream/2413513476-mobitex-mobitex-autumn-2026.mp3" length="57627838"/>
+      <itunes:image href="https://i1.sndcdn.com/artworks-h6jscIjSd8tNYwJW-XyQFNw-t3000x3000.jpg"/>
+    </item><item>
+      <guid isPermaLink="false">tag:soundcloud,2010:tracks/2315635310</guid>
+      <title>Mobitex and Red sun Rising - Nemesis (Mobitex 2026 version)</title>
+      <pubDate>Fri, 29 May 2026 17:13:18 +0000</pubDate>
+      <link>https://soundcloud.com/mobitex/mobitex-and-red-sun-rising</link>
+      <itunes:duration>00:09:02</itunes:duration>
+      <description>A remade to my collab track i made with Red sun rising  from 2018</description>
+      <enclosure type="audio/mpeg" url="https://feeds.soundcloud.com/stream/2315635310-mobitex-mobitex-and-red-sun-rising.mp3" length="8673181"/>
+      <itunes:image href="https://i1.sndcdn.com/artworks-pX3KpzZaFxY74f6A-qT8DAw-t3000x3000.png"/>
+    </item>
+  </channel>
+</rss>

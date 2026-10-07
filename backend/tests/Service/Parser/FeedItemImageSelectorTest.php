@@ -95,6 +95,36 @@ final class FeedItemImageSelectorTest extends TestCase
         ));
     }
 
+    public function testAnRss2ItemWithOnlyPodcastArtworkTakesIt(): void
+    {
+        $item = $this->rss2Item(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/art.jpg"/>',
+        );
+
+        self::assertSame('https://i/art.jpg', $this->selector->fromRss2($item, '<p>show notes</p>')?->url);
+    }
+
+    public function testAMediaRssImageBeatsPodcastArtwork(): void
+    {
+        $item = $this->rss2Item(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/art.jpg"/>'
+            . '<media:content url="https://i/media.jpg" medium="image"/>',
+        );
+
+        self::assertSame('https://i/media.jpg', $this->selector->fromRss2($item, null)?->url);
+    }
+
+    public function testAnAtomEntryWithOnlyPodcastArtworkTakesIt(): void
+    {
+        $entry = $this->atomEntry(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/art.jpg"/>',
+        );
+
+        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', []);
+
+        self::assertSame('https://i/art.jpg', $image?->url);
+    }
+
     public function testKeepsNativeHttpsMediaImmediately(): void
     {
         $item = $this->rss2Item('<media:content url="https://i/big.jpg" medium="image" width="700"/>');

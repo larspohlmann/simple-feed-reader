@@ -12,12 +12,17 @@ use App\Service\Url\Support\HttpsImageUrl;
  */
 final class FeedImageExtractor
 {
-    /** RSS 2.0: <channel><image><url>. */
+    /** RSS 2.0: <channel><image><url>, else the podcast artwork. A namespaced *:image is never the <image>. */
     public static function fromRss2Channel(\DOMElement $channel): ?string
     {
-        $image = XmlHelper::childElement($channel, 'image');
+        foreach (XmlHelper::childElements($channel, 'image', null) as $image) {
+            $url = $image->namespaceURI === null ? HttpsImageUrl::orNull(XmlHelper::childText($image, 'url')) : null;
+            if ($url !== null) {
+                return $url;
+            }
+        }
 
-        return $image === null ? null : HttpsImageUrl::orNull(XmlHelper::childText($image, 'url'));
+        return self::podcastArtwork($channel);
     }
 
     /**
@@ -37,10 +42,18 @@ final class FeedImageExtractor
         return $image === null ? null : HttpsImageUrl::orNull(XmlHelper::childText($image, 'url', $rss1Namespace));
     }
 
-    /** Atom: <feed><logo>. */
+    /** Atom: <feed><logo>, else the podcast artwork. */
     public static function fromAtomFeed(\DOMElement $root, string $atomNamespace): ?string
     {
-        return HttpsImageUrl::orNull(XmlHelper::childText($root, 'logo', $atomNamespace));
+        return HttpsImageUrl::orNull(XmlHelper::childText($root, 'logo', $atomNamespace))
+            ?? self::podcastArtwork($root);
+    }
+
+    private static function podcastArtwork(\DOMElement $parent): ?string
+    {
+        $artwork = PodcastArtwork::of($parent);
+
+        return $artwork === null ? null : HttpsImageUrl::orNull($artwork->url);
     }
 
     private function __construct()

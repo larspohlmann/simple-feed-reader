@@ -11,6 +11,7 @@ final class FeedImageExtractorTest extends TestCase
 {
     private const string RSS1_NS = 'http://purl.org/rss/1.0/';
     private const string ATOM_NS = 'http://www.w3.org/2005/Atom';
+    private const string ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
     private function document(string $xml): \DOMDocument
     {
@@ -199,5 +200,48 @@ final class FeedImageExtractorTest extends TestCase
         self::assertInstanceOf(\DOMElement::class, $root);
 
         self::assertNull(FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
+    }
+
+    public function testALeadingItunesImageDoesNotHideTheChannelImage(): void
+    {
+        $channel = $this->rss2Channel(
+            '<itunes:image xmlns:itunes="' . self::ITUNES_NS . '" href="https://example.com/avatar.jpg"/>'
+            . '<image><url>https://example.com/logo.png</url></image>',
+        );
+
+        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromRss2Channel($channel));
+    }
+
+    public function testFallsBackToTheChannelsPodcastArtwork(): void
+    {
+        $channel = $this->rss2Channel(
+            '<itunes:image xmlns:itunes="' . self::ITUNES_NS . '" href="https://example.com/avatar.jpg"/>',
+        );
+
+        self::assertSame('https://example.com/avatar.jpg', FeedImageExtractor::fromRss2Channel($channel));
+    }
+
+    public function testDropsPlainHttpPodcastArtwork(): void
+    {
+        $channel = $this->rss2Channel(
+            '<itunes:image xmlns:itunes="' . self::ITUNES_NS . '" href="http://example.com/avatar.jpg"/>',
+        );
+
+        self::assertNull(FeedImageExtractor::fromRss2Channel($channel));
+    }
+
+    public function testAnAtomFeedWithoutALogoFallsBackToItsPodcastArtwork(): void
+    {
+        $document = $this->document(/** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+                <title>Example</title>
+                <itunes:image href="https://example.com/avatar.jpg"/>
+            </feed>
+            XML);
+        $root = $document->documentElement;
+        self::assertInstanceOf(\DOMElement::class, $root);
+
+        self::assertSame('https://example.com/avatar.jpg', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
     }
 }

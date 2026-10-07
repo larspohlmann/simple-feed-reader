@@ -52,6 +52,20 @@ final class FeedParserTest extends TestCase
         self::assertStringContainsString('Description-only body', (string) $second->contentHtml);
     }
 
+    public function testASoundCloudFeedGivesEachTrackItsArtworkAndTheFeedItsImage(): void
+    {
+        $feed = $this->parser()->parse($this->fixture('soundcloud/sounds.rss'));
+
+        self::assertSame('https://i1.sndcdn.com/avatars-CJw9fKUiJYURN68j-qm5fdw-original.jpg', $feed->imageUrl);
+        self::assertSame(
+            [
+                'https://i1.sndcdn.com/artworks-h6jscIjSd8tNYwJW-XyQFNw-t3000x3000.jpg',
+                'https://i1.sndcdn.com/artworks-pX3KpzZaFxY74f6A-qT8DAw-t3000x3000.png',
+            ],
+            array_map(static fn ($entry) => $entry->media->image?->url, $feed->entries),
+        );
+    }
+
     public function testMissingGuidFallsBackToHashAndBrokenDateBecomesNull(): void
     {
         $feed = $this->parser()->parse($this->fixture('feeds/rss2-no-guid.xml'));
