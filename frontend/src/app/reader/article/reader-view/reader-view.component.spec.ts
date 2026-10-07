@@ -1493,6 +1493,27 @@ describe('ReaderViewComponent', () => {
       expect(player.isQueued('https://x.test/ep.mp3')).toBe(false);
     });
 
+    it("drops the page's own player for the enclosure, so only Listen plays it (#1434)", async () => {
+      loadMock.mockReturnValue(
+        of<ReaderContent>(
+          okContent({
+            contentHtml:
+              '<audio><source src="https://x.test/ep.mp3?_=1"></audio>' +
+              '<audio src="https://x.test/other.mp3"></audio><p>Notes</p>',
+          }),
+        ),
+      );
+      const element = mount(
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] }),
+      ).nativeElement as HTMLElement;
+      await Promise.resolve(); // decoration runs in a microtask
+
+      const players = Array.from(element.querySelectorAll('.content audio'));
+      expect(players.map((player) => player.getAttribute('src'))).toEqual([
+        'https://x.test/other.mp3',
+      ]);
+    });
+
     it('shows no listen control when the entry has no audio enclosure', () => {
       const fixture = mount(
         entry({ attachments: [{ url: 'https://x.test/clip.mp4', mimeType: 'video/mp4' }] }),

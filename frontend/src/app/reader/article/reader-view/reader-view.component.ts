@@ -224,7 +224,7 @@ export class ReaderViewComponent {
       queueMicrotask(() => {
         const host = this.content()?.nativeElement;
         if (!host) return;
-        decorateArticle(host, this.i18n);
+        decorateArticle(host, this.i18n, this.audio.attachment()?.url ?? null);
         this.toc.set(collectToc(host));
         this.scope.refresh();
         // Runs on the original render and again when the reader content swaps in.
