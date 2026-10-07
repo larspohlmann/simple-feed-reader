@@ -122,17 +122,12 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
 
-        $formatsByUrl = [];
-        foreach ($result->candidates as $candidate) {
-            $formatsByUrl[$candidate->url] = $candidate->format;
-        }
-
         self::assertSame(
             [
                 $postsUrl => 'wp-json',
                 'https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss' => 'rss',
             ],
-            $formatsByUrl,
+            array_column($result->candidates, 'format', 'url'),
         );
     }
 

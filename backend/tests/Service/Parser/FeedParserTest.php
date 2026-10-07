@@ -8,10 +8,13 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\FeedParser;
 use App\Tests\Support\FeedFormatParsers;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class FeedParserTest extends TestCase
 {
+    use ReadsFixtures;
+
     private function parser(): FeedParser
     {
         return new FeedParser(new FeedParserFactory([
@@ -22,14 +25,10 @@ final class FeedParserTest extends TestCase
         ]));
     }
 
-    private function fixture(string $name): string
-    {
-        return (string) file_get_contents(__DIR__ . '/../../Fixtures/feeds/' . $name);
-    }
 
     public function testParsesRss2Basic(): void
     {
-        $feed = $this->parser()->parse($this->fixture('rss2-basic.xml'));
+        $feed = $this->parser()->parse($this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
         self::assertSame('https://blog.example.com/', $feed->siteUrl);
@@ -55,7 +54,7 @@ final class FeedParserTest extends TestCase
 
     public function testMissingGuidFallsBackToHashAndBrokenDateBecomesNull(): void
     {
-        $feed = $this->parser()->parse($this->fixture('rss2-no-guid.xml'));
+        $feed = $this->parser()->parse($this->fixture('feeds/rss2-no-guid.xml'));
 
         self::assertCount(2, $feed->entries);
         $first = $feed->entries[0];
@@ -87,7 +86,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesFeedPrecededByBlankLines(): void
     {
-        $feed = $this->parser()->parse("\n\n" . $this->fixture('rss2-basic.xml'));
+        $feed = $this->parser()->parse("\n\n" . $this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
         self::assertCount(2, $feed->entries);
@@ -95,7 +94,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesFeedPrecededByUtf8Bom(): void
     {
-        $feed = $this->parser()->parse("\u{FEFF}" . $this->fixture('atom-basic.xml'));
+        $feed = $this->parser()->parse("\u{FEFF}" . $this->fixture('feeds/atom-basic.xml'));
 
         self::assertSame('Atom Example', $feed->title);
         self::assertCount(2, $feed->entries);
@@ -103,7 +102,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesFeedPrecededByBomAndBlankLines(): void
     {
-        $feed = $this->parser()->parse("\u{FEFF}\r\n \n" . $this->fixture('rss2-basic.xml'));
+        $feed = $this->parser()->parse("\u{FEFF}\r\n \n" . $this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
     }
@@ -197,7 +196,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesAtom(): void
     {
-        $feed = $this->parser()->parse($this->fixture('atom-basic.xml'));
+        $feed = $this->parser()->parse($this->fixture('feeds/atom-basic.xml'));
 
         self::assertSame('Atom Example', $feed->title);
         self::assertSame('https://atom.example.com/', $feed->siteUrl);
@@ -220,7 +219,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesAtom03Dialect(): void
     {
-        $feed = $this->parser()->parse($this->fixture('atom-03-basic.xml'));
+        $feed = $this->parser()->parse($this->fixture('feeds/atom-03-basic.xml'));
 
         self::assertSame('Atom 0.3 Example', $feed->title);
         self::assertSame('https://atom03.example.com/', $feed->siteUrl);
@@ -254,7 +253,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesRss1(): void
     {
-        $feed = $this->parser()->parse($this->fixture('rss1-basic.xml'));
+        $feed = $this->parser()->parse($this->fixture('feeds/rss1-basic.xml'));
 
         self::assertSame('RSS 1.0 Example', $feed->title);
         self::assertCount(1, $feed->entries);

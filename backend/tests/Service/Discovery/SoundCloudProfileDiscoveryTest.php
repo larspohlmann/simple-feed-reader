@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Service\Discovery\Model\ScrapeFallback;
+use App\Tests\Support\ReadsFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** Proves FeedDiscovery lists the profile's feed; the deep-link edge cases are SoundCloudProfileFeedTest's. */
 final class SoundCloudProfileDiscoveryTest extends KernelTestCase
 {
+    use ReadsFixtures;
     use BuildsFeedDiscovery;
 
     private const string PROFILE_URL = 'https://soundcloud.com/mobitex';
 
     public function testAProfileOffersItsRssFeedBeforeAnyGuessOrScrape(): void
     {
-        $fetcher = $this->fetcherReturning(self::PROFILE_URL, self::PROFILE_URL, $this->fixture('profile.html'));
+        $profilePage = $this->fixture('soundcloud/profile.html');
+        $fetcher = $this->fetcherReturning(self::PROFILE_URL, self::PROFILE_URL, $profilePage);
 
         $result = $this->discovery($fetcher)->discover(self::PROFILE_URL, ScrapeFallback::Enabled);
 
@@ -33,18 +36,10 @@ final class SoundCloudProfileDiscoveryTest extends KernelTestCase
     public function testATrackPageIsLeftToTheUsualFallbacks(): void
     {
         $trackUrl = 'https://soundcloud.com/forss/flickermood';
-        $fetcher = $this->fetcherReturning($trackUrl, $trackUrl, $this->fixture('track.html'));
+        $fetcher = $this->fetcherReturning($trackUrl, $trackUrl, $this->fixture('soundcloud/track.html'));
 
         $result = $this->discovery($fetcher)->discover($trackUrl, ScrapeFallback::Disabled);
 
         self::assertSame([], $result->candidates);
-    }
-
-    private function fixture(string $name): string
-    {
-        $html = file_get_contents(__DIR__ . '/../../Fixtures/soundcloud/' . $name);
-        self::assertIsString($html);
-
-        return $html;
     }
 }

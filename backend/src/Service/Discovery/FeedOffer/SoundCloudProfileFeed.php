@@ -15,15 +15,13 @@ use Dom\HTMLDocument;
  */
 final readonly class SoundCloudProfileFeed implements FeedOfferInterface
 {
-    private const string USER_DEEP_LINK = '#^soundcloud://users:(\d+)$#';
-
-    private const string USER_DEEP_LINK_PREFIX = 'soundcloud://users:';
+    private const string USER_DEEP_LINK = 'soundcloud://users:';
 
     private const string FEED_URL = 'https://feeds.soundcloud.com/users/soundcloud:users:%s/sounds.rss';
 
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
-        if (!str_contains($body, self::USER_DEEP_LINK_PREFIX)) {
+        if (!str_contains($body, self::USER_DEEP_LINK)) {
             return null;
         }
 
@@ -40,7 +38,13 @@ final readonly class SoundCloudProfileFeed implements FeedOfferInterface
     {
         $deepLink = trim($this->metaContent($document, 'al:ios:url'));
 
-        return 1 === preg_match(self::USER_DEEP_LINK, $deepLink, $match) ? $match[1] : null;
+        if (!str_starts_with($deepLink, self::USER_DEEP_LINK)) {
+            return null;
+        }
+
+        $userId = substr($deepLink, \strlen(self::USER_DEEP_LINK));
+
+        return ctype_digit($userId) ? $userId : null;
     }
 
     private function profileName(HTMLDocument $document): ?string

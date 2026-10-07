@@ -5,16 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery\FeedOffer;
 
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class SoundCloudProfileFeedTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string PROFILE_URL = 'https://soundcloud.com/mobitex';
 
     public function testOffersTheRssFeedOfTheUserTheProfileDeepLinks(): void
     {
-        $candidate = (new SoundCloudProfileFeed())->offer($this->fixture('profile.html'), self::PROFILE_URL);
+        $candidate = (new SoundCloudProfileFeed())->offer($this->fixture('soundcloud/profile.html'), self::PROFILE_URL);
 
         self::assertNotNull($candidate);
         self::assertSame(
@@ -29,7 +32,7 @@ final class SoundCloudProfileFeedTest extends TestCase
     {
         $trackUrl = 'https://soundcloud.com/forss/flickermood';
 
-        self::assertNull((new SoundCloudProfileFeed())->offer($this->fixture('track.html'), $trackUrl));
+        self::assertNull((new SoundCloudProfileFeed())->offer($this->fixture('soundcloud/track.html'), $trackUrl));
     }
 
     /** @return iterable<string, array{string}> */
@@ -77,13 +80,5 @@ final class SoundCloudProfileFeedTest extends TestCase
     private static function deepLinkPage(string $deepLink): string
     {
         return '<html lang="en"><head><meta property="al:ios:url" content="' . $deepLink . '"></head></html>';
-    }
-
-    private function fixture(string $name): string
-    {
-        $html = file_get_contents(__DIR__ . '/../../../Fixtures/soundcloud/' . $name);
-        self::assertIsString($html);
-
-        return $html;
     }
 }

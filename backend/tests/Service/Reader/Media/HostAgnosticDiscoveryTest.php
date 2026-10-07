@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Tests\Support\ReadsFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -13,20 +14,14 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class HostAgnosticDiscoveryTest extends KernelTestCase
 {
+    use ReadsFixtures;
     use ScansWithTheWiredSources;
 
-    private function fixture(string $name): string
-    {
-        $html = file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/' . $name);
-        self::assertIsString($html);
-
-        return $html;
-    }
 
     public function testDeutschlandradioYieldsItsEpisode(): void
     {
         $media = $this->scan(
-            $this->fixture('deutschlandradio-audio.html'),
+            $this->fixture('reader/media/deutschlandradio-audio.html'),
             'https://www.deutschlandfunkkultur.de/bildung-100.html',
         );
 
@@ -38,7 +33,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testNprYieldsItsSegment(): void
     {
         $media = $this->scan(
-            $this->fixture('npr-audio.html'),
+            $this->fixture('reader/media/npr-audio.html'),
             'https://www.npr.org/2026/08/30/nx-s1-5948814/launch-nancy-grace-roman-space-telescope-nasa',
         );
 
@@ -49,7 +44,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testArdYieldsAVideoWithAPoster(): void
     {
         $media = $this->scan(
-            $this->fixture('ard-video.html'),
+            $this->fixture('reader/media/ard-video.html'),
             'https://www.tagesschau.de/ausland/beispiel-100.html',
         );
 
@@ -64,14 +59,14 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
     public function testHeiseYieldsItsCompanionVideo(): void
     {
-        $media = $this->scan($this->fixture('heise-video.html'), 'https://www.heise.de/news/x.html');
+        $media = $this->scan($this->fixture('reader/media/heise-video.html'), 'https://www.heise.de/news/x.html');
 
         self::assertStringContainsString('M1j_uRqKMKI', $media->candidates[0]->url);
     }
 
     public function testFiveMagazineYieldsItsTrack(): void
     {
-        $media = $this->scan($this->fixture('soundcloud-page.html'), 'https://5mag.net/audio/dj-set/');
+        $media = $this->scan($this->fixture('reader/media/soundcloud-page.html'), 'https://5mag.net/audio/dj-set/');
 
         self::assertStringContainsString('soundcloud', $media->candidates[0]->url);
     }
@@ -79,7 +74,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testAnUnseenPublisherYieldsItsMediaWithNoNewCode(): void
     {
         $media = $this->scan(
-            $this->fixture('unseen-publisher.html'),
+            $this->fixture('reader/media/unseen-publisher.html'),
             'https://9to5mac.com/2026/08/27/happy-hour-605/',
         );
 
@@ -92,7 +87,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testASidebarTeaserDoesNotBecomeTheArticlesMedia(): void
     {
         $media = $this->scan(
-            $this->fixture('sidebar-teaser.html'),
+            $this->fixture('reader/media/sidebar-teaser.html'),
             'https://www.tagesschau.de/inland/innenpolitik/merz-linke-sachsen-anhalt-100.html',
         );
 
@@ -104,7 +99,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testAPageThatDeclaresOneOfFourVideosYieldsAllFourInPageOrder(): void
     {
         $media = $this->scan(
-            $this->fixture('multi-embed-page.html'),
+            $this->fixture('reader/media/multi-embed-page.html'),
             'https://www.vice.com/en/article/4-remixes-from-the-2000s/',
         );
 
@@ -124,7 +119,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testAlJazeeraYieldsItsBrightcovePlayerWithTheDeclaredPoster(): void
     {
         $media = $this->scan(
-            $this->fixture('aljazeera-brightcove.html'),
+            $this->fixture('reader/media/aljazeera-brightcove.html'),
             'https://www.aljazeera.com/video/newsfeed/2026/8/20/harry-kane-scores-goal',
         );
 
@@ -141,7 +136,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testZdfYieldsItsStreamWithTheDeclaredPoster(): void
     {
         $media = $this->scan(
-            $this->fixture('zdf-hls-video.html'),
+            $this->fixture('reader/media/zdf-hls-video.html'),
             'https://www.zdfheute.de/video/zdf-morgenmagazin/istaf-berlin-em-stars-100.html',
         );
 
@@ -157,7 +152,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testAnUnseenPublisherYieldsItsStreamAndItsBrightcovePlayerWithNoNewCode(): void
     {
         $media = $this->scan(
-            $this->fixture('unseen-hls-and-brightcove.html'),
+            $this->fixture('reader/media/unseen-hls-and-brightcove.html'),
             'https://unseen.test/two-ways',
         );
 
@@ -176,7 +171,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testAFileBesideAStreamYieldsTheFileOnly(): void
     {
         $media = $this->scan(
-            $this->fixture('file-beside-stream.html'),
+            $this->fixture('reader/media/file-beside-stream.html'),
             'https://www.mediathek.test/video/tv-2031',
         );
 
@@ -187,7 +182,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testTheGuardianYieldsItsYouTubeAtomAndNotTheSidebarOne(): void
     {
         $media = $this->scan(
-            $this->fixture('guardian-youtube-atom.html'),
+            $this->fixture('reader/media/guardian-youtube-atom.html'),
             'https://www.theguardian.com/science/video/2026/sep/01/could-humans-ever-communicate-with-whales-video',
         );
 
@@ -200,7 +195,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testABroadcastPageWithoutOgImageYieldsItsVideoWithThePlayersStillAndItsAudio(): void
     {
         $media = $this->scan(
-            $this->fixture('ard-broadcast-no-og-image.html'),
+            $this->fixture('reader/media/ard-broadcast-no-og-image.html'),
             'https://www.tagesschau.de/tagesschau_in_einfacher_sprache/tse-1410.html',
         );
 
@@ -222,7 +217,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     public function testTheZdfPlayerConfigsEachSeedAStream(): void
     {
         $media = $this->scan(
-            $this->fixture('zdf-sibling-video-configs.html'),
+            $this->fixture('reader/media/zdf-sibling-video-configs.html'),
             'https://www.zdfheute.de/politik/deutschland/leipzig-drohne-sabotage-100.html',
         );
 
