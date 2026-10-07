@@ -8,10 +8,16 @@ import { attachHlsStreams } from './hls-streams';
 import { markNarrationPlayers } from './reader-narration';
 import { expandFaqDisclosures } from './reader-faq';
 import { hydrateSlideshows } from './reader-slideshow';
+import { removeEnclosurePlayers } from './enclosure-players';
 
 /** Every decoration the rendered article body gets, in order. */
-export function decorateArticle(host: HTMLElement, i18n: TranslocoService): void {
+export function decorateArticle(
+  host: HTMLElement,
+  i18n: TranslocoService,
+  enclosureUrl: string | null,
+): void {
   openExternalLinksInNewTab(host);
+  removeEnclosurePlayers(host, enclosureUrl);
   markLeadParagraph(host);
   markInsetCards(host);
   fitReaderImages(host);
