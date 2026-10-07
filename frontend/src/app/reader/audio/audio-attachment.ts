@@ -1,5 +1,5 @@
-import { AudioTrack } from '../../audio-player.service';
-import { EntryAttachmentDto, EntryDto } from '../../models';
+import { AudioTrack } from '../audio-player.service';
+import { EntryAttachmentDto, EntryDto } from '../models';
 
 const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac'];
 

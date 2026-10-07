@@ -3,7 +3,10 @@ import { AudioPlayerService, AudioTrack } from '../app/reader/audio-player.servi
 
 /** The slice of the player a control reads, with its queue kept as plain urls:
  *  jsdom plays no media, so the real service never reaches `playing`. */
-export class StubAudioPlayer {
+export class StubAudioPlayer implements Pick<
+  AudioPlayerService,
+  'current' | 'playing' | 'play' | 'toggle' | 'isQueued' | 'enqueue' | 'dequeue'
+> {
   readonly queue = signal<string[]>([]);
   readonly current = signal<AudioTrack | null>(null);
   readonly playing = signal(false);

@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 import { AudioPlayerService } from '../audio-player.service';
-import { firstAudioAttachment, toAudioTrack } from '../article/decorators/audio-attachment';
+import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { EntryDto } from '../models';
 
 /** An entry's audio enclosure as the player sees it, with the controls the

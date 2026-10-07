@@ -1,5 +1,5 @@
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
-import { EntryAttachmentDto, EntryDto } from '../../models';
+import { EntryAttachmentDto, EntryDto } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
