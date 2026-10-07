@@ -131,6 +131,14 @@ export class ReaderViewComponent {
     firstAudioAttachment(this.entry()?.attachments ?? []),
   );
 
+  /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
+  protected readonly fallbackNoticeShown = computed(
+    () =>
+      this.source.failed() &&
+      this.mode() === 'original' &&
+      !(this.audioAttachment() && this.source.pageHoldsNoArticle()),
+  );
+
   protected listen(): void {
     const entry = this.entry();
     const attachment = this.audioAttachment();

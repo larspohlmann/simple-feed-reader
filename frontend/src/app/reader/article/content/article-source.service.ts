@@ -10,6 +10,13 @@ import { ReaderModeService } from './reader-mode.service';
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
 const READER_LOAD_TIMEOUT_MS = 30_000;
 
+/** Failures that say the page holds no article, which Retry cannot change. */
+const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
+  'unextractable',
+  'empty',
+  'mismatch',
+]);
+
 type SourceState =
   | { status: 'idle' | 'loading' }
   | { status: 'ok'; article: ReaderArticle }
@@ -29,6 +36,14 @@ export class ArticleSource {
 
   readonly loading = computed(() => this.state().status === 'loading');
   readonly failed = computed(() => this.state().status === 'failed');
+  readonly pageHoldsNoArticle = computed(() => {
+    const state = this.state();
+    return (
+      state.status === 'failed' &&
+      state.failure !== null &&
+      NO_ARTICLE_REASONS.has(state.failure.reason)
+    );
+  });
   /** The diagnostic detail behind the fallback note's "show error" disclosure.
    *  A backend failure prefers the server's own cause (the fetch's HTTP status or
    *  transport message), falling back to the bare reason code when it sent none;

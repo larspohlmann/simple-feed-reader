@@ -987,6 +987,44 @@ describe('ReaderViewComponent', () => {
       expect(detail).toContain('Bad Gateway');
       expect(detail).toContain('https://host.test/api/entries/1/reader');
     });
+
+    describe('on an audio-first entry', () => {
+      const audioEntry = () =>
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] });
+
+      it.each(['empty', 'unextractable', 'mismatch'] as const)(
+        'shows the summary and player with no note when the page holds no article (%s)',
+        (reason) => {
+          loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason })));
+          const element = mount(audioEntry()).nativeElement as HTMLElement;
+
+          expect(element.querySelector('.reader-fallback')).toBeNull();
+          expect(element.querySelector('.listen')).not.toBeNull();
+          expect(element.querySelector('.content')!.innerHTML).toContain('Body');
+        },
+      );
+
+      it('keeps the note with Retry when the page could not be fetched', () => {
+        loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'fetch' })));
+        const element = mount(audioEntry()).nativeElement as HTMLElement;
+
+        expect(element.querySelector('.reader-fallback .note-link')).not.toBeNull();
+      });
+
+      it('keeps the note when the load fails at the transport', () => {
+        loadMock.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+        const element = mount(audioEntry()).nativeElement as HTMLElement;
+
+        expect(element.querySelector('.reader-fallback')).not.toBeNull();
+      });
+    });
+
+    it('keeps the note on an entry without audio whose page holds no article', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'empty' })));
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.reader-fallback')).not.toBeNull();
+    });
   });
 
   it('says above the body that this is the free preview of a paywalled article', () => {
