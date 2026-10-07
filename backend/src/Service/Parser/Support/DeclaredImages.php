@@ -28,9 +28,13 @@ final class DeclaredImages
      */
     public static function widest(array $candidates): ?DeclaredImageModel
     {
-        $best = $candidates[0] ?? null;
+        if ($candidates === []) {
+            return null;
+        }
+
+        $best = $candidates[0];
         foreach ($candidates as $candidate) {
-            if (($candidate->width ?? 0) > ($best->width ?? 0)) {
+            if ($candidate->width !== null && ($best->width === null || $candidate->width > $best->width)) {
                 $best = $candidate;
             }
         }
@@ -40,7 +44,7 @@ final class DeclaredImages
 
     public static function positiveDimension(string $raw): ?int
     {
-        $value = filter_var(trim($raw), FILTER_VALIDATE_INT);
+        $value = filter_var($raw, FILTER_VALIDATE_INT);
 
         return \is_int($value) && $value > 0 ? $value : null;
     }

@@ -45,4 +45,19 @@ final class DeclaredImagesTest extends TestCase
 
         self::assertSame($first, DeclaredImages::widest([$first, new DeclaredImageModel('https://i/second.jpg', 800)]));
     }
+
+    public function testWithoutDeclaredWidthsTheFirstCandidateWins(): void
+    {
+        $first = new DeclaredImageModel('https://i/first.jpg');
+
+        self::assertSame($first, DeclaredImages::widest([$first, new DeclaredImageModel('https://i/second.jpg')]));
+    }
+
+    public function testAnyDeclaredWidthBeatsAnUndeclaredOne(): void
+    {
+        $undeclared = new DeclaredImageModel('https://i/unknown.jpg');
+        $declared = new DeclaredImageModel('https://i/tiny.jpg', 1);
+
+        self::assertSame($declared, DeclaredImages::widest([$undeclared, $declared]));
+    }
 }
