@@ -35,7 +35,7 @@ final class SoundCloudProfileFeedTest extends TestCase
     /** @return iterable<string, array{string}> */
     public static function pagesWithoutAUserDeepLink(): iterable
     {
-        yield 'no deep link' => ['<html><head><title>Discover</title></head></html>'];
+        yield 'no deep link' => ['<html lang="en"><head><title>Discover</title></head></html>'];
         yield 'another app scheme' => [self::deepLinkPage('spotify://users:42')];
         yield 'id with a suffix' => [self::deepLinkPage('soundcloud://users:42/likes')];
         yield 'id with a prefix' => [self::deepLinkPage('xsoundcloud://users:42')];
@@ -52,7 +52,7 @@ final class SoundCloudProfileFeedTest extends TestCase
 
     public function testAProfileWithoutAnOgTitleIsOfferedUntitled(): void
     {
-        $body = '<html><head><title>Stream X music</title>'
+        $body = '<html lang="en"><head><title>Stream X music</title>'
             . '<meta property="al:ios:url" content="soundcloud://users:42"></head></html>';
 
         $candidate = (new SoundCloudProfileFeed())->offer($body, self::PROFILE_URL);
@@ -64,7 +64,7 @@ final class SoundCloudProfileFeedTest extends TestCase
 
     public function testTheTitleIsWhitespaceNormalised(): void
     {
-        $body = '<html><head><meta property="og:title" content="  Mobitex   (PCT rec) ">'
+        $body = '<html lang="en"><head><meta property="og:title" content="  Mobitex   (PCT rec) ">'
             . '<meta property="al:ios:url" content=" soundcloud://users:42 "></head></html>';
 
         $candidate = (new SoundCloudProfileFeed())->offer($body, self::PROFILE_URL);
@@ -76,7 +76,7 @@ final class SoundCloudProfileFeedTest extends TestCase
 
     private static function deepLinkPage(string $deepLink): string
     {
-        return '<html><head><meta property="al:ios:url" content="' . $deepLink . '"></head></html>';
+        return '<html lang="en"><head><meta property="al:ios:url" content="' . $deepLink . '"></head></html>';
     }
 
     private function fixture(string $name): string

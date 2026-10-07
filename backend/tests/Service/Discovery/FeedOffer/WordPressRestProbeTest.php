@@ -37,7 +37,7 @@ final class WordPressRestProbeTest extends TestCase
 
     private function headLinkPage(): string
     {
-        return '<!doctype html><html><head><title>Site Example</title>'
+        return '<!doctype html><html lang="en"><head><title>Site Example</title>'
             . '<link rel="https://api.w.org/" href="https://site.example/wp-json/">'
             . '</head><body>Hi</body></html>';
     }
@@ -61,8 +61,8 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":9}]'));
 
         // No api.w.org link, but a wp-content asset path betrays WordPress.
-        $body = '<!doctype html><html><head><title>Fp</title></head>'
-            . '<body><img src="https://site.example/wp-content/uploads/x.jpg"></body></html>';
+        $body = '<!doctype html><html lang="en"><head><title>Fp</title></head>'
+            . '<body><img src="https://site.example/wp-content/uploads/x.jpg" alt=""></body></html>';
 
         $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
 
@@ -75,7 +75,7 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
 
         $candidate = (new WordPressRestProbe($fetcher))->offer(
-            '<!doctype html><html><head><title>Plain</title></head><body>Hi</body></html>',
+            '<!doctype html><html lang="en"><head><title>Plain</title></head><body>Hi</body></html>',
             'https://site.example/',
         );
 
@@ -102,7 +102,7 @@ final class WordPressRestProbeTest extends TestCase
     public function testARestRouteQueryRootIsUnsupported(): void
     {
         $fetcher = $this->fetcher();
-        $body = '<!doctype html><html><head><title>Q</title>'
+        $body = '<!doctype html><html lang="en"><head><title>Q</title>'
             . '<link rel="https://api.w.org/" href="https://site.example/?rest_route=/">'
             . '</head><body>Hi</body></html>';
 
@@ -129,8 +129,8 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
         // The fingerprint-fallback page has no <title> element at all.
-        $body = '<!doctype html><html><head></head>'
-            . '<body><img src="https://site.example/wp-content/uploads/x.jpg"></body></html>';
+        $body = '<!doctype html><html lang="en"><head></head>'
+            . '<body><img src="https://site.example/wp-content/uploads/x.jpg" alt=""></body></html>';
 
         $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
 
@@ -143,7 +143,7 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
-        $body = '<!doctype html><html><head><title>Loud</title>'
+        $body = '<!doctype html><html lang="en"><head><title>Loud</title>'
             . '<link rel="  HTTPS://API.W.ORG/  " href="https://site.example/wp-json/">'
             . '</head><body>Hi</body></html>';
 
@@ -158,7 +158,7 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
-        $body = '<!doctype html><html><head><title>Padded</title>'
+        $body = '<!doctype html><html lang="en"><head><title>Padded</title>'
             . '<link rel="https://api.w.org/" href="  https://site.example/wp-json/  ">'
             . '</head><body>Hi</body></html>';
 
@@ -173,8 +173,8 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
-        $body = '<!doctype html><html><head><title>Fp</title></head>'
-            . '<body><script src="https://site.example/wp-includes/js/x.js"></script></body></html>';
+        $body = '<!doctype html><html lang="en"><head><title>Fp</title></head>'
+            . '<body><div data-asset="https://site.example/wp-includes/js/x.js"></div></body></html>';
 
         $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
 
@@ -187,7 +187,7 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
-        $body = '<!doctype html><html><head><title>Fp</title>'
+        $body = '<!doctype html><html lang="en"><head><title>Fp</title>'
             . '<meta name="generator" content="WordPress 6.5"></head><body>Hi</body></html>';
 
         $candidate = (new WordPressRestProbe($fetcher))->offer($body, 'https://site.example/');
@@ -209,7 +209,7 @@ final class WordPressRestProbeTest extends TestCase
         $fetcher = $this->fetcher();
         $fetcher->willReturn(self::POSTS, $this->postsResponse('[{"id":1}]'));
 
-        $body = '<!doctype html><html><head><title>  Padded Title  </title>'
+        $body = '<!doctype html><html lang="en"><head><title>  Padded Title  </title>'
             . '<link rel="https://api.w.org/" href="https://site.example/wp-json/">'
             . '</head><body>Hi</body></html>';
 

@@ -96,6 +96,40 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertSame('wp-json', $result->candidates[1]->format);
     }
 
+    public function testEveryOfferThePageImpliesIsListed(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html lang="en"><head><title>Both</title>
+              <link rel="https://api.w.org/" href="https://wp.example/wp-json/">
+              <meta property="al:ios:url" content="soundcloud://users:42">
+            </head><body>Hi</body></html>
+            HTML;
+
+        $postsUrl = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
+            . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
+
+        $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
+        $fetcher->willReturn(
+            $postsUrl,
+            FetchResponseModel::fetched(
+                $postsUrl,
+                permanentRedirect: false,
+                body: '[{"id":1}]',
+                etag: null,
+                lastModified: null,
+            ),
+        );
+
+        $result = $this->discovery($fetcher)->discover('https://wp.example/', ScrapeFallback::Enabled);
+
+        self::assertCount(2, $result->candidates);
+        self::assertSame('wp-json', $result->candidates[0]->format);
+        self::assertSame(
+            'https://feeds.soundcloud.com/users/soundcloud:users:42/sounds.rss',
+            $result->candidates[1]->url,
+        );
+    }
+
     public function testAGatedRestApiLeavesOnlyTheRssCandidate(): void
     {
         // @lang TEXT
