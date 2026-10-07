@@ -7,9 +7,30 @@ import {
 } from './audio-player.service';
 import { TokenStore } from '../core/auth/token.store';
 
+const SRC_NOT_SUPPORTED = 4;
+const NETWORK = 2;
+
 class FakeAudio {
-  src = '';
+  error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
   currentTime = 0;
+  load = jest.fn();
+  private source = '';
+
+  /** Like the real element, a new source clears the last error. */
+  get src(): string {
+    return this.source;
+  }
+
+  set src(url: string) {
+    this.source = url;
+    this.error = null;
+  }
+
+  fail(code: number): void {
+    this.error = { code, MEDIA_ERR_SRC_NOT_SUPPORTED: SRC_NOT_SUPPORTED };
+    this.fire('error');
+  }
+
   duration = NaN;
   paused = true;
   play = jest.fn(() => {
@@ -309,37 +330,60 @@ describe('AudioPlayerService', () => {
       expect(audio.currentTime).toBe(0);
     });
 
-    it('skips a track that fails to load while playing', () => {
+    it('skips a dead track while playing', () => {
       const service = make();
       service.play(one);
       service.enqueue(two);
 
-      audio.fire('error');
+      audio.fail(SRC_NOT_SUPPORTED);
 
       expect(service.current()).toBe(two);
       expect(audio.src).toBe(two.url);
     });
 
-    it('leaves a failed track current and shows it paused when nothing follows', () => {
+    it('stops on a dead last track and shows it paused', () => {
       const service = make();
       service.play(one);
-      audio.paused = true;
-      audio.fire('pause');
 
-      audio.fire('error');
+      audio.fail(SRC_NOT_SUPPORTED);
 
       expect(service.current()).toBe(one);
       expect(service.playing()).toBe(false);
     });
 
-    it('does not skip a paused track whose source fails', () => {
+    it('waits on a dead track loaded paused, and skips it once play is pressed', () => {
       const service = make();
       service.enqueue(one);
       service.enqueue(two);
+      audio.fail(SRC_NOT_SUPPORTED);
+      expect(service.current()).toBe(one);
 
-      audio.fire('error');
+      service.toggle();
+
+      expect(service.current()).toBe(two);
+      expect(audio.src).toBe(two.url);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('pauses on a dropped connection, keeping the place, and reloads it on play', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+      at(600);
+
+      audio.fail(NETWORK);
 
       expect(service.current()).toBe(one);
+      expect(service.playing()).toBe(false);
+      expect(JSON.parse(localStorage.getItem('sfr.audio') ?? '{}').position).toBe(600);
+
+      audio.play.mockClear();
+      service.toggle();
+      expect(audio.load).toHaveBeenCalled();
+      expect(audio.play).toHaveBeenCalled();
+      audio.duration = 3600;
+      audio.fire('loadedmetadata');
+      expect(audio.currentTime).toBe(600);
     });
 
     it('plays a chosen row', () => {

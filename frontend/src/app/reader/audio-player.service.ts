@@ -176,6 +176,8 @@ export class AudioPlayerService {
 
   private resume(): void {
     if (!this.current()) return;
+    if (this.sourceIsDead()) return this.skipDeadTrack();
+    if (this.element.error) this.reloadAtPosition();
     void this.element.play().catch(() => {
       /* Autoplay can be blocked until the user gestures; the play control retries. */
     });
@@ -218,9 +220,30 @@ export class AudioPlayerService {
     this._playing.set(false);
   }
 
-  /** A dead enclosure (an expired podcast link) never ends: skip it while playing, as `ended` would. */
+  /** A dead enclosure (an expired podcast link) never ends, so it is skipped; a dropped
+   *  connection only pauses, keeping the listener's place for play to reload from. */
   private onError(): void {
-    if (this._playing()) this.onEnded();
+    if (this.sourceIsDead()) {
+      if (this._playing()) this.skipDeadTrack();
+      return;
+    }
+    this._playing.set(false);
+    this.persist();
+  }
+
+  private skipDeadTrack(): void {
+    if (this.hasNext()) return this.next();
+    this._playing.set(false);
+  }
+
+  private sourceIsDead(): boolean {
+    const error = this.element.error;
+    return !!error && error.code === error.MEDIA_ERR_SRC_NOT_SUPPORTED;
+  }
+
+  private reloadAtPosition(): void {
+    this.pendingSeek = this._position();
+    this.element.load();
   }
 
   private restore(): void {
