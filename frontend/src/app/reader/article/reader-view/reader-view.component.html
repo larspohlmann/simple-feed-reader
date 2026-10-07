@@ -139,26 +139,31 @@
             }
           </p>
           <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
-          <app-entry-actions class="actions" size="md" [entry]="e" />
-          @if (audioAttachment(); as audio) {
+          <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" />
+          @if (audio.attachment(); as attachment) {
             <div class="listen-row">
-              <button class="listen" type="button" (click)="listen()">
+              <button class="listen" type="button" (click)="audio.play()">
                 <app-icon name="play_circle" size="lg" />
                 <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
-                @if (audio.durationInSeconds; as seconds) {
+                @if (attachment.durationInSeconds; as seconds) {
                   <span class="listen-duration">{{ formatDuration(seconds) }}</span>
                 }
               </button>
               <button
                 class="listen queue"
                 type="button"
-                [class.queued]="queued()"
-                (click)="toggleQueued()"
+                [class.queued]="audio.queued()"
+                (click)="audio.toggleQueued()"
               >
-                <app-icon [name]="queued() ? 'playlist_add_check' : 'playlist_add'" size="md" />
+                <app-icon
+                  [name]="audio.queued() ? 'playlist_add_check' : 'playlist_add'"
+                  size="md"
+                />
                 <span class="listen-label">{{
-                  (queued() ? 'reader.audioPlayer.inPlaylist' : 'reader.audioPlayer.addToPlaylist')
-                    | transloco
+                  (audio.queued()
+                    ? 'reader.audioPlayer.inPlaylist'
+                    : 'reader.audioPlayer.addToPlaylist'
+                  ) | transloco
                 }}</span>
               </button>
             </div>

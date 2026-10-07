@@ -1,3 +1,32 @@
+@if (audio() && entryAudio.track()) {
+  <button
+    type="button"
+    [attr.aria-label]="
+      (entryAudio.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+    "
+    (click)="$event.stopPropagation(); entryAudio.togglePlaying()"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon [name]="entryAudio.playing() ? 'pause' : 'play_arrow'" [size]="size()" />
+  </button>
+  <button
+    type="button"
+    [attr.aria-label]="
+      (entryAudio.queued() ? 'reader.audioPlayer.inPlaylist' : 'reader.audioPlayer.addToPlaylist')
+        | transloco
+    "
+    [appFlagToggle]="entryAudio.queued()"
+    (click)="$event.stopPropagation(); entryAudio.toggleQueued()"
+    (keydown.enter)="$event.stopPropagation()"
+    (keydown.space)="$event.stopPropagation()"
+  >
+    <app-icon
+      [name]="entryAudio.queued() ? 'playlist_add_check' : 'playlist_add'"
+      [size]="size()"
+    />
+  </button>
+}
 <button
   type="button"
   [attr.aria-label]="'reader.favorite' | transloco"
