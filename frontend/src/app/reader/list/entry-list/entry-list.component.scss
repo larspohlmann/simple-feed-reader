@@ -16,6 +16,7 @@ $corner-clear: calc(var(--space-5) + var(--tap-target) + var(--space-3));
   min-height: 0;
   height: 100%;
   position: relative; /* anchor for the pull-to-refresh indicator */
+  container: entry-list / size;
 }
 
 /* Floats over the scroller rather than sitting in the flow: collapsing it used
@@ -417,6 +418,15 @@ app-to-top-button {
   z-index: 4;
 
   @include circle.corner-circle-button;
+}
+
+/* An open playlist can squeeze the list to a strip; there the corner buttons
+   would ride up over the list header, and the player wins. */
+@container entry-list (height < #{bp.$container-list-corner-buttons}) {
+  app-to-top-button,
+  .mark-above {
+    display: none;
+  }
 }
 
 /* The narrow-layout run pill is a bottom toast that buries both corners (#641).
