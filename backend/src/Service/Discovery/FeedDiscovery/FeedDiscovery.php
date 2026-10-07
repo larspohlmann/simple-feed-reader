@@ -27,7 +27,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Turns an entered URL into something to subscribe to, most certain source first: the URL as a feed, the feeds the
- * page links (then WordPress REST), a feed under a conventional path, and last a 'scraped' candidate from the page.
+ * page links, then the feeds it implies, a feed under a conventional path, and last a 'scraped' candidate from
+ * the page.
  * Never throws for a bad address: a failure is a scrapeFailureReason, so the subscribe endpoint can always answer.
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
