@@ -82,6 +82,12 @@ describe('playlist', () => {
       expect(currentTrack(playlist)).toBe(bravo);
     });
 
+    it('leaves the current track where it is', () => {
+      const playlist = of(0, alpha, bravo);
+
+      expect(insertNext(playlist, alpha)).toBe(playlist);
+    });
+
     it('starts an empty playlist', () => {
       const playlist = insertNext(EMPTY_PLAYLIST, alpha);
 

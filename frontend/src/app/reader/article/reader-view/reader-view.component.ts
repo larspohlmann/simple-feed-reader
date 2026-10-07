@@ -155,7 +155,6 @@ export class ReaderViewComponent {
     if (track) this.audioPlayer.play(track);
   }
 
-  /** Add to playlist appends without interrupting; once queued, the same control takes it out (#1429). */
   protected toggleQueued(): void {
     const track = this.audioTrack();
     if (!track) return;

@@ -5,6 +5,7 @@
    becoming a scroller the chrome would sit in (#1332). */
 :host {
   display: block;
+  position: relative;
   height: 100%;
   overflow: clip;
 }
@@ -77,11 +78,11 @@
   color: var(--accent);
 }
 
-/* Back-to-top affordance, pinned to the viewport corner. */
+/* Back-to-top affordance, pinned to the pane's corner, so it sits clear of the audio player. */
 app-to-top-button {
-  position: fixed;
+  position: absolute;
   right: 24px;
-  bottom: calc(24px + var(--toast-lift, 0px) + var(--audio-player-height, 0px));
+  bottom: calc(24px + var(--toast-lift, 0px));
   z-index: 20;
 }
 

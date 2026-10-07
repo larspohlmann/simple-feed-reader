@@ -1,6 +1,7 @@
 import { expect, Page, test } from '@playwright/test';
 import { presetLocalStorage } from './support/auth';
 import { entryDetailJson, entryWire, stubOneFeedReader } from './support/reader';
+import { silentWav } from './support/audio';
 
 /**
  * #1429: episodes added from their article views play in the order the
@@ -14,26 +15,6 @@ const EPISODES = [1, 2, 3].map((id) =>
     attachments: [{ url: `https://fixtures.invalid/episode-${id}.mp3`, mimeType: 'audio/mpeg' }],
   }),
 );
-
-/** `seconds` of 8 kHz 8-bit mono silence: a container every browser decodes. */
-function silentWav(seconds: number): Buffer {
-  const samples = 8000 * seconds;
-  const header = Buffer.alloc(44);
-  header.write('RIFF', 0);
-  header.writeUInt32LE(36 + samples, 4);
-  header.write('WAVE', 8);
-  header.write('fmt ', 12);
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(1, 22);
-  header.writeUInt32LE(8000, 24);
-  header.writeUInt32LE(8000, 28);
-  header.writeUInt16LE(1, 32);
-  header.writeUInt16LE(8, 34);
-  header.write('data', 36);
-  header.writeUInt32LE(samples, 40);
-  return Buffer.concat([header, Buffer.alloc(samples, 128)]);
-}
 
 async function stubEpisodes(page: Page): Promise<void> {
   await stubOneFeedReader(page, 'Fixture podcast');

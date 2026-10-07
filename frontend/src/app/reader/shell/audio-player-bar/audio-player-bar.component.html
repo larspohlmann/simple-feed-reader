@@ -13,14 +13,15 @@
           cdkDropListLockAxis="y"
           (cdkDropListDropped)="onDrop($event)"
         >
-          @for (queued of player.tracks(); track queued.url; let index = $index, last = $last) {
+          @for (row of rows(); track row.track.url; let index = $index, last = $last) {
+            @let queued = row.track;
             <li
               class="row"
               cdkDrag
               [cdkDragStartDelay]="dragDelay"
-              [class.current]="index === player.index()"
-              [class.played]="index < player.index()"
-              [attr.aria-current]="index === player.index() ? 'true' : null"
+              [class.current]="row.current"
+              [class.played]="row.played"
+              [attr.aria-current]="row.current ? 'true' : null"
             >
               <span class="handle" cdkDragHandle aria-hidden="true">
                 <app-icon name="drag_indicator" size="sm" />
@@ -35,7 +36,7 @@
               >
                 <app-audio-artwork [track]="queued" />
                 <span class="row-title">{{ queued.title }}</span>
-                @if (rowDuration(index, queued); as seconds) {
+                @if (row.durationInSeconds; as seconds) {
                   <span class="time row-time">{{ format(seconds) }}</span>
                 }
               </button>

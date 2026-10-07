@@ -90,27 +90,19 @@ export class AudioPlayerService {
     return indexOf(this._playlist(), url) !== -1;
   }
 
-  /** Listen: play now, keeping the rest of the playlist. */
   play(track: AudioTrack): void {
     if (this.current()?.url === track.url) return this.resume();
     this.go(insertNext(this._playlist(), track));
   }
 
-  /** Add to playlist: never interrupts; into an empty player it waits, paused. */
   enqueue(track: AudioTrack): void {
-    const wasEmpty = this.current() === null;
-    this._playlist.update((playlist) => append(playlist, track));
-    if (wasEmpty) this.load(track);
-    this.persist();
+    this.apply(append(this._playlist(), track));
   }
 
   dequeue(url: string): void {
-    const wasCurrent = this.current()?.url === url;
-    const playlist = remove(this._playlist(), url);
-    if (playlist === EMPTY_PLAYLIST) return this.stop();
-    this._playlist.set(playlist);
-    if (wasCurrent) this.replaceCurrent();
-    this.persist();
+    const wasPlaying = this._playing();
+    this.apply(remove(this._playlist(), url));
+    if (wasPlaying) this.resume();
   }
 
   playAt(index: number): void {
@@ -119,8 +111,7 @@ export class AudioPlayerService {
   }
 
   move(from: number, to: number): void {
-    this._playlist.update((playlist) => move(playlist, from, to));
-    this.persist();
+    this.apply(move(this._playlist(), from, to));
   }
 
   next(): void {
@@ -160,21 +151,18 @@ export class AudioPlayerService {
   }
 
   private go(playlist: Playlist): void {
-    this._playlist.set(playlist);
-    this.loadCurrent();
+    this.apply(playlist);
     this.resume();
+  }
+
+  /** Every queue change lands here: a new current track loads (paused), an empty queue stops. */
+  private apply(playlist: Playlist): void {
+    const track = currentTrack(playlist);
+    if (!track) return this.stop();
+    const changed = track.url !== this.current()?.url;
+    this._playlist.set(playlist);
+    if (changed) this.load(track);
     this.persist();
-  }
-
-  private replaceCurrent(): void {
-    const wasPlaying = this._playing();
-    this.loadCurrent();
-    if (wasPlaying) this.resume();
-  }
-
-  private loadCurrent(): void {
-    const track = this.current();
-    if (track) this.load(track);
   }
 
   private load(track: AudioTrack): void {
@@ -238,8 +226,10 @@ export class AudioPlayerService {
   private restore(): void {
     const saved = this.store.load();
     if (!saved) return;
+    const track = currentTrack(saved.playlist);
+    if (!track) return;
     this._playlist.set(saved.playlist);
-    this.loadCurrent();
+    this.load(track);
     this._position.set(saved.position);
     this.pendingSeek = saved.position;
   }
@@ -279,8 +269,7 @@ export class AudioPlayerService {
     session.setActionHandler('seekto', (details) => this.seekTo(details));
   }
 
-  /** iOS swaps the lock screen's ±15 s buttons for track buttons once a track handler is set,
-   *  so each is bound only while there is a track to step to. */
+  /** iOS swaps the lock screen's ±15 s buttons for track buttons once a track handler exists. */
   private bindTrackSteps(): void {
     const session = this.session;
     if (!session) return;

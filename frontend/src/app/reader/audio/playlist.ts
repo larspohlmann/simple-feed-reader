@@ -26,16 +26,16 @@ export function append(playlist: Playlist, track: AudioTrack): Playlist {
 /** Listen: the track goes right after the current one, moved there if already queued, and plays. */
 export function insertNext(playlist: Playlist, track: AudioTrack): Playlist {
   const queued = indexOf(playlist, track.url);
-  if (queued !== -1) return playQueuedNext(playlist, queued);
   const at = playlist.index + 1;
-  const tracks = [...playlist.tracks.slice(0, at), track, ...playlist.tracks.slice(at)];
-  return { tracks, index: at };
-}
-
-function playQueuedNext(playlist: Playlist, queued: number): Playlist {
-  const target = queued < playlist.index ? playlist.index : playlist.index + 1;
-  const moved = move(playlist, queued, target);
-  return select(moved, target);
+  if (queued === -1) {
+    return {
+      tracks: [...playlist.tracks.slice(0, at), track, ...playlist.tracks.slice(at)],
+      index: at,
+    };
+  }
+  if (queued === playlist.index) return playlist;
+  const target = queued < playlist.index ? playlist.index : at;
+  return select(move(playlist, queued, target), target);
 }
 
 export function select(playlist: Playlist, index: number): Playlist {
