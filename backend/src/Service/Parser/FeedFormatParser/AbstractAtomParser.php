@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -15,6 +16,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
@@ -59,6 +61,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
         $title = XmlHelper::childText($root, 'title', $this->namespaceUri());
 
+        $showArtwork = PodcastArtwork::of($root);
         $entries = [];
         foreach ($root->childNodes as $child) {
             if (
@@ -66,7 +69,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
                 && $child->localName === 'entry'
                 && $child->namespaceURI === $this->namespaceUri()
             ) {
-                $entry = $this->parseEntry($child);
+                $entry = $this->parseEntry($child, $showArtwork);
                 if ($entry !== null) {
                     $entries[] = $entry;
                 }
@@ -89,7 +92,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         );
     }
 
-    private function parseEntry(\DOMElement $entry): ?ParsedEntryModel
+    private function parseEntry(\DOMElement $entry, ?DeclaredImageModel $showArtwork): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
         $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());
@@ -116,7 +119,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
             contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry)),
-            media: new ParsedEntryMediaModel($image, $mediaBundle),
+            media: ParsedEntryMediaModel::withShowArtworkFallback($image, $mediaBundle, $showArtwork),
             categories: ItemCategoryExtractor::extract($entry),
             discussion: AtomDiscussion::from($entry, $this->namespaceUri()),
             authorUrl: $this->authorUri($entry),

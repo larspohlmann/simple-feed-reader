@@ -124,6 +124,38 @@ final class FeedItemImageSelectorTest extends TestCase
         self::assertSame('https://i/custom.jpg', $this->selector->fromRss2($item, null)?->url);
     }
 
+    public function testAnImageEnclosureBeatsPodcastArtwork(): void
+    {
+        $item = $this->rss2Item(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/art.jpg"/>'
+            . '<enclosure url="https://i/enclosure.jpg" type="image/jpeg" length="0"/>',
+        );
+
+        self::assertSame('https://i/enclosure.jpg', $this->selector->fromRss2($item, null)?->url);
+    }
+
+    public function testThePostsOwnBodyImageBeatsPodcastArtwork(): void
+    {
+        $item = $this->rss2Item(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/show.jpg"/>',
+        );
+
+        $image = $this->selector->fromRss2($item, '<img src="https://i/photo.jpg">');
+
+        self::assertSame('https://i/photo.jpg', $image?->url);
+    }
+
+    public function testAnAtomEntrysBodyImageBeatsPodcastArtwork(): void
+    {
+        $entry = $this->atomEntry(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/show.jpg"/>',
+        );
+
+        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', ['<img src="https://i/photo.jpg">']);
+
+        self::assertSame('https://i/photo.jpg', $image?->url);
+    }
+
     public function testAnAtomEntryWithOnlyPodcastArtworkTakesIt(): void
     {
         $entry = $this->atomEntry(

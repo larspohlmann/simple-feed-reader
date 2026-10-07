@@ -14,7 +14,7 @@ use Dom\Element;
 /**
  * The images a feed item declares, source by source; FeedItemImageSelector combines them in each format's order.
  * Within Media RSS the widest variant wins, not the first: feeds ship size ladders in ascending order (#148).
- * An undeclared width loses to any declared one, with no widths document order decides, and URLs stay unresolved.
+ * URLs stay unresolved.
  */
 final readonly class ItemImageExtractor
 {

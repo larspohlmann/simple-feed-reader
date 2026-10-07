@@ -6,6 +6,7 @@ namespace App\Service\Parser\Support;
 
 use App\Service\Html\Support\Srcset;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Url\Support\HttpsImageUrl;
 
 /**
  * The artwork the podcast namespaces declare on a channel or an item, best first: Podcasting 2.0's <podcast:image>,
@@ -14,7 +15,6 @@ use App\Service\Image\Model\DeclaredImageModel;
 final class PodcastArtwork
 {
     private const string PODCAST_NS = 'https://podcastindex.org/namespace/1.0';
-    private const string ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
     private const string GOOGLE_PLAY_NS = 'http://www.google.com/schemas/play-podcasts/1.0';
 
     /** A <podcast:image> may be a canvas video or a banner; only these purposes picture the show or episode. */
@@ -23,7 +23,7 @@ final class PodcastArtwork
     public static function of(\DOMElement $parent): ?DeclaredImageModel
     {
         return self::podcastNamespaceImage($parent)
-            ?? self::hrefImage($parent, self::ITUNES_NS)
+            ?? self::hrefImage($parent, XmlHelper::ITUNES_NAMESPACE)
             ?? self::hrefImage($parent, self::GOOGLE_PLAY_NS);
     }
 
@@ -36,8 +36,8 @@ final class PodcastArtwork
     {
         $candidates = [];
         foreach (XmlHelper::childElements($parent, 'image', self::PODCAST_NS) as $element) {
-            $href = trim($element->getAttribute('href'));
-            if ($href !== '' && self::picturesTheShow($element)) {
+            $href = self::usableHref($element);
+            if ($href !== null && self::picturesTheShow($element)) {
                 $candidates[] = DeclaredImages::fromElement($element, $href);
             }
         }
@@ -73,13 +73,21 @@ final class PodcastArtwork
     private static function hrefImage(\DOMElement $parent, string $namespace): ?DeclaredImageModel
     {
         foreach (XmlHelper::childElements($parent, 'image', $namespace) as $element) {
-            $href = trim($element->getAttribute('href'));
-            if ($href !== '') {
+            $href = self::usableHref($element);
+            if ($href !== null) {
                 return new DeclaredImageModel($href);
             }
         }
 
         return null;
+    }
+
+    /** An href no image can be stored from (relative, ftp:) lets a lower source answer instead. */
+    private static function usableHref(\DOMElement $element): ?string
+    {
+        $href = trim($element->getAttribute('href'));
+
+        return HttpsImageUrl::orNullUpgrading($href) === null ? null : $href;
     }
 
     private function __construct()

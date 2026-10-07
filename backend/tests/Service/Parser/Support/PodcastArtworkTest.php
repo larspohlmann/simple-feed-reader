@@ -160,4 +160,12 @@ final class PodcastArtworkTest extends TestCase
             '<podcast:images srcset="https://i/only.jpg 1400w"/>',
         ));
     }
+
+    public function testSkipsAnHrefNoImageCanBeStoredFrom(): void
+    {
+        self::assertSame('https://i/play.jpg', $this->artworkUrl(
+            '<podcast:image href="/relative.jpg"/><itunes:image href="ftp://i/art.jpg"/>'
+            . '<googleplay:image href="https://i/play.jpg"/>',
+        ));
+    }
 }

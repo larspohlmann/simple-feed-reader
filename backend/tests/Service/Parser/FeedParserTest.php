@@ -66,6 +66,49 @@ final class FeedParserTest extends TestCase
         );
     }
 
+    public function testAnEpisodeWithoutArtworkOfItsOwnTakesTheShowsAndOtherItemsDoNot(): void
+    {
+        $feed = $this->parser()->parse(<<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+                <channel>
+                    <title>Show</title>
+                    <itunes:image href="https://i/show.jpg"/>
+                    <item><title>Audio</title><enclosure url="https://c/a.mp3" type="audio/mpeg"/></item>
+                    <item><title>Video</title><enclosure url="https://c/v.mp4"/></item>
+                    <item>
+                        <title>Own art</title><enclosure url="https://c/b.mp3" type="audio/mpeg"/>
+                        <itunes:image href="https://i/episode.jpg"/>
+                    </item>
+                    <item><title>Text post</title><description>words</description></item>
+                    <item><title>Handout</title><enclosure url="https://c/notes.pdf" type="application/pdf"/></item>
+                </channel>
+            </rss>
+            XML);
+
+        self::assertSame(
+            ['https://i/show.jpg', 'https://i/show.jpg', 'https://i/episode.jpg', null, null],
+            array_map(static fn ($entry) => $entry->media->image?->url, $feed->entries),
+        );
+    }
+
+    public function testAnAtomEpisodeWithoutArtworkTakesTheShows(): void
+    {
+        $feed = $this->parser()->parse(<<<'XML'
+            <?xml version="1.0"?>
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+                <title>Show</title>
+                <itunes:image href="https://i/show.jpg"/>
+                <entry>
+                    <title>Episode</title><id>urn:ep:1</id>
+                    <link rel="enclosure" type="audio/mpeg" href="https://c/a.mp3"/>
+                </entry>
+            </feed>
+            XML);
+
+        self::assertSame('https://i/show.jpg', $feed->entries[0]->media->image?->url);
+    }
+
     public function testMissingGuidFallsBackToHashAndBrokenDateBecomesNull(): void
     {
         $feed = $this->parser()->parse($this->fixture('feeds/rss2-no-guid.xml'));

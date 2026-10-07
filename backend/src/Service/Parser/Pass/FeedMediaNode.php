@@ -70,6 +70,7 @@ final readonly class FeedMediaNode
             MediaDuration::seconds($this->element->getAttribute('duration')) ?? $fallbackDuration,
             $this->intAttribute('length') ?? $this->intAttribute('fileSize'),
             $this->title(),
+            $this->kind(),
         );
     }
 

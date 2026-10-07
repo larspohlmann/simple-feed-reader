@@ -12,11 +12,13 @@ use App\Service\Url\Support\HttpsImageUrl;
  */
 final class FeedImageExtractor
 {
-    /** RSS 2.0: <channel><image><url>, else the podcast artwork. A namespaced *:image is never the <image>. */
+    /** RSS 2.0: <channel><image><url>, else the podcast artwork. An extension's *:image is never the <image>. */
     public static function fromRss2Channel(\DOMElement $channel): ?string
     {
         foreach (XmlHelper::childElements($channel, 'image', null) as $image) {
-            $url = $image->namespaceURI === null ? HttpsImageUrl::orNull(XmlHelper::childText($image, 'url')) : null;
+            $url = $image->namespaceURI === $channel->namespaceURI
+                ? HttpsImageUrl::orNull(XmlHelper::childText($image, 'url'))
+                : null;
             if ($url !== null) {
                 return $url;
             }

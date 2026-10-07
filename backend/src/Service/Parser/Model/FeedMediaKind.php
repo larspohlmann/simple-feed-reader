@@ -15,4 +15,9 @@ enum FeedMediaKind
     case Video;
     case Other;
     case Unknown;
+
+    public function isPlayable(): bool
+    {
+        return $this === self::Audio || $this === self::Video;
+    }
 }

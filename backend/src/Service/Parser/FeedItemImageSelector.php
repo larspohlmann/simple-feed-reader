@@ -7,7 +7,10 @@ namespace App\Service\Parser;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Support\PodcastArtwork;
 
-/** Each format's image order; the body image stands in for a missing declared one, or lends it its renditions. */
+/**
+ * Each format's image order; the body image stands in for a missing declared one, or lends it its renditions.
+ * Podcast artwork comes last: many hosts repeat the show's art on every item, which must not hide the post's picture.
+ */
 final readonly class FeedItemImageSelector
 {
     public function __construct(private ItemImageExtractor $extractor)
@@ -18,9 +21,9 @@ final readonly class FeedItemImageSelector
     {
         $declared = $this->extractor->fromMedia($item)
             ?? $this->extractor->fromRssEnclosure($item)
-            ?? $this->extensionImage($item);
+            ?? $this->extractor->fromCustomImageElement($item);
 
-        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
+        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml)) ?? PodcastArtwork::of($item);
     }
 
     public function fromRss1(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
@@ -38,15 +41,9 @@ final readonly class FeedItemImageSelector
     ): ?DeclaredImageModel {
         $declared = $this->extractor->fromMedia($entry)
             ?? $this->extractor->fromAtomEnclosure($entry, $namespace)
-            ?? $this->extensionImage($entry);
+            ?? $this->extractor->fromCustomImageElement($entry);
 
-        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates));
-    }
-
-    /** An image an extension declares: a custom <image url>, else the podcast artwork. */
-    private function extensionImage(\DOMElement $element): ?DeclaredImageModel
-    {
-        return $this->extractor->fromCustomImageElement($element) ?? PodcastArtwork::of($element);
+        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates)) ?? PodcastArtwork::of($entry);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */

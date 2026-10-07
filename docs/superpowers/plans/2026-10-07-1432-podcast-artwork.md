@@ -22,9 +22,10 @@
 
 ## Rulings
 
-- **Precedence.** Podcast artwork goes after Media RSS, image enclosures and custom `<image url>`, because those are the item's own declared pictures. It goes before the body image, which `withBodyImage` lends renditions to as today.
-- **No show-art fallback for items.** An episode without its own artwork gets no image. Copying the channel's artwork onto every entry would put the same picture on every list row. I'll offer it to the user as a follow-up.
-- **Channel `<image>` fix, in scope.** `fromRss2Channel` now takes the first un-namespaced `<image>` that has a `<url>`. Today it takes any `*:image` child, so a leading `<itunes:image>` (SoundCloud) hides the real `<image>`.
+- **Precedence (revised after review).** The item's own declared pictures (Media RSS, image enclosure, custom `<image url>`) come first, then the body image, then the item's podcast artwork. Many hosts (Anchor, Libsyn, Buzzsprout, PowerPress) repeat the show art on every item, and it must not hide the post's own picture.
+- **Show-art fallback (user: "fall back to the shows artwork").** An *episode* (an item with an audio or video enclosure) that has no image at all takes the channel's or Atom feed's podcast artwork. Text posts and PDF handouts in the same feed stay without one, so a newsletter that also podcasts does not put its show art on every post.
+- **Unusable hrefs are skipped.** A relative or non-http(s) href would be rejected at persist time, which would leave the entry imageless. Skipping it lets a lower source answer.
+- **Channel `<image>` fix, in scope.** `fromRss2Channel` now takes the first `<image>` in the channel's own namespace that has a `<url>`. Today it takes any `*:image` child, so a leading `<itunes:image>` (SoundCloud) hides the real `<image>`.
 - **Backfill.** Entries whose image was never judged (`url` and `checkedAt` both NULL) fill on the next refresh through `EntryIngestor::fillMissingImages`. No migration is needed.
 
 ## Global Constraints

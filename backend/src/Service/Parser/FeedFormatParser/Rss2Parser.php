@@ -6,6 +6,7 @@ namespace App\Service\Parser\FeedFormatParser;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -16,6 +17,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
@@ -43,9 +45,10 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             throw new FeedParseException('RSS document without <channel>');
         }
 
+        $showArtwork = PodcastArtwork::of($channel);
         $entries = [];
         foreach ($document->getElementsByTagName('item') as $item) {
-            $entry = $this->parseItem($item);
+            $entry = $this->parseItem($item, $showArtwork);
             if ($entry !== null) {
                 $entries[] = $entry;
             }
@@ -60,7 +63,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         );
     }
 
-    private function parseItem(\DOMElement $item): ?ParsedEntryModel
+    private function parseItem(\DOMElement $item, ?DeclaredImageModel $showArtwork): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($item, 'title');
         $link = XmlHelper::childText($item, 'link');
@@ -84,7 +87,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
-            media: new ParsedEntryMediaModel($image, $mediaBundle),
+            media: ParsedEntryMediaModel::withShowArtworkFallback($image, $mediaBundle, $showArtwork),
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );

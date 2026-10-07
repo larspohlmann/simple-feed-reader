@@ -17,6 +17,7 @@ final readonly class ParsedAttachmentModel
         public ?int $durationInSeconds = null,
         public ?int $sizeInBytes = null,
         public ?string $title = null,
+        public FeedMediaKind $kind = FeedMediaKind::Other,
     ) {
     }
 }

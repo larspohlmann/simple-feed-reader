@@ -259,4 +259,20 @@ final class FeedImageExtractorTest extends TestCase
 
         self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
     }
+
+    public function testReadsTheImageOfAnRss2FeedInADefaultNamespace(): void
+    {
+        $document = $this->document(/** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rss version="2.0" xmlns="http://backend.userland.com/rss2">
+                <channel>
+                    <image><url>https://example.com/logo.png</url></image>
+                </channel>
+            </rss>
+            XML);
+        $channel = $document->getElementsByTagName('channel')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $channel);
+
+        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromRss2Channel($channel));
+    }
 }

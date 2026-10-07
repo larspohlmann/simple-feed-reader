@@ -8,6 +8,7 @@ use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\MediaDuration;
+use App\Service\Parser\Support\XmlHelper;
 
 /**
  * Splits a feed item's declared media into visual media and enclosures, from parsed attributes only. A `<media:group>`
@@ -17,7 +18,6 @@ use App\Service\Parser\Support\MediaDuration;
 final readonly class ItemMediaExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
-    private const string ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
     public function extract(\DOMElement $item): ParsedMediaBundleModel
     {
@@ -173,7 +173,7 @@ final readonly class ItemMediaExtractor
     {
         return $node instanceof \DOMElement
             && $node->localName === 'duration'
-            && $node->namespaceURI === self::ITUNES_NS;
+            && $node->namespaceURI === XmlHelper::ITUNES_NAMESPACE;
     }
 
     private static function isMediaNode(\DOMElement $node): bool
