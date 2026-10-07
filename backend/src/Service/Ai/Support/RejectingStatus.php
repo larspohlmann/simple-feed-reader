@@ -4,10 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Support;
 
+use Symfony\Component\HttpFoundation\Response;
+
 final class RejectingStatus
 {
-    private const array REFUSING_THE_KEY = [401, 403];
-    private const array NOT_A_VERDICT_ON_THE_REQUEST = [...self::REFUSING_THE_KEY, 408, 425, 429];
+    private const array REFUSING_THE_KEY = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
+    private const array NOT_A_VERDICT_ON_THE_REQUEST = [
+        ...self::REFUSING_THE_KEY,
+        Response::HTTP_REQUEST_TIMEOUT,
+        Response::HTTP_TOO_EARLY,
+        Response::HTTP_TOO_MANY_REQUESTS,
+    ];
 
     public static function refusesKey(int $status): bool
     {
@@ -16,7 +23,9 @@ final class RejectingStatus
 
     public static function matches(int $status): bool
     {
-        return $status >= 400 && $status < 500 && !\in_array($status, self::NOT_A_VERDICT_ON_THE_REQUEST, true);
+        return $status >= Response::HTTP_BAD_REQUEST
+            && $status < Response::HTTP_INTERNAL_SERVER_ERROR
+            && !\in_array($status, self::NOT_A_VERDICT_ON_THE_REQUEST, true);
     }
 
     private function __construct()

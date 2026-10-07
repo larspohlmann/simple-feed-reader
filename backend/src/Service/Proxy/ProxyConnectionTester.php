@@ -10,6 +10,7 @@ use App\Service\Fetch\Support\ProxyHandshakeFailure;
 use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use App\Service\Proxy\Model\ProxyTestFailure;
 use App\Service\Proxy\Model\ProxyTestResultModel;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -61,7 +62,7 @@ final readonly class ProxyConnectionTester
             );
         }
 
-        if ($status < 200 || $status >= 300) {
+        if ($status < Response::HTTP_OK || $status >= Response::HTTP_MULTIPLE_CHOICES) {
             return ProxyTestResultModel::failed(ProxyTestFailure::UnexpectedStatus, sprintf('HTTP %d', $status));
         }
 

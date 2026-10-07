@@ -15,6 +15,7 @@ use App\Service\Fetch\Model\HeaderVerdictModel;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -24,8 +25,14 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class ResponseClassifier
 {
-    private const array REDIRECT_CODES = [301, 302, 303, 307, 308];
-    private const array PERMANENT_CODES = [301, 308];
+    private const array REDIRECT_CODES = [
+        Response::HTTP_MOVED_PERMANENTLY,
+        Response::HTTP_FOUND,
+        Response::HTTP_SEE_OTHER,
+        Response::HTTP_TEMPORARY_REDIRECT,
+        Response::HTTP_PERMANENTLY_REDIRECT,
+    ];
+    private const array PERMANENT_CODES = [Response::HTTP_MOVED_PERMANENTLY, Response::HTTP_PERMANENTLY_REDIRECT];
 
     public function __construct(private ClockInterface $clock)
     {
@@ -39,22 +46,22 @@ final readonly class ResponseClassifier
             return $this->redirect($response, $attempt, $status);
         }
 
-        if (304 === $status) {
+        if (Response::HTTP_NOT_MODIFIED === $status) {
             return HeaderVerdictModel::terminal($this->notModifiedOrEmptyFetch($attempt));
         }
 
-        if (410 === $status) {
+        if (Response::HTTP_GONE === $status) {
             throw new FeedGoneException(sprintf('%s: HTTP 410 Gone', $attempt->url));
         }
 
-        if (429 === $status) {
+        if (Response::HTTP_TOO_MANY_REQUESTS === $status) {
             throw new FeedThrottledException(
                 sprintf('%s: HTTP 429', $attempt->url),
                 $this->retryAfterSeconds($response),
             );
         }
 
-        if ($status < 200 || $status >= 300) {
+        if ($status < Response::HTTP_OK || $status >= Response::HTTP_MULTIPLE_CHOICES) {
             throw new FeedUnreachableException(
                 sprintf('%s: HTTP %d', $attempt->url, $status),
                 statusCode: $status,

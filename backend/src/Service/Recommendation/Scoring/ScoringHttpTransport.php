@@ -19,6 +19,7 @@ use App\Service\Recommendation\Scoring\Pass\ScoringEndpoint;
 use App\Service\Recommendation\Support\ProviderErrorReason;
 use App\Service\Recommendation\Support\RefusalMessage;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -39,7 +40,9 @@ final readonly class ScoringHttpTransport
 
     private const int MAXIMUM_RESPONSE_BYTES = 1_048_576;
 
-    private const array RETRYABLE_STATUSES = [429, 529];
+    private const int OVERLOADED_STATUS = 529;
+
+    private const array RETRYABLE_STATUSES = [Response::HTTP_TOO_MANY_REQUESTS, self::OVERLOADED_STATUS];
 
     public function __construct(
         private HttpClientInterface $httpClient,
@@ -140,7 +143,9 @@ final readonly class ScoringHttpTransport
                 $status,
                 RefusalMessage::of($status, ProviderErrorReason::in($body, $wave->credentials)),
             )),
-            $status >= 300 => ScoringOutcomeModel::failed(ProviderUnreachableException::answeredWithStatus($status)),
+            $status >= Response::HTTP_MULTIPLE_CHOICES => ScoringOutcomeModel::failed(
+                ProviderUnreachableException::answeredWithStatus($status),
+            ),
             default => ScoringOutcomeModel::answered(
                 $wave->endpoint->decode($body, $response, $wave->positionOf($response)),
             ),

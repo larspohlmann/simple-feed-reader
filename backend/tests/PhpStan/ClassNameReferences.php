@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr\ClassConstFetch;
+use PhpParser\Node\Identifier;
 use PhpParser\Node\InterpolatedStringPart;
 use PhpParser\Node\Name;
 use PhpParser\Node\Scalar\String_;
@@ -17,9 +19,16 @@ use PHPStan\Node\FileNode;
 /** The forbidden class and namespace names a namespace mentions, in code, in strings and in imports. */
 final readonly class ClassNameReferences
 {
-    /** @param list<string> $forbiddenNames a name ending in a separator forbids that namespace, any other one class */
-    public function __construct(private NodeFinder $finder, private array $forbiddenNames)
-    {
+    /**
+     * @param list<string> $forbiddenNames a name ending in a separator forbids that namespace, any other one class
+     * @param array<string, string> $permittedConstantPrefixes class => constant prefix; such a constant and the
+     *                                                         class's import are not references
+     */
+    public function __construct(
+        private NodeFinder $finder,
+        private array $forbiddenNames,
+        private array $permittedConstantPrefixes = [],
+    ) {
     }
 
     /**
@@ -105,11 +114,11 @@ final readonly class ClassNameReferences
                 || $node instanceof GroupUse,
         );
 
-        $groupUsePrefixIds = self::groupUsePrefixIds($nodes);
+        $skippedNameIds = [...self::groupUsePrefixIds($nodes), ...$this->permittedNameIds($namespace)];
 
         $names = [];
         foreach ($nodes as $node) {
-            if ($node instanceof Name && \in_array(spl_object_id($node), $groupUsePrefixIds, true)) {
+            if ($node instanceof Name && \in_array(spl_object_id($node), $skippedNameIds, true)) {
                 continue;
             }
             $names = [...$names, ...self::namesInNode($node)];
@@ -133,6 +142,42 @@ final readonly class ClassNameReferences
         }
 
         return $prefixIds;
+    }
+
+    /** @return list<int> the class name of each permitted constant fetch and of its plain import */
+    private function permittedNameIds(Namespace_ $namespace): array
+    {
+        $candidates = $this->finder->find(
+            $namespace->stmts,
+            static fn (Node $node): bool => $node instanceof ClassConstFetch || $node instanceof UseItem,
+        );
+
+        return array_values(array_map(
+            spl_object_id(...),
+            array_filter(array_map($this->permittedNameIn(...), $candidates)),
+        ));
+    }
+
+    private function permittedNameIn(Node $node): ?Name
+    {
+        if ($node instanceof UseItem) {
+            return null !== $this->permittedPrefixFor($node->name) ? $node->name : null;
+        }
+        if (!$node instanceof ClassConstFetch || !$node->class instanceof Name || !$node->name instanceof Identifier) {
+            return null;
+        }
+        $prefix = $this->permittedPrefixFor($node->class);
+
+        return null !== $prefix && str_starts_with($node->name->toString(), $prefix) ? $node->class : null;
+    }
+
+    private function permittedPrefixFor(Name $class): ?string
+    {
+        return array_find(
+            $this->permittedConstantPrefixes,
+            static fn (string $prefix, string $permittedClass): bool
+                => 0 === strcasecmp($permittedClass, $class->toString()),
+        );
     }
 
     /** @return list<array{string, int}> */

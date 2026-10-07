@@ -11,6 +11,7 @@ use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\SearchEngineCapability;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -360,7 +361,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             ]);
 
             $status = $response->getStatusCode();
-            if ($status >= 300) {
+            if ($status >= Response::HTTP_MULTIPLE_CHOICES) {
                 throw new SearchEngineUnavailableException(sprintf(
                     'The search engine answered with status %d.',
                     $status,

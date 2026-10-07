@@ -25,6 +25,7 @@ use App\Service\Recommendation\Llm\Completion\Pass\ErrorBody;
 use App\Service\Recommendation\Run\Model\CallProgressModel;
 use App\Service\Recommendation\Run\ProviderCallHeartbeat\ProviderCallHeartbeatInterface;
 use App\Service\Recommendation\Support\ProviderErrorReason;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -36,6 +37,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientInterface
 {
+    private const array RETRYABLE_STATUSES = [
+        Response::HTTP_TOO_MANY_REQUESTS,
+        Response::HTTP_BAD_GATEWAY,
+        Response::HTTP_SERVICE_UNAVAILABLE,
+        Response::HTTP_GATEWAY_TIMEOUT,
+    ];
+
     /**
      * Retained answer bytes one requested token buys, bounding a provider that ignores `max_tokens`. Twice the prompt
      * builder's estimate, so no legitimate reply trips it: the largest batch on record kept 12 KB of a 36 KB bound.
@@ -311,11 +319,11 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
             throw CredentialsRejectedException::refusedKey();
         }
 
-        if (\in_array($status, [429, 502, 503, 504], true)) {
+        if (\in_array($status, self::RETRYABLE_STATUSES, true)) {
             throw new RetryableProviderException($status, RetryAfter::secondsIn($response));
         }
 
-        if ($status >= 300) {
+        if ($status >= Response::HTTP_MULTIPLE_CHOICES) {
             $errorBody->open($status);
         }
     }

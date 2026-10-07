@@ -167,6 +167,35 @@ namespace App\Service\Fixtures\Gaps {
     }
 }
 
+namespace App\Service\Fixtures\StatusConstants {
+    use Symfony\Component\HttpFoundation\Response;
+
+    final class NamesStatuses
+    {
+        public const array REDIRECTS = [Response::HTTP_MOVED_PERMANENTLY, Response::HTTP_FOUND];
+
+        public function isOk(int $status): bool
+        {
+            return Response::HTTP_OK === $status;
+        }
+
+        public function fullyQualified(): int
+        {
+            return \Symfony\Component\HttpFoundation\Response::HTTP_NOT_FOUND;
+        }
+
+        public function statusText(): string
+        {
+            return Response::$statusTexts[Response::HTTP_OK];
+        }
+
+        public function responseClass(): string
+        {
+            return Response::class;
+        }
+    }
+}
+
 namespace App\Doctrine\Fixtures {
     use Symfony\Component\HttpFoundation\Request;
 

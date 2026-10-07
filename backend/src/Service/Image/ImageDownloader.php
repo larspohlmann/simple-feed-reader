@@ -13,6 +13,7 @@ use App\Service\Image\Exception\ImageUnavailableException;
 use App\Service\Image\Model\ImageRequestModel;
 use App\Service\Image\Model\ProxiedImageModel;
 use App\Service\Image\Support\OriginRoot;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 /** Fetches one image for the proxy over RedirectFollower's guarded chain, served only as a raster type. */
@@ -20,7 +21,7 @@ final readonly class ImageDownloader
 {
     private const int MAX_REDIRECTS = 3;
     private const float TIMEOUT_SECONDS = 10.0;
-    private const array REFUSED_STATUSES = [401, 403];
+    private const array REFUSED_STATUSES = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
     private const array SERVED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
 
     public function __construct(

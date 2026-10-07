@@ -21,6 +21,7 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
     private const string API_PROBLEM = 'App\Http\Problem\ApiProblem';
     private const string FEED_JSON = 'App\Http\RecommendationFeedJson';
     private const string GAPS = 'App\Service\Fixtures\Gaps';
+    private const string STATUS_CONSTANTS = 'App\Service\Fixtures\StatusConstants';
     private const string DOCTRINE = 'App\Doctrine\Fixtures';
 
     protected function getRule(): Rule
@@ -28,14 +29,13 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
         return new DomainKnowsNoHttpRule(new NodeFinder());
     }
 
-    public function testItReportsHttpInDomainCodeButNotInTheHttpLayer(): void
+    public function testItReportsHttpInDomainCodeButNotInTheHttpLayerOrAStatusConstant(): void
     {
         $this->analyse(
             [__DIR__ . '/data/domain-knows-no-http-fixtures.php'],
             [
                 [self::message(self::SERVICE, self::FEED_JSON), 9],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Request'), 10],
-                [self::message(self::SERVICE, self::FOUNDATION . 'Response'), 11],
                 [self::message(self::SERVICE, self::HTTP_KERNEL . 'NotFoundHttpException'), 12],
                 [self::message(self::SERVICE, self::HTTP_KERNEL . 'NotFoundHttpException'), 18],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Response'), 23],
@@ -68,8 +68,10 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
                 [self::message(self::GAPS, 'App\Http\\'), 155],
                 [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 160],
                 [self::message(self::GAPS, strtolower(self::ACCESS_DENIED)), 165],
-                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 171],
-                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 175],
+                [self::message(self::STATUS_CONSTANTS, self::FOUNDATION . 'Response'), 189],
+                [self::message(self::STATUS_CONSTANTS, self::FOUNDATION . 'Response'), 194],
+                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 200],
+                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 204],
             ],
         );
     }

@@ -8,6 +8,7 @@ use App\Service\Version\Model\LatestReleaseModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -74,7 +75,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
                 },
             ]);
 
-            if (200 !== $response->getStatusCode()) {
+            if (Response::HTTP_OK !== $response->getStatusCode()) {
                 return null;
             }
 

@@ -11,10 +11,14 @@ use App\Service\Recommendation\Engine\RecommendationEngineResolver;
 use App\Service\Recommendation\Llm\Completion\Model\Reasoning;
 use App\Service\Recommendation\Run\RejectedRequestFallback\RejectedRequestFallbackInterface;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SuppressedReasoningFallback implements RejectedRequestFallbackInterface
 {
-    private const array STATUSES_A_REFUSED_PARAMETER_EARNS = [400, 422];
+    private const array STATUSES_A_REFUSED_PARAMETER_EARNS = [
+        Response::HTTP_BAD_REQUEST,
+        Response::HTTP_UNPROCESSABLE_ENTITY,
+    ];
 
     public function __construct(
         private RecommendationEngineResolver $engines,

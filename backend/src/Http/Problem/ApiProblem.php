@@ -34,7 +34,7 @@ final readonly class ApiProblem
                 Response::HTTP_NOT_FOUND => 'not_found',
                 Response::HTTP_METHOD_NOT_ALLOWED => 'method_not_allowed',
                 Response::HTTP_TOO_MANY_REQUESTS => 'rate_limited',
-                default => $status >= 500 ? 'internal_error' : 'request_error',
+                default => $status >= Response::HTTP_INTERNAL_SERVER_ERROR ? 'internal_error' : 'request_error',
             },
             Response::$statusTexts[$status] ?? 'Error',
             $status,
