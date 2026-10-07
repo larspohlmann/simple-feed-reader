@@ -15,6 +15,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
@@ -80,13 +81,13 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             throw new FeedParseException('Atom feed had neither a title nor any entries');
         }
 
-        return new ParsedFeedModel(
+        return (new ParsedFeedModel(
             PlainText::from($title),
             $this->alternateLink($root),
             XmlHelper::childText($root, $this->descriptionElement(), $this->namespaceUri()),
             FeedImageExtractor::fromAtomFeed($root, $this->namespaceUri()),
             $entries,
-        );
+        ))->withShowArtwork(PodcastArtwork::of($root));
     }
 
     private function parseEntry(\DOMElement $entry): ?ParsedEntryModel

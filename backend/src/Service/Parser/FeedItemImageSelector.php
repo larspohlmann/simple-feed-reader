@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Support\PodcastArtwork;
 
-/** Each format's image order; the body image stands in for a missing declared one, or lends it its renditions. */
+/**
+ * Each format's image order; the body image stands in for a missing declared one, or lends it its renditions.
+ * Podcast artwork comes last: many hosts repeat the show's art on every item, which must not hide the post's picture.
+ */
 final readonly class FeedItemImageSelector
 {
     public function __construct(private ItemImageExtractor $extractor)
@@ -19,7 +23,7 @@ final readonly class FeedItemImageSelector
             ?? $this->extractor->fromRssEnclosure($item)
             ?? $this->extractor->fromCustomImageElement($item);
 
-        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
+        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml)) ?? PodcastArtwork::of($item);
     }
 
     public function fromRss1(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
@@ -39,7 +43,7 @@ final readonly class FeedItemImageSelector
             ?? $this->extractor->fromAtomEnclosure($entry, $namespace)
             ?? $this->extractor->fromCustomImageElement($entry);
 
-        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates));
+        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates)) ?? PodcastArtwork::of($entry);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */

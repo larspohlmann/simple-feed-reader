@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Parser\Support;
+
+use App\Service\Image\Model\DeclaredImageModel;
+
+final class DeclaredImages
+{
+    public static function fromElement(\DOMElement $element, string $url): DeclaredImageModel
+    {
+        $width = self::positiveDimension($element->getAttribute('width'));
+
+        return new DeclaredImageModel(
+            $url,
+            $width,
+            self::positiveDimension($element->getAttribute('height')),
+            DeclaredRenditions::ofWidth($url, $width),
+        );
+    }
+
+    /**
+     * An undeclared width loses to any declared one; with no widths, document order decides.
+     *
+     * @param list<DeclaredImageModel> $candidates
+     */
+    public static function widest(array $candidates): ?DeclaredImageModel
+    {
+        if ($candidates === []) {
+            return null;
+        }
+
+        $best = $candidates[0];
+        foreach ($candidates as $candidate) {
+            if ($candidate->width !== null && ($best->width === null || $candidate->width > $best->width)) {
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    public static function positiveDimension(string $raw): ?int
+    {
+        $value = filter_var($raw, FILTER_VALIDATE_INT);
+
+        return \is_int($value) && $value > 0 ? $value : null;
+    }
+
+    private function __construct()
+    {
+    }
+}

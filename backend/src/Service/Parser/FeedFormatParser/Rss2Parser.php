@@ -16,6 +16,7 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
@@ -51,13 +52,13 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             }
         }
 
-        return new ParsedFeedModel(
+        return (new ParsedFeedModel(
             PlainText::from(XmlHelper::childText($channel, 'title')),
             XmlHelper::childText($channel, 'link'),
             XmlHelper::childText($channel, 'description'),
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
-        );
+        ))->withShowArtwork(PodcastArtwork::of($channel));
     }
 
     private function parseItem(\DOMElement $item): ?ParsedEntryModel

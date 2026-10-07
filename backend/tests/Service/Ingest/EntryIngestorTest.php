@@ -14,6 +14,7 @@ use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Ingest\PlatformEntryRules;
+use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedAttachmentModel;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -68,7 +69,13 @@ final class EntryIngestorTest extends DbTestCase
                 new DeclaredImageModel('https://i/lead.jpg', 800, 600),
                 new ParsedMediaBundleModel(
                     [new ParsedMediumModel('https://i/extra.jpg', VisualMediaKind::Image)],
-                    [new ParsedAttachmentModel('https://cdn/ep.mp3', 'audio/mpeg', 3723, 4200000)],
+                    [new ParsedAttachmentModel(
+                        'https://cdn/ep.mp3',
+                        FeedMediaKind::Audio,
+                        'audio/mpeg',
+                        3723,
+                        4200000,
+                    )],
                 ),
             ),
         );

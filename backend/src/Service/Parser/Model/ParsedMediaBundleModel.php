@@ -19,4 +19,16 @@ final readonly class ParsedMediaBundleModel
         public array $attachments = [],
     ) {
     }
+
+    /** An episode plays: a podcast or video item, not a post with a PDF attached. */
+    public function isEpisode(): bool
+    {
+        foreach ($this->attachments as $attachment) {
+            if ($attachment->kind->isPlayable()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

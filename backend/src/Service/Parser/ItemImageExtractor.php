@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
 use Dom\Element;
@@ -13,7 +14,7 @@ use Dom\Element;
 /**
  * The images a feed item declares, source by source; FeedItemImageSelector combines them in each format's order.
  * Within Media RSS the widest variant wins, not the first: feeds ship size ladders in ascending order (#148).
- * An undeclared width loses to any declared one, with no widths document order decides, and URLs stay unresolved.
+ * URLs stay unresolved.
  */
 final readonly class ItemImageExtractor
 {
@@ -31,7 +32,7 @@ final readonly class ItemImageExtractor
             }
         }
 
-        return self::widest($candidates)?->joinedWith(...$candidates);
+        return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
@@ -46,7 +47,7 @@ final readonly class ItemImageExtractor
             }
             $url = trim($child->getAttribute('url'));
             if ($url !== '') {
-                return self::imageFrom($child, $url);
+                return DeclaredImages::fromElement($child, $url);
             }
         }
 
@@ -70,7 +71,7 @@ final readonly class ItemImageExtractor
             }
             $href = trim($child->getAttribute('href'));
             if ($href !== '') {
-                return self::imageFrom($child, $href);
+                return DeclaredImages::fromElement($child, $href);
             }
         }
 
@@ -83,8 +84,8 @@ final readonly class ItemImageExtractor
      */
     public function fromCustomImageElement(\DOMElement $item): ?DeclaredImageModel
     {
-        return self::widest(self::customImageCandidates($item, 'image_big'))
-            ?? self::widest(self::customImageCandidates($item, 'image'));
+        return DeclaredImages::widest(self::customImageCandidates($item, 'image_big'))
+            ?? DeclaredImages::widest(self::customImageCandidates($item, 'image'));
     }
 
     /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions and renditions it declares. */
@@ -111,13 +112,13 @@ final readonly class ItemImageExtractor
             return null;
         }
 
-        $width = self::positiveInt($element->getAttribute('width') ?? '');
+        $width = DeclaredImages::positiveDimension($element->getAttribute('width') ?? '');
         $srcsetRenditions = DeclaredRenditions::fromSrcset($element->getAttribute('srcset'));
 
         return new DeclaredImageModel(
             $src,
             $width,
-            self::positiveInt($element->getAttribute('height') ?? ''),
+            DeclaredImages::positiveDimension($element->getAttribute('height') ?? ''),
             // A `w` descriptor is a file's width; beside one, the width attribute is only a display size.
             $srcsetRenditions === [] ? DeclaredRenditions::ofWidth($src, $width) : $srcsetRenditions,
         );
@@ -136,7 +137,7 @@ final readonly class ItemImageExtractor
             if ($url === '' || !MediaImageClassifier::isImage($child)) {
                 continue;
             }
-            $candidates[] = self::imageFrom($child, $url);
+            $candidates[] = DeclaredImages::fromElement($child, $url);
         }
 
         return $candidates;
@@ -152,7 +153,7 @@ final readonly class ItemImageExtractor
             }
             $url = trim($child->getAttribute('url'));
             if ($url !== '') {
-                $candidates[] = self::imageFrom($child, $url);
+                $candidates[] = DeclaredImages::fromElement($child, $url);
             }
         }
 
@@ -164,37 +165,5 @@ final readonly class ItemImageExtractor
         return $node instanceof \DOMElement
             && $node->localName === $localName
             && $node->namespaceURI === self::MEDIA_NS;
-    }
-
-    private static function imageFrom(\DOMElement $element, string $url): DeclaredImageModel
-    {
-        $width = self::positiveInt($element->getAttribute('width'));
-
-        return new DeclaredImageModel(
-            $url,
-            $width,
-            self::positiveInt($element->getAttribute('height')),
-            DeclaredRenditions::ofWidth($url, $width),
-        );
-    }
-
-    private static function positiveInt(string $raw): ?int
-    {
-        $value = filter_var(trim($raw), FILTER_VALIDATE_INT);
-
-        return \is_int($value) && $value > 0 ? $value : null;
-    }
-
-    /** @param list<DeclaredImageModel> $candidates */
-    private static function widest(array $candidates): ?DeclaredImageModel
-    {
-        $best = $candidates[0] ?? null;
-        foreach ($candidates as $candidate) {
-            if (($candidate->width ?? 0) > ($best->width ?? 0)) {
-                $best = $candidate;
-            }
-        }
-
-        return $best;
     }
 }

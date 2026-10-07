@@ -10,6 +10,7 @@ final class XmlHelper
 {
     /** Dublin Core: RSS feeds, and Atom feeds without their dialect's own date, carry the entry date as <dc:date>. */
     public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
+    public const string ITUNES_NAMESPACE = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
     /**
      * Trimmed text of the first matching direct child that HAS text. Matching is by local name, so an unqualified
