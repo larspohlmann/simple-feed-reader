@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Discovery\FeedOffer;
 
 use App\Enum\SourceFormat;
-use App\Service\Discovery\WordPressRestProbe;
+use App\Service\Discovery\FeedOffer\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
