@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.3.0] - 2026-10-07
+
 ### Highlights
 
 **A full podcast experience.** The audio player now plays a playlist with
@@ -21,6 +23,20 @@ podcast declares.
 
 **SoundCloud feeds.** Paste a SoundCloud profile link into "Add feed" and the
 reader offers that account's RSS feed.
+
+## What's Changed
+* fix(#1423): release the saved-searches in-flight guard when a load fails by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1424
+* refactor(#1425): name HTTP statuses with Response::HTTP_* constants by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1426
+* feat(#1427): discovery offers a SoundCloud profile's RSS feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1430
+* feat(#1428): an audio-first entry whose page holds no article shows no fallback note by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1431
+* feat(#1432): podcast artwork is the image of an episode and the fallback of a feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1433
+* feat(#1429): audio playlist with artwork, previous/next, reorder and add-to-playlist by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1435
+* feat(#1436): play and add to playlist from the list rows by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1437
+* feat(#1434): drop the in-body duplicate of the enclosure player by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1438
+* docs(#1439): prepare v1.3.0 release highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1440
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.2.1...v1.3.0
 
 ## [v1.2.1] - 2026-10-06
 
