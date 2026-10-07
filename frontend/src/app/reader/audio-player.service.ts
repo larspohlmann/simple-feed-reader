@@ -1,5 +1,17 @@
-import { DestroyRef, InjectionToken, Injectable, inject, signal } from '@angular/core';
+import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
 import { onIdentityChange } from '../core/auth/session-identity';
+import {
+  EMPTY_PLAYLIST,
+  Playlist,
+  append,
+  currentTrack,
+  indexOf,
+  insertNext,
+  move,
+  remove,
+  select,
+} from './audio/playlist';
+import { PlaylistStore } from './audio/playlist.store';
 
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */
@@ -18,30 +30,38 @@ export const AUDIO_ELEMENT_FACTORY = new InjectionToken<() => HTMLAudioElement>(
   { providedIn: 'root', factory: () => () => new Audio() },
 );
 
-const KEY = 'sfr.audio';
 /** Jump size for the skip controls and the OS seek keys (#915). */
 export const SKIP_SECONDS = 15;
 const PERSIST_INTERVAL_MS = 5000;
+/** Past this, previous restarts the current track instead of stepping back (#1429). */
+export const RESTART_THRESHOLD_SECONDS = 3;
 
 /**
  * The reader's single audio player. It owns one HTMLAudioElement created in
  * code, never placed in a template, so playback keeps running while the reader
  * view unmounts and across route changes; the mini-player bar is only a
- * reflection of these signals. Position and the current track are saved to
- * localStorage and rehydrated paused on reload, and cleared when the identity
- * changes so one account's podcast never bleeds into the next session.
+ * reflection of these signals. It plays a playlist (#1429): the queue rules live
+ * in `Playlist`, this service only drives the element from it. The playlist and
+ * position are saved through PlaylistStore and rehydrated paused on reload, and
+ * cleared when the identity changes so one account's podcasts never bleed into
+ * the next session.
  */
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
   private readonly element = inject(AUDIO_ELEMENT_FACTORY)();
   private readonly destroyRef = inject(DestroyRef);
+  private readonly store = inject(PlaylistStore);
 
-  private readonly _current = signal<AudioTrack | null>(null);
+  private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
   private readonly _playing = signal(false);
   private readonly _position = signal(0);
   private readonly _duration = signal(0);
 
-  readonly current = this._current.asReadonly();
+  readonly tracks = computed(() => this._playlist().tracks);
+  readonly index = computed(() => this._playlist().index);
+  readonly current = computed(() => currentTrack(this._playlist()));
+  readonly hasPrevious = computed(() => this.index() > 0);
+  readonly hasNext = computed(() => this.index() < this.tracks().length - 1);
   readonly playing = this._playing.asReadonly();
   readonly position = this._position.asReadonly();
   readonly duration = this._duration.asReadonly();
@@ -57,13 +77,54 @@ export class AudioPlayerService {
     onIdentityChange(() => this.stop());
   }
 
+  isQueued(url: string): boolean {
+    return indexOf(this._playlist(), url) !== -1;
+  }
+
+  /** Listen: play now, keeping the rest of the playlist. */
   play(track: AudioTrack): void {
-    if (this._current()?.url === track.url) return this.resume();
-    this.load(track);
+    if (this.current()?.url === track.url) return this.resume();
+    this.go(insertNext(this._playlist(), track));
+  }
+
+  /** Add to playlist: never interrupts; into an empty player it waits, paused. */
+  enqueue(track: AudioTrack): void {
+    const wasEmpty = this.current() === null;
+    this._playlist.update((playlist) => append(playlist, track));
+    if (wasEmpty) this.load(track);
+    this.persist();
+  }
+
+  dequeue(url: string): void {
+    const wasCurrent = this.current()?.url === url;
+    const playlist = remove(this._playlist(), url);
+    if (playlist === EMPTY_PLAYLIST) return this.stop();
+    this._playlist.set(playlist);
+    if (wasCurrent) this.replaceCurrent();
+    this.persist();
+  }
+
+  playAt(index: number): void {
+    if (index === this.index()) return this.resume();
+    this.go(select(this._playlist(), index));
+  }
+
+  move(from: number, to: number): void {
+    this._playlist.update((playlist) => move(playlist, from, to));
+    this.persist();
+  }
+
+  next(): void {
+    if (this.hasNext()) this.go(select(this._playlist(), this.index() + 1));
+  }
+
+  previous(): void {
+    if (this._position() > RESTART_THRESHOLD_SECONDS || !this.hasPrevious()) return this.seek(0);
+    this.go(select(this._playlist(), this.index() - 1));
   }
 
   toggle(): void {
-    if (!this._current()) return;
+    if (!this.current()) return;
     if (this._playing()) this.element.pause();
     else this.resume();
   }
@@ -80,7 +141,7 @@ export class AudioPlayerService {
 
   stop(): void {
     this.element.pause();
-    this._current.set(null);
+    this._playlist.set(EMPTY_PLAYLIST);
     this._playing.set(false);
     this._position.set(0);
     this._duration.set(0);
@@ -88,14 +149,31 @@ export class AudioPlayerService {
     this.clearMediaMetadata();
   }
 
+  private go(playlist: Playlist): void {
+    this._playlist.set(playlist);
+    this.loadCurrent();
+    this.resume();
+    this.persist();
+  }
+
+  private replaceCurrent(): void {
+    const wasPlaying = this._playing();
+    this.loadCurrent();
+    if (wasPlaying) this.resume();
+  }
+
+  private loadCurrent(): void {
+    const track = this.current();
+    if (track) this.load(track);
+  }
+
   private load(track: AudioTrack): void {
     this.element.src = track.url;
     this.element.currentTime = 0;
-    this._current.set(track);
+    this.pendingSeek = null;
     this._duration.set(track.durationInSeconds ?? 0);
     this._position.set(0);
     this.setMediaMetadata(track);
-    this.resume();
   }
 
   private resume(): void {
@@ -110,7 +188,7 @@ export class AudioPlayerService {
     this.element.addEventListener('durationchange', () => this.onMetadata());
     this.element.addEventListener('play', () => this.onPlaying(true));
     this.element.addEventListener('pause', () => this.onPlaying(false));
-    this.element.addEventListener('ended', () => this._playing.set(false));
+    this.element.addEventListener('ended', () => this.onEnded());
   }
 
   private onTimeUpdate(): void {
@@ -135,19 +213,18 @@ export class AudioPlayerService {
     this.reflectPlaybackState();
   }
 
+  private onEnded(): void {
+    if (this.hasNext()) return this.next();
+    this._playing.set(false);
+  }
+
   private restore(): void {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return;
-    try {
-      const saved = JSON.parse(raw) as { track: AudioTrack; position: number };
-      this._current.set(saved.track);
-      this._duration.set(saved.track.durationInSeconds ?? 0);
-      this._position.set(saved.position);
-      this.element.src = saved.track.url;
-      this.pendingSeek = saved.position;
-    } catch {
-      this.forget();
-    }
+    const saved = this.store.load();
+    if (!saved) return;
+    this._playlist.set(saved.playlist);
+    this.loadCurrent();
+    this._position.set(saved.position);
+    this.pendingSeek = saved.position;
   }
 
   private bindLifecycle(): void {
@@ -158,18 +235,17 @@ export class AudioPlayerService {
 
   private persistThrottled(): void {
     if (Date.now() - this.lastPersistAt < PERSIST_INTERVAL_MS) return;
+    this.lastPersistAt = Date.now();
     this.persist();
   }
 
   private persist(): void {
-    const track = this._current();
-    if (!track) return this.forget();
-    localStorage.setItem(KEY, JSON.stringify({ track, position: this._position() }));
-    this.lastPersistAt = Date.now();
+    if (!this.current()) return this.forget();
+    this.store.save({ playlist: this._playlist(), position: this._position() });
   }
 
   private forget(): void {
-    localStorage.removeItem(KEY);
+    this.store.clear();
   }
 
   private get session(): MediaSession | null {
@@ -184,6 +260,8 @@ export class AudioPlayerService {
     session.setActionHandler('seekbackward', () => this.skip(-SKIP_SECONDS));
     session.setActionHandler('seekforward', () => this.skip(SKIP_SECONDS));
     session.setActionHandler('seekto', (details) => this.seekTo(details));
+    session.setActionHandler('previoustrack', () => this.previous());
+    session.setActionHandler('nexttrack', () => this.next());
   }
 
   private seekTo(details: MediaSessionActionDetails): void {

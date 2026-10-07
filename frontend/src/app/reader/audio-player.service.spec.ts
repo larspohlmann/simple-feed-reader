@@ -1,5 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { AUDIO_ELEMENT_FACTORY, AudioPlayerService, AudioTrack } from './audio-player.service';
+import {
+  AUDIO_ELEMENT_FACTORY,
+  AudioPlayerService,
+  AudioTrack,
+  RESTART_THRESHOLD_SECONDS,
+} from './audio-player.service';
 import { TokenStore } from '../core/auth/token.store';
 
 class FakeAudio {
@@ -182,5 +187,219 @@ describe('AudioPlayerService', () => {
 
     expect(service.current()).toBeNull();
     expect(localStorage.getItem('sfr.audio')).toBeNull();
+  });
+
+  describe('as a playlist', () => {
+    const one = track({ url: 'https://x.test/1.mp3', title: 'One' });
+    const two = track({ url: 'https://x.test/2.mp3', title: 'Two' });
+    const three = track({ url: 'https://x.test/3.mp3', title: 'Three' });
+
+    function titles(service: AudioPlayerService): string[] {
+      return service.tracks().map((queued) => queued.title);
+    }
+
+    function at(seconds: number): void {
+      audio.currentTime = seconds;
+      audio.fire('timeupdate');
+    }
+
+    it('adds without interrupting what plays', () => {
+      const service = make();
+      service.play(one);
+      audio.play.mockClear();
+
+      service.enqueue(two);
+      service.enqueue(three);
+
+      expect(titles(service)).toEqual(['One', 'Two', 'Three']);
+      expect(service.current()).toBe(one);
+      expect(audio.src).toBe(one.url);
+      expect(audio.play).not.toHaveBeenCalled();
+      expect(service.isQueued(two.url)).toBe(true);
+    });
+
+    it('loads the first added track paused into an empty player', () => {
+      const service = make();
+
+      service.enqueue(one);
+
+      expect(service.current()).toBe(one);
+      expect(audio.src).toBe(one.url);
+      expect(audio.play).not.toHaveBeenCalled();
+      expect(service.playing()).toBe(false);
+    });
+
+    it('plays a listened track next to the current one and keeps the queue', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      service.play(three);
+
+      expect(titles(service)).toEqual(['One', 'Three', 'Two']);
+      expect(service.current()).toBe(three);
+      expect(audio.src).toBe(three.url);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('advances to the next track when one ends, and stops after the last', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      audio.fire('ended');
+      expect(service.current()).toBe(two);
+      expect(audio.src).toBe(two.url);
+      expect(service.playing()).toBe(true);
+
+      audio.pause();
+      audio.fire('ended');
+      expect(service.current()).toBe(two);
+      expect(service.playing()).toBe(false);
+    });
+
+    it('plays the reordered order', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+      service.enqueue(three);
+
+      service.move(2, 1);
+      audio.fire('ended');
+
+      expect(titles(service)).toEqual(['One', 'Three', 'Two']);
+      expect(service.current()).toBe(three);
+    });
+
+    it('steps with next and previous', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      service.next();
+      expect(service.current()).toBe(two);
+      expect(service.hasNext()).toBe(false);
+
+      service.previous();
+      expect(service.current()).toBe(one);
+      expect(service.hasPrevious()).toBe(false);
+    });
+
+    it('restarts the current track on previous once past the threshold', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+      service.next();
+      at(RESTART_THRESHOLD_SECONDS + 1);
+
+      service.previous();
+
+      expect(service.current()).toBe(two);
+      expect(audio.currentTime).toBe(0);
+    });
+
+    it('restarts the first track on previous', () => {
+      const service = make();
+      service.play(one);
+      at(1);
+
+      service.previous();
+
+      expect(service.current()).toBe(one);
+      expect(audio.currentTime).toBe(0);
+    });
+
+    it('plays a chosen row', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      service.playAt(1);
+
+      expect(service.current()).toBe(two);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('hands a removed playing track over to the next one, still playing', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      service.dequeue(one.url);
+
+      expect(titles(service)).toEqual(['Two']);
+      expect(audio.src).toBe(two.url);
+      expect(service.playing()).toBe(true);
+    });
+
+    it('keeps a paused player paused when its track is removed', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+      service.toggle();
+      audio.play.mockClear();
+
+      service.dequeue(one.url);
+
+      expect(service.current()).toBe(two);
+      expect(audio.play).not.toHaveBeenCalled();
+    });
+
+    it('stops when the last track is removed', () => {
+      const service = make();
+      service.play(one);
+
+      service.dequeue(one.url);
+
+      expect(service.current()).toBeNull();
+      expect(localStorage.getItem('sfr.audio')).toBeNull();
+    });
+
+    it('restores the playlist, its current track and position paused', () => {
+      const first = make();
+      first.play(one);
+      first.enqueue(two);
+      first.next();
+      at(20);
+      window.dispatchEvent(new Event('pagehide'));
+
+      const restored = make();
+
+      expect(titles(restored)).toEqual(['One', 'Two']);
+      expect(restored.current()?.url).toBe(two.url);
+      expect(restored.position()).toBe(20);
+      expect(audio.play).not.toHaveBeenCalled();
+    });
+
+    it('restores the single track saved before playlists', () => {
+      localStorage.setItem('sfr.audio', JSON.stringify({ track: one, position: 9 }));
+
+      const restored = make();
+
+      expect(titles(restored)).toEqual(['One']);
+      expect(restored.position()).toBe(9);
+    });
+
+    it('binds the OS previous and next track controls', () => {
+      const handlers: Record<string, () => void> = {};
+      Object.defineProperty(navigator, 'mediaSession', {
+        configurable: true,
+        value: {
+          setActionHandler: (action: string, handler: () => void) => (handlers[action] = handler),
+        },
+      });
+      try {
+        const service = make();
+        service.play(one);
+        service.enqueue(two);
+
+        handlers['nexttrack']();
+        expect(service.current()).toBe(two);
+        handlers['previoustrack']();
+        expect(service.current()).toBe(one);
+      } finally {
+        delete (navigator as { mediaSession?: unknown }).mediaSession;
+      }
+    });
   });
 });
