@@ -76,3 +76,31 @@ test('episodes added from their articles play in the reordered order', async ({ 
   await expect(bar.locator('.controls .title')).toHaveText('Episode 2');
   await expect(bar.getByRole('button', { name: 'Next track' })).toBeDisabled();
 });
+
+for (const layout of ['magazine', 'list'] as const) {
+  test(`episodes play and queue from their ${layout} rows without opening them (#1436)`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await presetLocalStorage(page, { 'sfr.layout': layout });
+    await stubEpisodes(page);
+    await page.goto('/?subscription=1');
+    const row = (title: string) =>
+      page.locator('app-entry-list article[role="button"]', { hasText: title });
+
+    await row('Episode 2').getByRole('button', { name: 'Add to playlist', exact: true }).click();
+    await expect(
+      row('Episode 2').getByRole('button', { name: 'In playlist', exact: true }),
+    ).toBeVisible();
+    await row('Episode 3').getByRole('button', { name: 'Play', exact: true }).click();
+
+    const bar = page.locator('app-audio-player-bar');
+    await expect(bar.locator('.controls .title')).toHaveText('Episode 3');
+    await expect(bar.getByRole('button', { name: 'Playlist (2)' })).toBeVisible();
+    await expect(
+      row('Episode 3').getByRole('button', { name: 'Pause', exact: true }),
+    ).toBeVisible();
+    await expect(page).toHaveURL(/\?subscription=1$/);
+    await expect(page.locator('app-reader-view')).toHaveCount(0);
+  });
+}

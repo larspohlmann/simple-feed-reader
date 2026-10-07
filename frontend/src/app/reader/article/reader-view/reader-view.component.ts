@@ -51,7 +51,7 @@ import { decorateArticle } from '../decorators/decorate-article';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
-import { firstAudioAttachment, toAudioTrack } from '../decorators/audio-attachment';
+import { EntryAudio } from '../../audio/entry-audio';
 
 @Component({
   selector: 'app-reader-view',
@@ -110,7 +110,6 @@ export class ReaderViewComponent {
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly screen = inject(LayoutService);
-  private readonly audioPlayer = inject(AudioPlayerService);
   private readonly injector = inject(Injector);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly restore = inject(ArticleScrollRestore);
@@ -126,41 +125,16 @@ export class ReaderViewComponent {
   protected readonly formatDuration = formatDuration;
 
   /** The entry's first playable audio enclosure, surfaced as a listen control
-   *  above the article; null when the feed declared none (#915). */
-  protected readonly audioAttachment = computed(() =>
-    firstAudioAttachment(this.entry()?.attachments ?? []),
-  );
+   *  above the article; its attachment is null when the feed declared none (#915). */
+  protected readonly audio = new EntryAudio(this.entry, inject(AudioPlayerService));
 
   /** Summary plus player is the whole of an audio-first entry whose page holds no article (#1428). */
   protected readonly fallbackNoticeShown = computed(
     () =>
       this.source.failed() &&
       this.mode() === 'original' &&
-      !(this.audioAttachment() && this.source.pageHoldsNoArticle()),
+      !(this.audio.attachment() && this.source.pageHoldsNoArticle()),
   );
-
-  private readonly audioTrack = computed(() => {
-    const entry = this.entry();
-    const attachment = this.audioAttachment();
-    return entry && attachment ? toAudioTrack(entry, attachment) : null;
-  });
-
-  protected readonly queued = computed(() => {
-    const track = this.audioTrack();
-    return track !== null && this.audioPlayer.isQueued(track.url);
-  });
-
-  protected listen(): void {
-    const track = this.audioTrack();
-    if (track) this.audioPlayer.play(track);
-  }
-
-  protected toggleQueued(): void {
-    const track = this.audioTrack();
-    if (!track) return;
-    if (this.queued()) this.audioPlayer.dequeue(track.url);
-    else this.audioPlayer.enqueue(track);
-  }
 
   // The open entry's reference changes on every optimistic flag update, but its
   // id doesn't. Tracking the loaded id lets the load effect ignore those churns

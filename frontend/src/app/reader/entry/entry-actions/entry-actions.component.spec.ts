@@ -6,6 +6,8 @@ import { EntryActionsComponent } from './entry-actions.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
+import { AudioPlayerService } from '../../audio-player.service';
+import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -48,13 +50,14 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
     (keydown.enter)="cardOpened = true"
     (keydown.space)="$event.preventDefault(); cardOpened = true"
   >
-    <app-entry-actions [entry]="entry" [size]="size" />
+    <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
 class HostComponent implements EntryActionHandler {
   entry: EntryDto = entry();
   size: 'sm' | 'md' = 'sm';
+  audio = true;
   cardOpened = false;
   favoriteCount = 0;
   kept: EntryDto | null = null;
@@ -113,9 +116,19 @@ const iconSizes = (fixture: ReturnType<typeof mount>) =>
     .queryAll(By.directive(IconComponent))
     .map((icon) => icon.componentInstance.size());
 
+const EPISODE = 'https://x.test/ep.mp3';
+const episode = (): EntryDto =>
+  entry({ title: 'Ep 1', attachments: [{ url: EPISODE, mimeType: 'audio/mpeg' }] });
+
 describe('EntryActionsComponent', () => {
+  let player: StubAudioPlayer;
+
   beforeEach(() => {
-    TestBed.configureTestingModule({ imports: [HostComponent, provideTranslocoTesting()] });
+    player = new StubAudioPlayer();
+    TestBed.configureTestingModule({
+      imports: [HostComponent, provideTranslocoTesting()],
+      providers: [{ provide: AudioPlayerService, useValue: player.asService() }],
+    });
   });
 
   it('renders the three actions with their labels', () => {
@@ -225,5 +238,79 @@ describe('EntryActionsComponent', () => {
   it('styles every toggle through the shared flag-toggle look', () => {
     const shared = buttons(mount()).map((button) => button.classList.contains('flag-toggle'));
     expect(shared).toEqual([true, true, true]);
+  });
+
+  describe('on an audio entry (#1436)', () => {
+    const labels = (fixture: ReturnType<typeof mount>) =>
+      buttons(fixture).map((button) => button.getAttribute('aria-label'));
+
+    it('leads with play and add to playlist', () => {
+      expect(labels(mount(episode()))).toEqual([
+        'Play',
+        'Add to playlist',
+        'Favorite',
+        'Keep',
+        'Toggle read',
+      ]);
+    });
+
+    it('leaves them out where the host has its own listen controls', () => {
+      const fixture = TestBed.createComponent(HostComponent);
+      fixture.componentInstance.entry = episode();
+      fixture.componentInstance.audio = false;
+      fixture.detectChanges();
+      expect(labels(fixture)).toEqual(['Favorite', 'Keep', 'Toggle read']);
+    });
+
+    it('plays the episode without opening the card, by click, Enter or Space', () => {
+      const fixture = mount(episode());
+      const [play] = buttons(fixture);
+
+      play.click();
+      pressEnter(play);
+      pressSpace(play);
+
+      expect(player.played.map((track) => track.url)).toEqual([EPISODE, EPISODE, EPISODE]);
+      expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
+
+    it('shows pause while the episode plays, and pauses it', () => {
+      const fixture = mount(episode());
+      player.current.set({
+        url: EPISODE,
+        title: 'Ep 1',
+        faviconUrl: null,
+        imageUrl: null,
+        durationInSeconds: null,
+      });
+      player.playing.set(true);
+      fixture.detectChanges();
+      const [pause] = buttons(fixture);
+      expect(pause.getAttribute('aria-label')).toBe('Pause');
+      expect(pause.textContent).toContain('pause');
+
+      pause.click();
+
+      expect(player.toggles).toBe(1);
+      expect(player.played).toEqual([]);
+    });
+
+    it('adds the episode to the playlist and, once queued, takes it out again', () => {
+      const fixture = mount(episode());
+      const queue = () => buttons(fixture)[1];
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.queue()).toEqual([EPISODE]);
+      expect(queue().getAttribute('aria-label')).toBe('In playlist');
+      expect(queue().getAttribute('aria-pressed')).toBe('true');
+      expect(queue().textContent).toContain('playlist_add_check');
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.queue()).toEqual([]);
+      expect(queue().getAttribute('aria-label')).toBe('Add to playlist');
+      expect(fixture.componentInstance.cardOpened).toBe(false);
+    });
   });
 });
