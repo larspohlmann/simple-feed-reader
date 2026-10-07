@@ -39,7 +39,10 @@ export class PlaylistStore {
     const tracks = stored.tracks ?? [];
     if (!Array.isArray(tracks) || tracks.length === 0) throw new Error('empty playlist');
     const index = Number.isInteger(stored.index) ? Number(stored.index) : 0;
-    return { playlist: { tracks, index: Math.max(0, Math.min(tracks.length - 1, index)) }, position };
+    return {
+      playlist: { tracks, index: Math.max(0, Math.min(tracks.length - 1, index)) },
+      position,
+    };
   }
 }
 

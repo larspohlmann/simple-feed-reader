@@ -16,6 +16,13 @@
   position: relative;
 }
 
+/* The player wins over every shell layer (header 10, article 12, drawer 20): on a
+   short viewport the list under the article paints past the body's bottom edge. */
+app-audio-player-bar {
+  position: relative;
+  z-index: 30;
+}
+
 /* Floats over the content rather than sitting in the flow. A negative
    `margin-top` used to hide it, re-running flex layout every frame and
    jumping the list under the finger (#87). A transform touches no layout. */
@@ -42,6 +49,8 @@ app-reader-header.hidden {
    bar's height in their own padding, so retracting it reveals content instead
    of leaving a gap. The in-flow sidebar takes its own offset below. */
 .body {
+  /* Contains the narrow drawer and its backdrop, so they end above the player. */
+  position: relative;
   flex: 1;
   display: flex;
   min-height: 0;

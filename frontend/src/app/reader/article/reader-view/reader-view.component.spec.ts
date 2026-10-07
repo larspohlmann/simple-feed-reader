@@ -1464,6 +1464,28 @@ describe('ReaderViewComponent', () => {
       );
     });
 
+    it('adds the episode to the playlist and, once queued, takes it out again', () => {
+      const fixture = mount(
+        entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] }),
+      );
+      const player = TestBed.inject(AudioPlayerService);
+      const queue = (): HTMLButtonElement =>
+        fixture.debugElement.query(By.css('.listen.queue')).nativeElement;
+      expect(queue().getAttribute('aria-pressed')).toBe('false');
+      expect(queue().textContent).toContain('Add to playlist');
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.isQueued('https://x.test/ep.mp3')).toBe(true);
+      expect(queue().getAttribute('aria-pressed')).toBe('true');
+      expect(queue().textContent).toContain('In playlist');
+
+      queue().click();
+      fixture.detectChanges();
+      expect(player.isQueued('https://x.test/ep.mp3')).toBe(false);
+      localStorage.clear();
+    });
+
     it('shows no listen control when the entry has no audio enclosure', () => {
       const fixture = mount(
         entry({ attachments: [{ url: 'https://x.test/clip.mp4', mimeType: 'video/mp4' }] }),

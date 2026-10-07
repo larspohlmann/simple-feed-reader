@@ -1,0 +1,17 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--artwork-size, var(--icon-lg));
+  block-size: var(--artwork-size, var(--icon-lg));
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}

@@ -1,0 +1,5 @@
+@if (imageUrl(); as url) {
+  <img appProxiedImage [src]="url" alt="" (imageFailed)="imageUrl.set(null)" />
+} @else {
+  <app-favicon [url]="track().faviconUrl" [size]="16" />
+}

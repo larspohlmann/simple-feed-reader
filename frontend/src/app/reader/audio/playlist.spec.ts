@@ -20,7 +20,7 @@ function track(name: string): AudioTrack {
   };
 }
 
-const [a, b, c, d] = ['a', 'b', 'c', 'd'].map(track);
+const [alpha, bravo, charlie, delta] = ['a', 'b', 'c', 'd'].map(track);
 
 function titles(playlist: Playlist): string {
   return playlist.tracks.map((queued) => queued.title).join('');
@@ -33,43 +33,43 @@ function of(index: number, ...tracks: AudioTrack[]): Playlist {
 describe('playlist', () => {
   describe('append', () => {
     it('makes the first track current', () => {
-      const playlist = append(EMPTY_PLAYLIST, a);
+      const playlist = append(EMPTY_PLAYLIST, alpha);
 
       expect(titles(playlist)).toBe('a');
       expect(playlist.index).toBe(0);
     });
 
     it('adds at the end and keeps the current track', () => {
-      const playlist = append(of(1, a, b), c);
+      const playlist = append(of(1, alpha, bravo), charlie);
 
       expect(titles(playlist)).toBe('abc');
       expect(playlist.index).toBe(1);
     });
 
     it('leaves a queued track where it is', () => {
-      const playlist = of(0, a, b);
+      const playlist = of(0, alpha, bravo);
 
-      expect(append(playlist, b)).toBe(playlist);
+      expect(append(playlist, bravo)).toBe(playlist);
     });
   });
 
   describe('insertNext', () => {
     it('puts the track after the current one and makes it current', () => {
-      const playlist = insertNext(of(0, a, b), c);
+      const playlist = insertNext(of(0, alpha, bravo), charlie);
 
       expect(titles(playlist)).toBe('acb');
-      expect(currentTrack(playlist)).toBe(c);
+      expect(currentTrack(playlist)).toBe(charlie);
     });
 
     it('jumps to a queued track without moving it', () => {
-      const playlist = insertNext(of(0, a, b, c), c);
+      const playlist = insertNext(of(0, alpha, bravo, charlie), charlie);
 
       expect(titles(playlist)).toBe('abc');
       expect(playlist.index).toBe(2);
     });
 
     it('starts an empty playlist', () => {
-      const playlist = insertNext(EMPTY_PLAYLIST, a);
+      const playlist = insertNext(EMPTY_PLAYLIST, alpha);
 
       expect(titles(playlist)).toBe('a');
       expect(playlist.index).toBe(0);
@@ -78,11 +78,11 @@ describe('playlist', () => {
 
   describe('select', () => {
     it('makes the track at the index current', () => {
-      expect(select(of(0, a, b), 1).index).toBe(1);
+      expect(select(of(0, alpha, bravo), 1).index).toBe(1);
     });
 
     it.each([-1, 2])('ignores the out-of-range index %i', (index) => {
-      const playlist = of(0, a, b);
+      const playlist = of(0, alpha, bravo);
 
       expect(select(playlist, index)).toBe(playlist);
     });
@@ -90,27 +90,27 @@ describe('playlist', () => {
 
   describe('move', () => {
     it('moves the current track and keeps it current', () => {
-      const playlist = move(of(0, a, b, c), 0, 2);
+      const playlist = move(of(0, alpha, bravo, charlie), 0, 2);
 
       expect(titles(playlist)).toBe('bca');
-      expect(currentTrack(playlist)).toBe(a);
+      expect(currentTrack(playlist)).toBe(alpha);
     });
 
     it('keeps the current track current when another moves across it', () => {
-      const down = move(of(1, a, b, c), 0, 2);
-      const up = move(of(1, a, b, c), 2, 0);
+      const down = move(of(1, alpha, bravo, charlie), 0, 2);
+      const up = move(of(1, alpha, bravo, charlie), 2, 0);
 
       expect([titles(down), currentTrack(down)?.title]).toEqual(['bca', 'b']);
       expect([titles(up), currentTrack(up)?.title]).toEqual(['cab', 'b']);
     });
 
     it('clamps the target to the ends', () => {
-      expect(titles(move(of(0, a, b, c), 0, 9))).toBe('bca');
-      expect(titles(move(of(0, a, b, c), 2, -4))).toBe('cab');
+      expect(titles(move(of(0, alpha, bravo, charlie), 0, 9))).toBe('bca');
+      expect(titles(move(of(0, alpha, bravo, charlie), 2, -4))).toBe('cab');
     });
 
     it('ignores an unknown source or a move onto itself', () => {
-      const playlist = of(0, a, b);
+      const playlist = of(0, alpha, bravo);
 
       expect(move(playlist, 5, 0)).toBe(playlist);
       expect(move(playlist, 1, 1)).toBe(playlist);
@@ -119,32 +119,32 @@ describe('playlist', () => {
 
   describe('remove', () => {
     it('shifts the current index when an earlier track goes', () => {
-      const playlist = remove(of(2, a, b, c), a.url);
+      const playlist = remove(of(2, alpha, bravo, charlie), alpha.url);
 
       expect(titles(playlist)).toBe('bc');
-      expect(currentTrack(playlist)).toBe(c);
+      expect(currentTrack(playlist)).toBe(charlie);
     });
 
     it('keeps the index when a later track goes', () => {
-      const playlist = remove(of(0, a, b, c), c.url);
+      const playlist = remove(of(0, alpha, bravo, charlie), charlie.url);
 
-      expect(currentTrack(playlist)).toBe(a);
+      expect(currentTrack(playlist)).toBe(alpha);
     });
 
     it('hands the current place to the next track', () => {
-      expect(currentTrack(remove(of(1, a, b, c, d), b.url))).toBe(c);
+      expect(currentTrack(remove(of(1, alpha, bravo, charlie, delta), bravo.url))).toBe(charlie);
     });
 
     it('falls back to the previous track when the last one was current', () => {
-      expect(currentTrack(remove(of(2, a, b, c), c.url))).toBe(b);
+      expect(currentTrack(remove(of(2, alpha, bravo, charlie), charlie.url))).toBe(bravo);
     });
 
     it('empties when the only track goes', () => {
-      expect(remove(of(0, a), a.url)).toBe(EMPTY_PLAYLIST);
+      expect(remove(of(0, alpha), alpha.url)).toBe(EMPTY_PLAYLIST);
     });
 
     it('ignores an unknown url', () => {
-      const playlist = of(0, a);
+      const playlist = of(0, alpha);
 
       expect(remove(playlist, 'https://x.test/none.mp3')).toBe(playlist);
     });
