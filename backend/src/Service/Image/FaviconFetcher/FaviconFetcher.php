@@ -13,6 +13,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\Model\FetchedFaviconModel;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -28,10 +29,16 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
 
     private const int TIMEOUT_SECONDS = 8;
     private const int MAX_REDIRECTS = 3;
-    private const array REDIRECT_STATUSES = [301, 302, 303, 307, 308];
+    private const array REDIRECT_STATUSES = [
+        Response::HTTP_MOVED_PERMANENTLY,
+        Response::HTTP_FOUND,
+        Response::HTTP_SEE_OTHER,
+        Response::HTTP_TEMPORARY_REDIRECT,
+        Response::HTTP_PERMANENTLY_REDIRECT,
+    ];
 
     /** Gone for good: retried and then dropped, unlike a merely-refused status. */
-    private const array GONE_STATUSES = [404, 410];
+    private const array GONE_STATUSES = [Response::HTTP_NOT_FOUND, Response::HTTP_GONE];
 
     /** Formats a browser will render in an <img>. SVG is excluded deliberately:
      *  it is a script-carrying document format, and we serve these bytes back
@@ -155,10 +162,14 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
 
     private function assertOk(int $status): void
     {
-        if (200 === $status) {
+        if (Response::HTTP_OK === $status) {
             return;
         }
-        if ($status >= 400 && $status <= 499 && !\in_array($status, self::GONE_STATUSES, true)) {
+        if (
+            $status >= Response::HTTP_BAD_REQUEST
+            && $status < Response::HTTP_INTERNAL_SERVER_ERROR
+            && !\in_array($status, self::GONE_STATUSES, true)
+        ) {
             throw new FaviconRejectedException('Icon responded ' . $status . '.');
         }
 

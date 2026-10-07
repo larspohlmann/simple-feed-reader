@@ -22,6 +22,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Turns an entered URL into something to subscribe to, most certain source first: the URL as a feed, the feeds the
@@ -35,7 +36,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      * a feed URL might. 429 is NOT one of them: retrying is exactly what that
      * one asks for, and it arrives as its own FeedThrottledException.
      */
-    private const array BLOCKED_STATUSES = [401, 403];
+    private const array BLOCKED_STATUSES = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
     public function __construct(
         private FeedFetcherInterface $fetcher,
@@ -126,7 +127,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         FeedUnreachableException $error,
     ): FeedDiscoveryResultModel {
         $status = $error->statusCode;
-        if (null === $status || $status >= 500) {
+        if (null === $status || $status >= Response::HTTP_INTERNAL_SERVER_ERROR) {
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 

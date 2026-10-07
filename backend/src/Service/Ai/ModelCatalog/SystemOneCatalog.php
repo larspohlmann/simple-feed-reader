@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Support\RejectingStatus;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -55,7 +56,12 @@ final readonly class SystemOneCatalog implements ModelCatalogInterface
             throw CredentialsRejectedException::refusedKey();
         }
 
-        if ($status < 400 || $status >= 500 || 404 === $status || 405 === $status) {
+        if (
+            $status < Response::HTTP_BAD_REQUEST
+            || $status >= Response::HTTP_INTERNAL_SERVER_ERROR
+            || Response::HTTP_NOT_FOUND === $status
+            || Response::HTTP_METHOD_NOT_ALLOWED === $status
+        ) {
             throw new ProviderUnreachableException('That address offers no System One endpoint.');
         }
     }

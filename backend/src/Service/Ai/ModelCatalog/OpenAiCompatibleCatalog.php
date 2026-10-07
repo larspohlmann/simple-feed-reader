@@ -12,6 +12,7 @@ use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\Support\RejectingStatus;
 use App\Service\Ai\Support\ResponseByteCap;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -66,7 +67,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
                 throw CredentialsRejectedException::refusedKey();
             }
 
-            if ($status >= 300) {
+            if ($status >= Response::HTTP_MULTIPLE_CHOICES) {
                 throw ProviderUnreachableException::answeredWithStatus($status);
             }
 

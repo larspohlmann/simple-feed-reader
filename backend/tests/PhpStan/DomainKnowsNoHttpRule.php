@@ -14,7 +14,8 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * Domain code returns typed values and throws typed exceptions; src/Http shapes them, and a controller hands a
- * service a value, never a request DTO. Strings, group imports and namespace aliases count too.
+ * service a value, never a request DTO. Strings, group imports and namespace aliases count too; a status
+ * constant such as `Response::HTTP_NOT_FOUND` does not (#1425).
  *
  * @implements Rule<FileNode>
  */
@@ -41,11 +42,17 @@ final readonly class DomainKnowsNoHttpRule implements Rule
         'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException' => self::LET_HTTP_SHAPE_IT,
     ];
 
+    private const array PERMITTED_CONSTANT_PREFIXES = ['Symfony\\Component\\HttpFoundation\\Response' => 'HTTP_'];
+
     private ClassNameReferences $references;
 
     public function __construct(NodeFinder $finder)
     {
-        $this->references = new ClassNameReferences($finder, array_keys(self::REMEDIES));
+        $this->references = new ClassNameReferences(
+            $finder,
+            array_keys(self::REMEDIES),
+            self::PERMITTED_CONSTANT_PREFIXES,
+        );
     }
 
     public function getNodeType(): string

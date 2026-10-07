@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Support\ResponseHeader;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
@@ -22,7 +23,7 @@ final readonly class LandedResponse
 
     public function isSuccess(): bool
     {
-        return $this->status >= 200 && $this->status < 300;
+        return $this->status >= Response::HTTP_OK && $this->status < Response::HTTP_MULTIPLE_CHOICES;
     }
 
     public function header(string $name): ?string

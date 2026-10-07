@@ -11,6 +11,7 @@ use App\Service\Catalog\Model\CatalogUrlReportModel;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Support\EgressOptions;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -69,12 +70,12 @@ final readonly class CatalogUrlChecker
                 ...(null !== $proxy ? EgressOptions::proxied($proxy) : []),
             ]);
             $status = $response->getStatusCode();
-            $head = 200 === $status ? mb_substr($response->getContent(), 0, 2048) : '';
+            $head = Response::HTTP_OK === $status ? mb_substr($response->getContent(), 0, 2048) : '';
         } catch (ExceptionInterface $exception) {
             throw new BrokenCatalogUrlException($exception->getMessage(), previous: $exception);
         }
 
-        if (200 !== $status) {
+        if (Response::HTTP_OK !== $status) {
             throw new BrokenCatalogUrlException('HTTP ' . $status);
         }
         if (!str_contains($head, '<rss') && !str_contains($head, '<feed') && !str_contains($head, '<rdf:RDF')) {

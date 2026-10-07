@@ -9,6 +9,7 @@ use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\UrlResolver;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -18,7 +19,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class RedirectFollower
 {
-    private const array REDIRECT_STATUSES = [301, 302, 303, 307, 308];
+    private const array REDIRECT_STATUSES = [
+        Response::HTTP_MOVED_PERMANENTLY,
+        Response::HTTP_FOUND,
+        Response::HTTP_SEE_OTHER,
+        Response::HTTP_TEMPORARY_REDIRECT,
+        Response::HTTP_PERMANENTLY_REDIRECT,
+    ];
 
     public function __construct(
         private FailoverRequestSender $requestSender,
