@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
-use App\Entity\ImageRendition;
+use App\Service\Html\Support\Srcset;
 use App\Service\Image\Model\DeclaredImageModel;
 
 /**
@@ -60,28 +60,14 @@ final class PodcastArtwork
 
     private static function podcastImagesSrcset(\DOMElement $parent): ?DeclaredImageModel
     {
-        $element = XmlHelper::childElement($parent, 'images', self::PODCAST_NS);
-        $renditions = DeclaredRenditions::fromSrcset($element?->getAttribute('srcset'));
-        if ($renditions === []) {
+        $srcset = XmlHelper::childElement($parent, 'images', self::PODCAST_NS)?->getAttribute('srcset');
+        $renditions = DeclaredRenditions::fromSrcset($srcset);
+        $widest = Srcset::widest($srcset);
+        if ($renditions === [] || $widest === null) {
             return null;
         }
 
-        $widest = self::widestRendition($renditions);
-
         return new DeclaredImageModel($widest->url, $widest->width, null, $renditions);
-    }
-
-    /** @param non-empty-list<ImageRendition> $renditions */
-    private static function widestRendition(array $renditions): ImageRendition
-    {
-        $widest = $renditions[0];
-        foreach ($renditions as $rendition) {
-            if ($rendition->width > $widest->width) {
-                $widest = $rendition;
-            }
-        }
-
-        return $widest;
     }
 
     private static function hrefImage(\DOMElement $parent, string $namespace): ?DeclaredImageModel

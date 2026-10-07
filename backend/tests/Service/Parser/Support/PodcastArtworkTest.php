@@ -141,4 +141,23 @@ final class PodcastArtworkTest extends TestCase
     {
         self::assertNull($this->artworkUrl('<title>Episode</title>'));
     }
+
+    public function testReadsTypeAndPurposeWhateverTheirCaseAndPadding(): void
+    {
+        self::assertSame('https://i/art.jpg', $this->artworkUrl(
+            '<podcast:image href="https://i/art.jpg" type=" Image/JPEG " purpose="Artwork"/>',
+        ));
+    }
+
+    public function testTrimsTheHrefOfAnItunesImage(): void
+    {
+        self::assertSame('https://i/itunes.jpg', $this->artworkUrl('<itunes:image href=" https://i/itunes.jpg "/>'));
+    }
+
+    public function testASrcsetOfOneCandidateYieldsIt(): void
+    {
+        self::assertSame('https://i/only.jpg', $this->artworkUrl(
+            '<podcast:images srcset="https://i/only.jpg 1400w"/>',
+        ));
+    }
 }

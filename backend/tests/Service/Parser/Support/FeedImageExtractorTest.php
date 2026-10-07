@@ -244,4 +244,19 @@ final class FeedImageExtractorTest extends TestCase
 
         self::assertSame('https://example.com/avatar.jpg', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
     }
+
+    public function testAnAtomLogoBeatsThePodcastArtwork(): void
+    {
+        $document = $this->document(/** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+                <itunes:image href="https://example.com/avatar.jpg"/>
+                <logo>https://example.com/logo.png</logo>
+            </feed>
+            XML);
+        $root = $document->documentElement;
+        self::assertInstanceOf(\DOMElement::class, $root);
+
+        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
+    }
 }

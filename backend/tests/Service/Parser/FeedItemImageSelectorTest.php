@@ -114,6 +114,16 @@ final class FeedItemImageSelectorTest extends TestCase
         self::assertSame('https://i/media.jpg', $this->selector->fromRss2($item, null)?->url);
     }
 
+    public function testACustomImageElementBeatsPodcastArtwork(): void
+    {
+        $item = $this->rss2Item(
+            '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="https://i/art.jpg"/>'
+            . '<image url="https://i/custom.jpg"/>',
+        );
+
+        self::assertSame('https://i/custom.jpg', $this->selector->fromRss2($item, null)?->url);
+    }
+
     public function testAnAtomEntryWithOnlyPodcastArtworkTakesIt(): void
     {
         $entry = $this->atomEntry(
