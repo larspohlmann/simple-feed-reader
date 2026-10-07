@@ -56,6 +56,19 @@ Alongside favorites, a separate list for the articles you want to come back to.
 
 ![The kept list](screenshots/kept-light.webp)
 
+## Listening
+
+Podcasts and SoundCloud feeds play in a persistent player with a playlist:
+episode artwork, previous and next, and a panel to reorder or remove episodes.
+Play and Add to playlist sit on every audio entry.
+
+![The audio playlist beneath the magazine, light theme](screenshots/podcast-playlist-light.webp)
+
+<p>
+  <img src="screenshots/mobile-podcast-light.webp" alt="The player bar on a phone" width="24%">
+  <img src="screenshots/mobile-podcast-playlist-light.webp" alt="The playlist panel on a phone" width="24%">
+</p>
+
 ## "For you"
 
 An optional personal feed. A model of your choice ranks your unread entries
