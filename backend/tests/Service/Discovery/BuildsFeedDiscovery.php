@@ -7,9 +7,10 @@ namespace App\Tests\Service\Discovery;
 use App\Service\Discovery\BotChallengePage;
 use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
+use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
+use App\Service\Discovery\FeedOffer\WordPressRestProbe;
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
-use App\Service\Discovery\FeedOffer\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
@@ -34,7 +35,7 @@ trait BuildsFeedDiscovery
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
             new SubstackProfileFeed($fetcher),
-            [new WordPressRestProbe($fetcher)],
+            [new WordPressRestProbe($fetcher), new SoundCloudProfileFeed()],
         );
     }
 
