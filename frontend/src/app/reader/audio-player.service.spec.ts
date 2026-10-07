@@ -5,6 +5,7 @@ import {
   AudioTrack,
   RESTART_THRESHOLD_SECONDS,
 } from './audio-player.service';
+import { PRECACHE_LEAD_SECONDS } from './audio/audio-deck';
 import { TokenStore } from '../core/auth/token.store';
 
 const SRC_NOT_SUPPORTED = 4;
@@ -24,6 +25,9 @@ class FakeAudio {
   preload = '';
   buffered: TimeRanges = ranges();
   load = jest.fn();
+  removeAttribute = jest.fn((name: string) => {
+    if (name === 'src') this.source = '';
+  });
   private source = '';
 
   /** Like the real element, a new source clears the last error. */
@@ -79,17 +83,28 @@ function track(overrides: Partial<AudioTrack> = {}): AudioTrack {
   };
 }
 
+/** The element playing when the service starts, and the standby one caching the next track. */
 let audio: FakeAudio;
+let standby: FakeAudio;
 
 function make(): AudioPlayerService {
-  audio = new FakeAudio();
+  const created: FakeAudio[] = [];
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
-      { provide: AUDIO_ELEMENT_FACTORY, useValue: () => audio as unknown as HTMLAudioElement },
+      {
+        provide: AUDIO_ELEMENT_FACTORY,
+        useValue: () => {
+          const element = new FakeAudio();
+          created.push(element);
+          return element as unknown as HTMLAudioElement;
+        },
+      },
     ],
   });
-  return TestBed.inject(AudioPlayerService);
+  const service = TestBed.inject(AudioPlayerService);
+  [audio, standby] = created;
+  return service;
 }
 
 describe('AudioPlayerService', () => {
@@ -221,9 +236,11 @@ describe('AudioPlayerService', () => {
   });
 
   describe('as a playlist', () => {
-    const one = track({ url: 'https://x.test/1.mp3', title: 'One' });
-    const two = track({ url: 'https://x.test/2.mp3', title: 'Two' });
-    const three = track({ url: 'https://x.test/3.mp3', title: 'Three' });
+    // Hour-long, so the next track stays outside the pre-cache lead and one element plays throughout.
+    const hour = { durationInSeconds: 3600 };
+    const one = track({ url: 'https://x.test/1.mp3', title: 'One', ...hour });
+    const two = track({ url: 'https://x.test/2.mp3', title: 'Two', ...hour });
+    const three = track({ url: 'https://x.test/3.mp3', title: 'Three', ...hour });
 
     function titles(service: AudioPlayerService): string[] {
       return service.tracks().map((queued) => queued.title);
@@ -532,6 +549,129 @@ describe('AudioPlayerService', () => {
       audio.fire('progress');
 
       expect(service.buffered()).toBe(50);
+    });
+
+    describe('the next track', () => {
+      const long = (name: string) =>
+        track({ url: `https://x.test/${name}.mp3`, title: name, durationInSeconds: 3600 });
+      const [first, second, third] = ['first', 'second', 'third'].map(long);
+
+      function playing(...tracks: AudioTrack[]): AudioPlayerService {
+        const service = make();
+        service.play(tracks[0]);
+        for (const queued of tracks.slice(1)) service.enqueue(queued);
+        return service;
+      }
+
+      function progressAt(seconds: number, cachedTo = seconds): void {
+        audio.currentTime = seconds;
+        audio.buffered = ranges([0, cachedTo]);
+        audio.fire('progress');
+      }
+
+      it('waits while the current track is far from its end', () => {
+        playing(first, second);
+
+        progressAt(60, 600);
+
+        expect(standby.src).toBe('');
+      });
+
+      it('caches once the current track nears its end', () => {
+        playing(first, second);
+
+        progressAt(3600 - PRECACHE_LEAD_SECONDS);
+
+        expect(standby.src).toBe(second.url);
+        expect(standby.preload).toBe('auto');
+      });
+
+      it('caches once the current track is cached to its end', () => {
+        playing(first, second);
+
+        progressAt(60, 3600);
+
+        expect(standby.src).toBe(second.url);
+      });
+
+      it('caches a track queued after the current one finished loading', () => {
+        const service = playing(first);
+        progressAt(60, 3600);
+
+        service.enqueue(second);
+
+        expect(standby.src).toBe(second.url);
+      });
+
+      it('caches once metadata shows a short track is within the lead', () => {
+        const service = make();
+        service.enqueue(track({ url: 'https://x.test/a.mp3', durationInSeconds: null }));
+        service.enqueue(second);
+        expect(standby.src).toBe('');
+
+        audio.duration = 60;
+        audio.fire('loadedmetadata');
+
+        expect(standby.src).toBe(second.url);
+      });
+
+      it('follows a reorder', () => {
+        const service = playing(first, second, third);
+        progressAt(3500);
+
+        service.move(2, 1);
+        progressAt(3501);
+
+        expect(standby.src).toBe(third.url);
+      });
+
+      it('plays the cached element when the current track ends', () => {
+        const service = playing(first, second);
+        progressAt(3500);
+
+        audio.fire('ended');
+
+        expect(service.current()).toBe(second);
+        expect(standby.play).toHaveBeenCalled();
+        expect(service.playing()).toBe(true);
+        expect(service.position()).toBe(0);
+      });
+
+      it('stops listening to the element it swapped out', () => {
+        const service = playing(first, second);
+        progressAt(3500);
+        audio.fire('ended');
+
+        audio.currentTime = 99;
+        audio.fire('timeupdate');
+        audio.fire('pause');
+
+        expect(service.position()).toBe(0);
+        expect(service.playing()).toBe(true);
+      });
+
+      it('keeps the outgoing track cached for previous', () => {
+        const service = playing(first, second);
+        progressAt(3500);
+        audio.fire('ended');
+        audio.play.mockClear();
+
+        service.previous();
+
+        expect(service.current()).toBe(first);
+        expect(audio.play).toHaveBeenCalled();
+        expect(audio.currentTime).toBe(0);
+      });
+
+      it('drops the cached track on close', () => {
+        const service = playing(first, second);
+        progressAt(3500);
+
+        service.stop();
+
+        expect(standby.src).toBe('');
+        expect(standby.load).toHaveBeenCalled();
+      });
     });
 
     it('starts a new track with nothing cached', () => {

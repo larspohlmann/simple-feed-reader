@@ -1474,9 +1474,11 @@ describe('ReaderViewComponent', () => {
         entry({ attachments: [{ url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' }] }),
       );
       const player = TestBed.inject(AudioPlayerService);
-      jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {
-        /* jsdom implements no media playback. */
-      });
+      for (const method of ['pause', 'load'] as const) {
+        jest.spyOn(HTMLMediaElement.prototype, method).mockImplementation(() => {
+          /* jsdom implements no media playback. */
+        });
+      }
       const queue = (): HTMLButtonElement =>
         fixture.debugElement.query(By.css('.listen.queue')).nativeElement;
       expect(queue().textContent).toContain('Add to playlist');

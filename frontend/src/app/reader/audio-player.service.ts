@@ -20,6 +20,8 @@ import {
   select,
 } from './audio/playlist';
 import { PlaylistStore } from './audio/playlist.store';
+import { AudioDeck } from './audio/audio-deck';
+import { MediaSessionControls } from './audio/media-session-controls';
 
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */
@@ -45,20 +47,24 @@ const PERSIST_INTERVAL_MS = 5000;
 export const RESTART_THRESHOLD_SECONDS = 3;
 
 /**
- * The reader's single audio player. It owns one HTMLAudioElement created in
- * code, never placed in a template, so playback keeps running while the reader
+ * The reader's single audio player. It owns its HTMLAudioElements in code, never
+ * placed in a template, so playback keeps running while the reader
  * view unmounts and across route changes; the mini-player bar is only a
  * reflection of these signals. It plays a playlist (#1429): the queue rules live
- * in `Playlist`, this service only drives the element from it. The playlist and
+ * in `Playlist`, this service only drives the element from it. A second, standby
+ * element caches the next track and swaps in when playback reaches it. The playlist and
  * position are saved through PlaylistStore and rehydrated paused on reload, and
  * cleared when the identity changes so one account's podcasts never bleed into
  * the next session.
  */
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
-  private readonly element = inject(AUDIO_ELEMENT_FACTORY)();
+  private readonly deck = new AudioDeck(inject(AUDIO_ELEMENT_FACTORY), (element, isPlaying) =>
+    this.bindElement(element, isPlaying),
+  );
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(PlaylistStore);
+  private readonly mediaSession = new MediaSessionControls();
 
   private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
   private readonly _playing = signal(false);
@@ -81,11 +87,23 @@ export class AudioPlayerService {
   private pendingSeek: number | null = null;
 
   constructor() {
-    this.bindElement();
-    this.bindMediaSession();
+    this.mediaSession.bind(
+      {
+        play: () => this.resume(),
+        pause: () => this.element.pause(),
+        skip: (seconds) => this.skip(seconds),
+        seek: (seconds) => this.seek(seconds),
+      },
+      SKIP_SECONDS,
+    );
     this.restore();
     this.bindLifecycle();
-    this.bindTrackSteps();
+    effect(() =>
+      this.mediaSession.setTrackSteps(
+        this.hasPrevious() ? () => this.previous() : null,
+        this.hasNext() ? () => this.next() : null,
+      ),
+    );
     onIdentityChange(() => this.stop());
   }
 
@@ -145,13 +163,14 @@ export class AudioPlayerService {
 
   stop(): void {
     this.element.pause();
+    this.deck.release();
     this._playlist.set(EMPTY_PLAYLIST);
     this._playing.set(false);
     this._position.set(0);
     this._duration.set(0);
     this._buffered.set(0);
     this.forget();
-    this.clearMediaMetadata();
+    this.mediaSession.showTrack(null);
   }
 
   private go(playlist: Playlist): void {
@@ -167,16 +186,30 @@ export class AudioPlayerService {
     this._playlist.set(playlist);
     if (changed) this.load(track);
     this.persist();
+    this.precacheNext();
   }
 
   private load(track: AudioTrack): void {
-    this.element.src = track.url;
-    this.element.currentTime = 0;
     this.pendingSeek = null;
     this._duration.set(track.durationInSeconds ?? 0);
     this._position.set(0);
     this._buffered.set(0);
-    this.setMediaMetadata(track);
+    this.mediaSession.showTrack(track);
+    const cached = this.deck.load(track.url);
+    this.element.currentTime = 0;
+    if (cached) this.adoptCachedElement();
+  }
+
+  /** The element that took over fired its load events while on standby; read them now. */
+  private adoptCachedElement(): void {
+    this.onPlaying(false);
+    this.onMetadata();
+    this.onProgress();
+  }
+
+  private precacheNext(): void {
+    const next = this.tracks()[this.index() + 1];
+    if (next) this.deck.cacheNearTheEnd(next.url, this._duration(), this._buffered());
   }
 
   private resume(): void {
@@ -188,23 +221,50 @@ export class AudioPlayerService {
     });
   }
 
-  private bindElement(): void {
-    this.element.preload = 'auto';
-    this.element.addEventListener('progress', () => this.onProgress());
-    this.element.addEventListener('timeupdate', () => this.onTimeUpdate());
-    this.element.addEventListener('loadedmetadata', () => this.onMetadata());
-    this.element.addEventListener('durationchange', () => this.onMetadata());
-    this.element.addEventListener('play', () => this.onPlaying(true));
-    this.element.addEventListener('pause', () => this.onPlaying(false));
-    this.element.addEventListener('ended', () => this.onEnded());
-    this.element.addEventListener('error', () => this.onError());
+  /** Both elements are bound once; only the one playing is listened to. */
+  private bindElement(element: HTMLAudioElement, isPlaying: () => boolean): void {
+    const whenActive = (handler: () => void) => () => {
+      if (isPlaying()) handler();
+    };
+    element.addEventListener(
+      'progress',
+      whenActive(() => this.onProgress()),
+    );
+    element.addEventListener(
+      'timeupdate',
+      whenActive(() => this.onTimeUpdate()),
+    );
+    element.addEventListener(
+      'loadedmetadata',
+      whenActive(() => this.onMetadata()),
+    );
+    element.addEventListener(
+      'durationchange',
+      whenActive(() => this.onMetadata()),
+    );
+    element.addEventListener(
+      'play',
+      whenActive(() => this.onPlaying(true)),
+    );
+    element.addEventListener(
+      'pause',
+      whenActive(() => this.onPlaying(false)),
+    );
+    element.addEventListener(
+      'ended',
+      whenActive(() => this.onEnded()),
+    );
+    element.addEventListener(
+      'error',
+      whenActive(() => this.onError()),
+    );
   }
 
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
     this.onProgress();
     this.persistThrottled();
-    this.updatePositionState();
+    this.mediaSession.showPosition(this._position(), this._duration());
   }
 
   /** The end of the cached range the playhead sits in; a range elsewhere (after a seek) is not ahead of it. */
@@ -216,6 +276,7 @@ export class AudioPlayerService {
       if (ranges.start(index) <= playhead && playhead <= ranges.end(index)) end = ranges.end(index);
     }
     this._buffered.set(end);
+    this.precacheNext();
   }
 
   private onMetadata(): void {
@@ -226,12 +287,13 @@ export class AudioPlayerService {
       this.seek(this.pendingSeek);
       this.pendingSeek = null;
     }
+    this.precacheNext();
   }
 
   private onPlaying(playing: boolean): void {
     this._playing.set(playing);
     if (!playing) this.persist();
-    this.reflectPlaybackState();
+    this.mediaSession.showPlaying(this._playing());
   }
 
   private onEnded(): void {
@@ -297,51 +359,7 @@ export class AudioPlayerService {
     this.store.clear();
   }
 
-  private get session(): MediaSession | null {
-    return 'mediaSession' in navigator ? navigator.mediaSession : null;
-  }
-
-  private bindMediaSession(): void {
-    const session = this.session;
-    if (!session) return;
-    session.setActionHandler('play', () => this.resume());
-    session.setActionHandler('pause', () => this.element.pause());
-    session.setActionHandler('seekbackward', () => this.skip(-SKIP_SECONDS));
-    session.setActionHandler('seekforward', () => this.skip(SKIP_SECONDS));
-    session.setActionHandler('seekto', (details) => this.seekTo(details));
-  }
-
-  /** iOS swaps the lock screen's ±15 s buttons for track buttons once a track handler exists. */
-  private bindTrackSteps(): void {
-    const session = this.session;
-    if (!session) return;
-    effect(() => {
-      session.setActionHandler('previoustrack', this.hasPrevious() ? () => this.previous() : null);
-      session.setActionHandler('nexttrack', this.hasNext() ? () => this.next() : null);
-    });
-  }
-
-  private seekTo(details: MediaSessionActionDetails): void {
-    if (details.seekTime != null) this.seek(details.seekTime);
-  }
-
-  private setMediaMetadata(track: AudioTrack): void {
-    if (!this.session || !('MediaMetadata' in window)) return;
-    const artwork = track.imageUrl ? [{ src: track.imageUrl }] : [];
-    this.session.metadata = new MediaMetadata({ title: track.title, artwork });
-  }
-
-  private clearMediaMetadata(): void {
-    if (this.session) this.session.metadata = null;
-  }
-
-  private reflectPlaybackState(): void {
-    if (this.session) this.session.playbackState = this._playing() ? 'playing' : 'paused';
-  }
-
-  private updatePositionState(): void {
-    const duration = this._duration();
-    if (!this.session?.setPositionState || duration <= 0) return;
-    this.session.setPositionState({ duration, position: Math.min(this._position(), duration) });
+  private get element(): HTMLAudioElement {
+    return this.deck.element;
   }
 }
