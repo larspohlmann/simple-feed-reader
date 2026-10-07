@@ -179,7 +179,7 @@ describe('AudioPlayerBarComponent', () => {
         By.css('.toggle-playlist'),
       ).nativeElement;
       expect(rows(fixture)).toHaveLength(0);
-      expect(toggle.textContent).toContain('3');
+      expect(toggle.getAttribute('aria-label')).toBe('Playlist (3)');
 
       open(fixture);
       expect(rows(fixture)).toHaveLength(3);

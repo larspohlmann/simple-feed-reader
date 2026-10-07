@@ -1005,7 +1005,8 @@
       "moveDown": "Move {{ title }} down",
       "remove": "Remove {{ title }} from the playlist",
       "addToPlaylist": "Add to playlist",
-      "inPlaylist": "In playlist"
+      "inPlaylist": "In playlist",
+      "playlistCount": "Playlist ({{ count }})"
     },
     "savedSearches": "Saved searches",
     "savedSearchesEmpty": "No saved searches yet. Save a search to see it here.",

@@ -309,6 +309,39 @@ describe('AudioPlayerService', () => {
       expect(audio.currentTime).toBe(0);
     });
 
+    it('skips a track that fails to load while playing', () => {
+      const service = make();
+      service.play(one);
+      service.enqueue(two);
+
+      audio.fire('error');
+
+      expect(service.current()).toBe(two);
+      expect(audio.src).toBe(two.url);
+    });
+
+    it('leaves a failed track current and shows it paused when nothing follows', () => {
+      const service = make();
+      service.play(one);
+      audio.paused = true;
+      audio.fire('pause');
+
+      audio.fire('error');
+
+      expect(service.current()).toBe(one);
+      expect(service.playing()).toBe(false);
+    });
+
+    it('does not skip a paused track whose source fails', () => {
+      const service = make();
+      service.enqueue(one);
+      service.enqueue(two);
+
+      audio.fire('error');
+
+      expect(service.current()).toBe(one);
+    });
+
     it('plays a chosen row', () => {
       const service = make();
       service.play(one);
@@ -324,8 +357,11 @@ describe('AudioPlayerService', () => {
       const service = make();
       service.play(one);
       service.enqueue(two);
+      audio.play.mockClear();
 
       service.dequeue(one.url);
+
+      expect(audio.play).toHaveBeenCalled();
 
       expect(titles(service)).toEqual(['Two']);
       expect(audio.src).toBe(two.url);
@@ -380,23 +416,35 @@ describe('AudioPlayerService', () => {
       expect(restored.position()).toBe(9);
     });
 
-    it('binds the OS previous and next track controls', () => {
-      const handlers: Record<string, () => void> = {};
+    it('binds the OS track controls only while there is a track to step to, and plays nothing after close', () => {
+      const handlers: Record<string, (() => void) | null> = {};
       Object.defineProperty(navigator, 'mediaSession', {
         configurable: true,
         value: {
-          setActionHandler: (action: string, handler: () => void) => (handlers[action] = handler),
+          setActionHandler: (action: string, handler: (() => void) | null) =>
+            (handlers[action] = handler),
         },
       });
       try {
         const service = make();
         service.play(one);
-        service.enqueue(two);
+        TestBed.tick();
+        expect(handlers['nexttrack']).toBeNull();
+        expect(handlers['previoustrack']).toBeNull();
 
-        handlers['nexttrack']();
+        service.enqueue(two);
+        TestBed.tick();
+        handlers['nexttrack']?.();
         expect(service.current()).toBe(two);
-        handlers['previoustrack']();
+        TestBed.tick();
+        expect(handlers['nexttrack']).toBeNull();
+        handlers['previoustrack']?.();
         expect(service.current()).toBe(one);
+
+        service.stop();
+        audio.play.mockClear();
+        handlers['play']?.();
+        expect(audio.play).not.toHaveBeenCalled();
       } finally {
         delete (navigator as { mediaSession?: unknown }).mediaSession;
       }

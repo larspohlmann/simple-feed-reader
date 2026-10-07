@@ -97,14 +97,15 @@
 }
 
 .playlist {
+  border-bottom: 1px solid var(--border);
+}
+
+/* The drop list is its own scroller, so a drag auto-scrolls it past the visible rows. */
+.rows {
   max-height: 50vh;
   max-height: 50dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-bottom: 1px solid var(--border);
-}
-
-.rows {
   margin: 0;
   padding: var(--space-1) 0;
   list-style: none;

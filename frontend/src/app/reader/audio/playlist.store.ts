@@ -14,10 +14,9 @@ const KEY = 'sfr.audio';
 @Injectable({ providedIn: 'root' })
 export class PlaylistStore {
   load(): SavedPlaylist | null {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return null;
     try {
-      return this.parse(JSON.parse(raw));
+      const raw = localStorage.getItem(KEY);
+      return raw ? this.parse(JSON.parse(raw)) : null;
     } catch {
       this.clear();
       return null;

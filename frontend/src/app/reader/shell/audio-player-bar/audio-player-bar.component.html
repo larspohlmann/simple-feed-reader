@@ -142,11 +142,13 @@
         type="button"
         [attr.aria-controls]="playlistOpen() ? 'audio-playlist' : null"
         [attr.aria-expanded]="playlistOpen()"
-        [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
+        [attr.aria-label]="
+          'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
+        "
         (click)="playlistOpen.set(!playlistOpen())"
       >
         <app-icon name="queue_music" size="md" />
-        <span class="count">{{ player.tracks().length }}</span>
+        <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>
       </button>
       <button
         class="ctrl close"

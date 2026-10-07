@@ -15,14 +15,16 @@
 - **Storage:** `localStorage` for now, behind `PlaylistStore`. No backend, no cross-device sync yet; a server-side playlist replaces only that class.
 - **Storage format:** key `sfr.audio`, `{ tracks, index, position }`. The pre-#1429 shape `{ track, position }` restores as a one-track playlist.
 - **Identity:** a track is identified by its `url` (the enclosure URL); one URL appears at most once.
-- **Listen = play now:** a queued track jumps to it; an unqueued one is inserted right after the current track and starts. The rest of the queue is kept.
+- **Listen = play now:** the track goes right after the current one (moved there if already queued, so nothing between is skipped or marked played) and starts. The rest of the queue is kept.
 - **Add to playlist:** appends without interrupting. Into an empty player it becomes the current track, paused.
 - **History:** played tracks stay in the list (greyed) so previous has somewhere to go; the user removes them.
 - **End of playlist:** playback stops on the last track, which stays current.
 - **Previous:** restarts the current track when more than `RESTART_THRESHOLD_SECONDS` (3) in, or when there is no previous track; otherwise steps back.
 - **Removing the current track:** the next track takes its place (the previous one when it was last), keeping the play/pause state; removing the last remaining track stops the player.
 - **Close (✕):** stops and clears the whole playlist, as it cleared the single track before.
-- **Media Session:** `previoustrack` / `nexttrack` bound to `previous()` / `next()`.
+- **Media Session:** `previoustrack` / `nexttrack` bound to `previous()` / `next()` only while there is a track to step to: iOS replaces the lock screen's ±15 s buttons with track buttons once a handler is set.
+- **A failed track** (an expired enclosure) is skipped like an ended one while playing; a paused one stays put.
+- **Layering (owner, visual round):** the player and playlist win over every shell layer; the narrow drawer ends above the player; the bar publishes `--audio-player-height` so the reader's to-top button sits clear of it. No drop shadow above the player. Rows show the track length.
 - **Drop lists:** the bar is a sibling of the shell, outside every other `cdkDropList`; the panel owns one flat list.
 - **Touch drag:** only from the handle, with `[cdkDragStartDelay]="{ touch: 180, mouse: 0 }"` (the sidebar's value), plus up/down buttons for touch and keyboard.
 

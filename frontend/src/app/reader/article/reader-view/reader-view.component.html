@@ -152,7 +152,7 @@
               <button
                 class="listen queue"
                 type="button"
-                [attr.aria-pressed]="queued()"
+                [class.queued]="queued()"
                 (click)="toggleQueued()"
               >
                 <app-icon [name]="queued() ? 'playlist_add_check' : 'playlist_add'" size="md" />

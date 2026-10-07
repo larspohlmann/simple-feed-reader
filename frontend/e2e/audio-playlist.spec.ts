@@ -4,9 +4,8 @@ import { entryDetailJson, entryWire, stubOneFeedReader } from './support/reader'
 
 /**
  * #1429: episodes added from their article views play in the order the
- * playlist is rearranged into. Every API read is stubbed, and the enclosures
- * point at an unreachable host: the bar's title follows the playlist whether or
- * not a byte of audio ever plays.
+ * playlist is rearranged into. Every API read is stubbed. Each enclosure is a
+ * minute of real silence: a dead one would be skipped as a failed track.
  */
 const EPISODES = [1, 2, 3].map((id) =>
   entryWire({
@@ -16,9 +15,32 @@ const EPISODES = [1, 2, 3].map((id) =>
   }),
 );
 
+/** `seconds` of 8 kHz 8-bit mono silence: a container every browser decodes. */
+function silentWav(seconds: number): Buffer {
+  const samples = 8000 * seconds;
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(36 + samples, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(8000, 24);
+  header.writeUInt32LE(8000, 28);
+  header.writeUInt16LE(1, 32);
+  header.writeUInt16LE(8, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(samples, 40);
+  return Buffer.concat([header, Buffer.alloc(samples, 128)]);
+}
+
 async function stubEpisodes(page: Page): Promise<void> {
   await stubOneFeedReader(page, 'Fixture podcast');
-  await page.route('https://fixtures.invalid/**', (route) => route.abort());
+  const audio = silentWav(60);
+  await page.route('https://fixtures.invalid/**', (route) =>
+    route.fulfill({ body: audio, contentType: 'audio/wav' }),
+  );
   await page.route(
     (url) => url.pathname === '/api/entries',
     (route) => route.fulfill({ json: { entries: EPISODES, nextCursor: null } }),
@@ -53,7 +75,7 @@ test('episodes added from their articles play in the reordered order', async ({ 
 
   const bar = page.locator('app-audio-player-bar');
   await expect(bar.locator('.controls .title')).toHaveText('Episode 1');
-  await bar.getByRole('button', { name: 'Playlist' }).click();
+  await bar.getByRole('button', { name: 'Playlist (3)' }).click();
   const rows = bar.locator('.row .row-title');
   await expect(rows).toHaveText(['Episode 1', 'Episode 2', 'Episode 3']);
 

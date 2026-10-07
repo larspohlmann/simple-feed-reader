@@ -81,7 +81,7 @@
 app-to-top-button {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: calc(24px + var(--toast-lift, 0px) + var(--audio-player-height, 0px));
   z-index: 20;
 }
 
@@ -89,7 +89,7 @@ app-to-top-button {
    (#641). `--app-toast-height` is the live toast's measured height; its
    fallback is zero so the button keeps its base offset when none is up. */
 :host-context(.is-narrow) app-to-top-button {
-  bottom: calc(24px + var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
+  --toast-lift: calc(var(--space-3) + var(--app-toast-height, calc(-1 * var(--space-3))));
 }
 
 /* Standing nameplate: the toolbar retracts, leaving nothing naming a
@@ -321,7 +321,7 @@ article {
   flex: none;
 }
 
-.listen.queue[aria-pressed='true'] {
+.listen.queue.queued {
   --rim-fill: var(--accent-soft);
 }
 

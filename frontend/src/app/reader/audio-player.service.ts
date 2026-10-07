@@ -1,4 +1,12 @@
-import { DestroyRef, InjectionToken, Injectable, computed, inject, signal } from '@angular/core';
+import {
+  DestroyRef,
+  InjectionToken,
+  Injectable,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { onIdentityChange } from '../core/auth/session-identity';
 import {
   EMPTY_PLAYLIST,
@@ -74,6 +82,7 @@ export class AudioPlayerService {
     this.bindMediaSession();
     this.restore();
     this.bindLifecycle();
+    this.bindTrackSteps();
     onIdentityChange(() => this.stop());
   }
 
@@ -132,6 +141,7 @@ export class AudioPlayerService {
   seek(seconds: number): void {
     const clamped = Math.max(0, Math.min(this._duration(), seconds));
     this.element.currentTime = clamped;
+    this.pendingSeek = null;
     this._position.set(clamped);
   }
 
@@ -177,6 +187,7 @@ export class AudioPlayerService {
   }
 
   private resume(): void {
+    if (!this.current()) return;
     void this.element.play().catch(() => {
       /* Autoplay can be blocked until the user gestures; the play control retries. */
     });
@@ -189,6 +200,7 @@ export class AudioPlayerService {
     this.element.addEventListener('play', () => this.onPlaying(true));
     this.element.addEventListener('pause', () => this.onPlaying(false));
     this.element.addEventListener('ended', () => this.onEnded());
+    this.element.addEventListener('error', () => this.onError());
   }
 
   private onTimeUpdate(): void {
@@ -216,6 +228,11 @@ export class AudioPlayerService {
   private onEnded(): void {
     if (this.hasNext()) return this.next();
     this._playing.set(false);
+  }
+
+  /** A dead enclosure (an expired podcast link) never ends: skip it while playing, as `ended` would. */
+  private onError(): void {
+    if (this._playing()) this.onEnded();
   }
 
   private restore(): void {
@@ -260,8 +277,17 @@ export class AudioPlayerService {
     session.setActionHandler('seekbackward', () => this.skip(-SKIP_SECONDS));
     session.setActionHandler('seekforward', () => this.skip(SKIP_SECONDS));
     session.setActionHandler('seekto', (details) => this.seekTo(details));
-    session.setActionHandler('previoustrack', () => this.previous());
-    session.setActionHandler('nexttrack', () => this.next());
+  }
+
+  /** iOS swaps the lock screen's ±15 s buttons for track buttons once a track handler is set,
+   *  so each is bound only while there is a track to step to. */
+  private bindTrackSteps(): void {
+    const session = this.session;
+    if (!session) return;
+    effect(() => {
+      session.setActionHandler('previoustrack', this.hasPrevious() ? () => this.previous() : null);
+      session.setActionHandler('nexttrack', this.hasNext() ? () => this.next() : null);
+    });
   }
 
   private seekTo(details: MediaSessionActionDetails): void {

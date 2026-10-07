@@ -61,11 +61,25 @@ describe('playlist', () => {
       expect(currentTrack(playlist)).toBe(charlie);
     });
 
-    it('jumps to a queued track without moving it', () => {
+    it('moves a queued later track up to play next', () => {
       const playlist = insertNext(of(0, alpha, bravo, charlie), charlie);
 
+      expect(titles(playlist)).toBe('acb');
+      expect(currentTrack(playlist)).toBe(charlie);
+    });
+
+    it('moves a played track down to play next', () => {
+      const playlist = insertNext(of(1, alpha, bravo, charlie), alpha);
+
+      expect(titles(playlist)).toBe('bac');
+      expect(currentTrack(playlist)).toBe(alpha);
+    });
+
+    it('plays the queued track right after the current one where it is', () => {
+      const playlist = insertNext(of(0, alpha, bravo, charlie), bravo);
+
       expect(titles(playlist)).toBe('abc');
-      expect(playlist.index).toBe(2);
+      expect(currentTrack(playlist)).toBe(bravo);
     });
 
     it('starts an empty playlist', () => {
