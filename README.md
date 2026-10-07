@@ -37,6 +37,13 @@ curated catalog gets a new account started.
   <img src="docs/screenshots/onboarding-light.webp" alt="Guided feed discovery from the curated catalog" width="49%">
 </p>
 
+Podcasts and SoundCloud feeds play in a playlist: episode artwork, previous and
+next, and a panel to reorder the queue.
+
+<p>
+  <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
+</p>
+
 More in the [screenshot gallery](docs/screenshots.md).
 
 ## Features
@@ -59,6 +66,18 @@ More in the [screenshot gallery](docs/screenshots.md).
   searches you choose.
 - Reading-time estimates, a progress bar, and an optional reading focus that
   dims everything but the passage in front of you.
+
+**Listening**
+
+- A persistent audio player with a playlist: episode artwork, previous and
+  next, and a panel to reorder or remove episodes. The next episode loads ahead
+  of time, so it starts the moment the current one ends.
+- Play and Add to playlist sit on every audio entry in the magazine, list and
+  two-pane views; the reader offers the same beside Listen.
+- Episodes show the artwork their podcast declares, and fall back to the
+  show's.
+- Paste a SoundCloud profile link into "Add feed" and the reader offers that
+  account's RSS feed.
 
 **Feeds**
 
