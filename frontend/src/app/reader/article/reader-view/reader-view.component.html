@@ -154,7 +154,7 @@
             @if (source.paywalled()) {
               <app-paywall-notice class="paywall-note" [url]="source.paywallUrl()" />
             }
-            @if (source.failed() && mode() === 'original') {
+            @if (fallbackNoticeShown()) {
               <app-warning-box class="reader-fallback">
                 <span class="warning-glyph" aria-hidden="true">⚠</span>
                 <div class="warning-text">
