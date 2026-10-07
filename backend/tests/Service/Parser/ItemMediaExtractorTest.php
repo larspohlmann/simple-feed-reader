@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\VisualMediaKind;
 use PHPUnit\Framework\TestCase;
 
@@ -55,6 +56,29 @@ final class ItemMediaExtractorTest extends TestCase
         self::assertSame('audio/mpeg', $attachment->mimeType);
         self::assertSame(3723, $attachment->durationInSeconds);
         self::assertSame(4200000, $attachment->sizeInBytes);
+    }
+
+    public function testOnlyItunesDurationIsReadAsTheDuration(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<itunes:author>Host</itunes:author><duration>9</duration>'
+            . '<enclosure url="https://cdn/ep1.mp3" type="audio/mpeg"/><itunes:duration>120</itunes:duration>',
+        ));
+
+        self::assertSame(120, $bundle->attachments[0]->durationInSeconds);
+    }
+
+    public function testAnEnclosureIsMarkedWithItsMediaKind(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<enclosure url="https://cdn/ep1.mp3" type="audio/mpeg"/>'
+            . '<enclosure url="https://cdn/notes.pdf" type="application/pdf"/>',
+        ));
+
+        self::assertSame(
+            [FeedMediaKind::Audio, FeedMediaKind::Other],
+            array_map(static fn ($attachment) => $attachment->kind, $bundle->attachments),
+        );
     }
 
     public function testMultipleTopLevelImagesBecomeMediaWithDimensions(): void
