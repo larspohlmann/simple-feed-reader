@@ -26,7 +26,6 @@ final readonly class SubstackProfileFeed implements ShareLinkFeedInterface
     {
     }
 
-    /** The publication feed a profile URL points at, or null when it is not one or cannot be resolved. */
     public function feedUrl(string $enteredUrl): ?string
     {
         $handle = $this->profileHandle($enteredUrl);

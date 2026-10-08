@@ -38,8 +38,8 @@ curated catalog gets a new account started.
 </p>
 
 Podcasts and SoundCloud feeds play in a playlist: episode artwork, previous and
-next, and a panel to reorder the queue. To subscribe to a podcast, paste its
-share link from Apple Podcasts.
+next, and a panel to reorder the queue. A podcast can also be added by pasting
+its share link from Apple Podcasts.
 
 <p>
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
@@ -83,7 +83,7 @@ More in the [screenshot gallery](docs/screenshots.md).
   the reader subscribes to the show's RSS feed. Any of these work:
   - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318`
     (Share Show → Copy Link on iPhone, iPad or Mac, or the show page's address)
-  - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318?i=1000700000001`
+  - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318?i=1000792103416`
     (an episode link subscribes to its show)
   - `https://podcasts.apple.com/us/podcast/id394775318` and
     `https://itunes.apple.com/us/podcast/99-invisible/id394775318`

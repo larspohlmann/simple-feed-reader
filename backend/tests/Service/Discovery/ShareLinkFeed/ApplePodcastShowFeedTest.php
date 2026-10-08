@@ -33,7 +33,6 @@ final class ApplePodcastShowFeedTest extends TestCase
         );
     }
 
-    /** The lookup API is asked about exactly the id in the path, and nothing else. */
     public function testQueriesTheLookupApiForThatShowId(): void
     {
         $fetcher = $this->fetcherResolving('1092957894', 'https://feeds.example.org/show.xml');
@@ -157,7 +156,6 @@ final class ApplePodcastShowFeedTest extends TestCase
         yield 'the body is a bare JSON scalar' => ['"1092957894"'];
     }
 
-    /** An unreachable or refusing API degrades to "not resolved", never an error. */
     public function testFallsThroughWhenTheLookupApiCannotBeReached(): void
     {
         $fetcher = new StubFeedFetcher();
