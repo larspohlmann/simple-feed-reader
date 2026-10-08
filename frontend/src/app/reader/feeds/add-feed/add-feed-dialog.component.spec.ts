@@ -70,6 +70,15 @@ describe('AddFeedDialogComponent', () => {
     expect(element.querySelector('.searching')).toBeNull();
   });
 
+  it('names Apple Podcasts share links beside the URL field', () => {
+    // Nobody would try pasting a show link unless the field says it works.
+    const fixture = create();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('app-field .hint')!.textContent,
+    ).toContain('Apple Podcasts');
+  });
+
   it('renders the tag picker and sends the checked tag ids on submit', () => {
     const fixture = create();
     const pills = (fixture.nativeElement as HTMLElement).querySelectorAll('button.tag-pill');
@@ -506,9 +515,9 @@ describe('AddFeedDialogComponent', () => {
     fixture.componentInstance.submit();
     ctrl.expectOne('https://api.test/api/subscriptions').flush({ candidates: [] });
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.hint')!.textContent).toContain(
-      'No feeds found',
-    );
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.fields > .hint')!.textContent,
+    ).toContain('No feeds found');
     expect(close).not.toHaveBeenCalled();
   });
 
