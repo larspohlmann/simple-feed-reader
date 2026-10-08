@@ -24,7 +24,7 @@ final class ResponseTooLargeExceptionTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        ResponseTooLargeException::throwIfExceeded($limit, $limit->value);
+        ResponseTooLargeException::throwIfExceeded($limit, $limit->bytes());
     }
 
     #[DataProvider('limits')]
@@ -32,7 +32,7 @@ final class ResponseTooLargeExceptionTest extends TestCase
     {
         $this->expectException(ResponseTooLargeException::class);
 
-        ResponseTooLargeException::throwIfExceeded($limit, $limit->value + 1);
+        ResponseTooLargeException::throwIfExceeded($limit, $limit->bytes() + 1);
     }
 
     public function testTheMessageNamesTheUrlAndTheLimitInMegabytes(): void

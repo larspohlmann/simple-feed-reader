@@ -229,10 +229,12 @@ final class ResponseClassifierTest extends TestCase
 
     public function testABodyOverTheSizeCapIsRejected(): void
     {
+        $oversized = new MockResponse(str_repeat('x', ResponseSizeLimit::Feed->bytes() + 1), ['http_code' => 200]);
+
         $this->expectException(ResponseTooLargeException::class);
 
         $this->classifier()->fromBody(
-            $this->respond(new MockResponse(str_repeat('x', ResponseSizeLimit::Feed->value + 1), ['http_code' => 200])),
+            $this->respond($oversized),
             $this->attempt(),
         );
     }

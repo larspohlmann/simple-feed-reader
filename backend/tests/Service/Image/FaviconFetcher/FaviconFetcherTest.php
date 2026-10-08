@@ -9,6 +9,7 @@ use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
@@ -148,6 +149,27 @@ final class FaviconFetcherTest extends TestCase
 
         $this->expectException(FaviconRejectedException::class);
         $this->fetcher($client)->download(self::ICON_URL);
+    }
+
+    public function testTheWireGuardStopsTheDownloadOnceTheBodyPassesTheCap(): void
+    {
+        $chunksSent = 0;
+        $body = (static function () use (&$chunksSent): \Generator {
+            while ($chunksSent < 2 * ResponseSizeLimit::Download->value) {
+                ++$chunksSent;
+                yield str_repeat('x', 1_000_000);
+            }
+        })();
+        $client = new MockHttpClient(new MockResponse($body, [
+            'response_headers' => ['content-type' => ['image/png']],
+        ]));
+
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail('expected the icon to be rejected');
+        } catch (FaviconRejectedException) {
+            self::assertLessThan(2 * ResponseSizeLimit::Download->value, $chunksSent);
+        }
     }
 
     public function testRejectsAnEmptyBody(): void

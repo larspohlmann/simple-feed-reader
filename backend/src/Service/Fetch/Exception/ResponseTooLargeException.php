@@ -11,11 +11,11 @@ final class ResponseTooLargeException extends FetchException
     /** @throws self when $observedBytes exceeds the limit */
     public static function throwIfExceeded(ResponseSizeLimit $limit, int $observedBytes, ?string $url = null): void
     {
-        if ($observedBytes <= $limit->value) {
+        if ($observedBytes <= $limit->bytes()) {
             return;
         }
 
-        $reason = sprintf('the response is larger than the %d MB limit', $limit->megabytes());
+        $reason = sprintf('the response is larger than the %d MB limit', $limit->value);
 
         throw new self(null === $url ? $reason : sprintf('%s: %s', $url, $reason));
     }

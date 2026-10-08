@@ -192,7 +192,7 @@ final class HttpFeedFetcherTest extends TestCase
 
     public function testOversizedResponseThrows(): void
     {
-        $body = str_repeat('a', ResponseSizeLimit::Feed->value + 1);
+        $body = str_repeat('a', ResponseSizeLimit::Feed->bytes() + 1);
 
         $this->expectException(ResponseTooLargeException::class);
         $this->fetcher([new MockResponse($body, ['http_code' => 200])])->fetch('https://example.com/feed');
