@@ -363,8 +363,8 @@ final class Rss2ParserTest extends TestCase
     {
         $entry = $this->parseSingleItem(
             '<item xmlns:content="http://purl.org/rss/1.0/modules/content/"><title>Both</title>'
-            . '<description><![CDATA[<img src="https://img.example.com/description.jpg">]]></description>'
-            . '<content:encoded><![CDATA[<img src="https://img.example.com/content.jpg">]]></content:encoded>'
+            . '<description><![CDATA[<img src="https://img.example.com/description.jpg" alt="">]]></description>'
+            . '<content:encoded><![CDATA[<img src="https://img.example.com/content.jpg" alt="">]]></content:encoded>'
             . '</item>',
         );
 

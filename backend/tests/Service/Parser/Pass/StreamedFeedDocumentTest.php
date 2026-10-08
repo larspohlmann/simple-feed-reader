@@ -38,7 +38,7 @@ final class StreamedFeedDocumentTest extends TestCase
         );
 
         self::assertSame(['One', 'Two'], array_map(
-            static fn (\DOMElement $item): string => (string) $item->getElementsByTagName('title')->item(0)?->textContent,
+            static fn (\DOMElement $item): ?string => $item->getElementsByTagName('title')->item(0)?->textContent,
             $parser->items,
         ));
         $image = $parser->items[0]->getElementsByTagNameNS('http://www.itunes.com/dtds/podcast-1.0.dtd', 'image');
