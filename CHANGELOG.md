@@ -10,6 +10,23 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.3.1] - 2026-10-08
+
+## What's Changed
+* docs: podcast and SoundCloud screenshots, Listening section in the README by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1441
+* feat(#1444): reader fallback note says why per reason by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1445
+* feat(#1442): big player behind the mini bar's artwork by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1446
+* fix(#1447): a plain-text feed body keeps its line breaks by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1448
+* feat(#1449): show an audio entry's duration left of its play button by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1450
+* Add feed: an Apple Podcasts show link subscribes to the show's RSS feed by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1451
+* feat(#1453): Podcasts and Podcasts (DE) catalog categories by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1454
+* feat(#1452): parse feeds as a stream, one DOM per entry by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1455
+* feat(#1452): a 20 MB feed cap, and a too-large reason instead of unreachable by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1456
+* fix(#1442): the big player's bottom row stays under the controls by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1457
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.3.0...v1.3.1
+
 ## [v1.3.0] - 2026-10-07
 
 ### Highlights
