@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -6,12 +6,13 @@ import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.dir
 import { EntryDto } from '../../models';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { formatDuration } from '../../format';
 
 /**
- * The per-entry actions — favorite, keep, mark read, led by play and
- * add-to-playlist on an audio entry (#1436) — as one control cluster. Lives
- * here, not repeated per block: a second copy (hero vs entry-row) once made
- * actions read as unreliable across the view (#414).
+ * The per-entry actions — favorite, keep, mark read, led by the declared
+ * duration, play and add-to-playlist on an audio entry (#1436, #1449) — as one
+ * control cluster. Lives here, not repeated per block: a second copy (hero vs
+ * entry-row) once made actions read as unreliable across the view (#414).
  *
  * Clicks stop propagating — the surrounding card is itself clickable and would
  * open the entry instead of toggling the flag. Enter/Space keydowns stop
@@ -36,4 +37,8 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
   protected readonly actions = inject(EntryActionHandler);
+  protected readonly duration = computed(() => {
+    const seconds = this.entryAudio.track()?.durationInSeconds;
+    return seconds ? formatDuration(seconds) : null;
+  });
 }

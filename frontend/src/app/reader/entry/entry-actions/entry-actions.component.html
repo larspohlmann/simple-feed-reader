@@ -1,4 +1,7 @@
 @if (audio() && entryAudio.track()) {
+  @if (duration(); as duration) {
+    <span class="duration">{{ duration }}</span>
+  }
   <button
     type="button"
     [attr.aria-label]="
