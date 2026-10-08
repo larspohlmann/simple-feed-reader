@@ -28,4 +28,12 @@ describe('LayoutService', () => {
     changes.next({ matches: false, breakpoints: {} });
     expect(service.isCoarse()).toBe(false);
   });
+
+  it('tracks the phone breakpoint', () => {
+    const service = TestBed.inject(LayoutService);
+    changes.next({ matches: true, breakpoints: {} });
+    expect(service.isPhone()).toBe(true);
+    changes.next({ matches: false, breakpoints: {} });
+    expect(service.isPhone()).toBe(false);
+  });
 });

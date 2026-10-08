@@ -13,6 +13,9 @@ export const NARROW_QUERY = '(max-width: 720px)';
 /** True on devices whose primary pointer is coarse (touch), not fine (mouse/trackpad). */
 export const COARSE_QUERY = '(pointer: coarse)';
 
+/** True below `$bp-sm`, where the big player is a full-screen sheet rather than a card. */
+export const PHONE_QUERY = '(max-width: 559.98px)';
+
 @Injectable({ providedIn: 'root' })
 export class LayoutService {
   private readonly bp = inject(BreakpointObserver);
@@ -24,5 +27,8 @@ export class LayoutService {
   });
   readonly isCoarse = toSignal(this.bp.observe(COARSE_QUERY).pipe(map((state) => state.matches)), {
     initialValue: typeof window !== 'undefined' ? window.matchMedia(COARSE_QUERY).matches : false,
+  });
+  readonly isPhone = toSignal(this.bp.observe(PHONE_QUERY).pipe(map((state) => state.matches)), {
+    initialValue: typeof window !== 'undefined' ? window.matchMedia(PHONE_QUERY).matches : false,
   });
 }
