@@ -22,6 +22,8 @@ function ranges(...spans: [number, number][]): TimeRanges {
 class FakeAudio {
   error: { code: number; MEDIA_ERR_SRC_NOT_SUPPORTED: number } | null = null;
   currentTime = 0;
+  defaultPlaybackRate = 1;
+  playbackRate = 1;
   preload = '';
   buffered: TimeRanges = ranges();
   load = jest.fn();
@@ -38,6 +40,7 @@ class FakeAudio {
   set src(url: string) {
     this.source = url;
     this.error = null;
+    this.playbackRate = this.defaultPlaybackRate;
   }
 
   fail(code: number): void {
@@ -683,6 +686,58 @@ describe('AudioPlayerService', () => {
       service.play(track({ url: 'https://x.test/other.mp3' }));
 
       expect(service.buffered()).toBe(0);
+    });
+  });
+
+  describe('playback speed', () => {
+    it('starts at normal speed and steps 1 → 1.25 → 1.5 → 2 → 1', () => {
+      const service = make();
+      const seen = [service.rate()];
+
+      for (let step = 0; step < 4; step++) {
+        service.cycleRate();
+        seen.push(service.rate());
+      }
+
+      expect(seen).toEqual([1, 1.25, 1.5, 2, 1]);
+    });
+
+    it('plays at the chosen speed on both elements', () => {
+      const service = make();
+
+      service.cycleRate();
+
+      expect(audio.playbackRate).toBe(1.25);
+      expect(standby.playbackRate).toBe(1.25);
+    });
+
+    it('keeps the speed when the next track loads', () => {
+      const service = make();
+      service.cycleRate();
+
+      service.play(track({ url: 'https://x.test/one.mp3' }));
+      service.play(track({ url: 'https://x.test/two.mp3' }));
+
+      expect(service.current()?.url).toBe('https://x.test/two.mp3');
+      expect(audio.playbackRate).toBe(1.25);
+    });
+
+    it('remembers the speed across a reload and a stop', () => {
+      const first = make();
+      first.cycleRate();
+      first.cycleRate();
+      first.stop();
+
+      const reloaded = make();
+
+      expect(reloaded.rate()).toBe(1.5);
+      expect(audio.playbackRate).toBe(1.5);
+    });
+
+    it('falls back to normal speed for a stored speed off the list', () => {
+      localStorage.setItem('sfr.audio.rate', '3');
+
+      expect(make().rate()).toBe(1);
     });
   });
 });

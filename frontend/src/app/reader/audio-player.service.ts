@@ -22,6 +22,7 @@ import {
 import { PlaylistStore } from './audio/playlist.store';
 import { AudioDeck } from './audio/audio-deck';
 import { MediaSessionControls } from './audio/media-session-controls';
+import { PlaybackRateStore } from './audio/playback-rate.store';
 
 /** The entry a track was queued from: the big player's details and its link back (#1442).
  *  Absent on tracks saved before it existed. */
@@ -56,6 +57,8 @@ export const SKIP_SECONDS = 15;
 const PERSIST_INTERVAL_MS = 5000;
 /** Past this, previous restarts the current track instead of stepping back (#1429). */
 export const RESTART_THRESHOLD_SECONDS = 3;
+/** The speeds the speed control steps through, in order (#1442). */
+export const PLAYBACK_RATES: readonly number[] = [1, 1.25, 1.5, 2];
 
 /**
  * The reader's single audio player. It owns its HTMLAudioElements in code, never
@@ -75,6 +78,7 @@ export class AudioPlayerService {
   );
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(PlaylistStore);
+  private readonly rateStore = inject(PlaybackRateStore);
   private readonly mediaSession = new MediaSessionControls();
 
   private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
@@ -82,6 +86,7 @@ export class AudioPlayerService {
   private readonly _position = signal(0);
   private readonly _duration = signal(0);
   private readonly _buffered = signal(0);
+  private readonly _rate = signal(1);
 
   readonly tracks = computed(() => this._playlist().tracks);
   readonly index = computed(() => this._playlist().index);
@@ -93,6 +98,7 @@ export class AudioPlayerService {
   readonly duration = this._duration.asReadonly();
   /** How far ahead of the playhead the stream is cached, in seconds from the start. */
   readonly buffered = this._buffered.asReadonly();
+  readonly rate = this._rate.asReadonly();
 
   private lastPersistAt = 0;
   private pendingSeek: number | null = null;
@@ -108,6 +114,7 @@ export class AudioPlayerService {
       SKIP_SECONDS,
     );
     this.restore();
+    this.restoreRate();
     this.bindLifecycle();
     effect(() =>
       this.mediaSession.setTrackSteps(
@@ -172,6 +179,12 @@ export class AudioPlayerService {
     this.seek(this._position() + delta);
   }
 
+  cycleRate(): void {
+    const next = PLAYBACK_RATES[(PLAYBACK_RATES.indexOf(this._rate()) + 1) % PLAYBACK_RATES.length];
+    this.applyRate(next);
+    this.rateStore.save(next);
+  }
+
   stop(): void {
     this.element.pause();
     this.deck.release();
@@ -198,6 +211,16 @@ export class AudioPlayerService {
     if (changed) this.load(track);
     this.persist();
     this.precacheNext();
+  }
+
+  private restoreRate(): void {
+    const saved = this.rateStore.load();
+    this.applyRate(saved !== null && PLAYBACK_RATES.includes(saved) ? saved : 1);
+  }
+
+  private applyRate(rate: number): void {
+    this._rate.set(rate);
+    this.deck.setRate(rate);
   }
 
   private load(track: AudioTrack): void {
@@ -275,7 +298,7 @@ export class AudioPlayerService {
     this._position.set(this.element.currentTime);
     this.onProgress();
     this.persistThrottled();
-    this.mediaSession.showPosition(this._position(), this._duration());
+    this.mediaSession.showPosition(this._position(), this._duration(), this._rate());
   }
 
   /** The end of the cached range the playhead sits in; a range elsewhere (after a seek) is not ahead of it. */
