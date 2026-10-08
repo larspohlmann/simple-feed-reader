@@ -454,4 +454,15 @@ final class FeedParserTest extends TestCase
             libxml_use_internal_errors($previousErrorMode);
         }
     }
+
+    public function testALatin1FeedIsDecodedByItsDeclaredEncoding(): void
+    {
+        $feed = $this->parser()->parse(
+            "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><rss version=\"2.0\"><channel><title>Gr\xFC\xDFe</title>"
+            . "<item><title>\xC4pfel</title><link>https://latin1.example.com/1</link></item></channel></rss>",
+        );
+
+        self::assertSame('Grüße', $feed->title);
+        self::assertSame('Äpfel', $feed->entries[0]->title);
+    }
 }

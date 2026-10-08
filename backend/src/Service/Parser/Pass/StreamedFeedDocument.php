@@ -52,10 +52,9 @@ final class StreamedFeedDocument
     private static function spooled(string $xml): mixed
     {
         $spool = fopen('php://temp', 'w+b');
-        if ($spool === false) {
-            throw new \RuntimeException('Could not open a php://temp spool for the feed body');
+        if ($spool === false || fwrite($spool, $xml) !== strlen($xml)) {
+            throw new FeedParseException('Could not spool the feed body for parsing');
         }
-        fwrite($spool, $xml);
         rewind($spool);
 
         return $spool;
