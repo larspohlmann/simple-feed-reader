@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { CdkScrollable } from '@angular/cdk/scrolling';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { AudioPlayerService, SKIP_SECONDS } from '../../audio-player.service';
 import { scrubFill } from '../../audio/scrub-fill';
 import { formatDuration } from '../../format';
@@ -20,7 +19,6 @@ import { AudioSurface } from './audio-surface.service';
   selector: 'app-audio-player-bar',
   imports: [
     IconComponent,
-    IconButtonDirective,
     AudioArtworkComponent,
     TranslocoPipe,
     CdkScrollable,
