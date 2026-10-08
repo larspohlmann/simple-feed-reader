@@ -12,7 +12,7 @@
   scroll-padding-block-start: env(safe-area-inset-top);
   padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-5)
     calc(var(--space-5) + env(safe-area-inset-bottom));
-  background: linear-gradient(var(--accent-soft), var(--surface-1) 55%);
+  background: linear-gradient(var(--surface-2), var(--surface-1) 55%);
   color: var(--text-primary);
   animation: big-player-rise 0.25s ease-out;
 }
@@ -25,7 +25,7 @@
       var(--surface-1),
       var(--border),
       surface,
-      (linear-gradient(var(--accent-soft), transparent 55%) padding-box)
+      (linear-gradient(var(--surface-2), transparent 55%) padding-box)
     );
 
     border-radius: var(--radius-lg);
@@ -58,14 +58,49 @@
   inline-size: var(--tap-target);
 }
 
+/* At most one screen tall, so the artwork shrinks to fit; a full screen while the list is hidden. */
+.now-playing {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-block-size: 100%;
+}
+
+.now-playing.fill {
+  block-size: 100%;
+}
+
+.art-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .art {
   inline-size: min(100%, 50dvh);
   block-size: auto;
   aspect-ratio: 1;
   flex: none;
-  align-self: center;
   border-radius: var(--radius-lg);
   box-shadow: 0 14px 34px rgb(0 0 0 / 35%);
+}
+
+/* The artwork box starts as wide as the content and gives up height when the screen is short. */
+@media (width < bp.$bp-sm) {
+  :host {
+    container-type: inline-size;
+  }
+
+  .art-box {
+    flex: 0 1 100cqi;
+    min-block-size: calc(4 * var(--space-7));
+    container-type: size;
+  }
+
+  .art {
+    inline-size: min(100cqi, 100cqb);
+  }
 }
 
 .details {
