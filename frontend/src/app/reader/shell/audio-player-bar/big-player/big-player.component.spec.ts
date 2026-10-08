@@ -79,10 +79,9 @@ function touch(type: string, target: EventTarget, ...clientYs: number[]) {
   target.dispatchEvent(event);
 }
 
-function pull(target: EventTarget, [from, to]: [number, number], fingers = 1) {
-  const fromAll = Array(fingers).fill(from);
-  touch('touchstart', target, ...fromAll);
-  touch('touchmove', target, ...Array(fingers).fill(to));
+function pull(target: EventTarget, [from, to]: [number, number]) {
+  touch('touchstart', target, from);
+  touch('touchmove', target, to);
   target.dispatchEvent(new Event('touchend', { bubbles: true }));
 }
 
@@ -239,10 +238,24 @@ describe('BigPlayerComponent', () => {
       expect(ref.close).not.toHaveBeenCalled();
     });
 
-    it('ignores a two-finger pull', () => {
+    it('ignores a pull a second finger joins', () => {
       const fixture = render();
+      const sheet = fixture.nativeElement as HTMLElement;
 
-      pull(fixture.nativeElement, [100, 300], 2);
+      touch('touchstart', sheet, 100);
+      touch('touchmove', sheet, 300, 300);
+      sheet.dispatchEvent(new Event('touchend', { bubbles: true }));
+
+      expect(ref.close).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pull that starts with two fingers', () => {
+      const fixture = render();
+      const sheet = fixture.nativeElement as HTMLElement;
+
+      touch('touchstart', sheet, 100, 100);
+      touch('touchmove', sheet, 300);
+      sheet.dispatchEvent(new Event('touchend', { bubbles: true }));
 
       expect(ref.close).not.toHaveBeenCalled();
     });
