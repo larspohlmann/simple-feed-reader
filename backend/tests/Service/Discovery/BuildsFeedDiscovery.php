@@ -9,6 +9,7 @@ use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
 use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
@@ -23,7 +24,10 @@ trait BuildsFeedDiscovery
 {
     private function discovery(StubFeedFetcher $fetcher): FeedDiscovery
     {
-        return $this->discoveryResolving($fetcher, [new SubstackProfileFeed($fetcher)]);
+        return $this->discoveryResolving(
+            $fetcher,
+            [new SubstackProfileFeed($fetcher), new ApplePodcastShowFeed($fetcher)],
+        );
     }
 
     /** @param list<ShareLinkFeedInterface> $shareLinks */
