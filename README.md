@@ -81,12 +81,12 @@ More in the [screenshot gallery](docs/screenshots.md).
   account's RSS feed.
 - Paste a show or episode link copied from Apple Podcasts into "Add feed" and
   the reader subscribes to the show's RSS feed. Any of these work:
-  - `https://podcasts.apple.com/de/podcast/lage-der-nation/id1092957894`
+  - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318`
     (Share Show → Copy Link on iPhone, iPad or Mac, or the show page's address)
-  - `https://podcasts.apple.com/de/podcast/lage-der-nation/id1092957894?i=1000700000001`
+  - `https://podcasts.apple.com/us/podcast/99-invisible/id394775318?i=1000700000001`
     (an episode link subscribes to its show)
-  - `https://podcasts.apple.com/de/podcast/id1092957894` and
-    `https://itunes.apple.com/us/podcast/lage-der-nation/id1092957894`
+  - `https://podcasts.apple.com/us/podcast/id394775318` and
+    `https://itunes.apple.com/us/podcast/99-invisible/id394775318`
 
 **Feeds**
 
