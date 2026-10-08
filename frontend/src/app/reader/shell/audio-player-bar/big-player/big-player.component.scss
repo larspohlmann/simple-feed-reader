@@ -1,4 +1,5 @@
 @use '../../../../theme/breakpoints' as bp;
+@use '../../../../theme/glass-rim';
 
 :host {
   display: flex;
@@ -18,7 +19,14 @@
 @media (width >= bp.$bp-sm) {
   :host {
     max-block-size: calc(100dvh - 2 * var(--space-5));
-    border: 1px solid var(--border);
+
+    @include glass-rim.filled(
+      var(--surface-1),
+      var(--border),
+      surface,
+      (linear-gradient(var(--accent-soft), transparent 55%) padding-box)
+    );
+
     border-radius: var(--radius-lg);
     box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
     animation-name: big-player-appear;

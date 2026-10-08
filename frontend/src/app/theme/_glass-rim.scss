@@ -90,13 +90,13 @@ $-tiers: (
 }
 
 // A state sets --rim-fill / --rim-base; a `background` or `border-color` there erases the rim.
-@mixin filled($fill, $base: var(--border), $tier: surface) {
+@mixin filled($fill, $base: var(--border), $tier: surface, $overlays: ()) {
   --rim-base: #{$base};
   --rim-fill: #{$fill};
 
   border: 1px solid transparent;
 
-  @include layers($tier);
+  @include layers($tier, $overlays);
 }
 
 // $overlays paint above the fill, so a control can add a glyph without erasing the rim.

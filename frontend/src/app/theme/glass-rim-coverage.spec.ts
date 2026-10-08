@@ -22,7 +22,7 @@ interface Site {
 const EXEMPT: readonly Exemption[] = [
   {
     file: 'app/theme/_glass-rim.scss',
-    selector: '@mixin filled($fill, $base: var(--border), $tier: surface)',
+    selector: '@mixin filled($fill, $base: var(--border), $tier: surface, $overlays: ())',
     reason: 'the rim itself: its gradient paints this transparent border',
   },
   {
