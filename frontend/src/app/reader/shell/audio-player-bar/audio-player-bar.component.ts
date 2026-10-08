@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -8,6 +8,7 @@ import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player
 import { scrubFill } from '../../audio/scrub-fill';
 import { formatDuration } from '../../format';
 import { AudioArtworkComponent } from './audio-artwork/audio-artwork.component';
+import { AudioSurface } from './audio-surface.service';
 
 interface PlaylistRow {
   track: AudioTrack;
@@ -42,7 +43,7 @@ export class AudioPlayerBarComponent {
   protected readonly skipStep = SKIP_SECONDS;
   protected readonly format = formatDuration;
   protected readonly dragDelay = TOUCH_DRAG_START_DELAY;
-  protected readonly playlistOpen = signal(false);
+  protected readonly surface = inject(AudioSurface);
 
   /** The current row reads the element's duration, which corrects the feed's declared one. */
   protected readonly rows = computed(() => {

@@ -1,6 +1,6 @@
 @if (player.current(); as track) {
   <div class="player" role="group" [attr.aria-label]="'reader.audioPlayer.label' | transloco">
-    @if (playlistOpen()) {
+    @if (surface.playlistOpen()) {
       <section
         id="audio-playlist"
         class="playlist"
@@ -77,7 +77,14 @@
       </section>
     }
     <div class="controls">
-      <app-audio-artwork class="artwork" [track]="track" />
+      <button
+        class="open-player"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.openPlayer' | transloco"
+        (click)="surface.openPlayer()"
+      >
+        <app-audio-artwork class="artwork" [track]="track" />
+      </button>
       <button
         class="ctrl previous"
         type="button"
@@ -143,12 +150,12 @@
       <button
         class="ctrl toggle-playlist"
         type="button"
-        [attr.aria-controls]="playlistOpen() ? 'audio-playlist' : null"
-        [attr.aria-expanded]="playlistOpen()"
+        [attr.aria-controls]="surface.playlistOpen() ? 'audio-playlist' : null"
+        [attr.aria-expanded]="surface.playlistOpen()"
         [attr.aria-label]="
           'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
         "
-        (click)="playlistOpen.set(!playlistOpen())"
+        (click)="surface.togglePlaylist()"
       >
         <app-icon name="queue_music" size="md" />
         <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>

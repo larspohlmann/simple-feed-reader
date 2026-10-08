@@ -5,6 +5,7 @@ import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerBarComponent } from './audio-player-bar.component';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player.service';
+import { AudioSurface } from './audio-surface.service';
 
 function stub() {
   return {
@@ -142,6 +143,21 @@ describe('AudioPlayerBarComponent', () => {
     expect(service.stop).toHaveBeenCalled();
   });
 
+  it('opens the big player from the artwork', () => {
+    const fixture = render();
+    const openPlayer = jest.spyOn(TestBed.inject(AudioSurface), 'openPlayer').mockImplementation();
+    service.current.set(track);
+    fixture.detectChanges();
+
+    const button: HTMLButtonElement = fixture.debugElement.query(
+      By.css('.open-player'),
+    ).nativeElement;
+    button.click();
+
+    expect(button.getAttribute('aria-label')).toBe('Open player');
+    expect(openPlayer).toHaveBeenCalled();
+  });
+
   describe('the playlist', () => {
     const second: AudioTrack = { ...track, url: 'https://x.test/two.mp3', title: 'Episode 2' };
     const third: AudioTrack = {
@@ -188,6 +204,19 @@ describe('AudioPlayerBarComponent', () => {
       const fixture = queued(2);
 
       expect(fixture.debugElement.query(By.css('.next')).nativeElement.disabled).toBe(true);
+    });
+
+    it('follows the shared surface state, so the big player can close it', () => {
+      const fixture = queued();
+      const surface = TestBed.inject(AudioSurface);
+
+      surface.togglePlaylist();
+      fixture.detectChanges();
+      expect(rows(fixture)).toHaveLength(3);
+
+      surface.togglePlaylist();
+      fixture.detectChanges();
+      expect(rows(fixture)).toHaveLength(0);
     });
 
     it('stays collapsed until the toggle opens it, and collapses again', () => {
