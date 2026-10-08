@@ -427,4 +427,31 @@ final class FeedParserTest extends TestCase
 
         self::assertSame('Example Tech Blog', $feed->title);
     }
+
+    public function testAFailedParseRestoresTheLibxmlErrorModeItFound(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(false);
+        try {
+            $this->parser()->parse('<rss><channel>');
+            self::fail('A truncated document must be rejected');
+        } catch (FeedParseException) {
+            self::assertFalse(libxml_use_internal_errors());
+        } finally {
+            libxml_use_internal_errors($previousErrorMode);
+        }
+    }
+
+    public function testAParseLeavesNoLibxmlErrorsBehind(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(true);
+        try {
+            $this->parser()->parse(
+                '<?xml version="1.0"?><rss version="2.0"><channel><title>Loose</title><itunes:author>A</itunes:author>'
+                . '</channel></rss>',
+            );
+            self::assertSame([], libxml_get_errors());
+        } finally {
+            libxml_use_internal_errors($previousErrorMode);
+        }
+    }
 }
