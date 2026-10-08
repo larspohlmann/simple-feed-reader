@@ -23,6 +23,16 @@ import { PlaylistStore } from './audio/playlist.store';
 import { AudioDeck } from './audio/audio-deck';
 import { MediaSessionControls } from './audio/media-session-controls';
 
+/** The entry a track was queued from: the big player's details and its link back (#1442).
+ *  Absent on tracks saved before it existed. */
+export interface AudioTrackEntry {
+  id: number;
+  title: string;
+  feedTitle: string;
+  publishedAt: string;
+  excerpt: string;
+}
+
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */
 export interface AudioTrack {
@@ -32,6 +42,7 @@ export interface AudioTrack {
   imageUrl: string | null;
   /** As the feed declared it, so the scrubber renders before metadata loads. */
   durationInSeconds: number | null;
+  entry?: AudioTrackEntry;
 }
 
 /** Injected so tests supply a stub: jsdom does not implement HTMLMediaElement. */

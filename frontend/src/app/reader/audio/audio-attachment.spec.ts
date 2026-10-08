@@ -84,6 +84,13 @@ describe('toAudioTrack', () => {
       faviconUrl: 'https://x.test/favicon.ico',
       imageUrl: 'https://x.test/cover.jpg',
       durationInSeconds: 1830,
+      entry: {
+        id: 1,
+        title: 'The entry headline',
+        feedTitle: 'Src',
+        publishedAt: 'x',
+        excerpt: '',
+      },
     });
   });
 
@@ -92,5 +99,35 @@ describe('toAudioTrack', () => {
 
     expect(toAudioTrack(entry(), attachment).title).toBe('The entry headline');
     expect(toAudioTrack(entry(), attachment).durationInSeconds).toBeNull();
+  });
+
+  it('keeps the entry it came from, for the big player and its link back', () => {
+    const track = toAudioTrack(
+      entry({
+        id: 42,
+        title: 'The entry headline',
+        source: 'Fixture podcast',
+        publishedAt: '2026-09-01T08:00:00Z',
+        excerpt: 'What this episode is about.',
+      }),
+      { url: 'https://x.test/ep.mp3', mimeType: 'audio/mpeg' },
+    );
+
+    expect(track.entry).toEqual({
+      id: 42,
+      title: 'The entry headline',
+      feedTitle: 'Fixture podcast',
+      publishedAt: '2026-09-01T08:00:00Z',
+      excerpt: 'What this episode is about.',
+    });
+  });
+
+  it('dates an undated entry by when it was stored', () => {
+    const track = toAudioTrack(entry({ publishedAt: null, createdAt: '2026-09-02T10:00:00Z' }), {
+      url: 'https://x.test/ep.mp3',
+      mimeType: 'audio/mpeg',
+    });
+
+    expect(track.entry?.publishedAt).toBe('2026-09-02T10:00:00Z');
   });
 });
