@@ -22,7 +22,7 @@ decisions; this file adds what the code survey found.
   mini bar stays as it is. ☰ in the big player closes the big player and opens the
   panel; opening the big player closes the panel. The panel's open state moves out
   of `AudioPlayerBarComponent`'s local `playlistOpen` signal into a small root
-  service (`AudioSurface`, in `reader/audio/`) holding `'none' | 'playlist' | 'big'`, so
+  service (`AudioSurface`, next to the bar in `reader/shell/audio-player-bar/`, since it opens the big player) holding `'none' | 'playlist' | 'player'`, so
   both surfaces read and write one value.
 - **Layout, top to bottom** (mockup "A" with "C"'s excerpt):
   1. Top bar: ⌄ (close) · "3 of 7" (queue position, `index + 1` of `tracks.length`).
@@ -54,21 +54,23 @@ decisions; this file adds what the code survey found.
 ## Data: what `AudioTrack` gains
 
 `AudioTrack` today is `{ url, title, faviconUrl, imageUrl, durationInSeconds }`.
-It gains, all nullable:
+It gains one optional field, `entry?: AudioTrackEntry`, holding the entry the
+track was queued from:
 
 | Field | From | Used for |
 |---|---|---|
-| `entryId` | `entry.id` | open article |
-| `entryTitle` | `entry.title` | the slug in `entryParam` |
+| `id` | `entry.id` | open article |
+| `title` | `entry.title` | the slug in `entryParam` |
 | `feedTitle` | `entry.source` | "feed · date" line |
 | `publishedAt` | `entry.publishedAt ?? entry.createdAt` | "feed · date" line |
 | `excerpt` | `entry.excerpt` | excerpt |
 
-`toAudioTrack()` (`reader/audio/audio-attachment.ts`) is the only builder, so it is
-the only place to fill them. Tracks already in a browser's `sfr.audio`
-(`PlaylistStore`) predate the fields: they render without the line, excerpt or
-link each missing field feeds. No migration; `PlaylistStore.parse` needs no change
-because the fields are optional.
+One optional object rather than five nullable fields: `toAudioTrack()`
+(`reader/audio/audio-attachment.ts`) is the only builder and always fills all of
+them, so they are present or absent together. Tracks already in a browser's
+`sfr.audio` (`PlaylistStore`) predate the field: they render without the feed
+line, excerpt and open-article link. No migration; `PlaylistStore.parse` needs no
+change.
 
 ## Speed: where it lives
 
