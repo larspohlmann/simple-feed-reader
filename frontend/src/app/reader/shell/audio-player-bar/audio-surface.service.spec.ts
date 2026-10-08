@@ -1,17 +1,21 @@
-import { ApplicationRef } from '@angular/core';
+import { ApplicationRef, WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { bigPlayerAudioSignals } from '../../../../testing/big-player-audio-signals';
 import { AudioPlayerService } from '../../audio-player.service';
+import { LayoutService } from '../../layout.service';
 import { AudioSurface } from './audio-surface.service';
 
 describe('AudioSurface', () => {
   let surface: AudioSurface;
   let container: HTMLElement;
+  let layout: { isPhone: WritableSignal<boolean> };
 
   beforeEach(() => {
+    Element.prototype.scrollIntoView = jest.fn();
+    layout = { isPhone: signal(false) };
     const player = bigPlayerAudioSignals();
     const track = {
       url: 'https://x.test/ep.mp3',
@@ -25,7 +29,11 @@ describe('AudioSurface', () => {
     player.index.set(0);
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [provideRouter([]), { provide: AudioPlayerService, useValue: player }],
+      providers: [
+        provideRouter([]),
+        { provide: AudioPlayerService, useValue: player },
+        { provide: LayoutService, useValue: layout },
+      ],
     });
     surface = TestBed.inject(AudioSurface);
     container = TestBed.inject(OverlayContainer).getContainerElement();
@@ -86,5 +94,21 @@ describe('AudioSurface', () => {
     surface.openPlayer();
     settle();
     expect(panes()).toHaveLength(1);
+  });
+
+  it('keeps the phone sheet showing the playlist across openings', () => {
+    layout.isPhone.set(true);
+    const list = () => container.querySelector('app-big-player app-audio-playlist');
+    surface.openPlayer();
+    settle();
+
+    click('.show-playlist');
+    expect(panes()).toHaveLength(1);
+    expect(list()).not.toBeNull();
+
+    click('.collapse');
+    surface.openPlayer();
+    settle();
+    expect(list()).not.toBeNull();
   });
 });

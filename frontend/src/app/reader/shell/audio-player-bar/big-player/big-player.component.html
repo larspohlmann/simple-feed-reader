@@ -103,7 +103,7 @@
     </button>
   </div>
 
-  <div class="extras">
+  <div class="extras" #extras>
     @if (track.entry; as entry) {
       <button
         type="button"
@@ -127,12 +127,24 @@
     <button
       type="button"
       class="ctrl show-playlist"
+      [attr.aria-expanded]="sheet() ? playlistShown() : null"
+      [attr.aria-controls]="playlistShown() ? 'big-player-playlist' : null"
       [attr.aria-label]="
         'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
       "
-      (click)="showPlaylist()"
+      (click)="togglePlaylist()"
     >
       <app-icon name="queue_music" size="md" />
     </button>
   </div>
+
+  @if (playlistShown()) {
+    <section
+      id="big-player-playlist"
+      class="queue"
+      [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
+    >
+      <app-audio-playlist />
+    </section>
+  }
 }

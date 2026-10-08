@@ -1,10 +1,13 @@
+import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { DialogRef } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router, provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../testing/transloco-testing';
 import { bigPlayerAudioSignals } from '../../../../../testing/big-player-audio-signals';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../../audio-player.service';
+import { LayoutService } from '../../../layout.service';
 import { BigPlayerComponent } from './big-player.component';
 
 const first: AudioTrack = {
@@ -44,10 +47,14 @@ function stub() {
 
 let player: ReturnType<typeof stub>;
 let ref: { close: jest.Mock };
+let layout: { isPhone: WritableSignal<boolean> };
+let playlistShown: WritableSignal<boolean>;
 
-function render(current: AudioTrack | null = episode) {
+function render(current: AudioTrack | null = episode, phone = false) {
   player = stub();
   ref = { close: jest.fn() };
+  layout = { isPhone: signal(phone) };
+  playlistShown = signal(false);
   player.tracks.set([first, episode]);
   player.index.set(1);
   player.current.set(current);
@@ -59,6 +66,8 @@ function render(current: AudioTrack | null = episode) {
       provideRouter([]),
       { provide: AudioPlayerService, useValue: player },
       { provide: DialogRef, useValue: ref },
+      { provide: DIALOG_DATA, useValue: { playlistShown } },
+      { provide: LayoutService, useValue: layout },
     ],
   });
   const fixture = TestBed.createComponent(BigPlayerComponent);
@@ -86,6 +95,10 @@ function pull(target: EventTarget, [from, to]: [number, number]) {
 }
 
 describe('BigPlayerComponent', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = jest.fn();
+  });
+
   it('shows the title, the feed line, the excerpt and the queue position', () => {
     const fixture = render();
 
@@ -171,6 +184,65 @@ describe('BigPlayerComponent', () => {
     expect(ref.close).toHaveBeenCalledWith('playlist');
   });
 
+  describe('in the phone sheet', () => {
+    it('shows and hides the playlist under the controls instead of handing over', () => {
+      const fixture = render(episode, true);
+      const button = query<HTMLButtonElement>(fixture, '.show-playlist')!;
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+
+      button.click();
+      fixture.detectChanges();
+      expect(ref.close).not.toHaveBeenCalled();
+      expect(playlistShown()).toBe(true);
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-controls')).toBe('big-player-playlist');
+      expect(fixture.debugElement.queryAll(By.css('#big-player-playlist .row'))).toHaveLength(2);
+
+      button.click();
+      fixture.detectChanges();
+      expect(playlistShown()).toBe(false);
+      expect(query(fixture, 'app-audio-playlist')).toBeNull();
+    });
+
+    it('scrolls the bottom row to the top when the playlist appears, not when it goes', () => {
+      const fixture = render(episode, true);
+      const scrollIntoView = Element.prototype.scrollIntoView as jest.Mock;
+
+      query(fixture, '.show-playlist')!.click();
+      fixture.detectChanges();
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+      expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.extras'));
+
+      query(fixture, '.show-playlist')!.click();
+      fixture.detectChanges();
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens with the playlist it was last left with', () => {
+      const fixture = render(episode, true);
+      playlistShown.set(true);
+      fixture.detectChanges();
+
+      expect(query(fixture, 'app-audio-playlist')).not.toBeNull();
+    });
+  });
+
+  it('keeps the card free of the playlist, even when the sheet last showed it', () => {
+    const fixture = render();
+    playlistShown.set(true);
+    fixture.detectChanges();
+
+    expect(query(fixture, 'app-audio-playlist')).toBeNull();
+    expect(query(fixture, '.show-playlist')!.hasAttribute('aria-expanded')).toBe(false);
+  });
+
+  it('is the scroll container a dragged row scrolls', () => {
+    const fixture = render();
+
+    expect(fixture.debugElement.injector.get(CdkScrollable, null)).not.toBeNull();
+  });
+
   for (const control of ['.open-article', '.title-link']) {
     it(`opens the article from ${control}, keeping the list it was played from`, async () => {
       const fixture = render();
@@ -225,6 +297,16 @@ describe('BigPlayerComponent', () => {
       const fixture = render();
 
       pull(query(fixture, '.scrubber')!, [100, 300]);
+
+      expect(ref.close).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pull that starts in the playlist', () => {
+      const fixture = render(episode, true);
+      query(fixture, '.show-playlist')!.click();
+      fixture.detectChanges();
+
+      pull(query(fixture, '#big-player-playlist .row')!, [100, 300]);
 
       expect(ref.close).not.toHaveBeenCalled();
     });

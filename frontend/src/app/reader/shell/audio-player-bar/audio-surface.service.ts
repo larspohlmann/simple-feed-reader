@@ -4,6 +4,7 @@ import { accountSignal } from '../../../core/auth/session-identity';
 import {
   BIG_PLAYER_TITLE_ID,
   BigPlayerComponent,
+  BigPlayerData,
   BigPlayerExit,
 } from './big-player/big-player.component';
 
@@ -15,6 +16,7 @@ type AudioSurfaceView = 'none' | 'playlist' | 'player';
 export class AudioSurface {
   private readonly dialog = inject(Dialog);
   private readonly view = accountSignal<AudioSurfaceView>('none');
+  private readonly sheetPlaylist = accountSignal(false);
 
   readonly playlistOpen = computed(() => this.view() === 'playlist');
 
@@ -26,9 +28,10 @@ export class AudioSurface {
     if (this.view() === 'player') return;
     this.view.set('player');
     this.dialog
-      .open<BigPlayerExit>(BigPlayerComponent, {
+      .open<BigPlayerExit, BigPlayerData>(BigPlayerComponent, {
         panelClass: 'app-big-player',
         ariaLabelledBy: BIG_PLAYER_TITLE_ID,
+        data: { playlistShown: this.sheetPlaylist },
       })
       .closed.subscribe((exit) => this.view.set(exit === 'playlist' ? 'playlist' : 'none'));
   }

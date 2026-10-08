@@ -9,6 +9,7 @@
   block-size: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-block-start: env(safe-area-inset-top);
   padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-5)
     calc(var(--space-5) + env(safe-area-inset-bottom));
   background: linear-gradient(var(--accent-soft), var(--surface-1) 55%);
@@ -36,6 +37,12 @@
 @media (prefers-reduced-motion: reduce) {
   :host {
     animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :host {
+    scroll-behavior: smooth;
   }
 }
 
@@ -224,6 +231,15 @@
   font-size: var(--fs-sm);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.show-playlist[aria-expanded='true'] {
+  color: var(--accent);
+}
+
+/* No scroller of its own: a second one inside the scrolling sheet is hard to use on a phone. */
+.queue {
+  margin-inline: calc(-1 * var(--space-5));
 }
 
 @keyframes big-player-rise {

@@ -2,12 +2,17 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  WritableSignal,
+  afterNextRender,
   computed,
   effect,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
-import { DialogRef } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { Router } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../../shared/icon/icon.component';
@@ -15,13 +20,20 @@ import { LanguageService } from '../../../../core/i18n/language.service';
 import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audio-player.service';
 import { scrubFill } from '../../../audio/scrub-fill';
 import { formatDuration, relativeTime } from '../../../format';
+import { LayoutService } from '../../../layout.service';
 import { entryParam } from '../../../query/slug';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
+import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
 
 /** What closing the big player asks for next; closing without one just minimises it. */
 export type BigPlayerExit = 'playlist';
 
 export const BIG_PLAYER_TITLE_ID = 'big-player-title';
+
+/** AudioSurface owns whether the phone sheet shows the playlist, so it outlasts one opening. */
+export interface BigPlayerData {
+  playlistShown: WritableSignal<boolean>;
+}
 
 /** Far enough that a scroll-ish wobble does not close the sheet, as on the action sheet. */
 const SWIPE_DISMISS_DISTANCE = 60;
@@ -33,10 +45,11 @@ const SWIPE_DISMISS_DISTANCE = 60;
  */
 @Component({
   selector: 'app-big-player',
-  imports: [IconComponent, AudioArtworkComponent, TranslocoPipe],
+  imports: [IconComponent, AudioArtworkComponent, AudioPlaylistComponent, TranslocoPipe],
   templateUrl: './big-player.component.html',
   styleUrl: './big-player.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  hostDirectives: [CdkScrollable],
   host: {
     '(touchstart)': 'onTouchStart($event)',
     '(touchmove)': 'onTouchMove($event)',
@@ -49,11 +62,16 @@ export class BigPlayerComponent {
   private readonly router = inject(Router);
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly data = inject<BigPlayerData>(DIALOG_DATA);
+  private readonly injector = inject(Injector);
+  private readonly extras = viewChild.required<ElementRef<HTMLElement>>('extras');
 
   protected readonly titleId = BIG_PLAYER_TITLE_ID;
   protected readonly skipStep = SKIP_SECONDS;
   protected readonly format = formatDuration;
   protected readonly dragging = signal(false);
+  protected readonly sheet = inject(LayoutService).isPhone;
+  protected readonly playlistShown = computed(() => this.sheet() && this.data.playlistShown());
 
   protected readonly fill = computed(() =>
     scrubFill(this.player.position(), this.player.buffered(), this.player.duration()),
@@ -79,8 +97,18 @@ export class BigPlayerComponent {
     this.ref.close();
   }
 
-  protected showPlaylist(): void {
-    this.ref.close('playlist');
+  /** The sheet has room for the list under the controls; the card hands over to the bar's panel. */
+  protected togglePlaylist(): void {
+    if (!this.sheet()) {
+      this.ref.close('playlist');
+      return;
+    }
+    this.data.playlistShown.update((shown) => !shown);
+    if (this.data.playlistShown()) {
+      afterNextRender(() => this.extras().nativeElement.scrollIntoView({ block: 'start' }), {
+        injector: this.injector,
+      });
+    }
   }
 
   protected openArticle(entry: AudioTrackEntry): void {
@@ -95,10 +123,11 @@ export class BigPlayerComponent {
   }
 
   protected onTouchStart(event: TouchEvent): void {
-    const onScrubber = event.target instanceof Element && event.target.closest('.scrubber');
+    const exempt =
+      event.target instanceof Element && event.target.closest('.scrubber, app-audio-playlist');
     const scrolled = this.host.nativeElement.scrollTop > 0;
     this.swipeStart =
-      event.touches.length === 1 && !onScrubber && !scrolled ? event.touches[0].clientY : null;
+      event.touches.length === 1 && !exempt && !scrolled ? event.touches[0].clientY : null;
     this.swipeDistance = 0;
   }
 
