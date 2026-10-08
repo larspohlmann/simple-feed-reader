@@ -13,6 +13,7 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
@@ -276,7 +277,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             function () use (&$requestCount): MockResponse {
                 ++$requestCount;
 
-                return new MockResponse(str_repeat('x', 6_000_000), ['http_code' => 200]);
+                return new MockResponse(str_repeat('x', ResponseSizeLimit::Feed->bytes() + 1), ['http_code' => 200]);
             },
             dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
         );
@@ -514,12 +515,29 @@ final class ConcurrentFeedFetcherTest extends TestCase
     public function testAnOversizedBodyIsReportedAsTooLarge(): void
     {
         $fetcher = $this->fetcher([
-            new MockResponse(str_repeat('x', 6_000_000), ['http_code' => 200]),
+            new MockResponse(str_repeat('x', ResponseSizeLimit::Feed->bytes() + 1), ['http_code' => 200]),
         ]);
 
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
+    }
+
+    public function testTheWireGuardStopsTheDownloadOnceTheBodyPassesTheCap(): void
+    {
+        $chunksSent = 0;
+        $body = (static function () use (&$chunksSent): \Generator {
+            while ($chunksSent < 2 * ResponseSizeLimit::Feed->value) {
+                ++$chunksSent;
+                yield str_repeat('x', 1_000_000);
+            }
+        })();
+
+        $outcomes = $this->collect($this->fetcher([new MockResponse($body, ['http_code' => 200])])
+            ->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
+
+        self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
+        self::assertLessThan(2 * ResponseSizeLimit::Feed->value, $chunksSent);
     }
 
     public function testSendsConditionalGetHeaders(): void

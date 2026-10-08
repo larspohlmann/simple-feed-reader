@@ -12,7 +12,7 @@ final class ScrapeFailureReasonTest extends TestCase
     public function testTheWireValuesAreTheOnesTheSubscribeDialogRenders(): void
     {
         self::assertSame(
-            ['blocked', 'throttled', 'unreachable', 'not_scrapable'],
+            ['blocked', 'throttled', 'unreachable', 'not_scrapable', 'too_large'],
             array_map(static fn (ScrapeFailureReason $reason): string => $reason->value, ScrapeFailureReason::cases()),
         );
     }

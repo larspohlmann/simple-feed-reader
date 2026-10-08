@@ -8,6 +8,7 @@ use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
@@ -384,6 +385,18 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
+    }
+
+    public function testAnOversizedFeedReportsTooLargeWithoutProbing(): void
+    {
+        $fetcher = $this->fetcher();
+        $fetcher->willThrow('https://podcast.example.com/feed', new ResponseTooLargeException('too large'));
+
+        $result = $this->discovery($fetcher)->discover('https://podcast.example.com/feed', ScrapeFallback::Enabled);
+
+        self::assertSame(ScrapeFailureReason::TooLarge, $result->scrapeFailureReason);
+        self::assertSame([], $result->candidates);
+        self::assertSame(['https://podcast.example.com/feed'], $fetcher->fetchedUrls);
     }
 
     public function testArticleFreePageReportsNotScrapable(): void

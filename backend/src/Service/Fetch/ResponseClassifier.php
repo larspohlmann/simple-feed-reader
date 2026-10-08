@@ -12,6 +12,7 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\HeaderVerdictModel;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
@@ -74,7 +75,7 @@ final readonly class ResponseClassifier
     public function fromBody(ResponseInterface $response, FetchAttemptModel $attempt): FetchResponseModel
     {
         $body = $this->content($response, $attempt->url);
-        ResponseTooLargeException::throwIfExceeded(\strlen($body), $attempt->url);
+        ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Feed, \strlen($body), $attempt->url);
 
         return FetchResponseModel::fetched(
             $attempt->url,

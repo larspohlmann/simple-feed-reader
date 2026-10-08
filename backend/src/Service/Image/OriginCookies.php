@@ -6,6 +6,7 @@ namespace App\Service\Image;
 
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\HostKey;
@@ -83,7 +84,7 @@ final readonly class OriginCookies
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS * 2,
             'on_progress' => static function (int $downloaded): void {
-                ResponseTooLargeException::throwIfExceeded($downloaded);
+                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);
             },
         ];
     }

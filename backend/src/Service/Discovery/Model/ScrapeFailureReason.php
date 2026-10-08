@@ -10,4 +10,5 @@ enum ScrapeFailureReason: string
     case Throttled = 'throttled';
     case Unreachable = 'unreachable';
     case NotScrapable = 'not_scrapable';
+    case TooLarge = 'too_large';
 }

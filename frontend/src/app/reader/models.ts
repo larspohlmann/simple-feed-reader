@@ -339,7 +339,7 @@ export interface FeedPreview {
  * `failureText()` renders a generic warning for anything outside the known set.
  */
 export type ScrapeFailureReason =
-  'blocked' | 'throttled' | 'unreachable' | 'not_scrapable' | (string & {});
+  'blocked' | 'throttled' | 'unreachable' | 'not_scrapable' | 'too_large' | (string & {});
 
 /** POST /subscriptions returns either the created subscription or a candidate
  *  list; an empty list may carry the reason the scraper fallback gave up. */

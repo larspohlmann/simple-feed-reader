@@ -15,6 +15,7 @@ use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\HeaderDecision;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\FetchQueue;
 use App\Service\Fetch\Pass\HostSlots;
 use App\Service\Fetch\ResponseClassifier;
@@ -266,7 +267,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
                 'on_progress' => static function (int $downloaded): void {
-                    ResponseTooLargeException::throwIfExceeded($downloaded);
+                    ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Feed, $downloaded);
                 },
                 ...$egress,
             ]);
@@ -280,7 +281,7 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     {
         $headers = [
             'Accept' => 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1',
-            // Refuse transparent compression so the MAX_BYTES cap (counted on the
+            // Refuse transparent compression so the size limit (counted on the
             // wire in on_progress) also bounds the buffered body — a compressed
             // response would otherwise decompress unbounded before the size check.
             'Accept-Encoding' => 'identity',

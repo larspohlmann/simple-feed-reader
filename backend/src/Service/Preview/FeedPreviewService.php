@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\EntrySnippet;
@@ -55,6 +56,8 @@ final readonly class FeedPreviewService
 
         try {
             $response = $this->fetcher->fetch($url);
+        } catch (ResponseTooLargeException $exception) {
+            throw new FeedPreviewException('The feed is larger than the reader accepts.', 0, $exception);
         } catch (FetchException $exception) {
             throw new FeedPreviewException('The feed could not be loaded.', 0, $exception);
         }

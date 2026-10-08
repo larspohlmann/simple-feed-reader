@@ -7,6 +7,7 @@ namespace App\Service\Image\FaviconFetcher;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use App\Service\Fetch\UrlGuard;
@@ -136,7 +137,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
             // decompress unbounded before the size check runs.
             'headers' => ['Accept-Encoding' => 'identity'],
             'on_progress' => static function (int $downloaded): void {
-                ResponseTooLargeException::throwIfExceeded($downloaded);
+                ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);
             },
         ]);
     }

@@ -12,6 +12,7 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FeedFetcher\HttpFeedFetcher;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
@@ -107,7 +108,7 @@ final class HttpFeedFetcherTest extends TestCase
                 $headers[] = strtolower($header);
             }
         }
-        // Without this, a gzip bomb could decompress past MAX_BYTES before the check.
+        // Without this, a gzip bomb could decompress past the size limit before the check.
         self::assertContains('accept-encoding: identity', $headers);
     }
 
@@ -191,7 +192,7 @@ final class HttpFeedFetcherTest extends TestCase
 
     public function testOversizedResponseThrows(): void
     {
-        $body = str_repeat('a', 5_000_001);
+        $body = str_repeat('a', ResponseSizeLimit::Feed->bytes() + 1);
 
         $this->expectException(ResponseTooLargeException::class);
         $this->fetcher([new MockResponse($body, ['http_code' => 200])])->fetch('https://example.com/feed');
