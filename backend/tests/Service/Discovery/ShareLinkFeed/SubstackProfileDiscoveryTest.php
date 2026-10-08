@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Tests\Service\Discovery\BuildsFeedDiscovery;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -23,7 +24,7 @@ final class SubstackProfileDiscoveryTest extends KernelTestCase
      */
     public function testASubstackProfileSubscribesThePublicationApiResolvesForIt(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
         $fetcher = $this->fetcherReturning(

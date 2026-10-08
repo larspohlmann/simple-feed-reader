@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\SubstackProfileFeed;
+use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
