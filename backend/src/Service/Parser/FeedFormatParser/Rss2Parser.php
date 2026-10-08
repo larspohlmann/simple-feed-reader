@@ -19,6 +19,7 @@ use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
+use App\Service\Text\Support\PlainTextBody;
 
 final readonly class Rss2Parser implements FeedFormatParserInterface
 {
@@ -81,7 +82,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             title: PlainText::from($title) ?? '(untitled)',
             author: XmlHelper::childText($item, 'author') ?? XmlHelper::childText($item, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
-            contentHtml: $contentEncoded ?? $description,
+            contentHtml: PlainTextBody::asHtml($contentEncoded ?? $description),
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),

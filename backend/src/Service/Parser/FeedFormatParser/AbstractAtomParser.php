@@ -18,6 +18,7 @@ use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
+use App\Service\Text\Support\PlainTextBody;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
@@ -216,7 +217,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
             $text = trim($child->textContent);
 
-            return $text === '' ? null : $text;
+            return $text === '' ? null : PlainTextBody::asHtml($text);
         }
 
         return null;

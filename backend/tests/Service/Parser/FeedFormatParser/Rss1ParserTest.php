@@ -231,4 +231,27 @@ final class Rss1ParserTest extends TestCase
         self::assertCount(1, $bundle->attachments);
         self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
     }
+
+    public function testAPlainTextDescriptionKeepsItsLineBreaks(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+              </channel>
+              <item rdf:about="https://e/set">
+                <title>Summer set</title>
+                <link>https://e/set</link>
+                <description>Track list :
+            1.Idaishoy</description>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
+
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $feed->entries[0]->contentHtml);
+    }
 }
