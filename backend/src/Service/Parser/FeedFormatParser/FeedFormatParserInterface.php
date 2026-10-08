@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
@@ -18,5 +19,14 @@ interface FeedFormatParserInterface
      */
     public function supports(\DOMElement $root): bool;
 
-    public function parse(\DOMDocument $document): ParsedFeedModel;
+    /** Asked of each element as the document streams past; the root sits at depth 0. */
+    public function isEntry(\DOMElement $element, int $depth): bool;
+
+    public function parseEntry(\DOMElement $entry): ?ParsedEntryModel;
+
+    /**
+     * @param \DOMDocument $skeleton the whole feed document except its entries
+     * @param list<ParsedEntryModel> $entries
+     */
+    public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel;
 }

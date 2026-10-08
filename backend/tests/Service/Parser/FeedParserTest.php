@@ -17,12 +17,7 @@ final class FeedParserTest extends TestCase
 
     private function parser(): FeedParser
     {
-        return new FeedParser(new FeedParserFactory([
-            FeedFormatParsers::rss2(),
-            FeedFormatParsers::atom10(),
-            FeedFormatParsers::atom03(),
-            FeedFormatParsers::rss1(),
-        ]));
+        return new FeedParser(new FeedParserFactory(FeedFormatParsers::all()));
     }
 
 
@@ -320,5 +315,154 @@ final class FeedParserTest extends TestCase
         self::assertSame('Grace Hopper', $item->author);
         self::assertStringContainsString('First RDF body', (string) $item->contentHtml);
         self::assertSame('2026-07-17T08:00:00+00:00', $item->publishedAt?->format(DATE_ATOM));
+    }
+
+    public function testAnUndeclaredNamespacePrefixDoesNotFailTheFeed(): void
+    {
+        $feed = $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Loose</title><itunes:author>A</itunes:author>'
+            . '<item><title>One</title><link>https://loose.example.com/1</link><media:thumbnail url="x"/></item>'
+            . '</channel></rss>',
+        );
+
+        self::assertSame('Loose', $feed->title);
+        self::assertSame(['One'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+    }
+
+    public function testAMalformedItemAfterGoodOnesFailsTheWholeFeed(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Broken</title>'
+            . '<item><title>Good</title><link>https://broken.example.com/1</link></item>'
+            . '<item><title>Bad<link>https://broken.example.com/2</link></item>'
+            . '</channel></rss>',
+        );
+    }
+
+    public function testATruncatedBodyFailsTheWholeFeed(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Cut</title>'
+            . '<item><title>Good</title><link>https://cut.example.com/1</link></item><item><title>Ha',
+        );
+    }
+
+    public function testChannelMetadataAfterTheItemsStillCounts(): void
+    {
+        $feed = $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel>'
+            . '<item><title>One</title><link>https://late.example.com/1</link></item>'
+            . '<title><![CDATA[Late & Titled]]></title><!-- note --><link>https://late.example.com/</link>'
+            . '<image><url>https://late.example.com/logo.png</url></image>'
+            . '</channel></rss>',
+        );
+
+        self::assertSame('Late & Titled', $feed->title);
+        self::assertSame('https://late.example.com/', $feed->siteUrl);
+        self::assertSame('https://late.example.com/logo.png', $feed->imageUrl);
+        self::assertCount(1, $feed->entries);
+    }
+
+    public function testAnItemInsideAnExtensionElementOfTheChannelIsStillAnEntry(): void
+    {
+        $feed = $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Nested</title>'
+            . '<section><item><title>Deep</title><link>https://nested.example.com/1</link></item></section>'
+            . '</channel></rss>',
+        );
+
+        self::assertSame(['Deep'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+    }
+
+    public function testAnEmptyRssRootIsAFeedWithoutAChannel(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->expectExceptionMessage('RSS document without <channel>');
+        $this->parser()->parse('<?xml version="1.0"?><rss version="2.0"/>');
+    }
+
+    public function testAnAtomEntryOutsideTheFeedRootLevelIsNotAnEntry(): void
+    {
+        $feed = $this->parser()->parse(
+            '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Atom</title>'
+            . '<wrapper><entry><title>Hidden</title><link href="https://a.example.com/h"/></entry></wrapper>'
+            . '<entry><title>Shown</title><link href="https://a.example.com/s"/></entry></feed>',
+        );
+
+        self::assertSame(['Shown'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+    }
+
+    public function testAnAtomXhtmlContentKeepsItsMarkupAndNamespace(): void
+    {
+        $feed = $this->parser()->parse(
+            '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:x="http://www.w3.org/1999/xhtml">'
+            . '<title>Atom</title><entry><title>E</title><link href="https://a.example.com/e"/>'
+            . '<content type="xhtml"><x:div><x:p>Hi <x:b>there</x:b></x:p></x:div></content></entry></feed>',
+        );
+
+        self::assertStringContainsString('<x:b>there</x:b>', (string) $feed->entries[0]->contentHtml);
+    }
+
+    public function testABodyCutOffBetweenItemsFailsTheWholeFeed(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Cut</title>'
+            . '<item><title>Good</title><link>https://cut.example.com/1</link></item><link>https://cut',
+        );
+    }
+
+    public function testAnEarlierLibxmlFailureInTheProcessDoesNotFailTheNextFeed(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(true);
+        try {
+            new \DOMDocument()->loadXML('<broken');
+            $feed = $this->parser()->parse($this->fixture('feeds/rss2-basic.xml'));
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrorMode);
+        }
+
+        self::assertSame('Example Tech Blog', $feed->title);
+    }
+
+    public function testAFailedParseRestoresTheLibxmlErrorModeItFound(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(false);
+        try {
+            $this->parser()->parse('<rss><channel>');
+            self::fail('A truncated document must be rejected');
+        } catch (FeedParseException) {
+            self::assertFalse(libxml_use_internal_errors());
+        } finally {
+            libxml_use_internal_errors($previousErrorMode);
+        }
+    }
+
+    public function testAParseLeavesNoLibxmlErrorsBehind(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(true);
+        try {
+            $this->parser()->parse(
+                '<?xml version="1.0"?><rss version="2.0"><channel><title>Loose</title><itunes:author>A</itunes:author>'
+                . '</channel></rss>',
+            );
+            self::assertSame([], libxml_get_errors());
+        } finally {
+            libxml_use_internal_errors($previousErrorMode);
+        }
+    }
+
+    public function testALatin1FeedIsDecodedByItsDeclaredEncoding(): void
+    {
+        $feed = $this->parser()->parse(
+            "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><rss version=\"2.0\"><channel><title>Gr\xFC\xDFe</title>"
+            . "<item><title>\xC4pfel</title><link>https://latin1.example.com/1</link></item></channel></rss>",
+        );
+
+        self::assertSame('Grüße', $feed->title);
+        self::assertSame('Äpfel', $feed->entries[0]->title);
     }
 }

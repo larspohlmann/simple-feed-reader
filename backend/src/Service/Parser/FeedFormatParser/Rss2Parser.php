@@ -38,19 +38,17 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         return $root->localName === 'rss';
     }
 
-    public function parse(\DOMDocument $document): ParsedFeedModel
+    /** Any unprefixed <item> at any depth. */
+    public function isEntry(\DOMElement $element, int $depth): bool
     {
-        $channel = $document->getElementsByTagName('channel')->item(0);
+        return $element->nodeName === 'item';
+    }
+
+    public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
+    {
+        $channel = $skeleton->getElementsByTagName('channel')->item(0);
         if (!$channel instanceof \DOMElement) {
             throw new FeedParseException('RSS document without <channel>');
-        }
-
-        $entries = [];
-        foreach ($document->getElementsByTagName('item') as $item) {
-            $entry = $this->parseItem($item);
-            if ($entry !== null) {
-                $entries[] = $entry;
-            }
         }
 
         return (new ParsedFeedModel(
@@ -62,33 +60,33 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         ))->withShowArtwork(PodcastArtwork::of($channel));
     }
 
-    private function parseItem(\DOMElement $item): ?ParsedEntryModel
+    public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childText($item, 'title');
-        $link = XmlHelper::childText($item, 'link');
+        $title = XmlHelper::childText($entry, 'title');
+        $link = XmlHelper::childText($entry, 'link');
         if ($title === null && $link === null) {
             return null;
         }
 
-        $description = XmlHelper::childText($item, 'description');
-        $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
+        $description = XmlHelper::childText($entry, 'description');
+        $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
-        $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
-        $mediaBundle = $this->mediaExtractor->extract($item);
+        $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($entry);
 
         return new ParsedEntryModel(
-            guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),
+            guid: GuidFallback::for(XmlHelper::childText($entry, 'guid'), $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
-            author: XmlHelper::childText($item, 'author') ?? XmlHelper::childText($item, 'creator', self::DC_NS),
+            author: XmlHelper::childText($entry, 'author') ?? XmlHelper::childText($entry, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: PlainTextBody::asHtml($contentEncoded ?? $description),
             publishedAt: DateParser::parse(
-                XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
+                XmlHelper::childText($entry, 'pubDate') ?? XmlHelper::childText($entry, 'date', self::DC_NS),
             ),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
-            categories: ItemCategoryExtractor::extract($item),
-            discussion: self::discussion($item),
+            categories: ItemCategoryExtractor::extract($entry),
+            discussion: self::discussion($entry),
         );
     }
 

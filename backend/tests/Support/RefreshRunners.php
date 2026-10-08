@@ -186,12 +186,7 @@ final readonly class RefreshRunners
 
         return new FeedBodyParser(new ServiceLocator([
             XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
-                new FeedParser(new FeedParserFactory([
-                    FeedFormatParsers::rss2(),
-                    FeedFormatParsers::atom10(),
-                    FeedFormatParsers::atom03(),
-                    FeedFormatParsers::rss1(),
-                ])),
+                new FeedParser(new FeedParserFactory(FeedFormatParsers::all())),
             ),
             ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
         ]));

@@ -8,10 +8,13 @@ use App\Enum\CommentsLoad;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Tests\Support\FeedFormatParsers;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class RedditEntryRuleTest extends TestCase
 {
+    use ReadsFixtures;
+
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1wobnjy/nativephp_mobile_450/';
 
     private static function footer(string $linkTarget): string
@@ -87,9 +90,7 @@ final class RedditEntryRuleTest extends TestCase
 
     public function testFixtureEntriesBecomeThreadsWithAnAutoCommentsFeed(): void
     {
-        $document = new \DOMDocument();
-        $document->load(__DIR__ . '/../../../Fixtures/reddit/subreddit.atom');
-        $feed = FeedFormatParsers::atom10()->parse($document);
+        $feed = FeedFormatParsers::feed($this->fixture('reddit/subreddit.atom'));
         $rule = new RedditEntryRule();
 
         self::assertNotSame([], $feed->entries);

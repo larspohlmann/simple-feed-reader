@@ -52,28 +52,20 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     /** Feed-level description element ('subtitle' in 1.0, 'tagline' in 0.3). */
     abstract protected function descriptionElement(): string;
 
-    public function parse(\DOMDocument $document): ParsedFeedModel
+    /** Only the feed's own children: an <entry> nested anywhere else was never one. */
+    public function isEntry(\DOMElement $element, int $depth): bool
     {
-        $root = $document->documentElement;
+        return $depth === 1 && $element->localName === 'entry' && $element->namespaceURI === $this->namespaceUri();
+    }
+
+    public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
+    {
+        $root = $skeleton->documentElement;
         if ($root === null) {
             throw new FeedParseException('Atom document without root element');
         }
 
         $title = XmlHelper::childText($root, 'title', $this->namespaceUri());
-
-        $entries = [];
-        foreach ($root->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === 'entry'
-                && $child->namespaceURI === $this->namespaceUri()
-            ) {
-                $entry = $this->parseEntry($child);
-                if ($entry !== null) {
-                    $entries[] = $entry;
-                }
-            }
-        }
 
         // A feed in the right namespace from which we extracted nothing is a
         // broken document: fail loudly so discovery/refresh report a real error
@@ -91,7 +83,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         ))->withShowArtwork(PodcastArtwork::of($root));
     }
 
-    private function parseEntry(\DOMElement $entry): ?ParsedEntryModel
+    public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
         $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());

@@ -11,26 +11,18 @@ use PHPUnit\Framework\TestCase;
 
 final class Rss2ParserTest extends TestCase
 {
-    private function document(string $xml): \DOMDocument
-    {
-        $document = new \DOMDocument();
-        $document->loadXML($xml);
-
-        return $document;
-    }
-
     private function parseSingleItem(string $itemXml): ParsedEntryModel
     {
         /** @noinspection XmlUnusedNamespaceDeclaration */
-        $document = $this->document(<<<XML
+        $xml = <<<XML
             <rss version="2.0"
                  xmlns:wfw="http://wellformedweb.org/CommentAPI/"
                  xmlns:slash="http://purl.org/rss/1.0/modules/slash/">
               <channel><title>Blog</title>{$itemXml}</channel>
             </rss>
-            XML);
+            XML;
 
-        return FeedFormatParsers::rss2()->parse($document)->entries[0];
+        return FeedFormatParsers::feed($xml)->entries[0];
     }
 
     public function testCarriesPodcastEnclosureIntoAttachments(): void
@@ -51,7 +43,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         $bundle = $feed->entries[0]->media->mediaBundle;
         self::assertNotNull($bundle);
@@ -91,7 +83,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertCount(3, $feed->entries);
         self::assertSame('https://e/a.jpg', $feed->entries[0]->media->image?->url);
@@ -120,7 +112,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertCount(1, $feed->entries);
         $image = $feed->entries[0]->media->image;
@@ -152,7 +144,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -177,7 +169,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('https://e/enclosure.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -201,7 +193,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         $image = $feed->entries[0]->media->image;
         self::assertNotNull($image);
@@ -230,7 +222,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('The Weekly Review', $feed->title);
         self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
@@ -255,7 +247,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        self::assertSame('https://example.com', FeedFormatParsers::rss2()->parse($this->document($xml))->siteUrl);
+        self::assertSame('https://example.com', FeedFormatParsers::feed($xml)->siteUrl);
     }
 
     public function testReadsTheChannelImage(): void
@@ -273,7 +265,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('https://example.com/logo.png', $feed->imageUrl);
     }
@@ -292,7 +284,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        self::assertNull(FeedFormatParsers::rss2()->parse($this->document($xml))->imageUrl);
+        self::assertNull(FeedFormatParsers::feed($xml)->imageUrl);
     }
 
     public function testWordPressCommentFeedIsAManualCommentsFeed(): void
@@ -365,5 +357,37 @@ final class Rss2ParserTest extends TestCase
             XML);
 
         self::assertSame('<p>Track list :<br>1.Idaishoy<br>2.Silver Galaxy</p>', $entry->contentHtml);
+    }
+
+    public function testTheBodyImageComesFromContentEncodedBeforeTheDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:content="http://purl.org/rss/1.0/modules/content/"><title>Both</title>'
+            . '<description><![CDATA[<img src="https://img.example.com/description.jpg" alt="">]]></description>'
+            . '<content:encoded><![CDATA[<img src="https://img.example.com/content.jpg" alt="">]]></content:encoded>'
+            . '</item>',
+        );
+
+        self::assertSame('https://img.example.com/content.jpg', $entry->media->image?->url);
+    }
+
+    public function testAuthorWinsOverDublinCoreCreator(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>By</title>'
+            . '<dc:creator>Creator</dc:creator><author>Author</author></item>',
+        );
+
+        self::assertSame('Author', $entry->author);
+    }
+
+    public function testPubDateWinsOverDublinCoreDate(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>When</title>'
+            . '<dc:date>2026-01-01T00:00:00Z</dc:date><pubDate>Tue, 06 Oct 2026 10:00:00 +0000</pubDate></item>',
+        );
+
+        self::assertSame('2026-10-06T10:00:00+00:00', $entry->publishedAt?->format(DATE_ATOM));
     }
 }

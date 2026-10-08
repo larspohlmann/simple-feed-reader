@@ -14,10 +14,7 @@ final class Atom10ParserTest extends TestCase
 {
     private function parse(string $xml): ParsedFeedModel
     {
-        $document = new \DOMDocument();
-        $document->loadXML($xml);
-
-        return FeedFormatParsers::atom10()->parse($document);
+        return FeedFormatParsers::feed($xml);
     }
 
     private function parseSingleEntry(string $entryXml): ParsedEntryModel
