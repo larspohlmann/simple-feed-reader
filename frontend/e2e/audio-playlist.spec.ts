@@ -105,9 +105,7 @@ for (const layout of ['magazine', 'list'] as const) {
   });
 }
 
-test('the artwork opens the big player, which trades places with the playlist (#1442)', async ({
-  page,
-}) => {
+test('on a phone the big player shows the playlist inside its sheet (#1442)', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await presetLocalStorage(page, { 'sfr.layout': 'list' });
   await stubEpisodes(page);
@@ -130,14 +128,40 @@ test('the artwork opens the big player, which trades places with the playlist (#
     player.getByRole('button', { name: 'Playback speed 1.25×', exact: true }),
   ).toBeVisible();
 
+  const playlist = player.getByRole('button', { name: 'Playlist (2)', exact: true });
+  await playlist.click();
+  await expect(playlist).toHaveAttribute('aria-expanded', 'true');
+  await expect(player.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
+  await expect(bar.locator('.row')).toHaveCount(0);
+  await playlist.click();
+  await expect(player.locator('.row')).toHaveCount(0);
+  await player.getByRole('button', { name: 'Open article', exact: true }).click();
+  await expect(player).toHaveCount(0);
+  await expect(page).toHaveURL(/[?&]entry=2-episode-2/);
+  await expect(page.locator('app-reader-view')).toBeVisible();
+});
+
+test('on a wide screen the big player trades places with the playlist panel (#1442)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await presetLocalStorage(page, { 'sfr.layout': 'list' });
+  await stubEpisodes(page);
+  await page.goto('/?subscription=1');
+  const row = (title: string) =>
+    page.locator('app-entry-list article[role="button"]', { hasText: title });
+
+  await row('Episode 2').getByRole('button', { name: 'Play', exact: true }).click();
+  await row('Episode 3').getByRole('button', { name: 'Add to playlist', exact: true }).click();
+
+  const bar = page.locator('app-audio-player-bar');
+  const player = page.getByRole('dialog');
+  await bar.getByRole('button', { name: 'Open player', exact: true }).click();
   await player.getByRole('button', { name: 'Playlist (2)', exact: true }).click();
   await expect(player).toHaveCount(0);
   await expect(bar.locator('.row .row-title')).toHaveText(['Episode 2', 'Episode 3']);
 
   await bar.getByRole('button', { name: 'Open player', exact: true }).click();
+  await expect(player).toBeVisible();
   await expect(bar.locator('.row')).toHaveCount(0);
-  await player.getByRole('button', { name: 'Open article', exact: true }).click();
-  await expect(player).toHaveCount(0);
-  await expect(page).toHaveURL(/[?&]entry=2-episode-2/);
-  await expect(page.locator('app-reader-view')).toBeVisible();
 });
