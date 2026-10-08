@@ -58,17 +58,13 @@
   inline-size: var(--tap-target);
 }
 
-/* At most one screen tall, so the artwork shrinks to fit; a full screen while the list is hidden. */
+/* At most one screen tall, so the artwork shrinks to fit a short screen. */
 .now-playing {
   display: flex;
   flex: none;
   flex-direction: column;
   gap: var(--space-3);
   max-block-size: 100%;
-}
-
-.now-playing.fill {
-  block-size: 100%;
 }
 
 .art-box {
@@ -254,7 +250,6 @@
 }
 
 .extras {
-  margin-block-start: auto;
   color: var(--text-secondary);
 }
 
