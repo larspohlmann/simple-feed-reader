@@ -2,6 +2,7 @@ import { computed } from '@angular/core';
 import { AudioPlayerService } from '../audio-player.service';
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { EntryDto } from '../models';
+import { formatDuration } from '../format';
 
 /** An entry's audio enclosure as the player sees it, with the controls the
  *  article view and the list rows share (#1436). */
@@ -12,6 +13,12 @@ export class EntryAudio {
     const entry = this.entry();
     const attachment = this.attachment();
     return entry && attachment ? toAudioTrack(entry, attachment) : null;
+  });
+
+  /** The feed-declared length as `m:ss`, or null when the feed declares none. */
+  readonly duration = computed(() => {
+    const seconds = this.attachment()?.durationInSeconds;
+    return seconds ? formatDuration(seconds) : null;
   });
 
   readonly queued = computed(() => {

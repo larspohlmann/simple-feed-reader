@@ -254,6 +254,21 @@ describe('EntryActionsComponent', () => {
       ]);
     });
 
+    it('shows the declared duration left of play (#1449)', () => {
+      const fixture = mount(
+        entry({
+          attachments: [{ url: EPISODE, mimeType: 'audio/mpeg', durationInSeconds: 3_725 }],
+        }),
+      );
+      const duration = fixture.nativeElement.querySelector('.duration');
+      expect(duration.textContent.trim()).toBe('1:02:05');
+      expect(duration.nextElementSibling.getAttribute('aria-label')).toBe('Play');
+    });
+
+    it('shows no duration when the feed declares none (#1449)', () => {
+      expect(mount(episode()).nativeElement.querySelector('.duration')).toBeNull();
+    });
+
     it('leaves them out where the host has its own listen controls', () => {
       const fixture = TestBed.createComponent(HostComponent);
       fixture.componentInstance.entry = episode();

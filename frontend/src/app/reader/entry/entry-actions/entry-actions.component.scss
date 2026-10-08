@@ -17,6 +17,12 @@
   --tap-glyph: var(--icon-md);
 }
 
+.duration {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
 button {
   display: inline-flex;
   align-items: center;
