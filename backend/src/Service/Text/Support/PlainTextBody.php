@@ -31,7 +31,7 @@ final class PlainTextBody
 
     private static function paragraph(string $paragraph): string
     {
-        return '<p>' . implode('<br>', array_map(trim(...), explode("\n", trim($paragraph)))) . '</p>';
+        return '<p>' . implode('<br>', array_map(trim(...), explode("\n", $paragraph))) . '</p>';
     }
 
     private function __construct()

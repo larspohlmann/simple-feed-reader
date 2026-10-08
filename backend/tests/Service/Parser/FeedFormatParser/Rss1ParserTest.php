@@ -254,4 +254,29 @@ final class Rss1ParserTest extends TestCase
 
         self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $feed->entries[0]->contentHtml);
     }
+
+    public function testContentEncodedWinsOverTheDescriptionAsTheBody(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel rdf:about="https://rss1.example.com/">
+                <title>RSS 1.0 Example</title>
+                <link>https://rss1.example.com/</link>
+              </channel>
+              <item rdf:about="https://e/post">
+                <title>Post</title>
+                <link>https://e/post</link>
+                <description>The teaser</description>
+                <content:encoded>&lt;p&gt;The article&lt;/p&gt;</content:encoded>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $entry = FeedFormatParsers::rss1()->parse($this->document($xml))->entries[0];
+
+        self::assertSame('<p>The article</p>', $entry->contentHtml);
+        self::assertSame('The teaser', $entry->summary);
+    }
 }

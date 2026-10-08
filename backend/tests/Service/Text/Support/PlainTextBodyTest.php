@@ -62,6 +62,16 @@ final class PlainTextBodyTest extends TestCase
         self::assertSame('<p>one</p><p>two</p>', PlainTextBody::asHtml("  one  \n \n\n\t\ntwo \n"));
     }
 
+    public function testEveryLineIsTrimmed(): void
+    {
+        self::assertSame('<p>one<br>two</p>', PlainTextBody::asHtml("one \n two"));
+    }
+
+    public function testLeadingAndTrailingBlankLinesMakeNoEmptyParagraph(): void
+    {
+        self::assertSame('<p>one</p><p>two</p>', PlainTextBody::asHtml("\n\none\n\ntwo\n\n"));
+    }
+
     public function testEntitiesAreNotEncodedTwice(): void
     {
         self::assertSame('<p>Fish &amp; Chips<br>peas</p>', PlainTextBody::asHtml("Fish &amp; Chips\npeas"));
