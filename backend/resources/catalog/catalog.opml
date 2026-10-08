@@ -1198,5 +1198,89 @@
                htmlUrl="https://t3n.de"
                description="German digital business magazine"/>
     </outline>
+    <outline text="Podcasts" key="podcasts" icon="podcasts" color="#db2777">
+      <outline type="rss" text="Acquired"
+               xmlUrl="https://feeds.transistor.fm/acquired"
+               htmlUrl="https://acquired.fm"
+               description="The stories and strategies behind great companies"/>
+      <outline type="rss" text="Hidden Brain"
+               xmlUrl="https://feeds.simplecast.com/kwWc0lhf"
+               htmlUrl="https://hiddenbrain.org"
+               description="Shankar Vedantam on the psychology of everyday life"/>
+      <outline type="rss" text="Planet Money"
+               xmlUrl="https://feeds.npr.org/510289/podcast.xml"
+               htmlUrl="https://www.npr.org/podcasts/510289/planet-money"
+               description="NPR explains the economy"/>
+      <outline type="rss" text="The Daily"
+               xmlUrl="https://feeds.simplecast.com/Sl5CSM3S"
+               htmlUrl="https://www.nytimes.com/the-daily"
+               description="The New York Times' daily news podcast"/>
+      <outline type="rss" text="The Ezra Klein Show"
+               xmlUrl="https://feeds.simplecast.com/kEKXbjuJ"
+               htmlUrl="https://www.nytimes.com/ezra-klein-podcast"
+               description="Long conversations on politics, policy and ideas"/>
+      <outline type="rss" text="The Rest Is History"
+               xmlUrl="https://feeds.megaphone.fm/GLT4787413333"
+               htmlUrl="https://therestishistory.com"
+               description="Tom Holland and Dominic Sandbrook on history"/>
+      <outline type="rss" text="This American Life"
+               xmlUrl="https://www.thisamericanlife.org/podcast/rss.xml"
+               htmlUrl="https://www.thisamericanlife.org"
+               description="Weekly documentary storytelling from public radio"/>
+      <outline type="rss" text="Up First"
+               xmlUrl="https://feeds.npr.org/510318/podcast.xml"
+               htmlUrl="https://www.npr.org/podcasts/510318/up-first"
+               description="NPR's morning news briefing"/>
+    </outline>
+    <outline text="Podcasts (DE)" key="podcasts_de" icon="mic" color="#0d9488">
+      <outline type="rss" text="11KM: der tagesschau-Podcast"
+               xmlUrl="https://www.tagesschau.de/multimedia/podcasts/11km/index~podcast.xml"
+               htmlUrl="https://www.ndr.de/podcast/11km-der-tagesschau-podcast,podcast5654.html"
+               description="One news story in depth, every weekday"/>
+      <outline type="rss" text="Amerika, wir müssen reden!"
+               xmlUrl="https://www.ndr.de/nachrichten/info/podcast4932.xml"
+               htmlUrl="https://www.ndr.de/nachrichten/info/amerika-wir-muessen-reden,podcast4932.html"
+               description="NDR Info on US politics"/>
+      <outline type="rss" text="Apokalypse &amp; Filterkaffee"
+               xmlUrl="https://apokalypse-und-filterkaffee.podigee.io/feed/mp3"
+               htmlUrl="https://apokalypse-und-filterkaffee.podigee.io"
+               description="Micky Beisenherz' morning news talk"/>
+      <outline type="rss" text="Der KI-Podcast"
+               xmlUrl="https://feeds.br.de/der-ki-podcast/feed.xml"
+               htmlUrl="https://www.br.de/mediathek/podcast/der-ki-podcast/898"
+               description="ARD on artificial intelligence"/>
+      <outline type="rss" text="Gemischtes Hack"
+               xmlUrl="https://feeds.megaphone.fm/GLT8390938385"
+               htmlUrl="https://www.spotify.com/gemischteshack"
+               description="Felix Lobrecht and Tommi Schmitt's comedy talk"/>
+      <outline type="rss" text="Geschichten aus der Geschichte"
+               xmlUrl="https://geschichten-aus-der-geschichte.podigee.io/feed/mp3"
+               htmlUrl="https://www.geschichte.fm"
+               description="Two historians tell each other a story from history"/>
+      <outline type="rss" text="Hotel Matze"
+               xmlUrl="https://hotelmatze.podigee.io/feed/mp3"
+               htmlUrl="https://hotelmatze.podigee.io"
+               description="Matze Hielscher's long-form interviews"/>
+      <outline type="rss" text="KI verstehen"
+               xmlUrl="https://www.deutschlandfunk.de/ki-verstehen-102.xml"
+               htmlUrl="https://www.deutschlandfunk.de/ki-verstehen-102.html"
+               description="Deutschlandfunk explains artificial intelligence"/>
+      <outline type="rss" text="Lage der Nation"
+               xmlUrl="https://feeds.lagedernation.org/feeds/ldn-mp3.xml"
+               htmlUrl="https://lagedernation.org"
+               description="Weekly German politics with Philip Banse and Ulf Buermeyer"/>
+      <outline type="rss" text="OK, America?"
+               xmlUrl="https://feeds.simplecast.com/yPsdBcxP"
+               htmlUrl="https://www.zeit.de/serie/ok-america"
+               description="DIE ZEIT on US politics"/>
+      <outline type="rss" text="Was bisher geschah"
+               xmlUrl="https://feeds.acast.com/public/shows/68935df5eef665d629ba5e4c"
+               htmlUrl="https://wasbishergeschah.com"
+               description="History podcast with Joachim Telgenbüscher and Nils Minkmar"/>
+      <outline type="rss" text="Was jetzt?"
+               xmlUrl="https://feeds.simplecast.com/Xtqjn37O"
+               htmlUrl="https://www.zeit.de/was-jetzt"
+               description="DIE ZEIT's daily news podcast"/>
+    </outline>
   </body>
 </opml>
