@@ -450,4 +450,18 @@ final class Atom10ParserTest extends TestCase
 
         self::assertSame('https://e/real', $entry->url);
     }
+
+    public function testAPlainTextContentKeepsItsLineBreaks(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Summer set</title>
+              <id>urn:uuid:set</id>
+              <content type="text">Track list :
+            1.Idaishoy</content>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
+    }
 }

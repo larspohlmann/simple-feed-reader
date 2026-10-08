@@ -352,4 +352,18 @@ final class Rss2ParserTest extends TestCase
 
         self::assertNull($entry->discussion->url);
     }
+
+    public function testAPlainTextDescriptionKeepsItsLineBreaks(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Summer set</title>
+              <description>Track list :
+            1.Idaishoy
+            2.Silver Galaxy</description>
+            </item>
+            XML);
+
+        self::assertSame('<p>Track list :<br>1.Idaishoy<br>2.Silver Galaxy</p>', $entry->contentHtml);
+    }
 }
