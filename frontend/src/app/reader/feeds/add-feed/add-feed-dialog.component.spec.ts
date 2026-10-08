@@ -71,7 +71,6 @@ describe('AddFeedDialogComponent', () => {
   });
 
   it('names Apple Podcasts share links beside the URL field', () => {
-    // Nobody would try pasting a show link unless the field says it works.
     const fixture = create();
 
     expect(
