@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
@@ -15,6 +16,19 @@ final class Rss1ParserTest extends TestCase
         $document->loadXML($xml);
 
         return $document;
+    }
+
+    private function parseSingleItem(string $itemXml): ParsedEntryModel
+    {
+        $document = $this->document(<<<XML
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
+              <channel rdf:about="https://rss1.example.com/"><title>Feed</title></channel>
+              {$itemXml}
+            </rdf:RDF>
+            XML);
+
+        return FeedFormatParsers::rss1()->parse($document)->entries[0];
     }
 
     public function testImageUrlComesFromContentEncodedThenMediaThenNull(): void
@@ -234,47 +248,26 @@ final class Rss1ParserTest extends TestCase
 
     public function testAPlainTextDescriptionKeepsItsLineBreaks(): void
     {
-        $xml = /** @lang TEXT */ <<<'XML'
-            <?xml version="1.0" encoding="UTF-8"?>
-            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
-              <channel rdf:about="https://rss1.example.com/">
-                <title>RSS 1.0 Example</title>
-                <link>https://rss1.example.com/</link>
-              </channel>
-              <item rdf:about="https://e/set">
-                <title>Summer set</title>
-                <link>https://e/set</link>
-                <description>Track list :
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item rdf:about="https://e/set">
+              <title>Summer set</title>
+              <description>Track list :
             1.Idaishoy</description>
-              </item>
-            </rdf:RDF>
-            XML;
+            </item>
+            XML);
 
-        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
-
-        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $feed->entries[0]->contentHtml);
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
     }
 
     public function testContentEncodedWinsOverTheDescriptionAsTheBody(): void
     {
-        $xml = /** @lang TEXT */ <<<'XML'
-            <?xml version="1.0" encoding="UTF-8"?>
-            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
-                     xmlns:content="http://purl.org/rss/1.0/modules/content/">
-              <channel rdf:about="https://rss1.example.com/">
-                <title>RSS 1.0 Example</title>
-                <link>https://rss1.example.com/</link>
-              </channel>
-              <item rdf:about="https://e/post">
-                <title>Post</title>
-                <link>https://e/post</link>
-                <description>The teaser</description>
-                <content:encoded>&lt;p&gt;The article&lt;/p&gt;</content:encoded>
-              </item>
-            </rdf:RDF>
-            XML;
-
-        $entry = FeedFormatParsers::rss1()->parse($this->document($xml))->entries[0];
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item rdf:about="https://e/post">
+              <title>Post</title>
+              <description>The teaser</description>
+              <content:encoded>&lt;p&gt;The article&lt;/p&gt;</content:encoded>
+            </item>
+            XML);
 
         self::assertSame('<p>The article</p>', $entry->contentHtml);
         self::assertSame('The teaser', $entry->summary);

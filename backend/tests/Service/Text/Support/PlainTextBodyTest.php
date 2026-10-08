@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Text\Support;
 
 use App\Service\Text\Support\PlainTextBody;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PlainTextBodyTest extends TestCase
@@ -14,29 +15,20 @@ final class PlainTextBodyTest extends TestCase
         self::assertNull(PlainTextBody::asHtml(null));
     }
 
-    public function testAMarkupBodyIsLeftAlone(): void
+    /** @return iterable<string, array{string}> */
+    public static function bodiesLeftAlone(): iterable
     {
-        self::assertSame("<p>one</p>\ntwo", PlainTextBody::asHtml("<p>one</p>\ntwo"));
+        yield 'an opening tag' => ["<p>one</p>\ntwo"];
+        yield 'a self-closing tag' => ["one<br/>\ntwo"];
+        yield 'a closing tag alone' => ["one</b>\ntwo"];
+        yield 'a comment' => ["one<!-- x -->\ntwo"];
+        yield 'a single line' => ['Just one line.'];
     }
 
-    public function testASelfClosingTagCountsAsMarkup(): void
+    #[DataProvider('bodiesLeftAlone')]
+    public function testAMarkupOrSingleLineBodyIsLeftAlone(string $body): void
     {
-        self::assertSame("one<br/>\ntwo", PlainTextBody::asHtml("one<br/>\ntwo"));
-    }
-
-    public function testAClosingTagAloneCountsAsMarkup(): void
-    {
-        self::assertSame("one</b>\ntwo", PlainTextBody::asHtml("one</b>\ntwo"));
-    }
-
-    public function testACommentCountsAsMarkup(): void
-    {
-        self::assertSame("one<!-- x -->\ntwo", PlainTextBody::asHtml("one<!-- x -->\ntwo"));
-    }
-
-    public function testASingleLineIsLeftAlone(): void
-    {
-        self::assertSame('Just one line.', PlainTextBody::asHtml('Just one line.'));
+        self::assertSame($body, PlainTextBody::asHtml($body));
     }
 
     public function testLineBreaksBecomeBreaksInOneParagraph(): void
@@ -60,11 +52,6 @@ final class PlainTextBodyTest extends TestCase
     public function testLinesAreTrimmedAndBlankRunsCollapse(): void
     {
         self::assertSame('<p>one</p><p>two</p>', PlainTextBody::asHtml("  one  \n \n\n\t\ntwo \n"));
-    }
-
-    public function testEveryLineIsTrimmed(): void
-    {
-        self::assertSame('<p>one<br>two</p>', PlainTextBody::asHtml("one \n two"));
     }
 
     public function testLeadingAndTrailingBlankLinesMakeNoEmptyParagraph(): void

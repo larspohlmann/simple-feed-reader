@@ -453,20 +453,15 @@ final class Atom10ParserTest extends TestCase
 
     public function testAPlainTextContentKeepsItsLineBreaks(): void
     {
-        $xml = /** @lang TEXT */ <<<'XML'
-            <?xml version="1.0" encoding="utf-8"?>
-            <feed xmlns="http://www.w3.org/2005/Atom">
-              <title>Sets</title>
-              <entry>
-                <title>Summer set</title>
-                <link rel="alternate" href="https://e/set"/>
-                <id>urn:uuid:set</id>
-                <content type="text">Track list :
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Summer set</title>
+              <id>urn:uuid:set</id>
+              <content type="text">Track list :
             1.Idaishoy</content>
-              </entry>
-            </feed>
-            XML;
+            </entry>
+            XML);
 
-        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $this->parse($xml)->entries[0]->contentHtml);
+        self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
     }
 }

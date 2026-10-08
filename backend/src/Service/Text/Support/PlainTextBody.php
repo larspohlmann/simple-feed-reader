@@ -14,7 +14,11 @@ final class PlainTextBody
 
     public static function asHtml(?string $body): ?string
     {
-        if ($body === null || preg_match('/[\r\n]/', $body) !== 1 || preg_match(self::MARKUP_PATTERN, $body) === 1) {
+        if ($body === null || preg_match(self::MARKUP_PATTERN, $body) === 1) {
+            return $body;
+        }
+
+        if (!str_contains($body, "\n") && !str_contains($body, "\r")) {
             return $body;
         }
 
