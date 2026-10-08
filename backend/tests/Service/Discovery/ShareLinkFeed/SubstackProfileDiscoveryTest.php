@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -24,13 +23,10 @@ final class SubstackProfileDiscoveryTest extends KernelTestCase
      */
     public function testASubstackProfileSubscribesThePublicationApiResolvesForIt(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
-        self::assertIsString($xml);
-
         $fetcher = $this->fetcherReturning(
             'https://theopenbookshelf.substack.com/feed',
             'https://theopenbookshelf.substack.com/feed',
-            $xml,
+            $this->rss2BasicXml(),
         );
         $this->stubProfileApi($fetcher, 'abbeyheffer', 'theopenbookshelf');
 
@@ -76,10 +72,6 @@ final class SubstackProfileDiscoveryTest extends KernelTestCase
     /** Makes the profile API answer for $handle with a verbatim body. */
     private function stubProfileApiRaw(StubFeedFetcher $fetcher, string $handle, string $body): void
     {
-        $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
-        $fetcher->willReturn(
-            $apiUrl,
-            FetchResponseModel::fetched($apiUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
-        );
+        $fetcher->willReturnBody(sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle), $body);
     }
 }

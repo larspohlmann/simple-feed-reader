@@ -6,6 +6,7 @@ namespace App\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Maps an Apple Podcasts show or episode share link to the show's RSS feed through Apple's public lookup API. Every
@@ -15,7 +16,7 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
 {
     private const array SHARE_HOSTS = ['podcasts.apple.com', 'itunes.apple.com'];
 
-    /** `/<storefront>/podcast/<slug>/id<showId>`; the storefront and the slug are optional, the query is ignored. */
+    /** `/<storefront>/podcast/<slug>/id<showId>`; the storefront and the slug are optional. */
     private const string SHOW_PATH = '#^/(?:[a-z]{2}/)?podcast/(?:[^/]+/)?id(\d+)/?$#i';
 
     private const string LOOKUP_API = 'https://itunes.apple.com/lookup?id=%s';
@@ -27,8 +28,11 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
     public function feedUrl(string $enteredUrl): ?string
     {
         $showId = $this->showId($enteredUrl);
+        if (null === $showId) {
+            return null;
+        }
 
-        return null === $showId ? null : $this->lookedUpFeedUrl($showId);
+        return $this->lookedUpFeedUrl($showId);
     }
 
     private function showId(string $enteredUrl): ?string
@@ -54,7 +58,6 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
         return $this->feedUrlOf($response->modifiedBody());
     }
 
-    /** Reads and validates `results[0].feedUrl` out of a lookup body whose first result is a podcast. */
     private function feedUrlOf(string $lookupJson): ?string
     {
         $lookup = json_decode($lookupJson, true);
@@ -66,13 +69,6 @@ final readonly class ApplePodcastShowFeed implements ShareLinkFeedInterface
 
         $feedUrl = $show['feedUrl'] ?? null;
 
-        return \is_string($feedUrl) && $this->isAbsoluteHttpUrl($feedUrl) ? $feedUrl : null;
-    }
-
-    private function isAbsoluteHttpUrl(string $url): bool
-    {
-        $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
-
-        return '' !== (string) parse_url($url, PHP_URL_HOST) && \in_array($scheme, ['http', 'https'], true);
+        return \is_string($feedUrl) ? AbsoluteHttpUrl::orNull($feedUrl) : null;
     }
 }

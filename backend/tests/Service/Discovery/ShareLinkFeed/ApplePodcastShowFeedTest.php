@@ -6,7 +6,6 @@ namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -180,15 +179,8 @@ final class ApplePodcastShowFeedTest extends TestCase
 
     private function fetcherReturningBody(string $showId, string $body): StubFeedFetcher
     {
-        $apiUrl = sprintf('https://itunes.apple.com/lookup?id=%s', $showId);
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn($apiUrl, FetchResponseModel::fetched(
-            $apiUrl,
-            permanentRedirect: false,
-            body: $body,
-            etag: null,
-            lastModified: null,
-        ));
+        $fetcher->willReturnBody(sprintf('https://itunes.apple.com/lookup?id=%s', $showId), $body);
 
         return $fetcher;
     }

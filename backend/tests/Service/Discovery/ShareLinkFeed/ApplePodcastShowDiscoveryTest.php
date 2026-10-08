@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
-use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -26,16 +24,13 @@ final class ApplePodcastShowDiscoveryTest extends KernelTestCase
     /** The feed lives on the publisher's host, which nothing about the Apple link names; the episode query is dropped. */
     public function testAShowLinkSubscribesTheFeedTheLookupResolves(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
-        self::assertIsString($xml);
-
         $fetcher = $this->fetcherReturning(
             'https://feeds.example.org/show.xml',
             'https://feeds.example.org/show.xml',
-            $xml,
+            $this->rss2BasicXml(),
         );
-        $this->stubLookup(
-            $fetcher,
+        $fetcher->willReturnBody(
+            self::LOOKUP_URL,
             '{"resultCount":1,"results":[{"kind":"podcast","feedUrl":"https://feeds.example.org/show.xml"}]}',
         );
 
@@ -51,26 +46,12 @@ final class ApplePodcastShowDiscoveryTest extends KernelTestCase
     public function testAnUnresolvableShowLinkFallsThroughInsteadOfSubscribing(): void
     {
         $fetcher = $this->fetcher();
-        $this->stubLookup($fetcher, '{"resultCount":0,"results":[]}');
+        $fetcher->willReturnBody(self::LOOKUP_URL, '{"resultCount":0,"results":[]}');
 
         $result = $this->discovery($fetcher)->discover(self::SHOW_LINK, ScrapeFallback::Enabled);
 
         self::assertNull($result->feed);
         self::assertSame([], $result->candidates);
         self::assertContains(self::SHOW_LINK, $fetcher->fetchedUrls);
-    }
-
-    private function stubLookup(StubFeedFetcher $fetcher, string $body): void
-    {
-        $fetcher->willReturn(
-            self::LOOKUP_URL,
-            FetchResponseModel::fetched(
-                self::LOOKUP_URL,
-                permanentRedirect: false,
-                body: $body,
-                etag: null,
-                lastModified: null,
-            ),
-        );
     }
 }

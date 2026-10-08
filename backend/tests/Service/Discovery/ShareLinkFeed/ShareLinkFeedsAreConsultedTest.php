@@ -37,20 +37,12 @@ final class ShareLinkFeedsAreConsultedTest extends KernelTestCase
 
     public function testTheFirstResolverToAnswerWinsAndTheRestAreNotAsked(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
-        self::assertIsString($xml);
-        $fetcher = $this->fetcherReturning('https://first.example/feed', 'https://first.example/feed', $xml);
-        $second = new class implements ShareLinkFeedInterface {
-            /** @var list<string> */
-            public array $asked = [];
-
-            public function feedUrl(string $enteredUrl): ?string
-            {
-                $this->asked[] = $enteredUrl;
-
-                return null;
-            }
-        };
+        $fetcher = $this->fetcherReturning(
+            'https://first.example/feed',
+            'https://first.example/feed',
+            $this->rss2BasicXml(),
+        );
+        $second = $this->answering(null);
 
         $result = $this->discoveryResolving($fetcher, [$this->answering('https://first.example/feed'), $second])
             ->discover('https://share.example/show', ScrapeFallback::Enabled);
@@ -62,9 +54,11 @@ final class ShareLinkFeedsAreConsultedTest extends KernelTestCase
 
     public function testWhenNoResolverAnswersTheEnteredUrlIsFetched(): void
     {
-        $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');
-        self::assertIsString($xml);
-        $fetcher = $this->fetcherReturning('https://plain.example/feed', 'https://plain.example/feed', $xml);
+        $fetcher = $this->fetcherReturning(
+            'https://plain.example/feed',
+            'https://plain.example/feed',
+            $this->rss2BasicXml(),
+        );
 
         $result = $this->discoveryResolving($fetcher, [$this->answering(null), $this->answering(null)])
             ->discover('https://plain.example/feed', ScrapeFallback::Enabled);
@@ -73,15 +67,21 @@ final class ShareLinkFeedsAreConsultedTest extends KernelTestCase
         self::assertSame(['https://plain.example/feed'], $fetcher->fetchedUrls);
     }
 
+    /** @return ShareLinkFeedInterface&object{asked: list<string>} */
     private function answering(?string $feedUrl): ShareLinkFeedInterface
     {
-        return new readonly class ($feedUrl) implements ShareLinkFeedInterface {
-            public function __construct(private ?string $feedUrl)
+        return new class ($feedUrl) implements ShareLinkFeedInterface {
+            /** @var list<string> */
+            public array $asked = [];
+
+            public function __construct(private readonly ?string $feedUrl)
             {
             }
 
             public function feedUrl(string $enteredUrl): ?string
             {
+                $this->asked[] = $enteredUrl;
+
                 return $this->feedUrl;
             }
         };
