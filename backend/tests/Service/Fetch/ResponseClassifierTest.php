@@ -11,6 +11,7 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\HeaderDecision;
+use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\ResponseClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -231,7 +232,7 @@ final class ResponseClassifierTest extends TestCase
         $this->expectException(ResponseTooLargeException::class);
 
         $this->classifier()->fromBody(
-            $this->respond(new MockResponse(str_repeat('x', 5_000_001), ['http_code' => 200])),
+            $this->respond(new MockResponse(str_repeat('x', ResponseSizeLimit::Feed->value + 1), ['http_code' => 200])),
             $this->attempt(),
         );
     }
