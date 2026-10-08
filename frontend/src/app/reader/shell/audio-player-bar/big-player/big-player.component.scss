@@ -1,0 +1,231 @@
+@use '../../../../theme/breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  box-sizing: border-box;
+  block-size: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(var(--space-2) + env(safe-area-inset-top)) var(--space-5)
+    calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: linear-gradient(var(--accent-soft), var(--surface-1) 55%);
+  color: var(--text-primary);
+  animation: big-player-rise 0.25s ease-out;
+}
+
+@media (width >= bp.$bp-sm) {
+  :host {
+    max-block-size: calc(100dvh - 2 * var(--space-5));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
+    animation-name: big-player-appear;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+}
+
+.top,
+.transport,
+.extras {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.position {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.balance {
+  inline-size: var(--tap-target);
+}
+
+.art {
+  inline-size: min(100%, 50dvh);
+  block-size: auto;
+  aspect-ratio: 1;
+  align-self: center;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 14px 34px rgb(0 0 0 / 35%);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.title-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.source,
+.excerpt {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The bar is drawn on the track, with no thumb (Apple-style); the input stays a native
+   range for keyboard and screen-reader seeking, and its full height is the tap target. */
+.scrub {
+  --bar: var(--space-2);
+}
+
+.scrub.dragging {
+  --bar: calc(var(--space-3) + var(--space-0));
+}
+
+.scrubber {
+  --track: linear-gradient(
+    to right,
+    var(--accent) var(--played, 0%),
+    var(--text-muted) var(--played, 0%) var(--cached, 0%),
+    var(--border) var(--cached, 0%)
+  );
+
+  display: block;
+  inline-size: 100%;
+  block-size: var(--tap-target);
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.scrubber::-webkit-slider-runnable-track {
+  height: var(--bar);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  transition: height 0.15s ease;
+}
+
+.scrubber::-moz-range-track {
+  height: var(--bar);
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  transition: height 0.15s ease;
+}
+
+.scrubber::-webkit-slider-thumb {
+  appearance: none;
+  width: 0;
+  height: var(--bar);
+  border: 0;
+}
+
+.scrubber::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  border: 0;
+}
+
+.scrubber:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: var(--space-0);
+  border-radius: var(--radius-pill);
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin-block-start: calc(-1 * var(--space-2));
+}
+
+.time {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.dragging .time {
+  color: var(--text-primary);
+}
+
+.ctrl {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--tap-target);
+  min-block-size: var(--tap-target);
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.ctrl:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.ctrl:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.play {
+  inline-size: var(--space-7);
+  block-size: var(--space-7);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.play:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.extras {
+  margin-block-start: auto;
+  color: var(--text-secondary);
+}
+
+.speed {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes big-player-rise {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes big-player-appear {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-4));
+  }
+}

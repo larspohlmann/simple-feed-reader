@@ -1006,7 +1006,12 @@
       "remove": "{{ title }} aus der Playlist entfernen",
       "addToPlaylist": "Zur Playlist",
       "inPlaylist": "In der Playlist",
-      "playlistCount": "Playlist ({{ count }})"
+      "playlistCount": "Playlist ({{ count }})",
+      "openPlayer": "Player öffnen",
+      "collapse": "Player minimieren",
+      "position": "{{ index }} von {{ count }}",
+      "openArticle": "Artikel öffnen",
+      "speed": "Wiedergabegeschwindigkeit {{ rate }}×"
     },
     "savedSearches": "Gespeicherte Suchen",
     "savedSearchesEmpty": "Noch keine gespeicherten Suchen. Speichern Sie eine Suche, um sie hier zu sehen.",

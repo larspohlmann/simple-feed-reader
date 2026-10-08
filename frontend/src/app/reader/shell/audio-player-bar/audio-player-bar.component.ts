@@ -5,6 +5,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TOUCH_DRAG_START_DELAY } from '../../../shared/touch-drag-delay';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player.service';
+import { scrubFill } from '../../audio/scrub-fill';
 import { formatDuration } from '../../format';
 import { AudioArtworkComponent } from './audio-artwork/audio-artwork.component';
 
@@ -55,13 +56,9 @@ export class AudioPlayerBarComponent {
     }));
   });
 
-  /** The scrubber's track: played, then cached ahead of the playhead, as percentages. */
-  protected readonly progress = computed(() => {
-    const duration = this.player.duration();
-    const percent = (seconds: number): string =>
-      `${duration > 0 ? Math.min(100, (seconds / duration) * 100) : 0}%`;
-    return { played: percent(this.player.position()), cached: percent(this.player.buffered()) };
-  });
+  protected readonly progress = computed(() =>
+    scrubFill(this.player.position(), this.player.buffered(), this.player.duration()),
+  );
 
   protected onScrub(event: Event): void {
     this.player.seek((event.target as HTMLInputElement).valueAsNumber);
