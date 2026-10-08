@@ -4,7 +4,11 @@
 <form [formGroup]="form" (ngSubmit)="submit()" cdkTrapFocus>
   <app-overlay-panel [heading]="'dialog.addFeed.title' | transloco" fillOnMobile>
     <div class="fields">
-      <app-field [label]="'dialog.addFeed.urlLabel' | transloco" [error]="error()">
+      <app-field
+        [label]="'dialog.addFeed.urlLabel' | transloco"
+        [hint]="'dialog.addFeed.urlHint' | transloco"
+        [error]="error()"
+      >
         <input formControlName="url" type="url" placeholder="https://example.com" cdkFocusInitial />
       </app-field>
       @if (tagsStore.tags().length) {

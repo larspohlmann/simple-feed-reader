@@ -13,7 +13,7 @@ use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Model\FeedDiscoveryResultModel;
 use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Discovery\Model\ScrapeFallback;
-use App\Service\Discovery\SubstackProfileFeed;
+use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -40,7 +40,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      */
     private const array BLOCKED_STATUSES = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
-    /** @param iterable<FeedOfferInterface> $offers */
+    /**
+     * @param iterable<ShareLinkFeedInterface> $shareLinks
+     * @param iterable<FeedOfferInterface>     $offers
+     */
     public function __construct(
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
@@ -48,7 +51,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         private FeedLinkScanner $links,
         private WellKnownFeedProbe $wellKnownFeeds,
         private BotChallengePage $botChallenge,
-        private SubstackProfileFeed $substackProfile,
+        #[AutowireIterator('app.share_link_feed')]
+        private iterable $shareLinks,
         #[AutowireIterator('app.feed_offer')]
         private iterable $offers,
     ) {
@@ -56,7 +60,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
     public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
     {
-        $url = $this->substackProfile->feedUrl($url) ?? $url;
+        $url = $this->shareLinkFeedUrl($url) ?? $url;
 
         try {
             $response = $this->fetcher->fetch($url);
@@ -102,6 +106,18 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         return [] !== $candidates
             ? FeedDiscoveryResultModel::candidates($candidates)
             : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+    }
+
+    private function shareLinkFeedUrl(string $enteredUrl): ?string
+    {
+        foreach ($this->shareLinks as $shareLink) {
+            $feedUrl = $shareLink->feedUrl($enteredUrl);
+            if (null !== $feedUrl) {
+                return $feedUrl;
+            }
+        }
+
+        return null;
     }
 
     /**

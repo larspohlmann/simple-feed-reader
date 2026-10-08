@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Discovery;
+namespace App\Service\Discovery\ShareLinkFeed;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
@@ -12,7 +12,7 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
  * subdomain comes from Substack's public-profile API. Every failure is a null, and discovery still parses the result,
  * so this can only ever add a subscription.
  */
-final readonly class SubstackProfileFeed
+final readonly class SubstackProfileFeed implements ShareLinkFeedInterface
 {
     private const array PROFILE_HOSTS = ['substack.com', 'www.substack.com'];
 
@@ -26,7 +26,6 @@ final readonly class SubstackProfileFeed
     {
     }
 
-    /** The publication feed a profile URL points at, or null when it is not one or cannot be resolved. */
     public function feedUrl(string $enteredUrl): ?string
     {
         $handle = $this->profileHandle($enteredUrl);

@@ -39,6 +39,14 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
         $this->results[$url] = $response;
     }
 
+    public function willReturnBody(string $url, string $body): void
+    {
+        $this->willReturn(
+            $url,
+            FetchResponseModel::fetched($url, permanentRedirect: false, body: $body, etag: null, lastModified: null),
+        );
+    }
+
     public function willThrow(string $url, FetchException $exception): void
     {
         $this->results[$url] = $exception;

@@ -55,6 +55,8 @@ services:
             tags: ['app.slideshow_recognizer']
         App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface:
             tags: ['app.platform_entry_rule']
+        App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface:
+            tags: ['app.share_link_feed']
         App\Service\Discovery\FeedOffer\FeedOfferInterface:
             tags: ['app.feed_offer']
         # Symfony's mailer auto-tags only the transport factories it ships; without this `dynamic://` has no factory

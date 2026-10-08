@@ -9,7 +9,9 @@ use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
-use App\Service\Discovery\SubstackProfileFeed;
+use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
+use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -21,6 +23,15 @@ use App\Tests\Support\StubFeedFetcher;
 trait BuildsFeedDiscovery
 {
     private function discovery(StubFeedFetcher $fetcher): FeedDiscovery
+    {
+        return $this->discoveryResolving(
+            $fetcher,
+            [new SubstackProfileFeed($fetcher), new ApplePodcastShowFeed($fetcher)],
+        );
+    }
+
+    /** @param list<ShareLinkFeedInterface> $shareLinks */
+    private function discoveryResolving(StubFeedFetcher $fetcher, array $shareLinks): FeedDiscovery
     {
         $parser = self::getContainer()->get(FeedParser::class);
         self::assertInstanceOf(FeedParser::class, $parser);
@@ -34,7 +45,7 @@ trait BuildsFeedDiscovery
             new FeedLinkScanner(),
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
-            new SubstackProfileFeed($fetcher),
+            $shareLinks,
             [new WordPressRestProbe($fetcher), new SoundCloudProfileFeed()],
         );
     }
@@ -49,6 +60,14 @@ trait BuildsFeedDiscovery
         $fetcher->willThrowForEverythingElse(new FeedUnreachableException('x: HTTP 404', 404));
 
         return $fetcher;
+    }
+
+    private function rss2BasicXml(): string
+    {
+        $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
+        self::assertIsString($xml);
+
+        return $xml;
     }
 
     private function fetcherReturning(string $url, string $finalUrl, string $body): StubFeedFetcher

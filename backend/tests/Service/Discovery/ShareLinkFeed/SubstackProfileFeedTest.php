@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discovery;
+namespace App\Tests\Service\Discovery\ShareLinkFeed;
 
-use App\Service\Discovery\SubstackProfileFeed;
+use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -164,15 +163,8 @@ final class SubstackProfileFeedTest extends TestCase
 
     private function fetcherReturningBody(string $handle, string $body): StubFeedFetcher
     {
-        $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn($apiUrl, FetchResponseModel::fetched(
-            $apiUrl,
-            permanentRedirect: false,
-            body: $body,
-            etag: null,
-            lastModified: null,
-        ));
+        $fetcher->willReturnBody(sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle), $body);
 
         return $fetcher;
     }
