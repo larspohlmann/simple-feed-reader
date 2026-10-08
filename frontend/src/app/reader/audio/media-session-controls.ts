@@ -44,8 +44,12 @@ export class MediaSessionControls {
     if (this.session) this.session.playbackState = playing ? 'playing' : 'paused';
   }
 
-  showPosition(position: number, duration: number): void {
+  showPosition(position: number, duration: number, playbackRate: number): void {
     if (!this.session?.setPositionState || duration <= 0) return;
-    this.session.setPositionState({ duration, position: Math.min(position, duration) });
+    this.session.setPositionState({
+      duration,
+      position: Math.min(position, duration),
+      playbackRate,
+    });
   }
 }

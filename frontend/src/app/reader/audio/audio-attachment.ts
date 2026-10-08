@@ -19,6 +19,13 @@ export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto): A
     faviconUrl: entry.faviconUrl,
     imageUrl: entry.imageUrl,
     durationInSeconds: attachment.durationInSeconds ?? null,
+    entry: {
+      id: entry.id,
+      title: entry.title,
+      feedTitle: entry.source,
+      publishedAt: entry.publishedAt ?? entry.createdAt,
+      excerpt: entry.excerpt,
+    },
   };
 }
 

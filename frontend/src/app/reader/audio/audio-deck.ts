@@ -51,6 +51,14 @@ export class AudioDeck {
     this.standby.src = url;
   }
 
+  /** The default rate too: a new `src` resets `playbackRate` to it. */
+  setRate(rate: number): void {
+    for (const element of [this.playing, this.standby]) {
+      element.defaultPlaybackRate = rate;
+      element.playbackRate = rate;
+    }
+  }
+
   release(): void {
     this.playingUrl = null;
     this.standbyUrl = null;

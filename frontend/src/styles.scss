@@ -3,6 +3,7 @@
 // fold (#85). Loaded here, not angular.json, so every build gets it.
 @use '@angular/cdk/overlay-prebuilt.css';
 @use './app/theme/tokens';
+@use './app/theme/breakpoints' as bp;
 @use './app/theme/utilities';
 @use './styles/reset';
 @use './styles/base';
@@ -36,4 +37,18 @@
 .cdk-overlay-pane.app-toast--translucent .toast {
   background: color-mix(in srgb, var(--surface-2) 88%, transparent);
   backdrop-filter: blur(8px);
+}
+
+// The big player (#1442) fills a phone and is a card from bp-sm up. Viewport units:
+// the pane has no size for a percentage to resolve against.
+.cdk-overlay-pane.app-big-player {
+  width: 100vw;
+  height: 100dvh;
+}
+
+@media (width >= bp.$bp-sm) {
+  .cdk-overlay-pane.app-big-player {
+    width: min(100vw - 2 * var(--space-4), 26.25rem);
+    height: auto;
+  }
 }

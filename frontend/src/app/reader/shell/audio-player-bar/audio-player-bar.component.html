@@ -1,83 +1,24 @@
 @if (player.current(); as track) {
   <div class="player" role="group" [attr.aria-label]="'reader.audioPlayer.label' | transloco">
-    @if (playlistOpen()) {
+    @if (surface.playlistOpen()) {
       <section
         id="audio-playlist"
         class="playlist"
+        cdkScrollable
         [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
       >
-        <ol
-          class="rows"
-          cdkDropList
-          [cdkDropListData]="player.tracks()"
-          cdkDropListLockAxis="y"
-          (cdkDropListDropped)="onDrop($event)"
-        >
-          @for (row of rows(); track row.track.url; let index = $index, last = $last) {
-            @let queued = row.track;
-            <li
-              class="row"
-              cdkDrag
-              [cdkDragStartDelay]="dragDelay"
-              [class.current]="row.current"
-              [class.played]="row.played"
-              [attr.aria-current]="row.current ? 'true' : null"
-            >
-              <span class="handle" cdkDragHandle aria-hidden="true">
-                <app-icon name="drag_indicator" size="sm" />
-              </span>
-              <button
-                class="pick"
-                type="button"
-                [attr.aria-label]="
-                  'reader.audioPlayer.playTrack' | transloco: { title: queued.title }
-                "
-                (click)="player.playAt(index)"
-              >
-                <app-audio-artwork [track]="queued" />
-                <span class="row-title">{{ queued.title }}</span>
-                @if (row.durationInSeconds; as seconds) {
-                  <span class="time row-time">{{ format(seconds) }}</span>
-                }
-              </button>
-              <button
-                type="button"
-                appIconButton
-                class="up"
-                [disabled]="index === 0"
-                [attr.aria-label]="'reader.audioPlayer.moveUp' | transloco: { title: queued.title }"
-                (click)="player.move(index, index - 1)"
-              >
-                <app-icon name="arrow_upward" size="sm" />
-              </button>
-              <button
-                type="button"
-                appIconButton
-                class="down"
-                [disabled]="last"
-                [attr.aria-label]="
-                  'reader.audioPlayer.moveDown' | transloco: { title: queued.title }
-                "
-                (click)="player.move(index, index + 1)"
-              >
-                <app-icon name="arrow_downward" size="sm" />
-              </button>
-              <button
-                type="button"
-                appIconButton
-                class="remove"
-                [attr.aria-label]="'reader.audioPlayer.remove' | transloco: { title: queued.title }"
-                (click)="player.dequeue(queued.url)"
-              >
-                <app-icon name="close" size="sm" />
-              </button>
-            </li>
-          }
-        </ol>
+        <app-audio-playlist />
       </section>
     }
     <div class="controls">
-      <app-audio-artwork class="artwork" [track]="track" />
+      <button
+        class="open-player"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.openPlayer' | transloco"
+        (click)="surface.openPlayer()"
+      >
+        <app-audio-artwork class="artwork" [track]="track" />
+      </button>
       <button
         class="ctrl previous"
         type="button"
@@ -143,12 +84,12 @@
       <button
         class="ctrl toggle-playlist"
         type="button"
-        [attr.aria-controls]="playlistOpen() ? 'audio-playlist' : null"
-        [attr.aria-expanded]="playlistOpen()"
+        [attr.aria-controls]="surface.playlistOpen() ? 'audio-playlist' : null"
+        [attr.aria-expanded]="surface.playlistOpen()"
         [attr.aria-label]="
           'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
         "
-        (click)="playlistOpen.set(!playlistOpen())"
+        (click)="surface.togglePlaylist()"
       >
         <app-icon name="queue_music" size="md" />
         <span class="count" aria-hidden="true">{{ player.tracks().length }}</span>

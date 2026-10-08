@@ -22,6 +22,17 @@ import {
 import { PlaylistStore } from './audio/playlist.store';
 import { AudioDeck } from './audio/audio-deck';
 import { MediaSessionControls } from './audio/media-session-controls';
+import { PlaybackRate } from './audio/playback-rate';
+
+/** The entry a track was queued from: the big player's details and its link back (#1442).
+ *  Absent on tracks saved before it existed. */
+export interface AudioTrackEntry {
+  id: number;
+  title: string;
+  feedTitle: string;
+  publishedAt: string;
+  excerpt: string;
+}
 
 /** Everything the player needs to render and resume a track without another API
  *  call — built by the caller from the entry and its audio attachment (#915). */
@@ -32,6 +43,7 @@ export interface AudioTrack {
   imageUrl: string | null;
   /** As the feed declared it, so the scrubber renders before metadata loads. */
   durationInSeconds: number | null;
+  entry?: AudioTrackEntry;
 }
 
 /** Injected so tests supply a stub: jsdom does not implement HTMLMediaElement. */
@@ -64,6 +76,7 @@ export class AudioPlayerService {
   );
   private readonly destroyRef = inject(DestroyRef);
   private readonly store = inject(PlaylistStore);
+  private readonly playbackRate = inject(PlaybackRate);
   private readonly mediaSession = new MediaSessionControls();
 
   private readonly _playlist = signal<Playlist>(EMPTY_PLAYLIST);
@@ -82,6 +95,7 @@ export class AudioPlayerService {
   readonly duration = this._duration.asReadonly();
   /** How far ahead of the playhead the stream is cached, in seconds from the start. */
   readonly buffered = this._buffered.asReadonly();
+  readonly rate = this.playbackRate.value;
 
   private lastPersistAt = 0;
   private pendingSeek: number | null = null;
@@ -97,6 +111,7 @@ export class AudioPlayerService {
       SKIP_SECONDS,
     );
     this.restore();
+    this.deck.setRate(this.rate());
     this.bindLifecycle();
     effect(() =>
       this.mediaSession.setTrackSteps(
@@ -161,6 +176,10 @@ export class AudioPlayerService {
     this.seek(this._position() + delta);
   }
 
+  cycleRate(): void {
+    this.deck.setRate(this.playbackRate.cycle());
+  }
+
   stop(): void {
     this.element.pause();
     this.deck.release();
@@ -223,48 +242,28 @@ export class AudioPlayerService {
 
   /** Both elements are bound once; only the one playing is listened to. */
   private bindElement(element: HTMLAudioElement, isPlaying: () => boolean): void {
-    const whenActive = (handler: () => void) => () => {
-      if (isPlaying()) handler();
+    const handlers: Record<string, () => void> = {
+      progress: () => this.onProgress(),
+      timeupdate: () => this.onTimeUpdate(),
+      loadedmetadata: () => this.onMetadata(),
+      durationchange: () => this.onMetadata(),
+      play: () => this.onPlaying(true),
+      pause: () => this.onPlaying(false),
+      ended: () => this.onEnded(),
+      error: () => this.onError(),
     };
-    element.addEventListener(
-      'progress',
-      whenActive(() => this.onProgress()),
-    );
-    element.addEventListener(
-      'timeupdate',
-      whenActive(() => this.onTimeUpdate()),
-    );
-    element.addEventListener(
-      'loadedmetadata',
-      whenActive(() => this.onMetadata()),
-    );
-    element.addEventListener(
-      'durationchange',
-      whenActive(() => this.onMetadata()),
-    );
-    element.addEventListener(
-      'play',
-      whenActive(() => this.onPlaying(true)),
-    );
-    element.addEventListener(
-      'pause',
-      whenActive(() => this.onPlaying(false)),
-    );
-    element.addEventListener(
-      'ended',
-      whenActive(() => this.onEnded()),
-    );
-    element.addEventListener(
-      'error',
-      whenActive(() => this.onError()),
-    );
+    for (const [type, handler] of Object.entries(handlers)) {
+      element.addEventListener(type, () => {
+        if (isPlaying()) handler();
+      });
+    }
   }
 
   private onTimeUpdate(): void {
     this._position.set(this.element.currentTime);
     this.onProgress();
     this.persistThrottled();
-    this.mediaSession.showPosition(this._position(), this._duration());
+    this.mediaSession.showPosition(this._position(), this._duration(), this.rate());
   }
 
   /** The end of the cached range the playhead sits in; a range elsewhere (after a seek) is not ahead of it. */

@@ -1,0 +1,154 @@
+@if (player.current(); as track) {
+  <div class="now-playing" [class.fill]="!playlistShown()">
+    <div class="top">
+      <button
+        type="button"
+        class="ctrl collapse"
+        [attr.aria-label]="'reader.audioPlayer.collapse' | transloco"
+        (click)="minimise()"
+      >
+        <app-icon name="keyboard_arrow_down" size="lg" />
+      </button>
+      <span class="position">
+        {{
+          'reader.audioPlayer.position'
+            | transloco: { index: player.index() + 1, count: player.tracks().length }
+        }}
+      </span>
+      <span class="balance" aria-hidden="true"></span>
+    </div>
+
+    <div class="art-box"><app-audio-artwork class="art" [track]="track" /></div>
+
+    <div class="details">
+      <h2 class="title" [id]="titleId">
+        @if (track.entry; as entry) {
+          <button type="button" class="title-link" (click)="openArticle(entry)">
+            {{ track.title }}
+          </button>
+        } @else {
+          {{ track.title }}
+        }
+      </h2>
+      @if (track.entry; as entry) {
+        <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
+        @if (entry.excerpt) {
+          <p class="excerpt">{{ entry.excerpt }}</p>
+        }
+      }
+    </div>
+
+    <div class="scrub" [class.dragging]="dragging()">
+      <input
+        class="scrubber"
+        type="range"
+        min="0"
+        step="1"
+        [max]="player.duration()"
+        [value]="player.position()"
+        [style.--played]="fill().played"
+        [style.--cached]="fill().cached"
+        [attr.aria-label]="'reader.audioPlayer.seek' | transloco"
+        (input)="onScrub($event)"
+        (pointerdown)="dragging.set(true)"
+        (pointerup)="dragging.set(false)"
+        (pointercancel)="dragging.set(false)"
+      />
+      <div class="times">
+        <span class="time">{{ format(player.position()) }}</span>
+        <span class="time">−{{ remaining() }}</span>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button
+        class="ctrl previous"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.previous' | transloco"
+        (click)="player.previous()"
+      >
+        <app-icon name="skip_previous" size="lg" />
+      </button>
+      <button
+        class="ctrl back"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.back' | transloco: { seconds: skipStep }"
+        (click)="player.skip(-skipStep)"
+      >
+        <app-icon name="replay" size="lg" />
+      </button>
+      <button
+        class="ctrl play"
+        type="button"
+        [attr.aria-label]="
+          (player.playing() ? 'reader.audioPlayer.pause' : 'reader.audioPlayer.play') | transloco
+        "
+        (click)="player.toggle()"
+      >
+        <app-icon [name]="player.playing() ? 'pause' : 'play_arrow'" size="lg" />
+      </button>
+      <button
+        class="ctrl forward"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.forward' | transloco: { seconds: skipStep }"
+        (click)="player.skip(skipStep)"
+      >
+        <app-icon name="forward_media" size="lg" />
+      </button>
+      <button
+        class="ctrl next"
+        type="button"
+        [disabled]="!player.hasNext()"
+        [attr.aria-label]="'reader.audioPlayer.next' | transloco"
+        (click)="player.next()"
+      >
+        <app-icon name="skip_next" size="lg" />
+      </button>
+    </div>
+
+    <div class="extras" #extras>
+      @if (track.entry; as entry) {
+        <button
+          type="button"
+          class="ctrl open-article"
+          [attr.aria-label]="'reader.audioPlayer.openArticle' | transloco"
+          (click)="openArticle(entry)"
+        >
+          <app-icon name="article" size="md" />
+        </button>
+      } @else {
+        <span class="balance" aria-hidden="true"></span>
+      }
+      <button
+        type="button"
+        class="ctrl speed"
+        [attr.aria-label]="'reader.audioPlayer.speed' | transloco: { rate: player.rate() }"
+        (click)="player.cycleRate()"
+      >
+        {{ player.rate() }}×
+      </button>
+      <button
+        type="button"
+        class="ctrl show-playlist"
+        [attr.aria-expanded]="sheet() ? playlistShown() : null"
+        [attr.aria-controls]="playlistShown() ? 'big-player-playlist' : null"
+        [attr.aria-label]="
+          'reader.audioPlayer.playlistCount' | transloco: { count: player.tracks().length }
+        "
+        (click)="togglePlaylist()"
+      >
+        <app-icon name="queue_music" size="md" />
+      </button>
+    </div>
+  </div>
+
+  @if (playlistShown()) {
+    <section
+      id="big-player-playlist"
+      class="queue"
+      [attr.aria-label]="'reader.audioPlayer.playlist' | transloco"
+    >
+      <app-audio-playlist />
+    </section>
+  }
+}
