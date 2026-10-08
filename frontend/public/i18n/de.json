@@ -1129,7 +1129,14 @@
     },
     "refreshArticle": "Artikel neu laden",
     "readingTime": "≈ {{minutes}} Min.",
-    "readerFallback": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung des Feeds angezeigt.",
+    "fallback": {
+      "transport": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung des Feeds angezeigt.",
+      "fetch": "Die Seite war nicht erreichbar – es wird die Zusammenfassung des Feeds angezeigt.",
+      "no_url": "Dieser Eintrag verlinkt keine Seite – es wird die Zusammenfassung des Feeds angezeigt.",
+      "unextractable": "Auf dieser Seite wurde kein Artikel gefunden – es wird die Zusammenfassung des Feeds angezeigt.",
+      "empty": "Die Seite enthält nicht mehr Text als der Feed – es wird die Fassung des Feeds angezeigt.",
+      "mismatch": "Die Seite passte nicht zu diesem Eintrag – es wird die Zusammenfassung des Feeds angezeigt."
+    },
     "bodyLoadFailed": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung angezeigt.",
     "retry": "Erneut versuchen",
     "showError": "Fehler anzeigen",

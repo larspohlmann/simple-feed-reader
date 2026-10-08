@@ -136,6 +136,10 @@ export class ReaderViewComponent {
       !(this.audio.attachment() && this.source.pageHoldsNoArticle()),
   );
 
+  protected readonly fallbackMessageKey = computed(
+    () => `reader.fallback.${this.source.failureReason() ?? 'transport'}`,
+  );
+
   // The open entry's reference changes on every optimistic flag update, but its
   // id doesn't. Tracking the loaded id lets the load effect ignore those churns
   // — no re-fetch, and the Reader/Original toggle survives an in-reader action.

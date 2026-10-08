@@ -44,16 +44,19 @@ export class ArticleSource {
       NO_ARTICLE_REASONS.has(state.failure.reason)
     );
   });
-  /** The diagnostic detail behind the fallback note's "show error" disclosure.
-   *  A backend failure prefers the server's own cause (the fetch's HTTP status or
-   *  transport message), falling back to the bare reason code when it sent none;
-   *  a transport failure in the browser carries the complete HTTP message. */
+  /** The backend's reason the reader fell back; null after a transport failure,
+   *  which carries no payload. */
+  readonly failureReason = computed<ReaderFailure['reason'] | null>(() => {
+    const state = this.state();
+    return state.status === 'failed' ? (state.failure?.reason ?? null) : null;
+  });
+  /** The diagnostic detail behind the fallback note's "show error" disclosure: the
+   *  server's own cause (a fetch's HTTP status or transport message), or the
+   *  complete HTTP message of a transport failure in the browser. */
   readonly errorDetail = computed<string | null>(() => {
     const state = this.state();
     if (state.status !== 'failed') return null;
-    return state.failure
-      ? (state.failure.detail ?? state.failure.reason)
-      : describeLoadError(state.error);
+    return state.failure ? state.failure.detail : describeLoadError(state.error);
   });
   private readonly article = computed(() => {
     const state = this.state();

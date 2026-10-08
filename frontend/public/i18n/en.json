@@ -1129,7 +1129,14 @@
     },
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
-    "readerFallback": "Couldn't load the full article — showing the feed's summary.",
+    "fallback": {
+      "transport": "Couldn't load the full article — showing the feed's summary.",
+      "fetch": "Couldn't reach the page — showing the feed's summary.",
+      "no_url": "This entry links to no page — showing the feed's summary.",
+      "unextractable": "Couldn't find an article on this page — showing the feed's summary.",
+      "empty": "The page has no more text than the feed — showing the feed's version.",
+      "mismatch": "The page didn't match this entry — showing the feed's summary."
+    },
     "bodyLoadFailed": "Couldn't load the full article — showing the summary.",
     "retry": "Retry",
     "showError": "Show error",

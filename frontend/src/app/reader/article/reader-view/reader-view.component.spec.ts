@@ -960,13 +960,55 @@ describe('ReaderViewComponent', () => {
       expect(details.querySelector('pre')!.textContent).toContain('HTTP 403 Forbidden');
     });
 
-    it('falls back to the bare reason code when the server sent no cause', () => {
-      loadMock.mockReturnValue(
-        of<ReaderContent>(failedContent({ reason: 'unextractable', detail: null })),
-      );
+    it.each([
+      ['fetch', "Couldn't reach the page — showing the feed's summary."],
+      ['unextractable', "Couldn't find an article on this page — showing the feed's summary."],
+      ['mismatch', "The page didn't match this entry — showing the feed's summary."],
+    ] as const)('says why the %s failure fell back to the feed', (reason, message) => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
-      expect(element.querySelector('.reader-error pre')!.textContent).toContain('unextractable');
+      expect(element.querySelector('.reader-fallback .reader-note')!.textContent).toContain(
+        message,
+      );
+    });
+
+    it('keeps the generic note when the load fails at the transport', () => {
+      loadMock.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.reader-fallback .reader-note')!.textContent).toContain(
+        "Couldn't load the full article — showing the feed's summary.",
+      );
+    });
+
+    it.each(['empty', 'unextractable', 'mismatch'] as const)(
+      'offers no Retry and no error disclosure when the page holds no article (%s)',
+      (reason) => {
+        loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason, detail: null })));
+        const element = mount(entry()).nativeElement as HTMLElement;
+
+        expect(element.querySelector('.note-link')).toBeNull();
+        expect(element.querySelector('.reader-error')).toBeNull();
+      },
+    );
+
+    it('offers no error disclosure for a fetch failure the server gave no cause for', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'fetch', detail: null })));
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.note-link')).not.toBeNull();
+      expect(element.querySelector('.reader-error')).toBeNull();
+    });
+
+    it('notes a page no longer than the feed quietly, outside the warning box', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'empty' })));
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('app-warning-box')).toBeNull();
+      expect(element.querySelector('.reader-fallback-quiet')!.textContent).toContain(
+        "The page has no more text than the feed — showing the feed's version.",
+      );
     });
 
     it('reveals the complete HTTP message when the load fails at the transport', () => {
@@ -999,6 +1041,7 @@ describe('ReaderViewComponent', () => {
           const element = mount(audioEntry()).nativeElement as HTMLElement;
 
           expect(element.querySelector('.reader-fallback')).toBeNull();
+          expect(element.querySelector('.reader-fallback-quiet')).toBeNull();
           expect(element.querySelector('.listen')).not.toBeNull();
           expect(element.querySelector('.content')!.innerHTML).toContain('Body');
         },
@@ -1023,7 +1066,7 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'empty' })));
       const element = mount(entry()).nativeElement as HTMLElement;
 
-      expect(element.querySelector('.reader-fallback')).not.toBeNull();
+      expect(element.querySelector('.reader-fallback-quiet')).not.toBeNull();
     });
   });
 
