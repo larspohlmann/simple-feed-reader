@@ -36,54 +36,51 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         return $root->localName === 'RDF';
     }
 
-    public function parse(\DOMDocument $document): ParsedFeedModel
+    public function isEntry(\DOMElement $element): bool
     {
-        $channel = $document->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
+        return $element->localName === 'item' && $element->namespaceURI === self::RSS1_NS;
+    }
+
+    public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
+    {
+        $channel = $skeleton->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
         if (!$channel instanceof \DOMElement) {
             throw new FeedParseException('RSS 1.0 document without <channel>');
-        }
-
-        $entries = [];
-        foreach ($document->getElementsByTagNameNS(self::RSS1_NS, 'item') as $item) {
-            $entry = $this->parseItem($item);
-            if ($entry !== null) {
-                $entries[] = $entry;
-            }
         }
 
         return new ParsedFeedModel(
             PlainText::from(XmlHelper::childText($channel, 'title', self::RSS1_NS)),
             XmlHelper::childText($channel, 'link', self::RSS1_NS),
             XmlHelper::childText($channel, 'description', self::RSS1_NS),
-            FeedImageExtractor::fromRss1Document($document, self::RSS1_NS),
+            FeedImageExtractor::fromRss1Document($skeleton, self::RSS1_NS),
             $entries,
         );
     }
 
-    private function parseItem(\DOMElement $item): ?ParsedEntryModel
+    public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childText($item, 'title', self::RSS1_NS);
-        $link = XmlHelper::childText($item, 'link', self::RSS1_NS);
+        $title = XmlHelper::childText($entry, 'title', self::RSS1_NS);
+        $link = XmlHelper::childText($entry, 'link', self::RSS1_NS);
         if ($title === null && $link === null) {
             return null;
         }
 
-        $about = trim($item->getAttributeNS(self::RDF_NS, 'about'));
-        $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
-        $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
-        $image = $this->imageSelector->fromRss1($item, $contentEncoded ?? $description);
-        $mediaBundle = $this->mediaExtractor->extract($item);
+        $about = trim($entry->getAttributeNS(self::RDF_NS, 'about'));
+        $description = XmlHelper::childText($entry, 'description', self::RSS1_NS);
+        $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
+        $image = $this->imageSelector->fromRss1($entry, $contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($entry);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($about === '' ? null : $about, $link, $title),
             url: $link ?? ($about === '' ? null : $about),
             title: PlainText::from($title) ?? '(untitled)',
-            author: XmlHelper::childText($item, 'creator', self::DC_NS),
+            author: XmlHelper::childText($entry, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: PlainTextBody::asHtml($contentEncoded ?? $description),
-            publishedAt: DateParser::parse(XmlHelper::childText($item, 'date', self::DC_NS)),
+            publishedAt: DateParser::parse(XmlHelper::childText($entry, 'date', self::DC_NS)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
-            categories: ItemCategoryExtractor::extract($item),
+            categories: ItemCategoryExtractor::extract($entry),
         );
     }
 }
