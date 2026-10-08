@@ -1,0 +1,64 @@
+<ol
+  class="rows"
+  cdkDropList
+  [cdkDropListData]="player.tracks()"
+  cdkDropListLockAxis="y"
+  (cdkDropListDropped)="onDrop($event)"
+>
+  @for (row of rows(); track row.track.url; let index = $index, last = $last) {
+    @let queued = row.track;
+    <li
+      class="row"
+      cdkDrag
+      [cdkDragStartDelay]="dragDelay"
+      [class.current]="row.current"
+      [class.played]="row.played"
+      [attr.aria-current]="row.current ? 'true' : null"
+    >
+      <span class="handle" cdkDragHandle aria-hidden="true">
+        <app-icon name="drag_indicator" size="sm" />
+      </span>
+      <button
+        class="pick"
+        type="button"
+        [attr.aria-label]="'reader.audioPlayer.playTrack' | transloco: { title: queued.title }"
+        (click)="player.playAt(index)"
+      >
+        <app-audio-artwork [track]="queued" />
+        <span class="row-title">{{ queued.title }}</span>
+        @if (row.durationInSeconds; as seconds) {
+          <span class="row-time">{{ format(seconds) }}</span>
+        }
+      </button>
+      <button
+        type="button"
+        appIconButton
+        class="up"
+        [disabled]="index === 0"
+        [attr.aria-label]="'reader.audioPlayer.moveUp' | transloco: { title: queued.title }"
+        (click)="player.move(index, index - 1)"
+      >
+        <app-icon name="arrow_upward" size="sm" />
+      </button>
+      <button
+        type="button"
+        appIconButton
+        class="down"
+        [disabled]="last"
+        [attr.aria-label]="'reader.audioPlayer.moveDown' | transloco: { title: queued.title }"
+        (click)="player.move(index, index + 1)"
+      >
+        <app-icon name="arrow_downward" size="sm" />
+      </button>
+      <button
+        type="button"
+        appIconButton
+        class="remove"
+        [attr.aria-label]="'reader.audioPlayer.remove' | transloco: { title: queued.title }"
+        (click)="player.dequeue(queued.url)"
+      >
+        <app-icon name="close" size="sm" />
+      </button>
+    </li>
+  }
+</ol>

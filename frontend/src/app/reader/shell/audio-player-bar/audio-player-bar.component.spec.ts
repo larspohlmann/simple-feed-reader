@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkScrollable } from '@angular/cdk/scrolling';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { AudioPlayerBarComponent } from './audio-player-bar.component';
 import { AudioPlayerService, AudioTrack, SKIP_SECONDS } from '../../audio-player.service';
@@ -186,10 +186,6 @@ describe('AudioPlayerBarComponent', () => {
       return fixture.debugElement.queryAll(By.css('.row')).map((row) => row.nativeElement);
     }
 
-    function click(row: HTMLElement, selector: string): void {
-      (row.querySelector(selector) as HTMLButtonElement).click();
-    }
-
     it('steps with previous and next', () => {
       const fixture = queued();
 
@@ -235,59 +231,12 @@ describe('AudioPlayerBarComponent', () => {
       expect(rows(fixture)).toHaveLength(0);
     });
 
-    it('lists every track with its length, marking the current and the played ones', () => {
+    it('scrolls the open panel itself, so a drag auto-scrolls it', () => {
       const fixture = queued();
       open(fixture);
 
-      const [first, current, last] = rows(fixture);
-      expect(current.getAttribute('aria-current')).toBe('true');
-      expect(first.classList).toContain('played');
-      expect(last.classList).not.toContain('played');
-      expect(first.textContent).toContain('2:00');
-      expect(last.querySelector('.row-time')).toBeNull();
-    });
-
-    it('shows the current row with the duration the element reports', () => {
-      const fixture = queued();
-      service.duration.set(150);
-      open(fixture);
-
-      expect(rows(fixture)[1].querySelector('.row-time')?.textContent).toContain('2:30');
-    });
-
-    it('plays, moves and removes from the row controls', () => {
-      const fixture = queued();
-      open(fixture);
-      const [first, current, last] = rows(fixture);
-
-      click(last, '.pick');
-      click(current, '.up');
-      click(current, '.down');
-      click(first, '.remove');
-
-      expect(service.playAt).toHaveBeenCalledWith(2);
-      expect(service.move).toHaveBeenNthCalledWith(1, 1, 0);
-      expect(service.move).toHaveBeenNthCalledWith(2, 1, 2);
-      expect(service.dequeue).toHaveBeenCalledWith(track.url);
-    });
-
-    it('disables moving past either end', () => {
-      const fixture = queued();
-      open(fixture);
-      const [first, , last] = rows(fixture);
-
-      expect((first.querySelector('.up') as HTMLButtonElement).disabled).toBe(true);
-      expect((last.querySelector('.down') as HTMLButtonElement).disabled).toBe(true);
-    });
-
-    it('moves a dragged row to where it was dropped', () => {
-      const fixture = queued();
-      open(fixture);
-
-      const list = fixture.debugElement.query(By.directive(CdkDropList)).injector.get(CdkDropList);
-      list.dropped.emit({ previousIndex: 2, currentIndex: 0 } as CdkDragDrop<AudioTrack[]>);
-
-      expect(service.move).toHaveBeenCalledWith(2, 0);
+      const panel = fixture.debugElement.query(By.directive(CdkScrollable));
+      expect(panel.nativeElement.id).toBe('audio-playlist');
     });
 
     it('shows the artwork, and the favicon when a track has none', () => {
