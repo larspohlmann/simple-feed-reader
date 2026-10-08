@@ -404,4 +404,27 @@ final class FeedParserTest extends TestCase
 
         self::assertStringContainsString('<x:b>there</x:b>', (string) $feed->entries[0]->contentHtml);
     }
+
+    public function testABodyCutOffBetweenItemsFailsTheWholeFeed(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->parser()->parse(
+            '<?xml version="1.0"?><rss version="2.0"><channel><title>Cut</title>'
+            . '<item><title>Good</title><link>https://cut.example.com/1</link></item><link>https://cut',
+        );
+    }
+
+    public function testAnEarlierLibxmlFailureInTheProcessDoesNotFailTheNextFeed(): void
+    {
+        $previousErrorMode = libxml_use_internal_errors(true);
+        try {
+            new \DOMDocument()->loadXML('<broken');
+            $feed = $this->parser()->parse($this->fixture('feeds/rss2-basic.xml'));
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrorMode);
+        }
+
+        self::assertSame('Example Tech Blog', $feed->title);
+    }
 }

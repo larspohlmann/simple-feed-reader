@@ -264,4 +264,13 @@ final class Rss1ParserTest extends TestCase
         self::assertSame('<p>The article</p>', $entry->contentHtml);
         self::assertSame('The teaser', $entry->summary);
     }
+
+    public function testAWhitespacePaddedAboutBecomesTheUrlOfAnItemWithoutALink(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item rdf:about="  https://rss1.example.com/padded  "><title>Padded</title></item>',
+        );
+
+        self::assertSame('https://rss1.example.com/padded', $entry->url);
+    }
 }

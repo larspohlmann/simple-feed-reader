@@ -15,12 +15,11 @@ use App\Service\Parser\Model\ParsedFeedModel;
  */
 final class StreamedFeedDocument
 {
-    private const string XMLNS_NAMESPACE = 'http://www.w3.org/2000/xmlns/';
     private const array TEXT_TYPES = [\XMLReader::TEXT, \XMLReader::WHITESPACE, \XMLReader::SIGNIFICANT_WHITESPACE];
 
     private readonly \DOMDocument $skeleton;
     private \DOMElement $root;
-    private ?\DOMElement $openElement = null;
+    private \DOMNode $openNode;
 
     /** @var list<ParsedEntryModel> */
     private array $entries = [];
@@ -28,11 +27,12 @@ final class StreamedFeedDocument
     private function __construct(private readonly \XMLReader $reader)
     {
         $this->skeleton = new \DOMDocument();
+        $this->openNode = $this->skeleton;
     }
 
     public static function open(string $xml): self
     {
-        $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET | LIBXML_COMPACT));
+        $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET));
         $document->readToRoot();
 
         return $document;
@@ -74,8 +74,7 @@ final class StreamedFeedDocument
         while ($this->read()) {
             if ($this->reader->nodeType === \XMLReader::ELEMENT) {
                 $this->root = $this->currentElement();
-                $this->skeleton->appendChild($this->root);
-                $this->openElement = $this->reader->isEmptyElement ? null : $this->root;
+                $this->descendInto($this->root);
 
                 return;
             }
@@ -86,36 +85,36 @@ final class StreamedFeedDocument
 
     private function placeElement(FeedFormatParserInterface $parser): bool
     {
-        if ($this->openElement === null) {
-            throw new FeedParseException('Document is not well-formed XML');
-        }
-
         $element = $this->currentElement();
-        $this->openElement->appendChild($element);
-        if ($parser->isEntry($element)) {
-            $element->remove();
+        if ($parser->isEntry($element, $this->openNode)) {
             $this->addEntry($parser->parseEntry($this->expandedEntry()));
 
             return $this->skipEntry();
         }
 
-        if (!$this->reader->isEmptyElement) {
-            $this->openElement = $element;
-        }
+        $this->descendInto($element);
 
         return $this->read();
+    }
+
+    /** Places the element under the open node, and descends into it unless it is empty. */
+    private function descendInto(\DOMElement $element): void
+    {
+        $this->openNode->appendChild($element);
+        if (!$this->reader->isEmptyElement) {
+            $this->openNode = $element;
+        }
     }
 
     private function placeOtherNode(): bool
     {
         $type = $this->reader->nodeType;
         if ($type === \XMLReader::END_ELEMENT) {
-            $parent = $this->openElement?->parentNode;
-            $this->openElement = $parent instanceof \DOMElement ? $parent : null;
+            $this->openNode = $this->openNode->parentNode ?? $this->skeleton;
         } elseif (in_array($type, self::TEXT_TYPES, true)) {
-            $this->openElement?->appendChild($this->skeleton->createTextNode($this->reader->value));
+            $this->openNode->appendChild($this->skeleton->createTextNode($this->reader->value));
         } elseif ($type === \XMLReader::CDATA) {
-            $this->openElement?->appendChild($this->skeleton->createCDATASection($this->reader->value));
+            $this->openNode->appendChild($this->skeleton->createCDATASection($this->reader->value));
         }
 
         return $this->read();
@@ -138,9 +137,6 @@ final class StreamedFeedDocument
     private function copyAttribute(\DOMElement $element): void
     {
         $namespace = $this->reader->namespaceURI;
-        if ($namespace === self::XMLNS_NAMESPACE) {
-            return;
-        }
         if ($namespace === '') {
             $element->setAttribute($this->reader->name, $this->reader->value);
 

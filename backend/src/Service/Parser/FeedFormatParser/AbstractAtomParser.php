@@ -53,11 +53,11 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     abstract protected function descriptionElement(): string;
 
     /** Only the feed's own children: an <entry> nested anywhere else was never one. */
-    public function isEntry(\DOMElement $element): bool
+    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
         return $element->localName === 'entry'
             && $element->namespaceURI === $this->namespaceUri()
-            && $element->parentNode === $element->ownerDocument?->documentElement;
+            && $parent->parentNode instanceof \DOMDocument;
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel

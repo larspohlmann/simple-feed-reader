@@ -358,4 +358,36 @@ final class Rss2ParserTest extends TestCase
 
         self::assertSame('<p>Track list :<br>1.Idaishoy<br>2.Silver Galaxy</p>', $entry->contentHtml);
     }
+
+    public function testTheBodyImageComesFromContentEncodedBeforeTheDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:content="http://purl.org/rss/1.0/modules/content/"><title>Both</title>'
+            . '<description><![CDATA[<img src="https://img.example.com/description.jpg">]]></description>'
+            . '<content:encoded><![CDATA[<img src="https://img.example.com/content.jpg">]]></content:encoded>'
+            . '</item>',
+        );
+
+        self::assertSame('https://img.example.com/content.jpg', $entry->media->image?->url);
+    }
+
+    public function testAuthorWinsOverDublinCoreCreator(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>By</title>'
+            . '<dc:creator>Creator</dc:creator><author>Author</author></item>',
+        );
+
+        self::assertSame('Author', $entry->author);
+    }
+
+    public function testPubDateWinsOverDublinCoreDate(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>When</title>'
+            . '<dc:date>2026-01-01T00:00:00Z</dc:date><pubDate>Tue, 06 Oct 2026 10:00:00 +0000</pubDate></item>',
+        );
+
+        self::assertSame('2026-10-06T10:00:00+00:00', $entry->publishedAt?->format(DATE_ATOM));
+    }
 }

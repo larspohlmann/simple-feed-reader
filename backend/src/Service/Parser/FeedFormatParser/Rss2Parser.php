@@ -39,7 +39,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
     }
 
     /** Any unprefixed <item> at any depth, as getElementsByTagName('item') found them before #1452. */
-    public function isEntry(\DOMElement $element): bool
+    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
         return $element->nodeName === 'item';
     }
