@@ -158,7 +158,7 @@
   border-radius: var(--radius-pill);
 }
 
-/* The panel is the drop list's scroller (cdkScrollable), so a drag auto-scrolls it past the visible rows. */
+/* The drop list's scroller (cdkScrollable): a drag auto-scrolls past the visible rows. */
 .playlist {
   max-height: 50vh;
   max-height: 50dvh;

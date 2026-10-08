@@ -39,6 +39,10 @@ describe('AudioSurface', () => {
     container = TestBed.inject(OverlayContainer).getContainerElement();
   });
 
+  afterEach(() => {
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  });
+
   const settle = () => TestBed.inject(ApplicationRef).tick();
   const panes = () => container.querySelectorAll('.cdk-overlay-pane.app-big-player');
   const click = (selector: string) => {

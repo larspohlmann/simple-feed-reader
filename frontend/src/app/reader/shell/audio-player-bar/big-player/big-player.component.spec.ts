@@ -99,6 +99,11 @@ describe('BigPlayerComponent', () => {
     Element.prototype.scrollIntoView = jest.fn();
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+    delete (Element.prototype as Partial<Element>).scrollIntoView;
+  });
+
   it('shows the title, the feed line, the excerpt and the queue position', () => {
     const fixture = render();
 
@@ -211,12 +216,25 @@ describe('BigPlayerComponent', () => {
       query(fixture, '.show-playlist')!.click();
       fixture.detectChanges();
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
-      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' });
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
       expect(scrollIntoView.mock.contexts[0]).toBe(query(fixture, '.extras'));
 
       query(fixture, '.show-playlist')!.click();
       fixture.detectChanges();
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    });
+
+    it('reveals the list without animation when the reader asks for reduced motion', () => {
+      const fixture = render(episode, true);
+      jest.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
+
+      query(fixture, '.show-playlist')!.click();
+      fixture.detectChanges();
+
+      expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+        block: 'start',
+        behavior: 'auto',
+      });
     });
 
     it('opens with the playlist it was last left with', () => {

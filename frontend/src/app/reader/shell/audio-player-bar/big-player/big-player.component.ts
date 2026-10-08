@@ -21,6 +21,7 @@ import { AudioPlayerService, AudioTrackEntry, SKIP_SECONDS } from '../../../audi
 import { scrubFill } from '../../../audio/scrub-fill';
 import { formatDuration, relativeTime } from '../../../format';
 import { LayoutService } from '../../../layout.service';
+import { prefersReducedMotion } from '../../../article/reading/reduced-motion';
 import { entryParam } from '../../../query/slug';
 import { AudioArtworkComponent } from '../audio-artwork/audio-artwork.component';
 import { AudioPlaylistComponent } from '../audio-playlist/audio-playlist.component';
@@ -105,9 +106,14 @@ export class BigPlayerComponent {
     }
     this.data.playlistShown.update((shown) => !shown);
     if (this.data.playlistShown()) {
-      afterNextRender(() => this.extras().nativeElement.scrollIntoView({ block: 'start' }), {
-        injector: this.injector,
-      });
+      afterNextRender(
+        () =>
+          this.extras().nativeElement.scrollIntoView({
+            block: 'start',
+            behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+          }),
+        { injector: this.injector },
+      );
     }
   }
 

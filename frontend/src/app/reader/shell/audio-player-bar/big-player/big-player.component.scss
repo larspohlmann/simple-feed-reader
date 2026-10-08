@@ -40,12 +40,6 @@
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  :host {
-    scroll-behavior: smooth;
-  }
-}
-
 .top,
 .transport,
 .extras {
