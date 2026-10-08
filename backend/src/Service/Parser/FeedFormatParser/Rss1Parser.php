@@ -36,7 +36,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         return $root->localName === 'RDF';
     }
 
-    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
+    public function isEntry(\DOMElement $element, int $depth): bool
     {
         return $element->localName === 'item' && $element->namespaceURI === self::RSS1_NS;
     }

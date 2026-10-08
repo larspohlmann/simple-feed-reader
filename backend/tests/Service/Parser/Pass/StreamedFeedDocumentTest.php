@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Pass;
 
+use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\Pass\StreamedFeedDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -53,17 +54,10 @@ final class StreamedFeedDocumentTest extends TestCase
         return $skeleton;
     }
 
-    /** FeedParser collects libxml's errors around the stream; so does this. */
     private function streamed(string $xml): RecordingItemParser
     {
         $parser = new RecordingItemParser();
-        $previousErrorMode = libxml_use_internal_errors(true);
-        try {
-            StreamedFeedDocument::open($xml)->parseWith($parser);
-        } finally {
-            libxml_clear_errors();
-            libxml_use_internal_errors($previousErrorMode);
-        }
+        StreamedFeedDocument::parse($xml, new FeedParserFactory([$parser]));
 
         return $parser;
     }

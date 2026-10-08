@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace App\Service\Parser\Pass;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
  * One feed read as a stream: each entry is expanded into a DOM of its own and parsed on the spot, and the skeleton
- * keeps the rest, so memory follows the largest entry rather than the whole feed. The caller collects libxml errors.
+ * keeps the rest, so memory follows the largest entry rather than the whole feed.
  */
 final class StreamedFeedDocument
 {
     private const array TEXT_TYPES = [\XMLReader::TEXT, \XMLReader::WHITESPACE, \XMLReader::SIGNIFICANT_WHITESPACE];
 
     private readonly \DOMDocument $skeleton;
-    private \DOMElement $root;
     private \DOMNode $openNode;
 
     /** @var list<ParsedEntryModel> */
@@ -30,16 +30,25 @@ final class StreamedFeedDocument
         $this->openNode = $this->skeleton;
     }
 
-    public static function open(string $xml): self
+    public static function parse(string $xml, FeedParserFactory $parserFactory): ParsedFeedModel
     {
-        $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET));
-        $document->readToRoot();
+        $previousErrorMode = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        try {
+            $document = new self(\XMLReader::fromStream(self::spooled($xml), null, LIBXML_NONET));
 
-        return $document;
+            return $document->parseWith($parserFactory->parserFor($document->readToRoot()));
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrorMode);
+        }
     }
 
-    /** XMLReader::fromString() copies the whole body into libxml; a php://temp spool past 2 MB lives on disk. */
-    /** @return resource */
+    /**
+     * XMLReader::fromString() copies the whole body into libxml; a php://temp spool past 2 MB lives on disk.
+     *
+     * @return resource
+     */
     private static function spooled(string $xml): mixed
     {
         $spool = fopen('php://temp', 'w+b');
@@ -52,12 +61,7 @@ final class StreamedFeedDocument
         return $spool;
     }
 
-    public function root(): \DOMElement
-    {
-        return $this->root;
-    }
-
-    public function parseWith(FeedFormatParserInterface $parser): ParsedFeedModel
+    private function parseWith(FeedFormatParserInterface $parser): ParsedFeedModel
     {
         $moved = $this->read();
         while ($moved) {
@@ -69,14 +73,19 @@ final class StreamedFeedDocument
         return $parser->parseFeed($this->skeleton, $this->entries);
     }
 
-    private function readToRoot(): void
+    private function readToRoot(): \DOMElement
     {
         while ($this->read()) {
+            // Feeds never need a DTD. Rejecting any doctype keeps a declared entity from ever being expanded, instead
+            // of relying on libxml's amplification limit, which varies by version.
+            if ($this->reader->nodeType === \XMLReader::DOC_TYPE) {
+                throw new FeedParseException('Feed documents must not declare a DTD');
+            }
             if ($this->reader->nodeType === \XMLReader::ELEMENT) {
-                $this->root = $this->currentElement();
-                $this->descendInto($this->root);
+                $root = $this->currentElement();
+                $this->descendInto($root);
 
-                return;
+                return $root;
             }
         }
 
@@ -86,7 +95,7 @@ final class StreamedFeedDocument
     private function placeElement(FeedFormatParserInterface $parser): bool
     {
         $element = $this->currentElement();
-        if ($parser->isEntry($element, $this->openNode)) {
+        if ($parser->isEntry($element, $this->reader->depth)) {
             $this->addEntry($parser->parseEntry($this->expandedEntry()));
 
             return $this->skipEntry();
@@ -165,24 +174,19 @@ final class StreamedFeedDocument
 
     private function read(): bool
     {
-        return $this->checked($this->reader->read());
+        return $this->unlessFatal($this->reader->read());
     }
 
     private function skipEntry(): bool
     {
-        return $this->checked($this->reader->next());
+        return $this->unlessFatal($this->reader->next());
     }
 
     /** A reader stops on a fatal error by reporting the end; a recoverable one (an undeclared prefix) reads on. */
-    private function checked(bool $moved): bool
+    private function unlessFatal(bool $moved): bool
     {
         if (!$moved) {
             self::rejectFatalErrors();
-        }
-        // Feeds never need a DTD. Rejecting any doctype keeps a declared entity from ever being expanded, instead
-        // of relying on libxml's amplification limit, which varies by version.
-        if ($moved && $this->reader->nodeType === \XMLReader::DOC_TYPE) {
-            throw new FeedParseException('Feed documents must not declare a DTD');
         }
 
         return $moved;

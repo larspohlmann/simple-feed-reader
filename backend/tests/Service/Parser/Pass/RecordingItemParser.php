@@ -20,7 +20,7 @@ final class RecordingItemParser implements FeedFormatParserInterface
         return true;
     }
 
-    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
+    public function isEntry(\DOMElement $element, int $depth): bool
     {
         return $element->localName === 'item';
     }

@@ -38,8 +38,8 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         return $root->localName === 'rss';
     }
 
-    /** Any unprefixed <item> at any depth, as getElementsByTagName('item') found them before #1452. */
-    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
+    /** Any unprefixed <item> at any depth. */
+    public function isEntry(\DOMElement $element, int $depth): bool
     {
         return $element->nodeName === 'item';
     }
