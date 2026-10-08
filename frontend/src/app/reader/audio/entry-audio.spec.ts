@@ -37,6 +37,14 @@ describe('EntryAudio', () => {
     expect(player.queue()).toEqual([]);
   });
 
+  it('formats the declared duration, and has none when the feed declares none (#1449)', () => {
+    const declared = entry({
+      attachments: [{ url: EPISODE, mimeType: 'audio/mpeg', durationInSeconds: 125 }],
+    });
+    expect(setUp(declared).audio.duration()).toBe('2:05');
+    expect(setUp().audio.duration()).toBeNull();
+  });
+
   it('has no track while no entry is open', () => {
     expect(setUp(null).audio.track()).toBeNull();
   });

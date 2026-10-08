@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
 import { EntryActionHandler } from './entry-action-handler';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../../shared/icon/icon.component';
@@ -6,7 +6,6 @@ import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.dir
 import { EntryDto } from '../../models';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
-import { formatDuration } from '../../format';
 
 /**
  * The per-entry actions — favorite, keep, mark read, led by the declared
@@ -37,8 +36,4 @@ export class EntryActionsComponent {
   readonly audio = input(true);
   protected readonly entryAudio = new EntryAudio(this.entry, inject(AudioPlayerService));
   protected readonly actions = inject(EntryActionHandler);
-  protected readonly duration = computed(() => {
-    const seconds = this.entryAudio.track()?.durationInSeconds;
-    return seconds ? formatDuration(seconds) : null;
-  });
 }

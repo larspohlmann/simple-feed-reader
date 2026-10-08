@@ -46,7 +46,7 @@ import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ArticleGestures } from './article-gestures.service';
-import { formatDuration, relativeTime } from '../../format';
+import { relativeTime } from '../../format';
 import { decorateArticle } from '../decorators/decorate-article';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
@@ -121,8 +121,6 @@ export class ReaderViewComponent {
     contentBottom: () => this.scope.contentBottom(),
     layout: this.scope.contentBottom,
   });
-
-  protected readonly formatDuration = formatDuration;
 
   /** The entry's first playable audio enclosure, surfaced as a listen control
    *  above the article; its attachment is null when the feed declared none (#915). */

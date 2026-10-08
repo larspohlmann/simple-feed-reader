@@ -140,13 +140,13 @@
           </p>
           <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
           <app-entry-actions class="actions" size="md" [entry]="e" [audio]="false" />
-          @if (audio.attachment(); as attachment) {
+          @if (audio.attachment()) {
             <div class="listen-row">
               <button class="listen" type="button" (click)="audio.play()">
                 <app-icon name="play_circle" size="lg" />
                 <span class="listen-label">{{ 'reader.audioPlayer.listen' | transloco }}</span>
-                @if (attachment.durationInSeconds; as seconds) {
-                  <span class="listen-duration">{{ formatDuration(seconds) }}</span>
+                @if (audio.duration(); as duration) {
+                  <span class="listen-duration">{{ duration }}</span>
                 }
               </button>
               <button
