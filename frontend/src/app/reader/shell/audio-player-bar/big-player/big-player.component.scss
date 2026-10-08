@@ -231,10 +231,6 @@
   cursor: pointer;
 }
 
-.ctrl:hover:not(:disabled) {
-  background: var(--surface-2);
-}
-
 .ctrl:disabled {
   color: var(--text-muted);
   cursor: default;
@@ -247,8 +243,14 @@
   color: var(--on-accent);
 }
 
-.play:hover:not(:disabled) {
-  background: var(--accent);
+@media (hover: hover) {
+  .ctrl:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+
+  .play:hover:not(:disabled) {
+    background: var(--accent);
+  }
 }
 
 .extras {

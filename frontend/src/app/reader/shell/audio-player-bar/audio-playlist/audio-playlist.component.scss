@@ -67,8 +67,10 @@
   text-align: start;
 }
 
-.pick:hover {
-  background: var(--surface-2);
+@media (hover: hover) {
+  .pick:hover {
+    background: var(--surface-2);
+  }
 }
 
 .cdk-drag-preview {
