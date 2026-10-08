@@ -38,7 +38,8 @@ curated catalog gets a new account started.
 </p>
 
 Podcasts and SoundCloud feeds play in a playlist: episode artwork, previous and
-next, and a panel to reorder the queue.
+next, and a panel to reorder the queue. To subscribe to a podcast, paste its
+share link from Apple Podcasts.
 
 <p>
   <img src="docs/screenshots/mobile-podcast-playlist-light.webp" alt="The audio playlist panel on a phone, above the player bar" width="24%">
@@ -78,11 +79,20 @@ More in the [screenshot gallery](docs/screenshots.md).
   show's.
 - Paste a SoundCloud profile link into "Add feed" and the reader offers that
   account's RSS feed.
+- Paste a show or episode link copied from Apple Podcasts into "Add feed" and
+  the reader subscribes to the show's RSS feed. Any of these work:
+  - `https://podcasts.apple.com/de/podcast/lage-der-nation/id1092957894`
+    (Share Show → Copy Link on iPhone, iPad or Mac, or the show page's address)
+  - `https://podcasts.apple.com/de/podcast/lage-der-nation/id1092957894?i=1000700000001`
+    (an episode link subscribes to its show)
+  - `https://podcasts.apple.com/de/podcast/id1092957894` and
+    `https://itunes.apple.com/us/podcast/lage-der-nation/id1092957894`
 
 **Feeds**
 
 - Add a feed by its address — or paste the website's address and the app
-  finds the feed for you.
+  finds the feed for you. A show link from Apple Podcasts or a SoundCloud
+  profile link works too.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
