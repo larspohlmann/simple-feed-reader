@@ -21,18 +21,20 @@
     <div class="art-box"><app-audio-artwork class="art" [track]="track" /></div>
 
     <div class="details">
-      @if (track.entry; as entry) {
-        <h2 class="title" [id]="titleId">
+      <h2 class="title" [id]="titleId">
+        @if (track.entry; as entry) {
           <button type="button" class="title-link" (click)="openArticle(entry)">
             {{ track.title }}
           </button>
-        </h2>
+        } @else {
+          {{ track.title }}
+        }
+      </h2>
+      @if (track.entry; as entry) {
         <p class="source">{{ entry.feedTitle }} · {{ published() }}</p>
         @if (entry.excerpt) {
           <p class="excerpt">{{ entry.excerpt }}</p>
         }
-      } @else {
-        <h2 class="title" [id]="titleId">{{ track.title }}</h2>
       }
     </div>
 

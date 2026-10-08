@@ -53,8 +53,7 @@ const SWIPE_DISMISS_DISTANCE = 60;
   hostDirectives: [CdkScrollable],
   host: {
     '(touchstart)': 'onTouchStart($event)',
-    '(touchmove)': 'onTouchMove($event)',
-    '(touchend)': 'onTouchEnd()',
+    '(touchend)': 'onTouchEnd($event)',
   },
 })
 export class BigPlayerComponent {
@@ -86,7 +85,6 @@ export class BigPlayerComponent {
   });
 
   private swipeStart: number | null = null;
-  private swipeDistance = 0;
 
   constructor() {
     effect(() => {
@@ -134,17 +132,13 @@ export class BigPlayerComponent {
     const scrolled = this.host.nativeElement.scrollTop > 0;
     this.swipeStart =
       event.touches.length === 1 && !exempt && !scrolled ? event.touches[0].clientY : null;
-    this.swipeDistance = 0;
   }
 
-  protected onTouchMove(event: TouchEvent): void {
-    if (this.swipeStart !== null && event.touches.length === 1) {
-      this.swipeDistance = event.touches[0].clientY - this.swipeStart;
+  protected onTouchEnd(event: TouchEvent): void {
+    const end = event.changedTouches[0].clientY;
+    if (this.swipeStart !== null && end - this.swipeStart > SWIPE_DISMISS_DISTANCE) {
+      this.ref.close();
     }
-  }
-
-  protected onTouchEnd(): void {
-    if (this.swipeStart !== null && this.swipeDistance > SWIPE_DISMISS_DISTANCE) this.ref.close();
     this.swipeStart = null;
   }
 }

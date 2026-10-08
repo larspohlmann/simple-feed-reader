@@ -84,14 +84,16 @@ function query<T extends HTMLElement>(
 
 function touch(type: string, target: EventTarget, ...clientYs: number[]) {
   const event = new Event(type, { bubbles: true });
-  Object.defineProperty(event, 'touches', { value: clientYs.map((clientY) => ({ clientY })) });
+  const points = clientYs.map((clientY) => ({ clientY }));
+  Object.defineProperty(event, type === 'touchend' ? 'changedTouches' : 'touches', {
+    value: points,
+  });
   target.dispatchEvent(event);
 }
 
 function pull(target: EventTarget, [from, to]: [number, number]) {
   touch('touchstart', target, from);
-  touch('touchmove', target, to);
-  target.dispatchEvent(new Event('touchend', { bubbles: true }));
+  touch('touchend', target, to);
 }
 
 describe('BigPlayerComponent', () => {
@@ -343,8 +345,8 @@ describe('BigPlayerComponent', () => {
       const sheet = fixture.nativeElement as HTMLElement;
 
       touch('touchstart', sheet, 100);
-      touch('touchmove', sheet, 300, 300);
-      sheet.dispatchEvent(new Event('touchend', { bubbles: true }));
+      touch('touchstart', sheet, 100, 100);
+      touch('touchend', sheet, 300);
 
       expect(ref.close).not.toHaveBeenCalled();
     });
@@ -354,8 +356,7 @@ describe('BigPlayerComponent', () => {
       const sheet = fixture.nativeElement as HTMLElement;
 
       touch('touchstart', sheet, 100, 100);
-      touch('touchmove', sheet, 300);
-      sheet.dispatchEvent(new Event('touchend', { bubbles: true }));
+      touch('touchend', sheet, 300);
 
       expect(ref.close).not.toHaveBeenCalled();
     });
