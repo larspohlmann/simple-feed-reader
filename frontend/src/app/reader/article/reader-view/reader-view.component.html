@@ -174,27 +174,33 @@
               <app-paywall-notice class="paywall-note" [url]="source.paywallUrl()" />
             }
             @if (fallbackNoticeShown()) {
-              <app-warning-box class="reader-fallback">
-                <span class="warning-glyph" aria-hidden="true">⚠</span>
-                <div class="warning-text">
-                  <p class="reader-note">
-                    {{ 'reader.readerFallback' | transloco }}
-                    <button
-                      type="button"
-                      class="note-link reads-as-text"
-                      (click)="refreshArticle()"
-                    >
-                      {{ 'reader.retry' | transloco }}
-                    </button>
-                  </p>
-                  @if (source.errorDetail(); as detail) {
-                    <details class="reader-error">
-                      <summary>{{ 'reader.showError' | transloco }}</summary>
-                      <pre>{{ detail }}</pre>
-                    </details>
-                  }
-                </div>
-              </app-warning-box>
+              @if (source.failureReason() === 'empty') {
+                <p class="reader-fallback-quiet">{{ fallbackMessageKey() | transloco }}</p>
+              } @else {
+                <app-warning-box class="reader-fallback">
+                  <span class="warning-glyph" aria-hidden="true">⚠</span>
+                  <div class="warning-text">
+                    <p class="reader-note">
+                      {{ fallbackMessageKey() | transloco }}
+                      @if (!source.pageHoldsNoArticle()) {
+                        <button
+                          type="button"
+                          class="note-link reads-as-text"
+                          (click)="refreshArticle()"
+                        >
+                          {{ 'reader.retry' | transloco }}
+                        </button>
+                      }
+                    </p>
+                    @if (source.errorDetail(); as detail) {
+                      <details class="reader-error">
+                        <summary>{{ 'reader.showError' | transloco }}</summary>
+                        <pre>{{ detail }}</pre>
+                      </details>
+                    }
+                  </div>
+                </app-warning-box>
+              }
             }
             @if (source.feedBodyFailed()) {
               <app-error-banner
