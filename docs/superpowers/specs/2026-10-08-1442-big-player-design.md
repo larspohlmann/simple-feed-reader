@@ -119,3 +119,32 @@ change.
 - Chapters, sleep timer, AirPlay/cast.
 - A speed control in the mini bar.
 - Server-side persistence of speed (the playlist itself is device-local, #1429).
+
+## Addendum: the playlist inside the phone sheet (2026-10-08)
+
+Asked for after the first five tasks, from a look at the phone sheet, where the
+space under the controls stood empty.
+
+- **Phone sheet (below `bp-sm`):** ☰ shows and hides the full playlist (play, drag,
+  up/down, remove) under the bottom row, inside the sheet. It no longer hands over
+  to the bar's panel there. While the list shows, ☰ is accented and
+  `aria-expanded="true"`. Showing it scrolls the sheet so the bottom row sits at the
+  top, with the list beneath it; otherwise the tap would change nothing visible.
+- **Centered card (from `bp-sm` up):** unchanged. ☰ closes the big player and opens
+  the panel.
+- **One scroller.** The list has no scroll area of its own in the sheet. It flows
+  below the bottom row and the whole sheet scrolls; a scroller inside a scrolling
+  sheet is hard to use on a phone, and iOS shows no indicator for it. The sheet is
+  the drop list's scroll container (`CdkScrollable`), so a drag past the edge
+  scrolls the sheet. A touch that starts inside the list never starts the
+  swipe-to-close. The up/down buttons stay as the way to reorder without dragging.
+  The bar's panel keeps its own `50dvh` scroller: it is a small panel, not a page.
+- **One list component.** The rows move out of `AudioPlayerBarComponent` into
+  `AudioPlaylistComponent` (`reader/shell/audio-player-bar/audio-playlist/`), which
+  never scrolls itself; each host provides the scroller.
+- **Remembered.** Whether the sheet shows the list is kept across openings, in
+  `AudioSurface` (an `accountSignal`, so logout resets it), and handed to the big
+  player as dialog data — the big player cannot inject `AudioSurface`, which imports it.
+- **Which mode:** a `LayoutService.isPhone` signal on `(max-width: 559.98px)`, the
+  same boundary as the stylesheet's `width < bp.$bp-sm`. Resizing across it switches
+  ☰'s behaviour live.
