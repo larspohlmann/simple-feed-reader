@@ -9,6 +9,7 @@ use App\Enum\SourceFormat;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ItemImageExtractor;
@@ -303,6 +304,22 @@ final class FeedPreviewServiceTest extends KernelTestCase
             self::fail('expected the preview to fail');
         } catch (FeedPreviewException $exception) {
             self::assertSame('The feed could not be loaded.', $exception->getMessage());
+            self::assertSame(0, $exception->getCode());
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
+    public function testAnOversizedFeedSaysItIsTooLarge(): void
+    {
+        $cause = new ResponseTooLargeException('too large');
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow(self::URL, $cause);
+
+        try {
+            $this->service($fetcher)->preview($this->user(), self::URL);
+            self::fail('expected the preview to fail');
+        } catch (FeedPreviewException $exception) {
+            self::assertSame('The feed is larger than the reader accepts.', $exception->getMessage());
             self::assertSame(0, $exception->getCode());
             self::assertSame($cause, $exception->getPrevious());
         }

@@ -18,6 +18,7 @@ use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
@@ -70,8 +71,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled);
         } catch (FeedUnreachableException $exception) {
             return $this->feedTheSiteMightStillServe($url, $exception);
+        } catch (ResponseTooLargeException) {
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::TooLarge);
         } catch (FetchException) {
-            // Gone, over-size, SSRF-blocked: nothing usable ever arrived.
+            // Gone, SSRF-blocked: nothing usable ever arrived.
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 

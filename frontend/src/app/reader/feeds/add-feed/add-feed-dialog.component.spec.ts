@@ -395,6 +395,20 @@ describe('AddFeedDialogComponent', () => {
     );
   });
 
+  it('says the feed is too large rather than unreachable', () => {
+    const fixture = create();
+    fixture.componentInstance.form.setValue({ url: 'https://podcast.example/feed' });
+    fixture.componentInstance.submit();
+    ctrl
+      .expectOne('https://api.test/api/subscriptions')
+      .flush({ candidates: [], scrapeFailureReason: 'too_large' });
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.warn')?.textContent).toContain(
+      'larger than the reader accepts',
+    );
+  });
+
   it('shows a generic warning for a scrape-failure reason it does not recognise', () => {
     // The backend reason set is open, so a newer server may send a reason this
     // build has never heard of; it must still warn, not render an empty box.

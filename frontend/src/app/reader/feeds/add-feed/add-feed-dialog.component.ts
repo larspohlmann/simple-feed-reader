@@ -23,6 +23,14 @@ type PreviewState =
   | { status: 'error'; message?: string }
   | { status: 'ok'; preview: FeedPreview };
 
+const FAILURE_TEXT_KEYS = new Map<ScrapeFailureReason, string>([
+  ['blocked', 'failBlocked'],
+  ['throttled', 'failThrottled'],
+  ['unreachable', 'failUnreachable'],
+  ['not_scrapable', 'failNotScrapable'],
+  ['too_large', 'failTooLarge'],
+]);
+
 @Component({
   selector: 'app-add-feed-dialog',
   imports: [
@@ -123,16 +131,7 @@ export class AddFeedDialogComponent implements OnInit {
    * box — the backend's reason set is open, so this build may not know them all.
    */
   failureText(reason: ScrapeFailureReason): string {
-    const key =
-      reason === 'blocked'
-        ? 'failBlocked'
-        : reason === 'throttled'
-          ? 'failThrottled'
-          : reason === 'unreachable'
-            ? 'failUnreachable'
-            : reason === 'not_scrapable'
-              ? 'failNotScrapable'
-              : 'failGeneric';
+    const key = FAILURE_TEXT_KEYS.get(reason) ?? 'failGeneric';
     return this.i18n.translate(`dialog.addFeed.${key}`);
   }
 

@@ -733,6 +733,7 @@
       "failThrottled": "This site is limiting requests right now — wait a moment and try again.",
       "failUnreachable": "The site couldn't be reached — check the address or try again later.",
       "failNotScrapable": "This page offers no feed and no article list could be detected — it can't be subscribed.",
+      "failTooLarge": "This feed is larger than the reader accepts — it can't be subscribed.",
       "failGeneric": "This page can't be subscribed."
     },
     "tagForm": {
