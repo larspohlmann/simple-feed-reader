@@ -134,10 +134,7 @@ final class ItemCategoryExtractorTest extends TestCase
             . '<item><title>A</title><link>https://x.test/a</link>'
             . '<category domain="https://d.test">Politics</category>'
             . '<category>World</category></item></channel></rss>';
-        $document = new \DOMDocument();
-        $document->loadXML($xml);
-
-        $feed = FeedFormatParsers::rss2()->parse($document);
+        $feed = FeedFormatParsers::feed($xml);
 
         self::assertCount(2, $feed->entries[0]->categories);
         self::assertSame('Politics', $feed->entries[0]->categories[0]->label);

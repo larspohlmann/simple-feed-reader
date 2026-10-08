@@ -12,10 +12,7 @@ final class Atom03ParserTest extends TestCase
 {
     private function parse(string $xml): ParsedFeedModel
     {
-        $document = new \DOMDocument();
-        $document->loadXML($xml);
-
-        return FeedFormatParsers::atom03()->parse($document);
+        return FeedFormatParsers::feed($xml);
     }
 
     public function testEntryDateComesFromDublinCoreWhenTheDialectDatesAreAbsent(): void
