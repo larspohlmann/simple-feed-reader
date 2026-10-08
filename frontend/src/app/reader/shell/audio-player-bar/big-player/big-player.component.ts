@@ -94,7 +94,7 @@ export class BigPlayerComponent {
     this.player.seek((event.target as HTMLInputElement).valueAsNumber);
   }
 
-  onTouchStart(event: TouchEvent): void {
+  protected onTouchStart(event: TouchEvent): void {
     const onScrubber = event.target instanceof Element && event.target.closest('.scrubber');
     const scrolled = this.host.nativeElement.scrollTop > 0;
     this.swipeStart =
@@ -102,13 +102,13 @@ export class BigPlayerComponent {
     this.swipeDistance = 0;
   }
 
-  onTouchMove(event: TouchEvent): void {
+  protected onTouchMove(event: TouchEvent): void {
     if (this.swipeStart !== null && event.touches.length === 1) {
       this.swipeDistance = event.touches[0].clientY - this.swipeStart;
     }
   }
 
-  onTouchEnd(): void {
+  protected onTouchEnd(): void {
     if (this.swipeStart !== null && this.swipeDistance > SWIPE_DISMISS_DISTANCE) this.ref.close();
     this.swipeStart = null;
   }

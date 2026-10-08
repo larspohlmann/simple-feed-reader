@@ -53,6 +53,7 @@
   inline-size: min(100%, 50dvh);
   block-size: auto;
   aspect-ratio: 1;
+  flex: none;
   align-self: center;
   border-radius: var(--radius-lg);
   box-shadow: 0 14px 34px rgb(0 0 0 / 35%);

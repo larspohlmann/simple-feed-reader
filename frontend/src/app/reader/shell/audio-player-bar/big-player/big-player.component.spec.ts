@@ -73,8 +73,18 @@ function query<T extends HTMLElement>(
   return fixture.debugElement.query(By.css(selector))?.nativeElement ?? null;
 }
 
-const touch = (clientY: number, target: EventTarget) =>
-  ({ touches: [{ clientY }], target }) as unknown as TouchEvent;
+function touch(type: string, target: EventTarget, ...clientYs: number[]) {
+  const event = new Event(type, { bubbles: true });
+  Object.defineProperty(event, 'touches', { value: clientYs.map((clientY) => ({ clientY })) });
+  target.dispatchEvent(event);
+}
+
+function pull(target: EventTarget, [from, to]: [number, number], fingers = 1) {
+  const fromAll = Array(fingers).fill(from);
+  touch('touchstart', target, ...fromAll);
+  touch('touchmove', target, ...Array(fingers).fill(to));
+  target.dispatchEvent(new Event('touchend', { bubbles: true }));
+}
 
 describe('BigPlayerComponent', () => {
   it('shows the title, the feed line, the excerpt and the queue position', () => {
@@ -198,27 +208,41 @@ describe('BigPlayerComponent', () => {
   describe('swipe down', () => {
     it('closes on a decisive downward pull', () => {
       const fixture = render();
-      const component = fixture.componentInstance;
-      const sheet = fixture.nativeElement as HTMLElement;
 
-      component.onTouchStart(touch(100, sheet));
-      component.onTouchMove(touch(180, sheet));
-      component.onTouchEnd();
+      pull(fixture.nativeElement, [100, 180]);
 
       expect(ref.close).toHaveBeenCalledWith();
     });
 
-    it('ignores a short pull, and any pull that starts on the scrubber', () => {
+    it('ignores a short pull', () => {
       const fixture = render();
-      const component = fixture.componentInstance;
-      const sheet = fixture.nativeElement as HTMLElement;
 
-      component.onTouchStart(touch(100, sheet));
-      component.onTouchMove(touch(140, sheet));
-      component.onTouchEnd();
-      component.onTouchStart(touch(100, query(fixture, '.scrubber')!));
-      component.onTouchMove(touch(300, sheet));
-      component.onTouchEnd();
+      pull(fixture.nativeElement, [100, 140]);
+
+      expect(ref.close).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pull that starts on the scrubber', () => {
+      const fixture = render();
+
+      pull(query(fixture, '.scrubber')!, [100, 300]);
+
+      expect(ref.close).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pull while the sheet is scrolled', () => {
+      const fixture = render();
+      Object.defineProperty(fixture.nativeElement, 'scrollTop', { value: 10 });
+
+      pull(fixture.nativeElement, [100, 300]);
+
+      expect(ref.close).not.toHaveBeenCalled();
+    });
+
+    it('ignores a two-finger pull', () => {
+      const fixture = render();
+
+      pull(fixture.nativeElement, [100, 300], 2);
 
       expect(ref.close).not.toHaveBeenCalled();
     });
