@@ -77,6 +77,7 @@ final class ApplePodcastShowFeedTest extends TestCase
             'https://podcasts.apple.com/us/podcast/lage-der-nation/id1092957894?uo=4&l=en-GB',
             '1092957894',
         ];
+        yield 'an uppercase path' => ['https://podcasts.apple.com/DE/Podcast/slug/id1092957894', '1092957894'];
         yield 'a different show' => ['https://podcasts.apple.com/gb/podcast/the-rest-is-x/id1611374685', '1611374685'];
     }
 
@@ -87,6 +88,21 @@ final class ApplePodcastShowFeedTest extends TestCase
 
         self::assertNull((new ApplePodcastShowFeed($fetcher))->feedUrl($enteredUrl));
         self::assertSame([], $fetcher->fetchedUrls);
+    }
+
+    #[DataProvider('resolvableFeedUrls')]
+    public function testSubscribesAnyAbsoluteHttpFeedTheLookupNames(string $feedUrl): void
+    {
+        $fetcher = $this->fetcherResolving('1092957894', $feedUrl);
+
+        self::assertSame($feedUrl, (new ApplePodcastShowFeed($fetcher))->feedUrl(self::SHOW_LINK));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function resolvableFeedUrls(): iterable
+    {
+        yield 'a plain http feed' => ['http://feeds.example.org/show.xml'];
+        yield 'an uppercase https scheme' => ['HTTPS://feeds.example.org/show.xml'];
     }
 
     /** @return iterable<string, array{string}> */
@@ -100,6 +116,10 @@ final class ApplePodcastShowFeedTest extends TestCase
         yield 'a look-alike host' => ['https://podcasts.apple.com.evil.example/de/podcast/x/id1092957894'];
         yield 'a non-Apple host' => ['https://example.com/de/podcast/x/id1092957894'];
         yield 'a feed URL' => ['https://feeds.lagedernation.org/feeds/ldn-mp3.xml'];
+        yield 'a segment before the storefront' => ['https://podcasts.apple.com/x/de/podcast/slug/id1092957894'];
+        yield 'a storefront that is not two letters' => ['https://podcasts.apple.com/usa/podcast/slug/id1092957894'];
+        yield 'text that is not a URL' => ['not a url'];
+        yield 'an Apple host without a path' => ['https://podcasts.apple.com'];
     }
 
     #[DataProvider('unresolvableLookups')]
@@ -119,6 +139,15 @@ final class ApplePodcastShowFeedTest extends TestCase
         yield 'a feed that is not a string' => ['{"resultCount":1,"results":[{"kind":"podcast","feedUrl":42}]}'];
         yield 'an empty feed' => ['{"resultCount":1,"results":[{"kind":"podcast","feedUrl":""}]}'];
         yield 'a relative feed' => ['{"resultCount":1,"results":[{"kind":"podcast","feedUrl":"/feed.xml"}]}'];
+        yield 'a software result that names a feed' => [
+            '{"resultCount":1,"results":[{"kind":"software","feedUrl":"https://feeds.example.org/show.xml"}]}',
+        ];
+        yield 'a result without a kind that names a feed' => [
+            '{"resultCount":1,"results":[{"feedUrl":"https://feeds.example.org/show.xml"}]}',
+        ];
+        yield 'an http scheme without a host' => [
+            '{"resultCount":1,"results":[{"kind":"podcast","feedUrl":"http:feed.xml"}]}',
+        ];
         yield 'a javascript feed' => [
             '{"resultCount":1,"results":[{"kind":"podcast","feedUrl":"javascript:alert(1)"}]}',
         ];
