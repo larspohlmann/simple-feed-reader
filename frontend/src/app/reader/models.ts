@@ -206,6 +206,9 @@ export interface EntryDto {
   /** Dimensions AS DECLARED by the feed. Null means unknown, not square. */
   imageWidth: number | null;
   imageHeight: number | null;
+  /** The shown picture's width / height when the file letterboxes it — a YouTube
+   *  Short's 4:3 thumbnail holds a 9:16 cover — else null: the file is the picture. */
+  imageAspectRatio: number | null;
   /** The same picture at each width the feed declared, for `srcset` (#1330): one rendition
    *  per URL and per width, narrowest first; empty when the feed declared no ladder. */
   imageRenditions: ImageRenditionDto[];

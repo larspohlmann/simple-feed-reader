@@ -37,6 +37,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -130,9 +131,9 @@ describe('planMagazine', () => {
     expect(entryCount(blocks)).toBe(80);
   });
 
-  it('never plans a Short into a hero or wide, however large its landscape image', () => {
+  it('never plans a letterboxed portrait cover into a hero or wide, however large its file', () => {
     const entries = many(80, (index) =>
-      big(index, { isShort: true, subscriptionId: (index % 6) + 1 }),
+      big(index, { imageAspectRatio: 9 / 16, subscriptionId: (index % 6) + 1 }),
     );
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(kinds(blocks)).not.toContain('hero');
@@ -141,7 +142,7 @@ describe('planMagazine', () => {
     expect(entryCount(blocks)).toBe(80);
   });
 
-  it('pulls the next entry that is not a Short into a hero slot', () => {
+  it('pulls the next landscape entry into a hero slot past a letterboxed portrait', () => {
     const plain = many(20, (index) => big(index, { subscriptionId: (index % 6) + 1 }));
     const plan = (entries: EntryDto[]) =>
       planMagazine({ entries, grouping: false, complete: true }).filter(
@@ -150,11 +151,13 @@ describe('planMagazine', () => {
     const heroAt = plan(plain).findIndex((block) => block.kind === 'hero');
     const shortId = plan(plain)[heroAt].entry.id;
 
-    const blocks = plan(plain.map((entry) => ({ ...entry, isShort: entry.id === shortId })));
+    const blocks = plan(
+      plain.map((entry) => ({ ...entry, imageAspectRatio: entry.id === shortId ? 9 / 16 : null })),
+    );
 
     const hero = blocks[heroAt];
     expect(hero.kind).toBe('hero');
-    expect(hero.entry.isShort).toBe(false);
+    expect(hero.entry.id).not.toBe(shortId);
     expect(['split', 'thumb']).toContain(blocks.find((block) => block.entry.id === shortId)?.kind);
   });
 

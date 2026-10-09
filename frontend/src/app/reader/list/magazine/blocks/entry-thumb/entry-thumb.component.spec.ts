@@ -8,7 +8,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import {
   describeShortMarking,
-  describeShortPortrait,
+  describePortraitCover,
 } from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
@@ -49,6 +49,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -71,7 +72,7 @@ function mount(testEntry: EntryDto) {
 
 describe('EntryThumbComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
-  describeShortPortrait((over) => mount(entry(over)));
+  describePortraitCover((over) => mount(entry(over)));
 
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());

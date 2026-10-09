@@ -11,7 +11,7 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import {
   describeShortMarking,
-  describeShortPortrait,
+  describePortraitCover,
 } from '../../../../testing/short-marking-testing';
 
 const entryActions = {
@@ -49,6 +49,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -84,7 +85,7 @@ function pressSpace(target: HTMLElement): void {
 
 describe('EntryRowComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
-  describeShortPortrait((over) => mount(entry(over)));
+  describePortraitCover((over) => mount(entry(over)));
 
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
 

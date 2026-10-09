@@ -1,6 +1,5 @@
 @use 'sass:math';
 @use '../../magazine-card';
-@use '../../../short-cover';
 
 $side-share: 0.38;
 
@@ -74,10 +73,8 @@ $side-share: 0.38;
   width: auto;
 }
 
-/* As tall as the 3:2 box a landscape image gets at the side share, so a Short's card is no taller. */
+/* As tall as the 3:2 box a landscape image gets at the side share, so a portrait's card is no taller. */
 .img-frame.portrait .img {
-  @include short-cover.portrait-crop;
-
   width: auto;
   height: calc(100cqi * #{$side-share} * 2 / 3);
 }

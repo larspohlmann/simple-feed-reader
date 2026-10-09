@@ -105,6 +105,7 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
     isKept: false,
     isViewed: false,
     isShort: false,
+    imageAspectRatio: null,
     discussionUrl: null,
     comments: null,
     ...overrides,

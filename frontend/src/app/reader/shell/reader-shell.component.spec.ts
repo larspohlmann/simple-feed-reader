@@ -121,6 +121,7 @@ describe('ReaderShellComponent', () => {
     isKept: false,
     isViewed: false,
     isShort: false,
+    imageAspectRatio: null,
     discussionUrl: null,
     comments: null,
   };

@@ -38,12 +38,13 @@
     <app-entry-duplicates [entry]="entry()" />
   </div>
   @if (showImage()) {
-    <div class="img-frame" [class.portrait]="entry().isShort">
+    <div class="img-frame" [class.portrait]="portraitAspect() !== null">
       <img
         class="thumb"
         [src]="image()!"
         #renditions="appRenditions"
         [appRenditions]="entry().imageRenditions"
+        [style.aspect-ratio]="portraitAspect()"
         [renditionSizes]="coverBoxSizes"
         alt=""
         loading="lazy"

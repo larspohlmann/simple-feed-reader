@@ -8,7 +8,7 @@ import { ImageProxyService } from '../../../../../shared/proxied-image/image-pro
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import {
   describeShortMarking,
-  describeShortPortrait,
+  describePortraitCover,
 } from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
@@ -49,6 +49,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -72,13 +73,7 @@ function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
 
 describe('EntrySplitComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
-  describeShortPortrait((over) => mount(entry(over)));
-
-  it('leaves the box of a Short to the stylesheet, not the declared dimensions', () => {
-    const element = mount(entry({ isShort: true, imageWidth: 480, imageHeight: 360 }))
-      .nativeElement as HTMLElement;
-    expect((element.querySelector('img.img') as HTMLImageElement).style.aspectRatio).toBe('');
-  });
+  describePortraitCover((over) => mount(entry(over)));
 
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());
@@ -101,7 +96,7 @@ describe('EntrySplitComponent', () => {
     expect(element.querySelector('.split.img-left')).not.toBeNull();
   });
 
-  it('gives a portrait image a portrait side box, bounded at 3:4', () => {
+  it('bounds a landscape side box at 3:2 and gives a portrait its own shape', () => {
     const fixture = mount(entry({ imageWidth: 900, imageHeight: 1100 }));
     const ratio = () => {
       fixture.detectChanges();
@@ -110,12 +105,8 @@ describe('EntrySplitComponent', () => {
     };
     const swap = (over: Partial<EntryDto>) => fixture.componentRef.setInput('entry', entry(over));
 
-    // A moderate portrait keeps its true ratio…
-    expect(ratio()).toBe('900 / 1100');
-    // …an extreme one is clamped to 3:4 (height = width * 4/3 = 1200).
-    swap({ imageWidth: 900, imageHeight: 3000 });
-    expect(ratio()).toBe('900 / 1200');
-    // …a wide landscape is clamped to 3:2 (height = width * 2/3 = 600).
+    expect(ratio()).toBe(String(900 / 1100));
+    // A wide landscape is clamped to 3:2 (height = width * 2/3 = 600).
     swap({ imageWidth: 900, imageHeight: 200 });
     expect(ratio()).toBe('900 / 600');
     // …unknown dimensions keep the 3:2 default.
