@@ -230,6 +230,8 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** The entry links a YouTube Short (`youtube.com/shorts/<id>`). */
+  isShort: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */
@@ -436,7 +438,7 @@ export interface ReaderArticle {
 export interface ReaderFailure {
   status: 'failed';
   url: string | null;
-  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch';
+  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch' | 'player_page';
   /** The underlying cause in words when one exists — a fetch carries the HTTP
    *  status or transport message; a reason with no such cause is null. */
   detail: string | null;

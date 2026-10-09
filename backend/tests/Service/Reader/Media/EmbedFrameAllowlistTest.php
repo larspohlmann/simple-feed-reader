@@ -50,6 +50,7 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
     public static function sourceUrls(): iterable
     {
         yield 'youtube' => ['https://www.youtube.com/watch?v=M1j_uRqKMKI'];
+        yield 'youtube short' => ['https://www.youtube.com/shorts/GhUuOxrCato'];
         yield 'vimeo' => ['https://vimeo.com/1226652197/'];
         yield 'unlisted vimeo' => ['https://vimeo.com/76979871/8272103f6e'];
         yield 'soundcloud' => ['https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2370150908'];
@@ -69,7 +70,7 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
 
         $matched = false;
         foreach ($providers->framePatterns() as $pattern) {
-            if (preg_match('#' . $pattern . '#', $target->url) === 1) {
+            if (preg_match('~' . $pattern . '~', $target->url) === 1) {
                 $matched = true;
                 break;
             }

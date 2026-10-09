@@ -72,6 +72,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
   ...over,

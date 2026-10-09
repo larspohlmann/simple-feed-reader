@@ -4,6 +4,7 @@ import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
+import { ShortBadgeComponent } from '../../../short-badge/short-badge.component';
 import { SPLIT_SIDE_IMAGE_SIZES } from '../../../rendition-sizes';
 
 @Component({
@@ -14,6 +15,7 @@ import { SPLIT_SIDE_IMAGE_SIZES } from '../../../rendition-sizes';
     EntryMetaComponent,
     EntryDuplicatesComponent,
     RenditionsDirective,
+    ShortBadgeComponent,
   ],
   templateUrl: './entry-split.component.html',
   styleUrl: './entry-split.component.scss',
@@ -24,8 +26,12 @@ export class EntrySplitComponent extends EntryImageBlockBase {
 
   /** The side box adapts to the image but stays bounded — landscape crops to
    *  3:2, portrait to 3:4. A portrait routed here from `hero`/`wide` shows AS a
-   *  portrait, not a thin cropped sliver. Unknown dimensions keep the 3:2 default. */
+   *  portrait, not a thin cropped sliver. Unknown dimensions keep the 3:2 default;
+   *  a Short's box is the stylesheet's. */
   readonly aspect = computed(() => {
+    if (this.entry().isShort) {
+      return null;
+    }
     const img = this.image();
     if (!img?.width || !img?.height) {
       return '3 / 2';

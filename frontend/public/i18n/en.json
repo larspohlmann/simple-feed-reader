@@ -1113,6 +1113,7 @@
     "keep": "Keep",
     "toggleRead": "Toggle read",
     "filterByTag": "Filter by {{name}}",
+    "shortBadge": "Short",
     "moreFrom": "More from {{source}}",
     "moreFromCount": "{{count}} more from {{source}}",
     "showLess": "Show less",

@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
 import { EntryDto, SubscriptionTagDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { describeShortPill } from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -47,21 +48,42 @@ const entry: EntryDto = {
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
 };
 
 describe('EntryCompactComponent', () => {
-  function mount() {
+  function mount(testEntry: EntryDto = entry) {
     TestBed.configureTestingModule({
       imports: [EntryCompactComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
     const fixture = TestBed.createComponent(EntryCompactComponent);
-    fixture.componentRef.setInput('entry', entry);
+    fixture.componentRef.setInput('entry', testEntry);
     fixture.detectChanges();
     return fixture;
   }
+
+  function mountInDigest(testEntry: EntryDto) {
+    const fixture = mount(testEntry);
+    fixture.componentRef.setInput('showSource', false);
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  describeShortPill((over) => mount({ ...entry, ...over }));
+
+  it('marks a Short in a source digest with a pill on its kicker line', () => {
+    const pill = mountInDigest({ ...entry, isShort: true }).querySelector('.pill.short');
+
+    expect(pill).not.toBeNull();
+    expect(pill!.closest('p.kicker')).not.toBeNull();
+  });
+
+  it('marks no other entry in a source digest', () => {
+    expect(mountInDigest(entry).querySelector('.pill.short')).toBeNull();
+  });
 
   it('renders the source and title', () => {
     const element = mount().nativeElement as HTMLElement;

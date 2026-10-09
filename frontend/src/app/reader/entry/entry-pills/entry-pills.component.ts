@@ -7,7 +7,7 @@ import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
 
 /**
- * Tag pills, then saved-search pills, as one wrapping list. Clicks stop
+ * The Short pill, tag pills, then saved-search pills, as one wrapping list. Clicks stop
  * propagating so a pill inside a clickable card follows its link instead.
  */
 @Component({
@@ -19,6 +19,7 @@ import { selectionQueryParams } from '../../query/query';
 export class EntryPillsComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  readonly tags = input.required<SubscriptionTagDto[]>();
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly savedSearches = input<SavedSearchMembershipDto[]>([]);
+  readonly short = input(false);
 }

@@ -1,7 +1,8 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
+import { showsShortPill } from '../preview-image';
 
 /**
  * The line a magazine card ends on: the entry's pills, with its own
@@ -18,4 +19,6 @@ import { EntryDto, SubscriptionTagDto } from '../../models';
 export class EntryMetaComponent {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
+  readonly imageShown = input(false);
+  readonly shortPill = computed(() => showsShortPill(this.entry(), this.imageShown()));
 }

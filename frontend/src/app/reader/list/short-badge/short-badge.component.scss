@@ -1,0 +1,14 @@
+:host {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  display: flex;
+  padding: var(--space-0);
+  border-radius: var(--radius-pill);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  pointer-events: none;
+}

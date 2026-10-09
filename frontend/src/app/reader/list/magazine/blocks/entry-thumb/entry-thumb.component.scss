@@ -1,4 +1,5 @@
 @use '../../magazine-card';
+@use '../../../short-cover';
 
 :host {
   display: block;
@@ -31,11 +32,21 @@
   }
 }
 
+.img-frame {
+  position: relative;
+  flex: none;
+  align-self: flex-start;
+
+  /* Drops the image onto the kicker text's letters, not the line-box top:
+     `align-self: flex-start` pins it ~0.35em above where letters begin,
+     leaving it looking too high without this nudge. */
+  margin-top: 0.35em;
+}
+
 .img {
   /* Fixed 88×66, both dimensions explicit, not width + aspect-ratio: a flex
      row stretches an aspect-ratio-only image, and a not-yet-loaded lazy image
      has no intrinsic size to hold the ratio. object-fit crops either way. */
-  flex: none;
   /* stylelint-disable declaration-property-unit-allowed-list --
      tuned thumbnail box, not spacing values. */
   width: 88px;
@@ -44,12 +55,12 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
-  align-self: flex-start;
+}
 
-  /* Drops the image onto the kicker text's letters, not the line-box top:
-     `align-self: flex-start` pins it ~0.35em above where letters begin,
-     leaving it looking too high without this nudge. */
-  margin-top: 0.35em;
+.img-frame.portrait .img {
+  @include short-cover.portrait-crop;
+
+  width: auto;
 }
 
 .body {

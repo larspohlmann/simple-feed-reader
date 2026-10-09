@@ -58,7 +58,7 @@ final class FeedLinkScannerTest extends TestCase
 
         self::assertCount(1, $candidates);
         self::assertSame('https://example.com/feed', $candidates[0]->url);
-        self::assertSame('RSS feed', $candidates[0]->title);
+        self::assertSame('A blog', $candidates[0]->title);
         // Nothing has parsed the document yet, so the dialect is still open.
         self::assertSame('feed', $candidates[0]->format);
     }
@@ -149,5 +149,51 @@ final class FeedLinkScannerTest extends TestCase
     public function testItReadsNothingFromAnEmptyPage(): void
     {
         self::assertSame([], $this->urls('   '));
+    }
+
+    public function testAGenericLinkLabelTakesThePagesName(): void
+    {
+        $html = /** @lang TEXT */ <<<'HTML'
+            <!doctype html><html><head><title>ScreenCrush - YouTube</title>
+              <meta property="og:title" content="ScreenCrush">
+              <link rel="alternate" type="application/rss+xml" title="RSS" href="/feeds/videos.xml?channel_id=UC1">
+              <link rel="alternate" type="application/atom+xml" title="Atom Feed" href="/atom">
+            </head><body></body></html>
+            HTML;
+
+        $candidates = $this->scanner->scan($html, 'https://example.com/');
+        $titles = array_map(static fn ($candidate) => $candidate->title, $candidates);
+
+        self::assertSame(['ScreenCrush', 'ScreenCrush'], $titles);
+    }
+
+    public function testWithoutOgTitleTheDocumentTitleNamesIt(): void
+    {
+        $html = '<html><head><title>Example Blog</title>'
+            . '<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="/rss"></head></html>';
+
+        self::assertSame('Example Blog', $this->scanner->scan($html, 'https://example.com/')[0]->title);
+    }
+
+    public function testASpecificLabelIsKept(): void
+    {
+        $html = '<html><head><meta property="og:title" content="Site">'
+            . '<link rel="alternate" type="application/rss+xml" title="Comments Feed" href="/c"></head></html>';
+
+        self::assertSame('Comments Feed', $this->scanner->scan($html, 'https://example.com/')[0]->title);
+    }
+
+    public function testAGenericLabelOnANamelessPageStays(): void
+    {
+        $html = '<html><head><link rel="alternate" type="application/rss+xml" title="RSS" href="/rss"></head></html>';
+
+        self::assertSame('RSS', $this->scanner->scan($html, 'https://example.com/')[0]->title);
+    }
+
+    public function testAGuessedFeedAnchorLabelledRssTakesThePagesName(): void
+    {
+        $html = '<html><head><title>Example Blog</title></head><body><a href="/updates">RSS</a></body></html>';
+
+        self::assertSame('Example Blog', $this->scanner->scan($html, 'https://example.com/')[0]->title);
     }
 }

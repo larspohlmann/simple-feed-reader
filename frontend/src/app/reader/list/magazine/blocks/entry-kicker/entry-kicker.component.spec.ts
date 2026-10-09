@@ -4,6 +4,7 @@ import { provideTranslocoTesting } from '../../../../../../testing/transloco-tes
 import { EntryKickerComponent } from './entry-kicker.component';
 import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { describeShortPill } from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -39,6 +40,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -56,6 +58,8 @@ function mount(testEntry: EntryDto) {
 }
 
 describe('EntryKickerComponent', () => {
+  describeShortPill((over) => mount(entry(over)));
+
   it('renders an oversized title and no image, even when the entry has one', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.textContent).toContain('A medium headline');

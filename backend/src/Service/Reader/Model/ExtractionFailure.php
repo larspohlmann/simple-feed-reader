@@ -16,4 +16,6 @@ enum ExtractionFailure: string
     case Empty = 'empty';
     /** The extraction did not reflect the article the feed carries. */
     case Mismatch = 'mismatch';
+    /** The page is a video or audio player; the feed body carries it. */
+    case PlayerPage = 'player_page';
 }

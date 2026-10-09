@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Repository\EntryListRow;
+use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Text\Support\EntryExcerpt;
 
 /**
@@ -26,7 +27,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -51,7 +52,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -73,7 +74,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
@@ -108,6 +109,7 @@ final class EntryJson
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
+            'isShort' => YouTubeShortUrl::is($entry->getUrl()),
             'savedSearches' => $row->savedSearches,
         ];
     }

@@ -217,8 +217,8 @@
   place-items: center;
   transform: translate(-50%, -50%);
   border-radius: var(--radius-pill);
-  background: rgb(0 0 0 / 55%);
-  color: rgb(255 255 255 / 92%);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
   font-size: var(--fs-xl);
   line-height: 1;
   pointer-events: none;
@@ -345,6 +345,13 @@
 .content ::ng-deep .reader-embed--tall {
   aspect-ratio: auto;
   height: 31.25rem;
+}
+
+/* A YouTube Short is portrait: a 9:16 box, centred and capped so it fits a desktop screen. */
+.content ::ng-deep .reader-embed--portrait {
+  aspect-ratio: 9 / 16;
+  width: min(100%, 22.5rem);
+  margin-inline: auto;
 }
 
 .content ::ng-deep audio,

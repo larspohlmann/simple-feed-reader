@@ -44,4 +44,35 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         self::assertNull($entry->getUrl());
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
     }
+
+    public function testTheContainersIngestorLeadsAVideoPagesBodyWithItsPlayerLink(): void
+    {
+        $ingestor = self::getContainer()->get(EntryIngestor::class);
+        self::assertInstanceOf(EntryIngestor::class, $ingestor);
+        $feed = new Feed('https://www.youtube.com/feeds/videos.xml?channel_id=UCabc');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+        $video = new ParsedEntryModel(
+            'yt:video:Xic3faS00Qs',
+            'https://www.youtube.com/watch?v=Xic3faS00Qs',
+            'Title',
+            null,
+            null,
+            '<p>Description</p>',
+            null,
+        );
+
+        $ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('Feed', null, null, null, [$video]),
+            new FeedIngestContext(new \DateTimeImmutable('2026-09-24T12:00:00Z'), null),
+        );
+        $this->entityManager->flush();
+
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $body = (string) $entry->getContentHtml();
+        self::assertStringContainsString('href="https://www.youtube-nocookie.com/embed/Xic3faS00Qs"', $body);
+        self::assertStringContainsString('<p>Description</p>', $body);
+    }
 }

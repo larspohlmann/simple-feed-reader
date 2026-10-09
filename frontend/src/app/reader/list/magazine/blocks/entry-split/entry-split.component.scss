@@ -1,4 +1,8 @@
+@use 'sass:math';
 @use '../../magazine-card';
+@use '../../../short-cover';
+
+$side-share: 0.38;
 
 :host {
   display: block;
@@ -39,26 +43,43 @@
   flex-direction: row-reverse;
 }
 
-.img {
+.img-frame {
   /* 38% of the column is the medium block's defining proportion (#148) — the
      old 88px thumbnail felt like a list row. Definite `width`, not `flex-basis`:
      a flex-basis image's aspect-ratio would drive width back up, crushing text. */
+  position: relative;
   flex: none;
-  width: 38%;
-  height: auto;
-
-  /* aspect-ratio is bound per-image in the component (3:2 for landscape, up to
-     3:4 for a portrait routed here from hero/wide); only the 3:2 fallback for
-     unknown dimensions would otherwise live here. */
-  object-fit: cover;
-  border-radius: var(--radius);
-  display: block;
+  width: math.percentage($side-share);
   align-self: flex-start;
 
   /* Drops the image onto the kicker text's letters, not the line-box top:
      `align-self: flex-start` pins it ~0.35em above where letters begin,
      leaving it looking too high without this nudge. */
   margin-top: 0.35em;
+}
+
+.img {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: var(--radius);
+  display: block;
+}
+
+.top:has(> .img-frame.portrait) {
+  container-type: inline-size;
+}
+
+.img-frame.portrait {
+  width: auto;
+}
+
+/* As tall as the 3:2 box a landscape image gets at the side share, so a Short's card is no taller. */
+.img-frame.portrait .img {
+  @include short-cover.portrait-crop;
+
+  width: auto;
+  height: calc(100cqi * #{$side-share} * 2 / 3);
 }
 
 .body {

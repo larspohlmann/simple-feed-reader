@@ -395,10 +395,10 @@ function hasSummary(entry: EntryDto): boolean {
 }
 
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
-  // Portraits are refused, demoting to `split`.
-  hero: (entry) => landscapeImageAtLeast(entry, 500),
+  // Portraits and Shorts are refused, demoting to `split`.
+  hero: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 500),
   // A portrait image cannot fill a 3:1 band at all.
-  wide: (entry) => landscapeImageAtLeast(entry, 400),
+  wide: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),
   thumb: (entry) => entryImage(entry) !== null,
   quote: (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
@@ -410,6 +410,11 @@ const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
 
 function fits(kind: EntryKind, entry: EntryDto): boolean {
   return FITS[kind](entry);
+}
+
+/** A Short's picture is a portrait cover; a full-width card would blow it up. */
+function notAShort(entry: EntryDto): boolean {
+  return !entry.isShort;
 }
 
 /** An unknown width is trusted only alongside the persisted image field. */

@@ -18,7 +18,11 @@ const savedSearch = (id: number, term: string): SavedSearchMembershipDto => ({
   term,
 });
 
-function mount(tags: SubscriptionTagDto[], savedSearches: SavedSearchMembershipDto[] = []) {
+function mount(
+  tags: SubscriptionTagDto[],
+  savedSearches: SavedSearchMembershipDto[] = [],
+  short = false,
+) {
   TestBed.configureTestingModule({
     imports: [EntryPillsComponent, provideTranslocoTesting()],
     providers: [provideRouter([{ path: '**', children: [] }])],
@@ -26,6 +30,7 @@ function mount(tags: SubscriptionTagDto[], savedSearches: SavedSearchMembershipD
   const fixture = TestBed.createComponent(EntryPillsComponent);
   fixture.componentRef.setInput('tags', tags);
   fixture.componentRef.setInput('savedSearches', savedSearches);
+  fixture.componentRef.setInput('short', short);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -37,6 +42,32 @@ describe('EntryPillsComponent', () => {
   it('lists the tag pills first, then the saved-search pills', () => {
     const element = mount([tag(1, 'Tech'), tag(2, 'News')], [savedSearch(5, 'climate')]);
     expect(pillNames(element)).toEqual(['Tech', 'News', 'climate']);
+  });
+
+  it('leads with a Short pill, as plain text rather than a link, when asked to', () => {
+    const element = mount([tag(1, 'Tech')], [], true);
+    const first = element.querySelector('.pill')!;
+
+    expect(first.classList).toContain('short');
+    expect(first.tagName).toBe('SPAN');
+    expect(first.textContent?.trim()).toBe('Short');
+  });
+
+  it('shows no Short pill by default', () => {
+    expect(mount([tag(1, 'Tech')]).querySelector('.pill.short')).toBeNull();
+  });
+
+  it('renders a lone Short pill without being given tags', () => {
+    TestBed.configureTestingModule({
+      imports: [EntryPillsComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
+    });
+    const fixture = TestBed.createComponent(EntryPillsComponent);
+    fixture.componentRef.setInput('short', true);
+    fixture.detectChanges();
+
+    const pills = (fixture.nativeElement as HTMLElement).querySelectorAll('.pill');
+    expect([...pills].map((pill) => pill.className)).toEqual(['pill short']);
   });
 
   it('renders no pill when there are neither tags nor saved searches', () => {

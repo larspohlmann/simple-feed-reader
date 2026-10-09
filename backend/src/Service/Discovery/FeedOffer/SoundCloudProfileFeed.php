@@ -6,6 +6,7 @@ namespace App\Service\Discovery\FeedOffer;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Html\Support\MetaProperty;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
@@ -36,7 +37,7 @@ final readonly class SoundCloudProfileFeed implements FeedOfferInterface
 
     private function deepLinkedUserId(HTMLDocument $document): ?string
     {
-        $deepLink = trim($this->metaContent($document, 'al:ios:url'));
+        $deepLink = trim(MetaProperty::content($document, 'al:ios:url'));
 
         if (!str_starts_with($deepLink, self::USER_DEEP_LINK)) {
             return null;
@@ -49,13 +50,8 @@ final readonly class SoundCloudProfileFeed implements FeedOfferInterface
 
     private function profileName(HTMLDocument $document): ?string
     {
-        $name = TextNormalizer::normalize($this->metaContent($document, 'og:title'));
+        $name = TextNormalizer::normalize(MetaProperty::content($document, 'og:title'));
 
         return '' === $name ? null : $name;
-    }
-
-    private function metaContent(HTMLDocument $document, string $property): string
-    {
-        return $document->querySelector(sprintf('meta[property="%s"]', $property))?->getAttribute('content') ?? '';
     }
 }

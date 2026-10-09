@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeEmbedProviderTest extends TestCase
@@ -71,5 +72,42 @@ final class YouTubeEmbedProviderTest extends TestCase
     public function testRejectsALookalikeHost(): void
     {
         self::assertFalse($this->provider->matches('https://youtube.com.evil.test/embed/M1j_uRqKMKI'));
+    }
+
+    #[DataProvider('shortsUrls')]
+    public function testReadsAShortAsAPortraitEmbed(string $url): void
+    {
+        self::assertTrue($this->provider->matches($url));
+        self::assertSame(
+            'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts',
+            $this->provider->normalize($url)
+        );
+        self::assertSame(
+            'https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg',
+            $this->provider->poster($url)
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function shortsUrls(): iterable
+    {
+        yield 'www' => ['https://www.youtube.com/shorts/GhUuOxrCato'];
+        yield 'mobile host' => ['https://m.youtube.com/shorts/GhUuOxrCato'];
+        yield 'bare host with a share query' => ['https://youtube.com/shorts/GhUuOxrCato?feature=share'];
+    }
+
+    public function testRejectsAShortsPathWithoutAnId(): void
+    {
+        self::assertFalse($this->provider->matches('https://www.youtube.com/shorts/'));
+        self::assertFalse($this->provider->matches('https://www.youtube.com/shorts/tooShort'));
+    }
+
+    public function testFramePatternAcceptsTheShortMarkerAndNothingElse(): void
+    {
+        $pattern = '~' . $this->provider->framePattern() . '~';
+
+        self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts'));
+        self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato'));
+        self::assertSame(0, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'));
     }
 }

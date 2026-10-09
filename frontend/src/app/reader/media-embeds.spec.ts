@@ -177,4 +177,22 @@ describe('upgradeMediaEmbeds', () => {
     expect(element.querySelector('.reader-embed')).not.toBeNull();
     expect(element.querySelector('.reader-embed--tall')).toBeNull();
   });
+
+  it('gives a YouTube Short a portrait box and keeps the fragment on the iframe', () => {
+    const element = host(
+      '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts">x</a>',
+    );
+
+    expect(element.querySelector('div.reader-embed.reader-embed--portrait')).not.toBeNull();
+    expect(element.querySelector('iframe')?.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts',
+    );
+  });
+
+  it('keeps the landscape box for an ordinary YouTube embed', () => {
+    const element = host('<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>');
+
+    expect(element.querySelector('.reader-embed')).not.toBeNull();
+    expect(element.querySelector('.reader-embed--portrait')).toBeNull();
+  });
 });

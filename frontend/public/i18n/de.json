@@ -1113,6 +1113,7 @@
     "keep": "Merken",
     "toggleRead": "Gelesen umschalten",
     "filterByTag": "Nach {{name}} filtern",
+    "shortBadge": "Short",
     "moreFrom": "Mehr von {{source}}",
     "moreFromCount": "{{count}} weitere von {{source}}",
     "showLess": "Weniger anzeigen",

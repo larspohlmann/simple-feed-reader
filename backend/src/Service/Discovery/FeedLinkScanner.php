@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Pass\LinkLabels;
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -40,9 +40,6 @@ final readonly class FeedLinkScanner
     /** A footer rarely hides more than a couple of feeds; the rest of a match list is noise. */
     private const int MAX_GUESSES = 5;
 
-    /** A label is a card heading, not an article: anything longer is markup that leaked in. */
-    private const int MAX_LABEL_CHARS = 120;
-
     /** `/feed`, `/rss/`, `/atom` — but not `/feedback`. */
     private const string FEED_PATH = '#/(feed|rss|atom)s?(/|$)#i';
 
@@ -61,13 +58,14 @@ final readonly class FeedLinkScanner
         $document = HtmlDocumentParser::parseOrEmpty($html);
 
         $pageUrls = new PageUrls($baseUrl);
-        $advertised = $this->advertisedFeeds($document, $pageUrls);
+        $labels = new LinkLabels($document);
+        $advertised = $this->advertisedFeeds($document, $pageUrls, $labels);
 
-        return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $pageUrls);
+        return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $pageUrls, $labels);
     }
 
     /** @return list<FeedCandidateModel> */
-    private function advertisedFeeds(HTMLDocument $document, PageUrls $pageUrls): array
+    private function advertisedFeeds(HTMLDocument $document, PageUrls $pageUrls, LinkLabels $labels): array
     {
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type]') as $link) {
@@ -77,14 +75,14 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidateModel($url, $this->label($link), $format);
+            $candidates[$url] = new FeedCandidateModel($url, $labels->nameFor($labels->ownLabel($link)), $format);
         }
 
         return array_values($candidates);
     }
 
     /** @return list<FeedCandidateModel> */
-    private function feedShapedLinks(HTMLDocument $document, PageUrls $pageUrls): array
+    private function feedShapedLinks(HTMLDocument $document, PageUrls $pageUrls, LinkLabels $labels): array
     {
         $candidates = [];
         foreach ($document->querySelectorAll('link[rel~="alternate" i][type], a[href]') as $link) {
@@ -93,12 +91,12 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $label = $this->label($link);
-            if (!$this->looksLikeAFeed($link, $url, $label)) {
+            $ownLabel = $labels->ownLabel($link);
+            if (!$this->looksLikeAFeed($link, $url, $ownLabel)) {
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidateModel($url, $label, self::GUESSED_FORMAT);
+            $candidates[$url] = new FeedCandidateModel($url, $labels->nameFor($ownLabel), self::GUESSED_FORMAT);
             if (\count($candidates) === self::MAX_GUESSES) {
                 break;
             }
@@ -138,19 +136,6 @@ final readonly class FeedLinkScanner
         $resolved = $pageUrls->httpUrl($href);
 
         return null === $resolved || $pageUrls->isPageItself($resolved) ? null : $resolved;
-    }
-
-    /** The link's own name: its title attribute, or the text a reader sees. */
-    private function label(Element $link): ?string
-    {
-        foreach ([$link->getAttribute('title'), $link->getAttribute('aria-label'), $link->textContent] as $text) {
-            $normalized = TextNormalizer::normalize((string) $text);
-            if ('' !== $normalized) {
-                return mb_substr($normalized, 0, self::MAX_LABEL_CHARS);
-            }
-        }
-
-        return null;
     }
 
     private function attribute(Element $link, string $name): string

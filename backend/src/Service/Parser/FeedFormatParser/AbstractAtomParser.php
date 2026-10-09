@@ -16,6 +16,7 @@ use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\MediaDescription;
 use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
@@ -101,14 +102,15 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             [$contentHtml, $this->elementMarkup($entry, 'summary')],
         );
         $mediaBundle = $this->mediaExtractor->extract($entry);
+        $summary = XmlHelper::childText($entry, 'summary', $this->namespaceUri());
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
             author: $this->authorName($entry),
-            summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
-            contentHtml: FeedBodyHtml::of($contentHtml),
+            summary: $summary,
+            contentHtml: FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null),
             publishedAt: DateParser::parse($this->firstDate($entry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),

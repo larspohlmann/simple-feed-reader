@@ -39,6 +39,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -52,14 +53,15 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-function mount(tags: SubscriptionTagDto[]) {
+function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = entry(), imageShown?: boolean) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
   });
   const fixture = TestBed.createComponent(EntryMetaComponent);
-  fixture.componentRef.setInput('entry', entry());
+  fixture.componentRef.setInput('entry', testEntry);
   fixture.componentRef.setInput('tags', tags);
+  if (imageShown !== undefined) fixture.componentRef.setInput('imageShown', imageShown);
   fixture.detectChanges();
   return fixture;
 }
@@ -94,5 +96,26 @@ describe('EntryMetaComponent', () => {
     expect(favorite).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(keep).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
     expect(read).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+  });
+
+  describe('Short pill', () => {
+    const shortPill = (testEntry: EntryDto, imageShown?: boolean) =>
+      (mount([], testEntry, imageShown).nativeElement as HTMLElement).querySelector('.pill.short');
+
+    it('marks a Short whose card shows no image', () => {
+      expect(shortPill(entry({ isShort: true }), false)).not.toBeNull();
+    });
+
+    it('takes a card to show no image unless told otherwise', () => {
+      expect(shortPill(entry({ isShort: true }))).not.toBeNull();
+    });
+
+    it('leaves a Short whose image is shown to the image badge', () => {
+      expect(shortPill(entry({ isShort: true }), true)).toBeNull();
+    });
+
+    it('marks no other entry', () => {
+      expect(shortPill(entry(), false)).toBeNull();
+    });
   });
 });

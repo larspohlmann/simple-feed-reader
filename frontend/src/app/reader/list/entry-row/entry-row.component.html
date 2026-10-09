@@ -28,23 +28,32 @@
       }
     </p>
     <div class="tagline">
-      <app-entry-pills [tags]="tags()" [savedSearches]="entry().savedSearches ?? []" />
+      <app-entry-pills
+        [tags]="tags()"
+        [savedSearches]="entry().savedSearches ?? []"
+        [short]="shortPill()"
+      />
       <app-entry-actions [entry]="entry()" size="md" />
     </div>
     <app-entry-duplicates [entry]="entry()" />
   </div>
-  @if (image() && !imgError()) {
-    <img
-      class="thumb"
-      [src]="image()!"
-      #renditions="appRenditions"
-      [appRenditions]="entry().imageRenditions"
-      [renditionSizes]="coverBoxSizes"
-      alt=""
-      loading="lazy"
-      decoding="async"
-      referrerpolicy="no-referrer"
-      (error)="renditions.fallBackToSrc() || imgError.set(true)"
-    />
+  @if (showImage()) {
+    <div class="img-frame" [class.portrait]="entry().isShort">
+      <img
+        class="thumb"
+        [src]="image()!"
+        #renditions="appRenditions"
+        [appRenditions]="entry().imageRenditions"
+        [renditionSizes]="coverBoxSizes"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        (error)="renditions.fallBackToSrc() || imgError.set(true)"
+      />
+      @if (entry().isShort) {
+        <app-short-badge />
+      }
+    </div>
   }
 </article>

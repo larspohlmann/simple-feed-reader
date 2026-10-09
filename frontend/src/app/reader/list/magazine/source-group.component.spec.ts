@@ -47,6 +47,7 @@ const entryAt = (id: number): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
 });

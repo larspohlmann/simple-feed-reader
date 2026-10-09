@@ -1,3 +1,6 @@
+@if (short()) {
+  <span class="pill short">{{ 'reader.shortBadge' | transloco }}</span>
+}
 @for (t of tags(); track t.id) {
   <a
     class="pill"
