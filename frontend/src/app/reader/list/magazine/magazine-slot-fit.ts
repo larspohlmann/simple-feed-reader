@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { entryImage, EntryImage, entrySnippet } from '../preview-image';
+import { entryImage, entrySnippet, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
@@ -51,10 +51,10 @@ function hasSummary(entry: EntryDto): boolean {
 }
 
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
-  // Portraits and Shorts are refused, demoting to `split`.
-  hero: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 500),
-  // A portrait image cannot fill a 3:1 band at all.
-  wide: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 400),
+  // A portrait cover is refused, demoting to `split`.
+  hero: (entry) => landscapeImageAtLeast(entry, 500),
+  // A portrait cover cannot fill a 3:1 band at all.
+  wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),
   thumb: (entry) => entryImage(entry) !== null,
   quote: (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
@@ -68,11 +68,6 @@ export function fits(kind: EntryKind, entry: EntryDto): boolean {
   return FITS[kind](entry);
 }
 
-/** A Short's picture is a portrait cover; a full-width card would blow it up. */
-function notAShort(entry: EntryDto): boolean {
-  return !entry.isShort;
-}
-
 /** An unknown width is trusted only alongside the persisted image field. */
 function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
   const image = entryImage(entry);
@@ -81,13 +76,5 @@ function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
 }
 
 function landscapeImageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
-  const image = entryImage(entry);
-  return !!image && !isPortrait(image) && imageAtLeast(entry, minimumWidth);
-}
-
-/** A known-portrait image — declared height clearly exceeds width. Unknown
- *  dimensions are NOT portrait: orientation can't be judged, so the image keeps
- *  its slot. The small margin keeps a near-square image on the image-above path. */
-function isPortrait(image: EntryImage): boolean {
-  return !!image.width && !!image.height && image.height > image.width * 1.05;
+  return portraitCoverRatio(entry) === null && imageAtLeast(entry, minimumWidth);
 }

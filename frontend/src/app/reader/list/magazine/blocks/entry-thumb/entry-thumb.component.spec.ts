@@ -6,10 +6,8 @@ import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
-import {
-  describeShortMarking,
-  describeShortPortrait,
-} from '../../../../../../testing/short-marking-testing';
+import { describeShortMarking } from '../../../../../../testing/short-marking-testing';
+import { describePortraitCover } from '../../../../../../testing/portrait-cover-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -49,6 +47,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -71,7 +70,7 @@ function mount(testEntry: EntryDto) {
 
 describe('EntryThumbComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
-  describeShortPortrait((over) => mount(entry(over)));
+  describePortraitCover((over) => mount(entry(over)));
 
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());

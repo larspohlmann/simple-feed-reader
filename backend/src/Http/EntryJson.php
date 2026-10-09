@@ -7,6 +7,7 @@ namespace App\Http;
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Repository\EntryListRow;
+use App\Service\Reader\Media\Support\CoverAspectRatio;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Text\Support\EntryExcerpt;
 
@@ -20,7 +21,7 @@ final class EntryJson
      * @return array{
      *   id: int|null, title: string, url: string|null, author: string|null,
      *   summary: string|null, excerpt: string,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
      *   imageRenditions: list<array{url: string, width: int}>,
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
@@ -45,7 +46,7 @@ final class EntryJson
      * @return array{
      *   id: int|null, title: string, url: string|null, author: string|null,
      *   summary: string|null, excerpt: string, contentHtml: string|null,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
      *   imageRenditions: list<array{url: string, width: int}>,
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
@@ -67,7 +68,7 @@ final class EntryJson
      * @return array{
      *   id: int|null, title: string, url: string|null, author: string|null,
      *   summary: string|null,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
      *   imageRenditions: list<array{url: string, width: int}>,
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
@@ -95,6 +96,7 @@ final class EntryJson
             'imageUrl' => $entry->getImageUrl(),
             'imageWidth' => $entry->getImageWidth(),
             'imageHeight' => $entry->getImageHeight(),
+            'imageAspectRatio' => CoverAspectRatio::of($entry->getUrl()),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),

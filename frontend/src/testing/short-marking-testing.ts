@@ -57,21 +57,3 @@ export function describeShortPill(render: RenderEntry): void {
     });
   });
 }
-
-/** The rule for a layout with a side image: a Short's cover shows in portrait. */
-export function describeShortPortrait(render: RenderEntry): void {
-  describe('YouTube Short portrait', () => {
-    it('crops the image of a Short to a portrait box', () => {
-      const element = render({ isShort: true }).nativeElement as HTMLElement;
-
-      expect(element.querySelector('.img-frame.portrait > img')).not.toBeNull();
-    });
-
-    it('keeps the image box of any other entry', () => {
-      const element = render({}).nativeElement as HTMLElement;
-
-      expect(element.querySelector('.img-frame > img')).not.toBeNull();
-      expect(element.querySelector('.img-frame.portrait')).toBeNull();
-    });
-  });
-}

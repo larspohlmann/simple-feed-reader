@@ -1596,7 +1596,7 @@ a sweep.
 |---|---|
 | `color-no-hex` | no hex literals — colours come from tokens |
 | `declaration-property-unit-allowed-list` | `padding*`, `margin*`, `gap`/`row-gap`/`column-gap`, `font-size`, `border-radius` accept only `%`/`em`/`rem` — i.e. a raw `px` is a failure, and a `var(--space-*)` is not a unit at all, so tokens pass |
-| ↳ same rule, sizing props | `width`/`height`/`min-*`/`max-*` additionally accept `ch`/`vw`/`vh`/`dvw`/`dvh`/`cqi`/`fr` (`cqi` sizes a box from its container, as a Short's cover does) |
+| ↳ same rule, sizing props | `width`/`height`/`min-*`/`max-*` additionally accept `ch`/`vw`/`vh`/`dvw`/`dvh`/`cqi`/`fr` (`cqi` sizes a box from its container, as a portrait cover in a split does) |
 | `media-feature-name-unit-allowed-list` | `@media (width …)` accepts **no** unit — forces `bp.$bp-*` |
 
 **Exempt** (all three rules disabled): `src/app/theme/**/*.scss`,
@@ -1654,14 +1654,19 @@ relative units for the budget, not a layout guarantee.
 
 | Block | Height | Image | Fills when |
 |---|---|---|---|
-| **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the entry is not a YouTube Short |
-| **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the entry is not a YouTube Short |
+| **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
+| **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
-| **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a YouTube Short's cover is 9:16, as tall as the 3:2 side box |
+| **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |
 | **Kicker** | 140px | none — oversized title only | the entry has a summary to show as a dek |
-| **Thumb** | 90px | fixed 88px box, `aspect-ratio: 4 / 3` | any persisted image; a YouTube Short's cover is 9:16, 66px tall |
+| **Thumb** | 90px | fixed 88px box, `aspect-ratio: 4 / 3` | any persisted image; a portrait cover keeps its shape (never narrower than 9:16), 66px tall |
 | **Compact** | 66px | none | always |
 | **Group** (source digest) | ~300px (not in `BLOCK_HEIGHT` — it consumes entries directly, not a template slot) | none — each row inside is a `<app-entry-compact>` | a same-source run of ≥ 3 entries whose source holds under 40% of the loaded entries |
+
+**A cover's orientation is the shape of the picture it shows** (#1466): the API's
+`imageAspectRatio` when the image file letterboxes the picture (a YouTube Short's 4:3
+thumbnail holds a 9:16 cover between bars), else the declared width / height. Below
+1 / 1.05 it is portrait; unknown dimensions are not.
 
 **"Width unknown" is not the same treatment everywhere.** `fits()` reads the
 persisted `imageWidth` and treats `0` (unknown) differently per kind. The three

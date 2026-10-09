@@ -10,7 +10,7 @@
 >
   <div class="top">
     @if (showImage()) {
-      <div class="img-frame" [class.portrait]="entry().isShort">
+      <div class="img-frame" [class.portrait]="portraitRatio() !== null">
         <img
           class="img"
           [src]="image()!.url"
