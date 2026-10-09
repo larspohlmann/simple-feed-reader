@@ -9,6 +9,7 @@ use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
+use App\Service\Parser\Support\XmlHelper;
 use Dom\Element;
 
 /**
@@ -18,8 +19,6 @@ use Dom\Element;
  */
 final readonly class ItemImageExtractor
 {
-    private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
-
     /** Media RSS image, searching <media:group> when nothing is attached directly; its other widths join it. */
     public function fromMedia(\DOMElement $item): ?DeclaredImageModel
     {
@@ -164,6 +163,6 @@ final readonly class ItemImageExtractor
     {
         return $node instanceof \DOMElement
             && $node->localName === $localName
-            && $node->namespaceURI === self::MEDIA_NS;
+            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
     }
 }

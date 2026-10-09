@@ -10,6 +10,7 @@ final class XmlHelper
 {
     /** Dublin Core: RSS feeds, and Atom feeds without their dialect's own date, carry the entry date as <dc:date>. */
     public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
+    public const string MEDIA_RSS_NAMESPACE = 'http://search.yahoo.com/mrss/';
     public const string ITUNES_NAMESPACE = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
     /**
@@ -21,6 +22,19 @@ final class XmlHelper
         foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
             $text = trim($child->textContent);
             if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    /** Trimmed text of the first direct child with this local name that sits in no namespace and has text. */
+    public static function unqualifiedChildText(\DOMElement $parent, string $localName): ?string
+    {
+        foreach (self::childElements($parent, $localName, null) as $child) {
+            $text = trim($child->textContent);
+            if ($text !== '' && ($child->namespaceURI === null || $child->namespaceURI === '')) {
                 return $text;
             }
         }

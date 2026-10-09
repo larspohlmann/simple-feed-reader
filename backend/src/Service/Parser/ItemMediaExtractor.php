@@ -17,8 +17,6 @@ use App\Service\Parser\Support\XmlHelper;
  */
 final readonly class ItemMediaExtractor
 {
-    private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
-
     public function extract(\DOMElement $item): ParsedMediaBundleModel
     {
         $fallbackDuration = self::itunesDuration($item);
@@ -192,6 +190,6 @@ final readonly class ItemMediaExtractor
     {
         return $node instanceof \DOMElement
             && $node->localName === $localName
-            && $node->namespaceURI === self::MEDIA_NS;
+            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
     }
 }

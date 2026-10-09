@@ -475,4 +475,45 @@ final class Atom10ParserTest extends TestCase
 
         self::assertStringContainsString('<p>a<br><br>b</p>', (string) $entry->contentHtml);
     }
+
+    public function testContentWinsOverAMediaGroupDescription(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <content type="html">&lt;p&gt;Body&lt;/p&gt;</content>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
+
+    public function testAMediaGroupDescriptionFillsABodylessEntry(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertSame('<p>Described</p>', $entry->contentHtml);
+    }
+
+    public function testASummaryKeepsAMediaDescriptionOutOfTheBody(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title>
+              <link rel="alternate" href="https://example.com/a"/>
+              <summary>Short</summary>
+              <media:group><media:description>Described</media:description></media:group>
+            </entry>
+            XML);
+
+        self::assertNull($entry->contentHtml);
+    }
 }

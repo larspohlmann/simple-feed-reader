@@ -11,6 +11,7 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\FeedMediaClassifier;
 use App\Service\Parser\Support\MediaDuration;
+use App\Service\Parser\Support\XmlHelper;
 
 /**
  * One feed media element — a `<media:content>`, `<media:thumbnail>`, or an
@@ -19,8 +20,6 @@ use App\Service\Parser\Support\MediaDuration;
  */
 final readonly class FeedMediaNode
 {
-    private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
-
     public function __construct(private \DOMElement $element)
     {
     }
@@ -90,7 +89,7 @@ final readonly class FeedMediaNode
     {
         return $node instanceof \DOMElement
             && $node->localName === 'title'
-            && $node->namespaceURI === self::MEDIA_NS;
+            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
     }
 
     private function intAttribute(string $name): ?int

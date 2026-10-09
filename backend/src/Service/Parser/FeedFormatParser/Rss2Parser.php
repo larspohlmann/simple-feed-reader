@@ -17,6 +17,7 @@ use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\MediaDescription;
 use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
@@ -68,7 +69,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             return null;
         }
 
-        $description = XmlHelper::childText($entry, 'description');
+        $description = XmlHelper::unqualifiedChildText($entry, 'description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
         $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);
@@ -80,7 +81,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             title: PlainText::from($title) ?? '(untitled)',
             author: XmlHelper::childText($entry, 'author') ?? XmlHelper::childText($entry, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
-            contentHtml: FeedBodyHtml::of($contentEncoded ?? $description),
+            contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
             publishedAt: DateParser::parse(
                 XmlHelper::childText($entry, 'pubDate') ?? XmlHelper::childText($entry, 'date', self::DC_NS),
             ),

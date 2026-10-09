@@ -404,4 +404,29 @@ final class Rss2ParserTest extends TestCase
 
         self::assertSame('2026-10-06T10:00:00+00:00', $entry->publishedAt?->format(DATE_ATOM));
     }
+
+    public function testMediaDescriptionFillsAnItemWithoutABody(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title><link>https://example.com/a</link>
+              <media:description>Described</media:description>
+            </item>
+            XML);
+
+        self::assertSame('<p>Described</p>', $entry->contentHtml);
+    }
+
+    public function testDescriptionWinsOverMediaDescription(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item xmlns:media="http://search.yahoo.com/mrss/">
+              <title>T</title><link>https://example.com/a</link>
+              <description>&lt;p&gt;Body&lt;/p&gt;</description>
+              <media:description>Described</media:description>
+            </item>
+            XML);
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
 }
