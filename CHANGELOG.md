@@ -10,6 +10,23 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+### Highlights
+
+**YouTube channels you can watch.** Paste a channel link such as
+`https://www.youtube.com/@ScreenCrush` into "Add feed" and the reader offers
+the channel's feed under the channel's name. Each new video plays right in the
+reader, with its description beneath. Shorts play in a portrait player and
+carry a Short badge in the list.
+
+**Portrait pictures keep their shape.** Tall covers show at their own
+proportions in the list and the magazine instead of being cropped to a
+landscape box, and an entry with a picture no longer lands in a text-only
+magazine card.
+
+**Cleaner feed text.** Text pasted into a feed or an article keeps its line
+breaks, and an RSS item's own title, link and description are no longer
+overridden by a podcast or media tag of the same name.
+
 ## [v1.3.1] - 2026-10-08
 
 ## What's Changed

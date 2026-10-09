@@ -88,11 +88,18 @@ More in the [screenshot gallery](docs/screenshots.md).
   - `https://podcasts.apple.com/us/podcast/id394775318` and
     `https://itunes.apple.com/us/podcast/99-invisible/id394775318`
 
+**Watching**
+
+- Paste a YouTube channel link (`https://www.youtube.com/@ScreenCrush`) into
+  "Add feed" to subscribe to the channel. New videos play in the reader with
+  their description; Shorts play in a portrait player and are marked in the
+  list.
+
 **Feeds**
 
 - Add a feed by its address — or paste the website's address and the app
-  finds the feed for you. A show link from Apple Podcasts or a SoundCloud
-  profile link works too.
+  finds the feed for you. A show link from Apple Podcasts, a SoundCloud
+  profile link or a YouTube channel link works too.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
