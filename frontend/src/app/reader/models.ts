@@ -230,6 +230,8 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** The entry links a YouTube Short (`youtube.com/shorts/<id>`). */
+  isShort: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */

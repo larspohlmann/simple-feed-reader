@@ -39,12 +39,23 @@
   flex-direction: row-reverse;
 }
 
-.img {
+.img-frame {
   /* 38% of the column is the medium block's defining proportion (#148) — the
      old 88px thumbnail felt like a list row. Definite `width`, not `flex-basis`:
      a flex-basis image's aspect-ratio would drive width back up, crushing text. */
+  position: relative;
   flex: none;
   width: 38%;
+  align-self: flex-start;
+
+  /* Drops the image onto the kicker text's letters, not the line-box top:
+     `align-self: flex-start` pins it ~0.35em above where letters begin,
+     leaving it looking too high without this nudge. */
+  margin-top: 0.35em;
+}
+
+.img {
+  width: 100%;
   height: auto;
 
   /* aspect-ratio is bound per-image in the component (3:2 for landscape, up to
@@ -53,12 +64,6 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
-  align-self: flex-start;
-
-  /* Drops the image onto the kicker text's letters, not the line-box top:
-     `align-self: flex-start` pins it ~0.35em above where letters begin,
-     leaving it looking too high without this nudge. */
-  margin-top: 0.35em;
 }
 
 .body {

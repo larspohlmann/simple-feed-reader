@@ -4,6 +4,7 @@ import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
+import { ShortBadgeComponent } from '../../../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../../../rendition-sizes';
 
 @Component({
@@ -14,6 +15,7 @@ import { COVER_BOX_SIZES } from '../../../rendition-sizes';
     EntryMetaComponent,
     EntryDuplicatesComponent,
     RenditionsDirective,
+    ShortBadgeComponent,
   ],
   templateUrl: './entry-thumb.component.html',
   styleUrl: './entry-thumb.component.scss',

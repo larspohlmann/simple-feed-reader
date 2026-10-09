@@ -8,22 +8,27 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   @if (showImage()) {
-    <img
-      class="img"
-      [src]="image()!.url"
-      #renditions="appRenditions"
-      [appRenditions]="entry().imageRenditions"
-      [renditionSizes]="fullColumnSizes"
-      [style.aspect-ratio]="aspect()"
-      [attr.width]="image()!.width"
-      [attr.height]="image()!.height"
-      alt=""
-      loading="lazy"
-      decoding="async"
-      referrerpolicy="no-referrer"
-      (load)="onLoad($event)"
-      (error)="renditions.fallBackToSrc() || imgError.set(true)"
-    />
+    <div class="img-frame">
+      <img
+        class="img"
+        [src]="image()!.url"
+        #renditions="appRenditions"
+        [appRenditions]="entry().imageRenditions"
+        [renditionSizes]="fullColumnSizes"
+        [style.aspect-ratio]="aspect()"
+        [attr.width]="image()!.width"
+        [attr.height]="image()!.height"
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerpolicy="no-referrer"
+        (load)="onLoad($event)"
+        (error)="renditions.fallBackToSrc() || imgError.set(true)"
+      />
+      @if (entry().isShort) {
+        <app-short-badge />
+      }
+    </div>
   }
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [faviconSize]="14" />
@@ -31,7 +36,7 @@
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }
-    <app-entry-meta [entry]="entry()" [tags]="tags()" />
+    <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="showImage()" />
     <app-entry-duplicates [entry]="entry()" />
   </div>
 </article>

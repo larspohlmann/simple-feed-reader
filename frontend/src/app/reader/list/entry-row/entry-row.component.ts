@@ -19,6 +19,7 @@ import { EntryDto, SubscriptionTagDto } from '../../models';
 import { entryImage, entrySnippet } from '../preview-image';
 import { relativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
+import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
 
 @Component({
@@ -35,6 +36,7 @@ import { COVER_BOX_SIZES } from '../rendition-sizes';
     EntryActionsComponent,
     forwardRef(() => EntryDuplicatesComponent),
     RenditionsDirective,
+    ShortBadgeComponent,
   ],
   templateUrl: './entry-row.component.html',
   styleUrl: './entry-row.component.scss',
@@ -60,6 +62,7 @@ export class EntryRowComponent {
   // persisted hero when present, else an inline <img>. One source of truth, so
   // a picture never shows in one view and hides in another.
   readonly image = computed(() => entryImage(this.entry())?.url ?? null);
+  readonly showImage = computed(() => !!this.image() && !this.imgError());
   readonly snippet = computed(() => entrySnippet(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>

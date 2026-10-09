@@ -7,7 +7,7 @@ import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
 
 /**
- * Tag pills, then saved-search pills, as one wrapping list. Clicks stop
+ * The Short pill, tag pills, then saved-search pills, as one wrapping list. Clicks stop
  * propagating so a pill inside a clickable card follows its link instead.
  */
 @Component({
@@ -21,4 +21,6 @@ export class EntryPillsComponent {
 
   readonly tags = input.required<SubscriptionTagDto[]>();
   readonly savedSearches = input<SavedSearchMembershipDto[]>([]);
+  /** The entry is a YouTube Short whose image, and with it the image's badge, is not shown. */
+  readonly short = input(false);
 }

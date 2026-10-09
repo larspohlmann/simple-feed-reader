@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
@@ -18,4 +18,7 @@ import { EntryDto, SubscriptionTagDto } from '../../models';
 export class EntryMetaComponent {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
+  /** The card shows the entry's image, which carries a Short's badge in place of the pill. */
+  readonly imageShown = input(false);
+  readonly shortPill = computed(() => this.entry().isShort && !this.imageShown());
 }

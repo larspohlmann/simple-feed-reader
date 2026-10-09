@@ -1,0 +1,13 @@
+:host {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  padding: var(--space-0) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 55%);
+  color: rgb(255 255 255 / 92%);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  pointer-events: none;
+}

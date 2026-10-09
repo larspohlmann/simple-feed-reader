@@ -84,7 +84,15 @@
   gap: var(--space-3);
 }
 
+.img-frame {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
 .thumb {
+  display: block;
+
   /* stylelint-disable-next-line declaration-property-unit-allowed-list --
      tuned thumbnail box (4:3), not a spacing value. */
   width: 88px;
@@ -94,9 +102,8 @@
   height: 66px;
   object-fit: cover;
   border-radius: var(--radius);
-  flex: 0 0 auto;
 }
 
-.row.img-left .thumb {
+.row.img-left .img-frame {
   order: -1;
 }

@@ -26,7 +26,11 @@
   cursor: pointer;
 }
 
-.pill:hover {
+.short {
+  cursor: inherit;
+}
+
+.pill:not(.short):hover {
   --rim-base: var(--border-strong);
 
   color: var(--text-primary);

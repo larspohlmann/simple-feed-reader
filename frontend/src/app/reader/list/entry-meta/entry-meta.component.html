@@ -1,2 +1,6 @@
-<app-entry-pills [tags]="tags()" [savedSearches]="entry().savedSearches ?? []" />
+<app-entry-pills
+  [tags]="tags()"
+  [savedSearches]="entry().savedSearches ?? []"
+  [short]="shortPill()"
+/>
 <app-entry-actions [entry]="entry()" />

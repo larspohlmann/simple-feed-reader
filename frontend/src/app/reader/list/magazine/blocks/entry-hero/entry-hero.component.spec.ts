@@ -7,6 +7,7 @@ import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
+import { describeShortMarking } from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -45,6 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  isShort: false,
   discussionUrl: null,
   comments: null,
   ...over,
@@ -90,6 +92,8 @@ const wideLadder: ImageRenditionDto[] = [
 ];
 
 describe('EntryHeroComponent', () => {
+  describeShortMarking((over) => mount(entry(over)));
+
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());
     const element = fixture.nativeElement as HTMLElement;
