@@ -13,5 +13,7 @@ export default {
   // path contains a literal '+' (a regex metachar), which breaks anchored
   // matches and makes jest try to run the Playwright specs (#615).
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+  maxWorkers: '50%',
+  workerIdleMemoryLimit: '512MB',
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.spec.ts', '!src/main.ts'],
 } satisfies Config;
