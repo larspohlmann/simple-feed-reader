@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Support\YouTubeShortUrl;
+
 /**
  * YouTube in every spelling a publisher uses, reduced to one nocookie embed.
  * The video id is the whole payload, so the query goes: `?si=` is a share
@@ -60,21 +62,14 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
             return null;
         }
 
-        return $this->shortsIdFromPath($parts['path'])
+        return YouTubeShortUrl::videoId($url)
             ?? $this->idFromPath($parts['path'])
             ?? $this->idFromQuery($parts['query'] ?? '');
     }
 
     private function shortsFragment(string $url): string
     {
-        $path = parse_url($url, PHP_URL_PATH);
-
-        return \is_string($path) && $this->shortsIdFromPath($path) !== null ? '#shorts' : '';
-    }
-
-    private function shortsIdFromPath(string $path): ?string
-    {
-        return preg_match('#^/shorts/(' . self::ID . ')/?$#', $path, $matches) === 1 ? $matches[1] : null;
+        return YouTubeShortUrl::is($url) ? '#shorts' : '';
     }
 
     private function idFromPath(string $path): ?string

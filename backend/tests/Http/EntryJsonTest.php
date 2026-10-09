@@ -209,6 +209,44 @@ final class EntryJsonTest extends TestCase
         self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);
     }
 
+    public function testMarksAYouTubeShort(): void
+    {
+        $json = EntryJson::listRow($this->row($this->entryAt('https://www.youtube.com/shorts/GhUuOxrCato')));
+
+        self::assertTrue($json['isShort']);
+    }
+
+    public function testMarksNoOtherEntryAsAShort(): void
+    {
+        $watchPage = $this->entryAt('https://www.youtube.com/watch?v=GhUuOxrCato');
+
+        self::assertFalse(EntryJson::listRow($this->row($watchPage))['isShort']);
+        self::assertFalse(EntryJson::listRow($this->row($this->entryAt(null)))['isShort']);
+    }
+
+    public function testMarksAShortAmongTheDuplicates(): void
+    {
+        $sibling = $this->entryAt('https://www.youtube.com/shorts/GhUuOxrCato');
+        $row = $this->row($this->entryAt('https://example.com/a'))->withDuplicates([$this->row($sibling)]);
+
+        $json = EntryJson::listRow($row);
+
+        self::assertFalse($json['isShort']);
+        self::assertTrue($json['duplicates'][0]['isShort']);
+    }
+
+    private function entryAt(?string $url): Entry
+    {
+        return new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            $url,
+            'Video',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+    }
+
     private function row(Entry $entry): EntryListRow
     {
         return new EntryListRow(
