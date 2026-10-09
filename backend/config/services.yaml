@@ -128,6 +128,7 @@ services:
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator'
                 - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper'
+                - '@App\Service\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer'
     App\Service\Search\EntrySearch\EntrySearchInterface: '@App\Service\Search\EntrySearch\EntrySearchWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).

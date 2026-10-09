@@ -204,6 +204,24 @@ final class ArticleExtractorTest extends TestCase
         self::assertFalse($result->paywalled);
     }
 
+    public function testKeepsTheLineBreaksOfAPastedTracklist(): void
+    {
+        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/soundcloud-track-noscript.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/artist/track');
+
+        self::assertTrue($result->ok);
+        self::assertMatchesRegularExpression(
+            '~Tracklist:<br\s*/?>\s*1\. Artist - One 00:00<br\s*/?>\s*2\. Artist - Two 06:26<br\s*/?>~',
+            (string) $result->contentHtml,
+        );
+        self::assertMatchesRegularExpression(
+            '~without skipping around\.<br\s*/?><br\s*/?>\s*Tracklist:~',
+            (string) $result->contentHtml,
+        );
+    }
+
     /**
      * Readability's built-in keep-list has no Spotify or Dailymotion, so it would strip those frames; the keep-regex
      * generated from the embed providers holds them in the body, where the rewriter turns each into an embed link.

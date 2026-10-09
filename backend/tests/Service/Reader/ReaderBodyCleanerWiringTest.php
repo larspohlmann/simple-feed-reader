@@ -16,6 +16,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\PastedTextBreakRestorer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
@@ -45,6 +46,7 @@ final class ReaderBodyCleanerWiringTest extends KernelTestCase
         MediaOnlyLede::class,
         AuthorBioSeparator::class,
         FeedDimensionStamper::class,
+        PastedTextBreakRestorer::class,
     ];
 
     public function testTheWiredStepsRunInTheOrderTheCleanerHardCoded(): void
