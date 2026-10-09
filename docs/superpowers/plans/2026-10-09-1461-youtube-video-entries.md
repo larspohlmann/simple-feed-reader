@@ -816,3 +816,26 @@ Added on request after Task 6. The user chose a "Short" badge in the corner of t
 - [ ] **Step 3:** Badge component + spec; wire into the five layouts and the pill fallback, with specs asserting: a Short with an image shows the badge and no pill; a Short without an image shows the pill; a normal entry shows neither.
 - [ ] **Step 4:** Visual check of every layout on a real Short (dev entry 575795, subscription 1713) in the built-in browser at desktop and mobile widths; screenshots into the report. Restore the viewport afterwards.
 - [ ] **Step 5:** `docker compose exec -T frontend npm run check` ONCE (never two Jest runs at a time — the container OOMs, #1462); then confirm the container is still up (`docker compose ps frontend`). Commit `feat(#1461): the list marks a YouTube Short`.
+
+---
+
+### Task 8: A Short's list image shows its cover in portrait
+
+Added on request after Task 7 (user chose option a). A Short's feed thumbnail (`hqdefault.jpg`, 480×360) is the creator's chosen portrait cover centred in a 4:3 frame with blurred side bars. YouTube's portrait files (`oar2.jpg`, `frame0.jpg`) are auto-picked frames, not the cover, and undocumented — not used. Instead the list crops the existing image to 9:16 in CSS.
+
+Ruling: CSS crop of the existing image only; no switch to `maxresdefault.jpg` (it 404s for some uploads, and the image pipeline would then lose the image). The cropped strip of a 480×360 source is ~200×360, so a large portrait slot is somewhat soft — accepted; a sharper source is a possible follow-up.
+
+**Files:** the five image-bearing list layouts touched by Task 7 (`list/entry-row`, `list/magazine/blocks/entry-hero|entry-wide|entry-split|entry-thumb`) — their `.html` (a modifier class when `entry().isShort`) and sibling `.scss`.
+
+**Behaviour:**
+- Every layout: a Short's image box is portrait — `aspect-ratio: 9 / 16; object-fit: cover; object-position: center` — overriding the bound `[style.aspect-ratio]` where a layout binds one (the cover sits in the middle; the blurred bars fall outside the crop).
+- Row and thumb: a narrow portrait thumbnail in place of the current one, same height as today's thumbnail box (width shrinks), so row height does not grow.
+- Hero and wide (option a): the portrait image is height-capped and centred in the card — a height token-based cap (pick from `docs/design-language.md` tokens or a rem value in the style the file already uses, no ad-hoc px) such that the image never exceeds roughly 60% of a phone viewport's height nor ~28rem on desktop; the card background shows on both sides.
+- Split: the side image takes the portrait box at the split's existing image width; the card may grow taller to fit, capped as in hero/wide.
+- The Task 7 badge stays in the top-right corner of the visible (cropped) image in every layout.
+- Image error gate, renditions (`appRenditions`/`renditionSizes`), lazy loading and `airy-image-rim` keep working; non-Short entries render exactly as before (pixel-identical — verify with a before/after look at a normal entry).
+
+- [ ] **Step 1:** Specs: in each touched layout's spec, a Short entry renders the image with the portrait modifier class and a normal entry without it.
+- [ ] **Step 2:** Implement markup + scss per layout.
+- [ ] **Step 3:** Visual check in the built-in browser on entry 575795 (subscription 1713) and on a normal YouTube video (subscription 1712), magazine and list layouts, desktop and mobile widths; screenshots/observations in the report; restore the viewport.
+- [ ] **Step 4:** One `docker compose exec -T frontend npm run check` (never concurrent Jest, #1462), container still Up; commit `feat(#1461): a Short's list image shows its cover in portrait`.
