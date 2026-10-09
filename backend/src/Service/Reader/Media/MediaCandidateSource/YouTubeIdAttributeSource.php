@@ -10,6 +10,7 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -22,7 +23,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInterface
 {
     private const string VIDEO_ID_ATTRIBUTE = 'data-video-id';
-    private const string ID_PATTERN = '#^[A-Za-z0-9_-]{11}$#';
+    private const string ID_PATTERN = '#^' . YouTubeShortUrl::VIDEO_ID_PATTERN . '$#';
     private const string YOUTUBE_MARKER = '#youtube|(?:^|[^a-z])yt[-_]#i';
 
     public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)

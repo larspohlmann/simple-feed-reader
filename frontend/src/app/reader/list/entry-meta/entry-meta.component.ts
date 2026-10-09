@@ -19,6 +19,6 @@ export class EntryMetaComponent {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
   /** The card shows the entry's image, which carries a Short's badge in place of the pill. */
-  readonly imageShown = input(false);
+  readonly imageShown = input.required<boolean>();
   readonly shortPill = computed(() => this.entry().isShort && !this.imageShown());
 }

@@ -65,6 +65,10 @@
   color: var(--text-muted);
 }
 
+app-entry-kicker-line app-entry-pills {
+  flex: none;
+}
+
 app-entry-kicker-line app-entry-actions {
   margin-inline-start: auto;
 }

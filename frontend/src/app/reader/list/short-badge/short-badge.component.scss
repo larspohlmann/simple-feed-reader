@@ -4,8 +4,8 @@
   right: var(--space-2);
   padding: var(--space-0) var(--space-2);
   border-radius: var(--radius-pill);
-  background: rgb(0 0 0 / 55%);
-  color: rgb(255 255 255 / 92%);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
   font-size: var(--fs-xs);
   font-weight: 600;
   line-height: 1.5;

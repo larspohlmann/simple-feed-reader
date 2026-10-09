@@ -115,6 +115,10 @@
   --icon-md: 20px;
   --icon-lg: 24px;
 
+  /* A label laid over a picture, whose colours are the picture's, not the theme's. */
+  --media-scrim: rgb(0 0 0 / 55%);
+  --on-media-scrim: rgb(255 255 255 / 92%);
+
   /* Row density, two named steps: every list/rail/picker row derives its
      padding from one, keeping the picker and reader's lists in sync (#126).
      Compact: rails, chip strips, menus, sidebar -- scanning over breathing room. */

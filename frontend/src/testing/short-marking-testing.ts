@@ -44,3 +44,16 @@ export function describeShortMarking(render: RenderEntry): void {
     });
   });
 }
+
+/** The rule for a text-only block: a Short carries the pill, any other entry none. */
+export function describeShortPill(render: RenderEntry): void {
+  describe('YouTube Short pill', () => {
+    it('marks a Short with a pill', () => {
+      expect(shortMarks(render({ isShort: true }))).toEqual({ badge: false, pill: true });
+    });
+
+    it('marks no other entry', () => {
+      expect(shortMarks(render({}))).toEqual({ badge: false, pill: false });
+    });
+  });
+}

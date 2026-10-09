@@ -10,6 +10,9 @@
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()">
       @if (!showSource()) {
+        @if (entry().isShort) {
+          <app-entry-pills [tags]="[]" [short]="true" />
+        }
         <app-entry-actions [entry]="entry()" />
       }
     </app-entry-kicker-line>
@@ -18,7 +21,7 @@
       <p class="dek">{{ snippet() }}</p>
     }
     @if (showSource()) {
-      <app-entry-meta [entry]="entry()" [tags]="tags()" />
+      <app-entry-meta [entry]="entry()" [tags]="tags()" [imageShown]="false" />
       <app-entry-duplicates [entry]="entry()" />
     }
   </div>

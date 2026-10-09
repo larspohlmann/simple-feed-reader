@@ -13,8 +13,6 @@ use App\Service\Reader\Media\Support\YouTubeShortUrl;
  */
 final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 {
-    private const string ID = '[A-Za-z0-9_-]{11}';
-
     private const array HOSTS = [
         'youtube.com', 'www.youtube.com',
         'youtube-nocookie.com', 'www.youtube-nocookie.com',
@@ -47,7 +45,7 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
     public function framePattern(): string
     {
-        return '^https://www\.youtube-nocookie\.com/embed/' . self::ID . '(?:#shorts)?$';
+        return '^https://www\.youtube-nocookie\.com/embed/' . YouTubeShortUrl::VIDEO_ID_PATTERN . '(?:#shorts)?$';
     }
 
     public function sourceHosts(): array
@@ -74,7 +72,9 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
     private function idFromPath(string $path): ?string
     {
-        return preg_match('#^/(?:embed/|v/)?(' . self::ID . ')$#', $path, $matches) === 1 ? $matches[1] : null;
+        $pattern = '#^/(?:embed/|v/)?(' . YouTubeShortUrl::VIDEO_ID_PATTERN . ')$#';
+
+        return preg_match($pattern, $path, $matches) === 1 ? $matches[1] : null;
     }
 
     private function idFromQuery(string $query): ?string
@@ -82,6 +82,6 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
         parse_str($query, $queryParameters);
         $id = $queryParameters['v'] ?? null;
 
-        return \is_string($id) && preg_match('#^' . self::ID . '$#', $id) === 1 ? $id : null;
+        return \is_string($id) && preg_match('#^' . YouTubeShortUrl::VIDEO_ID_PATTERN . '$#', $id) === 1 ? $id : null;
     }
 }

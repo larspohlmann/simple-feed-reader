@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryActionsComponent } from '../../../../entry/entry-actions/entry-actions.component';
+import { EntryPillsComponent } from '../../../../entry/entry-pills/entry-pills.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 
@@ -12,6 +13,7 @@ import { EntryBlockBase } from '../../entry-block-base';
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryActionsComponent,
+    EntryPillsComponent,
     EntryDuplicatesComponent,
   ],
   templateUrl: './entry-compact.component.html',
