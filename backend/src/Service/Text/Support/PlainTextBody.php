@@ -22,20 +22,12 @@ final class PlainTextBody
             return $body;
         }
 
-        return implode('', array_map(self::paragraph(...), self::paragraphs($body)));
+        return ParagraphedText::asHtml($body, self::escapeAngleBrackets(...));
     }
 
-    /** @return list<string> */
-    private static function paragraphs(string $text): array
+    private static function escapeAngleBrackets(string $line): string
     {
-        $normalised = str_replace(["\r\n", "\r", '<', '>'], ["\n", "\n", '&lt;', '&gt;'], $text);
-
-        return preg_split('/\n\s*\n/', trim($normalised)) ?: [];
-    }
-
-    private static function paragraph(string $paragraph): string
-    {
-        return '<p>' . implode('<br>', array_map(trim(...), explode("\n", $paragraph))) . '</p>';
+        return str_replace(['<', '>'], ['&lt;', '&gt;'], $line);
     }
 
     private function __construct()

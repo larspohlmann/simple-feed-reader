@@ -6,25 +6,24 @@ namespace App\Service\Reader\Media\Support;
 
 final class YouTubeShortUrl
 {
-    public const string VIDEO_ID_PATTERN = '[A-Za-z0-9_-]{11}';
+    public const string FRAGMENT = '#shorts';
 
-    private const array HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com'];
-
-    public static function videoId(string $url): ?string
-    {
-        $parts = parse_url($url);
-        if (!isset($parts['host'], $parts['path']) || !\in_array(strtolower($parts['host']), self::HOSTS, true)) {
-            return null;
-        }
-
-        $pattern = '#^/shorts/(' . self::VIDEO_ID_PATTERN . ')/?$#';
-
-        return preg_match($pattern, $parts['path'], $matches) === 1 ? $matches[1] : null;
-    }
+    private const string PATH_PATTERN = '#^/shorts/(' . YouTubeVideoId::PATTERN . ')/?$#';
 
     public static function is(?string $url): bool
     {
-        return $url !== null && self::videoId($url) !== null;
+        $parts = $url === null ? false : parse_url($url);
+
+        return isset($parts['host'], $parts['path']) && self::videoId($parts['host'], $parts['path']) !== null;
+    }
+
+    public static function videoId(string $host, string $path): ?string
+    {
+        if (!YouTubeVideoId::isYouTubeComHost($host)) {
+            return null;
+        }
+
+        return preg_match(self::PATH_PATTERN, $path, $matches) === 1 ? $matches[1] : null;
     }
 
     private function __construct()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery\Pass;
 
+use App\Service\Html\Support\MetaProperty;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -48,9 +49,8 @@ final readonly class LinkLabels
 
     private function readPageName(HTMLDocument $document): ?string
     {
-        $ogTitle = $document->querySelector('meta[property="og:title" i]')?->getAttribute('content');
-
-        return $this->normalized((string) $ogTitle) ?? $this->normalized((string) $document->title);
+        return $this->normalized(MetaProperty::content($document, 'og:title'))
+            ?? $this->normalized((string) $document->title);
     }
 
     private function normalized(string $text): ?string

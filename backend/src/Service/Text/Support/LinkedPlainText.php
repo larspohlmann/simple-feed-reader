@@ -7,37 +7,34 @@ namespace App\Service\Text\Support;
 /** Text known to carry no markup, as HTML: escaped, paragraphed, its bare URLs linked. */
 final class LinkedPlainText
 {
-    private const string URL_PATTERN = '#(https?://[^\s<>"]+?)(?=[.,;:!?)\]]*(?:\s|$))#i';
+    private const string TEXT_THEN_URL_PATTERN = '#(.*?)(?:(https?://[^\s<>"]+?)(?=[.,;:!?)\]]*(?:\s|$))|$)#is';
 
     public static function asHtml(string $text): ?string
     {
-        $normalised = trim(str_replace(["\r\n", "\r"], "\n", $text));
-        if ($normalised === '') {
+        if (trim($text) === '') {
             return null;
         }
 
-        $paragraphs = preg_split('/\n\s*\n/', $normalised) ?: [];
-
-        return implode('', array_map(self::paragraph(...), $paragraphs));
-    }
-
-    private static function paragraph(string $paragraph): string
-    {
-        $lines = array_map(static fn (string $line): string => self::linked(trim($line)), explode("\n", $paragraph));
-
-        return '<p>' . implode('<br>', $lines) . '</p>';
+        return ParagraphedText::asHtml($text, self::linked(...));
     }
 
     private static function linked(string $line): string
     {
-        $parts = preg_split(self::URL_PATTERN, $line, -1, \PREG_SPLIT_DELIM_CAPTURE) ?: [$line];
-        $html = '';
-        foreach ($parts as $index => $part) {
-            $escaped = htmlspecialchars($part, \ENT_QUOTES | \ENT_HTML5);
-            $html .= $index % 2 === 1 ? '<a href="' . $escaped . '">' . $escaped . '</a>' : $escaped;
-        }
+        return preg_replace_callback(
+            self::TEXT_THEN_URL_PATTERN,
+            static fn (array $match): string => self::escaped($match[1]) . self::link($match[2] ?? ''),
+            $line,
+        ) ?? self::escaped($line);
+    }
 
-        return $html;
+    private static function link(string $url): string
+    {
+        return $url === '' ? '' : '<a href="' . self::escaped($url) . '">' . self::escaped($url) . '</a>';
+    }
+
+    private static function escaped(string $text): string
+    {
+        return htmlspecialchars($text, \ENT_QUOTES | \ENT_HTML5);
     }
 
     private function __construct()

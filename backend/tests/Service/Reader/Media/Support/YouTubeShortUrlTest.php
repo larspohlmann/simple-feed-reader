@@ -11,9 +11,8 @@ use PHPUnit\Framework\TestCase;
 final class YouTubeShortUrlTest extends TestCase
 {
     #[DataProvider('shortUrls')]
-    public function testReadsTheVideoIdOfAShort(string $url): void
+    public function testRecognisesAShort(string $url): void
     {
-        self::assertSame('GhUuOxrCato', YouTubeShortUrl::videoId($url));
         self::assertTrue(YouTubeShortUrl::is($url));
     }
 
@@ -53,8 +52,18 @@ final class YouTubeShortUrlTest extends TestCase
         yield 'no url' => [null];
     }
 
-    public function testReadsNoVideoIdFromAWatchUrl(): void
+    public function testReadsTheVideoIdOfAShortsPath(): void
     {
-        self::assertNull(YouTubeShortUrl::videoId('https://www.youtube.com/watch?v=GhUuOxrCato'));
+        self::assertSame('GhUuOxrCato', YouTubeShortUrl::videoId('M.YouTube.com', '/shorts/GhUuOxrCato/'));
+    }
+
+    public function testReadsNoVideoIdFromAWatchPath(): void
+    {
+        self::assertNull(YouTubeShortUrl::videoId('www.youtube.com', '/watch'));
+    }
+
+    public function testReadsNoVideoIdFromAShortsPathOnAnotherYouTubeHost(): void
+    {
+        self::assertNull(YouTubeShortUrl::videoId('youtu.be', '/shorts/GhUuOxrCato'));
     }
 }

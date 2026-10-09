@@ -21,11 +21,13 @@ final readonly class VideoPageEntryRule implements PlatformEntryRuleInterface
 
     public function supports(ParsedEntryModel $entry): bool
     {
+        if ($entry->media->mediaBundle?->isEpisode() ?? false) {
+            return false;
+        }
+
         $target = $this->target($entry);
 
-        return $target !== null
-            && !($entry->media->mediaBundle?->isEpisode() ?? false)
-            && !$this->bodyEmbeds($entry->contentHtml ?? '', $target);
+        return $target !== null && !$this->bodyEmbeds($entry->contentHtml ?? '', $target);
     }
 
     public function apply(ParsedEntryModel $entry): ParsedEntryModel
@@ -45,11 +47,11 @@ final readonly class VideoPageEntryRule implements PlatformEntryRuleInterface
 
     private function bodyEmbeds(string $body, EmbedTargetModel $target): bool
     {
-        if (trim($body) === '') {
+        $playerUrl = $this->withoutFragment($target->url);
+        if (!str_contains($body, $playerUrl)) {
             return false;
         }
 
-        $playerUrl = $this->withoutFragment($target->url);
         foreach (HtmlDocumentParser::parseFragment($body)->querySelectorAll('a[href]') as $anchor) {
             if ($this->withoutFragment($anchor->getAttribute('href') ?? '') === $playerUrl) {
                 return true;
