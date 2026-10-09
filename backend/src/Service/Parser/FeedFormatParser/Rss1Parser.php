@@ -11,12 +11,12 @@ use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
-use App\Service\Text\Support\PlainTextBody;
 
 final readonly class Rss1Parser implements FeedFormatParserInterface
 {
@@ -77,7 +77,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             title: PlainText::from($title) ?? '(untitled)',
             author: XmlHelper::childText($entry, 'creator', self::DC_NS),
             summary: $contentEncoded !== null ? $description : null,
-            contentHtml: PlainTextBody::asHtml($contentEncoded ?? $description),
+            contentHtml: FeedBodyHtml::of($contentEncoded ?? $description),
             publishedAt: DateParser::parse(XmlHelper::childText($entry, 'date', self::DC_NS)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),

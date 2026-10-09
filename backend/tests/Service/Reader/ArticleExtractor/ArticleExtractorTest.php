@@ -66,6 +66,7 @@ use App\Tests\Service\Reader\FetchedPageNormalizerTest;
 use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -73,6 +74,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 final class ArticleExtractorTest extends TestCase
 {
     use NoEgressProxy;
+    use ReadsFixtures;
 
     private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
 
@@ -202,6 +204,25 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('https://site.test/img/photo.jpg', (string) $result->contentHtml);
         self::assertStringNotContainsString('About', (string) $result->contentHtml);
         self::assertFalse($result->paywalled);
+    }
+
+    public function testKeepsTheLineBreaksOfAPastedTracklist(): void
+    {
+        $html = $this->fixture('reader/soundcloud-track-noscript.html');
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/artist/track');
+
+        self::assertTrue($result->ok);
+        self::assertMatchesRegularExpression(
+            '~Tracklist:<br\s*/?>\s*1\. Artist - One 00:00<br\s*/?>\s*2\. Artist - Two 06:26<br\s*/?>\s*'
+            . '3\. Artist - Three 12:40<br\s*/?>\s*4\. Artist - Four 19:03</p>~',
+            (string) $result->contentHtml,
+        );
+        self::assertMatchesRegularExpression(
+            '~without skipping around\.<br\s*/?><br\s*/?>\s*Tracklist:~',
+            (string) $result->contentHtml,
+        );
     }
 
     /**

@@ -461,4 +461,18 @@ final class Atom10ParserTest extends TestCase
 
         self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
     }
+
+    public function testAnXhtmlContentKeepsTheLineBreaksOfPastedText(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>a
+
+            b</p></div></content>
+            </entry>
+            XML);
+
+        self::assertStringContainsString('<p>a<br><br>b</p>', (string) $entry->contentHtml);
+    }
 }

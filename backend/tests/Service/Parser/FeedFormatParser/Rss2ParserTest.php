@@ -359,6 +359,20 @@ final class Rss2ParserTest extends TestCase
         self::assertSame('<p>Track list :<br>1.Idaishoy<br>2.Silver Galaxy</p>', $entry->contentHtml);
     }
 
+    public function testAHtmlDescriptionWithPastedTextKeepsItsParagraphBreaks(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Storm</title>
+              <description>&lt;p&gt;Rain fell all night.
+
+            (Photo: Jane Doe)&lt;/p&gt;</description>
+            </item>
+            XML);
+
+        self::assertSame('<p>Rain fell all night.<br><br>(Photo: Jane Doe)</p>', $entry->contentHtml);
+    }
+
     public function testTheBodyImageComesFromContentEncodedBeforeTheDescription(): void
     {
         $entry = $this->parseSingleItem(

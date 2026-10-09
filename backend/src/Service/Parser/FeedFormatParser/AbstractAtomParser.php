@@ -12,13 +12,13 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\AtomDiscussion;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Service\Parser\Support\PodcastArtwork;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
-use App\Service\Text\Support\PlainTextBody;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
@@ -108,7 +108,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             title: PlainText::from($title) ?? '(untitled)',
             author: $this->authorName($entry),
             summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
-            contentHtml: $contentHtml,
+            contentHtml: FeedBodyHtml::of($contentHtml),
             publishedAt: DateParser::parse($this->firstDate($entry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
@@ -209,7 +209,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
             $text = trim($child->textContent);
 
-            return $text === '' ? null : PlainTextBody::asHtml($text);
+            return $text === '' ? null : $text;
         }
 
         return null;

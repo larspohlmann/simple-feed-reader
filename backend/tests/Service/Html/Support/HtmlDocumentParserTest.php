@@ -27,6 +27,20 @@ final class HtmlDocumentParserTest extends TestCase
         self::assertStringContainsString('Grüße', $document->saveHtml());
     }
 
+    public function testAFragmentIgnoresADeclaredCharset(): void
+    {
+        $document = HtmlDocumentParser::parseFragment('<meta charset="iso-8859-1"><p>Grüße</p>');
+
+        self::assertSame('Grüße', $document->querySelector('p')?->textContent);
+    }
+
+    public function testAFragmentKeepsLeadingHeadContentInTheBody(): void
+    {
+        $document = HtmlDocumentParser::parseFragment('<style>p{}</style><p>a</p>');
+
+        self::assertSame('<style>p{}</style><p>a</p>', $document->body?->innerHTML);
+    }
+
     public function testBlankInputYieldsAnEmptyDocument(): void
     {
         self::assertNull(HtmlDocumentParser::parseOrEmpty('')->documentElement);
