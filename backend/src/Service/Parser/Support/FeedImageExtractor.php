@@ -15,11 +15,8 @@ final class FeedImageExtractor
     /** RSS 2.0: <channel><image><url>, else the podcast artwork. An extension's *:image is never the <image>. */
     public static function fromRss2Channel(\DOMElement $channel): ?string
     {
-        foreach (XmlHelper::childElements($channel, 'image', null) as $image) {
-            if ($image->namespaceURI !== $channel->namespaceURI) {
-                continue;
-            }
-            $url = HttpsImageUrl::orNull(XmlHelper::childText($image, 'url'));
+        foreach (XmlHelper::childElements($channel, 'image', $channel->namespaceURI) as $image) {
+            $url = HttpsImageUrl::orNull(XmlHelper::childTextInOwnNamespace($image, 'url'));
             if ($url !== null) {
                 return $url;
             }

@@ -13,24 +13,22 @@ final class XmlHelper
     public const string MEDIA_RSS_NAMESPACE = 'http://search.yahoo.com/mrss/';
     public const string ITUNES_NAMESPACE = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
-    /**
-     * Trimmed text of the first matching direct child that HAS text. Matching is by local name, so an unqualified
-     * 'link' also matches the empty <atom:link rel="self"/> RSS 2.0 channels often put before the real <link>.
-     */
-    public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    /** Trimmed text of the first matching direct child that HAS text. */
+    public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
     {
         return self::firstText(self::childElements($parent, $localName, $namespaceUri));
     }
 
-    public static function childTextOutsideMediaRss(\DOMElement $parent, string $localName): ?string
+    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
+    public static function childTextInOwnNamespace(\DOMElement $parent, string $localName): ?string
     {
-        return self::firstText(self::outsideMediaRss(self::childElements($parent, $localName, null)));
+        return self::childText($parent, $localName, $parent->namespaceURI);
     }
 
     public static function childElement(
         \DOMElement $parent,
         string $localName,
-        ?string $namespaceUri = null,
+        ?string $namespaceUri,
     ): ?\DOMElement {
         foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
             return $child;
@@ -39,7 +37,7 @@ final class XmlHelper
         return null;
     }
 
-    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
     {
         foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
             $text = trim($child->textContent);
@@ -52,7 +50,7 @@ final class XmlHelper
     }
 
     /**
-     * Direct children with this local name; a null $namespaceUri matches any namespace.
+     * Direct children with this local name in exactly this namespace; null is no namespace.
      *
      * @return iterable<\DOMElement>
      */
@@ -65,7 +63,7 @@ final class XmlHelper
             if (!$child instanceof \DOMElement || $child->localName !== $localName) {
                 continue;
             }
-            if ($namespaceUri !== null && $child->namespaceURI !== $namespaceUri) {
+            if ($child->namespaceURI !== $namespaceUri) {
                 continue;
             }
 
@@ -86,19 +84,6 @@ final class XmlHelper
         }
 
         return null;
-    }
-
-    /**
-     * @param iterable<\DOMElement> $elements
-     * @return iterable<\DOMElement>
-     */
-    private static function outsideMediaRss(iterable $elements): iterable
-    {
-        foreach ($elements as $element) {
-            if ($element->namespaceURI !== self::MEDIA_RSS_NAMESPACE) {
-                yield $element;
-            }
-        }
     }
 
     private function __construct()
