@@ -28,7 +28,7 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
     {
         $id = $this->videoId($url);
 
-        return $id === null ? null : 'https://www.youtube-nocookie.com/embed/' . $id;
+        return $id === null ? null : 'https://www.youtube-nocookie.com/embed/' . $id . $this->shortsFragment($url);
     }
 
     public function poster(string $url): ?string
@@ -45,7 +45,7 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
     public function framePattern(): string
     {
-        return '^https://www\.youtube-nocookie\.com/embed/' . self::ID . '$';
+        return '^https://www\.youtube-nocookie\.com/embed/' . self::ID . '(?:#shorts)?$';
     }
 
     public function sourceHosts(): array
@@ -60,7 +60,21 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
             return null;
         }
 
-        return $this->idFromPath($parts['path']) ?? $this->idFromQuery($parts['query'] ?? '');
+        return $this->shortsIdFromPath($parts['path'])
+            ?? $this->idFromPath($parts['path'])
+            ?? $this->idFromQuery($parts['query'] ?? '');
+    }
+
+    private function shortsFragment(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+
+        return \is_string($path) && $this->shortsIdFromPath($path) !== null ? '#shorts' : '';
+    }
+
+    private function shortsIdFromPath(string $path): ?string
+    {
+        return preg_match('#^/shorts/(' . self::ID . ')/?$#', $path, $matches) === 1 ? $matches[1] : null;
     }
 
     private function idFromPath(string $path): ?string

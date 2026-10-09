@@ -69,7 +69,7 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
 
         $matched = false;
         foreach ($providers->framePatterns() as $pattern) {
-            if (preg_match('#' . $pattern . '#', $target->url) === 1) {
+            if (preg_match('~' . $pattern . '~', $target->url) === 1) {
                 $matched = true;
                 break;
             }

@@ -347,6 +347,13 @@
   height: 31.25rem;
 }
 
+/* A YouTube Short is portrait: a 9:16 box, centred and capped so it fits a desktop screen. */
+.content ::ng-deep .reader-embed--portrait {
+  aspect-ratio: 9 / 16;
+  width: min(100%, 22.5rem);
+  margin-inline: auto;
+}
+
 .content ::ng-deep audio,
 .content ::ng-deep video {
   display: block;
