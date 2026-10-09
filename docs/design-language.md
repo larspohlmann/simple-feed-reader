@@ -1648,7 +1648,7 @@ The reader's magazine list (`frontend/src/app/reader/list/magazine/`) plans entr
 onto eight block types, introduced by #148 to replace a layout that had
 collapsed to two-thirds compact rows. `magazine-block.ts`'s `BLOCK_HEIGHT`
 holds the measured height each contributes to the planner's per-page budget;
-`magazine-planner.ts`'s `fits()` decides whether a given entry may fill a
+`magazine-slot-fit.ts`'s `fits()` decides whether a given entry may fill a
 slot of that kind. Heights are measured at a 390px viewport width and are
 relative units for the budget, not a layout guarantee.
 
@@ -1679,6 +1679,15 @@ An entry that cannot fill its planned slot demotes transitively:
 `hero → wide → split → thumb → compact`, and `quote → kicker → compact` —
 never one step, since demoting a hero straight to `wide` in an image-less
 view would still leave an image block with no image.
+
+The reverse holds too: **an entry with a picture is never left in a text block**
+(#1463). A `quote`, `kicker` or `compact` slot that receives one promotes to the
+tallest image block the entry fills without outgrowing the slot — `quote → split`
+(or `thumb`), `kicker → thumb`, and `compact → thumb`. What counts as a picture
+depends on the family: the image family counts any usable image (`thumb`), the text
+family only one that fills a `split`. Wire services ship a miniature with every
+entry, so promoting those would turn the text family's pull-quotes into a wall of
+thumbs.
 
 **Each image block states its rendered width as `sizes`.** An entry with a
 rendition ladder (`imageRenditions`, #1330) gets a `srcset` through
