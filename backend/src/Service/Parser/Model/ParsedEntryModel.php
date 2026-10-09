@@ -51,6 +51,23 @@ final readonly class ParsedEntryModel
         );
     }
 
+    public function withContentHtml(?string $contentHtml): self
+    {
+        return new self(
+            guid: $this->guid,
+            url: $this->url,
+            title: $this->title,
+            author: $this->author,
+            summary: $this->summary,
+            contentHtml: $contentHtml,
+            publishedAt: $this->publishedAt,
+            media: $this->media,
+            categories: $this->categories,
+            discussion: $this->discussion,
+            authorUrl: $this->authorUrl,
+        );
+    }
+
     private function withMedia(ParsedEntryMediaModel $media): self
     {
         return $media === $this->media ? $this : new self(
