@@ -224,6 +224,20 @@ final class EntryJsonTest extends TestCase
         self::assertFalse(EntryJson::listRow($this->row($this->entryAt(null)))['isShort']);
     }
 
+    public function testStatesTheCoverAspectOfAShort(): void
+    {
+        $json = EntryJson::listRow($this->row($this->entryAt('https://www.youtube.com/shorts/GhUuOxrCato')));
+
+        self::assertSame(9 / 16, $json['imageAspectRatio']);
+    }
+
+    public function testStatesNoCoverAspectForAnImageShownAsIs(): void
+    {
+        $json = EntryJson::listRow($this->row($this->entryAt('https://www.youtube.com/watch?v=GhUuOxrCato')));
+
+        self::assertNull($json['imageAspectRatio']);
+    }
+
     public function testMarksAShortAmongTheDuplicates(): void
     {
         $sibling = $this->entryAt('https://www.youtube.com/shorts/GhUuOxrCato');
