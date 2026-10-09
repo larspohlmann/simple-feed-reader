@@ -27,7 +27,7 @@ Frontend (from `frontend/`):
 ```bash
 npm ci
 npm start            # dev server on :4200; calls /api same-origin (only the Docker frontend service proxies it)
-npm run check        # ESLint + Prettier + Stylelint + Jest — the CI gate
+npm run check        # ESLint + Prettier + Stylelint + tsc (app, spec, e2e) + Jest — the CI gate
 npm run build
 npm run e2e          # Playwright smokes; needs the Docker stack up
 ```
