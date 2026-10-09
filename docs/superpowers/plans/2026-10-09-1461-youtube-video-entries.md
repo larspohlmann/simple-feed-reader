@@ -750,3 +750,41 @@ git commit -m "feat(#1461): a feed link labelled only 'RSS' is named after its p
 - [ ] **Step 3: Live check** — `docker compose restart php worker`; run the discovery probe for `https://www.youtube.com/@ScreenCrush` (title is now `ScreenCrush`); subscribe a second channel (or a fresh test subscription) and confirm via the reader endpoint that an entry returns `reason: player_page` and its stored `content_html` starts with the nocookie embed link followed by the description; open it in the SPA (prod build or :4200) and confirm a player and the description, no fallback notice, no duplicate poster.
 - [ ] **Step 4: Scan today's dev log** (`ls -t backend/var/log/dev-*.log | head -1 | xargs tail -n 200 | jq -c 'select(.level >= 300)'`).
 - [ ] **Step 5: Push and open the PR** into `develop`, body ends with `Closes #1461`; note that stored YouTube entries from before the change stay body-less (ingest does not rewrite existing entries).
+
+---
+
+### Task 6: YouTube Shorts play in a portrait box
+
+Added on request after Tasks 1–4. A Short's entry URL is `https://www.youtube.com/shorts/<id>`, which `YouTubeEmbedProvider` does not read, so Shorts get no player; and a Short is 9:16, which the 16:9 `.reader-embed` box would pillarbox.
+
+**Files:**
+- Modify: `backend/src/Service/Reader/Media/EmbedProvider/YouTubeEmbedProvider.php`
+- Test: `backend/tests/Service/Reader/Media/EmbedProvider/YouTubeEmbedProviderTest.php`
+- Regenerate: `frontend/src/app/reader/embed-frame-allowlist.generated.json` (`docker compose exec -T php bin/console app:embed:dump-frame-allowlist` — read the command for its output target; `EmbedFrameAllowlistTest` pins that the committed file matches)
+- Modify: `frontend/src/app/reader/media-embeds.ts`, `frontend/src/app/reader/article/reader-view/reader-view.component.content.scss`
+- Test: `frontend/src/app/reader/media-embeds.spec.ts`
+
+**Interfaces:**
+- Produces: `YouTubeEmbedProvider::normalize('https://www.youtube.com/shorts/<id>')` → `https://www.youtube-nocookie.com/embed/<id>#shorts`; every other YouTube spelling unchanged (`…/embed/<id>`). `poster()` unchanged (`i.ytimg.com/vi/<id>/hqdefault.jpg`). `framePattern()` → `^https://www\.youtube-nocookie\.com/embed/[A-Za-z0-9_-]{11}(?:#shorts)?$`.
+- Produces: SPA box class `reader-embed reader-embed--portrait` for an allowed URL ending in `#shorts`; the iframe `src` keeps the fragment (it never reaches YouTube).
+
+Ruling: the Short marker rides in a URL fragment because the URL is the only thing that survives `EntrySanitizer` (class is allowed only on audio/figure) and the SPA's article cache — the same way the Spotify tall box is keyed on its URL path. A fragment is never sent to YouTube, so the player request is unchanged.
+
+- [ ] **Step 1: Failing backend tests** in `YouTubeEmbedProviderTest`: `https://www.youtube.com/shorts/GhUuOxrCato` and `https://youtube.com/shorts/GhUuOxrCato?feature=share` match, normalise to `https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts` and give poster `https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg`; `https://www.youtube.com/shorts/` and `/shorts/tooShort` do not match; the normalised Short URL matches `framePattern()`, and a `#other` fragment does not. Existing cases stay green.
+- [ ] **Step 2: Run** `php bin/phpunit tests/Service/Reader/Media` — expect FAIL.
+- [ ] **Step 3: Implement** — a Short is recognised from the path `^/shorts/(<ID>)/?$`; `normalize` appends `#shorts` for it; `idFromPath` keeps reading `/embed/`, `/v/`, bare id; `framePattern` gains the optional fragment. Keep methods short; no flag parameters (a `shortsId()` and `videoId()` split, or a small private match, not a bool).
+- [ ] **Step 4: Run** `php bin/phpunit tests/Service/Reader tests/Service/Ingest` — expect PASS (the Task 2 rule and Task 3 decorator now cover Shorts for free). Regenerate the allow-list JSON and run `EmbedFrameAllowlistTest`.
+- [ ] **Step 5: Frontend failing test** in `media-embeds.spec.ts`: an anchor to `https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts` is replaced by a `div.reader-embed.reader-embed--portrait` whose iframe `src` is that URL; a plain `…/embed/<id>` stays `reader-embed` without the modifier.
+- [ ] **Step 6: Implement** — in `media-embeds.ts` pick the box class from the URL as the Spotify branch does (`YOUTUBE_SHORT = /^https:\/\/www\.youtube-nocookie\.com\/embed\/[A-Za-z0-9_-]{11}#shorts$/` → `reader-embed reader-embed--portrait`). In the content SCSS add beside `.reader-embed--tall`:
+
+```scss
+/* A YouTube Short is portrait: a 9:16 box, centred and capped so it fits a desktop screen. */
+.content ::ng-deep .reader-embed--portrait {
+  aspect-ratio: 9 / 16;
+  width: min(100%, 22.5rem);
+  margin-inline: auto;
+}
+```
+
+- [ ] **Step 7: Run** `docker compose exec -T frontend npx jest src/app/reader/media-embeds` then `docker compose exec -T frontend npm run check` — expect PASS.
+- [ ] **Step 8: Gates + commit** — `composer cs stan md tramp` clean; commit `feat(#1461): a YouTube Short plays in a portrait box`.
