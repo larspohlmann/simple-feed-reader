@@ -131,6 +131,7 @@ export class ReaderViewComponent {
     () =>
       this.source.failed() &&
       this.mode() === 'original' &&
+      this.source.failureReason() !== 'player_page' &&
       !(this.audio.attachment() && this.source.pageHoldsNoArticle()),
   );
 

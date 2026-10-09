@@ -973,6 +973,15 @@ describe('ReaderViewComponent', () => {
       );
     });
 
+    it('falls back to the feed body without a note when the page is a player page', () => {
+      loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason: 'player_page' })));
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.reader-fallback')).toBeNull();
+      expect(element.querySelector('.reader-fallback-quiet')).toBeNull();
+      expect(element.querySelector('.content')!.innerHTML).toContain('Body');
+    });
+
     it('keeps the generic note when the load fails at the transport', () => {
       loadMock.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 502 })));
       const element = mount(entry()).nativeElement as HTMLElement;
@@ -982,7 +991,7 @@ describe('ReaderViewComponent', () => {
       );
     });
 
-    it.each(['empty', 'unextractable', 'mismatch'] as const)(
+    it.each(['empty', 'unextractable', 'mismatch', 'player_page'] as const)(
       'offers no Retry and no error disclosure when the page holds no article (%s)',
       (reason) => {
         loadMock.mockReturnValue(of<ReaderContent>(failedContent({ reason, detail: null })));

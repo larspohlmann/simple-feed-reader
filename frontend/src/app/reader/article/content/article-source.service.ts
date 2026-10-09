@@ -15,6 +15,7 @@ const NO_ARTICLE_REASONS: ReadonlySet<ReaderFailure['reason']> = new Set([
   'unextractable',
   'empty',
   'mismatch',
+  'player_page',
 ]);
 
 type SourceState =

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\ArticleExtractor\ArticleExtractor;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Reader\ArticleExtractor\PlayerPageExtractor;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
@@ -66,6 +67,8 @@ final class ReaderBodyCleanerWiringTest extends KernelTestCase
     {
         self::bootKernel();
         $extractor = self::getContainer()->get(ArticleExtractorInterface::class);
+        self::assertInstanceOf(PlayerPageExtractor::class, $extractor);
+        $extractor = new \ReflectionProperty(PlayerPageExtractor::class, 'inner')->getValue($extractor);
         self::assertInstanceOf(ArticleExtractor::class, $extractor);
         $cleaner = new \ReflectionProperty(ArticleExtractor::class, 'bodyCleaner')->getValue($extractor);
         self::assertInstanceOf(ReaderBodyCleaner::class, $cleaner);
