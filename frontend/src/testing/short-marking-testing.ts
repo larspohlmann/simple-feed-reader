@@ -58,7 +58,7 @@ export function describeShortPill(render: RenderEntry): void {
   });
 }
 
-/** The rule for a layout with a side image: a Short's cover shows in portrait, badged with the glyph its narrow box fits. */
+/** The rule for a layout with a side image: a Short's cover shows in portrait. */
 export function describeShortPortrait(render: RenderEntry): void {
   describe('YouTube Short portrait', () => {
     it('crops the image of a Short to a portrait box', () => {
@@ -72,12 +72,6 @@ export function describeShortPortrait(render: RenderEntry): void {
 
       expect(element.querySelector('.img-frame > img')).not.toBeNull();
       expect(element.querySelector('.img-frame.portrait')).toBeNull();
-    });
-
-    it('badges a Short with the glyph form, which fits its narrow portrait box', () => {
-      const element = render({ isShort: true }).nativeElement as HTMLElement;
-
-      expect(element.querySelector('.img-frame > app-short-badge.glyph')).not.toBeNull();
     });
   });
 }

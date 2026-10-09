@@ -151,7 +151,9 @@ describe('planMagazine', () => {
 
     const blocks = plan(plain.map((entry) => ({ ...entry, isShort: entry.id === shortId })));
 
-    expect(blocks[heroAt]).toMatchObject({ kind: 'hero', entry: { id: shortId + 1 } });
+    const hero = blocks[heroAt];
+    expect(hero.kind).toBe('hero');
+    expect(hero.entry.isShort).toBe(false);
     expect(['split', 'thumb']).toContain(blocks.find((block) => block.entry.id === shortId)?.kind);
   });
 

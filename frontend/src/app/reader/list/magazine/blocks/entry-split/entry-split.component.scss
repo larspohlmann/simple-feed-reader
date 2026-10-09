@@ -61,10 +61,6 @@ $side-share: 0.38;
 .img {
   width: 100%;
   height: auto;
-
-  /* aspect-ratio is bound per-image in the component (3:2 for landscape, up to
-     3:4 for a portrait routed here from hero/wide); only the 3:2 fallback for
-     unknown dimensions would otherwise live here. */
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
