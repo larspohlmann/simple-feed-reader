@@ -788,3 +788,31 @@ Ruling: the Short marker rides in a URL fragment because the URL is the only thi
 
 - [ ] **Step 7: Run** `docker compose exec -T frontend npx jest src/app/reader/media-embeds` then `docker compose exec -T frontend npm run check` — expect PASS.
 - [ ] **Step 8: Gates + commit** — `composer cs stan md tramp` clean; commit `feat(#1461): a YouTube Short plays in a portrait box`.
+
+---
+
+### Task 7: The list marks a YouTube Short
+
+Added on request after Task 6. The user chose a "Short" badge in the corner of the entry's thumbnail; an entry shown without an image carries a "Short" pill in its meta row instead.
+
+**Files:**
+- Create: `backend/src/Service/Reader/Media/Support/YouTubeShortUrl.php` (static, private constructor): `YouTubeShortUrl::videoId(string $url): ?string` — the 11-char id of a `youtube.com`/`www.youtube.com`/`m.youtube.com` `/shorts/<id>` URL (trailing slash and query allowed), else null; `YouTubeShortUrl::is(?string $url): bool`.
+- Modify: `backend/src/Service/Reader/Media/EmbedProvider/YouTubeEmbedProvider.php` — its `shortsIdFromPath`/`shortsFragment` use `YouTubeShortUrl` instead of their own `/shorts/` regex (one home for the Shorts shape).
+- Modify: `backend/src/Http/EntryJson.php` — every list row (`listRow`, so duplicates and the detail shape inherit it) gains `'isShort' => YouTubeShortUrl::is($entry->getUrl())`.
+- Test: `backend/tests/Service/Reader/Media/Support/YouTubeShortUrlTest.php`; extend the existing `EntryJson`/entries API test that pins the list-row keys (find it with `grep -rln "'isKept'" backend/tests`) to include `isShort` true for a `/shorts/` URL and false otherwise.
+- Modify: `frontend/src/app/reader/models.ts` (`EntryDto.isShort: boolean`), the five image-bearing list layouts — `list/entry-row/entry-row.component.html`, `list/magazine/blocks/entry-hero|entry-wide|entry-split|entry-thumb/*.component.html` — and the meta pill row (`entry/entry-pills` or `list/entry-meta`, whichever renders under both image-less row and magazine blocks).
+- Create: a shared standalone badge component (e.g. `frontend/src/app/reader/list/short-badge/short-badge.component.{ts,html,scss}`) used by all five layouts, so the chip is defined once.
+- i18n: `reader.shortBadge` = "Short" in `frontend/public/i18n/en.json` and "Short" in `de.json` (YouTube's own German UI says "Shorts"/"Short").
+- Test: specs beside each touched component, plus the badge component's own spec; update test fixtures/builders that construct `EntryDto` (grep `isKept:` in `frontend/src`) with `isShort: false`.
+
+**Interfaces:**
+- Wire: list-row JSON `isShort: boolean` (always present).
+- SPA: `EntryDto.isShort`; badge shown when `entry().isShort && showImage()` (or the row's equivalent image condition); pill shown when `entry().isShort && !image shown`.
+
+**Design constraints:** read `docs/design-language.md` first (tokens §1, catalog §2, magazine blocks §5, adding a surface §7). Use tokens only (`--fs-xs` for badge text, `--radius-pill` or the catalog's badge radius, existing surface/scrim colours); no hex, no ad-hoc px, no new media queries. The badge sits over the image's top-right corner inside the image's own box: wrap each `<img>` in a positioned frame only if needed and keep every existing image rule (aspect-ratio binding, `airy-image-rim`, renditions, error gate) working — check each layout's scss for selectors that assume the `img` is a direct child. It is decorative-plus-label: visible text "Short", not focusable, and the card's accessible name is unchanged except for the text.
+
+- [ ] **Step 1:** Failing `YouTubeShortUrlTest` (shorts URL with/without `www.`, `m.`, trailing slash, `?feature=share` → id; watch URL, `/shorts/`, `/shorts/tooShort`, other host, null → not a Short). Implement; switch `YouTubeEmbedProvider` to it; `php bin/phpunit tests/Service/Reader/Media` green.
+- [ ] **Step 2:** Failing API test for `isShort`; add the key in `EntryJson::listRow`; green. Gates `composer cs stan md tramp`.
+- [ ] **Step 3:** Badge component + spec; wire into the five layouts and the pill fallback, with specs asserting: a Short with an image shows the badge and no pill; a Short without an image shows the pill; a normal entry shows neither.
+- [ ] **Step 4:** Visual check of every layout on a real Short (dev entry 575795, subscription 1713) in the built-in browser at desktop and mobile widths; screenshots into the report. Restore the viewport afterwards.
+- [ ] **Step 5:** `docker compose exec -T frontend npm run check` ONCE (never two Jest runs at a time — the container OOMs, #1462); then confirm the container is still up (`docker compose ps frontend`). Commit `feat(#1461): the list marks a YouTube Short`.
