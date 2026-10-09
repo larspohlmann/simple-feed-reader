@@ -66,12 +66,29 @@ final class VideoPageEntryRuleTest extends TestCase
         self::assertFalse(self::rule()->supports(self::entry(null, '<p>x</p>')));
     }
 
-    public function testABodyThatAlreadyEmbedsTheVideoIsLeftAlone(): void
+    public function testABodyThatAlreadyLinksThePlayerIsLeftAlone(): void
+    {
+        self::assertFalse(self::rule()->supports(self::entry(self::WATCH, self::PLAYER_LINK)));
+    }
+
+    public function testAnIframeOrAWatchLinkDoesNotCountAsAPlayer(): void
     {
         $iframe = '<iframe src="https://www.youtube.com/embed/Xic3faS00Qs"></iframe>';
+        $watchLink = '<a href="https://www.youtube.com/watch?v=Xic3faS00Qs">watch</a>';
 
-        self::assertFalse(self::rule()->supports(self::entry(self::WATCH, $iframe)));
-        self::assertFalse(self::rule()->supports(self::entry(self::WATCH, self::PLAYER_LINK)));
+        self::assertTrue(self::rule()->supports(self::entry(self::WATCH, $iframe)));
+        self::assertTrue(self::rule()->supports(self::entry(self::WATCH, $watchLink)));
+    }
+
+    public function testAShortWhoseBodyLinksItsPlayerIsLeftAlone(): void
+    {
+        $short = 'https://www.youtube.com/shorts/GhUuOxrCato';
+        $plain = '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>';
+        $marked = '<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts">x</a>';
+
+        self::assertFalse(self::rule()->supports(self::entry($short, $plain)));
+        self::assertFalse(self::rule()->supports(self::entry($short, $marked)));
+        self::assertTrue(self::rule()->supports(self::entry($short, '<p>x</p>')));
     }
 
     public function testABodyEmbeddingAnotherVideoStillGetsItsOwn(): void

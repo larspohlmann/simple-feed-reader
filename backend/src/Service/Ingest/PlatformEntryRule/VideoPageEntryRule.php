@@ -13,8 +13,6 @@ use Dom\HTMLDocument;
 
 final readonly class VideoPageEntryRule implements PlatformEntryRuleInterface
 {
-    private const string EMBEDDING_ELEMENTS = 'a[href], iframe[src], embed[src]';
-
     public function __construct(
         private EmbedProviders $embeds,
         private MediaMarkup $markup,
@@ -51,14 +49,19 @@ final readonly class VideoPageEntryRule implements PlatformEntryRuleInterface
             return false;
         }
 
-        foreach (HtmlDocumentParser::parseFragment($body)->querySelectorAll(self::EMBEDDING_ELEMENTS) as $element) {
-            $source = $element->getAttribute('href') ?? $element->getAttribute('src') ?? '';
-            if ($this->embeds->resolve($source)?->url === $target->url) {
+        $playerUrl = $this->withoutFragment($target->url);
+        foreach (HtmlDocumentParser::parseFragment($body)->querySelectorAll('a[href]') as $anchor) {
+            if ($this->withoutFragment($anchor->getAttribute('href') ?? '') === $playerUrl) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private function withoutFragment(string $url): string
+    {
+        return explode('#', $url, 2)[0];
     }
 
     private function playerLink(EmbedTargetModel $target): string
