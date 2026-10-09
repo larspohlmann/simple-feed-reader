@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { entryImage, entrySnippet, portraitCoverAspect } from '../preview-image';
+import { entryImage, entrySnippet, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
@@ -76,5 +76,5 @@ function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
 }
 
 function landscapeImageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
-  return portraitCoverAspect(entry) === null && imageAtLeast(entry, minimumWidth);
+  return portraitCoverRatio(entry) === null && imageAtLeast(entry, minimumWidth);
 }

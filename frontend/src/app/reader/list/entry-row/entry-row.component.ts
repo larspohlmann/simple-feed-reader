@@ -16,7 +16,7 @@ import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.c
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
-import { entryImage, entrySnippet, portraitCoverAspect, showsShortPill } from '../preview-image';
+import { entryImage, entrySnippet, portraitCoverRatio, showsShortPill } from '../preview-image';
 import { relativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
@@ -63,7 +63,7 @@ export class EntryRowComponent {
   // a picture never shows in one view and hides in another.
   readonly image = computed(() => entryImage(this.entry())?.url ?? null);
   readonly showImage = computed(() => !!this.image() && !this.imgError());
-  readonly portraitAspect = computed(() => portraitCoverAspect(this.entry()));
+  readonly portraitRatio = computed(() => portraitCoverRatio(this.entry()));
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.showImage()));
   readonly snippet = computed(() => entrySnippet(this.entry()));
   private readonly language = inject(LanguageService);

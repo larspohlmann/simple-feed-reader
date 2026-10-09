@@ -1,6 +1,6 @@
 import { Directive, computed, effect, signal } from '@angular/core';
 import { EntryBlockBase } from './entry-block-base';
-import { entryImage, portraitCoverAspect } from '../preview-image';
+import { entryImage, portraitCoverRatio } from '../preview-image';
 
 /** Adds the image-error gate shared by every image-bearing block (split, wide,
  *  thumb). Quote and kicker are deliberately text-only and extend
@@ -10,7 +10,7 @@ export abstract class EntryImageBlockBase extends EntryBlockBase {
   readonly imgError = signal(false);
   readonly image = computed(() => entryImage(this.entry()));
   readonly showImage = computed(() => !!this.image() && !this.imgError());
-  readonly portraitAspect = computed(() => portraitCoverAspect(this.entry()));
+  readonly portraitRatio = computed(() => portraitCoverRatio(this.entry()));
 
   // Reset the error gate when the host reuses this component for a different entry.
   private readonly _reset = effect(() => {

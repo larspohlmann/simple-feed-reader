@@ -27,7 +27,7 @@ export class EntrySplitComponent extends EntryImageBlockBase {
   /** A portrait cover keeps its own shape; a landscape side box is never wider than
    *  3:2. Unknown dimensions keep the 3:2 default. */
   readonly aspect = computed(() => {
-    const portrait = this.portraitAspect();
+    const portrait = this.portraitRatio();
     if (portrait !== null) {
       return portrait;
     }

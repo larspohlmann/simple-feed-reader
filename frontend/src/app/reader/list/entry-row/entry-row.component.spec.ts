@@ -9,10 +9,8 @@ import { EntryDto, ImageRenditionDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
-import {
-  describeShortMarking,
-  describePortraitCover,
-} from '../../../../testing/short-marking-testing';
+import { describeShortMarking } from '../../../../testing/short-marking-testing';
+import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
 
 const entryActions = {
   favorite: jest.fn(),

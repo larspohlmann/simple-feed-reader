@@ -8,7 +8,7 @@ export function entrySnippet(entry: EntryDto): string {
 /** Same shape as the API's HeroImageDto — one declaration, so a picture the
  *  client derives and a picture the backend resolved cannot drift apart.
  *  Null width/height mean the feed did not say. */
-export type EntryImage = HeroImageDto;
+type EntryImage = HeroImageDto;
 
 /** The entry's persisted image, or null, as wide as the widest file it can be shown at. */
 export function entryImage(entry: EntryDto): EntryImage | null {
@@ -36,12 +36,12 @@ function coverAspectRatio(entry: EntryDto): number | null {
   return entry.imageWidth && entry.imageHeight ? entry.imageWidth / entry.imageHeight : null;
 }
 
-/** The CSS `aspect-ratio` a portrait cover is cropped to, or null for any other image —
+/** The width / height a portrait cover is cropped to, or null for any other image —
  *  an unknown shape included, since its orientation can't be judged. */
-export function portraitCoverAspect(entry: EntryDto): string | null {
+export function portraitCoverRatio(entry: EntryDto): number | null {
   const ratio = coverAspectRatio(entry);
   if (ratio === null || ratio >= PORTRAIT_BELOW) return null;
-  return String(Math.max(ratio, NARROWEST_PORTRAIT));
+  return Math.max(ratio, NARROWEST_PORTRAIT);
 }
 
 /** A Short is marked by a pill only where no image carries its badge. */

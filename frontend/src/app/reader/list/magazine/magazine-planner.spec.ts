@@ -149,16 +149,21 @@ describe('planMagazine', () => {
         (block): block is Exclude<MagazineBlock, { kind: 'group' }> => block.kind !== 'group',
       );
     const heroAt = plan(plain).findIndex((block) => block.kind === 'hero');
-    const shortId = plan(plain)[heroAt].entry.id;
+    const portraitId = plan(plain)[heroAt].entry.id;
 
     const blocks = plan(
-      plain.map((entry) => ({ ...entry, imageAspectRatio: entry.id === shortId ? 9 / 16 : null })),
+      plain.map((entry) => ({
+        ...entry,
+        imageAspectRatio: entry.id === portraitId ? 9 / 16 : null,
+      })),
     );
 
     const hero = blocks[heroAt];
     expect(hero.kind).toBe('hero');
-    expect(hero.entry.id).not.toBe(shortId);
-    expect(['split', 'thumb']).toContain(blocks.find((block) => block.entry.id === shortId)?.kind);
+    expect(hero.entry.id).not.toBe(portraitId);
+    expect(['split', 'thumb']).toContain(
+      blocks.find((block) => block.entry.id === portraitId)?.kind,
+    );
   });
 
   it('sizes a narrow lead image by its rendition ladder, so it can fill a hero or wide slot', () => {
@@ -619,7 +624,7 @@ describe('planMagazine', () => {
         imageWidth: 480,
         imageHeight: 360,
         summary: null,
-        isShort: index === 11,
+        imageAspectRatio: index === 11 ? 9 / 16 : null,
       }),
     );
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
