@@ -92,6 +92,7 @@ final class YouTubeEmbedProviderTest extends TestCase
     public static function shortsUrls(): iterable
     {
         yield 'www' => ['https://www.youtube.com/shorts/GhUuOxrCato'];
+        yield 'mobile host' => ['https://m.youtube.com/shorts/GhUuOxrCato'];
         yield 'bare host with a share query' => ['https://youtube.com/shorts/GhUuOxrCato?feature=share'];
     }
 

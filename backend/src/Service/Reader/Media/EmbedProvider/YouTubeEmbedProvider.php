@@ -14,7 +14,7 @@ use App\Service\Reader\Media\Support\YouTubeShortUrl;
 final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 {
     private const array HOSTS = [
-        'youtube.com', 'www.youtube.com',
+        'youtube.com', 'www.youtube.com', 'm.youtube.com',
         'youtube-nocookie.com', 'www.youtube-nocookie.com',
         'youtu.be', 'www.youtu.be',
     ];
