@@ -1,4 +1,10 @@
-import { entryImage, entrySnippet, renditionSrcset, widestRenditionWidth } from './preview-image';
+import {
+  entryImage,
+  entrySnippet,
+  renditionSrcset,
+  showsShortPill,
+  widestRenditionWidth,
+} from './preview-image';
 import { EntryDto } from '../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
@@ -133,5 +139,19 @@ describe('widestRenditionWidth', () => {
   it('is null without renditions', () => {
     expect(widestRenditionWidth([])).toBeNull();
     expect(widestRenditionWidth(undefined)).toBeNull();
+  });
+});
+
+describe('showsShortPill', () => {
+  it('marks a Short whose image is not shown', () => {
+    expect(showsShortPill(entry({ isShort: true }), false)).toBe(true);
+  });
+
+  it('leaves a Short whose image is shown to the image badge', () => {
+    expect(showsShortPill(entry({ isShort: true }), true)).toBe(false);
+  });
+
+  it('marks no other entry', () => {
+    expect(showsShortPill(entry(), false)).toBe(false);
   });
 });

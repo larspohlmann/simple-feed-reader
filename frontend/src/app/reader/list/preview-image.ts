@@ -24,6 +24,11 @@ function atLadderWidth(image: EntryImage, widest: number | null): EntryImage {
   return { ...image, width: widest, height };
 }
 
+/** A Short is marked by a pill only where no image carries its badge. */
+export function showsShortPill(entry: EntryDto, imageShown: boolean): boolean {
+  return entry.isShort && !imageShown;
+}
+
 /** The renditions as a `srcset`, or null when there are none. Stubbed e2e entries predate
  *  the field and omit it. */
 export function renditionSrcset(

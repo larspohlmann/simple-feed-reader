@@ -19,8 +19,7 @@ import { selectionQueryParams } from '../../query/query';
 export class EntryPillsComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
 
-  readonly tags = input.required<SubscriptionTagDto[]>();
+  readonly tags = input<SubscriptionTagDto[]>([]);
   readonly savedSearches = input<SavedSearchMembershipDto[]>([]);
-  /** The entry is a YouTube Short whose image, and with it the image's badge, is not shown. */
   readonly short = input(false);
 }

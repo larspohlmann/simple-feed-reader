@@ -57,6 +57,19 @@ describe('EntryPillsComponent', () => {
     expect(mount([tag(1, 'Tech')]).querySelector('.pill.short')).toBeNull();
   });
 
+  it('renders a lone Short pill without being given tags', () => {
+    TestBed.configureTestingModule({
+      imports: [EntryPillsComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
+    });
+    const fixture = TestBed.createComponent(EntryPillsComponent);
+    fixture.componentRef.setInput('short', true);
+    fixture.detectChanges();
+
+    const pills = (fixture.nativeElement as HTMLElement).querySelectorAll('.pill');
+    expect([...pills].map((pill) => pill.className)).toEqual(['pill short']);
+  });
+
   it('renders no pill when there are neither tags nor saved searches', () => {
     expect(mount([], []).querySelector('.pill')).toBeNull();
   });

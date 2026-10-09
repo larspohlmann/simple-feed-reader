@@ -1,5 +1,3 @@
-// A Short's feed thumbnail is a 4:3 frame holding the creator's portrait cover
-// between blurred side bars; a centred 9:16 crop keeps the cover and drops the bars.
 @mixin portrait-crop {
   aspect-ratio: 9 / 16;
   object-fit: cover;

@@ -25,6 +25,8 @@ const SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
    gets. A single track or episode keeps the default frame. */
 const SPOTIFY_COLLECTION = /^https:\/\/open\.spotify\.com\/embed\/(?:playlist|album|artist|show)\//;
 
+const SHORTS_FRAGMENT = '#shorts';
+
 export function upgradeMediaEmbeds(host: HTMLElement): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
@@ -35,7 +37,7 @@ export function upgradeMediaEmbeds(host: HTMLElement): void {
 
 function boxClass(url: string): string {
   if (SPOTIFY_COLLECTION.test(url)) return 'reader-embed reader-embed--tall';
-  if (url.endsWith('#shorts')) return 'reader-embed reader-embed--portrait';
+  if (url.endsWith(SHORTS_FRAGMENT)) return 'reader-embed reader-embed--portrait';
   return 'reader-embed';
 }
 

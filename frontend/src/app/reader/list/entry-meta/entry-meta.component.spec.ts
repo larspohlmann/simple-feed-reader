@@ -53,7 +53,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = entry(), imageShown = false) {
+function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = entry(), imageShown?: boolean) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
@@ -61,7 +61,7 @@ function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = entry(), imageS
   const fixture = TestBed.createComponent(EntryMetaComponent);
   fixture.componentRef.setInput('entry', testEntry);
   fixture.componentRef.setInput('tags', tags);
-  fixture.componentRef.setInput('imageShown', imageShown);
+  if (imageShown !== undefined) fixture.componentRef.setInput('imageShown', imageShown);
   fixture.detectChanges();
   return fixture;
 }
@@ -99,11 +99,15 @@ describe('EntryMetaComponent', () => {
   });
 
   describe('Short pill', () => {
-    const shortPill = (testEntry: EntryDto, imageShown: boolean) =>
+    const shortPill = (testEntry: EntryDto, imageShown?: boolean) =>
       (mount([], testEntry, imageShown).nativeElement as HTMLElement).querySelector('.pill.short');
 
     it('marks a Short whose card shows no image', () => {
       expect(shortPill(entry({ isShort: true }), false)).not.toBeNull();
+    });
+
+    it('takes a card to show no image unless told otherwise', () => {
+      expect(shortPill(entry({ isShort: true }))).not.toBeNull();
     });
 
     it('leaves a Short whose image is shown to the image badge', () => {
