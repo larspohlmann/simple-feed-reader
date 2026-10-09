@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
+use App\Service\Html\Support\PastedTextBreaks;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -204,7 +205,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
                 }
                 $html = trim($html);
 
-                return $html === '' ? null : $html;
+                return $html === '' ? null : PastedTextBreaks::inHtml($html);
             }
 
             $text = trim($child->textContent);

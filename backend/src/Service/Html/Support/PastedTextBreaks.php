@@ -5,61 +5,84 @@ declare(strict_types=1);
 namespace App\Service\Html\Support;
 
 use Dom\Document;
+use Dom\Element;
 use Dom\Text;
 
 /**
- * Text pasted into a <p> keeps its line breaks as newlines, which HTML collapses: a blank line between two
- * runs of text marks it, and every newline in that text node becomes <br> (a blank-line run, two).
+ * Text pasted into a <p> keeps its line breaks as newlines, which HTML collapses: a blank line between two runs
+ * of the paragraph's text marks it, and every newline inside its text nodes becomes <br> (a blank-line run, two).
  */
 final class PastedTextBreaks
 {
     private const string BLANK_LINE_PATTERN = '/\S[ \t]*\n[ \t]*\n\s*\S/';
+    private const string RAW_BLANK_LINE_PATTERN = '/\R(?:[ \t]|<[^>]*>)*\R/';
+    private const array VERBATIM_ELEMENTS = ['code', 'pre', 'script', 'style', 'textarea', 'kbd', 'samp'];
 
     public static function inHtml(string $html): string
     {
-        if (preg_match(self::BLANK_LINE_PATTERN, self::normalised($html)) !== 1) {
+        if (preg_match(self::RAW_BLANK_LINE_PATTERN, $html) !== 1) {
             return $html;
         }
 
-        $document = HtmlDocumentParser::parse('<body>' . $html);
-        self::restoreIn($document);
+        $document = HtmlDocumentParser::parseUtf8('<body>' . $html);
+        if (self::restoreIn($document) === 0) {
+            return $html;
+        }
 
-        $body = $document->body;
-
-        return $body === null ? $html : $body->innerHTML;
+        return $document->body->innerHTML ?? $html;
     }
 
-    public static function restoreIn(Document $document): void
+    /** @return int how many paragraphs got their line breaks back */
+    public static function restoreIn(Document $document): int
     {
-        foreach ($document->querySelectorAll('p') as $paragraph) {
-            foreach (iterator_to_array($paragraph->childNodes) as $child) {
-                if ($child instanceof Text && self::isPasted($child)) {
-                    self::replaceWithBreaks($child, $document);
-                }
+        $pastedParagraphs = array_filter(
+            iterator_to_array($document->querySelectorAll('p')),
+            static fn (Element $paragraph): bool => self::isPasted($paragraph),
+        );
+        foreach ($pastedParagraphs as $paragraph) {
+            foreach (self::proseTextsIn($paragraph) as $text) {
+                self::replaceWithBreaks($text, $document);
             }
         }
+
+        return count($pastedParagraphs);
     }
 
-    private static function isPasted(Text $text): bool
+    private static function isPasted(Element $paragraph): bool
     {
-        return preg_match(self::BLANK_LINE_PATTERN, self::normalised($text->data)) === 1;
+        $prose = implode('', array_map(static fn (Text $text): string => $text->data, self::proseTextsIn($paragraph)));
+
+        return preg_match(self::BLANK_LINE_PATTERN, $prose) === 1;
+    }
+
+    /** @return list<Text> */
+    private static function proseTextsIn(Element $element): array
+    {
+        $texts = [];
+        foreach ($element->childNodes as $child) {
+            if ($child instanceof Text) {
+                $texts[] = $child;
+            } elseif ($child instanceof Element && !in_array($child->localName, self::VERBATIM_ELEMENTS, true)) {
+                $texts = [...$texts, ...self::proseTextsIn($child)];
+            }
+        }
+
+        return $texts;
     }
 
     private static function replaceWithBreaks(Text $text, Document $document): void
     {
-        $content = self::normalised($text->data);
-        $lines = self::lines(trim($content));
-        $lines[0] = self::leadingWhitespace($content) . $lines[0];
-        $lines[array_key_last($lines)] .= self::trailingWhitespace($content);
+        $content = $text->data;
+        $core = trim($content);
+        $leadingWhitespace = substr($content, 0, strlen($content) - strlen(ltrim($content)));
+        $lines = self::lines($core);
+        $lines[0] = $leadingWhitespace . $lines[0];
+        $lines[array_key_last($lines)] .= substr($content, strlen($leadingWhitespace) + strlen($core));
 
-        $replacements = [];
-        foreach ($lines as $index => $line) {
-            if ($index > 0) {
-                $replacements[] = $document->createElement('br');
-            }
-            if ($line !== '') {
-                $replacements[] = $document->createTextNode($line);
-            }
+        $replacements = [$document->createTextNode(array_shift($lines))];
+        foreach ($lines as $line) {
+            $replacements[] = $document->createElement('br');
+            $replacements[] = $document->createTextNode($line);
         }
         $text->replaceWith(...$replacements);
     }
@@ -70,21 +93,6 @@ final class PastedTextBreaks
         $collapsed = preg_replace('/\n(?:[ \t]*\n)+/', "\n\n", $core) ?? $core;
 
         return array_map(trim(...), explode("\n", $collapsed));
-    }
-
-    private static function leadingWhitespace(string $text): string
-    {
-        return substr($text, 0, strlen($text) - strlen(ltrim($text)));
-    }
-
-    private static function trailingWhitespace(string $text): string
-    {
-        return substr($text, strlen(rtrim($text)));
-    }
-
-    private static function normalised(string $text): string
-    {
-        return str_replace(["\r\n", "\r"], "\n", $text);
     }
 
     private function __construct()

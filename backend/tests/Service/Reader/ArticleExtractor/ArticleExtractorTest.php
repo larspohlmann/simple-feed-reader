@@ -213,7 +213,8 @@ final class ArticleExtractorTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertMatchesRegularExpression(
-            '~Tracklist:<br\s*/?>\s*1\. Artist - One 00:00<br\s*/?>\s*2\. Artist - Two 06:26<br\s*/?>~',
+            '~Tracklist:<br\s*/?>\s*1\. Artist - One 00:00<br\s*/?>\s*2\. Artist - Two 06:26<br\s*/?>\s*'
+            . '3\. Artist - Three 12:40<br\s*/?>\s*4\. Artist - Four 19:03</p>~',
             (string) $result->contentHtml,
         );
         self::assertMatchesRegularExpression(
