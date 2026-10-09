@@ -10,6 +10,8 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.4.0] - 2026-10-09
+
 ### Highlights
 
 **YouTube channels you can watch.** Paste a channel link such as
@@ -17,6 +19,20 @@ lives in the git log and the merged pull requests.
 the channel's feed under the channel's name. Each new video plays right in the
 reader, with its description beneath. Shorts play in a portrait player and
 carry a Short badge in the list.
+
+## What's Changed
+* fix(#1458): restore line breaks in text pasted into a paragraph by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1460
+* YouTube channels: playable video entries, Shorts in portrait, channel-named discovery by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1465
+* fix(#1462): cap Jest workers so the frontend container survives a full run by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1468
+* fix(#1464): type-check the app program in npm run check by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1469
+* fix(#1467): read RSS core elements in their own namespace so prefixed elements no longer shadow them by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1470
+* fix(#1463): promote an image entry out of a text slot instead of hiding its image by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1471
+* refactor(#1466): route and crop portrait covers by their real aspect, not by isShort by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1472
+* refactor(#1473): parser child lookups through XmlHelper by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1474
+* docs(#1475): prepare v1.4.0 release highlights by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1476
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.3.1...v1.4.0
 
 ## [v1.3.1] - 2026-10-08
 
