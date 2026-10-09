@@ -1,7 +1,7 @@
 import { EntryDto } from '../../models';
 import { entryImage, entrySnippet } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
-import { fits, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
+import { fits, ImageBar, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -56,7 +56,7 @@ const PAGE_HEIGHT_CAP = 1100;
  *  carries a miniature, so only a picture that fills a `split` counts there. */
 interface MagazineFamily {
   readonly templates: readonly (readonly Slot[])[];
-  readonly imageBar: EntryKind;
+  readonly imageBar: ImageBar;
 }
 
 const IMAGE_FAMILY: MagazineFamily = { templates: IMAGE_TEMPLATES, imageBar: 'thumb' };
@@ -350,9 +350,9 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
  * Entries fill slots IN ORDER — chronological by contract. The one exception is
  * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
  * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
- * demotes TRANSITIVELY.
+ * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`).
  */
-function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: EntryKind): EntryKind[] {
+function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
   const order = [...slice];
   let tallest = 0;
   for (let index = 1; index < kinds.length; index++) {

@@ -1,5 +1,6 @@
 import { planMagazine } from './magazine-planner';
-import { MagazineBlock } from './magazine-block';
+import { EntryKind, MagazineBlock } from './magazine-block';
+import { IMAGE_KINDS } from './magazine-slot-fit';
 import { EntryDto } from '../../models';
 import { entryImage } from '../preview-image';
 
@@ -61,7 +62,6 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
 const many = (count: number, make: (index: number) => EntryDto): EntryDto[] =>
   Array.from({ length: count }, (_, index) => make(index + 1));
 const kinds = (bs: MagazineBlock[]) => bs.map((block) => block.kind);
-const IMAGE_KINDS: string[] = ['hero', 'wide', 'split', 'thumb'];
 
 const entryCount = (bs: MagazineBlock[]): number =>
   bs.reduce((count, block) => count + (block.kind === 'group' ? block.entries.length : 1), 0);
@@ -620,7 +620,7 @@ describe('planMagazine', () => {
       }),
     );
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
-    expect(ks.every((kind) => IMAGE_KINDS.includes(kind))).toBe(true);
+    expect(ks.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
   });
 
   it('promotes a text slot to the tallest image block no taller than the slot', () => {
@@ -643,7 +643,7 @@ describe('planMagazine', () => {
       .filter((block) => block.kind !== 'group' && block.entry.imageUrl !== null)
       .map((block) => block.kind);
     expect(pictureKinds).toHaveLength(10);
-    expect(pictureKinds.every((kind) => IMAGE_KINDS.includes(kind))).toBe(true);
+    expect(pictureKinds.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
     expect(kinds(blocks)).toContain('quote');
   });
 

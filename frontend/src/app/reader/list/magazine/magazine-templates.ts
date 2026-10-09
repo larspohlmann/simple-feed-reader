@@ -12,7 +12,8 @@ export type Slot = EntryKind | { either: [EntryKind, EntryKind] };
  * entries and produced the MOST monotonous output of three candidates (3-gram
  * entropy 1.57 vs 4.88 for templates): once the image pipeline works, ~99% of
  * entries score the same, so every entry gets the same block. Variety lives
- * here; content only decides whether an entry can FILL the slot it is given.
+ * here; content only decides whether an entry can FILL the slot it is given,
+ * and whether a text slot must show its picture instead.
  *
  * TWO families exist for two kinds of feed. An image-rich view (a magazine, a
  * photo blog) wants IMAGE_TEMPLATES. A wire service ships only tiny thumbnails
@@ -50,7 +51,8 @@ export const IMAGE_TEMPLATES: readonly (readonly Slot[])[] = [
  * The image-poor rhythm: pull-quotes, headline bands, and the feed's own small
  * thumbnails. A wire service (Phys.org, Reuters) is image-poor but TEXT-rich, so
  * this reads as a text magazine, not a degraded image one. `hero`/`wide`/`split`
- * are absent — a 90px thumbnail can't fill them and would collapse to `thumb`.
+ * are not authored — a 90px thumbnail can't fill them and would collapse to
+ * `thumb`; a `split` appears only when a real picture promotes a text slot.
  */
 export const TEXT_TEMPLATES: readonly (readonly Slot[])[] = [
   ['quote', 'thumb', 'kicker', { either: ['thumb', 'compact'] }, 'compact'],

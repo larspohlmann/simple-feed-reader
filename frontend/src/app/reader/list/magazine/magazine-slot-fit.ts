@@ -4,9 +4,12 @@ import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
 /** The blocks that show the entry's image, tallest first. */
-const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thumb'];
+export const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thumb'];
 
-export function settle(kind: EntryKind, entry: EntryDto, imageBar: EntryKind): EntryKind {
+/** The smallest image block whose fit means the entry's image must show. */
+export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
+
+export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
   const settled = demoteUntilFit(kind, entry);
   if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(kind, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
