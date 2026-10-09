@@ -46,7 +46,7 @@ final class RecommendationPromptText
         . 'A saved search is a standing interest even when nothing in the history matches it. Write a compact '
         . 'profile, at most about ' . self::PROFILE_WORD_CAP . ' words, that names the reader\'s specific, '
         . 'repeated interests — topics, '
-        . 'subjects, companies, technologies, people, kinds of story — and what they clearly avoid. Name concrete '
+        . 'subjects, companies, technologies, people, kinds of story. Name concrete '
         . 'interests, not broad categories: prefer "self-hosted home automation" over "technology". The profile is '
         . 'used to score unread posts, so it must be specific enough to tell a strong match from a weak one.';
 
