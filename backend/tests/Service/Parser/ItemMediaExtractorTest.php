@@ -118,6 +118,38 @@ final class ItemMediaExtractorTest extends TestCase
         self::assertSame(5000, $bundle->attachments[0]->sizeInBytes);
     }
 
+    public function testAVideoGroupPosterUrlIsTrimmed(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:group>'
+            . '<media:content url="https://v/clip.mp4" medium="video" type="video/mp4"/>'
+            . '<media:thumbnail url="  https://v/poster.jpg  "/>'
+            . '</media:group>',
+        ));
+
+        self::assertSame('https://v/poster.jpg', $bundle->media[0]->previewImageUrl);
+    }
+
+    public function testATopLevelThumbnailBecomesAnImage(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:thumbnail url="https://i/thumb.jpg" width="320"/>',
+        ));
+
+        self::assertCount(1, $bundle->media);
+        self::assertSame('https://i/thumb.jpg', $bundle->media[0]->url);
+    }
+
+    public function testAUrlBearingElementOutsideMediaRssIsNoMedia(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<content url="https://cdn/ep.mp3" type="audio/mpeg"/>',
+        ));
+
+        self::assertSame([], $bundle->media);
+        self::assertSame([], $bundle->attachments);
+    }
+
     public function testImageGroupCollapsesToTheWidestRendition(): void
     {
         $bundle = $this->extractor->extract($this->rssItem(

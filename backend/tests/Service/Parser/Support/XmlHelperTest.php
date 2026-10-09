@@ -12,6 +12,7 @@ final class XmlHelperTest extends TestCase
     private function firstChild(string $innerXml): \DOMNode
     {
         $document = new \DOMDocument();
+        /** @noinspection XmlUnusedNamespaceDeclaration */
         $document->loadXML('<item xmlns:media="http://search.yahoo.com/mrss/">' . $innerXml . '</item>');
         $child = $document->documentElement?->firstChild;
         self::assertInstanceOf(\DOMNode::class, $child);
