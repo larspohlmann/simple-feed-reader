@@ -365,6 +365,16 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://i/enc.png', $image?->url);
     }
 
+    public function testAnAtomEnclosureLinkMatchesItsTypeCaseInsensitivelyAndTrimsItsHref(): void
+    {
+        $image = $this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<link rel="enclosure" type="IMAGE/PNG" href="  https://i/enc.png  "/>'),
+            self::ATOM_NAMESPACE,
+        );
+
+        self::assertSame('https://i/enc.png', $image?->url);
+    }
+
     public function testAnAtomLinkThatIsNotAnEnclosureYieldsNoImage(): void
     {
         self::assertNull($this->extractor->fromAtomEnclosure(
