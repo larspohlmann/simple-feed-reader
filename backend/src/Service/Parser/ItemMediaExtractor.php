@@ -8,6 +8,7 @@ use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\MediaDuration;
+use App\Service\Parser\Support\MediaRssSlot;
 use App\Service\Parser\Support\XmlHelper;
 
 /**
@@ -166,7 +167,6 @@ final readonly class ItemMediaExtractor
             return true;
         }
 
-        return XmlHelper::isElement($node, 'content', XmlHelper::MEDIA_RSS_NAMESPACE)
-            || XmlHelper::isElement($node, 'thumbnail', XmlHelper::MEDIA_RSS_NAMESPACE);
+        return MediaRssSlot::isContentOrThumbnail($node);
     }
 }

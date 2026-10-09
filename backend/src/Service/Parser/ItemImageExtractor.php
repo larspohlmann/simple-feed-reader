@@ -9,6 +9,7 @@ use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
+use App\Service\Parser\Support\MediaRssSlot;
 use App\Service\Parser\Support\XmlHelper;
 use Dom\Element;
 
@@ -53,21 +54,16 @@ final readonly class ItemImageExtractor
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
     public function fromAtomEnclosure(\DOMElement $entry, string $atomNamespace): ?DeclaredImageModel
     {
-        foreach ($entry->childNodes as $child) {
-            if (
-                !$child instanceof \DOMElement
-                || $child->localName !== 'link'
-                || $child->namespaceURI !== $atomNamespace
-                || $child->getAttribute('rel') !== 'enclosure'
-            ) {
+        foreach (XmlHelper::childElements($entry, 'link', $atomNamespace) as $link) {
+            if ($link->getAttribute('rel') !== 'enclosure') {
                 continue;
             }
-            if (!str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
+            if (!str_starts_with(strtolower($link->getAttribute('type')), 'image/')) {
                 continue;
             }
-            $href = trim($child->getAttribute('href'));
+            $href = trim($link->getAttribute('href'));
             if ($href !== '') {
-                return DeclaredImages::fromElement($child, $href);
+                return DeclaredImages::fromElement($link, $href);
             }
         }
 
@@ -125,7 +121,7 @@ final readonly class ItemImageExtractor
     {
         $candidates = [];
         foreach ($parent->childNodes as $child) {
-            if (!self::isMediaImageSlot($child)) {
+            if (!MediaRssSlot::isContentOrThumbnail($child)) {
                 continue;
             }
             $url = trim($child->getAttribute('url'));
@@ -153,12 +149,5 @@ final readonly class ItemImageExtractor
         }
 
         return $candidates;
-    }
-
-    /** @phpstan-assert-if-true =\DOMElement $node */
-    private static function isMediaImageSlot(\DOMNode $node): bool
-    {
-        return XmlHelper::isElement($node, 'thumbnail', XmlHelper::MEDIA_RSS_NAMESPACE)
-            || XmlHelper::isElement($node, 'content', XmlHelper::MEDIA_RSS_NAMESPACE);
     }
 }

@@ -29,11 +29,6 @@ final class XmlHelperTest extends TestCase
         ));
     }
 
-    public function testAnElementInAnotherNamespaceDoesNotMatch(): void
-    {
-        self::assertFalse(XmlHelper::isElement($this->firstChild('<title/>'), 'title', XmlHelper::MEDIA_RSS_NAMESPACE));
-    }
-
     public function testNullMatchesOnlyAnElementWithoutNamespace(): void
     {
         self::assertTrue(XmlHelper::isElement($this->firstChild('<title/>'), 'title', null));

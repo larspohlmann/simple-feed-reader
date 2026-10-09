@@ -38,7 +38,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     public function isEntry(\DOMElement $element, int $depth): bool
     {
-        return $element->localName === 'item' && $element->namespaceURI === self::RSS1_NS;
+        return XmlHelper::isElement($element, 'item', self::RSS1_NS);
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
