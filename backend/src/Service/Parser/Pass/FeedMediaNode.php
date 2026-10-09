@@ -76,20 +76,9 @@ final readonly class FeedMediaNode
 
     private function title(): ?string
     {
-        foreach ($this->element->childNodes as $child) {
-            if (self::isMediaTitle($child)) {
-                return self::nonEmpty($child->textContent);
-            }
-        }
+        $title = XmlHelper::childElement($this->element, 'title', XmlHelper::MEDIA_RSS_NAMESPACE);
 
-        return null;
-    }
-
-    private static function isMediaTitle(\DOMNode $node): bool
-    {
-        return $node instanceof \DOMElement
-            && $node->localName === 'title'
-            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
+        return $title === null ? null : self::nonEmpty($title->textContent);
     }
 
     private function intAttribute(string $name): ?int

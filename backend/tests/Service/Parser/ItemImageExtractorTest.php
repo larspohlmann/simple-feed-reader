@@ -143,6 +143,17 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://i/g.jpg', $image->url);
     }
 
+    public function testADirectImageCompetesWithTheImagesInAMediaGroup(): void
+    {
+        $image = $this->extractor->fromMedia($this->item(
+            '<media:content url="https://i/direct.jpg" medium="image" width="900"/>'
+            . '<media:group><media:content url="https://i/g.jpg" medium="image" width="500"/></media:group>',
+        ));
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/direct.jpg', $image->url);
+    }
+
     public function testReadsAnRssEnclosure(): void
     {
         $image = $this->extractor->fromRssEnclosure($this->item(
@@ -348,6 +359,16 @@ final class ItemImageExtractorTest extends TestCase
     {
         $image = $this->extractor->fromAtomEnclosure(
             $this->atomEntry('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
+            self::ATOM_NAMESPACE,
+        );
+
+        self::assertSame('https://i/enc.png', $image?->url);
+    }
+
+    public function testAnAtomEnclosureLinkMatchesItsTypeCaseInsensitivelyAndTrimsItsHref(): void
+    {
+        $image = $this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<link rel="enclosure" type="IMAGE/PNG" href="  https://i/enc.png  "/>'),
             self::ATOM_NAMESPACE,
         );
 

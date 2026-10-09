@@ -9,6 +9,7 @@ use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
+use App\Service\Parser\Support\MediaRssSlot;
 use App\Service\Parser\Support\XmlHelper;
 use Dom\Element;
 
@@ -24,11 +25,8 @@ final readonly class ItemImageExtractor
     {
         $candidates = self::mediaCandidatesIn($item);
 
-        foreach ($item->childNodes as $child) {
-            if (self::isMediaElement($child, 'group')) {
-                /** @var \DOMElement $child */
-                $candidates = [...$candidates, ...self::mediaCandidatesIn($child)];
-            }
+        foreach (XmlHelper::childElements($item, 'group', XmlHelper::MEDIA_RSS_NAMESPACE) as $group) {
+            $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
         }
 
         return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
@@ -56,21 +54,16 @@ final readonly class ItemImageExtractor
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
     public function fromAtomEnclosure(\DOMElement $entry, string $atomNamespace): ?DeclaredImageModel
     {
-        foreach ($entry->childNodes as $child) {
-            if (
-                !$child instanceof \DOMElement
-                || $child->localName !== 'link'
-                || $child->namespaceURI !== $atomNamespace
-                || $child->getAttribute('rel') !== 'enclosure'
-            ) {
+        foreach (XmlHelper::childElements($entry, 'link', $atomNamespace) as $link) {
+            if ($link->getAttribute('rel') !== 'enclosure') {
                 continue;
             }
-            if (!str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
+            if (!str_starts_with(strtolower($link->getAttribute('type')), 'image/')) {
                 continue;
             }
-            $href = trim($child->getAttribute('href'));
+            $href = trim($link->getAttribute('href'));
             if ($href !== '') {
-                return DeclaredImages::fromElement($child, $href);
+                return DeclaredImages::fromElement($link, $href);
             }
         }
 
@@ -128,10 +121,9 @@ final readonly class ItemImageExtractor
     {
         $candidates = [];
         foreach ($parent->childNodes as $child) {
-            if (!self::isMediaElement($child, 'thumbnail') && !self::isMediaElement($child, 'content')) {
+            if (!MediaRssSlot::isContentOrThumbnail($child)) {
                 continue;
             }
-            /** @var \DOMElement $child */
             $url = trim($child->getAttribute('url'));
             if ($url === '' || !MediaImageClassifier::isImage($child)) {
                 continue;
@@ -157,12 +149,5 @@ final readonly class ItemImageExtractor
         }
 
         return $candidates;
-    }
-
-    private static function isMediaElement(\DOMNode $node, string $localName): bool
-    {
-        return $node instanceof \DOMElement
-            && $node->localName === $localName
-            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
     }
 }

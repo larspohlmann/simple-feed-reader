@@ -40,7 +40,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
     public function supports(\DOMElement $root): bool
     {
-        return $root->localName === 'feed' && $root->namespaceURI === $this->namespaceUri();
+        return XmlHelper::isElement($root, 'feed', $this->namespaceUri());
     }
 
     /**
@@ -56,7 +56,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     /** Only the feed's own children: an <entry> nested anywhere else was never one. */
     public function isEntry(\DOMElement $element, int $depth): bool
     {
-        return $depth === 1 && $element->localName === 'entry' && $element->namespaceURI === $this->namespaceUri();
+        return $depth === 1 && XmlHelper::isElement($element, 'entry', $this->namespaceUri());
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
@@ -121,11 +121,19 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
     private function authorUri(\DOMElement $entry): ?string
     {
+        return AbsoluteHttpUrl::orNull($this->authorChildText($entry, 'uri'));
+    }
+
+    private function authorName(\DOMElement $entry): ?string
+    {
+        return $this->authorChildText($entry, 'name');
+    }
+
+    private function authorChildText(\DOMElement $entry, string $localName): ?string
+    {
         $author = XmlHelper::childElement($entry, 'author', $this->namespaceUri());
 
-        return $author === null
-            ? null
-            : AbsoluteHttpUrl::orNull(XmlHelper::childText($author, 'uri', $this->namespaceUri()));
+        return $author === null ? null : XmlHelper::childText($author, $localName, $this->namespaceUri());
     }
 
     /** The first present entry date, in this dialect's preference order. */
@@ -145,19 +153,12 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     private function alternateLink(\DOMElement $parent): ?string
     {
         $fallback = null;
-        foreach ($parent->childNodes as $child) {
-            if (
-                !$child instanceof \DOMElement
-                || $child->localName !== 'link'
-                || $child->namespaceURI !== $this->namespaceUri()
-            ) {
-                continue;
-            }
-            $href = trim($child->getAttribute('href'));
+        foreach (XmlHelper::childElements($parent, 'link', $this->namespaceUri()) as $link) {
+            $href = trim($link->getAttribute('href'));
             if ($href === '') {
                 continue;
             }
-            $rel = $child->getAttribute('rel');
+            $rel = $link->getAttribute('rel');
             if ($rel === 'alternate') {
                 return $href;
             }
@@ -169,51 +170,27 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         return $fallback;
     }
 
-    private function authorName(\DOMElement $entry): ?string
-    {
-        foreach ($entry->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === 'author'
-                && $child->namespaceURI === $this->namespaceUri()
-            ) {
-                return XmlHelper::childText($child, 'name', $this->namespaceUri());
-            }
-        }
-
-        return null;
-    }
-
     /**
      * An Atom text construct's markup: a type="xhtml" one carries real child elements that must be serialized, every
      * other type carries text. Both forms let an <img> be found in a summary-only entry.
      */
     private function elementMarkup(\DOMElement $entry, string $localName): ?string
     {
-        foreach ($entry->childNodes as $child) {
-            if (
-                !$child instanceof \DOMElement
-                || $child->localName !== $localName
-                || $child->namespaceURI !== $this->namespaceUri()
-            ) {
-                continue;
-            }
-
-            if ($child->getAttribute('type') === 'xhtml') {
-                $html = '';
-                foreach ($child->childNodes as $inner) {
-                    $html .= $child->ownerDocument?->saveXML($inner);
-                }
-                $html = trim($html);
-
-                return $html === '' ? null : $html;
-            }
-
-            $text = trim($child->textContent);
-
-            return $text === '' ? null : $text;
+        $element = XmlHelper::childElement($entry, $localName, $this->namespaceUri());
+        if ($element === null) {
+            return null;
         }
+        if ($element->getAttribute('type') === 'xhtml') {
+            $html = '';
+            foreach ($element->childNodes as $inner) {
+                $html .= $element->ownerDocument?->saveXML($inner);
+            }
+            $html = trim($html);
 
-        return null;
+            return $html === '' ? null : $html;
+        }
+        $text = trim($element->textContent);
+
+        return $text === '' ? null : $text;
     }
 }

@@ -8,6 +8,7 @@ use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\MediaDuration;
+use App\Service\Parser\Support\MediaRssSlot;
 use App\Service\Parser\Support\XmlHelper;
 
 /**
@@ -39,7 +40,7 @@ final readonly class ItemMediaExtractor
         if (!$child instanceof \DOMElement) {
             return null;
         }
-        if (self::isMediaElement($child, 'group')) {
+        if (XmlHelper::isElement($child, 'group', XmlHelper::MEDIA_RSS_NAMESPACE)) {
             return self::fromGroup($child, $fallbackDuration);
         }
         $node = self::mediaNode($child);
@@ -144,34 +145,17 @@ final readonly class ItemMediaExtractor
 
     private static function posterIn(\DOMElement $group): ?string
     {
-        foreach ($group->childNodes as $child) {
-            if (self::isMediaElement($child, 'thumbnail')) {
-                /** @var \DOMElement $child */
-                $url = trim($child->getAttribute('url'));
+        $thumbnail = XmlHelper::childElement($group, 'thumbnail', XmlHelper::MEDIA_RSS_NAMESPACE);
+        $url = $thumbnail === null ? '' : trim($thumbnail->getAttribute('url'));
 
-                return $url !== '' ? $url : null;
-            }
-        }
-
-        return null;
+        return $url !== '' ? $url : null;
     }
 
     private static function itunesDuration(\DOMElement $item): ?int
     {
-        foreach ($item->childNodes as $child) {
-            if (self::isItunesDuration($child)) {
-                return MediaDuration::seconds($child->textContent);
-            }
-        }
+        $duration = XmlHelper::childElement($item, 'duration', XmlHelper::ITUNES_NAMESPACE);
 
-        return null;
-    }
-
-    private static function isItunesDuration(\DOMNode $node): bool
-    {
-        return $node instanceof \DOMElement
-            && $node->localName === 'duration'
-            && $node->namespaceURI === XmlHelper::ITUNES_NAMESPACE;
+        return $duration === null ? null : MediaDuration::seconds($duration->textContent);
     }
 
     private static function isMediaNode(\DOMElement $node): bool
@@ -183,13 +167,6 @@ final readonly class ItemMediaExtractor
             return true;
         }
 
-        return self::isMediaElement($node, 'content') || self::isMediaElement($node, 'thumbnail');
-    }
-
-    private static function isMediaElement(\DOMNode $node, string $localName): bool
-    {
-        return $node instanceof \DOMElement
-            && $node->localName === $localName
-            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
+        return MediaRssSlot::isContentOrThumbnail($node);
     }
 }

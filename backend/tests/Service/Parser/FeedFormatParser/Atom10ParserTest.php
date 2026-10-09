@@ -476,6 +476,38 @@ final class Atom10ParserTest extends TestCase
         self::assertStringContainsString('<p>a<br><br>b</p>', (string) $entry->contentHtml);
     }
 
+    public function testAnAlternateLinkHrefIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><link rel="alternate" href="  https://example.com/a  "/></entry>
+            XML);
+
+        self::assertSame('https://example.com/a', $entry->url);
+    }
+
+    public function testAnHtmlContentIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><content type="html">
+              &lt;p&gt;Body&lt;/p&gt;
+            </content></entry>
+            XML);
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
+
+    public function testAnXhtmlContentIsTrimmed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry><title>T</title><id>urn:1</id><content type="xhtml">
+              <div xmlns="http://www.w3.org/1999/xhtml"><p>Body</p></div>
+            </content></entry>
+            XML);
+
+        self::assertStringStartsWith('<div', (string) $entry->contentHtml);
+        self::assertStringEndsWith('</div>', (string) $entry->contentHtml);
+    }
+
     public function testContentWinsOverAMediaGroupDescription(): void
     {
         $entry = $this->parseSingleEntry(<<<'XML'

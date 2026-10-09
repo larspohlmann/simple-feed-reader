@@ -34,7 +34,7 @@ final class ItemCategoryExtractor
         if ($child->localName === 'category') {
             return self::fromCategoryElement($child);
         }
-        if ($child->localName === 'subject' && $child->namespaceURI === XmlHelper::DUBLIN_CORE_NAMESPACE) {
+        if (XmlHelper::isElement($child, 'subject', XmlHelper::DUBLIN_CORE_NAMESPACE)) {
             $label = trim($child->textContent);
 
             return $label === '' ? null : new ParsedCategoryModel($label);
