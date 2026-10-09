@@ -444,4 +444,78 @@ final class Rss2ParserTest extends TestCase
 
         self::assertSame('<p>Body</p>', $feed->entries[0]->contentHtml);
     }
+
+    public function testAnExtensionTitleBeforeTheTitleDoesNotShadowIt(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:media="http://search.yahoo.com/mrss/"'
+            . ' xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">'
+            . '<media:title>Media</media:title><itunes:title>Itunes</itunes:title><title>Core</title></item>',
+        );
+
+        self::assertSame('Core', $entry->title);
+    }
+
+    public function testAnItunesAuthorBeforeTheAuthorDoesNotShadowIt(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><title>By</title>'
+            . '<itunes:author>Itunes</itunes:author><author>Core</author></item>',
+        );
+
+        self::assertSame('Core', $entry->author);
+    }
+
+    public function testAPrefixedLinkBeforeTheLinkDoesNotShadowIt(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:atom="http://www.w3.org/2005/Atom"><title>T</title>'
+            . '<atom:link>https://example.com/self</atom:link><link>https://example.com/a</link></item>',
+        );
+
+        self::assertSame('https://example.com/a', $entry->url);
+    }
+
+    public function testAPrefixedGuidBeforeTheGuidDoesNotShadowIt(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:other="urn:example:other"><title>T</title>'
+            . '<other:guid>other-guid</other:guid><guid>core-guid</guid></item>',
+        );
+
+        self::assertSame('core-guid', $entry->guid);
+    }
+
+    public function testDublinCoreDescriptionFillsAnItemWithoutADescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>T</title>'
+            . '<dc:description>&lt;p&gt;Dublin&lt;/p&gt;</dc:description></item>',
+        );
+
+        self::assertSame('<p>Dublin</p>', $entry->contentHtml);
+    }
+
+    public function testDescriptionWinsOverDublinCoreDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item xmlns:dc="http://purl.org/dc/elements/1.1/"><title>T</title>'
+            . '<dc:description>Dublin</dc:description><description>&lt;p&gt;Body&lt;/p&gt;</description></item>',
+        );
+
+        self::assertSame('<p>Body</p>', $entry->contentHtml);
+    }
+
+    public function testAPrefixedChannelTitleBeforeTheTitleDoesNotShadowIt(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+              <channel><itunes:title>Itunes</itunes:title><title>Core</title>
+                <item><title>T</title><link>https://example.com/a</link></item>
+              </channel>
+            </rss>
+            XML);
+
+        self::assertSame('Core', $feed->title);
+    }
 }
