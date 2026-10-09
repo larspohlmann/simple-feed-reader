@@ -69,7 +69,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             return null;
         }
 
-        $description = self::description($entry);
+        $description = self::coreOrDublinCore($entry, 'description', 'description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
         $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);
@@ -79,32 +79,20 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             guid: GuidFallback::for(XmlHelper::childTextInOwnNamespace($entry, 'guid'), $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
-            author: self::author($entry),
+            author: self::coreOrDublinCore($entry, 'author', 'creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
-            publishedAt: DateParser::parse(self::publishedAt($entry)),
+            publishedAt: DateParser::parse(self::coreOrDublinCore($entry, 'pubDate', 'date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
             discussion: self::discussion($entry),
         );
     }
 
-    private static function description(\DOMElement $item): ?string
+    private static function coreOrDublinCore(\DOMElement $item, string $coreName, string $dublinCoreName): ?string
     {
-        return XmlHelper::childTextInOwnNamespace($item, 'description')
-            ?? XmlHelper::childText($item, 'description', self::DC_NS);
-    }
-
-    private static function author(\DOMElement $item): ?string
-    {
-        return XmlHelper::childTextInOwnNamespace($item, 'author')
-            ?? XmlHelper::childText($item, 'creator', self::DC_NS);
-    }
-
-    private static function publishedAt(\DOMElement $item): ?string
-    {
-        return XmlHelper::childTextInOwnNamespace($item, 'pubDate')
-            ?? XmlHelper::childText($item, 'date', self::DC_NS);
+        return XmlHelper::childTextInOwnNamespace($item, $coreName)
+            ?? XmlHelper::childText($item, $dublinCoreName, self::DC_NS);
     }
 
     private static function discussion(\DOMElement $item): Discussion
