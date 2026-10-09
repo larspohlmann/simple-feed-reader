@@ -14,9 +14,10 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\" \"e2e/**/*.ts\"",
     "stylelint": "stylelint \"src/**/*.scss\"",
+    "typecheck:app": "tsc -p tsconfig.app.json --noEmit",
     "typecheck:spec": "tsc -p tsconfig.spec.json --noEmit",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json --noEmit",
-    "check:static": "npm run lint && npm run format:check && npm run stylelint && npm run typecheck:spec && npm run typecheck:e2e",
+    "check:static": "npm run lint && npm run format:check && npm run stylelint && npm run typecheck:app && npm run typecheck:spec && npm run typecheck:e2e",
     "check": "npm run check:static && npm test"
   },
   "private": true,

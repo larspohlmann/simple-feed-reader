@@ -227,7 +227,7 @@ jobs:
 
       # The Playwright smoke needs the Docker stack and is deliberately not
       # part of this gate.
-      - name: ESLint, Prettier, Stylelint, spec typecheck
+      - name: ESLint, Prettier, Stylelint, typecheck
         run: npm run check:static
 
   # Jest is most of the frontend gate's time, so it is split across runners.
