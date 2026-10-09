@@ -61,7 +61,9 @@ Runs the full quality gate, the same one CI runs:
   values take relative units only, and a width media query takes no literal.
   Every component keeps its styles in a sibling `.scss` file (`styleUrl`), so
   Stylelint sees all of them.
-- **Spec typecheck** (`npm run typecheck:spec`) — `tsc` over `tsconfig.spec.json`.
+- **Typecheck** (`npm run typecheck:app`, `typecheck:spec`, `typecheck:e2e`) — `tsc`
+  over `tsconfig.app.json`, `tsconfig.spec.json` and `tsconfig.e2e.json`. Angular
+  template type-checking is left to `npm run build`.
 - **Jest** (`npm test`) — unit tests (jest-preset-angular, jsdom).
 
 ## Build
