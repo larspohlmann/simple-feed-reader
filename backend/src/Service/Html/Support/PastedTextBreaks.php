@@ -9,50 +9,60 @@ use Dom\Element;
 use Dom\Text;
 
 /**
- * Text pasted into a <p> keeps its line breaks as newlines, which HTML collapses: a blank line between two runs
- * of the paragraph's text marks it, and every newline inside its text nodes becomes <br> (a blank-line run, two).
+ * Text pasted into a <p> keeps its line breaks as newlines, which HTML collapses: a blank line inside one of the
+ * paragraph's text nodes marks it, and every newline in its text nodes becomes <br> (a blank-line run, two).
  */
 final class PastedTextBreaks
 {
-    private const string BLANK_LINE_PATTERN = '/\S[ \t]*\n[ \t]*\n\s*\S/';
-    private const string RAW_BLANK_LINE_PATTERN = '/\R(?:[ \t]|<[^>]*>)*\R/';
+    // Also the pre-parse gate over raw markup: `<` and `>` keep a blank line between block tags from costing a parse.
+    private const string BLANK_LINE_PATTERN = '/[^<>\s][ \t]*(?:\r\n?|\n)[ \t]*(?:\r\n?|\n)\s*[^<>\s]/';
     private const array VERBATIM_ELEMENTS = ['code', 'pre', 'script', 'style', 'textarea', 'kbd', 'samp'];
 
     public static function inHtml(string $html): string
     {
-        if (preg_match(self::RAW_BLANK_LINE_PATTERN, $html) !== 1) {
+        if (preg_match(self::BLANK_LINE_PATTERN, $html) !== 1) {
             return $html;
         }
 
-        $document = HtmlDocumentParser::parseUtf8('<body>' . $html);
-        if (self::restoreIn($document) === 0) {
+        $document = HtmlDocumentParser::parseFragment($html);
+        if (!self::restoreIn($document)) {
             return $html;
         }
 
         return $document->body->innerHTML ?? $html;
     }
 
-    /** @return int how many paragraphs got their line breaks back */
-    public static function restoreIn(Document $document): int
+    public static function restoreIn(Document $document): bool
     {
-        $pastedParagraphs = array_filter(
-            iterator_to_array($document->querySelectorAll('p')),
-            static fn (Element $paragraph): bool => self::isPasted($paragraph),
-        );
-        foreach ($pastedParagraphs as $paragraph) {
-            foreach (self::proseTextsIn($paragraph) as $text) {
-                self::replaceWithBreaks($text, $document);
-            }
+        $restored = false;
+        foreach ($document->querySelectorAll('p') as $paragraph) {
+            $restored = self::restoreInParagraph($paragraph, $document) || $restored;
         }
 
-        return count($pastedParagraphs);
+        return $restored;
     }
 
-    private static function isPasted(Element $paragraph): bool
+    private static function restoreInParagraph(Element $paragraph, Document $document): bool
     {
-        $prose = implode('', array_map(static fn (Text $text): string => $text->data, self::proseTextsIn($paragraph)));
+        if ($paragraph->closest(implode(',', self::VERBATIM_ELEMENTS)) !== null) {
+            return false;
+        }
 
-        return preg_match(self::BLANK_LINE_PATTERN, $prose) === 1;
+        $texts = self::proseTextsIn($paragraph);
+        if (!array_any($texts, self::hasBlankLine(...))) {
+            return false;
+        }
+
+        foreach ($texts as $text) {
+            self::replaceWithBreaks($text, $document);
+        }
+
+        return true;
+    }
+
+    private static function hasBlankLine(Text $text): bool
+    {
+        return preg_match(self::BLANK_LINE_PATTERN, $text->data) === 1;
     }
 
     /** @return list<Text> */
@@ -63,7 +73,7 @@ final class PastedTextBreaks
             if ($child instanceof Text) {
                 $texts[] = $child;
             } elseif ($child instanceof Element && !in_array($child->localName, self::VERBATIM_ELEMENTS, true)) {
-                $texts = [...$texts, ...self::proseTextsIn($child)];
+                array_push($texts, ...self::proseTextsIn($child));
             }
         }
 
@@ -74,6 +84,10 @@ final class PastedTextBreaks
     {
         $content = $text->data;
         $core = trim($content);
+        if (!str_contains($core, "\n")) {
+            return;
+        }
+
         $leadingWhitespace = substr($content, 0, strlen($content) - strlen(ltrim($content)));
         $lines = self::lines($core);
         $lines[0] = $leadingWhitespace . $lines[0];

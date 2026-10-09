@@ -66,6 +66,7 @@ use App\Tests\Service\Reader\FetchedPageNormalizerTest;
 use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -73,6 +74,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 final class ArticleExtractorTest extends TestCase
 {
     use NoEgressProxy;
+    use ReadsFixtures;
 
     private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
 
@@ -206,7 +208,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testKeepsTheLineBreaksOfAPastedTracklist(): void
     {
-        $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/soundcloud-track-noscript.html');
+        $html = $this->fixture('reader/soundcloud-track-noscript.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
         $result = $extractor->extract('https://site.test/artist/track');

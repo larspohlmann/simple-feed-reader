@@ -11,7 +11,10 @@ use PHPUnit\Framework\TestCase;
 
 final class PastedTextBreaksTest extends TestCase
 {
-    /** @return iterable<string, array{string, string}> */
+    /**
+     * @return iterable<string, array{string, string}>
+     * @noinspection HtmlRequiredAltAttribute, HtmlUnknownTarget
+     */
     public static function rewrittenBodies(): iterable
     {
         yield 'a blank line and a single break' => ["<p>a\n\nb\nc</p>", '<p>a<br><br>b<br>c</p>'];
@@ -43,7 +46,6 @@ final class PastedTextBreaksTest extends TestCase
             "<p>a<br><br>b <i>x</i>\n<i>y</i></p>",
         ];
         yield 'inside an inline element' => ["<p><strong>a\n\nb</strong></p>", '<p><strong>a<br><br>b</strong></p>'];
-        yield 'a blank line spread over two nodes' => ["<p>a\n<!--x-->\nb\nc</p>", "<p>a\n<!--x-->\nb<br>c</p>"];
         yield 'code in a pasted paragraph keeps its newlines' => [
             "<p>a\n\nb <code>x\ny</code></p>",
             "<p>a<br><br>b <code>x\ny</code></p>",
@@ -60,7 +62,10 @@ final class PastedTextBreaksTest extends TestCase
         self::assertSame($expected, PastedTextBreaks::inHtml($html));
     }
 
-    /** @return iterable<string, array{string}> */
+    /**
+     * @return iterable<string, array{string}>
+     * @noinspection HtmlRequiredAltAttribute, HtmlUnknownTarget
+     */
     public static function bodiesLeftAlone(): iterable
     {
         yield 'single newlines only' => ["<p>hard\nwrapped</p>"];
@@ -74,6 +79,11 @@ final class PastedTextBreaksTest extends TestCase
         yield 'a blank line only between divs' => ["<div><span>a</span>\n\n<span>b</span></div>"];
         yield 'a blank line only in verbatim text' => ["<p>a <kbd>x\n\ny</kbd> <samp>u\n\nv</samp></p>"];
         yield 'single newlines with windows line endings' => ["<p class=x>a\r\nb</p>"];
+        yield 'a blank line spread over two nodes' => ["<p>a\n<!--x-->\nb\nc</p>"];
+        yield 'hard wraps around an image on its own line' => ["<p>a\nb\n<img src=\"x\">\nc\nd</p>"];
+        yield 'a break on its own line' => ["<p class=x>a\n<br/>\nb</p>"];
+        yield 'a paragraph inside pre' => ["<pre><p>a\n\nb</p></pre>"];
+        yield 'a paragraph inside code' => ["<code><p>a\n\nb</p></code>"];
     }
 
     #[DataProvider('bodiesLeftAlone')]
@@ -84,11 +94,12 @@ final class PastedTextBreaksTest extends TestCase
 
     public function testRestoreInRewritesAParsedDocument(): void
     {
+        /** @noinspection HtmlRequiredLangAttribute */
         $document = HtmlDocumentParser::parse("<html><body><p>a\n\nb</p></body></html>");
 
         $restored = PastedTextBreaks::restoreIn($document);
 
         self::assertSame('<p>a<br><br>b</p>', $document->body?->innerHTML);
-        self::assertSame(1, $restored);
+        self::assertTrue($restored);
     }
 }

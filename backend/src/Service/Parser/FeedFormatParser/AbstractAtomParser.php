@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
-use App\Service\Html\Support\PastedTextBreaks;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
@@ -109,7 +108,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             title: PlainText::from($title) ?? '(untitled)',
             author: $this->authorName($entry),
             summary: XmlHelper::childText($entry, 'summary', $this->namespaceUri()),
-            contentHtml: $contentHtml,
+            contentHtml: FeedBodyHtml::of($contentHtml),
             publishedAt: DateParser::parse($this->firstDate($entry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
@@ -205,12 +204,12 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
                 }
                 $html = trim($html);
 
-                return $html === '' ? null : PastedTextBreaks::inHtml($html);
+                return $html === '' ? null : $html;
             }
 
             $text = trim($child->textContent);
 
-            return $text === '' ? null : FeedBodyHtml::of($text);
+            return $text === '' ? null : $text;
         }
 
         return null;

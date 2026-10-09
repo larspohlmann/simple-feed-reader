@@ -27,18 +27,18 @@ final class HtmlDocumentParserTest extends TestCase
         self::assertStringContainsString('Grüße', $document->saveHtml());
     }
 
-    public function testParseUtf8IgnoresADeclaredCharset(): void
+    public function testAFragmentIgnoresADeclaredCharset(): void
     {
-        $document = HtmlDocumentParser::parseUtf8('<meta charset="iso-8859-1"><p>Grüße</p>');
+        $document = HtmlDocumentParser::parseFragment('<meta charset="iso-8859-1"><p>Grüße</p>');
 
         self::assertSame('Grüße', $document->querySelector('p')?->textContent);
     }
 
-    public function testParseUtf8RefusesBlankInput(): void
+    public function testAFragmentKeepsLeadingHeadContentInTheBody(): void
     {
-        $this->expectException(UnparseableHtmlException::class);
+        $document = HtmlDocumentParser::parseFragment('<style>p{}</style><p>a</p>');
 
-        HtmlDocumentParser::parseUtf8(' ');
+        self::assertSame('<style>p{}</style><p>a</p>', $document->body?->innerHTML);
     }
 
     public function testBlankInputYieldsAnEmptyDocument(): void

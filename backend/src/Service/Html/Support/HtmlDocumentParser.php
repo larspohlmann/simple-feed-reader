@@ -15,13 +15,14 @@ final class HtmlDocumentParser
 {
     public static function parse(string $html): HTMLDocument
     {
-        return self::parsed($html, null) ?? throw self::unparseable();
+        return self::parsed($html, null)
+            ?? throw new UnparseableHtmlException('The HTML is blank or could not be parsed.');
     }
 
-    /** For markup that is UTF-8 already, whatever a `<meta charset>` inside it declares. */
-    public static function parseUtf8(string $html): HTMLDocument
+    /** A body fragment, UTF-8 already whatever a `<meta charset>` inside it declares; empty when unreadable. */
+    public static function parseFragment(string $html): HTMLDocument
     {
-        return self::parsed($html, 'UTF-8') ?? throw self::unparseable();
+        return self::parsed('<body>' . $html, 'UTF-8') ?? HTMLDocument::createEmpty();
     }
 
     /** A document with nothing in it when the HTML is blank or unreadable: nothing to read is not a failure here. */
@@ -41,11 +42,6 @@ final class HtmlDocumentParser
         } catch (\Throwable) {
             return null;
         }
-    }
-
-    private static function unparseable(): UnparseableHtmlException
-    {
-        return new UnparseableHtmlException('The HTML is blank or could not be parsed.');
     }
 
     private function __construct()

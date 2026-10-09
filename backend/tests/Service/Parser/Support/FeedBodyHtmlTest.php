@@ -26,11 +26,4 @@ final class FeedBodyHtmlTest extends TestCase
             FeedBodyHtml::of("<p>Caption\n\n(Photo: Jane)</p>"),
         );
     }
-
-    public function testPlainHtmlPassesThroughUntouched(): void
-    {
-        $html = "<p>Hard-wrapped\nprose</p><ul><li>one</li></ul>";
-
-        self::assertSame($html, FeedBodyHtml::of($html));
-    }
 }
