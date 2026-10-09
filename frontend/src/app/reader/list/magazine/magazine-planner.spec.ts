@@ -1,5 +1,6 @@
 import { planMagazine } from './magazine-planner';
-import { MagazineBlock } from './magazine-block';
+import { EntryKind, MagazineBlock } from './magazine-block';
+import { IMAGE_KINDS } from './magazine-slot-fit';
 import { EntryDto } from '../../models';
 import { entryImage } from '../preview-image';
 
@@ -606,6 +607,44 @@ describe('planMagazine', () => {
     ];
     const blocks = planMagazine({ entries, grouping: true, complete: true });
     expect(blocks.some((block) => block.kind === 'group')).toBe(true);
+  });
+
+  it('never plans an entry with an image into a text block in the image family', () => {
+    const entries = many(15, (index) =>
+      entryAt(index, {
+        imageUrl: `https://i/${index}.jpg`,
+        imageWidth: 480,
+        imageHeight: 360,
+        summary: null,
+        isShort: index === 11,
+      }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
+  });
+
+  it('promotes a text slot to the tallest image block no taller than the slot', () => {
+    // Page 2 is IMAGE_TEMPLATES[11]: hero, thumb, split, thumb, quote, kicker.
+    const entries = many(17, (index) =>
+      big(index, { summary: 'A summary long enough to fill a pull quote. '.repeat(8) }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks[15]).toBe('split');
+    expect(ks[16]).toBe('thumb');
+  });
+
+  it('shows a real picture in the text family rather than a text block', () => {
+    const summary = 'A long text-forward summary that fills a pull quote. '.repeat(8);
+    const entries = many(80, (index) =>
+      index % 8 === 0 ? big(index, { summary }) : entryAt(index, { summary }),
+    );
+    const blocks = planMagazine({ entries, grouping: false, complete: true });
+    const pictureKinds = blocks
+      .filter((block) => block.kind !== 'group' && block.entry.imageUrl !== null)
+      .map((block) => block.kind);
+    expect(pictureKinds).toHaveLength(10);
+    expect(pictureKinds.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
+    expect(kinds(blocks)).toContain('quote');
   });
 
   it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {

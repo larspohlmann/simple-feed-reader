@@ -1,6 +1,7 @@
 import { EntryDto } from '../../models';
-import { entryImage, EntryImage, entrySnippet } from '../preview-image';
+import { entryImage, entrySnippet } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
+import { fits, ImageBar, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -49,7 +50,17 @@ const LEAD_IMAGE_REACH = 6;
 /** Per-page height ceiling, in BLOCK_HEIGHT units — about one and a half phone
  *  screens. Without it three heroes can land in one page. */
 const PAGE_HEIGHT_CAP = 1100;
-const QUOTE_MIN_TEXT = 300;
+
+/** A template family, and the image an entry needs before the family refuses to
+ *  hide it in a text block. The text family serves wire services whose every entry
+ *  carries a miniature, so only a picture that fills a `split` counts there. */
+interface MagazineFamily {
+  readonly templates: readonly (readonly Slot[])[];
+  readonly imageBar: ImageBar;
+}
+
+const IMAGE_FAMILY: MagazineFamily = { templates: IMAGE_TEMPLATES, imageBar: 'thumb' };
+const TEXT_FAMILY: MagazineFamily = { templates: TEXT_TEMPLATES, imageBar: 'split' };
 
 /** A same-source run, with any single foreign posts it bridges pulled aside. */
 interface DetectedRun {
@@ -64,7 +75,7 @@ interface DetectedRun {
  *  advances. */
 interface PlanPass {
   readonly ordered: EntryDto[];
-  readonly templates: readonly (readonly Slot[])[];
+  readonly family: MagazineFamily;
   readonly complete: boolean;
   readonly collapseEnabled: boolean;
   readonly blocks: MagazineBlock[];
@@ -95,7 +106,7 @@ function startPass(input: MagazinePlanInput): PlanPass {
     // to the front when the first are image-less. The text family opens on a
     // headline by design, so it keeps strict order.
     ordered: useTextFamily ? entries : leadWithImage(entries),
-    templates: useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES,
+    family: useTextFamily ? TEXT_FAMILY : IMAGE_FAMILY,
     complete,
     collapseEnabled: grouping && activeSourceCount(entries) >= MIN_VIEW_SOURCES,
     blocks: [],
@@ -127,7 +138,7 @@ function collapseRun(pass: PlanPass, run: DetectedRun): number | null {
 }
 
 function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
-  const template = templateFor(pass.page, pass.templates);
+  const template = templateFor(pass.page, pass.family.templates);
   const remaining = pass.ordered.length - index;
   if (remaining < template.length && !pass.complete) return null;
 
@@ -140,7 +151,7 @@ function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
     ? cappedBeforeLongRun(pass.ordered, index, naturalLength)
     : naturalLength;
   const slice = pass.ordered.slice(index, index + take);
-  pass.blocks.push(...layOutPage(template, slice, pass.page));
+  pass.blocks.push(...layOutPage(pass, template, slice));
   pass.page += 1;
   return index + slice.length;
 }
@@ -281,12 +292,13 @@ function resolveSlot(slot: Slot, page: number, position: number): EntryKind {
   return seed(page, position) < 0.5 ? slot.either[0] : slot.either[1];
 }
 
-function layOutPage(template: readonly Slot[], slice: EntryDto[], page: number): MagazineBlock[] {
+function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
+  const { page } = pass;
   const wanted = template
     .slice(0, slice.length)
     .map((slot, position) => resolveSlot(slot, page, position));
   const budgeted = withinBudget(wanted);
-  const assigned = assign(budgeted, slice);
+  const assigned = assign(budgeted, slice, pass.family.imageBar);
 
   return assigned.map((kind, position) => toBlock(kind, slice[position], { page, position }));
 }
@@ -307,9 +319,9 @@ function emitInterlopers(pass: PlanPass, run: DetectedRun): void {
 function emitPages(pass: PlanPass, items: EntryDto[]): void {
   let index = 0;
   while (index < items.length) {
-    const template = templateFor(pass.page, pass.templates);
+    const template = templateFor(pass.page, pass.family.templates);
     const slice = items.slice(index, index + template.length);
-    pass.blocks.push(...layOutPage(template, slice, pass.page));
+    pass.blocks.push(...layOutPage(pass, template, slice));
     index += slice.length;
     pass.page += 1;
   }
@@ -338,9 +350,9 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
  * Entries fill slots IN ORDER — chronological by contract. The one exception is
  * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
  * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
- * demotes TRANSITIVELY.
+ * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`).
  */
-function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
+function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
   const order = [...slice];
   let tallest = 0;
   for (let index = 1; index < kinds.length; index++) {
@@ -360,80 +372,7 @@ function assign(kinds: EntryKind[], slice: EntryDto[]): EntryKind[] {
 
   slice.splice(0, slice.length, ...order);
 
-  return kinds.map((kind, position) => settle(kind, order[position]));
-}
-
-function settle(kind: EntryKind, entry: EntryDto): EntryKind {
-  const settled = demoteUntilFit(kind, entry);
-  // An image-less entry with a summary must keep its dek: lift the dek-less
-  // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
-  // both families honour it. A bare entry (no image, no summary) stays `compact`.
-  return settled === 'compact' && hasSummaryButNoImage(entry) ? 'kicker' : settled;
-}
-
-function demoteUntilFit(kind: EntryKind, entry: EntryDto): EntryKind {
-  let current = kind;
-  while (!fits(current, entry)) {
-    const next = DEMOTION[current];
-    if (next === current) return current;
-    current = next;
-  }
-  return current;
-}
-
-/** An entry with no image but a usable summary — the case the `compact` floor
- *  would strip of its copy. An entry that can fill any image block is excluded. */
-function hasSummaryButNoImage(entry: EntryDto): boolean {
-  return entryImage(entry) === null && hasSummary(entry);
-}
-
-/** Whether the entry carries copy to show as a dek. Mirrors the `snippet` a block
- *  renders (`EntryBlockBase`), so a `kicker` is only offered to an entry whose
- *  dek will not render empty. */
-function hasSummary(entry: EntryDto): boolean {
-  return entrySnippet(entry).length > 0;
-}
-
-const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
-  // Portraits and Shorts are refused, demoting to `split`.
-  hero: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 500),
-  // A portrait image cannot fill a 3:1 band at all.
-  wide: (entry) => notAShort(entry) && landscapeImageAtLeast(entry, 400),
-  split: (entry) => imageAtLeast(entry, 300),
-  thumb: (entry) => entryImage(entry) !== null,
-  quote: (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
-  // A kicker shows a title AND a dek; with no dek it is only a taller
-  // compact, so a summary-less entry demotes past it to the `compact` floor.
-  kicker: (entry) => hasSummary(entry),
-  compact: () => true,
-};
-
-function fits(kind: EntryKind, entry: EntryDto): boolean {
-  return FITS[kind](entry);
-}
-
-/** A Short's picture is a portrait cover; a full-width card would blow it up. */
-function notAShort(entry: EntryDto): boolean {
-  return !entry.isShort;
-}
-
-/** An unknown width is trusted only alongside the persisted image field. */
-function imageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
-  const image = entryImage(entry);
-  const width = image?.width ?? 0;
-  return !!image && (width >= minimumWidth || (width === 0 && !!entry.imageUrl));
-}
-
-function landscapeImageAtLeast(entry: EntryDto, minimumWidth: number): boolean {
-  const image = entryImage(entry);
-  return !!image && !isPortrait(image) && imageAtLeast(entry, minimumWidth);
-}
-
-/** A known-portrait image — declared height clearly exceeds width. Unknown
- *  dimensions are NOT portrait: orientation can't be judged, so the image keeps
- *  its slot. The small margin keeps a near-square image on the image-above path. */
-function isPortrait(image: EntryImage): boolean {
-  return !!image.width && !!image.height && image.height > image.width * 1.05;
+  return kinds.map((kind, position) => settle(kind, order[position], imageBar));
 }
 
 function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {
