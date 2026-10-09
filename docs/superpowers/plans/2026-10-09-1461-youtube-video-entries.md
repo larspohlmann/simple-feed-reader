@@ -339,7 +339,7 @@ git commit -m "feat(#1461): a body-less feed item reads its Media RSS descriptio
 - Consumes: `App\Service\Reader\Media\EmbedProviders::resolve(string $url): ?EmbedTargetModel` (`url`, `posterUrl`, `label`); `App\Service\Reader\Media\MediaMarkup::embedLink(HTMLDocument, EmbedTargetModel): Element`.
 - Produces: `ParsedEntryModel::withContentHtml(?string $contentHtml): self`; `VideoPageEntryRule implements PlatformEntryRuleInterface` (auto-tagged `app.platform_entry_rule` by `services.yaml` `_instanceof`).
 
-Rule semantics: `supports` is true when the entry URL resolves to an embed target, the entry has no playable attachment (`$entry->media->mediaBundle?->isEpisode()` — a SoundCloud/podcast enclosure already plays via Listen, #1434), and the body does not already embed that target (any `a[href]`, `iframe[src]`, `embed[src]` in the body resolving to the same `url`). `apply` prepends `MediaMarkup::embedLink` serialised, to the body (or as the body when null).
+Rule semantics: `supports` is true when the entry URL resolves to an embed target, the entry has no playable attachment (`$entry->media->mediaBundle?->isEpisode()` — a SoundCloud/podcast enclosure already plays via Listen, #1434), and the body does not already carry that player link (an `<a href>` equal to the target URL, `#fragment` ignored — only such a link becomes a player; iframes are stripped by the sanitizer and watch links are not upgraded). `apply` prepends `MediaMarkup::embedLink` serialised, to the body (or as the body when null).
 
 - [ ] **Step 1: Write the failing `VideoPageEntryRuleTest`**
 
