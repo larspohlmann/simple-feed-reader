@@ -18,7 +18,6 @@ the channel's feed under the channel's name. Each new video plays right in the
 reader, with its description beneath. Shorts play in a portrait player and
 carry a Short badge in the list.
 
-
 ## [v1.3.1] - 2026-10-08
 
 ## What's Changed
