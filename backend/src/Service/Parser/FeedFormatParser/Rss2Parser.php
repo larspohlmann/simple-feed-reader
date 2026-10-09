@@ -69,7 +69,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             return null;
         }
 
-        $description = XmlHelper::unqualifiedChildText($entry, 'description');
+        $description = XmlHelper::childTextOutsideMediaRss($entry, 'description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
         $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);

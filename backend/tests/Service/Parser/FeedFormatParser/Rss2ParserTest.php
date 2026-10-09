@@ -429,4 +429,19 @@ final class Rss2ParserTest extends TestCase
 
         self::assertSame('<p>Body</p>', $entry->contentHtml);
     }
+
+    public function testDescriptionIsReadInADefaultNamespacedRssDocument(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rss version="2.0" xmlns="http://backend.userland.com/rss2">
+              <channel><title>Blog</title>
+                <item><title>T</title><link>https://example.com/a</link>
+                  <description>&lt;p&gt;Body&lt;/p&gt;</description>
+                </item>
+              </channel>
+            </rss>
+            XML);
+
+        self::assertSame('<p>Body</p>', $feed->entries[0]->contentHtml);
+    }
 }

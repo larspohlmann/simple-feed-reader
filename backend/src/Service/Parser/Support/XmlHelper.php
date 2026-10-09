@@ -29,12 +29,12 @@ final class XmlHelper
         return null;
     }
 
-    /** Trimmed text of the first direct child with this local name that sits in no namespace and has text. */
-    public static function unqualifiedChildText(\DOMElement $parent, string $localName): ?string
+    /** Like childText, but a Media RSS element of that name is never taken for the item's own. */
+    public static function childTextOutsideMediaRss(\DOMElement $parent, string $localName): ?string
     {
         foreach (self::childElements($parent, $localName, null) as $child) {
             $text = trim($child->textContent);
-            if ($text !== '' && ($child->namespaceURI === null || $child->namespaceURI === '')) {
+            if ($text !== '' && $child->namespaceURI !== self::MEDIA_RSS_NAMESPACE) {
                 return $text;
             }
         }
