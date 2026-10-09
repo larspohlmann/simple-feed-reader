@@ -121,11 +121,19 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
     private function authorUri(\DOMElement $entry): ?string
     {
+        return AbsoluteHttpUrl::orNull($this->authorChildText($entry, 'uri'));
+    }
+
+    private function authorName(\DOMElement $entry): ?string
+    {
+        return $this->authorChildText($entry, 'name');
+    }
+
+    private function authorChildText(\DOMElement $entry, string $localName): ?string
+    {
         $author = XmlHelper::childElement($entry, 'author', $this->namespaceUri());
 
-        return $author === null
-            ? null
-            : AbsoluteHttpUrl::orNull(XmlHelper::childText($author, 'uri', $this->namespaceUri()));
+        return $author === null ? null : XmlHelper::childText($author, $localName, $this->namespaceUri());
     }
 
     /** The first present entry date, in this dialect's preference order. */
@@ -167,21 +175,6 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         return $fallback;
-    }
-
-    private function authorName(\DOMElement $entry): ?string
-    {
-        foreach ($entry->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === 'author'
-                && $child->namespaceURI === $this->namespaceUri()
-            ) {
-                return XmlHelper::childText($child, 'name', $this->namespaceUri());
-            }
-        }
-
-        return null;
     }
 
     /**

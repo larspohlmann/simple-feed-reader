@@ -60,15 +60,22 @@ final class XmlHelper
         ?string $namespaceUri,
     ): iterable {
         foreach ($parent->childNodes as $child) {
-            if (!$child instanceof \DOMElement || $child->localName !== $localName) {
-                continue;
+            if (
+                $child instanceof \DOMElement
+                && $child->localName === $localName
+                && $child->namespaceURI === $namespaceUri
+            ) {
+                yield $child;
             }
-            if ($child->namespaceURI !== $namespaceUri) {
-                continue;
-            }
-
-            yield $child;
         }
+    }
+
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    public static function isElement(\DOMNode $node, string $localName, ?string $namespaceUri): bool
+    {
+        return $node instanceof \DOMElement
+            && $node->localName === $localName
+            && $node->namespaceURI === $namespaceUri;
     }
 
     /**

@@ -24,11 +24,8 @@ final readonly class ItemImageExtractor
     {
         $candidates = self::mediaCandidatesIn($item);
 
-        foreach ($item->childNodes as $child) {
-            if (self::isMediaElement($child, 'group')) {
-                /** @var \DOMElement $child */
-                $candidates = [...$candidates, ...self::mediaCandidatesIn($child)];
-            }
+        foreach (XmlHelper::childElements($item, 'group', XmlHelper::MEDIA_RSS_NAMESPACE) as $group) {
+            $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
         }
 
         return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
@@ -128,10 +125,9 @@ final readonly class ItemImageExtractor
     {
         $candidates = [];
         foreach ($parent->childNodes as $child) {
-            if (!self::isMediaElement($child, 'thumbnail') && !self::isMediaElement($child, 'content')) {
+            if (!self::isMediaImageSlot($child)) {
                 continue;
             }
-            /** @var \DOMElement $child */
             $url = trim($child->getAttribute('url'));
             if ($url === '' || !MediaImageClassifier::isImage($child)) {
                 continue;
@@ -159,10 +155,10 @@ final readonly class ItemImageExtractor
         return $candidates;
     }
 
-    private static function isMediaElement(\DOMNode $node, string $localName): bool
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    private static function isMediaImageSlot(\DOMNode $node): bool
     {
-        return $node instanceof \DOMElement
-            && $node->localName === $localName
-            && $node->namespaceURI === XmlHelper::MEDIA_RSS_NAMESPACE;
+        return XmlHelper::isElement($node, 'thumbnail', XmlHelper::MEDIA_RSS_NAMESPACE)
+            || XmlHelper::isElement($node, 'content', XmlHelper::MEDIA_RSS_NAMESPACE);
     }
 }
