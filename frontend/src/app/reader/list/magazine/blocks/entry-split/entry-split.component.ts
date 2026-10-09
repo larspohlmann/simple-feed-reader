@@ -26,8 +26,12 @@ export class EntrySplitComponent extends EntryImageBlockBase {
 
   /** The side box adapts to the image but stays bounded — landscape crops to
    *  3:2, portrait to 3:4. A portrait routed here from `hero`/`wide` shows AS a
-   *  portrait, not a thin cropped sliver. Unknown dimensions keep the 3:2 default. */
+   *  portrait, not a thin cropped sliver. Unknown dimensions keep the 3:2 default;
+   *  a Short's box is the stylesheet's. */
   readonly aspect = computed(() => {
+    if (this.entry().isShort) {
+      return null;
+    }
     const img = this.image();
     if (!img?.width || !img?.height) {
       return '3 / 2';

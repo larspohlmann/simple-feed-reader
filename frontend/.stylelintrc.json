@@ -24,12 +24,12 @@
       "column-gap": ["%", "em", "rem"],
       "font-size": ["%", "em", "rem"],
       "border-radius": ["%", "em", "rem"],
-      "width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
-      "height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
-      "min-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
-      "min-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
-      "max-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"],
-      "max-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "fr"]
+      "width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"],
+      "height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"],
+      "min-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"],
+      "min-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"],
+      "max-width": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"],
+      "max-height": ["%", "em", "rem", "ch", "vw", "vh", "dvw", "dvh", "cqi", "fr"]
     },
     "media-feature-name-unit-allowed-list": { "width": [] }
   },

@@ -1650,8 +1650,8 @@ relative units for the budget, not a layout guarantee.
 
 | Block | Height | Image | Fills when |
 |---|---|---|---|
-| **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted |
-| **Wide** | 260px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted |
+| **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the entry is not a YouTube Short |
+| **Wide** | 260px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the entry is not a YouTube Short |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted |
 | **Kicker** | 140px | none — oversized title only | always |

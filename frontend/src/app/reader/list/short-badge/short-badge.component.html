@@ -1,1 +1,6 @@
-{{ 'reader.shortBadge' | transloco }}
+@if (form() === 'glyph') {
+  <app-icon name="play_arrow" size="xs" [fill]="true" />
+  <span class="sr-only">{{ 'reader.shortBadge' | transloco }}</span>
+} @else {
+  {{ 'reader.shortBadge' | transloco }}
+}

@@ -129,6 +129,32 @@ describe('planMagazine', () => {
     expect(entryCount(blocks)).toBe(80);
   });
 
+  it('never plans a Short into a hero or wide, however large its landscape image', () => {
+    const entries = many(80, (index) =>
+      big(index, { isShort: true, subscriptionId: (index % 6) + 1 }),
+    );
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(kinds(blocks)).not.toContain('hero');
+    expect(kinds(blocks)).not.toContain('wide');
+    expect(kinds(blocks)).toContain('split');
+    expect(entryCount(blocks)).toBe(80);
+  });
+
+  it('pulls the next entry that is not a Short into a hero slot', () => {
+    const plain = many(20, (index) => big(index, { subscriptionId: (index % 6) + 1 }));
+    const plan = (entries: EntryDto[]) =>
+      planMagazine({ entries, grouping: false, complete: true }).filter(
+        (block): block is Exclude<MagazineBlock, { kind: 'group' }> => block.kind !== 'group',
+      );
+    const heroAt = plan(plain).findIndex((block) => block.kind === 'hero');
+    const shortId = plan(plain)[heroAt].entry.id;
+
+    const blocks = plan(plain.map((entry) => ({ ...entry, isShort: entry.id === shortId })));
+
+    expect(blocks[heroAt]).toMatchObject({ kind: 'hero', entry: { id: shortId + 1 } });
+    expect(['split', 'thumb']).toContain(blocks.find((block) => block.entry.id === shortId)?.kind);
+  });
+
   it('sizes a narrow lead image by its rendition ladder, so it can fill a hero or wide slot', () => {
     // factmag: the lead image is a 367px inline img, but its srcset reaches 1920px.
     const factmag = (id: number, over: Partial<EntryDto> = {}): EntryDto =>

@@ -8,7 +8,7 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   @if (showImage()) {
-    <div class="img-frame">
+    <div class="img-frame" [class.portrait]="entry().isShort">
       <img
         class="img"
         [src]="image()!.url"
@@ -24,7 +24,7 @@
         (error)="renditions.fallBackToSrc() || imgError.set(true)"
       />
       @if (entry().isShort) {
-        <app-short-badge />
+        <app-short-badge form="glyph" />
       }
     </div>
   }

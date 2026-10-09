@@ -1,4 +1,5 @@
 @use '../../../theme/glass-rim';
+@use '../short-cover';
 
 .row {
   display: flex;
@@ -102,6 +103,12 @@
   height: 66px;
   object-fit: cover;
   border-radius: var(--radius);
+}
+
+.img-frame.portrait .thumb {
+  @include short-cover.portrait-crop;
+
+  width: auto;
 }
 
 .row.img-left .img-frame {

@@ -38,7 +38,7 @@
     <app-entry-duplicates [entry]="entry()" />
   </div>
   @if (showImage()) {
-    <div class="img-frame">
+    <div class="img-frame" [class.portrait]="entry().isShort">
       <img
         class="thumb"
         [src]="image()!"
@@ -52,7 +52,7 @@
         (error)="renditions.fallBackToSrc() || imgError.set(true)"
       />
       @if (entry().isShort) {
-        <app-short-badge />
+        <app-short-badge form="glyph" />
       }
     </div>
   }

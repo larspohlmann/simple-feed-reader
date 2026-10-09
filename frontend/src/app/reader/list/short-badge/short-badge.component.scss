@@ -11,3 +11,10 @@
   line-height: 1.5;
   pointer-events: none;
 }
+
+:host(.glyph) {
+  top: var(--space-1);
+  right: var(--space-1);
+  display: flex;
+  padding: var(--space-0);
+}

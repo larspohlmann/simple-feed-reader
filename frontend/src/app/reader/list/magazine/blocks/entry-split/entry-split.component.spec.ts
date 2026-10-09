@@ -6,7 +6,10 @@ import { EntryDto, ImageRenditionDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
-import { describeShortMarking } from '../../../../../../testing/short-marking-testing';
+import {
+  describeShortMarking,
+  describeShortPortrait,
+} from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -69,6 +72,13 @@ function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
 
 describe('EntrySplitComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
+  describeShortPortrait((over) => mount(entry(over)));
+
+  it('leaves the box of a Short to the stylesheet, not the declared dimensions', () => {
+    const element = mount(entry({ isShort: true, imageWidth: 480, imageHeight: 360 }))
+      .nativeElement as HTMLElement;
+    expect((element.querySelector('img.img') as HTMLImageElement).style.aspectRatio).toBe('');
+  });
 
   it('hides an image that fails to load, without a proxy retry', () => {
     const fixture = mount(entry());

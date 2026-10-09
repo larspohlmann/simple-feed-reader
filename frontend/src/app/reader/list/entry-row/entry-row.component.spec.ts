@@ -9,7 +9,10 @@ import { EntryDto, ImageRenditionDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
-import { describeShortMarking } from '../../../../testing/short-marking-testing';
+import {
+  describeShortMarking,
+  describeShortPortrait,
+} from '../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -81,6 +84,7 @@ function pressSpace(target: HTMLElement): void {
 
 describe('EntryRowComponent', () => {
   describeShortMarking((over) => mount(entry(over)));
+  describeShortPortrait((over) => mount(entry(over)));
 
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
 

@@ -1,4 +1,8 @@
+@use 'sass:math';
 @use '../../magazine-card';
+@use '../../../short-cover';
+
+$side-share: 0.38;
 
 :host {
   display: block;
@@ -45,7 +49,7 @@
      a flex-basis image's aspect-ratio would drive width back up, crushing text. */
   position: relative;
   flex: none;
-  width: 38%;
+  width: math.percentage($side-share);
   align-self: flex-start;
 
   /* Drops the image onto the kicker text's letters, not the line-box top:
@@ -64,6 +68,22 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
+}
+
+.top:has(> .img-frame.portrait) {
+  container-type: inline-size;
+}
+
+.img-frame.portrait {
+  width: auto;
+}
+
+/* As tall as the 3:2 box a landscape image gets at the side share, so a Short's card is no taller. */
+.img-frame.portrait .img {
+  @include short-cover.portrait-crop;
+
+  width: auto;
+  height: calc(100cqi * #{$side-share} * 2 / 3);
 }
 
 .body {

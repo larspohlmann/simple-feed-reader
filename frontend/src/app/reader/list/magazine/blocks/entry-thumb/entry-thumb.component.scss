@@ -1,4 +1,5 @@
 @use '../../magazine-card';
+@use '../../../short-cover';
 
 :host {
   display: block;
@@ -54,6 +55,12 @@
   object-fit: cover;
   border-radius: var(--radius);
   display: block;
+}
+
+.img-frame.portrait .img {
+  @include short-cover.portrait-crop;
+
+  width: auto;
 }
 
 .body {
