@@ -18,4 +18,6 @@ enum ExtractionFailure: string
     case Mismatch = 'mismatch';
     /** The page is a video or audio player; the feed body carries it. */
     case PlayerPage = 'player_page';
+    /** The entry is a post whose feed body is the whole of it; there is no page to extract. */
+    case FeedBodyIsPost = 'feed_body_is_post';
 }

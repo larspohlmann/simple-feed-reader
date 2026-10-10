@@ -47,13 +47,15 @@ final readonly class EntryReaderController
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 
         $url = $entry->getUrl();
-        $result = $url === null || $url === ''
-            ? ExtractionResultModel::failed(null, ExtractionFailure::NoUrl)
-            : $this->extractor->extract($url, new EntryHintsModel(
+        $result = match (true) {
+            $entry->isTitleDerived() => ExtractionResultModel::failed(null, ExtractionFailure::FeedBodyIsPost),
+            $url === null || $url === '' => ExtractionResultModel::failed(null, ExtractionFailure::NoUrl),
+            default => $this->extractor->extract($url, new EntryHintsModel(
                 title: $entry->getTitle(),
                 author: $entry->getAuthor(),
                 feedMedia: FeedMediaModel::fromEntry($entry),
-            ));
+            )),
+        };
 
         // A confident-but-wrong extraction (page furniture instead of the article)
         // is failed here so the client falls back to the feed body.

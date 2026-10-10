@@ -28,7 +28,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -53,7 +53,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -75,7 +75,7 @@ final class EntryJson
      *   categories: list<string>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool,
+     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
@@ -112,6 +112,7 @@ final class EntryJson
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
             'isShort' => YouTubeShortUrl::is($entry->getUrl()),
+            'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->savedSearches,
         ];
     }

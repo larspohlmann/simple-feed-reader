@@ -332,6 +332,27 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame([], $fake->calls);
     }
 
+    public function testAPostAnswersFeedBodyIsPostWithoutCallingExtractor(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-post@example.com');
+        $fake = $this->installFake();
+        $entry = $this->seedEntry($user, 'https://example.social/@a/1');
+        $entry->markTitleDerived();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->flush();
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('failed', $body['status']);
+        self::assertSame('feed_body_is_post', $body['reason']);
+        self::assertSame([], $fake->calls);
+    }
+
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void
     {
         $client = self::createClient();
