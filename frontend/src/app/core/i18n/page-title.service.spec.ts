@@ -54,11 +54,11 @@ describe('PageTitleService', () => {
     expect(title.getTitle()).toBe('simple feed reader');
   });
 
-  it('appends the count of what the page holds', () => {
+  it('leads with the count of what the page holds', () => {
     service.useText('The Verge', 4);
     TestBed.tick();
 
-    expect(title.getTitle()).toBe('The Verge (4) | simple feed reader');
+    expect(title.getTitle()).toBe('(4) The Verge | simple feed reader');
   });
 
   it('shows no count for a page with nothing in it', () => {
@@ -68,12 +68,12 @@ describe('PageTitleService', () => {
     expect(title.getTitle()).toBe('The Verge | simple feed reader');
   });
 
-  it('keeps the count after a long name is cut to what a tab shows', () => {
+  it('keeps the count ahead of a long name cut to what a tab shows', () => {
     const name = 'A feed name far longer than any browser tab has ever been able to show';
     service.useText(name, 12);
     TestBed.tick();
 
-    expect(title.getTitle()).toBe(`${name.slice(0, 60)}… (12) | simple feed reader`);
+    expect(title.getTitle()).toBe(`(12) ${name.slice(0, 60)}… | simple feed reader`);
   });
 
   it('drops the count with the name on reset', () => {
