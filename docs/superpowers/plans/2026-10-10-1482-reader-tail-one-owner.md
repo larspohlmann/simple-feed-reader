@@ -139,3 +139,11 @@ git commit -m "refactor(#1482): one rule owns the article's tail padding"
 ```
 
 The commit body carries the design rationale from the Architecture section above: why the size moved to `cqb`, and why the cinema decision stays in CSS.
+
+---
+
+## Execution notes
+
+- The article's base rule already set `padding: var(--space-5) var(--space-4)`, and both tail rules overrode its bottom. So the single owner is that rule's shorthand, with the bottom as `max(var(--space-5), var(--reader-focus-tail, 0%), var(--reader-cinema-tail, 0%))`, rather than a new `.reader article` rule. The short-article e2e baseline asserts "no tail yet" (`padding < focusRoom`), not `<= 1px`.
+- On the old CSS, every new case except that baseline passed: at 1920×1000 the scroller is the full viewport height, so `50dvh` equalled `50cqb`.
+- Break test: `--reader-focus-tail: 10cqb` failed both long-article cases (the phone #107 case and the desktop widened case), which shows the dev server served the new CSS.
