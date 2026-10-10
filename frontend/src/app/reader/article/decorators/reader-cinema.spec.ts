@@ -115,9 +115,9 @@ describe('toggleCinemaByKey', () => {
     },
   );
 
-  it('ignores a key typed into a field', () => {
+  it.each(['input', 'select'])('ignores a key typed into a %s', (tagName) => {
     const element = twoVideos();
-    toggleCinemaByKey(key({}, document.createElement('input')), element);
+    toggleCinemaByKey(key({}, document.createElement(tagName)), element);
     expect(widened(element)).toEqual([false, false]);
   });
 
