@@ -373,17 +373,7 @@
   background: var(--surface-1);
 }
 
-/* Cinema mode (#1479): the widened box fills the pane but stays short enough for
-   the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */
 .content ::ng-deep .reader-cinema {
-  --cinema-width: max(
-    100%,
-    min(
-      100cqi - 2 * var(--space-4),
-      (100cqb - var(--reader-top) - var(--tap-target) - 2 * var(--space-5)) * 16 / 9
-    )
-  );
-
   margin: var(--space-5) 0;
 }
 
@@ -391,15 +381,8 @@
   margin: 0;
 }
 
-.content ::ng-deep .reader-cinema--on {
-  width: var(--cinema-width);
-  margin-inline: calc((100% - var(--cinema-width)) / 2);
-}
-
 .content ::ng-deep .reader-cinema__bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--space-1);
+  display: none;
 }
 
 .content ::ng-deep .reader-cinema__toggle {
@@ -432,14 +415,26 @@
   color: var(--text-muted);
 }
 
-@container reader-pane (width <= #{bp.$container-reader-cinema}) {
+@container reader-pane (width > #{bp.$container-reader-cinema}) {
   .content ::ng-deep .reader-cinema__bar {
-    display: none;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--space-1);
   }
 
+  /* Cinema mode (#1479): the widened box fills the pane but stays short enough for
+     the whole 16:9 frame and its toggle to fit the visible pane; never narrower than the column. */
   .content ::ng-deep .reader-cinema--on {
-    width: auto;
-    margin-inline: 0;
+    --cinema-width: max(
+      100%,
+      min(
+        100cqi - 2 * var(--space-4),
+        (100cqb - var(--reader-top) - var(--tap-target) - 2 * var(--space-5)) * 16 / 9
+      )
+    );
+
+    width: var(--cinema-width);
+    margin-inline: calc((100% - var(--cinema-width)) / 2);
   }
 }
 

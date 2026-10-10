@@ -1,5 +1,12 @@
 import generatedFrames from './embed-frame-allowlist.generated.json';
 
+type EmbedKind = 'audio' | 'video';
+
+interface EmbedFrame {
+  pattern: string;
+  kind: EmbedKind;
+}
+
 /**
  * Turns a recovered media link into a real player. The backend can't ship an
  * `<iframe>` — its sanitizer is shared with feed ingest, and Angular's own
@@ -14,11 +21,6 @@ import generatedFrames from './embed-frame-allowlist.generated.json';
  * provider is added in exactly one place and the two sides never drift (#1048).
  * Regenerate with `app:embed:dump-frame-allowlist`.
  */
-interface EmbedFrame {
-  pattern: string;
-  kind: 'audio' | 'video';
-}
-
 const ALLOWED = (generatedFrames as EmbedFrame[]).map(({ pattern, kind }) => ({
   pattern: new RegExp(pattern),
   kind,
@@ -45,14 +47,14 @@ export function upgradeMediaEmbeds(host: HTMLElement): void {
   }
 }
 
-function boxClass(url: string, kind: EmbedFrame['kind']): string {
+function boxClass(url: string, kind: EmbedKind): string {
   const base = kind === 'audio' ? 'reader-embed reader-embed--audio' : 'reader-embed';
   if (SPOTIFY_COLLECTION.test(url)) return `${base} reader-embed--tall`;
   if (url.endsWith(SHORTS_FRAGMENT)) return `${base} reader-embed--portrait`;
   return base;
 }
 
-function embedFrame(url: string, kind: EmbedFrame['kind'], title: string): HTMLElement {
+function embedFrame(url: string, kind: EmbedKind, title: string): HTMLElement {
   const box = document.createElement('div');
   box.className = boxClass(url, kind);
 

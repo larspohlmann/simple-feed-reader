@@ -11,11 +11,11 @@ function host(html: string): HTMLElement {
 const LANDSCAPE =
   '<div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>';
 
-describe('addCinemaToggles', () => {
-  beforeAll(() => {
-    Element.prototype.scrollIntoView = jest.fn();
-  });
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
 
+describe('addCinemaToggles', () => {
   it('wraps a landscape embed with a cinema toggle beneath it', () => {
     const element = host(LANDSCAPE);
     addCinemaToggles(element, labels);
@@ -86,10 +86,6 @@ const widened = (element: HTMLElement) =>
   );
 
 describe('toggleCinemaByKey', () => {
-  beforeAll(() => {
-    Element.prototype.scrollIntoView = jest.fn();
-  });
-
   it('toggles the first video when none is in view', () => {
     const element = twoVideos();
     const event = key();
