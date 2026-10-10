@@ -6,10 +6,14 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class SpotifyEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private SpotifyEmbedProvider $provider;
 
     protected function setUp(): void
@@ -84,8 +88,27 @@ final class SpotifyEmbedProviderTest extends TestCase
         );
     }
 
-    public function testIsAnAudioPlayer(): void
+    public function testEveryFrameIsAnAudioPlayer(): void
     {
-        self::assertSame(EmbedKind::Audio, $this->provider->kind());
+        foreach ($this->provider->frames() as $frame) {
+            self::assertSame(EmbedKind::Audio, $frame->kind);
+        }
+    }
+
+    /** @return iterable<string, array{0: string, 1: EmbedShape}> */
+    public static function framesByShape(): iterable
+    {
+        yield 'track' => ['https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT', EmbedShape::Landscape];
+        yield 'episode' => ['https://open.spotify.com/embed/episode/4cOdK2wGLETKBW3PvgPWqT', EmbedShape::Landscape];
+        yield 'playlist' => ['https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', EmbedShape::Tall];
+        yield 'album' => ['https://open.spotify.com/embed/album/27uRYdAHvcKADidfnR8BN4', EmbedShape::Tall];
+        yield 'artist' => ['https://open.spotify.com/embed/artist/27uRYdAHvcKADidfnR8BN4', EmbedShape::Tall];
+        yield 'show' => ['https://open.spotify.com/embed/show/27uRYdAHvcKADidfnR8BN4', EmbedShape::Tall];
+    }
+
+    #[DataProvider('framesByShape')]
+    public function testACollectionGetsATallBoxAndASingleItemALandscapeOne(string $url, EmbedShape $shape): void
+    {
+        self::assertSame($shape, self::frameMatching($this->provider->frames(), $url)->shape);
     }
 }

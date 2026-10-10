@@ -6,10 +6,13 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\TestCase;
 
 final class BrightcoveEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private const string AL_JAZEERA =
         'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112';
 
@@ -68,8 +71,11 @@ final class BrightcoveEmbedProviderTest extends TestCase
         self::assertSame('Watch the video', $this->provider->label());
     }
 
-    public function testIsAVideoPlayer(): void
+    public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        self::assertSame(EmbedKind::Video, $this->provider->kind());
+        $frame = self::onlyFrame($this->provider);
+
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

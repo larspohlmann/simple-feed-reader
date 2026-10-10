@@ -6,11 +6,14 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class VimeoEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private VimeoEmbedProvider $provider;
 
     protected function setUp(): void
@@ -76,8 +79,11 @@ final class VimeoEmbedProviderTest extends TestCase
         self::assertSame('Watch on Vimeo', $this->provider->label());
     }
 
-    public function testIsAVideoPlayer(): void
+    public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        self::assertSame(EmbedKind::Video, $this->provider->kind());
+        $frame = self::onlyFrame($this->provider);
+
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

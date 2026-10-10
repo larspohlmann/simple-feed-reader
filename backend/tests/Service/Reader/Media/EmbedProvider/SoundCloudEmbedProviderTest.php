@@ -6,10 +6,13 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\TestCase;
 
 final class SoundCloudEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private SoundCloudEmbedProvider $provider;
 
     protected function setUp(): void
@@ -82,8 +85,11 @@ final class SoundCloudEmbedProviderTest extends TestCase
         );
     }
 
-    public function testIsAnAudioPlayer(): void
+    public function testIsAnAudioPlayerInALandscapeBox(): void
     {
-        self::assertSame(EmbedKind::Audio, $this->provider->kind());
+        $frame = self::onlyFrame($this->provider);
+
+        self::assertSame(EmbedKind::Audio, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

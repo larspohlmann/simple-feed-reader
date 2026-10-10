@@ -1,26 +1,42 @@
 [
     {
-        "pattern": "^https://open\\.spotify\\.com/embed/(?:playlist|track|album|episode|show|artist)/[A-Za-z0-9]+$",
-        "kind": "audio"
+        "pattern": "^https://open\\.spotify\\.com/embed/(?:playlist|album|show|artist)/[A-Za-z0-9]+$",
+        "kind": "audio",
+        "shape": "tall"
+    },
+    {
+        "pattern": "^https://open\\.spotify\\.com/embed/(?:track|episode)/[A-Za-z0-9]+$",
+        "kind": "audio",
+        "shape": "landscape"
     },
     {
         "pattern": "^https://player\\.vimeo\\.com/video/\\d+(?:\\?h=[A-Za-z0-9]+)?$",
-        "kind": "video"
+        "kind": "video",
+        "shape": "landscape"
     },
     {
         "pattern": "^https://players\\.brightcove\\.net/\\d+/[A-Za-z0-9_-]+/index\\.html\\?videoId=\\d+$",
-        "kind": "video"
+        "kind": "video",
+        "shape": "landscape"
     },
     {
         "pattern": "^https://w\\.soundcloud\\.com/player/\\?url=https%3A%2F%2Fapi\\.soundcloud\\.com%2Ftracks%2F\\d+$",
-        "kind": "audio"
+        "kind": "audio",
+        "shape": "landscape"
     },
     {
         "pattern": "^https://www\\.dailymotion\\.com/embed/video/[A-Za-z0-9]+$",
-        "kind": "video"
+        "kind": "video",
+        "shape": "landscape"
     },
     {
-        "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}(?:#shorts)?$",
-        "kind": "video"
+        "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}#shorts$",
+        "kind": "video",
+        "shape": "portrait"
+    },
+    {
+        "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}$",
+        "kind": "video",
+        "shape": "landscape"
     }
 ]

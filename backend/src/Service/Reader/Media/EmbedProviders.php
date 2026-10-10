@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
-use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -31,25 +31,25 @@ final readonly class EmbedProviders
         return null;
     }
 
-    /**
-     * Every provider's frame pattern, sorted for a stable dump.
-     *
-     * @return list<string>
-     */
-    public function framePatterns(): array
+    /** @return list<EmbedFrameModel> sorted for a stable dump */
+    public function frames(): array
     {
-        return array_keys($this->kindsByFramePattern());
+        $frames = [];
+        foreach ($this->providers as $provider) {
+            array_push($frames, ...$provider->frames());
+        }
+        usort(
+            $frames,
+            static fn (EmbedFrameModel $left, EmbedFrameModel $right): int => strcmp($left->pattern, $right->pattern),
+        );
+
+        return $frames;
     }
 
-    /** Every frame pattern with the kind of player it embeds, as the reader client's committed allow-list file. */
+    /** The reader client's committed allow-list file. */
     public function allowlistJson(): string
     {
-        $entries = [];
-        foreach ($this->kindsByFramePattern() as $pattern => $kind) {
-            $entries[] = ['pattern' => $pattern, 'kind' => $kind->value];
-        }
-
-        return json_encode($entries, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
+        return json_encode($this->frames(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
     }
 
     /** The case-insensitive regex readability keeps an in-body frame by, built from every provider's sourceHosts(). */
@@ -63,17 +63,5 @@ final readonly class EmbedProviders
         }
 
         return '#//(?:' . implode('|', $hosts) . ')#i';
-    }
-
-    /** @return array<string, EmbedKind> sorted by pattern */
-    private function kindsByFramePattern(): array
-    {
-        $kinds = [];
-        foreach ($this->providers as $provider) {
-            $kinds[$provider->framePattern()] = $provider->kind();
-        }
-        ksort($kinds, \SORT_STRING);
-
-        return $kinds;
     }
 }

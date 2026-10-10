@@ -6,11 +6,14 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private YouTubeEmbedProvider $provider;
 
     protected function setUp(): void
@@ -103,17 +106,27 @@ final class YouTubeEmbedProviderTest extends TestCase
         self::assertFalse($this->provider->matches('https://www.youtube.com/shorts/tooShort'));
     }
 
-    public function testFramePatternAcceptsTheShortMarkerAndNothingElse(): void
+    /** @return iterable<string, array{0: string, 1: EmbedShape}> */
+    public static function framesByShape(): iterable
     {
-        $pattern = '~' . $this->provider->framePattern() . '~';
-
-        self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts'));
-        self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato'));
-        self::assertSame(0, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'));
+        yield 'video' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato', EmbedShape::Landscape];
+        yield 'short' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', EmbedShape::Portrait];
     }
 
-    public function testIsAVideoPlayer(): void
+    #[DataProvider('framesByShape')]
+    public function testAShortGetsAPortraitVideoBoxAndAVideoALandscapeOne(string $url, EmbedShape $shape): void
     {
-        self::assertSame(EmbedKind::Video, $this->provider->kind());
+        $frame = self::frameMatching($this->provider->frames(), $url);
+
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame($shape, $frame->shape);
+    }
+
+    public function testNoFrameAcceptsAnotherFragment(): void
+    {
+        self::assertSame(
+            [],
+            self::framesMatching($this->provider->frames(), 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'),
+        );
     }
 }

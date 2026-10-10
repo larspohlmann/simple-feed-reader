@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 
 /**
  * The SoundCloud widget. The track id is permanent and the src is unsigned, so
@@ -43,15 +45,14 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
         return 'Listen on SoundCloud';
     }
 
-    public function framePattern(): string
+    public function frames(): array
     {
-        return '^https://' . preg_quote(self::HOST, '#')
-            . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$';
-    }
-
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Audio;
+        return [new EmbedFrameModel(
+            '^https://' . preg_quote(self::HOST, '#')
+                . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$',
+            EmbedKind::Audio,
+            EmbedShape::Landscape,
+        )];
     }
 
     public function sourceHosts(): array

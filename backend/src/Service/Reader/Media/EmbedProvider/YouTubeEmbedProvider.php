@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Reader\Media\Support\YouTubeVideoId;
 
@@ -51,15 +53,14 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
         return 'Watch on YouTube';
     }
 
-    public function framePattern(): string
+    public function frames(): array
     {
-        return '^https://www\.youtube-nocookie\.com/embed/' . YouTubeVideoId::PATTERN
-            . '(?:' . YouTubeShortUrl::FRAGMENT . ')?$';
-    }
+        $video = '^https://www\.youtube-nocookie\.com/embed/' . YouTubeVideoId::PATTERN;
 
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Video;
+        return [
+            new EmbedFrameModel($video . '$', EmbedKind::Video, EmbedShape::Landscape),
+            new EmbedFrameModel($video . YouTubeShortUrl::FRAGMENT . '$', EmbedKind::Video, EmbedShape::Portrait),
+        ];
     }
 
     public function sourceHosts(): array
