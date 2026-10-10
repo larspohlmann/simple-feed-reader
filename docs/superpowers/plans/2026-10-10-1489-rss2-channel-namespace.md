@@ -105,3 +105,7 @@ with
 - The plan held as written. Both decoy tests failed first with `'Decoy'`, and the missing-channel and default-namespace assertions passed on `develop` already.
 - Corpus: the parser output for all 235 feeds (224 parsed), covering titles, site URLs, descriptions, images and entries, is byte-identical between `develop` and the branch.
 - Gates: `infection:diff` killed 2/2 mutants. Both suites pass with 7686 tests each.
+- `/simplify` (altitude): `Rss1Parser` still found its channel with `getElementsByTagNameNS(RSS1_NS, 'channel')`, which is namespace-aware but reaches any depth. So the issue's claim that the RSS 2.0 lookup was the last bypass was wrong. It now reads `self::core($root)->child('channel')` and passes the same root wrapper to `fromRss1Root`. A nested-decoy test failed with `'Decoy'` first. A rootless-document test kills the escaped nullsafe mutant. The corpus output is still identical (one RSS 1.0 feed in it); MSI is 100% over 9 mutants, and both suites pass with 7688 tests.
+- Deliberately unchanged:
+  - RSS `isEntry()` still accepts an `<item>` at any depth, unlike Atom's `$depth === 1`. That leniency predates #1452 (which kept the old `getElementsByTagName('item')` reach), so changing it needs its own corpus measurement.
+  - `supports()` root detection still matches `'rss'`/`'RDF'` by local name, which is a separate concern from the channel lookup.
