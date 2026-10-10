@@ -242,6 +242,19 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->leadImage);
     }
 
+    public function testALinkCardShowsItsHostLowerCasedWithoutWww(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://WWW.Example.COM/Story'],
+        ]));
+
+        self::assertSame(
+            '<figure class="link-card"><a href="https://WWW.Example.COM/Story"><small>example.com</small></a></figure>',
+            $rendered?->html,
+        );
+    }
+
     public function testAnHttpImageIsDroppedAndAProtocolRelativeOneUpgraded(): void
     {
         $rendered = $this->renderer()->render(self::post([

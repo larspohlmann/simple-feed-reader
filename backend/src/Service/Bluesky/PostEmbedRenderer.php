@@ -6,6 +6,7 @@ namespace App\Service\Bluesky;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
+use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\AtPostUri;
 use App\Service\Parser\Model\ParsedMediumModel;
@@ -90,8 +91,9 @@ final readonly class PostEmbedRenderer
             return null;
         }
         $thumbnail = HttpsImageUrl::orNull($embed->string('thumbnail'));
-        $width = $embed->node('aspectRatio')->int('width');
-        $height = $embed->node('aspectRatio')->int('height');
+        $ratio = $embed->node('aspectRatio');
+        $width = $ratio->int('width');
+        $height = $ratio->int('height');
         $poster = $thumbnail === null ? '' : sprintf(' poster="%s"', HtmlEscape::text($thumbnail));
 
         return new RenderedEmbedModel(
@@ -115,7 +117,7 @@ final readonly class PostEmbedRenderer
         $card = ($thumbnail === null ? '' : sprintf('<img src="%s" alt="">', HtmlEscape::text($thumbnail)))
             . self::optionalTag('strong', $external->string('title'))
             . self::optionalTag('span', $external->string('description'))
-            . self::optionalTag('small', self::host($url));
+            . self::optionalTag('small', HostKey::forUrl($url));
 
         return new RenderedEmbedModel(
             sprintf('<figure class="link-card"><a href="%s">%s</a></figure>', HtmlEscape::text($url), $card),
@@ -156,13 +158,6 @@ final readonly class PostEmbedRenderer
         }
 
         return $displayName === null ? '@' . $handle : sprintf('%s (@%s)', $displayName, $handle);
-    }
-
-    private static function host(string $url): ?string
-    {
-        $host = parse_url($url, \PHP_URL_HOST);
-
-        return \is_string($host) ? preg_replace('/^www\./i', '', $host) : null;
     }
 
     private static function dimensions(JsonNodeModel $ratio): string
