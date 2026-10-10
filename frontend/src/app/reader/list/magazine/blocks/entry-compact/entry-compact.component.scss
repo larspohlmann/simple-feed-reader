@@ -1,3 +1,5 @@
+@use '../../../post-text';
+
 :host {
   display: block;
 }
@@ -71,4 +73,8 @@ app-entry-kicker-line app-entry-pills {
 
 app-entry-kicker-line app-entry-actions {
   margin-inline-start: auto;
+}
+
+.title.post {
+  @include post-text.post-text;
 }

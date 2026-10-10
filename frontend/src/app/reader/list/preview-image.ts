@@ -64,3 +64,8 @@ export function widestRenditionWidth(
 ): number | null {
   return renditions?.at(-1)?.width ?? null;
 }
+
+/** What a card shows in its headline slot: a post's own text, since its derived title only repeats it. */
+export function entryHeadline(entry: EntryDto): string {
+  return entry.titleDerived ? entry.excerpt : entry.title;
+}

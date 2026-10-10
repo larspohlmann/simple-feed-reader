@@ -1,3 +1,4 @@
+@use '../../../post-text';
 @use 'sass:math';
 @use '../../magazine-card';
 
@@ -112,4 +113,8 @@ $side-share: 0.38;
 
 :host-context(.airy) .img {
   @include magazine-card.image-rim;
+}
+
+.title.post {
+  @include post-text.post-text;
 }

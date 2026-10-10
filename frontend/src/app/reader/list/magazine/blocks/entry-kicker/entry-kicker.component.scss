@@ -1,3 +1,4 @@
+@use '../../../post-text';
 @use '../../magazine-card';
 
 :host {
@@ -49,4 +50,8 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.title.post {
+  @include post-text.post-text;
 }

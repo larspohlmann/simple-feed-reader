@@ -73,6 +73,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,

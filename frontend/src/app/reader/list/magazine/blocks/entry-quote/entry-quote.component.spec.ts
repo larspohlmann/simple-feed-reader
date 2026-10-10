@@ -41,6 +41,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -74,6 +75,15 @@ describe('EntryQuoteComponent', () => {
     expect(element.querySelector('.pull')!.textContent).toContain(
       'One long clause with no terminator',
     );
+  });
+
+  it('shows a post its own text as the title and renders no pull-quote', () => {
+    const element = mount(entry({ titleDerived: true, title: 'Body', excerpt: 'Body and more.' }))
+      .nativeElement as HTMLElement;
+    const title = element.querySelector('.title')!;
+    expect(title.textContent).toContain('Body and more.');
+    expect(title.classList).toContain('post');
+    expect(element.querySelector('.pull')).toBeNull();
   });
 
   it('carries the three actions on its meta row', () => {

@@ -118,20 +118,6 @@ export interface SubscriptionDto {
   includeInForYou: boolean;
 }
 
-/** True when a CDK drag's payload is a feed row, duck-typed on `feedUrl` (the
- *  field only `SubscriptionDto` carries) rather than some other draggable a
- *  shared drop list accepts. Shared by the sidebar and Organise page. */
-export function isSubscriptionDrag(data: unknown): data is SubscriptionDto {
-  return !!data && typeof data === 'object' && 'feedUrl' in data;
-}
-
-/** True when a CDK drag's payload is a tag header — duck-typed on `color`, the
- *  only field `TagDto` carries among this app's draggables. Lets a drop list that
- *  also accepts feed rows (Organise's tag header, #659) tell the drags apart. */
-export function isTagDrag(data: unknown): data is TagDto {
-  return !!data && typeof data === 'object' && 'color' in data && !isSubscriptionDrag(data);
-}
-
 /** The sidebar bootstrap payload: the feed list plus the user-wide favourite,
  *  kept and viewed totals shown as badges on the Favorites/Kept/Recently-read
  *  nav items. */
@@ -235,6 +221,8 @@ export interface EntryDto {
   isViewed: boolean;
   /** The entry links a YouTube Short (`youtube.com/shorts/<id>`). */
   isShort: boolean;
+  /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
+  titleDerived: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */
@@ -437,11 +425,13 @@ export interface ReaderArticle {
   extractedAt: string;
 }
 
+type ExtractionFailureReason = 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch';
+
 /** Extraction could not produce an article; the client falls back to feed content. */
 export interface ReaderFailure {
   status: 'failed';
   url: string | null;
-  reason: 'no_url' | 'fetch' | 'unextractable' | 'empty' | 'mismatch' | 'player_page';
+  reason: ExtractionFailureReason | 'player_page' | 'feed_body_is_post';
   /** The underlying cause in words when one exists — a fetch carries the HTTP
    *  status or transport message; a reason with no such cause is null. */
   detail: string | null;

@@ -1,3 +1,4 @@
+@use '../post-text';
 @use '../../../theme/glass-rim';
 
 .row {
@@ -110,4 +111,8 @@
 
 .row.img-left .img-frame {
   order: -1;
+}
+
+.title.post {
+  @include post-text.post-text;
 }

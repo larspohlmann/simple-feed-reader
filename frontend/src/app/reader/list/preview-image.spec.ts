@@ -1,4 +1,5 @@
 import {
+  entryHeadline,
   entryImage,
   entrySnippet,
   renditionSrcset,
@@ -31,6 +32,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -154,5 +156,19 @@ describe('showsShortPill', () => {
 
   it('marks no other entry', () => {
     expect(showsShortPill(entry(), false)).toBe(false);
+  });
+});
+
+describe('entryHeadline', () => {
+  it('is the title of an ordinary entry', () => {
+    expect(entryHeadline(entry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
+      'Real',
+    );
+  });
+
+  it('is the excerpt of a post, whose title only repeats it', () => {
+    expect(
+      entryHeadline(entry({ title: 'Body', excerpt: 'Body and more', titleDerived: true })),
+    ).toBe('Body and more');
   });
 });
