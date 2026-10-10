@@ -49,12 +49,10 @@
   scroll-padding-top: var(--reader-top);
 }
 
-/* Room for a long article's closing paragraph to reach the reading focus's centre. */
 .reader.with-tail article {
   --reader-focus-tail: 50cqb;
 }
 
-/* A widened video can scroll to the top of the pane, however short the article. */
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
   .reader article:has(.reader-cinema--on) {
     --reader-cinema-tail: calc(100cqb - var(--reader-top));

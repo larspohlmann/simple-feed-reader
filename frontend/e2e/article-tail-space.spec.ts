@@ -50,6 +50,18 @@ async function openArticle(page: Page) {
   return pane;
 }
 
+async function openStubbedArticle(page: Page, body: string): Promise<Locator> {
+  const signedIn = await signInWithLayout(page, 'list');
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
+  await stubArticle(page, body);
+  await page.reload();
+  return openArticle(page);
+}
+
+function expectWithinAPixel(actual: number, expected: number): void {
+  expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
+}
+
 test.describe('Article tail space', () => {
   test.use({ viewport: PHONE });
 
@@ -59,11 +71,7 @@ test.describe('Article tail space', () => {
   test('the last paragraph can be scrolled to the centre and fully highlighted', async ({
     page,
   }) => {
-    const signedIn = await signInWithLayout(page, 'list');
-    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
-    await stubArticle(page, LONG_BODY);
-    await page.reload();
-    const pane = await openArticle(page);
+    const pane = await openStubbedArticle(page, LONG_BODY);
     const scroller = pane.locator('.scroller');
 
     // All the way to the end of the article.
@@ -94,11 +102,7 @@ test.describe('Article tail space', () => {
   });
 
   test('an article that fits the screen gains no dead scroll', async ({ page }) => {
-    const signedIn = await signInWithLayout(page, 'list');
-    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
-    await stubArticle(page, SHORT_BODY);
-    await page.reload();
-    const scroller = (await openArticle(page)).locator('.scroller');
+    const scroller = (await openStubbedArticle(page, SHORT_BODY)).locator('.scroller');
 
     const overflow = await scroller.evaluate((el) => el.scrollHeight - el.clientHeight);
     expect(overflow).toBeLessThanOrEqual(2);
@@ -108,7 +112,6 @@ test.describe('Article tail space', () => {
 const DESKTOP = { width: 1920, height: 1000 };
 const VIDEO = '<video src="https://example.invalid/v.mp4" width="1280" height="720"></video>';
 
-/** The article's bottom padding and the room a widened video needs, in px. */
 async function tailMetrics(pane: Locator) {
   return pane.locator('.scroller').evaluate((scroller) => {
     const article = scroller.querySelector('article')!;
@@ -125,36 +128,28 @@ test.describe('Article tail space with a widened video', () => {
   test.use({ viewport: DESKTOP });
 
   // #1479/#1482: a widened video can reach the top of the pane however short the
-  // article, and the larger of the two tail needs wins whatever the rule order.
+  // article, and its tail outweighs the reading focus's in a long one.
   test('a short article reserves the widened video its room', async ({ page }) => {
-    const signedIn = await signInWithLayout(page, 'list');
-    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
-    await stubArticle(page, VIDEO + SHORT_BODY);
-    await page.reload();
-    const pane = await openArticle(page);
+    const pane = await openStubbedArticle(page, VIDEO + SHORT_BODY);
 
     const unwidened = await tailMetrics(pane);
     expect(unwidened.padding).toBeLessThan(unwidened.focusRoom);
 
     await pane.locator('.reader-cinema__toggle').click();
-    const metrics = await tailMetrics(pane);
-    expect(Math.abs(metrics.padding - metrics.cinemaRoom)).toBeLessThanOrEqual(1);
+    const widened = await tailMetrics(pane);
+    expectWithinAPixel(widened.padding, widened.cinemaRoom);
   });
 
-  test('a long article takes the larger tail while the video is widened', async ({ page }) => {
-    const signedIn = await signInWithLayout(page, 'list');
-    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
-    await stubArticle(page, VIDEO + LONG_BODY);
-    await page.reload();
-    const pane = await openArticle(page);
+  test("a long article trades the focus tail for the video's while it is widened", async ({
+    page,
+  }) => {
+    const pane = await openStubbedArticle(page, VIDEO + LONG_BODY);
 
     const reading = await tailMetrics(pane);
-    expect(Math.abs(reading.padding - reading.focusRoom)).toBeLessThanOrEqual(1);
+    expectWithinAPixel(reading.padding, reading.focusRoom);
 
     await pane.locator('.reader-cinema__toggle').click();
     const widened = await tailMetrics(pane);
-    expect(
-      Math.abs(widened.padding - Math.max(widened.focusRoom, widened.cinemaRoom)),
-    ).toBeLessThanOrEqual(1);
+    expectWithinAPixel(widened.padding, widened.cinemaRoom);
   });
 });
