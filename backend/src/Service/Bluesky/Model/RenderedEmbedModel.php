@@ -7,7 +7,6 @@ namespace App\Service\Bluesky\Model;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 
-/** A post's embed as HTML to follow its body, with the picture and media it brings and its link card's URL. */
 final readonly class RenderedEmbedModel
 {
     /** @param list<ParsedMediumModel> $media */

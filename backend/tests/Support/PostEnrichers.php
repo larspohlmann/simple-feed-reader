@@ -54,7 +54,7 @@ final class PostEnrichers
         );
     }
 
-    /** For refresh tests without Bluesky posts: an AppView call would fail, unlogged. */
+    /** An enricher whose every AppView call fails, unlogged: for refresh tests that need no AppView answer. */
     public static function idle(EntityManagerInterface $entityManager, ClockInterface $clock): PostEnricher
     {
         $appView = new AppViewClient(new StubFeedFetcher(), new HostThrottle(new ArrayAdapter(clock: $clock), $clock));

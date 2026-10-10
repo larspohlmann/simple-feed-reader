@@ -8,7 +8,7 @@ use App\Repository\PendingPostEnrichmentRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** A stored Bluesky post whose embed the AppView has not filled yet. Transient, so it stays out of the backup. */
+/** A stored Bluesky post whose embed the AppView has not filled yet. */
 #[ORM\Entity(repositoryClass: PendingPostEnrichmentRepository::class)]
 #[ORM\Table(name: 'pending_post_enrichment')]
 final class PendingPostEnrichment
