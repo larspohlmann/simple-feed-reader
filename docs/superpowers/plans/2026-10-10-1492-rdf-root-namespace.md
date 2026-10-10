@@ -56,3 +56,14 @@ Run: `php bin/phpunit tests/Service/Parser/Factory/FeedParserFactoryTest.php`. E
 ### Task 2: Gates
 
 - [ ] `composer cs`, `stan`, `md`, `tramp`, PhpStorm `lint_files` on the changed files; `composer test:parallel`, `docker compose exec php composer test` (repo root), `composer infection:diff`.
+
+---
+
+## Execution notes
+
+- The plan held. Both new tests failed first, because `Rss1Parser` was returned. The corpus output is byte-identical to `develop`.
+- Gates: both suites pass with 7690 tests. `infection:diff` generates no mutants for the changed line.
+- `/simplify`:
+  - The two tests are now one `#[DataProvider]` test.
+  - The `supports()` docblock in `FeedFormatParserInterface` is deleted. It said RSS variants match on the local name, which is no longer true, and the rest of it restated the method name.
+  - `Rss2Parser::supports` keeps its local-name match, because a real `<rss>` root may carry no namespace or a default one.
