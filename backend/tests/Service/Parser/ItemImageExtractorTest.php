@@ -6,6 +6,7 @@ namespace App\Tests\Service\Parser;
 
 use App\Entity\ImageRendition;
 use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase
@@ -359,7 +360,6 @@ final class ItemImageExtractorTest extends TestCase
     {
         $image = $this->extractor->fromAtomEnclosure(
             $this->atomEntry('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
-            self::ATOM_NAMESPACE,
         );
 
         self::assertSame('https://i/enc.png', $image?->url);
@@ -369,7 +369,6 @@ final class ItemImageExtractorTest extends TestCase
     {
         $image = $this->extractor->fromAtomEnclosure(
             $this->atomEntry('<link rel="enclosure" type="IMAGE/PNG" href="  https://i/enc.png  "/>'),
-            self::ATOM_NAMESPACE,
         );
 
         self::assertSame('https://i/enc.png', $image?->url);
@@ -379,7 +378,6 @@ final class ItemImageExtractorTest extends TestCase
     {
         self::assertNull($this->extractor->fromAtomEnclosure(
             $this->atomEntry('<link rel="alternate" type="image/png" href="https://i/alt.png"/>'),
-            self::ATOM_NAMESPACE,
         ));
     }
 
@@ -387,7 +385,6 @@ final class ItemImageExtractorTest extends TestCase
     {
         self::assertNull($this->extractor->fromAtomEnclosure(
             $this->atomEntry('<x:link xmlns:x="urn:other" rel="enclosure" type="image/png" href="https://i/x.png"/>'),
-            self::ATOM_NAMESPACE,
         ));
     }
 
@@ -395,18 +392,17 @@ final class ItemImageExtractorTest extends TestCase
     {
         self::assertNull($this->extractor->fromAtomEnclosure(
             $this->atomEntry('<content rel="enclosure" type="image/png" href="https://i/c.png"/>'),
-            self::ATOM_NAMESPACE,
         ));
     }
 
-    private function atomEntry(string $innerXml): \DOMElement
+    private function atomEntry(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         $document->loadXML('<feed xmlns="' . self::ATOM_NAMESPACE . '"><entry>' . $innerXml . '</entry></feed>');
         $entry = $document->getElementsByTagName('entry')->item(0);
         self::assertInstanceOf(\DOMElement::class, $entry);
 
-        return $entry;
+        return new CoreElement($entry, self::ATOM_NAMESPACE);
     }
 
     public function testReadsTheWidthDescribedSrcsetOfABodyImage(): void

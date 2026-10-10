@@ -44,10 +44,9 @@ final class FeedImageExtractor
     }
 
     /** Atom: <feed><logo>, else the podcast artwork. */
-    public static function fromAtomFeed(\DOMElement $root, string $atomNamespace): ?string
+    public static function fromAtomFeed(CoreElement $feed): ?string
     {
-        return HttpsImageUrl::orNull(XmlHelper::childText($root, 'logo', $atomNamespace))
-            ?? self::podcastArtwork($root);
+        return HttpsImageUrl::orNull($feed->text('logo')) ?? self::podcastArtwork($feed->element);
     }
 
     private static function podcastArtwork(\DOMElement $parent): ?string

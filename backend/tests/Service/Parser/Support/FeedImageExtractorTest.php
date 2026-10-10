@@ -53,12 +53,12 @@ final class FeedImageExtractorTest extends TestCase
         return new CoreElement($channel, self::RSS1_NS);
     }
 
-    private function atomRoot(string $xml): \DOMElement
+    private function atomRoot(string $xml): CoreElement
     {
         $root = $this->document($xml)->documentElement;
         self::assertInstanceOf(\DOMElement::class, $root);
 
-        return $root;
+        return new CoreElement($root, self::ATOM_NS);
     }
 
     public function testReadsTheRss2ChannelImage(): void
@@ -193,7 +193,7 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testReadsTheAtomLogo(): void
     {
-        $document = $this->document(/** @lang TEXT */ <<<'XML'
+        $root = $this->atomRoot(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
                 <title>Example</title>
@@ -201,28 +201,24 @@ final class FeedImageExtractorTest extends TestCase
                 <icon>https://example.com/favicon.ico</icon>
             </feed>
             XML);
-        $root = $document->documentElement;
-        self::assertInstanceOf(\DOMElement::class, $root);
 
         self::assertSame(
             'https://example.com/banner.png',
-            FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS),
+            FeedImageExtractor::fromAtomFeed($root),
         );
     }
 
     public function testAtomIconIsNotUsedAsTheFeedImage(): void
     {
-        $document = $this->document(/** @lang TEXT */ <<<'XML'
+        $root = $this->atomRoot(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
                 <title>Example</title>
                 <icon>https://example.com/favicon.ico</icon>
             </feed>
             XML);
-        $root = $document->documentElement;
-        self::assertInstanceOf(\DOMElement::class, $root);
 
-        self::assertNull(FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
+        self::assertNull(FeedImageExtractor::fromAtomFeed($root));
     }
 
     public function testALeadingItunesImageDoesNotHideTheChannelImage(): void
@@ -263,7 +259,7 @@ final class FeedImageExtractorTest extends TestCase
             </feed>
             XML);
 
-        self::assertSame('https://example.com/avatar.jpg', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
+        self::assertSame('https://example.com/avatar.jpg', FeedImageExtractor::fromAtomFeed($root));
     }
 
     public function testAnAtomLogoBeatsThePodcastArtwork(): void
@@ -276,7 +272,7 @@ final class FeedImageExtractorTest extends TestCase
             </feed>
             XML);
 
-        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromAtomFeed($root, self::ATOM_NS));
+        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromAtomFeed($root));
     }
 
     public function testReadsTheImageOfAnRss2FeedInADefaultNamespace(): void

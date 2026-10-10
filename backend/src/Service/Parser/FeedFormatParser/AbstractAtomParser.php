@@ -10,6 +10,7 @@ use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\AtomDiscussion;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedBodyHtml;
@@ -65,8 +66,9 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         if ($root === null) {
             throw new FeedParseException('Atom document without root element');
         }
+        $feed = $this->core($root);
 
-        $title = XmlHelper::childText($root, 'title', $this->namespaceUri());
+        $title = $feed->text('title');
 
         // A feed in the right namespace from which we extracted nothing is a
         // broken document: fail loudly so discovery/refresh report a real error
@@ -77,83 +79,78 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 
         return (new ParsedFeedModel(
             PlainText::from($title),
-            $this->alternateLink($root),
-            XmlHelper::childText($root, $this->descriptionElement(), $this->namespaceUri()),
-            FeedImageExtractor::fromAtomFeed($root, $this->namespaceUri()),
+            self::alternateLink($feed),
+            $feed->text($this->descriptionElement()),
+            FeedImageExtractor::fromAtomFeed($feed),
             $entries,
         ))->withShowArtwork(PodcastArtwork::of($root));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
-        $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());
+        $atomEntry = $this->core($entry);
+        $title = $atomEntry->text('title');
+        $id = $atomEntry->text('id');
         // Some WordPress Atom feeds carry the permalink only in <id>; only an absolute http(s) id may stand in,
         // since a urn:/tag: id is not fetchable.
-        $link = $this->alternateLink($entry) ?? AbsoluteHttpUrl::orNull($id);
+        $link = self::alternateLink($atomEntry) ?? AbsoluteHttpUrl::orNull($id);
         if ($title === null && $link === null) {
             return null;
         }
 
-        $contentHtml = $this->elementMarkup($entry, 'content');
+        $contentHtml = self::elementMarkup($atomEntry, 'content');
         $image = $this->imageSelector->fromAtom(
-            $entry,
-            $this->namespaceUri(),
-            [$contentHtml, $this->elementMarkup($entry, 'summary')],
+            $atomEntry,
+            [$contentHtml, self::elementMarkup($atomEntry, 'summary')],
         );
         $mediaBundle = $this->mediaExtractor->extract($entry);
-        $summary = XmlHelper::childText($entry, 'summary', $this->namespaceUri());
+        $summary = $atomEntry->text('summary');
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
-            author: $this->authorName($entry),
+            author: self::authorChildText($atomEntry, 'name'),
             summary: $summary,
             contentHtml: FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null),
-            publishedAt: DateParser::parse($this->firstDate($entry)),
+            publishedAt: DateParser::parse($this->firstDate($atomEntry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
-            discussion: AtomDiscussion::from($entry, $this->namespaceUri()),
-            authorUrl: $this->authorUri($entry),
+            discussion: AtomDiscussion::from($atomEntry),
+            authorUrl: AbsoluteHttpUrl::orNull(self::authorChildText($atomEntry, 'uri')),
         );
     }
 
-    private function authorUri(\DOMElement $entry): ?string
+    private function core(\DOMElement $element): CoreElement
     {
-        return AbsoluteHttpUrl::orNull($this->authorChildText($entry, 'uri'));
+        return new CoreElement($element, $this->namespaceUri());
     }
 
-    private function authorName(\DOMElement $entry): ?string
+    private static function authorChildText(CoreElement $entry, string $localName): ?string
     {
-        return $this->authorChildText($entry, 'name');
-    }
+        $author = $entry->child('author');
 
-    private function authorChildText(\DOMElement $entry, string $localName): ?string
-    {
-        $author = XmlHelper::childElement($entry, 'author', $this->namespaceUri());
-
-        return $author === null ? null : XmlHelper::childText($author, $localName, $this->namespaceUri());
+        return $author === null ? null : $entry->at($author)->text($localName);
     }
 
     /** The first present entry date, in this dialect's preference order. */
-    private function firstDate(\DOMElement $entry): ?string
+    private function firstDate(CoreElement $entry): ?string
     {
         foreach ($this->dateElements() as $element) {
-            $value = XmlHelper::childText($entry, $element, $this->namespaceUri());
+            $value = $entry->text($element);
             if ($value !== null) {
                 return $value;
             }
         }
 
         // Some Atom feeds date entries only with Dublin Core <dc:date>; dropping it would show every entry as "now".
-        return XmlHelper::childText($entry, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
+        return XmlHelper::childText($entry->element, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
     }
 
-    private function alternateLink(\DOMElement $parent): ?string
+    private static function alternateLink(CoreElement $parent): ?string
     {
         $fallback = null;
-        foreach (XmlHelper::childElements($parent, 'link', $this->namespaceUri()) as $link) {
+        foreach ($parent->children('link') as $link) {
             $href = trim($link->getAttribute('href'));
             if ($href === '') {
                 continue;
@@ -174,9 +171,9 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
      * An Atom text construct's markup: a type="xhtml" one carries real child elements that must be serialized, every
      * other type carries text. Both forms let an <img> be found in a summary-only entry.
      */
-    private function elementMarkup(\DOMElement $entry, string $localName): ?string
+    private static function elementMarkup(CoreElement $entry, string $localName): ?string
     {
-        $element = XmlHelper::childElement($entry, $localName, $this->namespaceUri());
+        $element = $entry->child($localName);
         if ($element === null) {
             return null;
         }

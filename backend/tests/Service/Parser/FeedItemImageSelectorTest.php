@@ -7,6 +7,7 @@ namespace App\Tests\Service\Parser;
 use App\Entity\ImageRendition;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
 final class FeedItemImageSelectorTest extends TestCase
@@ -36,7 +37,7 @@ final class FeedItemImageSelectorTest extends TestCase
         return '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="' . $href . '"/>';
     }
 
-    private function atomEntry(string $innerXml): \DOMElement
+    private function atomEntry(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         $atom = '<entry xmlns="http://www.w3.org/2005/Atom">' . $innerXml . '</entry>';
@@ -44,7 +45,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $entry = $document->documentElement;
         self::assertInstanceOf(\DOMElement::class, $entry);
 
-        return $entry;
+        return new CoreElement($entry, 'http://www.w3.org/2005/Atom');
     }
 
     public function testAnHttpEnclosureKeepsItsPrecedenceOverAnHttpsBodyImage(): void
@@ -156,7 +157,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/show.jpg'),
         );
 
-        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', ['<img src="https://i/photo.jpg">']);
+        $image = $this->selector->fromAtom($entry, ['<img src="https://i/photo.jpg">']);
 
         self::assertSame('https://i/photo.jpg', $image?->url);
     }
@@ -167,7 +168,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/art.jpg'),
         );
 
-        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', []);
+        $image = $this->selector->fromAtom($entry, []);
 
         self::assertSame('https://i/art.jpg', $image?->url);
     }
@@ -186,7 +187,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $entry = $this->atomEntry('<title>No media here</title>');
 
-        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', [
+        $image = $this->selector->fromAtom($entry, [
             null,
             '<p>none</p>',
             '<img src="https://i/second.jpg">',
@@ -270,7 +271,7 @@ final class FeedItemImageSelectorTest extends TestCase
             '<link rel="enclosure" type="image/jpeg" href="https://i/harbor-lighthouse.jpg"/>',
         );
 
-        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', [
+        $image = $this->selector->fromAtom($entry, [
             null,
             '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
             . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
