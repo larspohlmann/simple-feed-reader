@@ -39,7 +39,11 @@ final class TrailingUrlTest extends TestCase
             '<p>Read this.</p>',
         ];
         yield 'the whole body' => [self::URL, self::URL, ''];
-        yield 'before trailing blanks' => ['<p>Read this.<br />' . self::URL . " \n</p>", self::URL, '<p>Read this.</p>'];
+        yield 'before trailing blanks' => [
+            '<p>Read this.<br />' . self::URL . " \n</p>",
+            self::URL,
+            '<p>Read this.</p>',
+        ];
         yield 'before a trailing comment' => [
             '<p>Read this. ' . self::URL . '</p><!-- dlvr.it -->',
             self::URL,
