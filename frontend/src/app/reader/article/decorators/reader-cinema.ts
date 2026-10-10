@@ -25,7 +25,7 @@ function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
   const label = document.createElement('span');
   const key = document.createElement('kbd');
   key.setAttribute('aria-hidden', 'true');
-  key.textContent = 't';
+  key.textContent = '(t)';
 
   const toggle = document.createElement('button');
   toggle.type = 'button';

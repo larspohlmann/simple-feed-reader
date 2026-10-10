@@ -25,7 +25,7 @@ describe('addCinemaToggles', () => {
     expect(toggle.classList.contains('list-action')).toBe(true);
     expect(toggle.getAttribute('type')).toBe('button');
     expect(toggle.getAttribute('aria-keyshortcuts')).toBe('t');
-    expect(toggle.textContent).toBe('width_wideCinemat');
+    expect(toggle.textContent).toBe('width_wideCinema(t)');
   });
 
   it('wraps a native video', () => {
@@ -60,11 +60,11 @@ describe('addCinemaToggles', () => {
 
     toggle.click();
     expect(box.classList.contains('reader-cinema--on')).toBe(true);
-    expect(toggle.textContent).toBe('width_normalExit cinemat');
+    expect(toggle.textContent).toBe('width_normalExit cinema(t)');
     expect(box.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
 
     toggle.click();
     expect(box.classList.contains('reader-cinema--on')).toBe(false);
-    expect(toggle.textContent).toBe('width_wideCinemat');
+    expect(toggle.textContent).toBe('width_wideCinema(t)');
   });
 });

@@ -399,15 +399,19 @@
 .content ::ng-deep .reader-cinema__bar {
   display: flex;
   justify-content: flex-end;
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.content ::ng-deep .reader-cinema__toggle {
+  font-size: var(--fs-xs);
+}
+
+.content ::ng-deep .reader-cinema__toggle .material-symbols-outlined {
+  font-size: var(--icon-xs);
 }
 
 .content ::ng-deep .reader-cinema__toggle kbd {
-  padding: 0 var(--space-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: var(--fs-xs);
   color: var(--text-muted);
 }
 
