@@ -1,10 +1,15 @@
 import generatedFrames from './embed-frame-allowlist.generated.json';
 
 type EmbedKind = 'audio' | 'video';
+type EmbedShape = 'landscape' | 'tall' | 'portrait';
 
-interface EmbedFrame {
-  pattern: string;
+interface EmbedPlayer {
   kind: EmbedKind;
+  shape: EmbedShape;
+}
+
+interface EmbedFrame extends EmbedPlayer {
+  pattern: string;
 }
 
 /**
@@ -17,13 +22,14 @@ interface EmbedFrame {
  * idempotent since the anchor is gone after the first pass.
  *
  * The allow-list is generated from the backend embed providers (one entry per
- * provider: its `framePattern()` and whether it plays audio or video), so a
- * provider is added in exactly one place and the two sides never drift (#1048).
+ * provider frame: its pattern, whether it plays audio or video, and the box
+ * shape it needs), so a provider is added in exactly one place and the two
+ * sides never drift (#1048, #1481).
  * Regenerate with `app:embed:dump-frame-allowlist`.
  */
-const ALLOWED = (generatedFrames as EmbedFrame[]).map(({ pattern, kind }) => ({
-  pattern: new RegExp(pattern),
-  kind,
+const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
+  ...frame,
+  pattern: new RegExp(frame.pattern),
 }));
 
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
@@ -31,32 +37,29 @@ const ALLOWED = (generatedFrames as EmbedFrame[]).map(({ pattern, kind }) => ({
    reader. Never add a same-origin URL to ALLOWED. */
 const SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
 
-/* A Spotify collection (playlist/album/artist/show) renders a scrollable track
-   list, so its player needs a tall fixed box instead of the 16:9 frame a video
-   gets. A single track or episode keeps the default frame. */
-const SPOTIFY_COLLECTION = /^https:\/\/open\.spotify\.com\/embed\/(?:playlist|album|artist|show)\//;
-
-const SHORTS_FRAGMENT = '#shorts';
-
 export function upgradeMediaEmbeds(host: HTMLElement): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
     const frame = ALLOWED.find(({ pattern }) => pattern.test(url));
     if (!frame) continue;
-    anchor.replaceWith(embedFrame(url, frame.kind, anchor.textContent?.trim() || 'Embedded media'));
+    anchor.replaceWith(embedFrame(url, frame, anchor.textContent?.trim() || 'Embedded media'));
   }
 }
 
-function boxClass(url: string, kind: EmbedKind): string {
+const SHAPE_CLASS: Record<EmbedShape, string> = {
+  landscape: '',
+  tall: ' reader-embed--tall',
+  portrait: ' reader-embed--portrait',
+};
+
+function boxClass({ kind, shape }: EmbedPlayer): string {
   const base = kind === 'audio' ? 'reader-embed reader-embed--audio' : 'reader-embed';
-  if (SPOTIFY_COLLECTION.test(url)) return `${base} reader-embed--tall`;
-  if (url.endsWith(SHORTS_FRAGMENT)) return `${base} reader-embed--portrait`;
-  return base;
+  return base + SHAPE_CLASS[shape];
 }
 
-function embedFrame(url: string, kind: EmbedKind, title: string): HTMLElement {
+function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElement {
   const box = document.createElement('div');
-  box.className = boxClass(url, kind);
+  box.className = boxClass(player);
 
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);
