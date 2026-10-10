@@ -6,13 +6,16 @@ namespace App\Tests\Service\Reader\Media;
 
 use App\Command\DumpEmbedFrameAllowlistCommand;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\Model\EmbedFrameModel;
+use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Tests\Service\Reader\Media\EmbedProvider\MatchesEmbedFrames;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class EmbedFrameAllowlistTest extends KernelTestCase
 {
+    use MatchesEmbedFrames;
+
     private function providers(): EmbedProviders
     {
         self::bootKernel();
@@ -54,8 +57,8 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         foreach ($entries as $entry) {
             self::assertIsArray($entry);
             self::assertIsString($entry['pattern'] ?? null);
-            self::assertContains($entry['kind'] ?? null, ['audio', 'video']);
-            self::assertContains($entry['shape'] ?? null, ['landscape', 'tall', 'portrait']);
+            self::assertContains($entry['kind'] ?? null, array_column(EmbedKind::cases(), 'value'));
+            self::assertContains($entry['shape'] ?? null, array_column(EmbedShape::cases(), 'value'));
         }
     }
 
@@ -98,11 +101,6 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         $target = $providers->resolve($sourceUrl);
         self::assertNotNull($target, $sourceUrl . ' did not resolve to an embed.');
 
-        $matching = array_values(array_filter(
-            $providers->frames(),
-            static fn (EmbedFrameModel $frame): bool => $frame->matches($target->url),
-        ));
-        self::assertCount(1, $matching, $target->url . ' must match exactly one generated frame pattern.');
-        self::assertSame($shape, $matching[0]->shape);
+        self::assertSame($shape, self::frameMatching($providers->frames(), $target->url)->shape);
     }
 }

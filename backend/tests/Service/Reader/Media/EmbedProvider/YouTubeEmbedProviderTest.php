@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -13,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 final class YouTubeEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private YouTubeEmbedProvider $provider;
 
     protected function setUp(): void
@@ -115,24 +116,17 @@ final class YouTubeEmbedProviderTest extends TestCase
     #[DataProvider('framesByShape')]
     public function testAShortGetsAPortraitVideoBoxAndAVideoALandscapeOne(string $url, EmbedShape $shape): void
     {
-        $matching = $this->framesMatching($url);
+        $frame = self::frameMatching($this->provider->frames(), $url);
 
-        self::assertCount(1, $matching);
-        self::assertSame(EmbedKind::Video, $matching[0]->kind);
-        self::assertSame($shape, $matching[0]->shape);
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame($shape, $frame->shape);
     }
 
     public function testNoFrameAcceptsAnotherFragment(): void
     {
-        self::assertSame([], $this->framesMatching('https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'));
-    }
-
-    /** @return list<EmbedFrameModel> */
-    private function framesMatching(string $url): array
-    {
-        return array_values(array_filter(
-            $this->provider->frames(),
-            static fn (EmbedFrameModel $frame): bool => $frame->matches($url),
-        ));
+        self::assertSame(
+            [],
+            self::framesMatching($this->provider->frames(), 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'),
+        );
     }
 }

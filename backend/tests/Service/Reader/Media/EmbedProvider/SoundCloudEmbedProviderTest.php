@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 final class SoundCloudEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private SoundCloudEmbedProvider $provider;
 
     protected function setUp(): void
@@ -85,10 +87,9 @@ final class SoundCloudEmbedProviderTest extends TestCase
 
     public function testIsAnAudioPlayerInALandscapeBox(): void
     {
-        $frames = $this->provider->frames();
+        $frame = self::onlyFrame($this->provider);
 
-        self::assertCount(1, $frames);
-        self::assertSame(EmbedKind::Audio, $frames[0]->kind);
-        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
+        self::assertSame(EmbedKind::Audio, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

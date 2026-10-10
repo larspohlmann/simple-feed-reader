@@ -31,11 +31,7 @@ final readonly class EmbedProviders
         return null;
     }
 
-    /**
-     * Every provider's frames, sorted by pattern for a stable dump.
-     *
-     * @return list<EmbedFrameModel>
-     */
+    /** @return list<EmbedFrameModel> sorted for a stable dump */
     public function frames(): array
     {
         $frames = [];
@@ -50,7 +46,7 @@ final readonly class EmbedProviders
         return $frames;
     }
 
-    /** Every frame with its player kind and box shape, as the reader client's committed allow-list file. */
+    /** The reader client's committed allow-list file. */
     public function allowlistJson(): string
     {
         return json_encode($this->frames(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";

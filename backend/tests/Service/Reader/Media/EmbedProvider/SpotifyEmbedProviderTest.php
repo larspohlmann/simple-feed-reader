@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
-use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -13,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 final class SpotifyEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private SpotifyEmbedProvider $provider;
 
     protected function setUp(): void
@@ -108,12 +109,6 @@ final class SpotifyEmbedProviderTest extends TestCase
     #[DataProvider('framesByShape')]
     public function testACollectionGetsATallBoxAndASingleItemALandscapeOne(string $url, EmbedShape $shape): void
     {
-        $matching = array_values(array_filter(
-            $this->provider->frames(),
-            static fn (EmbedFrameModel $frame): bool => $frame->matches($url),
-        ));
-
-        self::assertCount(1, $matching);
-        self::assertSame($shape, $matching[0]->shape);
+        self::assertSame($shape, self::frameMatching($this->provider->frames(), $url)->shape);
     }
 }

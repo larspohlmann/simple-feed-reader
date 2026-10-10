@@ -341,14 +341,13 @@
   border: 0;
 }
 
-/* A Spotify collection player shows a scrollable track list, so it gets a tall
-   fixed box in place of the 16:9 frame a video uses (#1053). */
+/* A tall player (a scrollable track list) gets a fixed-height box in place of the 16:9 frame (#1053). */
 .content ::ng-deep .reader-embed--tall {
   aspect-ratio: auto;
   height: 31.25rem;
 }
 
-/* A YouTube Short is portrait: a 9:16 box, centred and capped so it fits a desktop screen. */
+/* A portrait player gets a 9:16 box, centred and capped so it fits a desktop screen. */
 .content ::ng-deep .reader-embed--portrait {
   aspect-ratio: 9 / 16;
   width: min(100%, 22.5rem);

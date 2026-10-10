@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 
 final class VimeoEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private VimeoEmbedProvider $provider;
 
     protected function setUp(): void
@@ -79,10 +81,9 @@ final class VimeoEmbedProviderTest extends TestCase
 
     public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        $frames = $this->provider->frames();
+        $frame = self::onlyFrame($this->provider);
 
-        self::assertCount(1, $frames);
-        self::assertSame(EmbedKind::Video, $frames[0]->kind);
-        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 final class BrightcoveEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private const string AL_JAZEERA =
         'https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html?videoId=6403736850112';
 
@@ -71,10 +73,9 @@ final class BrightcoveEmbedProviderTest extends TestCase
 
     public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        $frames = $this->provider->frames();
+        $frame = self::onlyFrame($this->provider);
 
-        self::assertCount(1, $frames);
-        self::assertSame(EmbedKind::Video, $frames[0]->kind);
-        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }

@@ -42,7 +42,6 @@ final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
         return 'Listen on Spotify';
     }
 
-    /** A collection renders a scrollable track list, so its player needs a tall box, not the default frame. */
     public function frames(): array
     {
         return [

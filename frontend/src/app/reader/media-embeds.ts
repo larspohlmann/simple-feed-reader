@@ -21,10 +21,8 @@ interface EmbedFrame extends EmbedPlayer {
  * takes effect on already-cached articles. Runs beside `markInsetCards`;
  * idempotent since the anchor is gone after the first pass.
  *
- * The allow-list is generated from the backend embed providers (one entry per
- * provider frame: its pattern, whether it plays audio or video, and the box
- * shape it needs), so a provider is added in exactly one place and the two
- * sides never drift (#1048, #1481).
+ * The allow-list is generated from the backend embed providers, so a provider
+ * is added in exactly one place and the two sides never drift (#1048).
  * Regenerate with `app:embed:dump-frame-allowlist`.
  */
 const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
@@ -46,20 +44,17 @@ export function upgradeMediaEmbeds(host: HTMLElement): void {
   }
 }
 
-const SHAPE_CLASS: Record<EmbedShape, string> = {
-  landscape: '',
-  tall: ' reader-embed--tall',
-  portrait: ' reader-embed--portrait',
-};
-
-function boxClass({ kind, shape }: EmbedPlayer): string {
-  const base = kind === 'audio' ? 'reader-embed reader-embed--audio' : 'reader-embed';
-  return base + SHAPE_CLASS[shape];
+function boxClasses({ kind, shape }: EmbedPlayer): string[] {
+  return [
+    'reader-embed',
+    `reader-embed--${shape}`,
+    ...(kind === 'audio' ? ['reader-embed--audio'] : []),
+  ];
 }
 
 function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElement {
   const box = document.createElement('div');
-  box.className = boxClass(player);
+  box.classList.add(...boxClasses(player));
 
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);

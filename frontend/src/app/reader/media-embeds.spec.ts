@@ -211,7 +211,7 @@ describe('upgradeMediaEmbeds', () => {
     );
 
     expect(element.querySelector('div')!.className).toBe(
-      'reader-embed reader-embed--audio reader-embed--tall',
+      'reader-embed reader-embed--tall reader-embed--audio',
     );
   });
 

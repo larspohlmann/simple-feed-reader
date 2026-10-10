@@ -5,7 +5,7 @@ export interface CinemaLabels {
   exit: string;
 }
 
-const LANDSCAPE_PLAYER = '.reader-embed:not(.reader-embed--audio, .reader-embed--portrait), video';
+const LANDSCAPE_PLAYER = '.reader-embed--landscape:not(.reader-embed--audio), video';
 const BOX = 'reader-cinema';
 const WIDENED = 'reader-cinema--on';
 

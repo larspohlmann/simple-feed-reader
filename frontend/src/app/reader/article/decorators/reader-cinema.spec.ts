@@ -9,7 +9,7 @@ function host(html: string): HTMLElement {
 }
 
 const LANDSCAPE =
-  '<div class="reader-embed"><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>';
+  '<div class="reader-embed reader-embed--landscape"><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = jest.fn();
@@ -33,10 +33,11 @@ describe('addCinemaToggles', () => {
     expect(element.querySelector('.reader-cinema > video')).not.toBeNull();
   });
 
-  it('leaves portrait embeds, audio embeds and native audio alone', () => {
+  it('leaves portrait, tall and audio embeds and native audio alone', () => {
     const element = host(
       '<div class="reader-embed reader-embed--portrait"><iframe></iframe></div>' +
-        '<div class="reader-embed reader-embed--audio"><iframe></iframe></div>' +
+        '<div class="reader-embed reader-embed--tall"><iframe></iframe></div>' +
+        '<div class="reader-embed reader-embed--landscape reader-embed--audio"><iframe></iframe></div>' +
         '<audio src="https://cdn/a.mp3"></audio>',
     );
     addCinemaToggles(element, labels);

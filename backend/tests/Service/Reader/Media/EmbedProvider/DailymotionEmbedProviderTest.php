@@ -11,6 +11,8 @@ use PHPUnit\Framework\TestCase;
 
 final class DailymotionEmbedProviderTest extends TestCase
 {
+    use MatchesEmbedFrames;
+
     private DailymotionEmbedProvider $provider;
 
     protected function setUp(): void
@@ -73,10 +75,9 @@ final class DailymotionEmbedProviderTest extends TestCase
 
     public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        $frames = $this->provider->frames();
+        $frame = self::onlyFrame($this->provider);
 
-        self::assertCount(1, $frames);
-        self::assertSame(EmbedKind::Video, $frames[0]->kind);
-        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
+        self::assertSame(EmbedKind::Video, $frame->kind);
+        self::assertSame(EmbedShape::Landscape, $frame->shape);
     }
 }
