@@ -6,6 +6,9 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\PendingPostEnrichment;
+use App\Service\Bluesky\PendingPostQueue;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -35,6 +38,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             $this->entityManager,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),
+            new PendingPostQueue($this->entityManager, new NaiveUtcClock($clock)),
         );
     }
 
@@ -48,6 +52,24 @@ final class FirstFetchRecorderTest extends DbTestCase
         $this->recorder->record($feed, $discovered);
 
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'a'));
+    }
+
+    public function testAFirstFetchQueuesItsBlueskyPostsForTheAppView(): void
+    {
+        $feed = $this->feed();
+        $post = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
+        $discovered = $this->discovered($feed, [
+            $this->parsedEntry($post, new \DateTimeImmutable('2026-10-10 16:01:00')),
+            $this->parsedEntry('article', new \DateTimeImmutable('2026-10-10 15:00:00')),
+        ]);
+
+        $this->recorder->record($feed, $discovered);
+
+        $queued = $this->entityManager->getRepository(PendingPostEnrichment::class)->findAll();
+        self::assertSame([$post], array_map(
+            static fn (PendingPostEnrichment $pending): string => $pending->getEntry()->getGuid(),
+            $queued,
+        ));
     }
 
     public function testAFirstFetchStoresTheDiscoveredCacheValidators(): void

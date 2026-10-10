@@ -25,6 +25,11 @@ final class LinkedPlainTextTest extends TestCase
         );
     }
 
+    public function testAnInvalidByteIsReplacedRatherThanBlankingTheText(): void
+    {
+        self::assertSame("<p>Caf\u{FFFD} &amp; cr\u{E8}me</p>", LinkedPlainText::asHtml("Caf\xE9 & cr\u{E8}me"));
+    }
+
     public function testBareUrlsBecomeLinksWithoutTrailingPunctuation(): void
     {
         self::assertSame(

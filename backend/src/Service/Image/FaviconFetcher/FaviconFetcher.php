@@ -14,6 +14,8 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\Support\ImageMagicBytes;
+use App\Service\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -52,6 +54,8 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         'image/x-icon',
         'image/vnd.microsoft.icon',
     ];
+
+    private const array UNDECLARED_TYPES = ['', 'application/octet-stream'];
 
     public function __construct(
         private FailoverRequestSender $requestSender,
@@ -155,10 +159,22 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
         $this->assertOk($status);
+        $declaredType = MediaType::of(ResponseHeader::first($response, 'content-type'));
+        $this->assertAllowedUnlessUndeclared($declaredType);
+        $bytes = $response->getContent();
 
-        $contentType = $this->assertAllowedType($response->getHeaders(false));
+        return [$bytes, $this->servedType($declaredType, $bytes)];
+    }
 
-        return [$response->getContent(), $contentType];
+    private function servedType(string $declaredType, string $bytes): string
+    {
+        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
+            return $declaredType;
+        }
+        $sniffedType = ImageMagicBytes::typeOf($bytes) ?? $declaredType;
+        $this->assertAllowedType($sniffedType);
+
+        return $sniffedType;
     }
 
     private function assertOk(int $status): void
@@ -191,22 +207,22 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         }
     }
 
-    /**
-     * @param array<string, list<string>> $headers
-     */
-    private function assertAllowedType(array $headers): string
+    private function assertAllowedUnlessUndeclared(string $declaredType): void
     {
-        $raw = $headers['content-type'][0] ?? '';
-        $type = mb_strtolower(trim(explode(';', $raw)[0]));
-
-        if (!\in_array($type, self::ALLOWED_TYPES, true)) {
-            $message = \sprintf('Content type "%s" is not an allowed image type.', $type);
-
-            throw str_starts_with($type, 'image/')
-                ? new FaviconRejectedException($message)
-                : new FaviconUnavailableException($message);
+        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
+            $this->assertAllowedType($declaredType);
         }
+    }
 
-        return $type;
+    private function assertAllowedType(string $type): void
+    {
+        if (\in_array($type, self::ALLOWED_TYPES, true)) {
+            return;
+        }
+        $message = \sprintf('Content type "%s" is not an allowed image type.', $type);
+
+        throw str_starts_with($type, 'image/')
+            ? new FaviconRejectedException($message)
+            : new FaviconUnavailableException($message);
     }
 }

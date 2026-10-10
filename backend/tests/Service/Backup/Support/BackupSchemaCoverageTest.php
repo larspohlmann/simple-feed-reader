@@ -17,6 +17,7 @@ use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
+use App\Entity\PendingPostEnrichment;
 use App\Entity\Preferences;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
@@ -113,6 +114,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'RecommendationDriverKind.',
         MailSendFailure::class => 'The instance\'s automated-mail failure log (#882); operational telemetry, '
             . 'cleared on the next successful send.',
+        PendingPostEnrichment::class => 'The instance\'s transient retry queue for Bluesky embeds (#1499); '
+            . 'refreshes rebuild it.',
     ];
 
     /**

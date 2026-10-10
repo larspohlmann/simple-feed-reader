@@ -14,6 +14,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -294,6 +295,86 @@ final class FaviconFetcherTest extends TestCase
         ]));
 
         $this->expectException(FaviconRejectedException::class);
+        $this->fetcher($client)->download(self::ICON_URL);
+    }
+
+    /** @return iterable<string, array{array<string, list<string>>, string, string}> */
+    public static function undeclaredImages(): iterable
+    {
+        yield 'jpeg as octet-stream' => [
+            ['content-type' => ['application/octet-stream']],
+            "\xFF\xD8\xFF\xE0\x00\x10JFIF",
+            'image/jpeg',
+        ];
+        yield 'png without a content type' => [[], "\x89PNG\r\n\x1A\n", 'image/png'];
+        yield 'gif as upper-case octet-stream with a parameter' => [
+            ['content-type' => ['Application/Octet-Stream; charset=binary']],
+            'GIF89a',
+            'image/gif',
+        ];
+        yield 'webp as octet-stream' => [
+            ['content-type' => ['application/octet-stream']],
+            "RIFF\x24\x00\x00\x00WEBPVP8 ",
+            'image/webp',
+        ];
+    }
+
+    /** @param array<string, list<string>> $headers */
+    #[DataProvider('undeclaredImages')]
+    public function testAnUndeclaredBodyIsTypedByItsLeadingBytes(array $headers, string $bytes, string $type): void
+    {
+        $client = new MockHttpClient(new MockResponse($bytes, ['response_headers' => $headers]));
+
+        $icon = $this->fetcher($client)->download(self::ICON_URL);
+
+        self::assertSame($bytes, $icon->bytes);
+        self::assertSame($type, $icon->contentType);
+    }
+
+    public function testADeclaredTypeIsTrustedOverTheLeadingBytes(): void
+    {
+        $client = new MockHttpClient(new MockResponse('GIF89a', [
+            'response_headers' => ['content-type' => ['Image/PNG ; charset=binary']],
+        ]));
+
+        self::assertSame('image/png', $this->fetcher($client)->download(self::ICON_URL)->contentType);
+    }
+
+    public function testAnUndeclaredAvifIsRejectedLikeADeclaredOne(): void
+    {
+        $client = new MockHttpClient(new MockResponse("\x00\x00\x00\x1CftypavifmiaF", [
+            'response_headers' => ['content-type' => ['application/octet-stream']],
+        ]));
+
+        $this->expectException(FaviconRejectedException::class);
+        $this->fetcher($client)->download(self::ICON_URL);
+    }
+
+    public function testAnUndeclaredBodyThatIsNoImageStaysUnavailable(): void
+    {
+        $client = new MockHttpClient(new MockResponse('<svg xmlns="http://www.w3.org/2000/svg"/>', [
+            'response_headers' => ['content-type' => ['application/octet-stream']],
+        ]));
+
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail('Expected a FaviconUnavailableException.');
+        } catch (FaviconUnavailableException $caught) {
+            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            self::assertSame(
+                'Content type "application/octet-stream" is not an allowed image type.',
+                $caught->getMessage(),
+            );
+        }
+    }
+
+    public function testADeclaredNonImageTypeIsNotSniffed(): void
+    {
+        $client = new MockHttpClient(new MockResponse("\xFF\xD8\xFF\xE0", [
+            'response_headers' => ['content-type' => ['text/html']],
+        ]));
+
+        $this->expectException(FaviconUnavailableException::class);
         $this->fetcher($client)->download(self::ICON_URL);
     }
 

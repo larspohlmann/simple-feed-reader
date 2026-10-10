@@ -1,0 +1,33 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:mtr3pwmbnirvyp3robuicd57/app.bsky.feed.post/3mxhy7vmqec2f",
+      "author": {"did": "did:plc:mtr3pwmbnirvyp3robuicd57", "handle": "davidcorn.bsky.social", "displayName": "David Corn"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "Hey, it’s another episode of STRESS TEST. Check it out. And please subscribe at youtube.com/motherjones."
+      },
+      "embed": {
+        "record": {
+          "$type": "app.bsky.embed.record#viewRecord",
+          "uri": "at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxhvfsp7n32t",
+          "author": {"did": "did:plc:qobvnkudcv3zlaklxxjduqoi", "handle": "motherjones.com", "displayName": "Mother Jones"},
+          "value": {
+            "$type": "app.bsky.feed.post",
+            "text": "Big money has long dominated American politics, with wealthy donors, corporations, and special interests dumping tons of cash into presidential and congressional elections. \n\nBut this year, the quid pro quo of campaign money for preferential government treatment is more brazen than ever before."
+          },
+          "embeds": [
+            {
+              "$type": "app.bsky.embed.external#view",
+              "external": {
+                "uri": "https://www.motherjones.com/politics/2026/10/stress-test-campaign-finance-corruption-midterms-video-podcast/",
+                "title": "The midterm spending bonanza is threatening democracy like never before."
+              }
+            }
+          ]
+        },
+        "$type": "app.bsky.embed.record#view"
+      }
+    }
+  ]
+}

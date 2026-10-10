@@ -1,0 +1,21 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mwolmfws5k2r",
+      "author": {"did": "did:plc:z72i7hdynmk6r22z27h6tvur", "handle": "bsky.app", "displayName": "Bluesky"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "Happy opening day of hockey season, NHL fans! \n\nKeep up with all 1,344 regular season games with this starter pack of hockey writers."
+      },
+      "embed": {
+        "record": {
+          "$type": "app.bsky.graph.defs#starterPackViewBasic",
+          "uri": "at://did:plc:54vdi5eoabhod2vumsbcpi7g/app.bsky.graph.starterpack/3lgml5ek7772a",
+          "cid": "bafyreig5co3zqwje5vtj535kqfc3rvdofgeh25br43ovzs57ezspkha6dm",
+          "record": {"$type": "app.bsky.graph.starterpack", "name": "NHL Writers"}
+        },
+        "$type": "app.bsky.embed.record#view"
+      }
+    }
+  ]
+}

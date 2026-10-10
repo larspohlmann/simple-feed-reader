@@ -28,4 +28,9 @@ final readonly class ParsedTitleModel
     {
         return new self(self::UNTITLED, false);
     }
+
+    public static function untitledPost(): self
+    {
+        return new self(self::UNTITLED, true);
+    }
 }
