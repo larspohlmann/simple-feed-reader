@@ -6,8 +6,11 @@ namespace App\Tests\Service\Bluesky;
 
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\FetchException;
+use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\HostThrottle;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\ReadsFixtures;
@@ -77,18 +80,49 @@ final class AppViewClientTest extends TestCase
         self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
     }
 
-    public function testAnotherFetchFailureRecordsNoThrottle(): void
+    /** @return iterable<string, array{FetchException}> */
+    public static function unreachableAppViews(): iterable
     {
-        $this->fetcher->willThrow(
-            Bluesky::GET_POSTS . '?' . self::TISCH_QUERY,
-            new FeedUnreachableException('timeout'),
-        );
+        yield 'a timeout' => [new FeedUnreachableException('timeout')];
+        yield 'the last status below the client errors' => [new FeedUnreachableException('HTTP 399', 399)];
+        yield 'the first server error' => [new FeedUnreachableException('HTTP 500', 500)];
+        yield 'a blocked address' => [new SsrfBlockedException('private address')];
+    }
+
+    #[DataProvider('unreachableAppViews')]
+    public function testAnUnreachableAppViewIsBackedOffForFiveMinutesAndRethrown(FetchException $failure): void
+    {
+        $this->fetcher->willThrow(Bluesky::GET_POSTS . '?' . self::TISCH_QUERY, $failure);
+
+        try {
+            $this->client()->posts([self::TISCH]);
+            self::fail('A fetch failure must be rethrown.');
+        } catch (FetchException $caught) {
+            self::assertSame($failure, $caught);
+        }
+
+        self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
+    }
+
+    /** @return iterable<string, array{FetchException}> */
+    public static function rejectedRequests(): iterable
+    {
+        yield 'the first client error' => [new FeedUnreachableException('HTTP 400', 400)];
+        yield 'the last client error' => [new FeedUnreachableException('HTTP 499', 499)];
+        yield 'gone' => [new FeedGoneException('HTTP 410 Gone')];
+    }
+
+    #[DataProvider('rejectedRequests')]
+    public function testARejectedRequestRecordsNoThrottle(FetchException $failure): void
+    {
+        $this->fetcher->willThrow(Bluesky::GET_POSTS . '?' . self::TISCH_QUERY, $failure);
         $client = $this->client();
 
         try {
             $client->posts([self::TISCH]);
             self::fail('A fetch failure must be rethrown.');
-        } catch (FeedUnreachableException) {
+        } catch (FetchException $caught) {
+            self::assertSame($failure, $caught);
         }
 
         self::assertFalse($client->isThrottled());

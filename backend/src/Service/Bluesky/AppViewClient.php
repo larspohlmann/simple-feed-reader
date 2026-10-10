@@ -6,7 +6,9 @@ namespace App\Service\Bluesky;
 
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
+use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
@@ -17,6 +19,9 @@ final readonly class AppViewClient
     public const int URIS_PER_CALL = 25;
 
     private const string GET_POSTS = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts';
+    private const int UNREACHABLE_BACKOFF_SECONDS = 300;
+    private const int FIRST_CLIENT_ERROR = 400;
+    private const int LAST_CLIENT_ERROR = 499;
 
     public function __construct(
         private FeedFetcherInterface $fetcher,
@@ -45,9 +50,23 @@ final readonly class AppViewClient
             $this->hostThrottle->record(self::GET_POSTS, $exception->retryAfterSeconds);
 
             throw $exception;
+        } catch (FetchException $exception) {
+            if (!self::rejectedTheRequest($exception)) {
+                $this->hostThrottle->record(self::GET_POSTS, self::UNREACHABLE_BACKOFF_SECONDS);
+            }
+
+            throw $exception;
         }
 
         return self::byUri($body);
+    }
+
+    private static function rejectedTheRequest(FetchException $failure): bool
+    {
+        $status = $failure instanceof FeedUnreachableException ? $failure->statusCode : null;
+
+        return $failure instanceof FeedGoneException
+            || ($status !== null && $status >= self::FIRST_CLIENT_ERROR && $status <= self::LAST_CLIENT_ERROR);
     }
 
     /** @param list<string> $uris */

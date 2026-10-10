@@ -7,18 +7,32 @@ namespace App\Tests\Service\Bluesky;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\PendingPostEnrichment;
+use App\Repository\PendingPostEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
+use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
+use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
+use App\Service\Bluesky\PendingPostQueue;
+use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\Clock\NaiveUtcClock;
+use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Ingest\EntryImageWriter;
+use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
+use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\StubFeedFetcher;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
@@ -95,29 +109,79 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([$guids[100]], $this->pendingGuids());
     }
 
-    public function testAFailedRequestKeepsItsRowsAndTheNextChunkIsStillAsked(): void
+    /** @return iterable<string, array{FetchException}> */
+    public static function unreachableAppViews(): iterable
+    {
+        yield 'no answer' => [new FeedUnreachableException('connection reset')];
+        yield 'a server error' => [new FeedUnreachableException('HTTP 503', 503)];
+        yield 'a redirect without a location' => [new FeedUnreachableException('no Location', 302)];
+    }
+
+    #[DataProvider('unreachableAppViews')]
+    public function testAnUnreachableAppViewStopsThePassAndBacksOff(FetchException $failure): void
+    {
+        $this->appView->failsWith($failure);
+        $this->queuePosts(30);
+
+        self::assertSame([], $this->enricher()->enrich($this->feed, []));
+
+        self::assertCount(1, $this->appView->requests);
+        self::assertSame(30, $this->pendingCount());
+        self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
+        self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+        self::assertSame('Bluesky AppView gave no usable answer for {url}', $this->logger->records[0]['message']);
+        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['url']);
+    }
+
+    public function testTheBackoffSkipsTheNextFeedsPass(): void
     {
         $this->appView->failsWith(new FeedUnreachableException('connection reset'));
+        $this->queuePosts(1);
+        $this->enricher()->enrich($this->feed, []);
+        $this->appView->recovers();
+        $otherFeed = $this->feed('https://bsky.app/profile/bsky.app/rss');
+        $this->queuedPost($otherFeed, self::TEST_POST . 'other', '-1 minute');
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($otherFeed, []);
+
+        self::assertCount(1, $this->appView->requests);
+        self::assertSame(2, $this->pendingCount());
+    }
+
+    /** @return iterable<string, array{FetchException}> */
+    public static function rejectedRequests(): iterable
+    {
+        yield 'a bad request' => [new FeedUnreachableException('HTTP 400', 400)];
+        yield 'the last client error' => [new FeedUnreachableException('HTTP 499', 499)];
+        yield 'gone' => [new FeedGoneException('HTTP 410 Gone')];
+    }
+
+    #[DataProvider('rejectedRequests')]
+    public function testARejectedRequestKeepsItsRowsAndTheNextChunkIsStillAsked(FetchException $failure): void
+    {
+        $this->appView->failsWith($failure);
         $this->queuePosts(30);
 
         self::assertSame([], $this->enricher()->enrich($this->feed, []));
 
         self::assertCount(2, $this->appView->requests);
         self::assertSame(30, $this->pendingCount());
+        self::assertSame(0, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
         self::assertSame(['warning', 'warning'], array_column($this->logger->records, 'level'));
-        self::assertSame('Bluesky AppView gave no usable answer for {url}', $this->logger->records[0]['message']);
-        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['url']);
     }
 
-    public function testAnUnreadableAnswerKeepsTheRows(): void
+    public function testAnUnreadableAnswerKeepsItsRowsAndTheNextChunkIsStillAsked(): void
     {
         $this->appView->answersWithBody('<html>Bad gateway</html>');
-        $this->queuePosts(1);
+        $this->queuePosts(30);
 
         $this->enricher()->enrich($this->feed, []);
 
-        self::assertSame(1, $this->pendingCount());
-        self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+        self::assertCount(2, $this->appView->requests);
+        self::assertSame(30, $this->pendingCount());
+        self::assertSame(0, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
+        self::assertSame(['warning', 'warning'], array_column($this->logger->records, 'level'));
     }
 
     public function testARowQueuedMoreThanThreeDaysAgoIsDroppedUnasked(): void
@@ -186,6 +250,46 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(1, $this->pendingCount());
     }
 
+    public function testAnEntryThatFailsToFillIsLoggedAndDequeuedWhileTheOthersFill(): void
+    {
+        $this->appView->knowsFixture('external');
+        $this->appView->knowsFixture('images');
+        $broken = $this->entry($this->feed, self::TISCH, '<p>Broken.</p>');
+        $apples = $this->entry($this->feed, self::APPLES, '<p>Apples.</p>');
+        $this->entityManager->flush();
+        $enricher = $this->enricherWith(new FailingEmbedWriter(self::TISCH, $this->embedWriter()));
+
+        $filled = $enricher->enrich($this->feed, [$broken, $apples]);
+
+        self::assertSame([$apples], $filled);
+        self::assertSame(0, $this->pendingCount());
+        self::assertStringStartsWith(
+            '<p>Apples.</p><figure class="post-images">',
+            (string) $this->reload($apples)->getContentHtml(),
+        );
+        self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+        self::assertSame('Bluesky post {entry} could not be filled', $this->logger->records[0]['message']);
+        self::assertSame($broken->requireId(), $this->logger->records[0]['context']['entry']);
+        self::assertInstanceOf(\RuntimeException::class, $this->logger->records[0]['context']['exception']);
+    }
+
+    public function testAFailedFlushIsRethrownSoTheRefreshAbortsUnderThisFeed(): void
+    {
+        $post = $this->entry($this->feed, self::TISCH, '<p>Text.</p>');
+        $this->entityManager->persist(new PendingPostEnrichment($post, $this->clock->now()));
+        $this->entityManager->flush();
+
+        try {
+            $this->enricher()->enrich($this->feed, [$post]);
+            self::fail('A failed flush must be rethrown.');
+        } catch (UniqueConstraintViolationException) {
+        }
+
+        self::assertFalse($this->entityManager->isOpen());
+        self::assertSame([], $this->appView->requests);
+        self::assertSame([], $this->logger->records);
+    }
+
     public function testQueuedAtAndTheCutoffAreUtcWhateverZoneTheClockIsIn(): void
     {
         $this->clock = new MockClock('2026-10-10 12:00:00', 'Europe/Berlin');
@@ -212,6 +316,32 @@ final class PostEnricherTest extends DbTestCase
             $this->clock,
             new AppViewClient($this->appView, $this->throttle),
             $this->logger,
+        );
+    }
+
+    private function enricherWith(EntryEmbedWriterInterface $embedWriter): PostEnricher
+    {
+        /** @var PendingPostEnrichmentRepository $pendingPosts */
+        $pendingPosts = $this->entityManager->getRepository(PendingPostEnrichment::class);
+        $naiveUtcClock = new NaiveUtcClock($this->clock);
+
+        return new PostEnricher(
+            $this->entityManager,
+            $pendingPosts,
+            new PendingPostQueue($this->entityManager, $naiveUtcClock),
+            new AppViewClient($this->appView, $this->throttle),
+            $embedWriter,
+            $naiveUtcClock,
+            $this->logger,
+        );
+    }
+
+    private function embedWriter(): EntryEmbedWriter
+    {
+        return new EntryEmbedWriter(
+            new PostEmbedRenderer(),
+            new EntrySanitizer(new TrailingBlankRemover()),
+            new EntryImageWriter(),
         );
     }
 

@@ -10,6 +10,7 @@ use App\Entity\PendingPostEnrichment;
 use App\Repository\PendingPostEnrichmentRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -33,7 +34,8 @@ final readonly class PostEnricher
     }
 
     /**
-     * Never throws: a failure is logged and leaves the refresh as it was.
+     * A failure is logged and leaves the refresh as it was, unless it closed the EntityManager: that one is rethrown,
+     * so the refresh aborts under this feed rather than the next.
      *
      * @param list<Entry> $createdEntries already flushed
      *
@@ -44,6 +46,9 @@ final readonly class PostEnricher
         try {
             return $this->enrichQueued($feed, $createdEntries);
         } catch (\Exception $exception) {
+            if (!$this->entityManager->isOpen()) {
+                throw $exception;
+            }
             $this->logger->error(
                 'Bluesky enrichment failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $exception],
@@ -108,12 +113,26 @@ final readonly class PostEnricher
         foreach ($chunk as $pending) {
             $entry = $pending->getEntry();
             $post = $posts[$entry->getGuid()] ?? null;
-            if ($post !== null && $this->embedWriter->fill($entry, $post)) {
+            if ($post !== null && $this->filled($entry, $post)) {
                 $filled[] = $entry;
             }
             $this->entityManager->remove($pending);
         }
 
         return $filled;
+    }
+
+    private function filled(Entry $entry, JsonNodeModel $post): bool
+    {
+        try {
+            return $this->embedWriter->fill($entry, $post);
+        } catch (\Exception $exception) {
+            $this->logger->warning(
+                'Bluesky post {entry} could not be filled',
+                ['entry' => $entry->requireId(), 'exception' => $exception],
+            );
+
+            return false;
+        }
     }
 }
