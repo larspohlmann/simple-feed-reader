@@ -151,6 +151,22 @@ final class PostEmbedRendererTest extends TestCase
                 'notFound' => true,
             ],
         ]];
+        yield 'a quoted record that is no post' => [[
+            '$type' => 'app.bsky.embed.record#view',
+            'record' => [
+                '$type' => 'app.bsky.embed.record#viewRecord',
+                'uri' => 'at://did:plc:c/app.bsky.feed.post/d',
+                'value' => ['$type' => 'app.bsky.graph.starterpack', 'text' => 'Pack'],
+            ],
+        ]];
+        yield 'a quoted post whose uri is no post uri' => [[
+            '$type' => 'app.bsky.embed.record#view',
+            'record' => [
+                '$type' => 'app.bsky.embed.record#viewRecord',
+                'uri' => 'https://example.com/d',
+                'value' => ['$type' => 'app.bsky.feed.post', 'text' => 'Text'],
+            ],
+        ]];
         yield 'a video on http' => [[
             '$type' => 'app.bsky.embed.video#view',
             'playlist' => 'http://video.example/p.m3u8',
@@ -270,6 +286,19 @@ final class PostEmbedRendererTest extends TestCase
         );
         self::assertSame('https://example.com/b.jpg', $rendered->leadImage?->url);
         self::assertCount(2, $rendered->media);
+    }
+
+    public function testAnImageWithHalfAnAspectRatioHasNoDimensions(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.images#view',
+            'images' => [['fullsize' => 'https://example.com/a.jpg', 'aspectRatio' => ['width' => 800]]],
+        ]));
+
+        self::assertSame(
+            '<figure class="post-images"><img src="https://example.com/a.jpg" alt=""></figure>',
+            $rendered?->html,
+        );
     }
 
     public function testAVideoWithoutAThumbnailHasNoPosterAndNoLeadImage(): void

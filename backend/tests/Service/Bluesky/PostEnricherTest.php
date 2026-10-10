@@ -414,7 +414,7 @@ final class PostEnricherTest extends DbTestCase
     private function queuedEntry(string $guid, string $contentHtml): Entry
     {
         $entry = $this->entry($this->feed, $guid, $contentHtml);
-        $this->entityManager->persist(new PendingPostEnrichment($entry, $this->clock->now()->modify('-1 minute')));
+        $this->entityManager->persist(new PendingPostEnrichment($entry, $this->clock->now()));
 
         return $entry;
     }
