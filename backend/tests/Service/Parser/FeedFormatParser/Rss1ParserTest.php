@@ -183,6 +183,26 @@ final class Rss1ParserTest extends TestCase
         );
     }
 
+    public function testANestedChannelIsNotTheFeedsChannel(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"
+                     xmlns:x="urn:example:other">
+              <x:meta><channel rdf:about="https://decoy.example/"><title>Decoy</title></channel></x:meta>
+              <channel rdf:about="https://example.com/"><title>Core</title></channel>
+            </rdf:RDF>
+            XML);
+
+        self::assertSame('Core', $feed->title);
+    }
+
+    public function testADocumentWithoutARootIsAParseError(): void
+    {
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss1()->parseFeed(new \DOMDocument(), []);
+    }
+
     public function testADocumentWithoutAChannelIsAParseError(): void
     {
         $document = new \DOMDocument();
