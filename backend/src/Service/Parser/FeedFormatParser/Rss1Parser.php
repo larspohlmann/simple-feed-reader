@@ -44,18 +44,18 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
-        $root = $skeleton->documentElement;
-        $channelElement = $skeleton->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
-        if ($root === null || !$channelElement instanceof \DOMElement) {
+        $root = $skeleton->documentElement === null ? null : self::core($skeleton->documentElement);
+        $channelElement = $root?->child('channel');
+        if ($root === null || $channelElement === null) {
             throw new FeedParseException('RSS 1.0 document without <channel>');
         }
-        $channel = self::core($channelElement);
+        $channel = $root->at($channelElement);
 
         return new ParsedFeedModel(
             PlainText::from($channel->text('title')),
             $channel->text('link'),
             $channel->text('description'),
-            FeedImageExtractor::fromRss1Root(self::core($root)),
+            FeedImageExtractor::fromRss1Root($root),
             $entries,
         );
     }
