@@ -13,6 +13,7 @@ use App\Service\Image\Exception\ImageRefusedException;
 use App\Service\Image\Exception\ImageUnavailableException;
 use App\Service\Image\Model\ImageRequestModel;
 use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Image\Support\MediaType;
 use App\Service\Image\Support\OriginRoot;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -70,7 +71,7 @@ final readonly class ImageDownloader
 
     private function servedType(LandedResponse $landed): string
     {
-        $type = mb_strtolower(trim(explode(';', $landed->header('content-type') ?? '')[0]));
+        $type = MediaType::of($landed->header('content-type'));
         if (\in_array($type, self::SERVED_TYPES, true)) {
             return $type;
         }

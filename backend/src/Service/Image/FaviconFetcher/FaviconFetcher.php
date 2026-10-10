@@ -15,6 +15,7 @@ use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\Model\FetchedFaviconModel;
 use App\Service\Image\Support\ImageMagicBytes;
+use App\Service\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -158,23 +159,22 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
         $this->assertOk($status);
-        $declaredType = self::declaredType($response);
-        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
-            $this->assertAllowedType($declaredType);
-
-            return [$response->getContent(), $declaredType];
-        }
-
+        $declaredType = MediaType::of(ResponseHeader::first($response, 'content-type'));
+        $this->assertAllowedUnlessUndeclared($declaredType);
         $bytes = $response->getContent();
+
+        return [$bytes, $this->servedType($declaredType, $bytes)];
+    }
+
+    private function servedType(string $declaredType, string $bytes): string
+    {
+        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
+            return $declaredType;
+        }
         $sniffedType = ImageMagicBytes::typeOf($bytes) ?? $declaredType;
         $this->assertAllowedType($sniffedType);
 
-        return [$bytes, $sniffedType];
-    }
-
-    private static function declaredType(ResponseInterface $response): string
-    {
-        return strtolower(trim(explode(';', ResponseHeader::first($response, 'content-type') ?? '')[0]));
+        return $sniffedType;
     }
 
     private function assertOk(int $status): void
@@ -204,6 +204,13 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     {
         if (\strlen($bytes) > self::MAX_BYTES) {
             throw new FaviconRejectedException('Icon exceeded ' . self::MAX_BYTES . ' bytes.');
+        }
+    }
+
+    private function assertAllowedUnlessUndeclared(string $declaredType): void
+    {
+        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
+            $this->assertAllowedType($declaredType);
         }
     }
 
