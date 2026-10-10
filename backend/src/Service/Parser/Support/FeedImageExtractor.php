@@ -30,17 +30,12 @@ final class FeedImageExtractor
      * RSS 1.0: the channel only points at the image by rdf:resource; the <image> holding the <url> is its sibling at
      * the RDF root.
      */
-    public static function fromRss1Channel(CoreElement $channel): ?string
+    public static function fromRss1Root(CoreElement $root): ?string
     {
-        $root = $channel->element->ownerDocument?->documentElement;
-        if ($root === null) {
-            return null;
-        }
-
         // Direct children only: a document-wide search finds the channel's url-less <image rdf:resource> first.
-        $image = $channel->at($root)->child('image');
+        $image = $root->child('image');
 
-        return $image === null ? null : HttpsImageUrl::orNull($channel->at($image)->text('url'));
+        return $image === null ? null : HttpsImageUrl::orNull($root->at($image)->text('url'));
     }
 
     /** Atom: <feed><logo>, else the podcast artwork. */

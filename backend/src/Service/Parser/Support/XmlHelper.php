@@ -13,7 +13,7 @@ final class XmlHelper
     public const string MEDIA_RSS_NAMESPACE = 'http://search.yahoo.com/mrss/';
     public const string ITUNES_NAMESPACE = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
-    public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
+    public static function childText(\DOMElement $parent, string $localName, string $namespaceUri): ?string
     {
         return self::firstText(self::childElements($parent, $localName, $namespaceUri));
     }
@@ -21,12 +21,12 @@ final class XmlHelper
     public static function childElement(
         \DOMElement $parent,
         string $localName,
-        ?string $namespaceUri,
+        string $namespaceUri,
     ): ?\DOMElement {
         return self::firstElement(self::childElements($parent, $localName, $namespaceUri));
     }
 
-    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
+    public static function childHttpUrl(\DOMElement $parent, string $localName, string $namespaceUri): ?string
     {
         return self::firstHttpUrl(self::childElements($parent, $localName, $namespaceUri));
     }

@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
 final class CoreElementTest extends TestCase
 {
     private const string CORE_NAMESPACE = 'urn:example:core';
-    private const string OTHER_NAMESPACE = ' xmlns:x="urn:example:other"';
+    private const string OTHER_NAMESPACE_DECLARATION = ' xmlns:x="urn:example:other"';
 
     public function testReadsTheTrimmedTextOfACoreChild(): void
     {
@@ -24,7 +24,7 @@ final class CoreElementTest extends TestCase
 
     public function testAPrefixedChildDoesNotShadowTheCoreOne(): void
     {
-        $item = $this->core('<x:title' . self::OTHER_NAMESPACE . '>Wrong</x:title><title>Right</title>');
+        $item = $this->core('<x:title' . self::OTHER_NAMESPACE_DECLARATION . '>Wrong</x:title><title>Right</title>');
 
         self::assertSame('Right', $item->text('title'));
     }
@@ -52,14 +52,14 @@ final class CoreElementTest extends TestCase
 
     public function testAnHttpUrlOutsideTheCoreNamespaceIsNotRead(): void
     {
-        $item = $this->core('<x:comments' . self::OTHER_NAMESPACE . '>https://example.com/c</x:comments>');
+        $item = $this->core('<x:comments' . self::OTHER_NAMESPACE_DECLARATION . '>https://example.com/c</x:comments>');
 
         self::assertNull($item->httpUrl('comments'));
     }
 
     public function testFindsTheFirstCoreChildElement(): void
     {
-        $feed = $this->core('<x:author' . self::OTHER_NAMESPACE . '/><author><name>A</name></author>');
+        $feed = $this->core('<x:author' . self::OTHER_NAMESPACE_DECLARATION . '/><author><name>A</name></author>');
 
         self::assertSame(self::CORE_NAMESPACE, $feed->child('author')?->namespaceURI);
         self::assertNull($feed->child('missing'));
@@ -67,7 +67,7 @@ final class CoreElementTest extends TestCase
 
     public function testListsEveryCoreChildElementInOrder(): void
     {
-        $feed = $this->core('<link rel="a"/><x:link' . self::OTHER_NAMESPACE . ' rel="x"/><link rel="b"/>');
+        $feed = $this->core('<link rel="a"/><x:link' . self::OTHER_NAMESPACE_DECLARATION . ' rel="x"/><link rel="b"/>');
 
         $relations = array_map(
             static fn (\DOMElement $link): string => $link->getAttribute('rel'),
@@ -79,7 +79,7 @@ final class CoreElementTest extends TestCase
 
     public function testAtReadsAnotherElementInTheSameNamespace(): void
     {
-        $feed = $this->core('<author><x:name' . self::OTHER_NAMESPACE . '>Wrong</x:name><name>Right</name></author>');
+        $feed = $this->core('<author><x:name' . self::OTHER_NAMESPACE_DECLARATION . '>Wrong</x:name><name>Right</name></author>');
         $author = $feed->child('author');
         self::assertNotNull($author);
 
