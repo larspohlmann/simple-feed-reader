@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
-use App\Entity\Feed;
 use App\Entity\Entry;
+use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
@@ -24,9 +24,9 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\PostLinkCardsWiring;
-use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use Doctrine\ORM\EntityManagerInterface;

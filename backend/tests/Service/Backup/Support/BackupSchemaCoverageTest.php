@@ -117,8 +117,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'cleared on the next successful send.',
         PendingPostEnrichment::class => 'The instance\'s transient retry queue for Bluesky embeds (#1499); '
             . 'refreshes rebuild it.',
-        LinkCard::class => 'The card of a page a post shares (#1502); identical for every account, since it names '
-            . 'no account.',
+        LinkCard::class => 'The card of a page a post shares (#1502); names no account, and opening the post '
+            . 'rebuilds it.',
     ];
 
     /**

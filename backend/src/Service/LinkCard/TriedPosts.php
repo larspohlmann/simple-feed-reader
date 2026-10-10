@@ -28,6 +28,6 @@ final readonly class TriedPosts
 
     private static function key(int $entryId): string
     {
-        return 'post_link_cards.' . $entryId;
+        return (string) $entryId;
     }
 }
