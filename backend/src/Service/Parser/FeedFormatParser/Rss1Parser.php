@@ -84,7 +84,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             contentHtml: FeedBodyHtml::of($contentEncoded ?? $description),
             publishedAt: DateParser::parse(XmlHelper::childText($entry, 'date', self::DC_NS)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
-            categories: ItemCategoryExtractor::extract($entry),
+            categories: ItemCategoryExtractor::extract($item),
         );
     }
 

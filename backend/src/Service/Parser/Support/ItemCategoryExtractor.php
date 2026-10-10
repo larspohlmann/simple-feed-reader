@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser\Support;
 
 use App\Service\Parser\Model\ParsedCategoryModel;
+use App\Service\Parser\Pass\CoreElement;
 
 /**
  * Reads a feed item's declared categories into a flat list, across RSS 2.0
@@ -13,11 +14,11 @@ use App\Service\Parser\Model\ParsedCategoryModel;
 final class ItemCategoryExtractor
 {
     /** @return list<ParsedCategoryModel> */
-    public static function extract(\DOMElement $item): array
+    public static function extract(CoreElement $item): array
     {
         $categories = [];
-        foreach ($item->childNodes as $child) {
-            $category = self::fromChild($child);
+        foreach ($item->element->childNodes as $child) {
+            $category = self::fromChild($item, $child);
             if ($category !== null) {
                 $categories[] = $category;
             }
@@ -26,12 +27,9 @@ final class ItemCategoryExtractor
         return $categories;
     }
 
-    private static function fromChild(\DOMNode $child): ?ParsedCategoryModel
+    private static function fromChild(CoreElement $item, \DOMNode $child): ?ParsedCategoryModel
     {
-        if (!$child instanceof \DOMElement) {
-            return null;
-        }
-        if ($child->localName === 'category') {
+        if ($item->isCore($child, 'category')) {
             return self::fromCategoryElement($child);
         }
         if (XmlHelper::isElement($child, 'subject', XmlHelper::DUBLIN_CORE_NAMESPACE)) {

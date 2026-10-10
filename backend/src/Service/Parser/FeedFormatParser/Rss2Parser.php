@@ -87,7 +87,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
             publishedAt: DateParser::parse(self::coreOrDublinCore($item, 'pubDate', 'date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
-            categories: ItemCategoryExtractor::extract($entry),
+            categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );
     }

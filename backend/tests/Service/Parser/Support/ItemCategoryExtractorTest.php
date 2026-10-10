@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Support;
 
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class ItemCategoryExtractorTest extends TestCase
 {
-    private function firstItem(string $xml): \DOMElement
+    private function firstItem(string $xml): CoreElement
     {
         $document = new \DOMDocument();
         $document->loadXML($xml);
         $item = $document->getElementsByTagName('*')->item(0);
         \assert($item instanceof \DOMElement);
 
-        // Return the element that actually holds the categories: the wrapper root.
-        return $item;
+        return new CoreElement($item, $item->namespaceURI);
     }
 
     public function testRss2CategoryTextAndDomain(): void
@@ -138,5 +138,31 @@ final class ItemCategoryExtractorTest extends TestCase
 
         self::assertCount(2, $feed->entries[0]->categories);
         self::assertSame('Politics', $feed->entries[0]->categories[0]->label);
+    }
+
+    public function testAnExtensionCategoryIsNotAnItemCategory(): void
+    {
+        $item = $this->firstItem(
+            '<item xmlns:media="http://search.yahoo.com/mrss/">'
+            . '<media:category>Music</media:category><category>World</category>'
+            . '</item>',
+        );
+
+        $labels = array_map(static fn ($category) => $category->label, ItemCategoryExtractor::extract($item));
+
+        self::assertSame(['World'], $labels);
+    }
+
+    public function testAnAtomEntryReadsOnlyAtomCategories(): void
+    {
+        $item = $this->firstItem(
+            '<entry xmlns="http://www.w3.org/2005/Atom" xmlns:x="urn:example:other">'
+            . '<x:category term="Wrong"/><category term="Right"/>'
+            . '</entry>',
+        );
+
+        $labels = array_map(static fn ($category) => $category->label, ItemCategoryExtractor::extract($item));
+
+        self::assertSame(['Right'], $labels);
     }
 }
