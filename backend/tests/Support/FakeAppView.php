@@ -23,11 +23,7 @@ final class FakeAppView implements FeedFetcherInterface
 
     public function knowsFixture(string $name): void
     {
-        $answer = json_decode(
-            (string) file_get_contents(__DIR__ . '/../Fixtures/Bluesky/' . $name . '.json'),
-            true,
-            flags: \JSON_THROW_ON_ERROR,
-        );
+        $answer = json_decode(Bluesky::fixture($name), true, flags: \JSON_THROW_ON_ERROR);
         Assert::assertIsArray($answer);
         $views = $answer['posts'] ?? null;
         Assert::assertIsArray($views);

@@ -14,13 +14,10 @@ use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\Bluesky;
-use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class EntryEmbedWriterTest extends TestCase
 {
-    use ReadsFixtures;
-
     private const string CARD_THUMB = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/'
         . 'bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y';
     private const string VIDEO = 'https://video.bsky.app/watch/did%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi/'
@@ -32,7 +29,7 @@ final class EntryEmbedWriterTest extends TestCase
     {
         $entry = self::entry('<p>Read this.<br />' . Bluesky::CARD . '</p>');
 
-        self::assertTrue($this->writer()->fill($entry, $this->post('external')));
+        self::assertTrue($this->writer()->fill($entry, Bluesky::post('external')));
 
         self::assertSame(
             '<p>Read this.</p><figure class="link-card"><a href="' . Bluesky::CARD . '" rel="noopener noreferrer"'
@@ -51,7 +48,7 @@ final class EntryEmbedWriterTest extends TestCase
     {
         $entry = self::entry('<p>See https://example.com/other</p>');
 
-        $this->writer()->fill($entry, $this->post('external'));
+        $this->writer()->fill($entry, Bluesky::post('external'));
 
         self::assertStringStartsWith(
             '<p>See https://example.com/other</p><figure class="link-card">',
@@ -85,7 +82,7 @@ final class EntryEmbedWriterTest extends TestCase
     {
         $entry = self::entry('<p>Watch.</p>');
 
-        $this->writer()->fill($entry, $this->post('video'));
+        $this->writer()->fill($entry, Bluesky::post('video'));
 
         self::assertStringStartsWith(
             '<p>Watch.</p><figure class="post-video"><video controls',
@@ -107,7 +104,7 @@ final class EntryEmbedWriterTest extends TestCase
         $entry = self::entry('<p>Apples.</p>');
         $entry->getImage()->storePending('https://example.com/own.jpg', 800, 600);
 
-        $this->writer()->fill($entry, $this->post('images'));
+        $this->writer()->fill($entry, Bluesky::post('images'));
 
         self::assertSame('https://example.com/own.jpg', $entry->getImageUrl());
         self::assertEquals(
@@ -123,7 +120,7 @@ final class EntryEmbedWriterTest extends TestCase
     {
         $entry = self::entry(null);
 
-        $this->writer()->fill($entry, $this->post('images'));
+        $this->writer()->fill($entry, Bluesky::post('images'));
 
         self::assertStringStartsWith(
             '<figure class="post-images"><img src="' . self::FULLSIZE . '"',
@@ -137,7 +134,7 @@ final class EntryEmbedWriterTest extends TestCase
     {
         $entry = self::entry('<p onclick="steal()">Hi.</p><script>alert(1)</script>');
 
-        $this->writer()->fill($entry, $this->post('images'));
+        $this->writer()->fill($entry, Bluesky::post('images'));
 
         $stored = (string) $entry->getContentHtml();
         self::assertStringStartsWith('<p>Hi.</p><figure class="post-images">', $stored);
@@ -174,15 +171,6 @@ final class EntryEmbedWriterTest extends TestCase
         $entry->getImage()->storePending(null, null, null);
 
         return $entry;
-    }
-
-    private function post(string $fixture): JsonNodeModel
-    {
-        $answer = json_decode($this->fixture('Bluesky/' . $fixture . '.json'), true, flags: \JSON_THROW_ON_ERROR);
-        $posts = JsonNodeModel::of($answer)->nodes('posts');
-        self::assertCount(1, $posts);
-
-        return $posts[0];
     }
 
     private function writer(): EntryEmbedWriter

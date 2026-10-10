@@ -12,14 +12,11 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\Bluesky;
-use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PostEmbedRendererTest extends TestCase
 {
-    use ReadsFixtures;
-
     private const string MOTHER_JONES = 'https://bsky.app/profile/did:plc:qobvnkudcv3zlaklxxjduqoi/post/';
     private const string THUMBNAILS = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/';
     private const string CARD_THUMB = self::THUMBNAILS
@@ -370,10 +367,7 @@ final class PostEmbedRendererTest extends TestCase
 
     private function rendered(string $fixture): RenderedEmbedModel
     {
-        $answer = json_decode($this->fixture('Bluesky/' . $fixture . '.json'), true, flags: \JSON_THROW_ON_ERROR);
-        $posts = JsonNodeModel::of($answer)->nodes('posts');
-        self::assertCount(1, $posts);
-        $rendered = $this->renderer()->render($posts[0]);
+        $rendered = $this->renderer()->render(Bluesky::post($fixture));
         self::assertNotNull($rendered);
 
         return $rendered;
