@@ -41,6 +41,22 @@ final class LinkCardRepositoryTest extends DbTestCase
         self::assertCount(1, $this->entityManager->getConnection()->fetchFirstColumn('SELECT id FROM link_card'));
     }
 
+    public function testReplacingCardsAlreadyLoadedLeavesOnlyTheNewSet(): void
+    {
+        $entry = $this->entry('one');
+        $cards = $this->repository();
+        $cards->replaceFor($entry, [$this->content('a'), $this->content('b')]);
+        $this->entityManager->flush();
+        $cards->findByEntryIds([$entry->requireId()]);
+
+        $cards->replaceFor($entry, [$this->content('c'), $this->content('d')]);
+        $this->entityManager->flush();
+
+        $stored = $cards->findByEntryIds([$entry->requireId()]);
+        self::assertSame(['c', 'd'], self::titlesOf($stored[$entry->requireId()]));
+        self::assertCount(2, $this->entityManager->getConnection()->fetchFirstColumn('SELECT id FROM link_card'));
+    }
+
     public function testStoresTheOptionalFieldsAsGiven(): void
     {
         $entry = $this->entry('one');
