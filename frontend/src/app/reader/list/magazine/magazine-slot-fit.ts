@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { entryImage, entrySnippet, portraitCoverRatio } from '../preview-image';
+import { entryDek, entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
@@ -47,7 +47,7 @@ function hasSummaryButNoImage(entry: EntryDto): boolean {
  *  renders (`EntryBlockBase`), so a `kicker` is only offered to an entry whose
  *  dek will not render empty. */
 function hasSummary(entry: EntryDto): boolean {
-  return entrySnippet(entry).length > 0;
+  return entryDek(entry).length > 0;
 }
 
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
@@ -57,7 +57,7 @@ const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),
   thumb: (entry) => entryImage(entry) !== null,
-  quote: (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
+  quote: (entry) => entryDek(entry).length >= QUOTE_MIN_TEXT,
   // A kicker shows a title AND a dek; with no dek it is only a taller
   // compact, so a summary-less entry demotes past it to the `compact` floor.
   kicker: (entry) => hasSummary(entry),
