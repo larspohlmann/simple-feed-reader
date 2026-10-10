@@ -18,10 +18,4 @@ final readonly class EmbedFrameModel
     {
         return preg_match('~' . $this->pattern . '~', $url) === 1;
     }
-
-    /** @return array{pattern: string, kind: string, shape: string} */
-    public function toAllowlistEntry(): array
-    {
-        return ['pattern' => $this->pattern, 'kind' => $this->kind->value, 'shape' => $this->shape->value];
-    }
 }

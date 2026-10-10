@@ -12,7 +12,7 @@
 
 - Branch `feature/1481-embed-shape-from-providers`; commits `type(#1481): lower-case summary`.
 - Frame patterns of all providers are pairwise disjoint: every normalised URL matches exactly one entry (asserted in `EmbedFrameAllowlistTest`).
-- `EmbedShape` lives in `Service/Reader/Media/Model/` beside `EmbedKind`; `EmbedFrameModel` is `final readonly` there too and serialises through `toAllowlistEntry()` (no `toArray()` in `App\Service`).
+- `EmbedShape` lives in `Service/Reader/Media/Model/` beside `EmbedKind`; `EmbedFrameModel` is `final readonly` there too and is JSON-encoded as is (public fields, backed enums).
 - Regenerate the client file with `bin/console app:embed:dump-frame-allowlist`.
 - Gates: `composer check`, `composer md` on touched files, `php bin/phpunit`, `composer infection:diff`; frontend `docker compose exec -T frontend npm run check`.
 
@@ -22,7 +22,7 @@
 
 **Files:**
 - Create: `backend/src/Service/Reader/Media/Model/EmbedShape.php` (`Landscape = 'landscape'`, `Tall = 'tall'`, `Portrait = 'portrait'`)
-- Create: `backend/src/Service/Reader/Media/Model/EmbedFrameModel.php` (`pattern`, `kind`, `shape`; `toAllowlistEntry(): array{pattern: string, kind: string, shape: string}`)
+- Create: `backend/src/Service/Reader/Media/Model/EmbedFrameModel.php` (`pattern`, `kind`, `shape`; `matches(string $url): bool`)
 - Modify: `EmbedProviderInterface` — replace `framePattern()` + `kind()` with `frames()`
 - Modify: all six providers. Spotify: `track|episode` → landscape, `playlist|album|artist|show` → tall. YouTube: plain id → landscape, id + `#shorts` → portrait. Others: one landscape frame.
 - Modify: `EmbedProviders::framePatterns()` / `allowlistJson()` read `frames()`, sorted by pattern.

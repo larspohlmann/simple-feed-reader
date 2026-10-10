@@ -53,9 +53,7 @@ final readonly class EmbedProviders
     /** Every frame with its player kind and box shape, as the reader client's committed allow-list file. */
     public function allowlistJson(): string
     {
-        $entries = array_map(static fn (EmbedFrameModel $frame): array => $frame->toAllowlistEntry(), $this->frames());
-
-        return json_encode($entries, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
+        return json_encode($this->frames(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
     }
 
     /** The case-insensitive regex readability keeps an in-body frame by, built from every provider's sourceHosts(). */
