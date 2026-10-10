@@ -49,24 +49,13 @@
   scroll-padding-top: var(--reader-top);
 }
 
-/* Tail padding so a long article's closing paragraph can reach the reading
-   focus's centre (#107), applied only when the article overflows. */
 .reader.with-tail article {
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     a deliberate share of the viewport, not a spacing value; see above. */
-  padding-bottom: 50vh;
-
-  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-     a deliberate share of the viewport, not a spacing value; see above. */
-  padding-bottom: 50dvh;
+  --reader-focus-tail: 50cqb;
 }
 
-/* A widened video (#1479) can scroll to the top of the pane, however short the article. */
 @container reader-pane (width > #{bp.$container-reader-cinema}) {
   .reader article:has(.reader-cinema--on) {
-    /* stylelint-disable-next-line declaration-property-unit-allowed-list --
-       a share of the pane height, not a spacing value. */
-    padding-bottom: calc(100cqb - var(--reader-top));
+    --reader-cinema-tail: calc(100cqb - var(--reader-top));
   }
 }
 
@@ -230,7 +219,11 @@ article {
      tuned reading measure, not a spacing value. */
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-4);
+
+  /* The tail is the largest bottom need: the reading focus's (#107), which ReadingScope
+     grants only when the article overflows, and a widened video's (#1479). */
+  padding: var(--space-5) var(--space-4)
+    max(var(--space-5), var(--reader-focus-tail, 0%), var(--reader-cinema-tail, 0%));
 }
 
 /* The toolbar carries the back button in every mode now (#128), so this is
