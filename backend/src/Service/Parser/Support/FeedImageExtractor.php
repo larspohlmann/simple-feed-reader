@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Url\Support\HttpsImageUrl;
 
 /**
@@ -13,16 +14,16 @@ use App\Service\Url\Support\HttpsImageUrl;
 final class FeedImageExtractor
 {
     /** RSS 2.0: <channel><image><url>, else the podcast artwork. An extension's *:image is never the <image>. */
-    public static function fromRss2Channel(\DOMElement $channel): ?string
+    public static function fromRss2Channel(CoreElement $channel): ?string
     {
-        foreach (XmlHelper::childElements($channel, 'image', $channel->namespaceURI) as $image) {
-            $url = HttpsImageUrl::orNull(XmlHelper::childTextInOwnNamespace($image, 'url'));
+        foreach ($channel->children('image') as $image) {
+            $url = HttpsImageUrl::orNull($channel->at($image)->text('url'));
             if ($url !== null) {
                 return $url;
             }
         }
 
-        return self::podcastArtwork($channel);
+        return self::podcastArtwork($channel->element);
     }
 
     /**

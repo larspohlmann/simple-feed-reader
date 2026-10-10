@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Support;
 
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\FeedImageExtractor;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +22,7 @@ final class FeedImageExtractorTest extends TestCase
         return $document;
     }
 
-    private function rss2Channel(string $imageMarkup): \DOMElement
+    private function rss2Channel(string $imageMarkup): CoreElement
     {
         $document = $this->document(/** @lang TEXT */ <<<XML
             <?xml version="1.0"?>
@@ -32,10 +33,16 @@ final class FeedImageExtractorTest extends TestCase
                 </channel>
             </rss>
             XML);
+
+        return self::channelOf($document);
+    }
+
+    private static function channelOf(\DOMDocument $document): CoreElement
+    {
         $channel = $document->getElementsByTagName('channel')->item(0);
         self::assertInstanceOf(\DOMElement::class, $channel);
 
-        return $channel;
+        return new CoreElement($channel, $channel->namespaceURI);
     }
 
     private function atomRoot(string $xml): \DOMElement
@@ -274,9 +281,6 @@ final class FeedImageExtractorTest extends TestCase
                 </channel>
             </rss>
             XML);
-        $channel = $document->getElementsByTagName('channel')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $channel);
-
-        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromRss2Channel($channel));
+        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromRss2Channel(self::channelOf($document)));
     }
 }

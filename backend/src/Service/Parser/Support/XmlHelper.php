@@ -18,12 +18,6 @@ final class XmlHelper
         return self::firstText(self::childElements($parent, $localName, $namespaceUri));
     }
 
-    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
-    public static function childTextInOwnNamespace(\DOMElement $parent, string $localName): ?string
-    {
-        return self::childText($parent, $localName, $parent->namespaceURI);
-    }
-
     public static function childElement(
         \DOMElement $parent,
         string $localName,
