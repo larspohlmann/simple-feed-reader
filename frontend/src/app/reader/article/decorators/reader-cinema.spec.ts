@@ -1,6 +1,6 @@
 import { addCinemaToggles, toggleCinemaByKey, type CinemaLabels } from './reader-cinema';
 
-const labels: CinemaLabels = { enter: 'Cinema', exit: 'Exit cinema' };
+const labels: CinemaLabels = { enter: 'Cinema mode', exit: 'Exit cinema mode' };
 
 function host(html: string): HTMLElement {
   const element = document.createElement('div');
@@ -24,7 +24,7 @@ describe('addCinemaToggles', () => {
     const toggle = box.querySelector('.reader-cinema__bar > button.reader-cinema__toggle')!;
     expect(toggle.getAttribute('type')).toBe('button');
     expect(toggle.getAttribute('aria-keyshortcuts')).toBe('t');
-    expect(toggle.textContent).toBe('width_wideCinema(t)');
+    expect(toggle.textContent).toBe('width_wideCinema mode(t)');
   });
 
   it('wraps a native video', () => {
@@ -59,12 +59,12 @@ describe('addCinemaToggles', () => {
 
     toggle.click();
     expect(box.classList.contains('reader-cinema--on')).toBe(true);
-    expect(toggle.textContent).toBe('width_normalExit cinema(t)');
+    expect(toggle.textContent).toBe('width_normalExit cinema mode(t)');
     expect(box.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
 
     toggle.click();
     expect(box.classList.contains('reader-cinema--on')).toBe(false);
-    expect(toggle.textContent).toBe('width_wideCinema(t)');
+    expect(toggle.textContent).toBe('width_wideCinema mode(t)');
   });
 });
 

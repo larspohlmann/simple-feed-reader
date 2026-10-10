@@ -990,8 +990,8 @@
     "slideshowPrevious": "Vorheriges Bild",
     "slideshowNext": "Nächstes Bild",
     "slideshowPosition": "{{current}} von {{total}}",
-    "cinema": "Kino",
-    "cinemaExit": "Kino beenden",
+    "cinema": "Kinomodus",
+    "cinemaExit": "Kinomodus beenden",
     "audioPlayer": {
       "listen": "Anhören",
       "label": "Audio-Player",
