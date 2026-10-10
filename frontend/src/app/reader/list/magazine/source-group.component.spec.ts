@@ -48,6 +48,7 @@ const entryAt = (id: number): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,

@@ -13,6 +13,7 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\AtomDiscussion;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Parser\Support\EntryTitle;
 use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
@@ -104,19 +105,22 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         );
         $mediaBundle = $this->mediaExtractor->extract($atomEntry);
         $summary = $atomEntry->text('summary');
+        $body = FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null);
+        $entryTitle = EntryTitle::of($title, $body ?? $summary);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
-            title: PlainText::from($title) ?? '(untitled)',
+            title: $entryTitle->text,
             author: self::authorChildText($atomEntry, 'name'),
             summary: $summary,
-            contentHtml: FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null),
+            contentHtml: $body,
             publishedAt: DateParser::parse($this->firstDate($atomEntry)),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($atomEntry),
             discussion: AtomDiscussion::from($atomEntry),
             authorUrl: AbsoluteHttpUrl::orNull(self::authorChildText($atomEntry, 'uri')),
+            titleDerived: $entryTitle->derived,
         );
     }
 

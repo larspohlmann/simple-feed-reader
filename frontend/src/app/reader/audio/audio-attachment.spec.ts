@@ -25,6 +25,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,

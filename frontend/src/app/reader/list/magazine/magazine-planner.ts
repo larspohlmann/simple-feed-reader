@@ -1,5 +1,5 @@
 import { EntryDto } from '../../models';
-import { entryImage, entrySnippet } from '../preview-image';
+import { entryDek, entryImage } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
 import { fits, ImageBar, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
@@ -240,9 +240,7 @@ function isImageRich(entries: EntryDto[]): boolean {
  *  choosing when its quotes render for real, not demote to headlines. */
 function isTextRich(entries: EntryDto[]): boolean {
   if (entries.length === 0) return false;
-  const withLongText = entries.filter(
-    (entry) => entrySnippet(entry).length >= QUOTE_MIN_TEXT,
-  ).length;
+  const withLongText = entries.filter((entry) => entryDek(entry).length >= QUOTE_MIN_TEXT).length;
   return withLongText / entries.length >= TEXT_RICH_SHARE;
 }
 

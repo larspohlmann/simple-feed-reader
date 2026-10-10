@@ -9,24 +9,26 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <div class="body">
-    <h3 class="title">
+    <h3 class="title" [class.post]="isPost()">
       @if (marking()) {
-        <app-marked-text [text]="entry().title" [terms]="terms()" />
+        <app-marked-text [text]="headline()" [terms]="terms()" />
       } @else {
-        {{ entry().title }}
+        {{ headline() }}
       }
     </h3>
     <p class="meta">
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
     </p>
-    <p class="snippet">
-      @if (marking()) {
-        <app-marked-text [text]="snippet()" [terms]="terms()" />
-      } @else {
-        {{ snippet() }}
-      }
-    </p>
+    @if (!isPost()) {
+      <p class="snippet">
+        @if (marking()) {
+          <app-marked-text [text]="snippet()" [terms]="terms()" />
+        } @else {
+          {{ snippet() }}
+        }
+      </p>
+    }
     <div class="tagline">
       <app-entry-pills
         [tags]="tags()"

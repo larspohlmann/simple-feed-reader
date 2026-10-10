@@ -41,6 +41,20 @@ final class EntryTest extends TestCase
         self::assertCount(1, $entry->getMedia());
     }
 
+    public function testANewEntryKeepsTheTitleTheFeedGave(): void
+    {
+        self::assertFalse($this->entry()->isTitleDerived());
+    }
+
+    public function testAnEntryRemembersItsTitleWasDerived(): void
+    {
+        $entry = $this->entry();
+
+        $entry->markTitleDerived();
+
+        self::assertTrue($entry->isTitleDerived());
+    }
+
     private function entry(): Entry
     {
         $feed = new Feed('https://example.test/feed.xml');

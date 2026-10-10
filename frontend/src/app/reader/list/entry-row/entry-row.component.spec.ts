@@ -47,6 +47,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -105,6 +106,21 @@ describe('EntryRowComponent', () => {
     expect(element.querySelector('.meta')!.textContent).toContain('heise');
     expect(element.querySelector('.snippet')!.textContent).toContain('Summary text');
     expect(element.querySelector('img.thumb')!.getAttribute('src')).toBe('https://cdn.test/a.jpg');
+  });
+
+  it('shows a post its own text as the title and renders no snippet', () => {
+    const element = mount(entry({ titleDerived: true, title: 'Body', excerpt: 'Body and more' }))
+      .nativeElement as HTMLElement;
+    const title = element.querySelector('.title')!;
+    expect(title.textContent).toContain('Body and more');
+    expect(title.classList).toContain('post');
+    expect(element.querySelector('.snippet')).toBeNull();
+  });
+
+  it('keeps title and snippet for an ordinary entry', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+    expect(element.querySelector('.title')!.classList).not.toContain('post');
+    expect(element.querySelector('.snippet')).not.toBeNull();
   });
 
   it('omits the thumbnail when the entry has no persisted image', () => {

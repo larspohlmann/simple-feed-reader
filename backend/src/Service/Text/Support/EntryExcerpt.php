@@ -21,19 +21,7 @@ final class EntryExcerpt
     {
         $text = EntryPlainText::of($html);
 
-        return $text === null ? null : self::cutAtWordBoundary($text);
-    }
-
-    private static function cutAtWordBoundary(string $text): string
-    {
-        if (mb_strlen($text) <= self::MAX_LENGTH) {
-            return $text;
-        }
-
-        $cut = mb_substr($text, 0, self::MAX_LENGTH);
-        $lastSpace = mb_strrpos($cut, ' ');
-
-        return $lastSpace === false ? $cut : mb_substr($cut, 0, $lastSpace);
+        return $text === null ? null : WordBoundary::cut($text, self::MAX_LENGTH);
     }
 
     private function __construct()

@@ -79,4 +79,21 @@ final class PlainTextTest extends TestCase
     {
         self::assertNull(PlainText::fromHtmlBlocks(null));
     }
+
+    public function testLinesFromHtmlBlocksGivesEachBlockAndLineBreakItsOwnLine(): void
+    {
+        self::assertSame(
+            ['RE: https://example.social/@a/1', 'Have you taken the survey yet?', 'Second line'],
+            PlainText::linesFromHtmlBlocks(
+                "<p>RE: <a href=\"https://example.social/@a/1\">https://example.social/@a/1</a></p>"
+                . "<p>Have you taken\n the <em>survey</em> yet?<br />Second line</p><p> </p>",
+            ),
+        );
+    }
+
+    public function testLinesFromHtmlBlocksOfNothingIsNoLines(): void
+    {
+        self::assertSame([], PlainText::linesFromHtmlBlocks(null));
+        self::assertSame([], PlainText::linesFromHtmlBlocks('<p></p>'));
+    }
 }

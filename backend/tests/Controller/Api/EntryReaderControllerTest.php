@@ -18,6 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryReaderControllerTest extends WebTestCase
@@ -330,6 +331,45 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('no_url', $body['reason']);
         self::assertNull($body['url']);
         self::assertSame([], $fake->calls);
+    }
+
+    public function testAPostAnswersFeedBodyIsPostWithoutCallingExtractor(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-post@example.com');
+        $fake = $this->installFake();
+        $entry = $this->seedEntry($user, 'https://example.social/@a/1');
+        $entry->markTitleDerived();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->flush();
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('failed', $body['status']);
+        self::assertSame('feed_body_is_post', $body['reason']);
+        self::assertSame([], $fake->calls);
+    }
+
+    public function testAPostIsAnsweredWhenTheReaderBudgetIsSpent(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-post-budget@example.com');
+        $this->installFake();
+        $post = $this->seedEntry($user, 'https://example.social/@a/2');
+        $post->markTitleDerived();
+        $article = $this->seedEntry($user, 'https://example.com/article');
+        $readerLimiter = self::getContainer()->get('limiter.reader');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
+        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+
+        $client->request('GET', '/api/entries/' . $post->getId() . '/reader', server: $headers);
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/api/entries/' . $article->getId() . '/reader', server: $headers);
+        self::assertResponseStatusCodeSame(429);
     }
 
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void

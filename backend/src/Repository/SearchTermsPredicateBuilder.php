@@ -42,7 +42,7 @@ final readonly class SearchTermsPredicateBuilder
 
         return \sprintf(
             "(%s LIKE :%s ESCAPE '%s' OR %s LIKE :%s ESCAPE '%s')",
-            \sprintf('%s.title', $entryAlias),
+            \sprintf('%s.headline.title', $entryAlias),
             $parameter,
             LikePattern::ESCAPE_CHARACTER,
             \sprintf('%s.summary', $entryAlias),
@@ -68,7 +68,7 @@ final readonly class SearchTermsPredicateBuilder
 
         return \sprintf(
             '(%s OR %s)',
-            $this->wholeWordColumnPredicate('title', $cheap, $word, $entryAlias),
+            $this->wholeWordColumnPredicate('headline.title', $cheap, $word, $entryAlias),
             $this->wholeWordColumnPredicate('summary', $cheap, $word, $entryAlias),
         );
     }

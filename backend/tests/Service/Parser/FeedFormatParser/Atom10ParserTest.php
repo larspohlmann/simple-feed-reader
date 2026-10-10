@@ -545,4 +545,45 @@ final class Atom10ParserTest extends TestCase
 
         self::assertNull($entry->contentHtml);
     }
+
+    public function testAnEntryWithoutATitleTakesItsTitleFromTheContent(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:1</id><link rel="alternate" href="https://example.social/@a/1"/>'
+            . '<content type="html">&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</content></entry>',
+        );
+
+        self::assertSame('Hello from the fediverse.', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
+
+    public function testTheContentOutranksTheSummaryAsTheSourceOfADerivedTitle(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:4</id><link rel="alternate" href="https://example.social/@a/4"/>'
+            . '<summary>From the summary.</summary>'
+            . '<content type="html">&lt;p&gt;From the content.&lt;/p&gt;</content></entry>',
+        );
+
+        self::assertSame('From the content.', $entry->title);
+    }
+
+    public function testAnEntryWithoutATitleOrContentTakesItsTitleFromTheSummary(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:2</id><link rel="alternate" href="https://example.social/@a/2"/>'
+            . '<summary>Only a summary here. More.</summary></entry>',
+        );
+
+        self::assertSame('Only a summary here.', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
+
+    public function testATitledEntryIsNotDerived(): void
+    {
+        $entry = $this->parseSingleEntry('<entry><title>Real</title><id>tag:x,2026:3</id></entry>');
+
+        self::assertSame('Real', $entry->title);
+        self::assertFalse($entry->titleDerived);
+    }
 }

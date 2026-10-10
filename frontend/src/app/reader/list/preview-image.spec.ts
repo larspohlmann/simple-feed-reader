@@ -1,4 +1,6 @@
 import {
+  entryDek,
+  entryHeadline,
   entryImage,
   entrySnippet,
   renditionSrcset,
@@ -31,6 +33,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -44,6 +47,16 @@ describe('entrySnippet', () => {
 
   it('returns an empty string when the entry has none', () => {
     expect(entrySnippet(entry())).toBe('');
+  });
+});
+
+describe('entryDek', () => {
+  it('is the excerpt of an ordinary entry', () => {
+    expect(entryDek(entry({ excerpt: 'Some copy' }))).toBe('Some copy');
+  });
+
+  it('is empty for a post, whose text is already its headline', () => {
+    expect(entryDek(entry({ excerpt: 'Some copy', titleDerived: true }))).toBe('');
   });
 });
 
@@ -154,5 +167,23 @@ describe('showsShortPill', () => {
 
   it('marks no other entry', () => {
     expect(showsShortPill(entry(), false)).toBe(false);
+  });
+});
+
+describe('entryHeadline', () => {
+  it('is the title of an ordinary entry', () => {
+    expect(entryHeadline(entry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
+      'Real',
+    );
+  });
+
+  it('is the excerpt of a post, whose title only repeats it', () => {
+    expect(
+      entryHeadline(entry({ title: 'Body', excerpt: 'Body and more', titleDerived: true })),
+    ).toBe('Body and more');
+  });
+
+  it('falls back to the derived title when a post has no excerpt', () => {
+    expect(entryHeadline(entry({ title: 'null', excerpt: '', titleDerived: true }))).toBe('null');
   });
 });

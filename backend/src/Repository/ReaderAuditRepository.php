@@ -39,6 +39,7 @@ final readonly class ReaderAuditRepository
                FROM subscription s
                JOIN entry e ON e.feed_id = s.feed_id
               WHERE s.user_id = :user AND e.url IS NOT NULL AND e.url <> \'\'
+                AND e.title_derived = 0
                 AND e.created_at < :before
               ORDER BY s.feed_id, e.id',
             ['user' => $userId, 'before' => $before->format('Y-m-d H:i:s')],

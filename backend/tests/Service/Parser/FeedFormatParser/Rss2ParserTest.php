@@ -601,4 +601,36 @@ final class Rss2ParserTest extends TestCase
     {
         self::assertFalse(FeedFormatParsers::rss2()->isEntry(new \DOMElement('item'), new \DOMDocument()));
     }
+
+    public function testAnItemWithoutATitleTakesItsTitleFromTheDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item><guid>https://example.social/@a/1</guid><link>https://example.social/@a/1</link>'
+            . '<description>&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</description></item>',
+        );
+
+        self::assertSame('Hello from the fediverse.', $entry->title);
+        self::assertTrue($entry->titleDerived);
+        self::assertSame('https://example.social/@a/1', $entry->guid);
+    }
+
+    public function testATitledItemIsNotDerived(): void
+    {
+        $entry = $this->parseSingleItem('<item><title>Real</title><link>https://example.com/1</link></item>');
+
+        self::assertSame('Real', $entry->title);
+        self::assertFalse($entry->titleDerived);
+    }
+
+    public function testAPlainTextBlueskyDescriptionGivesItsFirstLine(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item><link>https://bsky.app/profile/a/post/1</link><guid>at://did:plc:a/app.bsky.feed.post/1</guid>'
+            . "<description>a masterclass in alt text\n\n[contains quote post or other embedded content]"
+            . '</description></item>',
+        );
+
+        self::assertSame('a masterclass in alt text', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
 }

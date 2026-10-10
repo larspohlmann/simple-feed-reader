@@ -46,6 +46,9 @@ final readonly class IngestedEntryFactory
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);
         $entry->setDiscussion($parsed->discussion);
+        if ($parsed->titleDerived) {
+            $entry->markTitleDerived();
+        }
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);
 

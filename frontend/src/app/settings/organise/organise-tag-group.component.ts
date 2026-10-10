@@ -9,7 +9,8 @@ import { IconButtonDirective } from '../../shared/icon-button/icon-button.direct
 import { ManageActions } from '../../reader/feeds/manage/manage-actions.service';
 import { LayoutService } from '../../reader/layout.service';
 import { LanguageService } from '../../core/i18n/language.service';
-import { SubscriptionDto, TagDto, isSubscriptionDrag, isTagDrag } from '../../reader/models';
+import { SubscriptionDto, TagDto } from '../../reader/models';
+import { isSubscriptionDrag, isTagDrag } from '../../reader/drag-payload';
 
 /** One tag panel: a header row, and -- when open -- its feeds.
  *

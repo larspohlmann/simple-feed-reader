@@ -25,7 +25,7 @@
   }
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" />
-    <p class="title">{{ entry().title }}</p>
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
     <app-entry-meta [entry]="entry()" [tags]="tags()" />
     <app-entry-duplicates [entry]="entry()" />
   </div>

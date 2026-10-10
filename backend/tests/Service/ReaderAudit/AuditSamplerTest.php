@@ -75,6 +75,26 @@ final class AuditSamplerTest extends DbTestCase
         self::assertSame([], $this->drawn(limit: 10, perFeed: 10, seed: 1));
     }
 
+    public function testAPostWhoseTitleWasDerivedIsNeverSampledBecauseItHasNoPageToExtract(): void
+    {
+        $feed = $this->feedWithEntries('posts', 0);
+        $moment = new \DateTimeImmutable(self::MOMENT);
+        $post = new Entry($feed, 'post', 'https://posts.example.com/1', 'A post', $moment, $moment);
+        $post->markTitleDerived();
+        $this->entityManager->persist($post);
+        $this->entityManager->persist(
+            new Entry($feed, 'article', 'https://posts.example.com/2', 'Art', $moment, $moment),
+        );
+        $this->entityManager->flush();
+
+        $sample = $this->drawn(limit: 10, perFeed: 10, seed: 1);
+
+        self::assertSame(['Art'], array_map(
+            static fn (SampledEntryModel $entry): string => $entry->title,
+            $sample,
+        ));
+    }
+
     public function testAFeedThePublisherNeverTitledIsNamedByItsUrlRatherThanDropped(): void
     {
         $feed = new Feed('https://untitled.example.com/feed.xml');

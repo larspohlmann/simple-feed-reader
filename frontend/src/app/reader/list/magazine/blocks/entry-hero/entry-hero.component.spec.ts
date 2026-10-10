@@ -46,6 +46,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -106,6 +107,21 @@ describe('EntryHeroComponent', () => {
     expect(element.textContent).toContain('Big headline');
     expect(element.textContent).toContain('Src');
     expect(element.querySelector('img.img')).not.toBeNull();
+  });
+
+  it('shows a post its own text as the title and renders no dek', () => {
+    const element = mount(entry({ titleDerived: true, title: 'Body', excerpt: 'Body and more' }))
+      .nativeElement as HTMLElement;
+    const title = element.querySelector('.title')!;
+    expect(title.textContent).toContain('Body and more');
+    expect(title.classList).toContain('post');
+    expect(element.querySelector('.dek')).toBeNull();
+  });
+
+  it('keeps title and dek for an ordinary entry', () => {
+    const element = mount(entry({ excerpt: 'A dek' })).nativeElement as HTMLElement;
+    expect(element.querySelector('.title')!.classList).not.toContain('post');
+    expect(element.querySelector('.dek')!.textContent).toContain('A dek');
   });
 
   it('emits open on click', () => {

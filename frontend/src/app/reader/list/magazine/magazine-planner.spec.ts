@@ -37,6 +37,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isKept: false,
   isViewed: false,
   isShort: false,
+  titleDerived: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -713,6 +714,27 @@ describe('planMagazine', () => {
     );
     const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
     expect(ks.every((kind) => kind === 'compact')).toBe(true);
+  });
+
+  it('never offers a post a kicker or a quote, which would render without their copy', () => {
+    // A post's text is its headline, so a block shows it no dek and no pull-quote.
+    const summary = 'A long post body that would otherwise fill a pull quote. '.repeat(8);
+    const entries = many(80, (index) =>
+      entryAt(index, { subscriptionId: (index % 6) + 1, summary, titleDerived: true }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: true, complete: true }));
+    expect(ks.every((kind) => kind === 'compact')).toBe(true);
+  });
+
+  it('does not count posts toward a text-rich view', () => {
+    const summary = 'A long post body that would otherwise fill a pull quote. '.repeat(8);
+    const entries = many(80, (index) =>
+      index % 4 === 0
+        ? big(index, { subscriptionId: (index % 6) + 1 })
+        : entryAt(index, { subscriptionId: (index % 6) + 1, summary, titleDerived: true }),
+    );
+    const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
+    expect(ks).toContain('hero');
   });
 
   it('is prefix-stable for a short-summary, image-less feed', () => {

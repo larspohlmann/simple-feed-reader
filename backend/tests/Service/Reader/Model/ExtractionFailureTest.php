@@ -13,7 +13,7 @@ final class ExtractionFailureTest extends TestCase
     public function testTheWireValuesAreTheOnesTheClientSwitchesOn(): void
     {
         self::assertSame(
-            ['no_url', 'fetch', 'unextractable', 'empty', 'mismatch', 'player_page'],
+            ['no_url', 'fetch', 'unextractable', 'empty', 'mismatch', 'player_page', 'feed_body_is_post'],
             array_map(static fn (ExtractionFailure $failure): string => $failure->value, ExtractionFailure::cases()),
         );
     }

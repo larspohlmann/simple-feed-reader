@@ -8,8 +8,10 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <app-entry-kicker-line [entry]="entry()" />
-  <p class="pull">{{ lead() }}</p>
-  <p class="title">{{ entry().title }}</p>
+  @if (!isPost()) {
+    <p class="pull">{{ lead() }}</p>
+  }
+  <p class="title" [class.post]="isPost()">{{ headline() }}</p>
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />
 </article>

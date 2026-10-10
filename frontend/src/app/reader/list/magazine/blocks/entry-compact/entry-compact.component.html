@@ -16,7 +16,7 @@
         <app-entry-actions [entry]="entry()" />
       }
     </app-entry-kicker-line>
-    <p class="title">{{ entry().title }}</p>
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }

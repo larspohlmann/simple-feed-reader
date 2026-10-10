@@ -105,6 +105,8 @@ More in the [screenshot gallery](docs/screenshots.md).
   finds the feed for you. A show link from Apple Podcasts, a SoundCloud
   profile link, a YouTube channel, playlist or video link works too, and a
   GitHub repository link subscribes to the repository's releases.
+- Mastodon and Bluesky profiles show as posts: the post's own text stands in
+  for the missing headline, and the reader shows it without loading a page.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.

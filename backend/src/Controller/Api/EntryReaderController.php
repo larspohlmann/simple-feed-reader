@@ -41,19 +41,23 @@ final readonly class EntryReaderController
         #[CurrentUser] User $user,
     ): JsonResponse {
         // Ownership is checked BEFORE the limiter so an unowned id 404s without
-        // spending the caller's reader budget.
+        // spending the caller's reader budget; a post fetches nothing, so it spends none.
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
 
-        $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
+        if (!$entry->isTitleDerived()) {
+            $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
+        }
 
         $url = $entry->getUrl();
-        $result = $url === null || $url === ''
-            ? ExtractionResultModel::failed(null, ExtractionFailure::NoUrl)
-            : $this->extractor->extract($url, new EntryHintsModel(
+        $result = match (true) {
+            $entry->isTitleDerived() => ExtractionResultModel::failed(null, ExtractionFailure::FeedBodyIsPost),
+            $url === null || $url === '' => ExtractionResultModel::failed(null, ExtractionFailure::NoUrl),
+            default => $this->extractor->extract($url, new EntryHintsModel(
                 title: $entry->getTitle(),
                 author: $entry->getAuthor(),
                 feedMedia: FeedMediaModel::fromEntry($entry),
-            ));
+            )),
+        };
 
         // A confident-but-wrong extraction (page furniture instead of the article)
         // is failed here so the client falls back to the feed body.

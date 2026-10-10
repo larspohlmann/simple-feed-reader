@@ -16,7 +16,13 @@ import { EntryActionsComponent } from '../../entry/entry-actions/entry-actions.c
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../../core/i18n/language.service';
 import { EntryDto, SubscriptionTagDto } from '../../models';
-import { entryImage, entrySnippet, portraitCoverRatio, showsShortPill } from '../preview-image';
+import {
+  entryHeadline,
+  entryImage,
+  entrySnippet,
+  portraitCoverRatio,
+  showsShortPill,
+} from '../preview-image';
 import { relativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
@@ -65,6 +71,8 @@ export class EntryRowComponent {
   readonly showImage = computed(() => !!this.image() && !this.imgError());
   readonly portraitRatio = computed(() => portraitCoverRatio(this.entry()));
   readonly shortPill = computed(() => showsShortPill(this.entry(), this.showImage()));
+  readonly isPost = computed(() => this.entry().titleDerived);
+  readonly headline = computed(() => entryHeadline(this.entry()));
   readonly snippet = computed(() => entrySnippet(this.entry()));
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>

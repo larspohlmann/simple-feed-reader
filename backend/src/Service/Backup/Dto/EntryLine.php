@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\LineFieldWithDefault;
 
 /**
  * One entry belonging to a feed the account subscribes to.
@@ -38,6 +39,7 @@ final readonly class EntryLine
         public ?string $commentsLoad = null,
         /** @var list<array<string, mixed>> */
         public array $imageRenditions = [],
+        public bool $titleDerived = false,
     ) {
     }
 
@@ -67,6 +69,7 @@ final readonly class EntryLine
             commentsFeedUrl: LineField::stringOrNull($line, 'commentsFeedUrl'),
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
             imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
+            titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
         );
     }
 }

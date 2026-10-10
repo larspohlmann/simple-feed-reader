@@ -33,13 +33,8 @@ import { DismissOnOutsideDirective } from '../../../shared/dismiss-on-outside.di
 import { IconButtonDirective } from '../../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../../state/subscriptions.store';
 import { Selection, selectionQueryParams } from '../../query/query';
-import {
-  MoveFeedToTag,
-  SavedSearchDto,
-  SubscriptionDto,
-  TagDto,
-  isSubscriptionDrag,
-} from '../../models';
+import { MoveFeedToTag, SavedSearchDto, SubscriptionDto, TagDto } from '../../models';
+import { isSubscriptionDrag } from '../../drag-payload';
 import { RefreshService } from '../../state/refresh.service';
 import { RecommendationsService } from '../../state/recommendations.service';
 import { AiAvailabilityService } from '../../../core/ai-availability.service';

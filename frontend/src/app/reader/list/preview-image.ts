@@ -5,6 +5,11 @@ export function entrySnippet(entry: EntryDto): string {
   return entry.excerpt;
 }
 
+/** The dek a block renders: none for a post, whose text is already its headline. */
+export function entryDek(entry: EntryDto): string {
+  return entry.titleDerived ? '' : entrySnippet(entry);
+}
+
 /** Same shape as the API's HeroImageDto — one declaration, so a picture the
  *  client derives and a picture the backend resolved cannot drift apart.
  *  Null width/height mean the feed did not say. */
@@ -63,4 +68,10 @@ export function widestRenditionWidth(
   renditions: readonly ImageRenditionDto[] | undefined,
 ): number | null {
   return renditions?.at(-1)?.width ?? null;
+}
+
+/** What a card shows in its headline slot: a post's own text, since its derived title only
+ *  repeats it — the title when the text came out empty. */
+export function entryHeadline(entry: EntryDto): string {
+  return entry.titleDerived ? entry.excerpt || entry.title : entry.title;
 }

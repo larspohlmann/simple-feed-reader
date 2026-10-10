@@ -317,4 +317,15 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML)));
     }
+
+    public function testAnItemWithoutATitleTakesItsTitleFromTheDescription(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item rdf:about="https://example.social/@a/1"><link>https://example.social/@a/1</link>'
+            . '<description>&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</description></item>',
+        );
+
+        self::assertSame('Hello from the fediverse.', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
 }

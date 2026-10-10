@@ -8,7 +8,7 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <app-entry-kicker-line [entry]="entry()" />
-  <p class="title">{{ entry().title }}</p>
+  <p class="title" [class.post]="isPost()">{{ headline() }}</p>
   @if (snippet()) {
     <p class="dek">{{ snippet() }}</p>
   }

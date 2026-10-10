@@ -34,6 +34,7 @@ final class EntryBatchInserterTest extends DbTestCase
         string $title = 'Entry',
         ?string $url = self::GENERATED_URL,
         ?string $imageUrl = null,
+        bool $titleDerived = false,
     ): EntryLine {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
@@ -50,6 +51,7 @@ final class EntryBatchInserterTest extends DbTestCase
             publishedAt: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
             createdAt: new \DateTimeImmutable('2026-08-02T00:00:00+00:00'),
             effectiveDate: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
+            titleDerived: $titleDerived,
         );
     }
 
@@ -107,6 +109,25 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertSame('2026-08-01 10:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-02 00:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-01 10:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
+    }
+
+    public function testARestoredRowKeepsWhetherItsTitleWasDerived(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+
+        $this->inserter()->insert($feedId, [
+            $this->entryLine('derived-guid', titleDerived: true),
+            $this->entryLine('given-guid'),
+        ]);
+
+        $this->entityManager->clear();
+        $repository = $this->entityManager->getRepository(Entry::class);
+        $derived = $repository->findOneBy(['guidHash' => hash('sha256', 'derived-guid')]);
+        $given = $repository->findOneBy(['guidHash' => hash('sha256', 'given-guid')]);
+        self::assertInstanceOf(Entry::class, $derived);
+        self::assertInstanceOf(Entry::class, $given);
+        self::assertTrue($derived->isTitleDerived());
+        self::assertFalse($given->isTitleDerived());
     }
 
     public function testAnEmptyListDoesNothing(): void

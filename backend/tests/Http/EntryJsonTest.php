@@ -139,6 +139,15 @@ final class EntryJsonTest extends TestCase
         self::assertSame([], $json['duplicates'][0]['duplicates']);
     }
 
+    public function testFlagsAnEntryWhoseTitleWasDerivedFromItsText(): void
+    {
+        $derived = $this->entryTitled('Derived');
+        $derived->markTitleDerived();
+
+        self::assertTrue(EntryJson::listRow($this->row($derived))['titleDerived']);
+        self::assertFalse(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['titleDerived']);
+    }
+
     public function testListRowHasNoContentHtmlAndCarriesAnExcerpt(): void
     {
         $entry = new Entry(
@@ -256,6 +265,18 @@ final class EntryJsonTest extends TestCase
             'guid',
             $url,
             'Video',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+    }
+
+    private function entryTitled(string $title): Entry
+    {
+        return new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            $title,
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
             new \DateTimeImmutable('2026-09-07T00:00:00Z'),
         );
