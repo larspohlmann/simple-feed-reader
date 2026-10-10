@@ -48,6 +48,21 @@ final class PendingPostEnrichmentRepositoryTest extends DbTestCase
         self::assertCount(1, $this->repository()->findOldestForFeed($other, 10));
     }
 
+    public function testTellsWhetherAFeedHasAnyRow(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $other = $this->feed('https://bsky.app/profile/b/rss');
+        $empty = $this->feed('https://bsky.app/profile/c/rss');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/one', '2026-10-10 09:00:00');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/two', '2026-10-10 09:00:00');
+        $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/one', '2026-10-10 09:00:00');
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository()->hasPendingForFeed($feed));
+        self::assertTrue($this->repository()->hasPendingForFeed($other));
+        self::assertFalse($this->repository()->hasPendingForFeed($empty));
+    }
+
     public function testARowGoesWithItsEntry(): void
     {
         $feed = $this->feed('https://bsky.app/profile/a/rss');

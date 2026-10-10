@@ -28,6 +28,7 @@ use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\StubFeedFetcher;
@@ -75,6 +76,34 @@ final class PostEnricherTest extends DbTestCase
         $stored = $this->reload($post);
         self::assertStringStartsWith('<p>Read this.</p><figure class="link-card">', (string) $stored->getContentHtml());
         self::assertSame('Read this.', $stored->getSummary());
+    }
+
+    /** @return iterable<string, array{list<string>}> */
+    public static function refreshesWithoutBlueskyPosts(): iterable
+    {
+        yield 'a fetched feed with new articles' => [['https://example.com/a', 'https://example.com/b']];
+        yield 'a not-modified feed' => [[]];
+    }
+
+    /** @param list<string> $createdGuids */
+    #[DataProvider('refreshesWithoutBlueskyPosts')]
+    public function testAFeedWithNothingPendingCostsOneQueryAndNoFlush(array $createdGuids): void
+    {
+        $created = array_map(
+            fn (string $guid): Entry => $this->entry($this->feed, $guid, '<p>Text.</p>'),
+            $createdGuids,
+        );
+        $this->entityManager->flush();
+        $this->feed->setTitle('Unflushed title');
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        self::assertSame([], $this->enricher()->enrich($this->feed, $created));
+
+        self::assertCount(1, $recorder->queries());
+        self::assertCount(1, $recorder->queriesMatching('from pending_post_enrichment'));
+        self::assertSame([], $this->appView->requests);
     }
 
     public function testAPostTheAppViewOmitsIsDequeuedAndKeepsItsText(): void

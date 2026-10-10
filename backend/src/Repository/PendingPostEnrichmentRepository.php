@@ -33,6 +33,18 @@ final class PendingPostEnrichmentRepository extends ServiceEntityRepository
             ->execute();
     }
 
+    public function hasPendingForFeed(Feed $feed): bool
+    {
+        return $this->createQueryBuilder('pending')
+            ->select('pending.id')
+            ->innerJoin('pending.entry', 'queuedEntry')
+            ->andWhere('queuedEntry.feed = :feed')
+            ->setParameter('feed', $feed)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getScalarResult() !== [];
+    }
+
     /** @return list<PendingPostEnrichment> */
     public function findOldestForFeed(Feed $feed, int $limit): array
     {

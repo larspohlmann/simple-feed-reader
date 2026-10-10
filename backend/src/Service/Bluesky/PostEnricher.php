@@ -67,6 +67,8 @@ final readonly class PostEnricher
     {
         if ($this->queue->queue($createdEntries) > 0) {
             $this->entityManager->flush();
+        } elseif (!$this->pendingPosts->hasPendingForFeed($feed)) {
+            return [];
         }
         $this->pendingPosts->deleteQueuedBefore(
             $feed,
