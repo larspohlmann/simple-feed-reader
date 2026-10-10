@@ -34,7 +34,7 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     public function supports(\DOMElement $root): bool
     {
-        return $root->localName === 'RDF';
+        return XmlHelper::isElement($root, 'RDF', self::RDF_NS);
     }
 
     public function isEntry(\DOMElement $element, int $depth): bool

@@ -11,6 +11,7 @@ use App\Service\Parser\FeedFormatParser\Atom10Parser;
 use App\Service\Parser\FeedFormatParser\Rss1Parser;
 use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Tests\Support\FeedFormatParsers;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FeedParserFactoryTest extends TestCase
@@ -84,5 +85,22 @@ final class FeedParserFactoryTest extends TestCase
         $this->factory()->parserFor(
             $this->root('<feed xmlns="http://example.com/not-atom"><title>x</title></feed>'),
         );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function rdfRootsOutsideTheRdfNamespace(): iterable
+    {
+        yield 'no namespace' => ['<RDF><channel><title>x</title></channel></RDF>'];
+        yield 'a foreign namespace' => [
+            '<x:RDF xmlns:x="urn:example:other"><channel><title>x</title></channel></x:RDF>',
+        ];
+    }
+
+    #[DataProvider('rdfRootsOutsideTheRdfNamespace')]
+    public function testThrowsForAnRdfRootOutsideTheRdfNamespace(string $xml): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->expectExceptionMessage('No parser for feed root <RDF>');
+        $this->factory()->parserFor($this->root($xml));
     }
 }

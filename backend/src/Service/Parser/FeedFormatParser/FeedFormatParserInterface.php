@@ -13,10 +13,6 @@ use App\Service\Parser\Model\ParsedFeedModel;
  */
 interface FeedFormatParserInterface
 {
-    /**
-     * Whether this parser handles the given document root. RSS variants match on
-     * the local element name; Atom dialects narrow further by namespace.
-     */
     public function supports(\DOMElement $root): bool;
 
     /** Asked of each element as the document streams past; the root sits at depth 0. */
