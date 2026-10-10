@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Entity\Feed;
+use App\Service\Bluesky\PendingPostQueue;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Ingest\EntryIngestor;
@@ -34,6 +35,7 @@ final readonly class FirstFetchRecorder
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
+        private PendingPostQueue $postQueue,
     ) {
     }
 
@@ -56,6 +58,7 @@ final readonly class FirstFetchRecorder
         );
         $feed->recordCacheValidators($discovered->etag, $discovered->lastModified);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
+        $this->postQueue->queue($createdEntries);
         $this->entityManager->flush();
         // Index after the flush: an entry has no id before it.
         $this->indexer->index($createdEntries);

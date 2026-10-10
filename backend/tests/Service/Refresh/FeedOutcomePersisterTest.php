@@ -21,6 +21,7 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
@@ -224,6 +225,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
             EntryIngestors::build($this->entityManager, $this->clock),
             FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+            PostEnrichers::idle($this->entityManager, $this->clock),
             $this->logger,
         );
     }

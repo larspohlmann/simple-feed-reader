@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
 use App\Service\Feed\FeedScheduler;
+use App\Service\Bluesky\PostEnricher;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
@@ -37,6 +38,7 @@ final readonly class FeedOutcomePersister
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
+        private PostEnricher $postEnricher,
         private LoggerInterface $logger,
     ) {
     }
@@ -95,6 +97,7 @@ final readonly class FeedOutcomePersister
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordNotModified($feed);
         $this->entityManager->flush();
+        $this->indexer->index($this->postEnricher->enrich($feed, []));
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);
     }
@@ -114,9 +117,25 @@ final readonly class FeedOutcomePersister
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
-        $this->indexer->index($createdEntries);
+        $filledEntries = $this->postEnricher->enrich($feed, $createdEntries);
+        $this->indexer->index(self::withoutRepeats([...$createdEntries, ...$filledEntries]));
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));
+    }
+
+    /**
+     * @param list<Entry> $entries
+     *
+     * @return list<Entry>
+     */
+    private static function withoutRepeats(array $entries): array
+    {
+        $distinct = [];
+        foreach ($entries as $entry) {
+            $distinct[spl_object_id($entry)] = $entry;
+        }
+
+        return array_values($distinct);
     }
 
     /** @throws \DateMalformedStringException */
