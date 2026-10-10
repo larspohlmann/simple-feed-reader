@@ -75,4 +75,35 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         self::assertStringContainsString('href="https://www.youtube-nocookie.com/embed/Xic3faS00Qs"', $body);
         self::assertStringContainsString('<p>Description</p>', $body);
     }
+
+    public function testTheContainersIngestorDropsABlueskyPlaceholder(): void
+    {
+        $ingestor = self::getContainer()->get(EntryIngestor::class);
+        self::assertInstanceOf(EntryIngestor::class, $ingestor);
+        $feed = new Feed('https://bsky.app/profile/bsky.app/rss');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+        $post = new ParsedEntryModel(
+            'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mxhdhodv222n',
+            'https://bsky.app/profile/bsky.app/post/3mxhdhodv222n',
+            'a masterclass in alt text',
+            null,
+            null,
+            '<p>a masterclass in alt text</p><p>[contains quote post or other embedded content]</p>',
+            null,
+            titleDerived: true,
+        );
+
+        $ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('Feed', null, null, null, [$post]),
+            new FeedIngestContext(new \DateTimeImmutable('2026-10-10T12:00:00Z'), null),
+        );
+        $this->entityManager->flush();
+
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        self::assertSame('<p>a masterclass in alt text</p>', $entry->getContentHtml());
+        self::assertSame('a masterclass in alt text', $entry->getSummary());
+    }
 }

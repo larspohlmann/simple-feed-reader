@@ -53,22 +53,32 @@ final readonly class ParsedEntryModel
         );
     }
 
-    public function withContentHtml(?string $contentHtml): self
+    public function parsedTitle(): ParsedTitleModel
+    {
+        return $this->titleDerived ? ParsedTitleModel::derived($this->title) : ParsedTitleModel::fromFeed($this->title);
+    }
+
+    public function withPostText(ParsedTitleModel $title, ?string $summary, ?string $contentHtml): self
     {
         return new self(
             guid: $this->guid,
             url: $this->url,
-            title: $this->title,
+            title: $title->text,
             author: $this->author,
-            summary: $this->summary,
+            summary: $summary,
             contentHtml: $contentHtml,
             publishedAt: $this->publishedAt,
             media: $this->media,
             categories: $this->categories,
             discussion: $this->discussion,
             authorUrl: $this->authorUrl,
-            titleDerived: $this->titleDerived,
+            titleDerived: $title->derived,
         );
+    }
+
+    public function withContentHtml(?string $contentHtml): self
+    {
+        return $this->withPostText($this->parsedTitle(), $this->summary, $contentHtml);
     }
 
     private function withMedia(ParsedEntryMediaModel $media): self
