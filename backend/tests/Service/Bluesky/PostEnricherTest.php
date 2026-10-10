@@ -6,7 +6,9 @@ namespace App\Tests\Service\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
 use App\Entity\PendingPostEnrichment;
+use App\Repository\LinkCardRepository;
 use App\Repository\PendingPostEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
@@ -73,7 +75,8 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([[self::TISCH]], $this->appView->requests);
         self::assertSame(0, $this->pendingCount());
         $stored = $this->reload($post);
-        self::assertStringStartsWith('<p>Read this.</p><figure class="link-card">', (string) $stored->getContentHtml());
+        self::assertSame('<p>Read this.</p>', $stored->getContentHtml());
+        self::assertTrue($this->linkCards()->hasAnyFor($stored));
         self::assertSame('Read this.', $stored->getSummary());
     }
 
@@ -115,10 +118,7 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame([$queuedEarlier], $this->enricher()->enrich($this->feed, [$created]));
 
-        self::assertStringContainsString(
-            '<figure class="link-card">',
-            (string) $this->reload($created)->getContentHtml(),
-        );
+        self::assertTrue($this->linkCards()->hasAnyFor($this->reload($created)));
         self::assertSame(0, $this->pendingCount());
     }
 
@@ -389,7 +389,16 @@ final class PostEnricherTest extends DbTestCase
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
+            $this->linkCards(),
         );
+    }
+
+    private function linkCards(): LinkCardRepository
+    {
+        /** @var LinkCardRepository $linkCards */
+        $linkCards = $this->entityManager->getRepository(LinkCard::class);
+
+        return $linkCards;
     }
 
     private function feed(string $url): Feed

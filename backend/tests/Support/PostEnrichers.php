@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\LinkCard;
 use App\Entity\PendingPostEnrichment;
+use App\Repository\LinkCardRepository;
 use App\Repository\PendingPostEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
@@ -47,6 +49,7 @@ final class PostEnrichers
                 new PostEmbedRenderer(),
                 new EntrySanitizer(new TrailingBlankRemover()),
                 new EntryImageWriter(),
+                self::linkCards($entityManager),
             ),
             $naiveUtcClock,
             $logger,
@@ -59,5 +62,13 @@ final class PostEnrichers
         $appView = new AppViewClient(new StubFeedFetcher(), new HostThrottle(new ArrayAdapter(clock: $clock), $clock));
 
         return self::build($entityManager, $clock, $appView, new NullLogger());
+    }
+
+    private static function linkCards(EntityManagerInterface $entityManager): LinkCardRepository
+    {
+        /** @var LinkCardRepository $linkCards */
+        $linkCards = $entityManager->getRepository(LinkCard::class);
+
+        return $linkCards;
     }
 }

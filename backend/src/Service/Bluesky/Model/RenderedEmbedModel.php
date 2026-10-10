@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Bluesky\Model;
 
+use App\Entity\LinkCardContent;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 
@@ -14,7 +15,7 @@ final readonly class RenderedEmbedModel
         public string $html,
         public ?DeclaredImageModel $leadImage = null,
         public array $media = [],
-        public ?string $linkCardUrl = null,
+        public ?LinkCardContent $linkCard = null,
     ) {
     }
 
@@ -24,7 +25,7 @@ final readonly class RenderedEmbedModel
             $this->html . $next->html,
             $this->leadImage ?? $next->leadImage,
             [...$this->media, ...$next->media],
-            $this->linkCardUrl ?? $next->linkCardUrl,
+            $this->linkCard ?? $next->linkCard,
         );
     }
 }

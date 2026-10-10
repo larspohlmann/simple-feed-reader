@@ -7,16 +7,19 @@ namespace App\Tests\Service\Bluesky\EntryEmbedWriter;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
+use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Tests\DbTestCase;
 use App\Tests\Support\Bluesky;
-use PHPUnit\Framework\TestCase;
 
-final class EntryEmbedWriterTest extends TestCase
+final class EntryEmbedWriterTest extends DbTestCase
 {
     private const string CARD_THUMB = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/'
         . 'bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y';
@@ -25,41 +28,40 @@ final class EntryEmbedWriterTest extends TestCase
     private const string FULLSIZE = 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:z72i7hdynmk6r22z27h6tvur/'
         . 'bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4';
 
-    public function testALinkCardReplacesTheTrailingUrlAndSetsSummaryAndImage(): void
+    public function testALinkCardLeavesTheBodyAndIsStoredAsACard(): void
     {
-        $entry = self::entry('<p>Read this.<br />' . Bluesky::CARD . '</p>');
+        $entry = $this->entry('<p>Read this.<br />' . Bluesky::CARD . '</p>');
 
         self::assertTrue($this->writer()->fill($entry, Bluesky::post('external')));
+        $this->entityManager->flush();
 
-        self::assertSame(
-            '<p>Read this.</p><figure class="link-card"><a href="' . Bluesky::CARD . '" rel="noopener noreferrer"'
-                . ' target="_blank"><img src="' . self::CARD_THUMB . '" alt /><strong>After ICE Shooting, Progressives'
-                . ' Want New York&#039;s Police Commissioner to Step Down</strong><span>28-year-old Oscar Belgal still'
-                . ' has a bullet lodged in his body.</span><small>motherjones.com</small></a></figure>',
-            $entry->getContentHtml(),
-        );
+        self::assertSame('<p>Read this.</p>', $entry->getContentHtml());
         self::assertSame('Read this.', $entry->getSummary());
         self::assertSame(self::CARD_THUMB, $entry->getImageUrl());
         self::assertEquals([new EntryMedium(self::CARD_THUMB, 'image')], $entry->getMedia());
         self::assertSame('Post', $entry->getTitle());
+        self::assertEquals([new LinkCardContent(
+            Bluesky::CARD,
+            'After ICE Shooting, Progressives Want New York\'s Police Commissioner to Step Down',
+            '28-year-old Oscar Belgal still has a bullet lodged in his body.',
+            self::CARD_THUMB,
+            'motherjones.com',
+        )], $this->storedCards($entry));
     }
 
     public function testAnotherUrlAtTheEndStaysInTheText(): void
     {
-        $entry = self::entry('<p>See https://example.com/other</p>');
+        $entry = $this->entry('<p>See https://example.com/other</p>');
 
         $this->writer()->fill($entry, Bluesky::post('external'));
 
-        self::assertStringStartsWith(
-            '<p>See https://example.com/other</p><figure class="link-card">',
-            (string) $entry->getContentHtml(),
-        );
+        self::assertSame('<p>See https://example.com/other</p>', $entry->getContentHtml());
         self::assertSame('See https://example.com/other', $entry->getSummary());
     }
 
     public function testAnHttpLinkCardReplacesTheTrailingUrlToo(): void
     {
-        $entry = self::entry('<p>Scores tonight.<br />http://spr.ly/6018AbCdE</p>');
+        $entry = $this->entry('<p>Scores tonight.<br />http://spr.ly/6018AbCdE</p>');
 
         $this->writer()->fill($entry, JsonNodeModel::of([
             'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
@@ -68,19 +70,51 @@ final class EntryEmbedWriterTest extends TestCase
                 'external' => ['uri' => 'http://spr.ly/6018AbCdE', 'title' => 'Scores'],
             ],
         ]));
+        $this->entityManager->flush();
 
-        self::assertSame(
-            '<p>Scores tonight.</p><figure class="link-card"><a href="http://spr.ly/6018AbCdE"'
-                . ' rel="noopener noreferrer" target="_blank"><strong>Scores</strong><small>spr.ly</small></a>'
-                . '</figure>',
-            $entry->getContentHtml(),
-        );
+        self::assertSame('<p>Scores tonight.</p>', $entry->getContentHtml());
         self::assertSame('Scores tonight.', $entry->getSummary());
+        self::assertEquals(
+            [new LinkCardContent('http://spr.ly/6018AbCdE', 'Scores', null, null, 'spr.ly')],
+            $this->storedCards($entry),
+        );
+    }
+
+    public function testAPostThatIsOnlyTheLinkLeavesNoBody(): void
+    {
+        $entry = $this->entry('<p>' . Bluesky::CARD . '</p>');
+
+        $this->writer()->fill($entry, Bluesky::post('external'));
+
+        self::assertNull($entry->getContentHtml());
+        self::assertNull($entry->getSummary());
+    }
+
+    public function testAQuoteWithALinkCardKeepsTheQuoteInTheBodyAndStoresTheCard(): void
+    {
+        $entry = $this->entry('<p>Look.</p>');
+
+        $this->writer()->fill($entry, Bluesky::post('record-with-media'));
+        $this->entityManager->flush();
+
+        self::assertStringStartsWith('<p>Look.</p><figure class="quote-post">', (string) $entry->getContentHtml());
+        self::assertStringNotContainsString('link-card', (string) $entry->getContentHtml());
+        self::assertCount(1, $this->storedCards($entry));
+    }
+
+    public function testAPostWithoutALinkCardStoresNone(): void
+    {
+        $entry = $this->entry('<p>Apples.</p>');
+
+        $this->writer()->fill($entry, Bluesky::post('images'));
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->storedCards($entry));
     }
 
     public function testAVideoAddsThePosterAsImageAndThePlaylistAsMedia(): void
     {
-        $entry = self::entry('<p>Watch.</p>');
+        $entry = $this->entry('<p>Watch.</p>');
 
         $this->writer()->fill($entry, Bluesky::post('video'));
 
@@ -101,7 +135,7 @@ final class EntryEmbedWriterTest extends TestCase
 
     public function testAnImageTheEntryAlreadyHasIsKeptAndLeadsTheMedia(): void
     {
-        $entry = self::entry('<p>Apples.</p>');
+        $entry = $this->entry('<p>Apples.</p>');
         $entry->getImage()->storePending('https://example.com/own.jpg', 800, 600);
 
         $this->writer()->fill($entry, Bluesky::post('images'));
@@ -118,7 +152,7 @@ final class EntryEmbedWriterTest extends TestCase
 
     public function testAnEmptyBodyGetsTheEmbedAndNoSummary(): void
     {
-        $entry = self::entry(null);
+        $entry = $this->entry(null);
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
@@ -132,7 +166,7 @@ final class EntryEmbedWriterTest extends TestCase
 
     public function testTheCombinedHtmlIsSanitizedBeforeItIsStored(): void
     {
-        $entry = self::entry('<p onclick="steal()">Hi.</p><script>alert(1)</script>');
+        $entry = $this->entry('<p onclick="steal()">Hi.</p><script>alert(1)</script>');
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
@@ -144,7 +178,7 @@ final class EntryEmbedWriterTest extends TestCase
 
     public function testAPostWithoutAnEmbedLeavesTheEntryAlone(): void
     {
-        $entry = self::entry('<p>Plain.</p>');
+        $entry = $this->entry('<p>Plain.</p>');
         $entry->setSummary('Plain.');
 
         self::assertFalse(
@@ -157,10 +191,12 @@ final class EntryEmbedWriterTest extends TestCase
         self::assertSame([], $entry->getMedia());
     }
 
-    private static function entry(?string $contentHtml): Entry
+    private function entry(?string $contentHtml): Entry
     {
+        $feed = new Feed('https://bsky.app/profile/motherjones.com/rss');
+        $this->entityManager->persist($feed);
         $entry = new Entry(
-            new Feed('https://bsky.app/profile/motherjones.com/rss'),
+            $feed,
             'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t',
             null,
             'Post',
@@ -169,8 +205,29 @@ final class EntryEmbedWriterTest extends TestCase
         );
         $entry->setContentHtml($contentHtml);
         $entry->getImage()->storePending(null, null, null);
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
+    }
+
+    /** @return list<LinkCardContent> */
+    private function storedCards(Entry $entry): array
+    {
+        $this->entityManager->clear();
+
+        return array_map(
+            static fn (LinkCard $card): LinkCardContent => $card->getContent(),
+            $this->linkCards()->findByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [],
+        );
+    }
+
+    private function linkCards(): LinkCardRepository
+    {
+        /** @var LinkCardRepository $linkCards */
+        $linkCards = $this->entityManager->getRepository(LinkCard::class);
+
+        return $linkCards;
     }
 
     private function writer(): EntryEmbedWriter
@@ -179,6 +236,7 @@ final class EntryEmbedWriterTest extends TestCase
             new PostEmbedRenderer(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(),
+            $this->linkCards(),
         );
     }
 }
