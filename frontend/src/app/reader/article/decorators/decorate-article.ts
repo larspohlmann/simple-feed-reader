@@ -5,6 +5,7 @@ import { markInsetCards } from './reader-cards';
 import { fitReaderImages } from './reader-image-fit';
 import { highlightCodeBlocks } from './code-highlight';
 import { attachHlsStreams } from './hls-streams';
+import { playVideosInline } from './inline-videos';
 import { markNarrationPlayers } from './reader-narration';
 import { expandFaqDisclosures } from './reader-faq';
 import { hydrateSlideshows } from './reader-slideshow';
@@ -35,6 +36,7 @@ export function decorateArticle(
     next: i18n.translate('reader.slideshowNext'),
     position: (current, total) => i18n.translate('reader.slideshowPosition', { current, total }),
   });
+  playVideosInline(host);
   attachHlsStreams(host);
 }
 
