@@ -37,9 +37,9 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         return $root->localName === 'RDF';
     }
 
-    public function isEntry(\DOMElement $element, int $depth): bool
+    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
-        return XmlHelper::isElement($element, 'item', self::RSS1_NS);
+        return XmlHelper::isRoot($parent) && XmlHelper::isElement($element, 'item', self::RSS1_NS);
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel

@@ -307,4 +307,16 @@ final class Rss1ParserTest extends TestCase
 
         self::assertSame('https://rss1.example.com/padded', $entry->url);
     }
+
+    public function testAnItemInsideTheChannelIsNotAnEntry(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/">
+              <channel><title>Feed</title><item><title>Decoy</title></item></channel>
+              <item><title>Core</title></item>
+            </rdf:RDF>
+            XML);
+
+        self::assertSame(['Core'], array_map(static fn (ParsedEntryModel $entry): string => $entry->title, $feed->entries));
+    }
 }

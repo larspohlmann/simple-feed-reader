@@ -365,15 +365,15 @@ final class FeedParserTest extends TestCase
         self::assertCount(1, $feed->entries);
     }
 
-    public function testAnItemInsideAnExtensionElementOfTheChannelIsStillAnEntry(): void
+    public function testAnItemInsideAnExtensionElementOfTheChannelIsNotAnEntry(): void
     {
         $feed = $this->parser()->parse(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Nested</title>'
             . '<section><item><title>Deep</title><link>https://nested.example.com/1</link></item></section>'
-            . '</channel></rss>',
+            . '<item><title>Shown</title><link>https://nested.example.com/2</link></item></channel></rss>',
         );
 
-        self::assertSame(['Deep'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+        self::assertSame(['Shown'], array_map(static fn ($entry) => $entry->title, $feed->entries));
     }
 
     public function testAnEmptyRssRootIsAFeedWithoutAChannel(): void

@@ -52,6 +52,11 @@ final class XmlHelper
         }
     }
 
+    public static function isRoot(\DOMNode $node): bool
+    {
+        return $node->parentNode instanceof \DOMDocument;
+    }
+
     /** @phpstan-assert-if-true =\DOMElement $node */
     public static function isElement(\DOMNode $node, string $localName, ?string $namespaceUri): bool
     {
