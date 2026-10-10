@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, Locator, Page } from '@playwright/test';
 import { signInWithLayout } from './support/auth';
 import { entryDetailJson, entryWire, readerFailedJson } from './support/reader';
 
@@ -102,5 +102,59 @@ test.describe('Article tail space', () => {
 
     const overflow = await scroller.evaluate((el) => el.scrollHeight - el.clientHeight);
     expect(overflow).toBeLessThanOrEqual(2);
+  });
+});
+
+const DESKTOP = { width: 1920, height: 1000 };
+const VIDEO = '<video src="https://example.invalid/v.mp4" width="1280" height="720"></video>';
+
+/** The article's bottom padding and the room a widened video needs, in px. */
+async function tailMetrics(pane: Locator) {
+  return pane.locator('.scroller').evaluate((scroller) => {
+    const article = scroller.querySelector('article')!;
+    const readerTop = parseFloat(getComputedStyle(scroller.querySelector('.reader')!).paddingTop);
+    return {
+      padding: parseFloat(getComputedStyle(article).paddingBottom),
+      cinemaRoom: scroller.clientHeight - readerTop,
+      focusRoom: scroller.clientHeight / 2,
+    };
+  });
+}
+
+test.describe('Article tail space with a widened video', () => {
+  test.use({ viewport: DESKTOP });
+
+  // #1479/#1482: a widened video can reach the top of the pane however short the
+  // article, and the larger of the two tail needs wins whatever the rule order.
+  test('a short article reserves the widened video its room', async ({ page }) => {
+    const signedIn = await signInWithLayout(page, 'list');
+    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
+    await stubArticle(page, VIDEO + SHORT_BODY);
+    await page.reload();
+    const pane = await openArticle(page);
+
+    const unwidened = await tailMetrics(pane);
+    expect(unwidened.padding).toBeLessThan(unwidened.focusRoom);
+
+    await pane.locator('.reader-cinema__toggle').click();
+    const metrics = await tailMetrics(pane);
+    expect(Math.abs(metrics.padding - metrics.cinemaRoom)).toBeLessThanOrEqual(1);
+  });
+
+  test('a long article takes the larger tail while the video is widened', async ({ page }) => {
+    const signedIn = await signInWithLayout(page, 'list');
+    test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin)');
+    await stubArticle(page, VIDEO + LONG_BODY);
+    await page.reload();
+    const pane = await openArticle(page);
+
+    const reading = await tailMetrics(pane);
+    expect(Math.abs(reading.padding - reading.focusRoom)).toBeLessThanOrEqual(1);
+
+    await pane.locator('.reader-cinema__toggle').click();
+    const widened = await tailMetrics(pane);
+    expect(
+      Math.abs(widened.padding - Math.max(widened.focusRoom, widened.cinemaRoom)),
+    ).toBeLessThanOrEqual(1);
   });
 });
