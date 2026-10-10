@@ -94,12 +94,17 @@ More in the [screenshot gallery](docs/screenshots.md).
   "Add feed" to subscribe to the channel. New videos play in the reader with
   their description; Shorts play in a portrait player and are marked in the
   list.
+- A playlist link (`https://www.youtube.com/playlist?list=…`, or a video
+  watched inside a playlist) subscribes to the playlist; a video link
+  (`https://youtu.be/…`, `…/watch?v=…`, `…/shorts/…`) subscribes to the
+  video's channel.
 
 **Feeds**
 
 - Add a feed by its address — or paste the website's address and the app
   finds the feed for you. A show link from Apple Podcasts, a SoundCloud
-  profile link or a YouTube channel link works too.
+  profile link, a YouTube channel, playlist or video link works too, and a
+  GitHub repository link subscribes to the repository's releases.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
