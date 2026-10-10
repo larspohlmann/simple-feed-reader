@@ -60,6 +60,27 @@ final class EntryEmbedWriterTest extends TestCase
         self::assertSame('See https://example.com/other', $entry->getSummary());
     }
 
+    public function testAnHttpLinkCardReplacesTheTrailingUrlToo(): void
+    {
+        $entry = self::entry('<p>Scores tonight.<br />http://spr.ly/6018AbCdE</p>');
+
+        $this->writer()->fill($entry, JsonNodeModel::of([
+            'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
+            'embed' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => 'http://spr.ly/6018AbCdE', 'title' => 'Scores'],
+            ],
+        ]));
+
+        self::assertSame(
+            '<p>Scores tonight.</p><figure class="link-card"><a href="http://spr.ly/6018AbCdE"'
+                . ' rel="noopener noreferrer" target="_blank"><strong>Scores</strong><small>spr.ly</small></a>'
+                . '</figure>',
+            $entry->getContentHtml(),
+        );
+        self::assertSame('Scores tonight.', $entry->getSummary());
+    }
+
     public function testAVideoAddsThePosterAsImageAndThePlaylistAsMedia(): void
     {
         $entry = self::entry('<p>Watch.</p>');

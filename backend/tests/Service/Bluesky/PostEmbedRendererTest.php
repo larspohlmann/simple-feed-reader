@@ -56,7 +56,7 @@ final class PostEmbedRendererTest extends TestCase
         $embed = $this->rendered('video');
 
         self::assertSame(
-            '<figure class="post-video"><video controls preload="none" playsinline poster="' . self::VIDEO
+            '<figure class="post-video"><video controls preload="none" poster="' . self::VIDEO
                 . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>'
                 . '<p><a href="' . self::MOTHER_JONES . '3mxhlfehxzi27">Watch on Bluesky</a></p>',
             $embed->html,
@@ -162,9 +162,17 @@ final class PostEmbedRendererTest extends TestCase
             '$type' => 'app.bsky.embed.images#view',
             'images' => [['fullsize' => 'http://example.com/a.jpg', 'alt' => 'a']],
         ]];
-        yield 'a link card to an http page' => [[
+        yield 'a link card to a javascript: uri' => [[
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'http://example.com/a', 'title' => 'A'],
+            'external' => ['uri' => 'javascript:alert(1)//https://example.com/', 'title' => 'A'],
+        ]];
+        yield 'a link card to a data: uri' => [[
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'data:text/html,<script>alert(1)</script>', 'title' => 'A'],
+        ]];
+        yield 'a link card to a protocol-relative uri' => [[
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => '//example.com/a', 'title' => 'A'],
         ]];
     }
 
@@ -214,6 +222,26 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->leadImage);
     }
 
+    public function testALinkCardMayLinkAnHttpPageButItsThumbnailStaysHttpsOnly(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'http://spr.ly/6018AbCdE',
+                'title' => 'Scores',
+                'thumb' => 'http://example.com/t.jpg',
+            ],
+        ]));
+
+        self::assertSame(
+            '<figure class="link-card"><a href="http://spr.ly/6018AbCdE"><strong>Scores</strong>'
+                . '<small>spr.ly</small></a></figure>',
+            $rendered?->html,
+        );
+        self::assertSame('http://spr.ly/6018AbCdE', $rendered->linkCardUrl);
+        self::assertNull($rendered->leadImage);
+    }
+
     public function testAnHttpImageIsDroppedAndAProtocolRelativeOneUpgraded(): void
     {
         $rendered = $this->renderer()->render(self::post([
@@ -242,7 +270,7 @@ final class PostEmbedRendererTest extends TestCase
         ]));
 
         self::assertStringStartsWith(
-            '<figure class="post-video"><video controls preload="none" playsinline src="https://video.example/p.m3u8">',
+            '<figure class="post-video"><video controls preload="none" src="https://video.example/p.m3u8">',
             (string) $rendered?->html,
         );
         self::assertNull($rendered?->leadImage);
@@ -296,7 +324,7 @@ final class PostEmbedRendererTest extends TestCase
             ' width="4000" height="3000" /></figure>',
         ]];
         yield 'video' => ['video', [
-            '<figure class="post-video"><video controls preload="none" playsinline poster="' . self::VIDEO
+            '<figure class="post-video"><video controls preload="none" poster="' . self::VIDEO
                 . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>',
         ]];
         yield 'link card' => ['external', [

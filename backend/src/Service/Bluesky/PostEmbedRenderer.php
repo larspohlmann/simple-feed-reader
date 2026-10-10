@@ -11,9 +11,10 @@ use App\Service\Ingest\Support\AtPostUri;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Text\Support\ParagraphedText;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
 
-/** Renders the embed of one AppView post view as HTML; every text is escaped and every URL must be https. */
+/** Renders the embed of one AppView post view as HTML; every text is escaped, every media URL must be https. */
 final readonly class PostEmbedRenderer
 {
     private const string IMAGES = 'app.bsky.embed.images#view';
@@ -94,7 +95,7 @@ final readonly class PostEmbedRenderer
 
         return new RenderedEmbedModel(
             sprintf(
-                '<figure class="post-video"><video controls preload="none" playsinline%s src="%s"></video></figure>',
+                '<figure class="post-video"><video controls preload="none"%s src="%s"></video></figure>',
                 $poster,
                 self::escaped($playlist),
             ) . self::linkParagraph($postUrl, self::WATCH_LABEL),
@@ -105,7 +106,7 @@ final readonly class PostEmbedRenderer
 
     private function linkCard(JsonNodeModel $external): ?RenderedEmbedModel
     {
-        $url = HttpsImageUrl::orNull($external->string('uri'));
+        $url = AbsoluteHttpUrl::orNull($external->string('uri'));
         if ($url === null) {
             return null;
         }
