@@ -22,7 +22,6 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
-/** A PostEnricher over the EntityManager's real repository: the one assembly the enrichment and refresh tests share. */
 final class PostEnrichers
 {
     private function __construct()

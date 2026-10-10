@@ -20,7 +20,8 @@ final class Version20261010180000 extends AbstractMigration
     {
         $this->skipIf($schema->hasTable('pending_post_enrichment'), 'pending_post_enrichment already exists.');
 
-        if ($this->mysql()) {
+        $this->abortIfUnsupportedPlatform();
+        if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
             $this->addSql('CREATE TABLE pending_post_enrichment (id INT AUTO_INCREMENT NOT NULL,'
                 . ' queued_at DATETIME NOT NULL, entry_id INT NOT NULL, UNIQUE INDEX UNIQ_BA362B72BA364942 (entry_id),'
                 . ' PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4');
@@ -48,8 +49,7 @@ final class Version20261010180000 extends AbstractMigration
         return false;
     }
 
-    /** Refuses any platform but the two supported ones: better a refusal than DDL nobody tested. */
-    private function mysql(): bool
+    private function abortIfUnsupportedPlatform(): void
     {
         $platform = $this->connection->getDatabasePlatform();
 
@@ -57,7 +57,5 @@ final class Version20261010180000 extends AbstractMigration
             !$platform instanceof AbstractMySQLPlatform && !$platform instanceof SQLitePlatform,
             \sprintf('No DDL defined for platform %s; only MySQL and SQLite are supported.', $platform::class),
         );
-
-        return $platform instanceof AbstractMySQLPlatform;
     }
 }

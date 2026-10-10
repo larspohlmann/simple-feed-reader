@@ -34,8 +34,7 @@ final readonly class PostEnricher
     }
 
     /**
-     * A failure is logged and leaves the refresh as it was, unless it closed the EntityManager: that one is rethrown,
-     * so the refresh aborts under this feed rather than the next.
+     * A failure is logged, unless it closed the EntityManager: rethrown, so the refresh aborts under this feed.
      *
      * @param list<Entry> $createdEntries already flushed
      *
@@ -92,7 +91,7 @@ final readonly class PostEnricher
     }
 
     /**
-     * Fills what the AppView answered and dequeues the whole chunk; a post it omits is deleted or hidden.
+     * A post the AppView omits was deleted or hidden, so it is dequeued unfilled.
      *
      * @param list<PendingPostEnrichment> $chunk
      *

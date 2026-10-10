@@ -9,7 +9,6 @@ use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
 use PHPUnit\Framework\Assert;
 
-/** The AppView's getPosts over recorded post views: it answers each requested URI it knows, as the real one does. */
 final class FakeAppView implements FeedFetcherInterface
 {
     /** @var array<string, array<mixed>> */

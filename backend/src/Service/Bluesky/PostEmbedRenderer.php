@@ -14,7 +14,6 @@ use App\Service\Text\Support\ParagraphedText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
 
-/** Renders the embed of one AppView post view as HTML; every text is escaped, every media URL must be https. */
 final readonly class PostEmbedRenderer
 {
     private const string IMAGES = 'app.bsky.embed.images#view';
