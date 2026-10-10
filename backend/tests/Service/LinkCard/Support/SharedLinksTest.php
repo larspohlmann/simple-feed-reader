@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\LinkCard\Support;
+
+use App\Service\LinkCard\Support\SharedLinks;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+
+final class SharedLinksTest extends TestCase
+{
+    /** @return iterable<string, array{string, list<string>}> */
+    public static function bodies(): iterable
+    {
+        yield 'hashtag' => [
+            '<a href="https://mastodon.social/tags/Mastodon" rel="noopener noreferrer" target="_blank">'
+            . '#<span>Mastodon</span></a>',
+            [],
+        ];
+        yield 'mention' => [
+            '<span translate="no"><a href="https://mastodon.iftas.org/&#64;iftas" rel="noopener noreferrer"'
+            . ' target="_blank">&#64;<span>iftas</span></a></span>',
+            [],
+        ];
+        yield 'text link' => ['<p><a href="https://example.com/a">read more</a></p>', []];
+        yield 'link split across spans' => [
+            '<p><a href="https://joinmastodon.org/sponsors#donate" target="_blank" rel="noopener noreferrer"'
+            . ' translate="no"><span>https://</span><span>joinmastodon.org/sponsors#dona</span>'
+            . '<span>te</span></a></p>',
+            ['https://joinmastodon.org/sponsors#donate'],
+        ];
+        yield 'quoted post' => [
+            '<p>RE: <a href="https://social.souverain.ovh/&#64;souverain/116830136337222206" target="_blank"'
+            . ' rel="noopener noreferrer" translate="no"><span>https://</span>'
+            . '<span>social.souverain.ovh/&#64;souverai</span><span>n/116830136337222206</span></a></p>'
+            . '<p>Nous formons un mouvement ✊🏾</p>',
+            [],
+        ];
+        yield 'host-only text with an ellipsis' => [
+            '<p><a href="https://example.com/long/path">example.com/long/pa…</a></p>',
+            ['https://example.com/long/path'],
+        ];
+        yield 'bare url after a break' => [
+            '<p>I went on Michael Cohen\'s podcast. It was... bizarre.<br />'
+            . 'https://www.motherjones.com/politics/2026/10/x/</p>',
+            ['https://www.motherjones.com/politics/2026/10/x/'],
+        ];
+        yield 'trailing full stop stays outside' => [
+            '<p>See https://example.com/a.</p>',
+            ['https://example.com/a'],
+        ];
+        yield 'closing parenthesis stays outside' => [
+            '<p>(see https://example.com/a)</p>',
+            ['https://example.com/a'],
+        ];
+        yield 'a duplicate counts once' => [
+            '<p>https://example.com/a and again https://example.com/a</p>',
+            ['https://example.com/a'],
+        ];
+        yield 'six links give five' => [
+            '<p>' . implode(' ', self::urls(6)) . '</p>',
+            self::urls(5),
+        ];
+    }
+
+    /** @return list<string> */
+    private static function urls(int $count): array
+    {
+        return array_map(static fn (int $number): string => 'https://example.com/' . $number, range(1, $count));
+    }
+
+    /** @param list<string> $expected */
+    #[DataProvider('bodies')]
+    public function testFindsTheSharedUrls(string $body, array $expected): void
+    {
+        self::assertSame($expected, SharedLinks::in($body));
+    }
+
+    public function testLinksABareUrlAndKeepsPunctuationOutside(): void
+    {
+        self::assertSame(
+            '<p>See <a href="https://example.com/a">https://example.com/a</a>.</p>',
+            SharedLinks::linked('<p>See https://example.com/a.</p>'),
+        );
+    }
+
+    public function testLeavesAnAlreadyLinkedUrlAlone(): void
+    {
+        $body = '<p><a href="https://example.com/a">https://example.com/a</a></p>';
+
+        self::assertSame($body, SharedLinks::linked($body));
+    }
+
+    public function testLeavesABodyWithoutUrlsByteForByte(): void
+    {
+        self::assertSame('<p>a &#64; b</p>', SharedLinks::linked('<p>a &#64; b</p>'));
+    }
+}
