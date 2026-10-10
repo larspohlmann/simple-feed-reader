@@ -58,6 +58,7 @@ final class GitHubRepositoryFeedTest extends TestCase
         yield 'the GitHub home page' => ['https://github.com/'];
         yield 'the host without a path' => ['https://github.com'];
         yield 'an org route' => ['https://github.com/orgs/symfony/repositories'];
+        yield 'a mixed-case org route' => ['https://github.com/Orgs/symfony/repositories'];
         yield 'a user route' => ['https://github.com/users/symfony/projects'];
         yield 'the settings' => ['https://github.com/settings/profile'];
         yield 'a topic' => ['https://github.com/topics/php'];

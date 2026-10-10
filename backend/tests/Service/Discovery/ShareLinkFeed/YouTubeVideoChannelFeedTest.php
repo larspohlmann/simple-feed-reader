@@ -71,6 +71,7 @@ final class YouTubeVideoChannelFeedTest extends TestCase
         yield 'a video id that is too short' => ['https://www.youtube.com/watch?v=EeS-cBgIox'];
         yield 'a video id that is too long' => ['https://www.youtube.com/watch?v=EeS-cBgIoxIx'];
         yield 'a video id given as an array' => ['https://www.youtube.com/watch?v[]=EeS-cBgIoxI'];
+        yield 'the short-link host without a path' => ['https://youtu.be'];
         yield 'a short link with a sub-path' => ['https://youtu.be/EeS-cBgIoxI/extra'];
         yield 'a Short id that is too short' => ['https://www.youtube.com/shorts/EeS-cBgIox'];
         yield 'an embed on another host' => ['https://www.youtube-nocookie.com/embed/EeS-cBgIoxI'];
