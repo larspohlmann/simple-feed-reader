@@ -24,6 +24,8 @@ final readonly class EntryListRow
     public array $savedSearches;
     /** @var list<LinkCardContent> the links the post shares, as stored cards, in post order */
     public array $linkCards;
+    /** a post whose embed or link cards are still to come, which a client may ask to complete */
+    public bool $pending;
 
     public function __construct(
         public Entry $entry,
@@ -48,6 +50,27 @@ final readonly class EntryListRow
         $this->categories = $enrichment->categories;
         $this->savedSearches = $enrichment->savedSearches;
         $this->linkCards = $enrichment->linkCards;
+        $this->pending = $enrichment->pending;
+    }
+
+    /**
+     * @param list<self> $rows
+     *
+     * @return list<int> the ids of these rows and of their duplicates, each once
+     */
+    public static function entryIdsOf(array $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            foreach ([$row, ...$row->duplicates] as $member) {
+                $id = $member->entry->getId();
+                if ($id !== null) {
+                    $ids[$id] = $id;
+                }
+            }
+        }
+
+        return array_values($ids);
     }
 
     /**
@@ -65,6 +88,7 @@ final readonly class EntryListRow
             $categories,
             $this->savedSearches,
             $this->linkCards,
+            $this->pending,
         ));
     }
 
@@ -75,6 +99,7 @@ final readonly class EntryListRow
             $this->categories,
             $savedSearches,
             $this->linkCards,
+            $this->pending,
         ));
     }
 
@@ -85,12 +110,23 @@ final readonly class EntryListRow
             $this->categories,
             $this->savedSearches,
             $linkCards,
+            $this->pending,
+        ));
+    }
+
+    public function withPending(bool $pending): self
+    {
+        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
+            $this->categories,
+            $this->savedSearches,
+            $this->linkCards,
+            $pending,
         ));
     }
 
     private function enrichment(): EntryListRowEnrichment
     {
-        return new EntryListRowEnrichment($this->categories, $this->savedSearches, $this->linkCards);
+        return new EntryListRowEnrichment($this->categories, $this->savedSearches, $this->linkCards, $this->pending);
     }
 
     /**

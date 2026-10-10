@@ -99,6 +99,32 @@ final class PostLinkCardsTest extends DbTestCase
         self::assertSame(14, $this->client->getRequestsCount());
     }
 
+    public function testPendingPostsShareFiveFetchesAndTheOneItRunsOutOnStaysUntried(): void
+    {
+        [$first, $second] = $this->threePostsOfFourLinks();
+
+        $this->postLinkCards->forPending([$first, $second]);
+        self::assertSame(5, $this->client->getRequestsCount());
+        self::assertCount(4, $this->cardTitles($first));
+        self::assertSame([], $this->cardTitles($second));
+
+        $this->postLinkCards->forPending([$first, $second]);
+        self::assertSame(9, $this->client->getRequestsCount());
+        self::assertCount(4, $this->cardTitles($second));
+    }
+
+    public function testCompletingATriedPostAnArticleOrABlueskyPostFetchesNothing(): void
+    {
+        $tried = $this->post('https://mastodon.example/@someone/1', '<p>https://example.com/missing</p>');
+        $this->postLinkCards->forCreated([$tried]);
+        $article = $this->entry('https://example.org/article', '<p>See https://example.com/a</p>');
+        $blueskyPost = $this->post(self::AT_POST, '<p>See https://example.com/a</p>');
+
+        $this->postLinkCards->forPending([$tried, $article, $blueskyPost]);
+
+        self::assertSame(1, $this->client->getRequestsCount());
+    }
+
     public function testOpeningAPostIngestBuiltFetchesNothing(): void
     {
         $post = $this->post('https://mastodon.example/@someone/1', '<p>https://example.com/missing</p>');

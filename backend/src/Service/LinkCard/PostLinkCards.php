@@ -7,17 +7,21 @@ namespace App\Service\LinkCard;
 use App\Entity\Entry;
 use App\Repository\EntryRepository;
 use App\Repository\LinkCardRepository;
-use App\Service\Ingest\Support\AtPostUri;
 use App\Service\LinkCard\Exception\FetchBudgetSpentException;
 use App\Service\LinkCard\Pass\FetchBudget;
+use App\Service\LinkCard\Support\LinkPost;
 use App\Service\LinkCard\Support\SharedLinks;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/** Builds the link cards of the posts a refresh creates, and of any post still without them when it is opened. */
+/**
+ * Builds the link cards of the posts a refresh creates, and of any post still without them when it is opened or a
+ * client asks to complete it.
+ */
 final readonly class PostLinkCards
 {
     private const int FETCHES_PER_REFRESH = 10;
+    private const int FETCHES_PER_COMPLETION = 5;
 
     public function __construct(
         private PostCardWriter $writer,
@@ -36,14 +40,17 @@ final readonly class PostLinkCards
      */
     public function forCreated(array $createdEntries): void
     {
-        $budget = new FetchBudget(self::FETCHES_PER_REFRESH);
-        try {
-            foreach (array_filter($createdEntries, self::isPost(...)) as $post) {
-                $this->writeAndMark($post, $budget);
-            }
-        } catch (FetchBudgetSpentException) {
-            return;
-        }
+        $this->forPosts(array_filter($createdEntries, LinkPost::matches(...)), self::FETCHES_PER_REFRESH);
+    }
+
+    /**
+     * The post the budget runs out on, and every post after it, stays untried for the client's next call.
+     *
+     * @param list<Entry> $pendingEntries
+     */
+    public function forPending(array $pendingEntries): void
+    {
+        $this->forPosts(array_filter($pendingEntries, $this->isUntriedPost(...)), self::FETCHES_PER_COMPLETION);
     }
 
     public function forOpened(int $entryId): void
@@ -52,7 +59,7 @@ final readonly class PostLinkCards
             return;
         }
         $entry = $this->entries->find($entryId);
-        if ($entry === null || !self::isPost($entry) || $this->linkCards->hasAnyFor($entry)) {
+        if ($entry === null || !LinkPost::matches($entry) || $this->linkCards->hasAnyFor($entry)) {
             return;
         }
         $this->writeAndMark($entry, new FetchBudget(SharedLinks::MAX));
@@ -77,8 +84,21 @@ final readonly class PostLinkCards
         $this->triedPosts->mark($post->requireId());
     }
 
-    private static function isPost(Entry $entry): bool
+    /** @param array<Entry> $posts */
+    private function forPosts(array $posts, int $fetches): void
     {
-        return $entry->isTitleDerived() && !AtPostUri::matches($entry->getGuid());
+        $budget = new FetchBudget($fetches);
+        try {
+            foreach ($posts as $post) {
+                $this->writeAndMark($post, $budget);
+            }
+        } catch (FetchBudgetSpentException) {
+            return;
+        }
+    }
+
+    private function isUntriedPost(Entry $entry): bool
+    {
+        return LinkPost::matches($entry) && !$this->triedPosts->wasTried($entry->requireId());
     }
 }

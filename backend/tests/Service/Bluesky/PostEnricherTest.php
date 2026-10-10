@@ -356,6 +356,83 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame('2026-10-10 10:00:00', $this->storedQueuedAt(self::TEST_POST . 'fresh'));
     }
 
+    public function testEnrichingEntriesFillsTheirQueuedRowsAcrossFeedsInOneCall(): void
+    {
+        $this->appView->knowsFixture('external');
+        $this->appView->knowsFixture('images');
+        $tisch = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
+        $otherFeed = $this->feed('https://bsky.app/profile/bsky.app/rss');
+        $apples = $this->entry($otherFeed, self::APPLES, '<p>Apples.</p>');
+        $this->entityManager->persist(new PendingPostEnrichment($apples, $this->clock->now()));
+        $notQueued = $this->entry($this->feed, self::TEST_POST . 'settled', '<p>Settled.</p>');
+        $leftOut = $this->queuedEntry(self::TEST_POST . 'left-out', '<p>Not asked.</p>');
+        $this->entityManager->flush();
+
+        $filled = $this->enricher()->enrichEntries([$tisch, $apples, $notQueued]);
+
+        self::assertSame([$tisch, $apples], $filled);
+        self::assertCount(1, $this->appView->requests);
+        self::assertEqualsCanonicalizing([self::TISCH, self::APPLES], $this->appView->requests[0]);
+        self::assertSame([$leftOut->getGuid()], $this->pendingGuids());
+        self::assertTrue($this->linkCards()->hasAnyFor($this->reload($tisch)));
+    }
+
+    public function testEnrichingEntriesNoneOfWhichIsQueuedAsksNothing(): void
+    {
+        $settled = $this->entry($this->feed, self::TEST_POST . 'settled', '<p>Settled.</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->enricher()->enrichEntries([$settled]));
+        self::assertSame([], $this->enricher()->enrichEntries([]));
+
+        self::assertSame([], $this->appView->requests);
+    }
+
+    public function testEnrichingEntriesOnAThrottledHostLeavesThemQueued(): void
+    {
+        $this->throttle->record(Bluesky::GET_POSTS, 120);
+        $queued = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->enricher()->enrichEntries([$queued]));
+
+        self::assertSame([], $this->appView->requests);
+        self::assertSame(1, $this->pendingCount());
+    }
+
+    public function testEnrichingEntriesThatTheAppViewFailsLeavesThemQueuedAndWarns(): void
+    {
+        $this->appView->failsWith(new FeedUnreachableException('connection reset'));
+        $queued = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([], $this->enricher()->enrichEntries([$queued]));
+
+        self::assertSame(1, $this->pendingCount());
+        self::assertSame(['warning'], array_column($this->logger->records, 'level'));
+        self::assertSame('Bluesky AppView gave no usable answer for {url}', $this->logger->records[0]['message']);
+        self::assertSame('a completion request', $this->logger->records[0]['context']['url']);
+    }
+
+    public function testAnUnexpectedFailureWhileEnrichingEntriesIsLoggedAndFillsNothing(): void
+    {
+        $queued = $this->queuedEntry(self::TISCH, '<p>Text.</p>');
+        $this->entityManager->flush();
+        $enricher = PostEnrichers::build(
+            $this->entityManager,
+            $this->clock,
+            new AppViewClient(new StubFeedFetcher(), $this->throttle),
+            $this->logger,
+        );
+
+        self::assertSame([], $enricher->enrichEntries([$queued]));
+
+        self::assertSame(['error'], array_column($this->logger->records, 'level'));
+        self::assertSame('Bluesky enrichment failed for {url}', $this->logger->records[0]['message']);
+        self::assertSame('a completion request', $this->logger->records[0]['context']['url']);
+        self::assertSame(1, $this->pendingCount());
+    }
+
     private function enricher(): PostEnricher
     {
         return PostEnrichers::build(

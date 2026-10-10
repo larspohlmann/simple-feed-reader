@@ -26,7 +26,7 @@ final readonly class SavedSearchMembershipLoader
             return [];
         }
 
-        $byEntryId = $this->memberships->savedSearchesByEntry($userId, $this->entryIdsOf($rows));
+        $byEntryId = $this->memberships->savedSearchesByEntry($userId, EntryListRow::entryIdsOf($rows));
 
         return array_map(
             fn (EntryListRow $row): EntryListRow => $this->enrich($row, $byEntryId),
@@ -47,29 +47,5 @@ final readonly class SavedSearchMembershipLoader
         return $row
             ->withDuplicates($enrichedDuplicates)
             ->withSavedSearches($byEntryId[$row->entry->getId()] ?? []);
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int>
-     */
-    private function entryIdsOf(array $rows): array
-    {
-        $ids = [];
-        foreach ($rows as $row) {
-            $id = $row->entry->getId();
-            if ($id !== null) {
-                $ids[$id] = $id;
-            }
-            foreach ($row->duplicates as $duplicate) {
-                $duplicateId = $duplicate->entry->getId();
-                if ($duplicateId !== null) {
-                    $ids[$duplicateId] = $duplicateId;
-                }
-            }
-        }
-
-        return array_values($ids);
     }
 }

@@ -42,6 +42,30 @@ final class PostLinkCardsWiring
         HttpClientInterface $client,
         LoggerInterface $logger,
     ): PostLinkCards {
+        return self::assemble($entityManager, $client, $logger, new TriedPosts(new ArrayAdapter()));
+    }
+
+    /** For a test that reads the markers back through the container, as the list's pending flag does. */
+    public static function sharingTriedPosts(
+        EntityManagerInterface $entityManager,
+        HttpClientInterface $client,
+        TriedPosts $triedPosts,
+    ): PostLinkCards {
+        return self::assemble($entityManager, $client, new NullLogger(), $triedPosts);
+    }
+
+    /** For refresh tests that build no cards: every page fetch fails before it reaches a network. */
+    public static function offline(EntityManagerInterface $entityManager): PostLinkCards
+    {
+        return self::build($entityManager, new MockHttpClient([]), new NullLogger());
+    }
+
+    private static function assemble(
+        EntityManagerInterface $entityManager,
+        HttpClientInterface $client,
+        LoggerInterface $logger,
+        TriedPosts $triedPosts,
+    ): PostLinkCards {
         /** @var EntryRepository $entries */
         $entries = $entityManager->getRepository(Entry::class);
         /** @var LinkCardRepository $linkCards */
@@ -55,18 +79,12 @@ final class PostLinkCardsWiring
                 $entityManager,
                 $logger,
             ),
-            new TriedPosts(new ArrayAdapter()),
+            $triedPosts,
             $entries,
             $linkCards,
             $entityManager,
             $logger,
         );
-    }
-
-    /** For refresh tests that build no cards: every page fetch fails before it reaches a network. */
-    public static function offline(EntityManagerInterface $entityManager): PostLinkCards
-    {
-        return self::build($entityManager, new MockHttpClient([]), new NullLogger());
     }
 
     private static function pageFetcher(HttpClientInterface $client): HtmlPageFetcher

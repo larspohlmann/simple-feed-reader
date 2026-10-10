@@ -33,7 +33,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
@@ -61,7 +61,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
@@ -86,7 +86,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
      */
@@ -125,6 +125,7 @@ final class EntryJson
             'isShort' => YouTubeShortUrl::is($entry->getUrl()),
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->savedSearches,
+            'pending' => $row->pending,
         ];
     }
 

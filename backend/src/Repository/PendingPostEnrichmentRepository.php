@@ -62,4 +62,45 @@ final class PendingPostEnrichmentRepository extends ServiceEntityRepository
 
         return $rows;
     }
+
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<int> those among them still waiting for the AppView
+     */
+    public function queuedEntryIdsAmong(array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<int|string> $queued */
+        $queued = $this->createQueryBuilder('pending')
+            ->select('IDENTITY(pending.entry)')
+            ->andWhere('pending.entry IN (:entryIds)')
+            ->setParameter('entryIds', $entryIds)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return array_map(intval(...), $queued);
+    }
+
+    /**
+     * @param list<Entry> $entries
+     *
+     * @return list<PendingPostEnrichment> the rows of those still waiting for the AppView, oldest queued first
+     */
+    public function findForEntries(array $entries): array
+    {
+        /** @var list<PendingPostEnrichment> $rows */
+        $rows = $this->createQueryBuilder('pending')
+            ->andWhere('pending.entry IN (:entries)')
+            ->setParameter('entries', $entries)
+            ->orderBy('pending.queuedAt', 'ASC')
+            ->addOrderBy('pending.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
 }

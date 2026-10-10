@@ -25,7 +25,7 @@ final readonly class LinkCardLoader
             return [];
         }
 
-        $cardsByEntryId = $this->linkCards->findByEntryIds($this->entryIdsOf($rows));
+        $cardsByEntryId = $this->linkCards->findByEntryIds(EntryListRow::entryIdsOf($rows));
 
         return array_map(
             fn (EntryListRow $row): EntryListRow => $this->enrich($row, $cardsByEntryId),
@@ -48,25 +48,5 @@ final readonly class LinkCardLoader
         );
 
         return $row->withDuplicates($enrichedDuplicates)->withLinkCards($contents);
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int>
-     */
-    private function entryIdsOf(array $rows): array
-    {
-        $ids = [];
-        foreach ($rows as $row) {
-            foreach ([$row, ...$row->duplicates] as $member) {
-                $id = $member->entry->getId();
-                if ($id !== null) {
-                    $ids[$id] = $id;
-                }
-            }
-        }
-
-        return array_values($ids);
     }
 }

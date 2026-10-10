@@ -58,3 +58,7 @@ services:
     # RefreshControllerTest clears it, or a stale run could be resumed by a same-id user.
     test.cache.refresh_run:
         alias: refresh.run.cache
+
+    # The same, for the tried markers the pending flag reads; EntryCompletionControllerTest clears it.
+    test.cache.post_link_cards:
+        alias: post_link_cards.cache

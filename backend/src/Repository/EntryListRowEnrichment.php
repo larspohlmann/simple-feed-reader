@@ -6,7 +6,10 @@ namespace App\Repository;
 
 use App\Entity\LinkCardContent;
 
-/** The collections a loader batch-attaches to a row after hydration: feed categories, saved searches and shared-link cards. */
+/**
+ * What the loaders batch-attach to a row after hydration: feed categories, saved searches, shared-link cards, and
+ * whether the post is still being completed.
+ */
 final readonly class EntryListRowEnrichment
 {
     public function __construct(
@@ -16,6 +19,7 @@ final readonly class EntryListRowEnrichment
         public array $savedSearches = [],
         /** @var list<LinkCardContent> the links the post shares, in post order */
         public array $linkCards = [],
+        public bool $pending = false,
     ) {
     }
 }
