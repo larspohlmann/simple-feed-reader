@@ -18,6 +18,12 @@ final readonly class CoreElement
         return new self($element, $this->namespaceUri);
     }
 
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    public function isCore(\DOMNode $node, string $localName): bool
+    {
+        return XmlHelper::isElement($node, $localName, $this->namespaceUri);
+    }
+
     public function text(string $localName): ?string
     {
         return XmlHelper::firstText(XmlHelper::childElements($this->element, $localName, $this->namespaceUri));

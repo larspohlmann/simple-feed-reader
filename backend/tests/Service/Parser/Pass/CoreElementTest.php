@@ -88,6 +88,19 @@ final class CoreElementTest extends TestCase
         self::assertSame('Right', $feed->at($author)->text('name'));
     }
 
+    public function testIsCoreMatchesOnlyACoreElementOfThatName(): void
+    {
+        $item = $this->core(
+            '<category>A</category><x:category' . self::OTHER_NAMESPACE_DECLARATION . '>B</x:category>text',
+        );
+        [$core, $foreign, $text] = iterator_to_array($item->element->childNodes, false);
+
+        self::assertTrue($item->isCore($core, 'category'));
+        self::assertFalse($item->isCore($core, 'link'));
+        self::assertFalse($item->isCore($foreign, 'category'));
+        self::assertFalse($item->isCore($text, 'category'));
+    }
+
     private function core(string $children): CoreElement
     {
         $xml = '<root xmlns="' . self::CORE_NAMESPACE . '">' . $children . '</root>';
