@@ -39,7 +39,7 @@ final readonly class PostEnricher
      *
      * @param list<Entry> $createdEntries already flushed
      *
-     * @return list<Entry> the entries it filled
+     * @return list<Entry> the entries it filled, $createdEntries left out
      */
     public function enrich(Feed $feed, array $createdEntries): array
     {
@@ -85,7 +85,10 @@ final readonly class PostEnricher
         }
         $this->entityManager->flush();
 
-        return $filled;
+        return array_values(array_filter(
+            $filled,
+            static fn (Entry $entry): bool => !\in_array($entry, $createdEntries, true),
+        ));
     }
 
     /**

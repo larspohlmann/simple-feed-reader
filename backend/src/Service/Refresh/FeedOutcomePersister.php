@@ -117,25 +117,9 @@ final readonly class FeedOutcomePersister
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
-        $filledEntries = $this->postEnricher->enrich($feed, $createdEntries);
-        $this->indexer->index(self::withoutRepeats([...$createdEntries, ...$filledEntries]));
+        $this->indexer->index([...$createdEntries, ...$this->postEnricher->enrich($feed, $createdEntries)]);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));
-    }
-
-    /**
-     * @param list<Entry> $entries
-     *
-     * @return list<Entry>
-     */
-    private static function withoutRepeats(array $entries): array
-    {
-        $distinct = [];
-        foreach ($entries as $entry) {
-            $distinct[spl_object_id($entry)] = $entry;
-        }
-
-        return array_values($distinct);
     }
 
     /** @throws \DateMalformedStringException */

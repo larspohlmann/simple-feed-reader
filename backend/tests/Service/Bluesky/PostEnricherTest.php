@@ -68,9 +68,8 @@ final class PostEnricherTest extends DbTestCase
         $article = $this->entry($this->feed, 'https://example.com/article', '<p>Article.</p>');
         $this->entityManager->flush();
 
-        $filled = $this->enricher()->enrich($this->feed, [$post, $article]);
+        self::assertSame([], $this->enricher()->enrich($this->feed, [$post, $article]));
 
-        self::assertSame([$post], $filled);
         self::assertSame([[self::TISCH]], $this->appView->requests);
         self::assertSame(0, $this->pendingCount());
         $stored = $this->reload($post);
@@ -104,6 +103,23 @@ final class PostEnricherTest extends DbTestCase
         self::assertCount(1, $recorder->queries());
         self::assertCount(1, $recorder->queriesMatching('from pending_post_enrichment'));
         self::assertSame([], $this->appView->requests);
+    }
+
+    public function testReturnsOnlyTheFilledPostsItWasNotHanded(): void
+    {
+        $this->appView->knowsFixture('external');
+        $this->appView->knowsFixture('images');
+        $created = $this->entry($this->feed, self::TISCH, '<p>Read this.</p>');
+        $queuedEarlier = $this->queuedEntry(self::APPLES, '<p>Apples.</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([$queuedEarlier], $this->enricher()->enrich($this->feed, [$created]));
+
+        self::assertStringContainsString(
+            '<figure class="link-card">',
+            (string) $this->reload($created)->getContentHtml(),
+        );
+        self::assertSame(0, $this->pendingCount());
     }
 
     public function testAPostTheAppViewOmitsIsDequeuedAndKeepsItsText(): void
@@ -286,11 +302,11 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->knowsFixture('external');
         $this->appView->knowsFixture('images');
         $broken = $this->entry($this->feed, self::TISCH, '<p>Broken.</p>');
-        $apples = $this->entry($this->feed, self::APPLES, '<p>Apples.</p>');
+        $apples = $this->queuedEntry(self::APPLES, '<p>Apples.</p>');
         $this->entityManager->flush();
         $enricher = $this->enricherWith(new FailingEmbedWriter(self::TISCH, $this->embedWriter()));
 
-        $filled = $enricher->enrich($this->feed, [$broken, $apples]);
+        $filled = $enricher->enrich($this->feed, [$broken]);
 
         self::assertSame([$apples], $filled);
         self::assertSame(0, $this->pendingCount());
@@ -391,6 +407,14 @@ final class PostEnricherTest extends DbTestCase
         $entry->setContentHtml($contentHtml);
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
+
+        return $entry;
+    }
+
+    private function queuedEntry(string $guid, string $contentHtml): Entry
+    {
+        $entry = $this->entry($this->feed, $guid, $contentHtml);
+        $this->entityManager->persist(new PendingPostEnrichment($entry, $this->clock->now()->modify('-1 minute')));
 
         return $entry;
     }
