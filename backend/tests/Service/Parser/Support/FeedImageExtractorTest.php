@@ -191,6 +191,11 @@ final class FeedImageExtractorTest extends TestCase
         self::assertNull(FeedImageExtractor::fromRss1Channel(self::rss1Channel($document)));
     }
 
+    public function testAChannelOutsideAnyDocumentYieldsNoRss1Image(): void
+    {
+        self::assertNull(FeedImageExtractor::fromRss1Channel(new CoreElement(new \DOMElement('channel'), self::RSS1_NS)));
+    }
+
     public function testReadsTheAtomLogo(): void
     {
         $root = $this->atomRoot(/** @lang TEXT */ <<<'XML'
