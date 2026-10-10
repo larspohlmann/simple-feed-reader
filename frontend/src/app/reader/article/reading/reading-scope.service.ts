@@ -23,6 +23,7 @@ type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 export interface ReadingScopeParts {
   readonly scroller: Signal<HTMLElement | undefined>;
   readonly content: ElementQuery;
+  readonly linkCards: ElementQuery;
   readonly comments: ElementQuery;
 }
 
@@ -38,7 +39,7 @@ function isPresent(element: HTMLElement | undefined): element is HTMLElement {
   return element !== undefined;
 }
 
-/** The article's reading scope — the body plus its comments: the reading-focus
+/** The article's reading scope — the body, its link cards and its comments: the reading-focus
  *  dimming, the tail space below it and where the progress rail ends. `connect` and
  *  `observeResizes` create its effects, so the host decides where they fall in
  *  its own effect order. */
@@ -55,13 +56,14 @@ export class ReadingScope {
   private readonly reduceMotion = prefersReducedMotion();
   private scroller: Signal<HTMLElement | undefined> = signal(undefined);
   private content: ElementQuery = signal(undefined);
+  private linkCards: ElementQuery = signal(undefined);
   private comments: ElementQuery = signal(undefined);
   private applier?: ReadingFocusApplier;
   private scopeObserver?: ResizeObserver;
 
   // The reading scope's extent, re-measured whenever the content, the comments
   // or the pane changes size — see measureScrollRange(). The tail keys on the
-  // scope's bottom (body + comments); the progress rail keys on the body alone.
+  // scope's bottom (body + link cards + comments); the progress rail keys on the body alone.
   private readonly measuredContentBottom = signal(0);
   private readonly readingBottom = signal(0);
   private readonly viewportHeight = signal(0);
@@ -83,6 +85,7 @@ export class ReadingScope {
   connect(parts: ReadingScopeParts): void {
     this.scroller = parts.scroller;
     this.content = parts.content;
+    this.linkCards = parts.linkCards;
     this.comments = parts.comments;
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
@@ -131,11 +134,12 @@ export class ReadingScope {
     effect(
       () => {
         const content = this.content()?.nativeElement;
+        const linkCards = this.linkCards()?.nativeElement;
         const comments = this.comments()?.nativeElement;
         this.scopeObserver?.disconnect();
         this.scopeObserver = undefined;
         if (typeof ResizeObserver === 'undefined') return;
-        const targets = [content, comments].filter(isPresent);
+        const targets = [content, linkCards, comments].filter(isPresent);
         if (targets.length === 0) return;
         const observer = new ResizeObserver(() => this.refresh());
         for (const target of targets) observer.observe(target);
@@ -167,7 +171,8 @@ export class ReadingScope {
     }
     this.viewportHeight.set(scroller.clientHeight);
     this.measuredContentBottom.set(bottomWithin(scroller, content));
-    this.readingBottom.set(bottomWithin(scroller, this.commentsHost() ?? content));
+    const lastPart = this.commentsHost() ?? untracked(this.linkCards)?.nativeElement ?? content;
+    this.readingBottom.set(bottomWithin(scroller, lastPart));
   }
 
   // `blocks()` runs inside effects, which must not rerun when the comments mount.

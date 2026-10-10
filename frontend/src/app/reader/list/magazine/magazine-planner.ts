@@ -274,7 +274,10 @@ function leadWithImage(entries: EntryDto[]): EntryDto[] {
 /** Deterministic and page-indexed, so re-planning a longer list re-emits an
  *  identical prefix. The stride is coprime with each family's size, which walks
  *  every template before repeating one. */
-function templateFor(page: number, templates: readonly (readonly Slot[])[]): readonly Slot[] {
+export function templateFor(
+  page: number,
+  templates: readonly (readonly Slot[])[],
+): readonly Slot[] {
   return templates[(page * 5 + 1) % templates.length];
 }
 

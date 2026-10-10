@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
 import { LinkCardDto } from '../../../../link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -94,6 +96,23 @@ describe('EntryLinkComponent', () => {
 
     expect(element.querySelector('a.card img')).toBeNull();
     expect(element.querySelector('a.card span')).toBeNull();
+  });
+
+  it('drops a picture that fails for good, and shows the next card its own', () => {
+    const fixture = mount(entry());
+    const element = fixture.nativeElement as HTMLElement;
+    const image = fixture.debugElement.query(By.directive(ProxiedImageDirective));
+
+    image.injector.get(ProxiedImageDirective).imageFailed.emit();
+    fixture.detectChanges();
+    expect(element.querySelector('a.card img')).toBeNull();
+
+    fixture.componentRef.setInput(
+      'entry',
+      entry({ id: 2, linkCards: [card({ url: 'https://third.test/' })] }),
+    );
+    fixture.detectChanges();
+    expect(element.querySelector('a.card img')).not.toBeNull();
   });
 
   it('opens the shared page, not the post, when the card is clicked or keyed', () => {

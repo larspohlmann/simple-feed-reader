@@ -302,7 +302,8 @@ describe('ReaderViewComponent', () => {
         }),
       ).nativeElement as HTMLElement;
 
-      const cards = element.querySelectorAll('.content figure.link-card');
+      expect(element.querySelectorAll('.content')).toHaveLength(1);
+      const cards = element.querySelectorAll('.link-cards figure.link-card');
       expect(cards).toHaveLength(2);
       const link = cards[0].querySelector<HTMLAnchorElement>('a[href]')!;
       expect(link.href).toBe('https://news.test/story');
@@ -329,6 +330,7 @@ describe('ReaderViewComponent', () => {
       const element = mount(post()).nativeElement as HTMLElement;
 
       expect(element.querySelector('figure.link-card')).toBeNull();
+      expect(element.querySelector('app-link-cards')).toBeNull();
     });
 
     it('leaves an ordinary entry title visible', () => {
@@ -649,6 +651,52 @@ describe('ReaderViewComponent', () => {
 
       expect(host.querySelector('.reader')!.classList).toContain('with-tail');
       expect(host.querySelector('app-progress-rail:not(.idle)')).toBeNull();
+    });
+
+    /** A short post whose one link card reaches `cardsBottom`. */
+    function mountCardedPost(cardsBottom: number): {
+      fixture: ReturnType<typeof mount>;
+      cards: HTMLElement;
+    } {
+      const fixture = mount(
+        entry({
+          titleDerived: true,
+          linkCards: [
+            {
+              url: 'https://news.test/story',
+              title: 'A shared story',
+              description: null,
+              imageUrl: null,
+              siteName: 'news.test',
+            },
+          ],
+        }),
+      );
+      const cards = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-link-cards',
+      ) as HTMLElement;
+      cards.getBoundingClientRect = () => ({ top: 400, bottom: cardsBottom }) as DOMRect;
+      return { fixture, cards };
+    }
+
+    it('adds it when the link cards carry a short post past the pane', () => {
+      const { fixture } = mountCardedPost(2400);
+
+      const host = stubGeometry(fixture, 400, 800);
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+    });
+
+    it('re-measures the reading scope when a link card grows', () => {
+      const { fixture, cards } = mountCardedPost(600);
+      const host = stubGeometry(fixture, 400, 800);
+      expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
+
+      cards.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
+      MockResizeObserver.instances.find((observer) => observer.targets.has(cards))!.fire();
+      fixture.detectChanges();
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
     });
 
     it('re-measures the reading scope when the toolbar’s reservation moves the article', () => {

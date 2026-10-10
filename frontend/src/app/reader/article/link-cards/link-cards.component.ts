@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { LinkCardDto } from '../../link-card';
 
-/** Unstyled on purpose: the reader's `.content .link-card` rules (#1499) dress the cards. */
+/** Unstyled on purpose: the reader's `.link-card` rules (#1499) dress the cards. */
 @Component({
   selector: 'app-link-cards',
   changeDetection: ChangeDetectionStrategy.OnPush,

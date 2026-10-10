@@ -1,4 +1,4 @@
-import { planMagazine } from './magazine-planner';
+import { planMagazine, templateFor } from './magazine-planner';
 import { BLOCK_HEIGHT, EntryKind, MagazineBlock } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
@@ -793,7 +793,7 @@ describe('planMagazine', () => {
       const pages: MagazineBlock[][] = [];
       let start = 0;
       for (let page = 0; start < blocks.length; page++) {
-        const length = IMAGE_TEMPLATES[(page * 5 + 1) % IMAGE_TEMPLATES.length].length;
+        const length = templateFor(page, IMAGE_TEMPLATES).length;
         pages.push(blocks.slice(start, start + length));
         start += length;
       }

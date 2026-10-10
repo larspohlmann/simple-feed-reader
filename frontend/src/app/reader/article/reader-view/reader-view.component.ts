@@ -105,6 +105,7 @@ export class ReaderViewComponent {
   private readonly commentsSection = viewChild(EntryCommentsComponent, {
     read: ElementRef<HTMLElement>,
   });
+  private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -204,6 +205,7 @@ export class ReaderViewComponent {
     this.scope.connect({
       scroller: this.scroller,
       content: this.content,
+      linkCards: this.linkCards,
       comments: this.commentsSection,
     });
 

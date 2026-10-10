@@ -11,8 +11,9 @@ export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
 
 export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
   if (isLinkPost(entry)) return 'link';
-  const settled = demoteUntilFit(kind, entry);
-  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(kind, entry);
+  const slot = kind === 'link' ? 'hero' : kind;
+  const settled = demoteUntilFit(slot, entry);
+  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
   // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
   // both families honour it. A bare entry (no image, no summary) stays `compact`.

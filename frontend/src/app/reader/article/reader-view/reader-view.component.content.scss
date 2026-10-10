@@ -4,7 +4,8 @@
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
    need ::ng-deep (scoped under .content). The sanitizer strips default
    margins, so h2/p/li/blockquote need an explicit vertical rhythm here. */
-.content {
+.content,
+.link-cards {
   color: var(--text-primary);
   font-size: var(--fs-read);
   line-height: 1.75;
@@ -648,7 +649,7 @@
   }
 }
 
-.content ::ng-deep .link-card {
+:is(.content, .link-cards) ::ng-deep .link-card {
   @include glass-rim.filled(var(--surface-1));
 
   margin: var(--space-5) 0;
@@ -656,7 +657,7 @@
   overflow: hidden;
 }
 
-.content ::ng-deep .link-card a[href] {
+:is(.content, .link-cards) ::ng-deep .link-card a[href] {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -666,33 +667,33 @@
 }
 
 /* The card clips its thumbnail to its corners, so the focus ring is drawn inside the link. */
-.content ::ng-deep .link-card a[href]:focus-visible {
+:is(.content, .link-cards) ::ng-deep .link-card a[href]:focus-visible {
   border-radius: inherit;
   outline-offset: -2px;
 }
 
-.content ::ng-deep .link-card img {
+:is(.content, .link-cards) ::ng-deep .link-card img {
   display: block;
   width: 100%;
   margin-bottom: var(--space-2);
   border-radius: 0;
 }
 
-.content ::ng-deep .link-card :is(strong, span, small) {
+:is(.content, .link-cards) ::ng-deep .link-card :is(strong, span, small) {
   padding-inline: var(--space-4);
 }
 
-.content ::ng-deep .link-card a > :first-child:not(img) {
+:is(.content, .link-cards) ::ng-deep .link-card a > :first-child:not(img) {
   padding-top: var(--space-3);
 }
 
-.content ::ng-deep .link-card span {
+:is(.content, .link-cards) ::ng-deep .link-card span {
   color: var(--text-secondary);
   font-size: var(--fs-sm);
   line-height: 1.5;
 }
 
-.content ::ng-deep .link-card small {
+:is(.content, .link-cards) ::ng-deep .link-card small {
   color: var(--text-muted);
   font-size: var(--fs-xs);
 }
