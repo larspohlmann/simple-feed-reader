@@ -295,6 +295,15 @@ describe('ReaderViewComponent', () => {
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
   });
 
+  it('gives a body video back the playsinline the sanitizer strips', async () => {
+    const element = mount(
+      entryWithBody('<video controls playsinline src="https://x.test/clip.mp4"></video>'),
+    ).nativeElement as HTMLElement;
+    await Promise.resolve();
+
+    expect(element.querySelector('.content video')!.hasAttribute('playsinline')).toBe(true);
+  });
+
   describe('reading time', () => {
     const longBody = `<p>${Array.from({ length: 660 }, (_, index) => `w${index}`).join(' ')}</p>`;
 
