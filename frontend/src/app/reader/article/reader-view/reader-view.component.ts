@@ -213,12 +213,13 @@ export class ReaderViewComponent {
       const recover = (event: Event) => {
         if (event.target instanceof HTMLImageElement) {
           void this.injector.get(ImageProxyService).recover(event.target);
+          return;
         }
-        replaceUnplayableVideo(event.target, {
+        replaceUnplayableVideo(event.target, () => ({
           pageUrl: this.entry()?.url ?? null,
           title: this.i18n.translate('reader.unplayableVideo.title'),
           action: this.i18n.translate('reader.unplayableVideo.action'),
-        });
+        }));
       };
       content.addEventListener('error', recover, true);
       onCleanup(() => content.removeEventListener('error', recover, true));

@@ -1,4 +1,4 @@
-import { isPlaylist } from './hls-streams';
+import { isHlsManaged } from './hls-streams';
 
 export interface UnplayableVideoFallback {
   pageUrl: string | null;
@@ -6,33 +6,28 @@ export interface UnplayableVideoFallback {
   action: string;
 }
 
-/** Swaps a body video the browser cannot decode (AV1 on an older iPhone, a ProRes master)
- *  for a link card, styled as `.link-card`, to where it can be watched. */
+/** Swaps a body video the browser cannot decode for a `.link-card` to where it can be watched. */
 export function replaceUnplayableVideo(
   target: EventTarget | null,
-  fallback: UnplayableVideoFallback,
+  fallback: () => UnplayableVideoFallback,
 ): void {
   const video = failedVideo(target);
-  if (!video || isPlaylist(video.getAttribute('src') ?? '')) return;
+  if (!video || isHlsManaged(video)) return;
+  const { pageUrl, title, action } = fallback();
   const href =
-    fallback.pageUrl ||
-    video.currentSrc ||
-    video.getAttribute('src') ||
-    (video.querySelector('source')?.getAttribute('src') ?? '');
-  video.replaceWith(linkCard(href, video.getAttribute('poster'), fallback));
+    pageUrl ?? video.getAttribute('src') ?? video.querySelector('source')?.getAttribute('src');
+  video.replaceWith(linkCard(href ?? '', video.getAttribute('poster'), { title, action }));
 }
 
 function failedVideo(target: EventTarget | null): HTMLVideoElement | null {
   if (target instanceof HTMLVideoElement) return target;
   if (!(target instanceof HTMLSourceElement)) return null;
-  // The browser tries each <source> in turn; only the last one failing leaves nothing to play.
-  const hasNextSource = target.nextElementSibling instanceof HTMLSourceElement;
-  return !hasNextSource && target.parentElement instanceof HTMLVideoElement
-    ? target.parentElement
-    : null;
+  // Only the last <source> failing leaves the browser nothing to play.
+  if (target.nextElementSibling instanceof HTMLSourceElement) return null;
+  return target.closest('video');
 }
 
-function linkCard(href: string, poster: string | null, fallback: UnplayableVideoFallback) {
+function linkCard(href: string, poster: string | null, text: { title: string; action: string }) {
   const link = document.createElement('a');
   link.href = href;
   link.target = '_blank';
@@ -44,8 +39,8 @@ function linkCard(href: string, poster: string | null, fallback: UnplayableVideo
     link.append(image);
   }
   link.append(
-    textElement('strong', fallback.title),
-    textElement('span', fallback.action),
+    textElement('strong', text.title),
+    textElement('span', text.action),
     textElement('small', link.hostname),
   );
   const card = document.createElement('figure');

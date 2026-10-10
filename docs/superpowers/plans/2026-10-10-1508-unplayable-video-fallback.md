@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - One rule for every source and codec: no host or codec list.
-- HLS playlists are hls-streams' business: hls.js swaps a `.m3u8` src for a MediaSource on first play, and the native attempt before that may raise `error`. A video whose `src` is a playlist is never replaced.
+- HLS playlists are hls-streams' business: hls.js swaps a `.m3u8` src for a MediaSource on first play, and the native attempt before that may raise `error`. A video hls-streams manages (`isHlsManaged`) is never replaced.
 - No `bypassSecurityTrustHtml`; the fallback is built with DOM APIs, never with an HTML string.
 - `reader-view.component.ts` sits near ESLint's 300-line cap: the listener grows by one call, and the logic lives in the decorators folder.
 - No new SCSS: the fallback reuses `.link-card` (reader-view.component.content.scss).
@@ -26,24 +26,24 @@
 **Files:**
 - Create: `frontend/src/app/reader/article/decorators/unplayable-videos.ts`
 - Create: `frontend/src/app/reader/article/decorators/unplayable-videos.spec.ts`
-- Modify: `frontend/src/app/reader/article/decorators/hls-streams.ts` (export the playlist test)
+- Modify: `frontend/src/app/reader/article/decorators/hls-streams.ts` (export `isHlsManaged`)
 - Modify: `frontend/src/app/reader/article/reader-view/reader-view.component.ts` (the capturing error listener)
 - Modify: `frontend/public/i18n/en.json`, `frontend/public/i18n/de.json` (`reader.unplayableVideo.title`, `reader.unplayableVideo.action`)
 - Test: `frontend/src/app/reader/article/reader-view/reader-view.component.spec.ts`
 
 **Interfaces:**
-- Produces: `replaceUnplayableVideo(target: EventTarget | null, fallback: UnplayableVideoFallback): void`, with `interface UnplayableVideoFallback { pageUrl: string | null; title: string; action: string }`.
-- Produces: `isPlaylist(url: string): boolean` exported from `hls-streams.ts`, and used there too.
+- Produces: `replaceUnplayableVideo(target: EventTarget | null, fallback: () => UnplayableVideoFallback): void` (lazy, so an image error builds nothing), with `interface UnplayableVideoFallback { pageUrl: string | null; title: string; action: string }`.
+- Produces: `isHlsManaged(video: HTMLVideoElement): boolean` exported from `hls-streams.ts`.
 
 - [ ] **Step 1: Write the failing unit tests** (`unplayable-videos.spec.ts`)
   - A `<video src=a.mp4 poster=p.jpg>` error → replaced by `figure.link-card > a[href=pageUrl][target=_blank][rel="noopener noreferrer"]`, holding `img[src=p.jpg]`, `strong` = title, `span` = action, `small` = the page's host.
   - No pageUrl → the link goes to the video's src.
   - No poster → no `img`.
   - A `<source>` error replaces its video only when it is the last source; an earlier source's error leaves the video in place.
-  - A `.m3u8` video's error leaves it in place.
+  - A video `attachHlsStreams` armed keeps its place on error.
   - A target that is neither a video nor a source (an `img`) is ignored.
 - [ ] **Step 2: Run them, expect FAIL** (module missing): `docker compose exec -T frontend npx jest src/app/reader/article/decorators/unplayable-videos.spec.ts`
-- [ ] **Step 3: Implement** `unplayable-videos.ts` with DOM APIs (`createElement`, `textContent`, `replaceWith`). Export `isPlaylist` from `hls-streams.ts` and use it in both places.
+- [ ] **Step 3: Implement** `unplayable-videos.ts` with DOM APIs (`createElement`, `textContent`, `replaceWith`). Export `isHlsManaged` from `hls-streams.ts`.
 - [ ] **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Wire it.** In the reader view's capturing `error` listener, call `replaceUnplayableVideo(event.target, …)` beside the image recovery. `pageUrl` is `this.entry()?.url ?? null`; the labels come from `this.i18n.translate`. Add the en/de keys.
 - [ ] **Step 6: Component test** (`reader-view.component.spec.ts`): mount an entry whose body holds `<video src="https://x.test/clip.mp4">`, dispatch `new Event('error')` on it, and expect a `.content figure.link-card a[href=<entry url>]` and no `video`. Break-test it: remove the wiring call and confirm the test fails, then restore.
