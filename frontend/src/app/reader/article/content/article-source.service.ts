@@ -137,7 +137,7 @@ export class ArticleSource {
       this.state.set({ status: 'idle' });
       return;
     }
-    if (!entry.url) {
+    if (!entry.url || entry.titleDerived) {
       this.loadSub?.unsubscribe();
       this.state.set({ status: 'idle' });
       this.readerMode.setOriginalOnly();

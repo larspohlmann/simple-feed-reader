@@ -100,7 +100,9 @@
       >
         <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
-            <h1 class="title" #titleHeading tabindex="-1">{{ e.title }}</h1>
+            <h1 class="title" [class.sr-only]="e.titleDerived" #titleHeading tabindex="-1">
+              {{ e.title }}
+            </h1>
           </div>
           <p class="meta">
             <app-favicon [url]="e.faviconUrl" [size]="16" /><a

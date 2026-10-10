@@ -260,6 +260,31 @@ describe('ReaderViewComponent', () => {
     expect(link.rel).toContain('noopener');
   });
 
+  describe('a post (derived title)', () => {
+    const post = () =>
+      entryWithBody('<p>Just a post</p>', { titleDerived: true, url: 'https://example.test/p/1' });
+
+    it('requests no reader page, renders the feed body and shows no fallback notice', () => {
+      const element = mount(post()).nativeElement as HTMLElement;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(element.querySelector('.content')!.textContent).toContain('Just a post');
+      expect(element.querySelector('.reader-fallback, .reader-fallback-quiet')).toBeNull();
+    });
+
+    it('keeps the title heading as a focus target but hides it visually', () => {
+      const element = mount(post()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('h1.title')!.classList).toContain('sr-only');
+    });
+
+    it('leaves an ordinary entry title visible', () => {
+      const element = mount(entry()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('h1.title')!.classList).not.toContain('sr-only');
+    });
+  });
+
   it('leaves in-page fragment anchors undecorated', async () => {
     const element = mount(
       entryWithBody('<a href="#footnote">jump</a><a href="https://ext.test/z">ext</a>'),
