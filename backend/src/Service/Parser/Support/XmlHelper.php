@@ -13,7 +13,6 @@ final class XmlHelper
     public const string MEDIA_RSS_NAMESPACE = 'http://search.yahoo.com/mrss/';
     public const string ITUNES_NAMESPACE = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
-    /** Trimmed text of the first matching direct child that HAS text. */
     public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
     {
         return self::firstText(self::childElements($parent, $localName, $namespaceUri));
@@ -30,23 +29,12 @@ final class XmlHelper
         string $localName,
         ?string $namespaceUri,
     ): ?\DOMElement {
-        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
-            return $child;
-        }
-
-        return null;
+        return self::firstElement(self::childElements($parent, $localName, $namespaceUri));
     }
 
     public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri): ?string
     {
-        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
-            $text = trim($child->textContent);
-            if (AbsoluteHttpUrl::matches($text)) {
-                return $text;
-            }
-        }
-
-        return null;
+        return self::firstHttpUrl(self::childElements($parent, $localName, $namespaceUri));
     }
 
     /**
@@ -79,15 +67,40 @@ final class XmlHelper
     }
 
     /**
+     * Trimmed text of the first element that HAS text.
+     *
      * @param iterable<\DOMElement> $elements
      */
-    private static function firstText(iterable $elements): ?string
+    public static function firstText(iterable $elements): ?string
     {
         foreach ($elements as $element) {
             $text = trim($element->textContent);
             if ($text !== '') {
                 return $text;
             }
+        }
+
+        return null;
+    }
+
+    /** @param iterable<\DOMElement> $elements */
+    public static function firstHttpUrl(iterable $elements): ?string
+    {
+        foreach ($elements as $element) {
+            $text = trim($element->textContent);
+            if (AbsoluteHttpUrl::matches($text)) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param iterable<\DOMElement> $elements */
+    public static function firstElement(iterable $elements): ?\DOMElement
+    {
+        foreach ($elements as $element) {
+            return $element;
         }
 
         return null;
