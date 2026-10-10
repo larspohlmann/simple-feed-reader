@@ -21,7 +21,7 @@ final readonly class EntryCompletionController
     public function __construct(
         private EntryCompletion $completion,
         private RateLimitGuard $rateLimitGuard,
-        private RateLimiterFactoryInterface $readerLimiter,
+        private RateLimiterFactoryInterface $entryCompletionLimiter,
     ) {
     }
 
@@ -30,7 +30,7 @@ final readonly class EntryCompletionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] CompleteEntriesRequest $request,
     ): JsonResponse {
-        $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
+        $this->rateLimitGuard->enforceForUser($this->entryCompletionLimiter, $user);
 
         $rows = $this->completion->complete($user->requireId(), $request->ids);
 

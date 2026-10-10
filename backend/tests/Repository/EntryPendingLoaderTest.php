@@ -13,27 +13,32 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\EntryPendingLoader;
 use App\Repository\PendingPostEnrichmentRepository;
-use App\Service\LinkCard\TriedPosts;
+use App\Repository\TriedPostRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 
 final class EntryPendingLoaderTest extends DbTestCase
 {
     private const string AT_POST = 'at://did:plc:test/app.bsky.feed.post/';
     private const string SHARING = '<p>Worth a read: https://example.com/story</p>';
 
-    private TriedPosts $triedPosts;
+    private TriedPostRepository $triedPosts;
     private EntryPendingLoader $loader;
     private Feed $feed;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->triedPosts = new TriedPosts(new ArrayAdapter());
+        $this->triedPosts = new TriedPostRepository(new ArrayAdapter());
         /** @var PendingPostEnrichmentRepository $pendingPosts */
         $pendingPosts = $this->entityManager->getRepository(PendingPostEnrichment::class);
-        $this->loader = new EntryPendingLoader($pendingPosts, $this->triedPosts);
+        $this->loader = new EntryPendingLoader(
+            $pendingPosts,
+            $this->triedPosts,
+            new MockClock('2026-10-10 13:00:00', 'UTC'),
+        );
         $this->feed = new Feed('https://f.test/' . uniqid('', true));
         $this->entityManager->persist($this->feed);
     }
@@ -75,17 +80,45 @@ final class EntryPendingLoaderTest extends DbTestCase
         self::assertSame([true, false, false], array_column($rows, 'pending'));
     }
 
+    public function testAnUntriedPostIsPendingOnlyWhileItIsYoungerThanThreeDays(): void
+    {
+        $oneDayOld = $this->post('https://mastodon.example/@a/1', self::SHARING, '2026-10-09 13:00:00');
+        $threeDaysOld = $this->post('https://mastodon.example/@a/2', self::SHARING, '2026-10-07 13:00:00');
+        $fourDaysOld = $this->post('https://mastodon.example/@a/3', self::SHARING, '2026-10-06 13:00:00');
+        $this->entityManager->flush();
+
+        $rows = $this->loader->loadInto([$this->row($oneDayOld), $this->row($threeDaysOld), $this->row($fourDaysOld)]);
+
+        self::assertSame([true, true, false], array_column($rows, 'pending'));
+    }
+
+    public function testTheAgeIsMeasuredInUtcWhateverZoneTheClockIsIn(): void
+    {
+        /** @var PendingPostEnrichmentRepository $pendingPosts */
+        $pendingPosts = $this->entityManager->getRepository(PendingPostEnrichment::class);
+        $berlinClock = new MockClock('2026-10-13 14:00:00', 'Europe/Berlin');
+        $loader = new EntryPendingLoader($pendingPosts, $this->triedPosts, $berlinClock);
+        $justYoungEnough = $this->post('https://mastodon.example/@a/1', self::SHARING, '2026-10-10 12:30:00');
+        $this->entityManager->flush();
+
+        self::assertTrue($loader->loadInto([$this->row($justYoungEnough)])[0]->pending);
+    }
+
     public function testAPostWithCardsOrWithoutASharedLinkIsNotPending(): void
     {
         $withCards = $this->post('https://mastodon.example/@a/1', self::SHARING);
         $withoutLinks = $this->post('https://mastodon.example/@a/2', '<p>Just words.</p>');
+        $withoutBody = $this->post('https://mastodon.example/@a/3', null);
         $this->entityManager->flush();
         $card = new LinkCardContent('https://example.com/story', 'Story', null, null, 'example.com');
 
-        $rows = $this->loader->loadInto([$this->row($withCards)->withLinkCards([$card]), $this->row($withoutLinks)]);
+        $rows = $this->loader->loadInto([
+            $this->row($withCards)->withLinkCards([$card]),
+            $this->row($withoutLinks),
+            $this->row($withoutBody),
+        ]);
 
-        self::assertFalse($rows[0]->pending);
-        self::assertFalse($rows[1]->pending);
+        self::assertSame([false, false, false], array_column($rows, 'pending'));
     }
 
     public function testAnArticleSharingALinkIsNotPending(): void
@@ -120,10 +153,10 @@ final class EntryPendingLoaderTest extends DbTestCase
         self::assertCount(1, $recorder->queriesMatching('pending_post_enrichment'));
     }
 
-    private function post(string $guid, string $contentHtml): Entry
+    private function post(string $guid, ?string $contentHtml, string $createdAt = '2026-10-10 12:00:00'): Entry
     {
-        $now = new \DateTimeImmutable('2026-10-10 12:00:00');
-        $entry = new Entry($this->feed, $guid, null, 'Post', $now, $now);
+        $created = new \DateTimeImmutable($createdAt);
+        $entry = new Entry($this->feed, $guid, null, 'Post', $created, $created);
         $entry->setContentHtml($contentHtml);
         $entry->markTitleDerived();
         $this->entityManager->persist($entry);

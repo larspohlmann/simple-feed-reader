@@ -13,6 +13,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'pending_post_enrichment')]
 final class PendingPostEnrichment
 {
+    /** How long a queued post waits for the AppView before it is dropped unfilled. */
+    public const string GIVE_UP_AFTER = 'P3D';
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

@@ -7,6 +7,7 @@ namespace App\Service\LinkCard;
 use App\Entity\Entry;
 use App\Repository\EntryRepository;
 use App\Repository\LinkCardRepository;
+use App\Repository\TriedPostRepository;
 use App\Service\LinkCard\Exception\FetchBudgetSpentException;
 use App\Service\LinkCard\Pass\FetchBudget;
 use App\Service\LinkCard\Support\LinkPost;
@@ -25,7 +26,7 @@ final readonly class PostLinkCards
 
     public function __construct(
         private PostCardWriter $writer,
-        private TriedPosts $triedPosts,
+        private TriedPostRepository $triedPosts,
         private EntryRepository $entries,
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,

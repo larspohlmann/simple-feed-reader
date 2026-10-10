@@ -9,6 +9,7 @@ use App\Entity\LinkCard;
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Repository\EntryRepository;
 use App\Repository\LinkCardRepository;
+use App\Repository\TriedPostRepository;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\IpValidator;
@@ -17,7 +18,6 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\LinkCard\PageCardReader;
 use App\Service\LinkCard\PostCardWriter;
 use App\Service\LinkCard\PostLinkCards;
-use App\Service\LinkCard\TriedPosts;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
@@ -42,14 +42,14 @@ final class PostLinkCardsWiring
         HttpClientInterface $client,
         LoggerInterface $logger,
     ): PostLinkCards {
-        return self::assemble($entityManager, $client, $logger, new TriedPosts(new ArrayAdapter()));
+        return self::assemble($entityManager, $client, $logger, new TriedPostRepository(new ArrayAdapter()));
     }
 
     /** For a test that reads the markers back through the container, as the list's pending flag does. */
     public static function sharingTriedPosts(
         EntityManagerInterface $entityManager,
         HttpClientInterface $client,
-        TriedPosts $triedPosts,
+        TriedPostRepository $triedPosts,
     ): PostLinkCards {
         return self::assemble($entityManager, $client, new NullLogger(), $triedPosts);
     }
@@ -64,7 +64,7 @@ final class PostLinkCardsWiring
         EntityManagerInterface $entityManager,
         HttpClientInterface $client,
         LoggerInterface $logger,
-        TriedPosts $triedPosts,
+        TriedPostRepository $triedPosts,
     ): PostLinkCards {
         /** @var EntryRepository $entries */
         $entries = $entityManager->getRepository(Entry::class);

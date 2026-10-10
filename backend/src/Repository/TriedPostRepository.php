@@ -2,15 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Repository;
 
-use App\Repository\TriedPostsInterface;
 use Psr\Cache\CacheItemInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /** The posts whose link cards were built once, so opening one never fetches its pages again. */
-final readonly class TriedPosts implements TriedPostsInterface
+final readonly class TriedPostRepository
 {
     public function __construct(
         #[Autowire(service: 'post_link_cards.cache')]
@@ -28,6 +27,11 @@ final readonly class TriedPosts implements TriedPostsInterface
         return $this->cache->hasItem(self::key($entryId));
     }
 
+    /**
+     * @param list<int> $entryIds
+     *
+     * @return list<int> those among them that were tried
+     */
     public function triedAmong(array $entryIds): array
     {
         $keys = array_map(self::key(...), $entryIds);

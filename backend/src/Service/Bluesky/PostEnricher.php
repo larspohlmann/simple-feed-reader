@@ -23,7 +23,6 @@ use Psr\Log\LoggerInterface;
 final readonly class PostEnricher
 {
     private const int POSTS_PER_PASS = 100;
-    private const string GIVE_UP_AFTER = 'P3D';
     private const string ON_REQUEST = 'a completion request';
 
     public function __construct(
@@ -75,8 +74,8 @@ final readonly class PostEnricher
                 throw $exception;
             }
             $this->logger->error(
-                'Bluesky enrichment failed for {url}',
-                ['url' => $source, 'exception' => $exception],
+                'Bluesky enrichment failed for {source}',
+                ['source' => $source, 'exception' => $exception],
             );
 
             return [];
@@ -97,7 +96,7 @@ final readonly class PostEnricher
         }
         $this->pendingPosts->deleteQueuedBefore(
             $feed,
-            $this->clock->now()->sub(new \DateInterval(self::GIVE_UP_AFTER)),
+            $this->clock->now()->sub(new \DateInterval(PendingPostEnrichment::GIVE_UP_AFTER)),
         );
         $filled = $this->settleAll(
             $this->pendingPosts->findOldestForFeed($feed, self::POSTS_PER_PASS),
@@ -157,8 +156,8 @@ final readonly class PostEnricher
             ));
         } catch (FetchException | AppViewAnswerException $exception) {
             $this->logger->warning(
-                'Bluesky AppView gave no usable answer for {url}',
-                ['url' => $source, 'exception' => $exception],
+                'Bluesky AppView gave no usable answer for {source}',
+                ['source' => $source, 'exception' => $exception],
             );
 
             return [];

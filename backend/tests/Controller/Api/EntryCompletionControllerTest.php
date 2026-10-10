@@ -10,11 +10,11 @@ use App\Entity\Feed;
 use App\Entity\PendingPostEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\TriedPostRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Fetch\HostThrottle;
 use App\Service\LinkCard\PostLinkCards;
-use App\Service\LinkCard\TriedPosts;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
@@ -175,18 +175,48 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->assertRejected($this->client, 422);
     }
 
-    public function testASpentReaderBudgetIsRateLimitedWithoutWork(): void
+    public function testASpentCompletionBudgetIsRateLimitedWithoutWork(): void
     {
         [$headers, $user] = $this->auth('complete-limited@example.com');
         $blueskyPost = $this->queuedPost($this->subscribedFeed($user), self::TISCH);
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+        $this->limiter('limiter.entry_completion')->create('user-' . $user->requireId())->consume(120);
 
         $this->complete($headers, [$blueskyPost->requireId()]);
 
         $this->assertRejected($this->client, 429);
         self::assertSame([], $this->appView->requests);
+    }
+
+    public function testASpentReaderBudgetDoesNotBlockCompleting(): void
+    {
+        [$headers, $user] = $this->auth('complete-reader-spent@example.com');
+        $post = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
+        $this->limiter('limiter.reader')->create('user-' . $user->requireId())->consume(60);
+
+        $this->complete($headers, [$post->requireId()]);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testCompletingSpendsNothingOfTheReaderBudget(): void
+    {
+        [$headers, $user] = $this->auth('complete-reader-kept@example.com');
+        $post = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
+        $readerBudget = $this->limiter('limiter.reader')->create('user-' . $user->requireId());
+        self::assertTrue($readerBudget->consume(59)->isAccepted());
+
+        $this->complete($headers, [$post->requireId()]);
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($readerBudget->consume()->isAccepted());
+    }
+
+    private function limiter(string $id): RateLimiterFactoryInterface
+    {
+        $limiter = self::getContainer()->get($id);
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
+
+        return $limiter;
     }
 
     public function testAnAnonymousCallIsUnauthorized(): void
@@ -220,8 +250,8 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private function installFakes(): void
     {
         $container = self::getContainer();
-        $triedPosts = $container->get(TriedPosts::class);
-        self::assertInstanceOf(TriedPosts::class, $triedPosts);
+        $triedPosts = $container->get(TriedPostRepository::class);
+        self::assertInstanceOf(TriedPostRepository::class, $triedPosts);
         $container->set(
             PostEnricher::class,
             PostEnrichers::build(
@@ -276,8 +306,8 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     private function post(Feed $feed, string $guid, string $contentHtml): Entry
     {
-        $publishedAt = new \DateTimeImmutable('2026-10-10 10:00:00');
-        $post = new Entry($feed, $guid, null, 'Post', $publishedAt, $publishedAt);
+        $createdAt = new \DateTimeImmutable('-1 hour', new \DateTimeZone('UTC'));
+        $post = new Entry($feed, $guid, null, 'Post', $createdAt, $createdAt);
         $post->setContentHtml($contentHtml);
         $post->markTitleDerived();
         $post->getImage()->storePending(null, null, null);

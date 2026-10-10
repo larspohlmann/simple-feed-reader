@@ -174,8 +174,8 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(30, $this->pendingCount());
         self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
-        self::assertSame('Bluesky AppView gave no usable answer for {url}', $this->logger->records[0]['message']);
-        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['url']);
+        self::assertSame('Bluesky AppView gave no usable answer for {source}', $this->logger->records[0]['message']);
+        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['source']);
     }
 
     public function testTheBackoffSkipsTheNextFeedsPass(): void
@@ -291,8 +291,8 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([], $enricher->enrich($this->feed, [$post]));
 
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
-        self::assertSame('Bluesky enrichment failed for {url}', $this->logger->records[0]['message']);
-        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['url']);
+        self::assertSame('Bluesky enrichment failed for {source}', $this->logger->records[0]['message']);
+        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['source']);
         self::assertInstanceOf(\LogicException::class, $this->logger->records[0]['context']['exception']);
         self::assertSame(1, $this->pendingCount());
     }
@@ -410,8 +410,8 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame(1, $this->pendingCount());
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
-        self::assertSame('Bluesky AppView gave no usable answer for {url}', $this->logger->records[0]['message']);
-        self::assertSame('a completion request', $this->logger->records[0]['context']['url']);
+        self::assertSame('Bluesky AppView gave no usable answer for {source}', $this->logger->records[0]['message']);
+        self::assertSame('a completion request', $this->logger->records[0]['context']['source']);
     }
 
     public function testAnUnexpectedFailureWhileEnrichingEntriesIsLoggedAndFillsNothing(): void
@@ -428,8 +428,8 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([], $enricher->enrichEntries([$queued]));
 
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
-        self::assertSame('Bluesky enrichment failed for {url}', $this->logger->records[0]['message']);
-        self::assertSame('a completion request', $this->logger->records[0]['context']['url']);
+        self::assertSame('Bluesky enrichment failed for {source}', $this->logger->records[0]['message']);
+        self::assertSame('a completion request', $this->logger->records[0]['context']['source']);
         self::assertSame(1, $this->pendingCount());
     }
 
