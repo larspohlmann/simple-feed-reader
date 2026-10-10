@@ -135,8 +135,9 @@ The first fetch (`FirstFetchRecorder`) builds no link cards either.
 
 `EntryJson` gains `pending: bool`. An entry is pending when either of these holds:
 - a `PendingPostEnrichment` row exists for it (a Bluesky post waiting for the AppView), or
-- it is a post that is not an AT post, has no link cards, is not marked tried, and `SharedLinks::in` finds at least
-  one link in its body.
+- it is a post that is not an AT post, was created within the last **3 days** (Bluesky's give-up window), has no
+  link cards, is not marked tried, and `SharedLinks::in` finds at least one link in its body. The window bounds the
+  rollout and the 30-day marker's expiry: an older post never shows as pending, and still gets its cards on open.
 
 A `PendingLoader` batch-attaches the flag to list rows with one query for the Bluesky rows and one cache `getItems`
 for the markers. That makes 1 query plus 1 cache read per page.
@@ -152,7 +153,8 @@ dropped silently, as the list already scopes them.
 2. Link cards: the remaining pending posts are built as on open, sharing a budget of **5** page fetches per call.
 3. The response is `{ "entries": [listRow…] }` for the requested owned ids, each with fresh `linkCards` and `pending`.
 
-It is rate-limited by the existing reader limiter. A POST with side effects suits a native client, and nothing in it
+It has its own limiter, `entry_completion` (sliding window, 120 per 5 minutes per user), so polling never spends
+the reader view's budget. A POST with side effects suits a native client, and nothing in it
 is browser-only.
 
 ### Frontend
