@@ -340,3 +340,11 @@ Check `MediaRssSlot::isContentOrThumbnail`'s parameter type. If it already takes
 
 - [ ] Run `composer cs`, `composer stan`, `composer md` and `composer tramp` (expect "No tramp data found"), plus PhpStorm `lint_files` on the changed PHP. Then `composer test:parallel`, `docker compose exec php composer test` (from the repo root) and `composer infection:diff`. Kill any escaped mutant on a touched line with a test in the matching file.
 - [ ] Commit any gate fixes: `fix(#1487): gate fixes`.
+
+---
+
+## Execution notes
+
+- PhpStorm doesn't follow `@phpstan-assert-if-true` through `isCore()`, so it flagged `\DOMNode`-to-`\DOMElement` arguments. `ItemCategoryExtractor::fromChild` and `ItemMediaExtractor::fromChild` therefore keep an explicit `instanceof \DOMElement` guard, and `isItemMediaNode` takes a `\DOMElement`.
+- Infection on the touched lines needed three new pins: an RSS enclosure's `type` matched case-insensitively and its `url` trimmed, and a `<media:group>` whose first child is not a Media RSS slot and which holds a non-slot element with a URL (`media:peerLink`).
+- Real run: the parser ran over the 235 dev-database feeds (224 parse, 8,344 entries, 12,139 categories) on `develop` and on this branch. The JSON of every entry's categories, image, media and attachments is byte-identical.
