@@ -118,3 +118,65 @@ entry block.
 - **Migration:** the CI migration leg on SQLite and MySQL.
 - **Frontend:** Jest for the planner rule (a post with cards gets `entry-link`), the block's render, and the reader's cards.
 - **Real render:** the magazine and the reader at phone and desktop width, light and dark, with Mastodon and Mother Jones on Bluesky.
+
+## 8. Entries still being completed (added 2026-10-10)
+
+The user reported: right after subscribing to a Bluesky feed, the list shows posts whose embeds are not filled yet,
+with nothing saying they will be. Enrichment waits for the feed's next scheduled refresh, which can be minutes away.
+The first fetch (`FirstFetchRecorder`) builds no link cards either.
+
+| Question | Decision (agreed) |
+|---|---|
+| Scope | Part of #1502 |
+| Indicator | A placeholder card where the card or embed will go, with a subtle shimmer and a muted "Loading preview…", in the magazine and in the reader |
+| Update | The client polls while visible entries are pending, and swaps in the finished entry without a reload |
+
+### Pending, as data
+
+`EntryJson` gains `pending: bool`. An entry is pending when either of these holds:
+- a `PendingPostEnrichment` row exists for it (a Bluesky post waiting for the AppView), or
+- it is a post that is not an AT post, has no link cards, is not marked tried, and `SharedLinks::in` finds at least
+  one link in its body.
+
+A `PendingLoader` batch-attaches the flag to list rows with one query for the Bluesky rows and one cache `getItems`
+for the markers. That makes 1 query plus 1 cache read per page.
+
+### Completing on demand
+
+`POST /api/entries/complete`, with the body `{ "ids": [..] }`, takes at most 25 ids. Ids the caller does not own are
+dropped silently, as the list already scopes them.
+
+1. Bluesky: the caller's pending AT posts among the ids are filled through the AppView (one call, at most 25 URIs),
+   the same way `PostEnricher` settles a chunk: fill, or drop the row when the post is omitted. A throttled host
+   or an AppView failure leaves the rows queued.
+2. Link cards: the remaining pending posts are built as on open, sharing a budget of **5** page fetches per call.
+3. The response is `{ "entries": [listRow…] }` for the requested owned ids, each with fresh `linkCards` and `pending`.
+
+It is rate-limited by the existing reader limiter. A POST with side effects suits a native client, and nothing in it
+is browser-only.
+
+### Frontend
+
+- **Placeholder:**
+  - In the magazine, a pending post renders as the `entry-link` block with a placeholder card instead of the first
+    card. The placeholder is the image area as a shimmer block at 1.91:1, followed by a muted "Loading preview…".
+  - In the reader, the same placeholder appears under the body.
+  - The shimmer respects `prefers-reduced-motion`.
+- **Polling:** while the current list holds pending entries, the client posts their ids (the first 25, oldest
+  first) every **3 s**, at most **20** rounds per list load. It merges the returned rows into the list store and
+  the open entry.
+  - It stops when nothing is pending, when the list changes, or when the tab is hidden; it resumes when the tab is
+    shown.
+  - A failed call counts as a round.
+- i18n: en "Loading preview…", de "Vorschau wird geladen…".
+
+### Testing (additions)
+
+- **Backend:**
+  - `PendingLoader`: the Bluesky row, a link post that is untried versus tried, and a non-post.
+  - The `complete` endpoint, with `MockHttpClient` for the AppView and the pages: it fills and returns pending
+    false, drops unowned ids, enforces the 5-fetch budget, leaves a throttled AppView queued, and rejects more
+    than 25 ids with 422.
+- **Frontend:** placeholder rendering, and a polling service test with fake timers: it stops when nothing is
+  pending, at 20 rounds, and on a list change.
+- **Real render:** subscribe to a new Bluesky feed in Docker, and watch the placeholders fill in without a reload.

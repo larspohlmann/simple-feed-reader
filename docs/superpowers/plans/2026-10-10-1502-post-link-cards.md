@@ -192,3 +192,46 @@
   - The reader shows the cards under the post.
   - A pre-existing Mastodon post gains cards on open.
 - [ ] Scan today's dev log for warnings.
+
+### Task 8: `pending` and `POST /api/entries/complete` (backend)
+
+Spec §8. (Task 7 above stays the controller's final gate and runs last.)
+
+**Files:**
+- Create: `backend/src/Repository/PendingLoader.php`, or a better name such as `EntryPendingLoader`. It batch-attaches `pending` the way `LinkCardLoader` does, and is chained in `EntryListRowEnricher`. It uses `EntryListRowEnrichment`, `EntryListRow` and `EntryJson::listRow` (`pending`).
+  - The tried-marker lookup lives in `LinkCard\TriedPosts`. Give it a batch method if it has none.
+  - Keep the repository free of Service imports beyond what `PersistenceKnowsNoServiceRule` allows. If the marker check cannot live in a repository, compute `pending` in a Service and pass it in, following how the enrichment is attached.
+- Modify: `backend/src/Service/Bluesky/PostEnricher.php`.
+  - Add `enrichEntries(list<Entry>): list<Entry>`. It fills those entries' queued rows through the same chunk settling (extract the shared part; do not copy it) and returns the filled entries.
+  - The throttle and failure handling stay as they are.
+- Modify: `backend/src/Service/LinkCard/PostLinkCards.php`. Add `forPending(list<Entry>)`, which builds as on open with a shared 5-fetch budget (`FetchBudget`).
+- Create: a service in the right module, e.g. `Service/Reading/EntryCompletion` or the module that owns both calls without a cycle. Check the module graph: Bluesky and LinkCard are both used by Refresh. It runs Bluesky first, then link cards, then flushes.
+- Create: a controller action, `POST /api/entries/complete`, with a request DTO holding `ids` (a list of positive ints, max 25, validated → 422). It scopes ids to the user through the existing list repository and is rate-limited with `readerLimiter` via `RateLimitGuard`.
+  - It returns `{entries: [EntryJson::listRow…]}` built through `EntryListRowEnricher`.
+  - Controller thin.
+- Tests:
+  - Loader unit tests.
+  - A functional test of the endpoint (AppView and page `MockHttpClient`) per spec §8 Testing.
+  - `PostEnricher::enrichEntries`.
+
+- [ ] Write the tests and run them red, implement, run them green. Run all backend gates on both DB legs and `composer infection:diff`.
+- [ ] Commit `feat(#1502): entries say when they are still being completed, and a client can complete them`.
+
+### Task 9: Placeholder and polling (frontend)
+
+Spec §8. The brief is the spec section plus these files:
+- `LinkCardDto`'s neighbour: `EntryDto.pending: boolean`. Fix the builders.
+- The magazine planner rule becomes: a post is a `link` block when `linkCards.length > 0 || pending`.
+- `entry-link`: when pending and without cards, it renders the placeholder.
+  - The placeholder is a shared small component, e.g. `link-card-placeholder`, used by both `entry-link` and the reader's `app-link-cards`.
+  - The shimmer is a token-only animation, off under `prefers-reduced-motion`.
+- `reader-api`: `complete(ids: number[]): Observable<EntryDto[]>`.
+- A polling service (`pending-entries-poller` or similar) owned by the list state:
+  - every 3 s, at most 20 rounds per list load;
+  - stop rules per spec;
+  - pause while `document.hidden`;
+  - merge into the list store and the open entry's state, through existing update paths (find how a patched entry is merged today, e.g. the state PATCH merge).
+- i18n keys in en/de.
+- Tests: placeholder render, planner rule, poller with fake timers (memory: never let fake timers advance by an undefined ms).
+- [ ] Red, then green. Run `docker compose exec -T frontend npm run check`.
+- [ ] Commit `feat(#1502): a post still being completed shows a placeholder card and fills in by itself`.
