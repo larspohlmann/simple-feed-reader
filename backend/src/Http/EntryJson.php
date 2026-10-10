@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCardContent;
 use App\Repository\EntryListRow;
 use App\Service\Reader\Media\Support\CoverAspectRatio;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
@@ -26,6 +27,9 @@ final class EntryJson
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
      *   categories: list<string>,
+     *   linkCards: list<array{
+     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
+     *   }>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
@@ -51,6 +55,9 @@ final class EntryJson
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
      *   categories: list<string>,
+     *   linkCards: list<array{
+     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
+     *   }>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
@@ -73,6 +80,9 @@ final class EntryJson
      *   media: list<array<string, string|int>>,
      *   attachments: list<array<string, string|int>>,
      *   categories: list<string>,
+     *   linkCards: list<array{
+     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
+     *   }>,
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
@@ -101,6 +111,7 @@ final class EntryJson
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'categories' => $row->categories,
+            'linkCards' => array_map(self::linkCard(...), $row->linkCards),
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
@@ -114,6 +125,20 @@ final class EntryJson
             'isShort' => YouTubeShortUrl::is($entry->getUrl()),
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->savedSearches,
+        ];
+    }
+
+    /**
+     * @return array{url: string, title: string, description: string|null, imageUrl: string|null, siteName: string}
+     */
+    private static function linkCard(LinkCardContent $card): array
+    {
+        return [
+            'url' => $card->url,
+            'title' => $card->title,
+            'description' => $card->description,
+            'imageUrl' => $card->imageUrl,
+            'siteName' => $card->siteName,
         ];
     }
 }

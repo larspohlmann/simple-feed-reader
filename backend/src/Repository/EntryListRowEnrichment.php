@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/** The two collections a loader batch-attaches to a row after hydration: feed categories and saved searches. */
+use App\Entity\LinkCardContent;
+
+/** The collections a loader batch-attaches to a row after hydration: feed categories, saved searches and shared-link cards. */
 final readonly class EntryListRowEnrichment
 {
     public function __construct(
@@ -12,6 +14,8 @@ final readonly class EntryListRowEnrichment
         public array $categories = [],
         /** @var list<array{id: int, slug: string, term: string}> owned saved searches this entry belongs to, sidebar order */
         public array $savedSearches = [],
+        /** @var list<LinkCardContent> the links the post shares, in post order */
+        public array $linkCards = [],
     ) {
     }
 }

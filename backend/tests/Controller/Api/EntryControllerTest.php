@@ -10,6 +10,8 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\SavedSearch;
@@ -196,6 +198,95 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
+    }
+
+    private function seedLinkCards(Entry $entry): void
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->persist(
+            new LinkCard($entry, 1, new LinkCardContent('https://b.test/2', 'Second', null, null, 'B')),
+        );
+        $entityManager->persist(new LinkCard(
+            $entry,
+            0,
+            new LinkCardContent('https://a.test/1', 'First', 'About it', 'https://a.test/i.jpg', 'A'),
+        ));
+        $entityManager->flush();
+    }
+
+    private function entryWithGuid(Subscription $subscription, string $guid): Entry
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => $guid]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        return $entry;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function expectedLinkCards(): array
+    {
+        return [
+            [
+                'url' => 'https://a.test/1',
+                'title' => 'First',
+                'description' => 'About it',
+                'imageUrl' => 'https://a.test/i.jpg',
+                'siteName' => 'A',
+            ],
+            [
+                'url' => 'https://b.test/2',
+                'title' => 'Second',
+                'description' => null,
+                'imageUrl' => null,
+                'siteName' => 'B',
+            ],
+        ];
+    }
+
+    public function testEntryListCarriesLinkCardsInPositionOrderAndEmptyOtherwise(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-list-link-cards@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 2);
+        $this->seedLinkCards($this->entryWithGuid($subscription, 'g2'));
+
+        $client->request('GET', '/api/entries', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        [$newest, $oldest] = $body['entries'];
+        self::assertIsArray($newest);
+        self::assertIsArray($oldest);
+        self::assertSame($this->expectedLinkCards(), $newest['linkCards']);
+        self::assertSame([], $oldest['linkCards']);
+    }
+
+    public function testGetCarriesLinkCardsAndEmptyWhenThereAreNone(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-link-cards@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 2);
+        $withCards = $this->entryWithGuid($subscription, 'g2');
+        $this->seedLinkCards($withCards);
+        $without = $this->entryWithGuid($subscription, 'g1');
+
+        $client->request('GET', "/api/entries/{$withCards->getId()}", server: $headers);
+        $cards = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $client->request('GET', "/api/entries/{$without->getId()}", server: $headers);
+        $none = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+
+        self::assertIsArray($cards);
+        self::assertIsArray($none);
+        self::assertIsArray($cards['entry']);
+        self::assertIsArray($none['entry']);
+        self::assertSame($this->expectedLinkCards(), $cards['entry']['linkCards']);
+        self::assertSame([], $none['entry']['linkCards']);
     }
 
     public function testEntryListCarriesSavedSearchMembership(): void

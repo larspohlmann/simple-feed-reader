@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
+use App\Entity\LinkCardContent;
 
 /**
  * One row of the entry list: the shared Entry plus the caller-specific view of
@@ -21,6 +22,8 @@ final readonly class EntryListRow
     public array $categories;
     /** @var list<array{id: int, slug: string, term: string}> owned saved searches this entry belongs to, sidebar order */
     public array $savedSearches;
+    /** @var list<LinkCardContent> the links the post shares, as stored cards, in post order */
+    public array $linkCards;
 
     public function __construct(
         public Entry $entry,
@@ -44,6 +47,7 @@ final readonly class EntryListRow
         $this->viewedAt = $viewState->viewedAt;
         $this->categories = $enrichment->categories;
         $this->savedSearches = $enrichment->savedSearches;
+        $this->linkCards = $enrichment->linkCards;
     }
 
     /**
@@ -51,27 +55,48 @@ final readonly class EntryListRow
      */
     public function withDuplicates(array $duplicates): self
     {
-        return $this->copyWith($duplicates, $this->categories, $this->savedSearches);
+        return $this->copyWith($duplicates, $this->enrichment());
     }
 
     /** @param list<string> $categories */
     public function withCategories(array $categories): self
     {
-        return $this->copyWith($this->duplicates, $categories, $this->savedSearches);
+        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
+            $categories,
+            $this->savedSearches,
+            $this->linkCards,
+        ));
     }
 
     /** @param list<array{id: int, slug: string, term: string}> $savedSearches */
     public function withSavedSearches(array $savedSearches): self
     {
-        return $this->copyWith($this->duplicates, $this->categories, $savedSearches);
+        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
+            $this->categories,
+            $savedSearches,
+            $this->linkCards,
+        ));
+    }
+
+    /** @param list<LinkCardContent> $linkCards */
+    public function withLinkCards(array $linkCards): self
+    {
+        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
+            $this->categories,
+            $this->savedSearches,
+            $linkCards,
+        ));
+    }
+
+    private function enrichment(): EntryListRowEnrichment
+    {
+        return new EntryListRowEnrichment($this->categories, $this->savedSearches, $this->linkCards);
     }
 
     /**
-     * @param list<self>                                       $duplicates
-     * @param list<string>                                     $categories
-     * @param list<array{id: int, slug: string, term: string}> $savedSearches
+     * @param list<self> $duplicates
      */
-    private function copyWith(array $duplicates, array $categories, array $savedSearches): self
+    private function copyWith(array $duplicates, EntryListRowEnrichment $enrichment): self
     {
         return new self(
             $this->entry,
@@ -82,7 +107,7 @@ final readonly class EntryListRow
             new EntryListRowViewState($this->isViewed, $this->viewedAt),
             $this->markedReadUntil,
             $duplicates,
-            new EntryListRowEnrichment($categories, $savedSearches),
+            $enrichment,
         );
     }
 }
