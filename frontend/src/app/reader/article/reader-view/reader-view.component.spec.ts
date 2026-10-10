@@ -133,6 +133,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  linkCards: [],
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -276,6 +277,58 @@ describe('ReaderViewComponent', () => {
       const element = mount(post()).nativeElement as HTMLElement;
 
       expect(element.querySelector('h1.title')!.classList).toContain('sr-only');
+    });
+
+    it('renders one link card per shared link after the body', () => {
+      const element = mount(
+        entryWithBody('<p>Just a post</p>', {
+          titleDerived: true,
+          linkCards: [
+            {
+              url: 'https://news.test/story',
+              title: 'A shared story',
+              description: 'What it is about.',
+              imageUrl: 'https://news.test/story.jpg',
+              siteName: 'news.test',
+            },
+            {
+              url: 'https://other.test/',
+              title: 'Another',
+              description: null,
+              imageUrl: null,
+              siteName: 'other.test',
+            },
+          ],
+        }),
+      ).nativeElement as HTMLElement;
+
+      const cards = element.querySelectorAll('.content figure.link-card');
+      expect(cards).toHaveLength(2);
+      const link = cards[0].querySelector<HTMLAnchorElement>('a[href]')!;
+      expect(link.href).toBe('https://news.test/story');
+      expect(link.target).toBe('_blank');
+      expect(link.rel).toBe('noopener noreferrer');
+      expect([...link.children].map((child) => child.tagName)).toEqual([
+        'IMG',
+        'STRONG',
+        'SPAN',
+        'SMALL',
+      ]);
+      const image = link.querySelector('img')!;
+      expect(image.getAttribute('loading')).toBe('lazy');
+      expect(image.getAttribute('referrerpolicy')).toBe('no-referrer');
+      image.dispatchEvent(new Event('error'));
+      expect(imageProxy.recover).toHaveBeenCalledWith(image);
+      expect([...cards[1].querySelector('a')!.children].map((child) => child.tagName)).toEqual([
+        'STRONG',
+        'SMALL',
+      ]);
+    });
+
+    it('renders no link card for an entry without shared links', () => {
+      const element = mount(post()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('figure.link-card')).toBeNull();
     });
 
     it('leaves an ordinary entry title visible', () => {

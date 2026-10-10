@@ -1,0 +1,124 @@
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
+import { EntryLinkComponent } from './entry-link.component';
+import { EntryDto } from '../../../../models';
+import { LinkCardDto } from '../../../../link-card';
+import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+
+const entryActions = {
+  favorite: jest.fn(),
+  keep: jest.fn(),
+  toggleRead: jest.fn(),
+  open: jest.fn(),
+};
+
+beforeEach(() => {
+  Object.values(entryActions).forEach((spy) => spy.mockReset());
+});
+
+const card = (over: Partial<LinkCardDto> = {}): LinkCardDto => ({
+  url: 'https://news.test/story',
+  title: 'A shared story',
+  description: 'What the story is about.',
+  imageUrl: 'https://news.test/story.jpg',
+  siteName: 'news.test',
+  ...over,
+});
+
+const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
+  id: 1,
+  title: 'Worth a read',
+  url: 'https://social.test/@someone/1',
+  author: null,
+  summary: null,
+  excerpt: 'Worth a read, this one.',
+  imageUrl: null,
+  imageWidth: null,
+  imageHeight: null,
+  imageRenditions: [],
+  media: [],
+  attachments: [],
+  categories: [],
+  publishedAt: null,
+  createdAt: 'x',
+  subscriptionId: 1,
+  source: 'Src',
+  faviconUrl: null,
+  isHidden: false,
+  isFavorite: false,
+  isKept: false,
+  isViewed: false,
+  isShort: false,
+  titleDerived: true,
+  linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
+  imageAspectRatio: null,
+  discussionUrl: null,
+  comments: null,
+  ...over,
+});
+
+function mount(testEntry: EntryDto) {
+  TestBed.configureTestingModule({
+    imports: [EntryLinkComponent, provideTranslocoTesting()],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+  });
+  const fixture = TestBed.createComponent(EntryLinkComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  return fixture;
+}
+
+describe('EntryLinkComponent', () => {
+  it('shows the post text as its headline and stacks the first card under it', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title.post')!.textContent).toContain('Worth a read, this one.');
+    const cards = element.querySelectorAll<HTMLAnchorElement>('a.card');
+    expect(cards).toHaveLength(1);
+    expect(cards[0].href).toBe('https://news.test/story');
+    expect(cards[0].target).toBe('_blank');
+    expect(cards[0].rel).toBe('noopener noreferrer');
+    expect(cards[0].querySelector('small')!.textContent).toContain('news.test');
+    expect(cards[0].querySelector('strong')!.textContent).toContain('A shared story');
+    expect(cards[0].querySelector('span')!.textContent).toContain('What the story is about.');
+    const image = cards[0].querySelector('img')!;
+    expect(image.getAttribute('src')).toBe('https://news.test/story.jpg');
+    expect(image.getAttribute('loading')).toBe('lazy');
+    expect(image.getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
+  it('leaves out the picture and the description a card does not have', () => {
+    const element = mount(entry({ linkCards: [card({ imageUrl: null, description: null })] }))
+      .nativeElement as HTMLElement;
+
+    expect(element.querySelector('a.card img')).toBeNull();
+    expect(element.querySelector('a.card span')).toBeNull();
+  });
+
+  it('opens the shared page, not the post, when the card is clicked or keyed', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+    const link = element.querySelector<HTMLAnchorElement>('a.card')!;
+    link.addEventListener('click', (event) => event.preventDefault());
+
+    link.click();
+    link.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    link.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+
+    expect(entryActions.open).not.toHaveBeenCalled();
+  });
+
+  it('opens the post from the rest of the block', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    element.querySelector<HTMLElement>('.title')!.click();
+
+    expect(entryActions.open).toHaveBeenCalled();
+  });
+
+  it('carries the meta row', () => {
+    const element = mount(entry()).nativeElement as HTMLElement;
+
+    expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+  });
+});

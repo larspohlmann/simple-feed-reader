@@ -45,6 +45,7 @@ import { ReadingScope } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
+import { LinkCardsComponent } from '../link-cards/link-cards.component';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { decorateArticle } from '../decorators/decorate-article';
@@ -78,6 +79,7 @@ import { EntryAudio } from '../../audio/entry-audio';
     ErrorBannerComponent,
     EntryCommentsComponent,
     ReaderTocComponent,
+    LinkCardsComponent,
   ],
   providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope],
   templateUrl: './reader-view.component.html',

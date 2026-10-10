@@ -47,6 +47,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  linkCards: [],
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,

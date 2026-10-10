@@ -4,6 +4,7 @@ import { EntryDto } from '../../models';
  *  first — `DEMOTION` walks this ladder and the planner's budget compares on it. */
 export const ENTRY_KINDS = [
   'hero',
+  'link',
   'wide',
   'quote',
   'split',
@@ -16,6 +17,7 @@ export type EntryKind = (typeof ENTRY_KINDS)[number];
 
 export type MagazineBlock =
   | { kind: 'hero'; entry: EntryDto }
+  | { kind: 'link'; entry: EntryDto }
   | { kind: 'wide'; entry: EntryDto }
   | { kind: 'quote'; entry: EntryDto }
   | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
@@ -36,6 +38,7 @@ export type MagazineBlock =
  *  they need only be right relative to each other. */
 export const BLOCK_HEIGHT: Record<EntryKind, number> = {
   hero: 463,
+  link: 463,
   wide: 321,
   quote: 180,
   split: 150,
@@ -49,6 +52,7 @@ export const BLOCK_HEIGHT: Record<EntryKind, number> = {
  *  to `wide` in an image-less view still leaves an image block with no image. */
 export const DEMOTION: Record<EntryKind, EntryKind> = {
   hero: 'wide',
+  link: 'link',
   wide: 'split',
   split: 'thumb',
   thumb: 'compact',

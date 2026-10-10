@@ -1,7 +1,9 @@
 import { planMagazine } from './magazine-planner';
-import { EntryKind, MagazineBlock } from './magazine-block';
+import { BLOCK_HEIGHT, EntryKind, MagazineBlock } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
+import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
+import { LinkCardDto } from '../../link-card';
 import { entryImage } from '../preview-image';
 
 const NOW = '2026-07-29T12:00:00.000Z';
@@ -38,6 +40,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  linkCards: [],
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -60,6 +63,16 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     summary: 'A wire-service summary long enough to fill a pull quote. '.repeat(8),
     ...over,
   });
+
+const CARD: LinkCardDto = {
+  url: 'https://news.test/story',
+  title: 'A shared story',
+  description: null,
+  imageUrl: null,
+  siteName: 'news.test',
+};
+const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  big(id, { titleDerived: true, linkCards: [CARD], ...over });
 
 const many = (count: number, make: (index: number) => EntryDto): EntryDto[] =>
   Array.from({ length: count }, (_, index) => make(index + 1));
@@ -770,5 +783,81 @@ describe('planMagazine', () => {
     );
     expect(groups.length).toBe(2);
     expect(groups.every((block) => block.kind === 'group' && block.entries.length >= 1)).toBe(true);
+  });
+
+  describe('a post sharing a link', () => {
+    const PAGE_HEIGHT_CAP = 1100;
+
+    /** The image family's pages in order, each as long as the template it was given. */
+    const imagePages = (blocks: MagazineBlock[]): MagazineBlock[][] => {
+      const pages: MagazineBlock[][] = [];
+      let start = 0;
+      for (let page = 0; start < blocks.length; page++) {
+        const length = IMAGE_TEMPLATES[(page * 5 + 1) % IMAGE_TEMPLATES.length].length;
+        pages.push(blocks.slice(start, start + length));
+        start += length;
+      }
+      return pages;
+    };
+    const height = (page: MagazineBlock[]): number =>
+      page.reduce((sum, block) => sum + BLOCK_HEIGHT[block.kind as EntryKind], 0);
+
+    it('is a link block in whatever slot it lands', () => {
+      const entries = many(60, (index) =>
+        index % 3 === 0 ? linkPost(index, { subscriptionId: 2 }) : big(index),
+      );
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      const linkKinds = blocks
+        .filter((block) => block.kind !== 'group' && block.entry.linkCards.length > 0)
+        .map((block) => block.kind);
+      expect(linkKinds).toHaveLength(20);
+      expect(linkKinds.every((kind) => kind === 'link')).toBe(true);
+    });
+
+    it('never reaches past a link post, which would hand its block to an entry without cards', () => {
+      const entries = many(
+        60,
+        (index) => [entryAt(index, { summary: null }), linkPost(index), big(index)][index % 3],
+      );
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      expect(
+        blocks
+          .filter((block) => block.kind === 'link')
+          .every((block) => block.kind === 'link' && block.entry.linkCards.length > 0),
+      ).toBe(true);
+    });
+
+    it('keeps the kinds of a post without cards and of an article with them', () => {
+      const entries = many(60, (index) =>
+        index % 2 === 0 ? big(index, { titleDerived: true }) : big(index, { linkCards: [CARD] }),
+      );
+      const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(blockKinds).not.toContain('link');
+      expect(blockKinds).toContain('hero');
+    });
+
+    it('counts a link block against the page height cap', () => {
+      const entries = many(120, (index) => (index % 6 === 0 ? linkPost(index) : big(index)));
+      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(pages.some((page) => page.some((block) => block.kind === 'link'))).toBe(true);
+      expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
+
+    it('keeps the cap when the tallest slot reaches ahead past an image-less entry', () => {
+      const entries = many(120, (index) =>
+        index % 6 === 0
+          ? linkPost(index)
+          : index % 6 === 1
+            ? entryAt(index, { summary: null })
+            : big(index),
+      );
+      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
   });
 });

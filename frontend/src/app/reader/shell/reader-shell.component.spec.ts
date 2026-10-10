@@ -122,6 +122,7 @@ describe('ReaderShellComponent', () => {
     isViewed: false,
     isShort: false,
     titleDerived: false,
+    linkCards: [],
     imageAspectRatio: null,
     discussionUrl: null,
     comments: null,

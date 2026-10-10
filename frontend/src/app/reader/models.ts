@@ -1,3 +1,5 @@
+import { LinkCardDto } from './link-card';
+
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup
  *  against the sidebar's saved-search list to render or link. */
@@ -223,6 +225,8 @@ export interface EntryDto {
   isShort: boolean;
   /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
   titleDerived: boolean;
+  /** Preview cards for the links a post shares, in the order the post names them (#1502). */
+  linkCards: LinkCardDto[];
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */

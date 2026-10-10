@@ -1,0 +1,21 @@
+@for (card of cards(); track card.url) {
+  <figure class="link-card">
+    <a [href]="card.url" target="_blank" rel="noopener noreferrer">
+      @if (card.imageUrl) {
+        <img
+          appProxiedImage
+          [src]="card.imageUrl"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+        />
+      }
+      <strong>{{ card.title }}</strong>
+      @if (card.description) {
+        <span>{{ card.description }}</span>
+      }
+      <small>{{ card.siteName }}</small>
+    </a>
+  </figure>
+}
