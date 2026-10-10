@@ -45,6 +45,14 @@ final class FeedImageExtractorTest extends TestCase
         return new CoreElement($channel, $channel->namespaceURI);
     }
 
+    private static function rss1Channel(\DOMDocument $document): CoreElement
+    {
+        $channel = $document->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $channel);
+
+        return new CoreElement($channel, self::RSS1_NS);
+    }
+
     private function atomRoot(string $xml): \DOMElement
     {
         $root = $this->document($xml)->documentElement;
@@ -142,7 +150,7 @@ final class FeedImageExtractorTest extends TestCase
 
         self::assertSame(
             'https://example.com/logo.png',
-            FeedImageExtractor::fromRss1Document($document, self::RSS1_NS),
+            FeedImageExtractor::fromRss1Channel(self::rss1Channel($document)),
         );
     }
 
@@ -166,7 +174,7 @@ final class FeedImageExtractorTest extends TestCase
 
         self::assertSame(
             'https://example.com/logo.png',
-            FeedImageExtractor::fromRss1Document($document, self::RSS1_NS),
+            FeedImageExtractor::fromRss1Channel(self::rss1Channel($document)),
         );
     }
 
@@ -180,7 +188,7 @@ final class FeedImageExtractorTest extends TestCase
             </rdf:RDF>
             XML);
 
-        self::assertNull(FeedImageExtractor::fromRss1Document($document, self::RSS1_NS));
+        self::assertNull(FeedImageExtractor::fromRss1Channel(self::rss1Channel($document)));
     }
 
     public function testReadsTheAtomLogo(): void
