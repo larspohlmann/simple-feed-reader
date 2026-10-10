@@ -22,19 +22,14 @@ final class LinkedPlainText
     {
         return preg_replace_callback(
             self::TEXT_THEN_URL_PATTERN,
-            static fn (array $match): string => self::escaped($match[1]) . self::link($match[2] ?? ''),
+            static fn (array $match): string => HtmlEscape::text($match[1]) . self::link($match[2] ?? ''),
             $line,
-        ) ?? self::escaped($line);
+        ) ?? HtmlEscape::text($line);
     }
 
     private static function link(string $url): string
     {
-        return $url === '' ? '' : '<a href="' . self::escaped($url) . '">' . self::escaped($url) . '</a>';
-    }
-
-    private static function escaped(string $text): string
-    {
-        return htmlspecialchars($text, \ENT_QUOTES | \ENT_HTML5);
+        return $url === '' ? '' : '<a href="' . HtmlEscape::text($url) . '">' . HtmlEscape::text($url) . '</a>';
     }
 
     private function __construct()

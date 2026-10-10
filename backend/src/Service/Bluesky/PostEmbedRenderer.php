@@ -10,6 +10,7 @@ use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\AtPostUri;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Text\Support\HtmlEscape;
 use App\Service\Text\Support\ParagraphedText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
@@ -36,9 +37,10 @@ final readonly class PostEmbedRenderer
         }
 
         return match ($embed->type()) {
-            self::RECORD => $this->quoteOrFallback($embed->node('record'), $postUrl),
-            self::RECORD_WITH_MEDIA => $this->quoteOrFallback($embed->node('record')->node('record'), $postUrl)
-                ->followedBy($this->media($embed->node('media'), $postUrl)),
+            self::RECORD => $this->quote($embed->node('record')) ?? $this->fallback($postUrl),
+            self::RECORD_WITH_MEDIA => (
+                $this->quote($embed->node('record')->node('record')) ?? $this->fallback($postUrl)
+            )->followedBy($this->media($embed->node('media'), $postUrl)),
             default => $this->media($embed, $postUrl),
         };
     }
@@ -67,8 +69,8 @@ final readonly class PostEmbedRenderer
             $ratio = $image->node('aspectRatio');
             $tags .= sprintf(
                 '<img src="%s" alt="%s"%s>',
-                self::escaped($url),
-                self::escaped($image->string('alt') ?? ''),
+                HtmlEscape::text($url),
+                HtmlEscape::text($image->string('alt') ?? ''),
                 self::dimensions($ratio),
             );
             $media[] = new ParsedMediumModel($url, VisualMediaKind::Image, $ratio->int('width'), $ratio->int('height'));
@@ -90,13 +92,13 @@ final readonly class PostEmbedRenderer
         $thumbnail = HttpsImageUrl::orNull($embed->string('thumbnail'));
         $width = $embed->node('aspectRatio')->int('width');
         $height = $embed->node('aspectRatio')->int('height');
-        $poster = $thumbnail === null ? '' : sprintf(' poster="%s"', self::escaped($thumbnail));
+        $poster = $thumbnail === null ? '' : sprintf(' poster="%s"', HtmlEscape::text($thumbnail));
 
         return new RenderedEmbedModel(
             sprintf(
                 '<figure class="post-video"><video controls preload="none"%s src="%s"></video></figure>',
                 $poster,
-                self::escaped($playlist),
+                HtmlEscape::text($playlist),
             ) . self::linkParagraph($postUrl, self::WATCH_LABEL),
             $thumbnail === null ? null : new DeclaredImageModel($thumbnail, $width, $height),
             [new ParsedMediumModel($playlist, VisualMediaKind::Video, $width, $height, $thumbnail)],
@@ -110,33 +112,33 @@ final readonly class PostEmbedRenderer
             return null;
         }
         $thumbnail = HttpsImageUrl::orNull($external->string('thumb'));
-        $card = ($thumbnail === null ? '' : sprintf('<img src="%s" alt="">', self::escaped($thumbnail)))
+        $card = ($thumbnail === null ? '' : sprintf('<img src="%s" alt="">', HtmlEscape::text($thumbnail)))
             . self::optionalTag('strong', $external->string('title'))
             . self::optionalTag('span', $external->string('description'))
             . self::optionalTag('small', self::host($url));
 
         return new RenderedEmbedModel(
-            sprintf('<figure class="link-card"><a href="%s">%s</a></figure>', self::escaped($url), $card),
+            sprintf('<figure class="link-card"><a href="%s">%s</a></figure>', HtmlEscape::text($url), $card),
             $thumbnail === null ? null : new DeclaredImageModel($thumbnail),
             linkCardUrl: $url,
         );
     }
 
-    private function quoteOrFallback(JsonNodeModel $record, string $postUrl): RenderedEmbedModel
+    private function quote(JsonNodeModel $record): ?RenderedEmbedModel
     {
         $quotedUrl = AtPostUri::webUrl($record->string('uri') ?? '');
         $value = $record->node('value');
         if ($record->type() !== self::VIEW_RECORD || $value->type() !== self::POST_RECORD || $quotedUrl === null) {
-            return $this->fallback($postUrl);
+            return null;
         }
         $text = $value->string('text');
-        $paragraphs = $text === null ? '' : ParagraphedText::asHtml($text, self::escaped(...));
+        $paragraphs = $text === null ? '' : ParagraphedText::asHtml($text, HtmlEscape::text(...));
 
         return new RenderedEmbedModel(sprintf(
             '<figure class="quote-post"><blockquote>%s<footer><a href="%s">%s</a></footer></blockquote></figure>',
             $paragraphs,
-            self::escaped($quotedUrl),
-            self::escaped(self::authorName($record->node('author'))),
+            HtmlEscape::text($quotedUrl),
+            HtmlEscape::text(self::authorName($record->node('author'))),
         ));
     }
 
@@ -173,16 +175,11 @@ final readonly class PostEmbedRenderer
 
     private static function optionalTag(string $tag, ?string $text): string
     {
-        return $text === null ? '' : sprintf('<%1$s>%2$s</%1$s>', $tag, self::escaped($text));
+        return $text === null ? '' : sprintf('<%1$s>%2$s</%1$s>', $tag, HtmlEscape::text($text));
     }
 
     private static function linkParagraph(string $url, string $label): string
     {
-        return sprintf('<p><a href="%s">%s</a></p>', self::escaped($url), $label);
-    }
-
-    private static function escaped(string $text): string
-    {
-        return htmlspecialchars($text, \ENT_QUOTES | \ENT_SUBSTITUTE | \ENT_HTML5);
+        return sprintf('<p><a href="%s">%s</a></p>', HtmlEscape::text($url), $label);
     }
 }
