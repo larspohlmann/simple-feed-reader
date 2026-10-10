@@ -196,6 +196,13 @@ final class Rss1ParserTest extends TestCase
         self::assertSame('Core', $feed->title);
     }
 
+    public function testADocumentWithoutARootIsAParseError(): void
+    {
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss1()->parseFeed(new \DOMDocument(), []);
+    }
+
     public function testADocumentWithoutAChannelIsAParseError(): void
     {
         $document = new \DOMDocument();
