@@ -33,10 +33,10 @@ describe('addCinemaToggles', () => {
     expect(element.querySelector('.reader-cinema > video')).not.toBeNull();
   });
 
-  it('leaves portrait and tall embeds and audio alone', () => {
+  it('leaves portrait embeds, audio embeds and native audio alone', () => {
     const element = host(
       '<div class="reader-embed reader-embed--portrait"><iframe></iframe></div>' +
-        '<div class="reader-embed reader-embed--tall"><iframe></iframe></div>' +
+        '<div class="reader-embed reader-embed--audio"><iframe></iframe></div>' +
         '<audio src="https://cdn/a.mp3"></audio>',
     );
     addCinemaToggles(element, labels);
