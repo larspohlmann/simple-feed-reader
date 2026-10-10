@@ -14,9 +14,15 @@ final class TrailingUrl
     public static function removedFrom(string $html, string $url): string
     {
         $body = HtmlDocumentParser::parseFragment($html)->body;
-        $last = $body === null ? null : self::lastText($body);
-        $kept = $last === null ? '' : rtrim($last->data);
-        if ($body === null || $last === null || !str_ends_with($kept, $url)) {
+        if ($body === null) {
+            return $html;
+        }
+        $last = self::lastText($body);
+        if ($last === null) {
+            return $html;
+        }
+        $kept = rtrim($last->data);
+        if (!str_ends_with($kept, $url)) {
             return $html;
         }
 
@@ -31,10 +37,11 @@ final class TrailingUrl
     private static function lastText(Node $node): ?Text
     {
         for ($child = $node->lastChild; $child !== null; $child = $child->previousSibling) {
-            $found = $child instanceof Element ? self::lastText($child) : null;
-            if ($child instanceof Text) {
-                $found = $child;
-            }
+            $found = match (true) {
+                $child instanceof Text => $child,
+                $child instanceof Element => self::lastText($child),
+                default => null,
+            };
             if ($found !== null && trim($found->data) !== '') {
                 return $found;
             }
