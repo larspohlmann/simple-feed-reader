@@ -78,3 +78,8 @@ framework:
             image_proxy.cookie.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 3600
+
+            # The posts whose link cards were built once (#1502); a lost entry only repeats that work on the next open.
+            post_link_cards.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 2592000

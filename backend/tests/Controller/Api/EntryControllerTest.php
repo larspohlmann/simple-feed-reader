@@ -20,13 +20,18 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\LinkCard\PostLinkCards;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryControllerTest extends WebTestCase
@@ -1294,6 +1299,71 @@ final class EntryControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
+    }
+
+    public function testOpeningAPostBuildsItsCardsAndAnswersWithTheLinkedBody(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-post@example.com');
+        $pages = $this->installPageClient();
+        $entryId = $this->seedPostSharing($user, 'https://example.com/story');
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(1, $pages->getRequestsCount());
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertIsString($body['entry']['contentHtml']);
+        self::assertStringContainsString('<a href="https://example.com/story"', $body['entry']['contentHtml']);
+    }
+
+    public function testOpeningAStrangersPostIs404WithoutFetchingAPage(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-get-post-idor@example.com');
+        [, $stranger] = $this->auth('e-get-post-owner@example.com');
+        $pages = $this->installPageClient();
+        $entryId = $this->seedPostSharing($stranger, 'https://example.com/story');
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame(0, $pages->getRequestsCount());
+    }
+
+    private function installPageClient(): MockHttpClient
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $pages = new MockHttpClient(new MockResponse(
+            '<html lang="en"><head><meta property="og:title" content="Story"></head></html>',
+            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
+        ));
+        self::getContainer()->set(
+            PostLinkCards::class,
+            PostLinkCardsWiring::build($entityManager, $pages, new NullLogger()),
+        );
+
+        return $pages;
+    }
+
+    private function seedPostSharing(User $user, string $sharedUrl): int
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $feed = new Feed('https://mastodon.example/@someone-' . uniqid('', true) . '.rss');
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $post = new Entry($feed, 'https://mastodon.example/@someone/1', null, 'Post', $july1, $july1);
+        $post->setContentHtml('<p>Worth a read: ' . $sharedUrl . '</p>');
+        $post->markTitleDerived();
+        $entityManager->persist($post);
+        $entityManager->flush();
+
+        return $post->requireId();
     }
 
     public function testGetMissingEntryIs404(): void

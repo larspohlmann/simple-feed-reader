@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Entity\Entry;
+use App\Entity\LinkCard;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -12,6 +14,7 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\LinkCard\PostLinkCards;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
@@ -22,6 +25,7 @@ use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
@@ -29,6 +33,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class FeedOutcomePersisterTest extends DbTestCase
 {
@@ -60,6 +66,31 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame(2, $result->entriesCreated);
         self::assertSame('"e1"', $feed->getEtag());
         self::assertSame([], $this->logger->records);
+    }
+
+    public function testAFetchedPostGetsACardForTheLinkItShares(): void
+    {
+        $feed = $this->feed('https://mastodon.example/@someone.rss');
+        $client = new MockHttpClient(new MockResponse(
+            '<html lang="en"><head><meta property="og:title" content="Shared story"></head></html>',
+            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
+        ));
+        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, $client, new NullLogger());
+
+        $this->persister($this->entityManager, $postLinkCards)->persist(
+            $feed,
+            FetchOutcomeModel::succeeded(
+                FetchResponseModel::fetched($feed->getUrl(), false, $this->postRss(), null, null),
+            ),
+            $this->clock->now(),
+        );
+
+        $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'post-1']);
+        self::assertInstanceOf(Entry::class, $post);
+        $cards = $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]);
+        self::assertCount(1, $cards);
+        self::assertSame('https://example.com/story', $cards[0]->getContent()->url);
+        self::assertSame('Shared story', $cards[0]->getContent()->title);
     }
 
     public function testAThrottledFetchIsLoggedAtInfo(): void
@@ -211,8 +242,10 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame($target, $feed->getUrl());
     }
 
-    private function persister(EntityManagerInterface $entityManager): FeedOutcomePersister
-    {
+    private function persister(
+        EntityManagerInterface $entityManager,
+        ?PostLinkCards $postLinkCards = null,
+    ): FeedOutcomePersister {
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
         $bodyParser = self::getContainer()->get(FeedBodyParser::class);
@@ -226,6 +259,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
             FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             PostEnrichers::idle($this->entityManager, $this->clock),
+            $postLinkCards ?? PostLinkCardsWiring::offline($this->entityManager),
             $this->logger,
         );
     }
@@ -255,6 +289,14 @@ final class FeedOutcomePersisterTest extends DbTestCase
         return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>T</title>'
             . '<item><title>One</title><link>https://one.example.com/1</link><guid>one-1</guid></item>'
             . '<item><title>Two</title><link>https://one.example.com/2</link><guid>one-2</guid></item>'
+            . '</channel></rss>';
+    }
+
+    private function postRss(): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>T</title>'
+            . '<item><link>https://mastodon.example/@someone/1</link><guid>post-1</guid>'
+            . '<description>&lt;p&gt;Worth a read: https://example.com/story&lt;/p&gt;</description></item>'
             . '</channel></rss>';
     }
 }

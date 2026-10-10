@@ -29,6 +29,7 @@ use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\ReadsFixtures;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -188,6 +189,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
             $postEnricher,
+            PostLinkCardsWiring::offline($this->entityManager),
             new NullLogger(),
         );
     }

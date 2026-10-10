@@ -158,6 +158,7 @@ final readonly class RefreshRunners
                 FeedSchedulers::build($this->clock),
                 $indexer,
                 PostEnrichers::idle($this->entityManager, $this->clock),
+                PostLinkCardsWiring::offline($this->entityManager),
                 new NullLogger(),
             ),
             new MissingFaviconResolver(
