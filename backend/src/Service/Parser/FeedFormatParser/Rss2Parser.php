@@ -42,13 +42,14 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
-        $root = $parent->parentNode;
-        if (!$root instanceof \DOMElement || !XmlHelper::isRoot($root)) {
+        $root = $element->ownerDocument?->documentElement;
+        if ($root === null) {
             return false;
         }
         $core = CoreElement::inOwnNamespace($root);
+        $channel = $core->isCore($element, 'item') ? $core->child('channel') : null;
 
-        return $core->isCore($parent, 'channel') && $core->isCore($element, 'item');
+        return $channel !== null && $parent->isSameNode($channel);
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel

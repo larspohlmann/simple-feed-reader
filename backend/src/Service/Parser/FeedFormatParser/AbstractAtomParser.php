@@ -54,7 +54,6 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     /** Feed-level description element ('subtitle' in 1.0, 'tagline' in 0.3). */
     abstract protected function descriptionElement(): string;
 
-    /** Only the feed's own children: an <entry> nested anywhere else was never one. */
     public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
         return XmlHelper::isRoot($parent) && XmlHelper::isElement($element, 'entry', $this->namespaceUri());

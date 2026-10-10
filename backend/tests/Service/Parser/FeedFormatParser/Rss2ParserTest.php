@@ -557,43 +557,48 @@ final class Rss2ParserTest extends TestCase
 
     public function testAnItemOutsideTheChannelIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(FeedFormatParsers::feed(<<<'XML'
             <rss version="2.0">
               <item><title>Decoy</title></item>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
             </rss>
-            XML));
+            XML)));
     }
 
     public function testAnItemUnderAnotherRootChildIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(FeedFormatParsers::feed(<<<'XML'
             <rss version="2.0" xmlns:x="urn:example:other">
               <x:meta><item><title>Decoy</title></item></x:meta>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
             </rss>
-            XML));
+            XML)));
     }
 
     public function testAnItemOfANestedChannelIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(FeedFormatParsers::feed(<<<'XML'
             <rss version="2.0">
               <section><channel><item><title>Decoy</title></item></channel></section>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
             </rss>
-            XML));
+            XML)));
     }
 
     public function testAnItemInAnotherNamespaceIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(FeedFormatParsers::feed(<<<'XML'
             <rss version="2.0">
               <channel><title>Blog</title>
                 <item xmlns="urn:example:other"><title>Decoy</title></item>
                 <item><title>Core</title></item>
               </channel>
             </rss>
-            XML));
+            XML)));
+    }
+
+    public function testADetachedItemIsNotAnEntry(): void
+    {
+        self::assertFalse(FeedFormatParsers::rss2()->isEntry(new \DOMElement('item'), new \DOMDocument()));
     }
 }
