@@ -23,6 +23,9 @@
    inside a coasting scroller on stopping it (#1332). Isolated so nothing that
    scrolls, dimmed paragraphs included, paints over that chrome. */
 .scroller {
+  --reader-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
+
+  container: reader-pane / size;
   height: 100%;
   overflow: auto;
   isolation: isolate;
@@ -34,18 +37,16 @@
 .reader {
   position: relative;
   min-height: 100%;
-  padding-top: calc(var(--reader-mini-h) + var(--reader-bar-h) + var(--bar-gap));
+  padding-top: var(--reader-top);
   background: var(--surface-read);
 }
 
 /* Split pane: the shell's bar floats over this panel and the toolbar hangs
    beneath it, never retracting, so the whole stack stays covered. */
 .with-bar .scroller {
-  scroll-padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
-}
+  --reader-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
 
-.with-bar .reader {
-  padding-top: calc(var(--app-bar-h, var(--bar-h)) + var(--reader-bar-h) + var(--bar-gap));
+  scroll-padding-top: var(--reader-top);
 }
 
 /* Tail padding so a long article's closing paragraph can reach the reading
