@@ -57,9 +57,11 @@ final readonly class YouTubeVideoChannelFeed implements ShareLinkFeedInterface
             return null;
         }
 
-        return '/watch' === $path
-            ? $this->watchedVideoId($enteredUrl)
-            : (1 === preg_match(self::VIDEO_PATH, $path, $match) ? $match[1] : null);
+        if ('/watch' === $path) {
+            return $this->watchedVideoId($enteredUrl);
+        }
+
+        return 1 === preg_match(self::VIDEO_PATH, $path, $match) ? $match[1] : null;
     }
 
     private function watchedVideoId(string $enteredUrl): ?string
