@@ -11,6 +11,7 @@ use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Tests\Support\Bluesky;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +21,6 @@ final class PostEmbedRendererTest extends TestCase
     use ReadsFixtures;
 
     private const string MOTHER_JONES = 'https://bsky.app/profile/did:plc:qobvnkudcv3zlaklxxjduqoi/post/';
-    private const string CARD = 'https://www.motherjones.com/politics/2026/10/ice-shooting-nypd-bronx-tisch/';
     private const string THUMBNAILS = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/';
     private const string CARD_THUMB = self::THUMBNAILS
         . 'bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y';
@@ -40,13 +40,13 @@ final class PostEmbedRendererTest extends TestCase
         $embed = $this->rendered('external');
 
         self::assertSame(
-            '<figure class="link-card"><a href="' . self::CARD . '"><img src="' . self::CARD_THUMB . '" alt="">'
+            '<figure class="link-card"><a href="' . Bluesky::CARD . '"><img src="' . self::CARD_THUMB . '" alt="">'
                 . '<strong>After ICE Shooting, Progressives Want New York&apos;s Police Commissioner to Step Down'
                 . '</strong><span>28-year-old Oscar Belgal still has a bullet lodged in his body.</span>'
                 . '<small>motherjones.com</small></a></figure>',
             $embed->html,
         );
-        self::assertSame(self::CARD, $embed->linkCardUrl);
+        self::assertSame(Bluesky::CARD, $embed->linkCardUrl);
         self::assertSame(self::CARD_THUMB, $embed->leadImage?->url);
         self::assertSame([], $embed->media);
     }
@@ -300,7 +300,7 @@ final class PostEmbedRendererTest extends TestCase
                 . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>',
         ]];
         yield 'link card' => ['external', [
-            '<figure class="link-card"><a href="' . self::CARD . '" rel="noopener noreferrer" target="_blank">'
+            '<figure class="link-card"><a href="' . Bluesky::CARD . '" rel="noopener noreferrer" target="_blank">'
                 . '<img src="' . self::CARD_THUMB . '" alt /><strong>',
             '<small>motherjones.com</small></a></figure>',
         ]];

@@ -13,6 +13,7 @@ use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Tests\Support\Bluesky;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
 
@@ -20,7 +21,6 @@ final class EntryEmbedWriterTest extends TestCase
 {
     use ReadsFixtures;
 
-    private const string CARD = 'https://www.motherjones.com/politics/2026/10/ice-shooting-nypd-bronx-tisch/';
     private const string CARD_THUMB = 'https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/'
         . 'bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y';
     private const string VIDEO = 'https://video.bsky.app/watch/did%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi/'
@@ -30,12 +30,12 @@ final class EntryEmbedWriterTest extends TestCase
 
     public function testALinkCardReplacesTheTrailingUrlAndSetsSummaryAndImage(): void
     {
-        $entry = self::entry('<p>Read this.<br />' . self::CARD . '</p>');
+        $entry = self::entry('<p>Read this.<br />' . Bluesky::CARD . '</p>');
 
         self::assertTrue($this->writer()->fill($entry, $this->post('external')));
 
         self::assertSame(
-            '<p>Read this.</p><figure class="link-card"><a href="' . self::CARD . '" rel="noopener noreferrer"'
+            '<p>Read this.</p><figure class="link-card"><a href="' . Bluesky::CARD . '" rel="noopener noreferrer"'
                 . ' target="_blank"><img src="' . self::CARD_THUMB . '" alt /><strong>After ICE Shooting, Progressives'
                 . ' Want New York&#039;s Police Commissioner to Step Down</strong><span>28-year-old Oscar Belgal still'
                 . ' has a bullet lodged in his body.</span><small>motherjones.com</small></a></figure>',

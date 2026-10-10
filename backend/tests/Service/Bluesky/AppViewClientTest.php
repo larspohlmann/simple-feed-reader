@@ -9,6 +9,7 @@ use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
+use App\Tests\Support\Bluesky;
 use App\Tests\Support\ReadsFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -20,7 +21,6 @@ final class AppViewClientTest extends TestCase
 {
     use ReadsFixtures;
 
-    private const string GET_POSTS = 'https://public.api.bsky.app/xrpc/app.bsky.feed.getPosts';
     private const string TISCH = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
     private const string GONE = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxgone';
     private const string TISCH_QUERY = 'uris=at%3A%2F%2Fdid%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi%2Fapp.bsky.feed.post'
@@ -40,7 +40,7 @@ final class AppViewClientTest extends TestCase
 
     public function testAsksForEveryUriInOneRequestAndKeysTheAnswerByUri(): void
     {
-        $url = self::GET_POSTS . '?' . self::TISCH_QUERY . '&' . self::GONE_QUERY;
+        $url = Bluesky::GET_POSTS . '?' . self::TISCH_QUERY . '&' . self::GONE_QUERY;
         $this->fetcher->willReturnBody($url, $this->fixture('Bluesky/external.json'));
 
         $posts = $this->client()->posts([self::TISCH, self::GONE]);
@@ -52,7 +52,7 @@ final class AppViewClientTest extends TestCase
 
     public function testAPostWithoutAUriIsLeftOut(): void
     {
-        $url = self::GET_POSTS . '?' . self::TISCH_QUERY;
+        $url = Bluesky::GET_POSTS . '?' . self::TISCH_QUERY;
         $this->fetcher->willReturnBody($url, '{"posts":[{"cid":"bafy"},{"uri":"' . self::TISCH . '"}]}');
 
         self::assertSame([self::TISCH], array_keys($this->client()->posts([self::TISCH])));
@@ -61,7 +61,7 @@ final class AppViewClientTest extends TestCase
     public function testAThrottledAnswerIsRecordedForTheHostAndRethrown(): void
     {
         $this->fetcher->willThrow(
-            self::GET_POSTS . '?' . self::TISCH_QUERY,
+            Bluesky::GET_POSTS . '?' . self::TISCH_QUERY,
             new FeedThrottledException('HTTP 429', 300),
         );
         $client = $this->client();
@@ -74,13 +74,13 @@ final class AppViewClientTest extends TestCase
         }
 
         self::assertTrue($client->isThrottled());
-        self::assertSame(300, $this->throttle->remainingSeconds(self::GET_POSTS));
+        self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
     }
 
     public function testAnotherFetchFailureRecordsNoThrottle(): void
     {
         $this->fetcher->willThrow(
-            self::GET_POSTS . '?' . self::TISCH_QUERY,
+            Bluesky::GET_POSTS . '?' . self::TISCH_QUERY,
             new FeedUnreachableException('timeout'),
         );
         $client = $this->client();
@@ -105,7 +105,7 @@ final class AppViewClientTest extends TestCase
     #[DataProvider('unusableAnswers')]
     public function testAnAnswerWithoutAPostsListIsRejected(string $body): void
     {
-        $this->fetcher->willReturnBody(self::GET_POSTS . '?' . self::TISCH_QUERY, $body);
+        $this->fetcher->willReturnBody(Bluesky::GET_POSTS . '?' . self::TISCH_QUERY, $body);
 
         $this->expectException(AppViewAnswerException::class);
 
