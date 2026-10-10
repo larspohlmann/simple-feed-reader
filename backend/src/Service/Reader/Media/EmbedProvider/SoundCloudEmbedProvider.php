@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * The SoundCloud widget. The track id is permanent and the src is unsigned, so
  * the player survives a cache with no TTL. Only the track is kept: rebuilding
@@ -45,6 +47,11 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
     {
         return '^https://' . preg_quote(self::HOST, '#')
             . '/player/\?url=https%3A%2F%2Fapi\.soundcloud\.com%2Ftracks%2F\d+$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Audio;
     }
 
     public function sourceHosts(): array

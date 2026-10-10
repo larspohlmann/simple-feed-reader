@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * Brightcove's hosted player page, declared as a VideoObject's embedUrl. The video id lives in the query, so the
  * query is reduced to it rather than dropped; the player id is kept verbatim.
@@ -48,6 +50,11 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
     public function framePattern(): string
     {
         return '^https://' . preg_quote(self::HOST, '#') . '/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Video;
     }
 
     public function sourceHosts(): array

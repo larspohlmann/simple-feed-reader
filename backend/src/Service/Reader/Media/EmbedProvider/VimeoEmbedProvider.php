@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * Vimeo player embed. Public video is `vimeo.com/<id>`; unlisted carries a
  * privacy hash as a second segment, which the player needs as `?h=<hash>`.
@@ -43,6 +45,11 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
     public function framePattern(): string
     {
         return '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Video;
     }
 
     public function sourceHosts(): array

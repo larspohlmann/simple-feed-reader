@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * The Spotify embed player. The content type and its base62 id are the whole payload, so the query (a `?si=` share
  * token, the embed builder's `utm_source`) goes, and an older `embed-podcast` path segment folds to `embed`.
@@ -39,6 +41,11 @@ final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
     public function framePattern(): string
     {
         return '^https://' . preg_quote(self::HOST, '#') . '/embed/(?:' . self::TYPE . ')/' . self::ID . '$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Audio;
     }
 
     public function sourceHosts(): array

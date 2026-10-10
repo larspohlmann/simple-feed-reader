@@ -38,6 +38,24 @@ final class EmbedFrameAllowlistTest extends KernelTestCase
         );
     }
 
+    public function testEveryCommittedEntryDeclaresAnAudioOrVideoKind(): void
+    {
+        self::bootKernel();
+        $entries = json_decode(
+            (string) file_get_contents(DumpEmbedFrameAllowlistCommand::allowlistPath($this->projectDir())),
+            true,
+            flags: \JSON_THROW_ON_ERROR,
+        );
+
+        self::assertIsArray($entries);
+        self::assertNotEmpty($entries);
+        foreach ($entries as $entry) {
+            self::assertIsArray($entry);
+            self::assertIsString($entry['pattern'] ?? null);
+            self::assertContains($entry['kind'] ?? null, ['audio', 'video']);
+        }
+    }
+
     public function testEveryPatternIsFullyAnchored(): void
     {
         foreach ($this->providers()->framePatterns() as $pattern) {

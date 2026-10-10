@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\TestCase;
 
 final class SpotifyEmbedProviderTest extends TestCase
@@ -81,5 +82,10 @@ final class SpotifyEmbedProviderTest extends TestCase
         self::assertFalse(
             $this->provider->matches('https://open.spotify.com.evil.test/embed/playlist/27uRYdAHvcKADidfnR8BN4'),
         );
+    }
+
+    public function testIsAnAudioPlayer(): void
+    {
+        self::assertSame(EmbedKind::Audio, $this->provider->kind());
     }
 }

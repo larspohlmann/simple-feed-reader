@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\TestCase;
 
 final class SoundCloudEmbedProviderTest extends TestCase
@@ -79,5 +80,10 @@ final class SoundCloudEmbedProviderTest extends TestCase
             'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908',
             $this->provider->normalize($src)
         );
+    }
+
+    public function testIsAnAudioPlayer(): void
+    {
+        self::assertSame(EmbedKind::Audio, $this->provider->kind());
     }
 }

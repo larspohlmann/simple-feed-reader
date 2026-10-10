@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\DailymotionEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\TestCase;
 
 final class DailymotionEmbedProviderTest extends TestCase
@@ -67,5 +68,10 @@ final class DailymotionEmbedProviderTest extends TestCase
     public function testRejectsALookalikeHost(): void
     {
         self::assertFalse($this->provider->matches('https://www.dailymotion.com.evil.test/embed/video/x7tgad0'));
+    }
+
+    public function testIsAVideoPlayer(): void
+    {
+        self::assertSame(EmbedKind::Video, $this->provider->kind());
     }
 }
