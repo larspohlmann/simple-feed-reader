@@ -61,6 +61,13 @@
   padding-bottom: 50dvh;
 }
 
+/* A widened video (#1479) can scroll to the top of the pane, however short the article. */
+.reader article:has(.reader-cinema--on) {
+  /* stylelint-disable-next-line declaration-property-unit-allowed-list --
+     a share of the pane height, not a spacing value. */
+  padding-bottom: calc(100cqb - var(--reader-top));
+}
+
 /* Overscroll-to-return affordance: anchored just below the article's end, so a
          pull past the bottom (which translates .reader up) slides it into view.
          .armed marks that releasing now will return to the list. */
