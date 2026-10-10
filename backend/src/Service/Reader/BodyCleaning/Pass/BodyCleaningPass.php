@@ -27,9 +27,19 @@ final class BodyCleaningPass
         $this->embedsRecoveredInBody = true;
     }
 
-    /** The page's media to place: no embed once the body recovered its own, so a video never shows twice. */
+    /**
+     * The page's media to place, so a video never shows twice: no embed once the body recovered its own, and no
+     * video or stream while the body carries a player of its own.
+     */
     public function discoveredMedia(): ArticleMediaModel
     {
-        return $this->embedsRecoveredInBody ? $this->input->media->withoutEmbeds() : $this->input->media;
+        $media = $this->embedsRecoveredInBody ? $this->input->media->withoutEmbeds() : $this->input->media;
+
+        return $this->bodyPlaysAVideo() ? $media->withoutVideos() : $media;
+    }
+
+    private function bodyPlaysAVideo(): bool
+    {
+        return $this->document->querySelector('video[controls][src], video[controls] > source[src]') !== null;
     }
 }
