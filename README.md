@@ -107,6 +107,9 @@ More in the [screenshot gallery](docs/screenshots.md).
   GitHub repository link subscribes to the repository's releases.
 - Mastodon and Bluesky profiles show as posts: the post's own text stands in
   for the missing headline, and the reader shows it without loading a page.
+- A Bluesky post shows what it embeds — images, video, a link card or the
+  post it quotes — fetched from Bluesky's public AppView once the post
+  arrives, and retried on later refreshes for three days.
 - Preview a feed before you subscribe: recent items, whether entries carry
   images, and whether the feed delivers full text or only summaries.
 - Import and export your subscriptions as OPML.
