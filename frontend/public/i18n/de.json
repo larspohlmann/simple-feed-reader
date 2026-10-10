@@ -992,6 +992,10 @@
     "slideshowPosition": "{{current}} von {{total}}",
     "cinema": "Kinomodus",
     "cinemaExit": "Kinomodus beenden",
+    "unplayableVideo": {
+      "title": "Dieses Video lässt sich in deinem Browser nicht abspielen",
+      "action": "Auf der Originalseite ansehen"
+    },
     "audioPlayer": {
       "listen": "Anhören",
       "label": "Audio-Player",

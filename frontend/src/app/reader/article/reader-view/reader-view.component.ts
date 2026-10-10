@@ -49,6 +49,7 @@ import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
+import { replaceUnplayableVideo } from '../decorators/unplayable-videos';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -204,8 +205,8 @@ export class ReaderViewComponent {
       comments: this.commentsSection,
     });
 
-    // Body images arrive through [innerHTML], so one capturing listener gives them the proxy
-    // fallback (error events do not bubble).
+    // Body media arrive through [innerHTML], so one capturing listener gives images the proxy
+    // fallback and failed videos a link out (error events do not bubble).
     effect((onCleanup) => {
       const content = this.content()?.nativeElement;
       if (!content) return;
@@ -213,6 +214,11 @@ export class ReaderViewComponent {
         if (event.target instanceof HTMLImageElement) {
           void this.injector.get(ImageProxyService).recover(event.target);
         }
+        replaceUnplayableVideo(event.target, {
+          pageUrl: this.entry()?.url ?? null,
+          title: this.i18n.translate('reader.unplayableVideo.title'),
+          action: this.i18n.translate('reader.unplayableVideo.action'),
+        });
       };
       content.addEventListener('error', recover, true);
       onCleanup(() => content.removeEventListener('error', recover, true));

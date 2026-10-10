@@ -295,6 +295,20 @@ describe('ReaderViewComponent', () => {
     expect((anchors[1] as HTMLAnchorElement).target).toBe('_blank'); // external decorated
   });
 
+  it('replaces a body video the browser cannot play with a link to the original page', () => {
+    const element = mount(
+      entryWithBody('<video controls src="https://x.test/clip.mp4"></video>', {
+        url: 'https://news.test/story',
+      }),
+    ).nativeElement as HTMLElement;
+
+    element.querySelector('.content video')!.dispatchEvent(new Event('error'));
+
+    expect(element.querySelector('.content video')).toBeNull();
+    const link = element.querySelector<HTMLAnchorElement>('.content figure.link-card a')!;
+    expect(link.href).toBe('https://news.test/story');
+  });
+
   it('gives a body video back the playsinline the sanitizer strips', async () => {
     const element = mount(
       entryWithBody('<video controls playsinline src="https://x.test/clip.mp4"></video>'),

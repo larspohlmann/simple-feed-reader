@@ -15,6 +15,7 @@ import type Hls from 'hls.js';
  * Runs beside `upgradeMediaEmbeds`; a re-render destroys detached instances first.
  */
 const PLAYLIST = /\.m3u8$/i;
+export const isPlaylist = (url: string): boolean => PLAYLIST.test(url);
 const instances = new Map<HTMLVideoElement, Hls>();
 const armed = new WeakSet<HTMLVideoElement>();
 
@@ -22,7 +23,7 @@ export function attachHlsStreams(host: HTMLElement): void {
   destroyDetached();
   for (const video of Array.from(host.querySelectorAll('video'))) {
     const source = video.getAttribute('src') ?? '';
-    if (!PLAYLIST.test(source) || armed.has(video)) continue;
+    if (!isPlaylist(source) || armed.has(video)) continue;
     armed.add(video);
     video.addEventListener('play', () => void play(video, source).catch(() => undefined), {
       once: true,
