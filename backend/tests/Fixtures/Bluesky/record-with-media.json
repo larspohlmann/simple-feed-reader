@@ -1,0 +1,35 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxh7eyc2bs2b",
+      "author": {"did": "did:plc:qobvnkudcv3zlaklxxjduqoi", "handle": "motherjones.com", "displayName": "Mother Jones"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "Come ask Amy anything about her coverage of Kristan Hawkins and the anti-abortion movement!"
+      },
+      "embed": {
+        "media": {
+          "external": {
+            "uri": "https://sh.reddit.com/r/IAmA/comments/1x1n1i1/after_the_fall_of_roe_v_wade_the_antiabortion/",
+            "title": "From the IAmA community on Reddit",
+            "description": "Explore this post and more from the IAmA community",
+            "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/bafkreihbcj6mbqkkoffjnzm4qlwje6vezlsydmbv4hljgllcqrkjs2kg7q"
+          },
+          "$type": "app.bsky.embed.external#view"
+        },
+        "record": {
+          "record": {
+            "$type": "app.bsky.embed.record#viewRecord",
+            "uri": "at://did:plc:rhgbyqyye2vpydw7c75j4wnr/app.bsky.feed.post/3mxh76vhjfk2k",
+            "author": {"did": "did:plc:rhgbyqyye2vpydw7c75j4wnr", "handle": "amylittlefield.bsky.social", "displayName": "Amy Littlefield"},
+            "value": {
+              "$type": "app.bsky.feed.post",
+              "text": "I spent months following Kristan Hawkins, president of Students for Life and one of the country’s most influential anti-abortion leaders, for a profile and doc for @motherjones.com and @revealnews.org \n\nLots of fascinating details didn’t make it into the piece. \n\nHead to Reddit to ask me anything!"
+            }
+          }
+        },
+        "$type": "app.bsky.embed.recordWithMedia#view"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t",
+      "author": {"did": "did:plc:qobvnkudcv3zlaklxxjduqoi", "handle": "motherjones.com", "displayName": "Mother Jones"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "Billionaire heiress Jessica Tisch is a holdover from Eric Adams’ mayoral administration who has pushed to expand surveillance infrastructure in New York City. Progressives are calling on her to step down if ICE doesn't leave the city. www.motherjones.com/politics/202..."
+      },
+      "embed": {
+        "external": {
+          "uri": "https://www.motherjones.com/politics/2026/10/ice-shooting-nypd-bronx-tisch/",
+          "title": "After ICE Shooting, Progressives Want New York's Police Commissioner to Step Down",
+          "description": "28-year-old Oscar Belgal still has a bullet lodged in his body.",
+          "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:qobvnkudcv3zlaklxxjduqoi/bafkreie2nvxxbwowodsbtm3rksbshxxyrzr7jp6qkebllexxwjkmjs3a4y"
+        },
+        "$type": "app.bsky.embed.external#view"
+      }
+    }
+  ]
+}

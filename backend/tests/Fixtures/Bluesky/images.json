@@ -1,0 +1,23 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e",
+      "author": {"did": "did:plc:z72i7hdynmk6r22z27h6tvur", "handle": "bsky.app", "displayName": "Bluesky"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "Not to brag, but ... we snagged a couple of passes to today’s Apple event. Stay tuned for our take on all the latest and greatest Apple products."
+      },
+      "embed": {
+        "images": [
+          {
+            "thumb": "https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:z72i7hdynmk6r22z27h6tvur/bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4",
+            "fullsize": "https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:z72i7hdynmk6r22z27h6tvur/bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4",
+            "alt": "An enormous pile of red apples and green apples—sweet, tart, delicious, and coming soon to an Apple Store near you! Keep your eye on this thread (and maybe put on a sturdy hat) to learn more about today's big drops.",
+            "aspectRatio": {"height": 3000, "width": 4000}
+          }
+        ],
+        "$type": "app.bsky.embed.images#view"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "posts": [
+    {
+      "uri": "at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxhlfehxzi27",
+      "author": {"did": "did:plc:qobvnkudcv3zlaklxxjduqoi", "handle": "motherjones.com", "displayName": "Mother Jones"},
+      "record": {
+        "$type": "app.bsky.feed.post",
+        "text": "From battleground candidates to Elon Musk, Republicans can’t stop posting wistfully about Rhodesia, the defunct white supremacist state in southern Africa.\n\nHistory repeats. Sometimes as tragedy…sometimes as LARP."
+      },
+      "embed": {
+        "cid": "bafkreibs4hca2whguuqvtnk4y5dahy5hvsxoygftczl4rgpxlwooqlycde",
+        "playlist": "https://video.bsky.app/watch/did%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi/bafkreibs4hca2whguuqvtnk4y5dahy5hvsxoygftczl4rgpxlwooqlycde/playlist.m3u8",
+        "thumbnail": "https://video.bsky.app/watch/did%3Aplc%3Aqobvnkudcv3zlaklxxjduqoi/bafkreibs4hca2whguuqvtnk4y5dahy5hvsxoygftczl4rgpxlwooqlycde/thumbnail.jpg",
+        "aspectRatio": {"height": 1920, "width": 1080},
+        "$type": "app.bsky.embed.video#view"
+      }
+    }
+  ]
+}
