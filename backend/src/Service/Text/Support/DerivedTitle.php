@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Text\Support;
 
-/** A headline for a post its feed gave none: the first sentence of its first line that holds words, cut to fit. */
+/**
+ * A headline for a post its feed gave none: the first sentence of its first line that holds words, cut to fit.
+ * A "sentence" of one word is a number or an abbreviation ("1.", "e.g.", "Dr."), so the whole line stands.
+ */
 final class DerivedTitle
 {
     private const int MAX_LENGTH = 80;
@@ -13,6 +16,7 @@ final class DerivedTitle
     /** Punctuation, symbols and at most a short label such as Mastodon's quote-post "RE:". */
     private const string WORDLESS_PATTERN = '/^[\p{P}\p{S}\s]*(?:\p{L}{1,3}:)?[\p{P}\p{S}\s]*$/u';
     private const string FIRST_SENTENCE_PATTERN = '/^.+?[.!?…](?=\s|$)/u';
+    private const string TWO_WORDS_PATTERN = '/\S\s+\S/u';
 
     public static function from(?string $bodyHtml): ?string
     {
@@ -34,7 +38,11 @@ final class DerivedTitle
 
     private static function firstSentence(string $line): string
     {
-        return preg_match(self::FIRST_SENTENCE_PATTERN, $line, $sentence) === 1 ? $sentence[0] : $line;
+        if (preg_match(self::FIRST_SENTENCE_PATTERN, $line, $sentence) !== 1) {
+            return $line;
+        }
+
+        return preg_match(self::TWO_WORDS_PATTERN, $sentence[0]) === 1 ? $sentence[0] : $line;
     }
 
     private static function cut(string $text): string

@@ -68,6 +68,17 @@ final class DerivedTitleTest extends TestCase
             '<p>' . str_repeat('a', 70) . ', ' . str_repeat('b', 20) . '</p>',
             str_repeat('a', 70) . '…',
         ];
+        yield 'a numbered first line is not cut to its number' => [
+            '<p>1. Thread about our new release</p>',
+            '1. Thread about our new release',
+        ];
+        yield 'an abbreviation alone is no sentence' => ['<p>e.g. this works fine now</p>', 'e.g. this works fine now'];
+        yield 'a title before a name is no sentence' => [
+            '<p>Dr. Smith announced the results today.</p>',
+            'Dr. Smith announced the results today.',
+        ];
+        yield 'a two-word first sentence is kept' => ['<p>It works. Try it now.</p>', 'It works.'];
+        yield 'a one-word sentence falls back to the line' => ['<p>Yes! We did it.</p>', 'Yes! We did it.'];
         yield 'entities are decoded' => ['<p>Fish &amp; chips</p>', 'Fish & chips'];
         yield 'no words at all' => ['<p>https://example.com/a</p>', null];
         yield 'empty body' => ['', null];
