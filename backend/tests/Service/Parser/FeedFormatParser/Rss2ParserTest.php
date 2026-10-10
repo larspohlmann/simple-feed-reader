@@ -557,7 +557,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testAnItemOutsideTheChannelIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], self::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
             <rss version="2.0">
               <item><title>Decoy</title></item>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
@@ -567,7 +567,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testAnItemUnderAnotherRootChildIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], self::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
             <rss version="2.0" xmlns:x="urn:example:other">
               <x:meta><item><title>Decoy</title></item></x:meta>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
@@ -577,7 +577,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testAnItemOfANestedChannelIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], self::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
             <rss version="2.0" xmlns:x="urn:example:other">
               <x:meta><channel><item><title>Decoy</title></item></channel></x:meta>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
@@ -587,7 +587,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testAnItemInAnotherNamespaceIsNotAnEntry(): void
     {
-        self::assertSame(['Core'], self::entryTitles(<<<'XML'
+        self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
             <rss version="2.0">
               <channel><title>Blog</title>
                 <item xmlns="urn:example:other"><title>Decoy</title></item>
@@ -595,11 +595,5 @@ final class Rss2ParserTest extends TestCase
               </channel>
             </rss>
             XML));
-    }
-
-    /** @return list<string> */
-    private static function entryTitles(string $xml): array
-    {
-        return array_map(static fn (ParsedEntryModel $entry): string => $entry->title, FeedFormatParsers::feed($xml)->entries);
     }
 }
