@@ -1519,7 +1519,7 @@ describe('ReaderShellComponent', () => {
     const fixture = boot();
     fixture.detectChanges();
 
-    expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
+    expect(TestBed.inject(Title).getTitle()).toBe('(2) All items | simple feed reader');
   });
 
   it('names the browser tab after the selected feed and its unread count', () => {
@@ -1532,7 +1532,7 @@ describe('ReaderShellComponent', () => {
       .flush({ entries: [], nextCursor: null });
     fixture.detectChanges();
 
-    expect(TestBed.inject(Title).getTitle()).toBe('heise (2) | simple feed reader');
+    expect(TestBed.inject(Title).getTitle()).toBe('(2) heise | simple feed reader');
   });
 
   // The heading shows the same number as the tab, from the same computed — two
@@ -1553,7 +1553,7 @@ describe('ReaderShellComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.heading.titleCount()).toEqual({ value: 9, counts: 'items' });
-    expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
+    expect(TestBed.inject(Title).getTitle()).toBe('(9) All items | simple feed reader');
   });
 
   it('counts every post of a feed when All posts is on', () => {
@@ -3995,7 +3995,7 @@ describe('ReaderShellComponent', () => {
     it('moves the sidebar badge, the list heading and the tab title on one tick', async () => {
       localStorage.setItem('sfr.user.1.unread-only', '1');
       const fixture = boot();
-      expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
+      expect(TestBed.inject(Title).getTitle()).toBe('(2) All items | simple feed reader');
 
       await jest.advanceTimersByTimeAsync(SIDEBAR_RELOAD_INTERVAL_MS);
       ctrl.expectOne('https://api.test/api/subscriptions/counts').flush({
@@ -4008,7 +4008,7 @@ describe('ReaderShellComponent', () => {
       expect(TestBed.inject(SubscriptionsStore).totalUnread()).toBe(9);
       const list = fixture.debugElement.query(By.directive(EntryListComponent));
       expect(list.componentInstance.titleCount()).toEqual({ value: 9, counts: 'unread' });
-      expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
+      expect(TestBed.inject(Title).getTitle()).toBe('(9) All items | simple feed reader');
     });
 
     it('ends with the reader, so a closed reader polls nothing', async () => {

@@ -74,15 +74,14 @@ export class PageTitleService {
 function compose(name: ResolvedName | null): string {
   const shown = cutToTab(name?.text ?? '');
   if (shown === '' || shown === BASE_TITLE) return BASE_TITLE;
-  return `${shown}${countSuffix(name?.count ?? 0)} | ${BASE_TITLE}`;
+  return `${countPrefix(name?.count ?? 0)}${shown} | ${BASE_TITLE}`;
 }
 
-/** The count trails the NAME CUT, not the name: a feed whose title overruns the
- *  tab would otherwise lose the very number this suffix exists to show. Nothing
- *  to count renders nothing — an empty list reads as its name alone, the way
- *  the sidebar drops the badge rather than showing a zero. */
-function countSuffix(count: number): string {
-  return count > 0 ? ` (${count})` : '';
+/** The count leads, so a narrow tab still shows it. Nothing to count renders
+ *  nothing — an empty list reads as its name alone, the way the sidebar drops
+ *  the badge rather than showing a zero. */
+function countPrefix(count: number): string {
+  return count > 0 ? `(${count}) ` : '';
 }
 
 function cutToTab(name: string): string {
