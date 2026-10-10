@@ -63,7 +63,7 @@ final class FeedParserTest extends TestCase
 
     public function testAnEpisodeWithoutArtworkOfItsOwnTakesTheShowsAndOtherItemsDoNot(): void
     {
-        $feed = $this->parser()->parse(<<<'XML'
+        $feed = $this->parser()->parse(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <channel>
@@ -89,7 +89,7 @@ final class FeedParserTest extends TestCase
 
     public function testAnAtomEpisodeWithoutArtworkTakesTheShows(): void
     {
-        $feed = $this->parser()->parse(<<<'XML'
+        $feed = $this->parser()->parse(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <title>Show</title>

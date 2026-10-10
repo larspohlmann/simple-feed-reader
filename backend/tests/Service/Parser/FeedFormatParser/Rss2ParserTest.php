@@ -578,8 +578,8 @@ final class Rss2ParserTest extends TestCase
     public function testAnItemOfANestedChannelIsNotAnEntry(): void
     {
         self::assertSame(['Core'], FeedFormatParsers::entryTitles(<<<'XML'
-            <rss version="2.0" xmlns:x="urn:example:other">
-              <x:meta><channel><item><title>Decoy</title></item></channel></x:meta>
+            <rss version="2.0">
+              <section><channel><item><title>Decoy</title></item></channel></section>
               <channel><title>Blog</title><item><title>Core</title></item></channel>
             </rss>
             XML));
