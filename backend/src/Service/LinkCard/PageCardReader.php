@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\LinkCard;
 
 use App\Entity\LinkCardContent;
+use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Html\Support\MetaName;
@@ -14,7 +15,6 @@ use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Scraper\Support\TextNormalizer;
 use App\Service\Text\Support\WordBoundary;
 use App\Service\Url\Support\HttpsImageUrl;
-use App\Service\Url\Support\ResolvedUrl;
 use Dom\HTMLDocument;
 
 /** Reads the card a page declares for itself: its Open Graph or Twitter title, description, image and site. */
@@ -70,14 +70,14 @@ final readonly class PageCardReader
 
         return mb_strlen($description) <= self::DESCRIPTION_LIMIT
             ? $description
-            : WordBoundary::cut($description, self::DESCRIPTION_LIMIT - 1) . '…';
+            : rtrim(WordBoundary::cut($description, self::DESCRIPTION_LIMIT - 1), ' ,;:-–—') . '…';
     }
 
     private function image(HTMLDocument $document, string $finalUrl): ?string
     {
-        $declared = trim($this->meta($document, 'og:image') ?: $this->meta($document, 'twitter:image'));
+        $declared = $this->firstFilled($this->meta($document, 'og:image'), $this->meta($document, 'twitter:image'));
 
-        return $declared === '' ? null : HttpsImageUrl::orNullUpgrading(ResolvedUrl::against($finalUrl, $declared));
+        return HttpsImageUrl::orNullUpgrading((new PageUrls($finalUrl))->httpUrl($declared));
     }
 
     private function siteName(HTMLDocument $document, string $sharedUrl): string

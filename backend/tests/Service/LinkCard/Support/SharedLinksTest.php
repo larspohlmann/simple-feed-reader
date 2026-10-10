@@ -41,6 +41,24 @@ final class SharedLinksTest extends TestCase
             '<p><a href="https://example.com/long/path">example.com/long/pa…</a></p>',
             ['https://example.com/long/path'],
         ];
+        yield 'quote with a non-breaking space' => [
+            '<p>RE:&nbsp;<a href="https://q.test/@a/1">https://q.test/@a/1</a></p>',
+            [],
+        ];
+        yield 'text drops www' => [
+            '<a href="https://www.example.com/a">example.com/a</a>',
+            ['https://www.example.com/a'],
+        ];
+        yield 'host cut to an ellipsis' => [
+            '<a href="https://example.com/a">example.com…</a>',
+            ['https://example.com/a'],
+        ];
+        yield 'text adds www' => ['<a href="https://example.com/a">www.example.com/a</a>', ['https://example.com/a']];
+        yield 'host that only starts like the link host' => ['<a href="https://ex.com/a">ex.com.evil/a</a>', []];
+        yield 'uppercase scheme' => ['<p>HTTPS://EXAMPLE.COM/A</p>', ['HTTPS://EXAMPLE.COM/A']];
+        yield 'url inside code' => ['<p><code>curl https://example.com/api</code></p>', []];
+        yield 'url in curly quotes' => ['<p>“https://example.com/a”</p>', ['https://example.com/a']];
+        yield 'url before an ellipsis' => ['<p>https://example.com/a… more</p>', ['https://example.com/a']];
         yield 'bare url after a break' => [
             '<p>I went on Michael Cohen\'s podcast. It was... bizarre.<br />'
             . 'https://www.motherjones.com/politics/2026/10/x/</p>',
@@ -82,6 +100,14 @@ final class SharedLinksTest extends TestCase
         self::assertSame(
             '<p>See <a href="https://example.com/a">https://example.com/a</a>.</p>',
             SharedLinks::linked('<p>See https://example.com/a.</p>'),
+        );
+    }
+
+    public function testLinksAnUppercaseSchemeToo(): void
+    {
+        self::assertStringContainsString(
+            '<a href="HTTPS://EXAMPLE.COM/A">',
+            SharedLinks::linked('<p>HTTPS://EXAMPLE.COM/A</p>'),
         );
     }
 

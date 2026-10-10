@@ -39,6 +39,19 @@ final class LinkedPlainTextTest extends TestCase
         );
     }
 
+    public function testClosingQuotesAndEllipsesStayOutsideTheLink(): void
+    {
+        self::assertSame(
+            '<p>“<a href="https://x.test/a">https://x.test/a</a>” &apos;'
+            . '<a href="https://x.test/b">https://x.test/b</a>&apos;'
+            . ' &quot;<a href="https://x.test/c">https://x.test/c</a>&quot; <a href="https://x.test/d">'
+            . 'https://x.test/d</a>… more</p>',
+            LinkedPlainText::asHtml(
+                '“https://x.test/a” \'https://x.test/b\' "https://x.test/c" https://x.test/d… more',
+            ),
+        );
+    }
+
     public function testBlankTextIsNull(): void
     {
         self::assertNull(LinkedPlainText::asHtml(" \n\n "));

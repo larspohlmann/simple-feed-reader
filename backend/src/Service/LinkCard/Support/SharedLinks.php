@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\LinkCard\Support;
 
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Fetch\Support\HostKey;
 use App\Service\Text\Support\LinkedPlainText;
+use App\Service\Text\Support\Whitespace;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -17,12 +19,12 @@ final class SharedLinks
 {
     public const int MAX = 5;
 
-    private const string BARE_URL_SPLIT = '#(' . LinkedPlainText::URL . ')#i';
+    private const string BARE_URL_SPLIT = '#(' . LinkedPlainText::URL . ')#iu';
     private const string TRUNCATION = '…';
 
     public static function linked(string $bodyHtml): string
     {
-        if (!str_contains($bodyHtml, 'http')) {
+        if (stripos($bodyHtml, 'http') === false) {
             return $bodyHtml;
         }
 
@@ -54,7 +56,7 @@ final class SharedLinks
     {
         $linked = 0;
         foreach (self::allTexts($document->body) as $text) {
-            if ($text->parentElement?->closest('a') === null) {
+            if ($text->parentElement?->closest('a, code, pre') === null) {
                 $linked += self::linkUrlsIn($text, $document);
             }
         }
@@ -100,11 +102,11 @@ final class SharedLinks
     {
         $visible = strtolower((string) preg_replace('/\s+/u', '', $anchor->textContent ?? ''));
         $visible = (string) preg_replace('/' . self::TRUNCATION . '$/u', '', $visible);
-        $host = strtolower((string) parse_url($href, \PHP_URL_HOST));
+        $withoutWww = (string) preg_replace('/^www\./', '', $visible);
 
         return str_starts_with($visible, 'http://')
             || str_starts_with($visible, 'https://')
-            || ($host !== '' && str_starts_with($visible, $host));
+            || preg_match('#^' . preg_quote(HostKey::forUrl($href), '#') . '(?:[/:?\#]|$)#', $withoutWww) === 1;
     }
 
     private static function isQuote(Element $anchor): bool
@@ -122,7 +124,7 @@ final class SharedLinks
             $before .= $text->data;
         }
 
-        return trim($before) === 'RE:';
+        return Whitespace::collapse($before) === 'RE:';
     }
 
     /** @return list<Text> */

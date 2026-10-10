@@ -8,9 +8,9 @@ namespace App\Service\Text\Support;
 final class LinkedPlainText
 {
     /** A bare URL, without the sentence punctuation that trails it. */
-    public const string URL = 'https?://[^\s<>"]+?(?=[.,;:!?)\]]*(?:\s|$))';
+    public const string URL = 'https?://[^\s<>"]+?(?=[.,;:!?)\]"\'”’»…]*(?:\s|$))';
 
-    private const string TEXT_THEN_URL_PATTERN = '#(.*?)(?:(' . self::URL . ')|$)#is';
+    private const string TEXT_THEN_URL_PATTERN = '#(.*?)(?:(' . self::URL . ')|$)#isu';
 
     public static function asHtml(string $text): ?string
     {

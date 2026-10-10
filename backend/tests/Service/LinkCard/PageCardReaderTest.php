@@ -112,6 +112,16 @@ final class PageCardReaderTest extends TestCase
         self::assertSame('https://cdn.example.com/a.jpg', $card?->imageUrl);
     }
 
+    public function testABlankOpenGraphImageFallsBackToTwitter(): void
+    {
+        $card = $this->reader($this->page(
+            '<meta property="og:title" content="T"><meta property="og:image" content=" ">'
+            . '<meta name="twitter:image" content="https://cdn.example.com/t.jpg">',
+        ))->read(self::SHARED);
+
+        self::assertSame('https://cdn.example.com/t.jpg', $card?->imageUrl);
+    }
+
     public function testRefusesAJavascriptImage(): void
     {
         $card = $this->reader($this->page(
@@ -139,6 +149,16 @@ final class PageCardReaderTest extends TestCase
         self::assertNotNull($card->description);
         self::assertLessThanOrEqual(300, mb_strlen($card->description));
         self::assertStringEndsWith('word…', $card->description);
+    }
+
+    public function testACutDescriptionDoesNotEndOnPunctuationBeforeTheEllipsis(): void
+    {
+        $long = str_repeat('word ', 58) . 'word, trailing text that runs on and on';
+        $card = $this->reader($this->page(
+            '<meta property="og:title" content="T"><meta property="og:description" content="' . $long . '">',
+        ))->read(self::SHARED);
+
+        self::assertStringEndsWith('word…', (string) $card?->description);
     }
 
     public function testTheCardUrlIsTheSharedUrlEvenAfterARedirect(): void
