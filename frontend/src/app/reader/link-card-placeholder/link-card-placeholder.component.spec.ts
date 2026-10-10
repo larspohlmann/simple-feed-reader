@@ -13,12 +13,13 @@ function mount(): HTMLElement {
 }
 
 describe('LinkCardPlaceholderComponent', () => {
-  it('shows a silent image area, then announces that the preview is loading', () => {
+  it('reads as busy, with its loading line as visible copy rather than a live region', () => {
     const element = mount();
 
+    expect(element.getAttribute('aria-busy')).toBe('true');
     expect(element.querySelector('.image')!.getAttribute('aria-hidden')).toBe('true');
-    const status = element.querySelector('[role="status"]')!;
-    expect(status.textContent!.trim()).toBe('Loading preview…');
+    expect(element.querySelector('[role="status"], [aria-live]')).toBeNull();
+    expect(element.querySelector('.label')!.textContent!.trim()).toBe('Loading preview…');
   });
 
   it('says it in German', () => {

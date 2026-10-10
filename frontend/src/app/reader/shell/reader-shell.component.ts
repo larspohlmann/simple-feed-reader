@@ -126,7 +126,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
   /** Injected for its timer: holding it fills in the listed entries still pending (#1502). */
-  private readonly pendingPoll = inject(PendingEntriesPoll);
+  protected readonly pendingPoll = inject(PendingEntriesPoll);
 
   protected readonly onboarding = inject(ReaderOnboarding);
   /** Injected for its effect: holding it opens the passkey offer when due. */

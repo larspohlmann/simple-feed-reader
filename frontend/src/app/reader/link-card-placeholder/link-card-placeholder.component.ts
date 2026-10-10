@@ -8,5 +8,6 @@ import { TranslocoPipe } from '@jsverse/transloco';
   imports: [TranslocoPipe],
   templateUrl: './link-card-placeholder.component.html',
   styleUrl: './link-card-placeholder.component.scss',
+  host: { 'aria-busy': 'true' },
 })
 export class LinkCardPlaceholderComponent {}

@@ -21,6 +21,7 @@ export class EntryBodyService {
   /** Bumped on logout so a response already on the wire for the previous
    *  account can't write itself into the next one's cache. */
   private generation = 0;
+  private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
 
   constructor() {
     onIdentityChange(() => this.clear());
@@ -58,12 +59,18 @@ export class EntryBodyService {
     this.fetch(id, state);
   }
 
-  /** Refetch a shown body that the server has since changed, keeping it on screen
-   *  until the new one lands — and for good if the refetch fails. */
+  /** Refetch a body the server has since changed, keeping a shown one on screen until
+   *  the new one lands, and for good if the refetch fails. A fetch still out is superseded. */
   refresh(id: number): void {
     const state = this.cache.get(id);
-    if (state?.().status !== 'ok') return;
-    this.request(id, state, () => undefined);
+    if (!state) return;
+    const shown = state();
+    this.request(id, state, () => state.set(shown.status === 'ok' ? shown : { status: 'error' }));
+  }
+
+  /** Drop a cached body the server has since changed, so it is fetched afresh when next asked for. */
+  forget(id: number): void {
+    this.cache.delete(id);
   }
 
   private stateFor(id: number): WritableSignal<EntryBodyState> {
@@ -94,13 +101,17 @@ export class EntryBodyService {
 
   private request(id: number, state: WritableSignal<EntryBodyState>, onError: () => void): void {
     const generation = this.generation;
+    const ticket = {};
+    this.latestRequest.set(state, ticket);
+    const superseded = () =>
+      generation !== this.generation || this.latestRequest.get(state) !== ticket;
     this.api.entry(id).subscribe({
       next: (response) => {
-        if (generation !== this.generation) return;
+        if (superseded()) return;
         state.set({ status: 'ok', html: response.entry.contentHtml });
       },
       error: () => {
-        if (generation !== this.generation) return;
+        if (superseded()) return;
         onError();
       },
     });

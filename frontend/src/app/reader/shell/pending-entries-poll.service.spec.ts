@@ -5,6 +5,8 @@ import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
+import { TokenStore } from '../../core/auth/token.store';
+import { ReaderRouteState } from './reader-route-state.service';
 import {
   PENDING_POLL_INTERVAL_MS,
   PENDING_POLL_MAX_ROUNDS,
@@ -25,6 +27,8 @@ describe('PendingEntriesPoll', () => {
   const loadedAt = signal('load-1');
   let complete: jest.Mock<Observable<EntryDto[]>, [number[]]>;
   let refreshBody: jest.Mock;
+  let forgetBody: jest.Mock;
+  const openEntryId = signal<number | null>(null);
 
   function setVisibility(state: DocumentVisibilityState): void {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -59,6 +63,9 @@ describe('PendingEntriesPoll', () => {
     complete = jest.fn();
     answerStillPending();
     refreshBody = jest.fn();
+    forgetBody = jest.fn();
+    openEntryId.set(null);
+    localStorage.clear();
     const mergeCompleted = (rows: EntryDto[]) =>
       entries.update((current) =>
         current.map((listed) => rows.find((finished) => finished.id === listed.id) ?? listed),
@@ -68,7 +75,8 @@ describe('PendingEntriesPoll', () => {
         PendingEntriesPoll,
         { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
-        { provide: EntryBodyService, useValue: { refresh: refreshBody } },
+        { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
+        { provide: ReaderRouteState, useValue: { openEntryId } },
       ],
     });
   });
@@ -92,15 +100,18 @@ describe('PendingEntriesPoll', () => {
     expect(complete).toHaveBeenCalledTimes(2);
   });
 
-  it('merges the finished rows and refreshes the body of an entry that just finished', () => {
-    start([row(1), row(2)]);
-    complete.mockReturnValueOnce(of([row(1, { pending: false }), row(2)]));
+  it('merges the finished rows, refreshes the open body and forgets the others', () => {
+    start([row(1), row(2), row(3)]);
+    openEntryId.set(2);
+    complete.mockReturnValueOnce(
+      of([row(1, { pending: false }), row(2, { pending: false }), row(3)]),
+    );
 
     rounds(1);
 
-    expect(entries().map((listed) => listed.pending)).toEqual([false, true]);
-    expect(refreshBody).toHaveBeenCalledTimes(1);
-    expect(refreshBody).toHaveBeenCalledWith(1);
+    expect(entries().map((listed) => listed.pending)).toEqual([false, false, true]);
+    expect(refreshBody.mock.calls).toEqual([[2]]);
+    expect(forgetBody.mock.calls).toEqual([[1]]);
   });
 
   it('polls nothing for a list with nothing pending', () => {
@@ -171,5 +182,60 @@ describe('PendingEntriesPoll', () => {
     setVisibility('visible');
     rounds(1);
     expect(complete).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reset the round count when the tab is hidden and shown again', () => {
+    start([row(1)]);
+    rounds(PENDING_POLL_MAX_ROUNDS - 1);
+
+    setVisibility('hidden');
+    setVisibility('visible');
+    rounds(5);
+
+    expect(complete).toHaveBeenCalledTimes(PENDING_POLL_MAX_ROUNDS);
+  });
+
+  it('stops polling and drops the answer on the wire when the reader is destroyed', () => {
+    start([row(1)]);
+    const answer = new Subject<EntryDto[]>();
+    complete.mockReturnValueOnce(answer);
+    rounds(1);
+
+    TestBed.resetTestingModule();
+    answer.next([row(1, { pending: false })]);
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS * 3);
+
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(entries()[0].pending).toBe(true);
+  });
+
+  it('stops polling and drops the answer on the wire when the signed-in account changes', () => {
+    const tokens = TestBed.inject(TokenStore);
+    tokens.set('account-a.jwt');
+    start([row(1)]);
+    const answer = new Subject<EntryDto[]>();
+    complete.mockReturnValueOnce(answer);
+    rounds(1);
+
+    tokens.set('account-b.jwt');
+    TestBed.tick();
+    answer.next([row(1, { pending: false })]);
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS * 3);
+
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(entries()[0].pending).toBe(true);
+  });
+
+  it('clears an armed timer when the signed-in account changes', () => {
+    const tokens = TestBed.inject(TokenStore);
+    tokens.set('account-a.jwt');
+    start([row(1)]);
+    rounds(1);
+
+    tokens.set('account-b.jwt');
+    TestBed.tick();
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS * 3);
+
+    expect(complete).toHaveBeenCalledTimes(1);
   });
 });

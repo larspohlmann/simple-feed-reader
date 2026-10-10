@@ -230,6 +230,24 @@ describe('ReaderShellComponent', () => {
     return fixture;
   }
 
+  describe('previews still loading (#1502)', () => {
+    const status = (element: HTMLElement) => element.querySelector('.previews-status')!;
+
+    it('says so once, in one polite region, while a listed post is still being completed', () => {
+      const element = boot({ titleDerived: true, pending: true }).nativeElement as HTMLElement;
+
+      expect(status(element).getAttribute('role')).toBe('status');
+      expect(status(element).textContent!.trim()).toBe('Loading preview…');
+      expect(element.querySelectorAll('[role="status"] app-link-card-placeholder')).toHaveLength(0);
+    });
+
+    it('stays quiet while nothing is pending', () => {
+      const element = boot().nativeElement as HTMLElement;
+
+      expect(status(element).textContent!.trim()).toBe('');
+    });
+  });
+
   // One subscription row in the shape the shell reads. Overlay `id`/`lastFetchedAt`
   // per test to describe "fetched" vs "never fetched" feeds.
   const SUBSCRIPTION_FIXTURE = {

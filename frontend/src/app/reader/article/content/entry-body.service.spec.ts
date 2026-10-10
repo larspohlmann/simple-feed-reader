@@ -141,6 +141,32 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
     });
 
+    it('ends on the new body when the first fetch was still on the wire', async () => {
+      const state = store.body(1);
+      await settle();
+      const first = ctrl.expectOne('https://api.test/api/entries/1');
+
+      store.refresh(1);
+      const second = ctrl.expectOne('https://api.test/api/entries/1');
+      second.flush({ entry: { contentHtml: '<p>new</p>' } });
+      first.flush({ entry: { contentHtml: '<p>old</p>' } });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>' });
+    });
+
+    it('forgets a body so the next request fetches it afresh', async () => {
+      await shown('<p>a</p>');
+
+      store.forget(1);
+      const state = store.body(1);
+      await settle();
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { contentHtml: '<p>b</p>' } });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+    });
+
     it('fetches nothing for a body nobody has loaded', async () => {
       store.refresh(5);
       await settle();

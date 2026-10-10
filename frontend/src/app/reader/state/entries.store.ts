@@ -171,17 +171,15 @@ export class EntriesStore {
       });
   }
 
-  /** Lays finished copies of listed rows over them (#1502). The list's own collapse and
-   *  ranking stay: a completed row carries neither duplicates nor recommendation fields. */
+  /** Takes what completing a listed row filled in (#1502); the row's own state and
+   *  list context stay, since the user may have changed them while the call was out. */
   mergeCompleted(rows: EntryDto[]): void {
     const finished = new Map(rows.map((row) => [row.id, row]));
     this.rawEntries.update((current) =>
-      this.withInFlightPatches(
-        current.map((entry) => {
-          const row = finished.get(entry.id);
-          return row ? { ...entry, ...row, duplicates: entry.duplicates } : entry;
-        }),
-      ),
+      current.map((entry) => {
+        const row = finished.get(entry.id);
+        return row ? { ...entry, ...completedFields(row) } : entry;
+      }),
     );
   }
 
@@ -217,6 +215,37 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
   }
+}
+
+type CompletedFields = Pick<
+  EntryDto,
+  | 'title'
+  | 'summary'
+  | 'excerpt'
+  | 'imageUrl'
+  | 'imageWidth'
+  | 'imageHeight'
+  | 'imageAspectRatio'
+  | 'imageRenditions'
+  | 'media'
+  | 'linkCards'
+  | 'pending'
+>;
+
+function completedFields(row: EntryDto): CompletedFields {
+  return {
+    title: row.title,
+    summary: row.summary,
+    excerpt: row.excerpt,
+    imageUrl: row.imageUrl,
+    imageWidth: row.imageWidth,
+    imageHeight: row.imageHeight,
+    imageAspectRatio: row.imageAspectRatio,
+    imageRenditions: row.imageRenditions,
+    media: row.media,
+    linkCards: row.linkCards,
+    pending: row.pending,
+  };
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

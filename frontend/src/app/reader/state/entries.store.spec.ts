@@ -459,19 +459,23 @@ describe('EntriesStore', () => {
         });
     });
 
-    it('replaces a listed row with its finished copy, keeping what only the list knows', () => {
-      store.mergeCompleted([entry(1, { linkCards: [card], duplicates: [] }), entry(7)]);
+    it('takes what completion filled in, keeping what only the list knows', () => {
+      store.mergeCompleted([
+        entry(1, { linkCards: [card], pending: false, excerpt: 'Filled', duplicates: [] }),
+        entry(7),
+      ]);
 
       const [first, second] = store.entries();
       expect(first.pending).toBe(false);
       expect(first.linkCards).toEqual([card]);
+      expect(first.excerpt).toBe('Filled');
       expect(first.duplicates!.map((duplicate) => duplicate.id)).toEqual([9]);
       expect(first.recommendationReason).toBe('Because');
       expect(second.pending).toBe(true);
       expect(store.entries().map((listed) => listed.id)).toEqual([1, 2]);
     });
 
-    it('lays a state change still on the wire over the finished copy', () => {
+    it('keeps a state change still on the wire', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
 
@@ -479,6 +483,20 @@ describe('EntriesStore', () => {
 
       expect(store.entries()[1].isFavorite).toBe(true);
       patch.flush({ state: {} });
+    });
+
+    it('keeps a state change that landed while the completion call was out', () => {
+      store.setState(2, { isFavorite: true });
+      ctrl.expectOne('https://api.test/api/entries/2/state').flush({ state: {} });
+      store.markHiddenLocally([2]);
+
+      store.mergeCompleted([entry(2, { isFavorite: false, isHidden: false, pending: false })]);
+
+      expect(store.entries()[1]).toMatchObject({
+        isFavorite: true,
+        isHidden: true,
+        pending: false,
+      });
     });
   });
 

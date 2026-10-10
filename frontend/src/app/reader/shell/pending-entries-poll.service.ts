@@ -1,10 +1,11 @@
-import { DestroyRef, Injectable, NgZone, effect, inject, untracked } from '@angular/core';
+import { DestroyRef, Injectable, NgZone, computed, effect, inject, untracked } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
+import { ReaderRouteState } from './reader-route-state.service';
 
 export const PENDING_POLL_INTERVAL_MS = 3000;
 export const PENDING_POLL_MAX_ROUNDS = 20;
@@ -18,6 +19,9 @@ export class PendingEntriesPoll {
   private readonly api = inject(ReaderApi);
   private readonly bodies = inject(EntryBodyService);
   private readonly zone = inject(NgZone);
+  private readonly routeState = inject(ReaderRouteState);
+
+  readonly previewsLoading = computed(() => this.store.entries().some((entry) => entry.pending));
 
   private timerId: ReturnType<typeof setTimeout> | null = null;
   private request: Subscription | null = null;
@@ -100,8 +104,11 @@ export class PendingEntriesPoll {
   private merge(rows: EntryDto[]): void {
     const pendingBefore = new Set(this.pendingIds());
     this.store.mergeCompleted(rows);
+    const openId = this.routeState.openEntryId();
     for (const row of rows) {
-      if (!row.pending && pendingBefore.has(row.id)) this.bodies.refresh(row.id);
+      if (row.pending || !pendingBefore.has(row.id)) continue;
+      if (row.id === openId) this.bodies.refresh(row.id);
+      else this.bodies.forget(row.id);
     }
   }
 

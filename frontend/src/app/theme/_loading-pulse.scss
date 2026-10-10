@@ -1,0 +1,24 @@
+// The app's one loading motion (<app-skeleton>, link-card placeholders): a block that breathes.
+@mixin block {
+  background: var(--surface-2);
+  animation: loading-pulse 1.4s ease-in-out infinite;
+
+  /* A pulsing block is exactly the kind of motion that triggers vestibular
+     symptoms; hold it still when the reader asks for reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@mixin keyframes {
+  @keyframes loading-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.45;
+    }
+  }
+}
