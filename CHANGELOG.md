@@ -10,6 +10,22 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.4.1] - 2026-10-10
+
+## What's Changed
+* feat(#1477): stop asking the profile prompt for topics to avoid by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1478
+* Cinema mode for landscape videos by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1480
+* feat(#1481): embed shape comes from the backend providers by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1483
+* refactor(#1484): a core-element object holds each dialect's namespace by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1485
+* refactor(#1482): one rule owns the article's tail padding by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1486
+* fix(#1487): enclosure and category reads stay in the dialect namespace by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1488
+* fix(#1489): rss channels are core children of the root by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1490
+* fix(#1492): RSS 1.0 root detection checks the RDF namespace by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1493
+* fix(#1491): RSS items are entries only where the spec puts them by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1494
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.4.0...v1.4.1
+
 ## [v1.4.0] - 2026-10-09
 
 ### Highlights
