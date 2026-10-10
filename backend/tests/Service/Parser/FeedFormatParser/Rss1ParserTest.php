@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
+use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
@@ -180,6 +181,18 @@ final class Rss1ParserTest extends TestCase
             "\u{201C}Datatype\u{201D} is an OpenType variable font",
             $feed->entries[1]->title,
         );
+    }
+
+    public function testADocumentWithoutAChannelIsAParseError(): void
+    {
+        $document = new \DOMDocument();
+        $document->loadXML(
+            '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"/>',
+        );
+
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss1()->parseFeed($document, []);
     }
 
     public function testReadsTheImageFromTheRdfRoot(): void

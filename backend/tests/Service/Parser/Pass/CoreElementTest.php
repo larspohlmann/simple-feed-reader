@@ -79,7 +79,9 @@ final class CoreElementTest extends TestCase
 
     public function testAtReadsAnotherElementInTheSameNamespace(): void
     {
-        $feed = $this->core('<author><x:name' . self::OTHER_NAMESPACE_DECLARATION . '>Wrong</x:name><name>Right</name></author>');
+        $feed = $this->core(
+            '<author><x:name' . self::OTHER_NAMESPACE_DECLARATION . '>Wrong</x:name><name>Right</name></author>',
+        );
         $author = $feed->child('author');
         self::assertNotNull($author);
 
