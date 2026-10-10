@@ -48,8 +48,9 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
-        $channelElement = $skeleton->getElementsByTagName('channel')->item(0);
-        if (!$channelElement instanceof \DOMElement) {
+        $root = $skeleton->documentElement;
+        $channelElement = $root === null ? null : CoreElement::inOwnNamespace($root)->child('channel');
+        if ($channelElement === null) {
             throw new FeedParseException('RSS document without <channel>');
         }
         $channel = CoreElement::inOwnNamespace($channelElement);

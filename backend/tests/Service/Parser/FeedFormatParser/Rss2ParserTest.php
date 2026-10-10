@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
+use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
@@ -442,6 +443,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML);
 
+        self::assertSame('Blog', $feed->title);
         self::assertSame('<p>Body</p>', $feed->entries[0]->contentHtml);
     }
 
@@ -517,5 +519,39 @@ final class Rss2ParserTest extends TestCase
             XML);
 
         self::assertSame('Core', $feed->title);
+    }
+
+    public function testAChannelInAnotherNamespaceIsNotTheFeedsChannel(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rss version="2.0">
+              <channel xmlns="urn:example:other"><title>Decoy</title></channel>
+              <channel><title>Core</title></channel>
+            </rss>
+            XML);
+
+        self::assertSame('Core', $feed->title);
+    }
+
+    public function testANestedChannelIsNotTheFeedsChannel(): void
+    {
+        $feed = FeedFormatParsers::feed(<<<'XML'
+            <rss version="2.0" xmlns:x="urn:example:other">
+              <x:meta><channel><title>Decoy</title></channel></x:meta>
+              <channel><title>Core</title></channel>
+            </rss>
+            XML);
+
+        self::assertSame('Core', $feed->title);
+    }
+
+    public function testADocumentWithoutAChannelIsAParseError(): void
+    {
+        $document = new \DOMDocument();
+        $document->loadXML('<rss version="2.0"/>');
+
+        $this->expectException(FeedParseException::class);
+
+        FeedFormatParsers::rss2()->parseFeed($document, []);
     }
 }
