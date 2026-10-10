@@ -14,7 +14,7 @@ final class DerivedTitle
     private const string ELLIPSIS = '…';
     private const string LINK_PATTERN = '#\bhttps?://\S+#u';
     /** Punctuation, symbols and at most a short label such as Mastodon's quote-post "RE:". */
-    private const string WORDLESS_PATTERN = '/^[\p{P}\p{S}\s]*(?:\p{L}{1,3}:)?[\p{P}\p{S}\s]*$/u';
+    private const string WORDLESS_PATTERN = '/^[\p{P}\p{S}\s]*+(?:\p{L}{1,3}:)?[\p{P}\p{S}\s]*+$/u';
     private const string FIRST_SENTENCE_PATTERN = '/^.+?[.!?…](?=\s|$)/u';
     private const string TWO_WORDS_PATTERN = '/\S\s+\S/u';
 
@@ -51,11 +51,7 @@ final class DerivedTitle
             return $text;
         }
 
-        $head = mb_substr($text, 0, self::MAX_LENGTH - 1);
-        $lastSpace = mb_strrpos($head, ' ');
-        $kept = $lastSpace === false ? $head : mb_substr($head, 0, $lastSpace);
-
-        return rtrim($kept, ' ,;:-–—') . self::ELLIPSIS;
+        return rtrim(WordBoundary::cut($text, self::MAX_LENGTH - 1), ' ,;:-–—') . self::ELLIPSIS;
     }
 
     private function __construct()
