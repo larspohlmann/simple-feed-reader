@@ -1,4 +1,4 @@
-import { addCinemaToggles, type CinemaLabels } from './reader-cinema';
+import { addCinemaToggles, toggleCinemaByKey, type CinemaLabels } from './reader-cinema';
 
 const labels: CinemaLabels = { enter: 'Cinema', exit: 'Exit cinema' };
 
@@ -66,5 +66,74 @@ describe('addCinemaToggles', () => {
     toggle.click();
     expect(box.classList.contains('reader-cinema--on')).toBe(false);
     expect(toggle.textContent).toBe('width_wideCinema(t)');
+  });
+});
+
+function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { key: 't', cancelable: true, ...init });
+  if (target) Object.defineProperty(event, 'target', { value: target });
+  return event;
+}
+
+function twoVideos(): HTMLElement {
+  const element = host(LANDSCAPE + LANDSCAPE);
+  addCinemaToggles(element, labels);
+  return element;
+}
+
+const widened = (element: HTMLElement) =>
+  Array.from(element.querySelectorAll('.reader-cinema'), (box) =>
+    box.classList.contains('reader-cinema--on'),
+  );
+
+describe('toggleCinemaByKey', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = jest.fn();
+  });
+
+  it('toggles the first video when none is in view', () => {
+    const element = twoVideos();
+    const event = key();
+    toggleCinemaByKey(event, element);
+    expect(widened(element)).toEqual([true, false]);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('toggles the video in view', () => {
+    const element = twoVideos();
+    const second = element.querySelectorAll<HTMLElement>('.reader-cinema__toggle')[1];
+    second.getBoundingClientRect = () => ({ top: 100, bottom: 400 }) as DOMRect;
+    toggleCinemaByKey(key(), element);
+    expect(widened(element)).toEqual([false, true]);
+  });
+
+  it.each([{ metaKey: true }, { ctrlKey: true }, { altKey: true }, { key: 'T' }, { key: 'x' }])(
+    'ignores %o',
+    (init) => {
+      const element = twoVideos();
+      toggleCinemaByKey(key(init), element);
+      expect(widened(element)).toEqual([false, false]);
+    },
+  );
+
+  it('ignores a key typed into a field', () => {
+    const element = twoVideos();
+    toggleCinemaByKey(key({}, document.createElement('input')), element);
+    expect(widened(element)).toEqual([false, false]);
+  });
+
+  it('does nothing where cinema is not offered', () => {
+    const element = twoVideos();
+    element.querySelectorAll<HTMLElement>('.reader-cinema__bar').forEach((bar) => {
+      bar.style.display = 'none';
+    });
+    const event = key();
+    toggleCinemaByKey(event, element);
+    expect(widened(element)).toEqual([false, false]);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('does nothing without an article', () => {
+    expect(() => toggleCinemaByKey(key(), undefined)).not.toThrow();
   });
 });

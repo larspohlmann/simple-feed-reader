@@ -48,6 +48,7 @@ import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
 import { decorateArticle } from '../decorators/decorate-article';
+import { toggleCinemaByKey } from '../decorators/reader-cinema';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -55,6 +56,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 
 @Component({
   selector: 'app-reader-view',
+  host: { '(document:keydown)': 'onKeydown($event)' },
   imports: [
     ProgressRailComponent,
     ScrollProgressDirective,
@@ -252,6 +254,10 @@ export class ReaderViewComponent {
       observer.observe(bar);
       onCleanup(() => observer.disconnect());
     });
+  }
+
+  protected onKeydown(event: KeyboardEvent): void {
+    toggleCinemaByKey(event, this.content()?.nativeElement);
   }
 
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
