@@ -565,4 +565,13 @@ final class ItemImageExtractorTest extends TestCase
             '<x:enclosure xmlns:x="urn:example:other" url="https://i/x.jpg" type="image/jpeg"/>',
         ))));
     }
+
+    public function testAnRssEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(): void
+    {
+        $image = $this->extractor->fromRssEnclosure(self::core($this->item(
+            '<enclosure url="  https://i/e.jpg  " type="IMAGE/JPEG"/>',
+        )));
+
+        self::assertSame('https://i/e.jpg', $image?->url);
+    }
 }

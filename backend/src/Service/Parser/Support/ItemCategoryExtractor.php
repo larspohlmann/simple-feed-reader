@@ -29,6 +29,9 @@ final class ItemCategoryExtractor
 
     private static function fromChild(CoreElement $item, \DOMNode $child): ?ParsedCategoryModel
     {
+        if (!$child instanceof \DOMElement) {
+            return null;
+        }
         if ($item->isCore($child, 'category')) {
             return self::fromCategoryElement($child);
         }

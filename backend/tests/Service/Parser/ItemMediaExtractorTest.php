@@ -241,4 +241,18 @@ final class ItemMediaExtractorTest extends TestCase
 
         self::assertSame([], $bundle->attachments);
     }
+
+    public function testAGroupReadsOnlyItsMediaRssSlotsWhateverComesFirst(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<media:group>'
+            . '<media:title>Pictures</media:title>'
+            . '<media:peerLink url="https://i/peer.jpg" medium="image" width="2000"/>'
+            . '<media:content url="https://i/photo.jpg" medium="image" width="800"/>'
+            . '</media:group>',
+        ));
+
+        self::assertCount(1, $bundle->media);
+        self::assertSame('https://i/photo.jpg', $bundle->media[0]->url);
+    }
 }

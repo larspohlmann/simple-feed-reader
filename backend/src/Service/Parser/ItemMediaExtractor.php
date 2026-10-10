@@ -41,6 +41,9 @@ final readonly class ItemMediaExtractor
         \DOMNode $child,
         ?int $fallbackDuration,
     ): ?ParsedMediaBundleModel {
+        if (!$child instanceof \DOMElement) {
+            return null;
+        }
         if (XmlHelper::isElement($child, 'group', XmlHelper::MEDIA_RSS_NAMESPACE)) {
             return self::fromGroup($child, $fallbackDuration);
         }
@@ -158,8 +161,7 @@ final readonly class ItemMediaExtractor
         return $duration === null ? null : MediaDuration::seconds($duration->textContent);
     }
 
-    /** @phpstan-assert-if-true =\DOMElement $node */
-    private static function isItemMediaNode(CoreElement $item, \DOMNode $node): bool
+    private static function isItemMediaNode(CoreElement $item, \DOMElement $node): bool
     {
         if ($item->isCore($node, 'enclosure')) {
             return true;
