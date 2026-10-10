@@ -12,6 +12,7 @@ use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
@@ -47,59 +48,66 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
-        $channel = $skeleton->getElementsByTagName('channel')->item(0);
-        if (!$channel instanceof \DOMElement) {
+        $channelElement = $skeleton->getElementsByTagName('channel')->item(0);
+        if (!$channelElement instanceof \DOMElement) {
             throw new FeedParseException('RSS document without <channel>');
         }
+        $channel = self::core($channelElement);
 
         return (new ParsedFeedModel(
-            PlainText::from(XmlHelper::childTextInOwnNamespace($channel, 'title')),
-            XmlHelper::childTextInOwnNamespace($channel, 'link'),
-            XmlHelper::childTextInOwnNamespace($channel, 'description'),
+            PlainText::from($channel->text('title')),
+            $channel->text('link'),
+            $channel->text('description'),
             FeedImageExtractor::fromRss2Channel($channel),
             $entries,
-        ))->withShowArtwork(PodcastArtwork::of($channel));
+        ))->withShowArtwork(PodcastArtwork::of($channelElement));
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childTextInOwnNamespace($entry, 'title');
-        $link = XmlHelper::childTextInOwnNamespace($entry, 'link');
+        $item = self::core($entry);
+        $title = $item->text('title');
+        $link = $item->text('link');
         if ($title === null && $link === null) {
             return null;
         }
 
-        $description = self::coreOrDublinCore($entry, 'description', 'description');
+        $description = self::coreOrDublinCore($item, 'description', 'description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
         $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($entry);
 
         return new ParsedEntryModel(
-            guid: GuidFallback::for(XmlHelper::childTextInOwnNamespace($entry, 'guid'), $link, $title),
+            guid: GuidFallback::for($item->text('guid'), $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
-            author: self::coreOrDublinCore($entry, 'author', 'creator'),
+            author: self::coreOrDublinCore($item, 'author', 'creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
-            publishedAt: DateParser::parse(self::coreOrDublinCore($entry, 'pubDate', 'date')),
+            publishedAt: DateParser::parse(self::coreOrDublinCore($item, 'pubDate', 'date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
-            discussion: self::discussion($entry),
+            discussion: self::discussion($item),
         );
     }
 
-    private static function coreOrDublinCore(\DOMElement $item, string $coreName, string $dublinCoreName): ?string
+    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
+    private static function core(\DOMElement $element): CoreElement
     {
-        return XmlHelper::childTextInOwnNamespace($item, $coreName)
-            ?? XmlHelper::childText($item, $dublinCoreName, self::DC_NS);
+        return new CoreElement($element, $element->namespaceURI);
     }
 
-    private static function discussion(\DOMElement $item): Discussion
+    private static function coreOrDublinCore(CoreElement $item, string $coreName, string $dublinCoreName): ?string
+    {
+        return $item->text($coreName) ?? XmlHelper::childText($item->element, $dublinCoreName, self::DC_NS);
+    }
+
+    private static function discussion(CoreElement $item): Discussion
     {
         return Discussion::of(
-            XmlHelper::childHttpUrl($item, 'comments', $item->namespaceURI),
-            XmlHelper::childHttpUrl($item, 'commentRss', self::WFW_NS),
+            $item->httpUrl('comments'),
+            XmlHelper::childHttpUrl($item->element, 'commentRss', self::WFW_NS),
             CommentsLoad::Manual,
         );
     }

@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
@@ -52,9 +53,9 @@ final readonly class ItemImageExtractor
     }
 
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public function fromAtomEnclosure(\DOMElement $entry, string $atomNamespace): ?DeclaredImageModel
+    public function fromAtomEnclosure(CoreElement $entry): ?DeclaredImageModel
     {
-        foreach (XmlHelper::childElements($entry, 'link', $atomNamespace) as $link) {
+        foreach ($entry->children('link') as $link) {
             if ($link->getAttribute('rel') !== 'enclosure') {
                 continue;
             }

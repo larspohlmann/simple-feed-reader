@@ -10,6 +10,7 @@ use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
@@ -43,30 +44,33 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
-        $channel = $skeleton->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
-        if (!$channel instanceof \DOMElement) {
+        $root = $skeleton->documentElement;
+        $channelElement = $skeleton->getElementsByTagNameNS(self::RSS1_NS, 'channel')->item(0);
+        if ($root === null || !$channelElement instanceof \DOMElement) {
             throw new FeedParseException('RSS 1.0 document without <channel>');
         }
+        $channel = self::core($channelElement);
 
         return new ParsedFeedModel(
-            PlainText::from(XmlHelper::childText($channel, 'title', self::RSS1_NS)),
-            XmlHelper::childText($channel, 'link', self::RSS1_NS),
-            XmlHelper::childText($channel, 'description', self::RSS1_NS),
-            FeedImageExtractor::fromRss1Document($skeleton, self::RSS1_NS),
+            PlainText::from($channel->text('title')),
+            $channel->text('link'),
+            $channel->text('description'),
+            FeedImageExtractor::fromRss1Root(self::core($root)),
             $entries,
         );
     }
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $title = XmlHelper::childText($entry, 'title', self::RSS1_NS);
-        $link = XmlHelper::childText($entry, 'link', self::RSS1_NS);
+        $item = self::core($entry);
+        $title = $item->text('title');
+        $link = $item->text('link');
         if ($title === null && $link === null) {
             return null;
         }
 
         $about = trim($entry->getAttributeNS(self::RDF_NS, 'about'));
-        $description = XmlHelper::childText($entry, 'description', self::RSS1_NS);
+        $description = $item->text('description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
         $image = $this->imageSelector->fromRss1($entry, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($entry);
@@ -82,5 +86,10 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
         );
+    }
+
+    private static function core(\DOMElement $element): CoreElement
+    {
+        return new CoreElement($element, self::RSS1_NS);
     }
 }

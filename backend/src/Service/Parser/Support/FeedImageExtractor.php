@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Url\Support\HttpsImageUrl;
 
 /**
@@ -13,40 +14,34 @@ use App\Service\Url\Support\HttpsImageUrl;
 final class FeedImageExtractor
 {
     /** RSS 2.0: <channel><image><url>, else the podcast artwork. An extension's *:image is never the <image>. */
-    public static function fromRss2Channel(\DOMElement $channel): ?string
+    public static function fromRss2Channel(CoreElement $channel): ?string
     {
-        foreach (XmlHelper::childElements($channel, 'image', $channel->namespaceURI) as $image) {
-            $url = HttpsImageUrl::orNull(XmlHelper::childTextInOwnNamespace($image, 'url'));
+        foreach ($channel->children('image') as $image) {
+            $url = HttpsImageUrl::orNull($channel->at($image)->text('url'));
             if ($url !== null) {
                 return $url;
             }
         }
 
-        return self::podcastArtwork($channel);
+        return self::podcastArtwork($channel->element);
     }
 
     /**
      * RSS 1.0: the channel only points at the image by rdf:resource; the <image> holding the <url> is its sibling at
      * the RDF root.
      */
-    public static function fromRss1Document(\DOMDocument $document, string $rss1Namespace): ?string
+    public static function fromRss1Root(CoreElement $root): ?string
     {
-        $root = $document->documentElement;
-        if ($root === null) {
-            return null;
-        }
-
         // Direct children only: a document-wide search finds the channel's url-less <image rdf:resource> first.
-        $image = XmlHelper::childElement($root, 'image', $rss1Namespace);
+        $image = $root->child('image');
 
-        return $image === null ? null : HttpsImageUrl::orNull(XmlHelper::childText($image, 'url', $rss1Namespace));
+        return $image === null ? null : HttpsImageUrl::orNull($root->at($image)->text('url'));
     }
 
     /** Atom: <feed><logo>, else the podcast artwork. */
-    public static function fromAtomFeed(\DOMElement $root, string $atomNamespace): ?string
+    public static function fromAtomFeed(CoreElement $feed): ?string
     {
-        return HttpsImageUrl::orNull(XmlHelper::childText($root, 'logo', $atomNamespace))
-            ?? self::podcastArtwork($root);
+        return HttpsImageUrl::orNull($feed->text('logo')) ?? self::podcastArtwork($feed->element);
     }
 
     private static function podcastArtwork(\DOMElement $parent): ?string

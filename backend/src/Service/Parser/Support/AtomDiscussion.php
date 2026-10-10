@@ -6,15 +6,16 @@ namespace App\Service\Parser\Support;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final class AtomDiscussion
 {
-    public static function from(\DOMElement $entry, string $atomNamespace): Discussion
+    public static function from(CoreElement $entry): Discussion
     {
         $page = null;
         $commentsFeed = null;
-        foreach (self::repliesLinks($entry, $atomNamespace) as $link) {
+        foreach (self::repliesLinks($entry) as $link) {
             $href = trim($link->getAttribute('href'));
             if (!AbsoluteHttpUrl::matches($href)) {
                 continue;
@@ -35,9 +36,9 @@ final class AtomDiscussion
     }
 
     /** @return iterable<\DOMElement> */
-    private static function repliesLinks(\DOMElement $entry, string $atomNamespace): iterable
+    private static function repliesLinks(CoreElement $entry): iterable
     {
-        foreach (XmlHelper::childElements($entry, 'link', $atomNamespace) as $link) {
+        foreach ($entry->children('link') as $link) {
             if ($link->getAttribute('rel') === 'replies') {
                 yield $link;
             }

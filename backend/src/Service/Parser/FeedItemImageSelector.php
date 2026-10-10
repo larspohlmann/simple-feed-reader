@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\PodcastArtwork;
 
 /**
@@ -34,16 +35,14 @@ final readonly class FeedItemImageSelector
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    public function fromAtom(
-        \DOMElement $entry,
-        string $namespace,
-        array $bodyHtmlCandidates,
-    ): ?DeclaredImageModel {
-        $declared = $this->extractor->fromMedia($entry)
-            ?? $this->extractor->fromAtomEnclosure($entry, $namespace)
-            ?? $this->extractor->fromCustomImageElement($entry);
+    public function fromAtom(CoreElement $entry, array $bodyHtmlCandidates): ?DeclaredImageModel
+    {
+        $declared = $this->extractor->fromMedia($entry->element)
+            ?? $this->extractor->fromAtomEnclosure($entry)
+            ?? $this->extractor->fromCustomImageElement($entry->element);
 
-        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates)) ?? PodcastArtwork::of($entry);
+        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates))
+            ?? PodcastArtwork::of($entry->element);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
