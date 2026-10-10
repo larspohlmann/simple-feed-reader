@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 
 /**
  * Brightcove's hosted player page, declared as a VideoObject's embedUrl. The video id lives in the query, so the
@@ -47,14 +49,13 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
         return 'Watch the video';
     }
 
-    public function framePattern(): string
+    public function frames(): array
     {
-        return '^https://' . preg_quote(self::HOST, '#') . '/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$';
-    }
-
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Video;
+        return [new EmbedFrameModel(
+            '^https://' . preg_quote(self::HOST, '#') . '/\d+/[A-Za-z0-9_-]+/index\.html\?videoId=\d+$',
+            EmbedKind::Video,
+            EmbedShape::Landscape,
+        )];
     }
 
     public function sourceHosts(): array

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 
 /**
  * The Spotify embed player. The content type and its base62 id are the whole payload, so the query (a `?si=` share
@@ -13,7 +15,9 @@ use App\Service\Reader\Media\Model\EmbedKind;
 final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
 {
     private const string HOST = 'open.spotify.com';
-    private const string TYPE = 'playlist|track|album|episode|show|artist';
+    private const string SINGLE_TYPE = 'track|episode';
+    private const string COLLECTION_TYPE = 'playlist|album|show|artist';
+    private const string TYPE = self::SINGLE_TYPE . '|' . self::COLLECTION_TYPE;
     private const string ID = '[A-Za-z0-9]+';
 
     public function matches(string $url): bool
@@ -38,19 +42,23 @@ final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
         return 'Listen on Spotify';
     }
 
-    public function framePattern(): string
+    /** A collection renders a scrollable track list, so its player needs a tall box, not the default frame. */
+    public function frames(): array
     {
-        return '^https://' . preg_quote(self::HOST, '#') . '/embed/(?:' . self::TYPE . ')/' . self::ID . '$';
-    }
-
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Audio;
+        return [
+            new EmbedFrameModel($this->framePattern(self::SINGLE_TYPE), EmbedKind::Audio, EmbedShape::Landscape),
+            new EmbedFrameModel($this->framePattern(self::COLLECTION_TYPE), EmbedKind::Audio, EmbedShape::Tall),
+        ];
     }
 
     public function sourceHosts(): array
     {
         return [self::HOST];
+    }
+
+    private function framePattern(string $types): string
+    {
+        return '^https://' . preg_quote(self::HOST, '#') . '/embed/(?:' . $types . ')/' . self::ID . '$';
     }
 
     /** @return array{0: string, 1: string}|null the content type and its id */

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 
 /**
  * Vimeo player embed. Public video is `vimeo.com/<id>`; unlisted carries a
@@ -42,14 +44,13 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
         return 'Watch on Vimeo';
     }
 
-    public function framePattern(): string
+    public function frames(): array
     {
-        return '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$';
-    }
-
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Video;
+        return [new EmbedFrameModel(
+            '^https://' . preg_quote(self::PLAYER_HOST, '#') . '/video/\d+(?:\?h=' . self::HASH . ')?$',
+            EmbedKind::Video,
+            EmbedShape::Landscape,
+        )];
     }
 
     public function sourceHosts(): array

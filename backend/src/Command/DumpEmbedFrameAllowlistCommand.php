@@ -13,7 +13,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Writes the frontend's embed allow-list from each provider's framePattern() and kind(), so the two never drift. Run it
+ * Writes the frontend's embed allow-list from each provider's frames(), so the two never drift. Run it
  * after changing an embed provider; EmbedFrameAllowlistTest fails until the committed file is current.
  */
 #[AsCommand(

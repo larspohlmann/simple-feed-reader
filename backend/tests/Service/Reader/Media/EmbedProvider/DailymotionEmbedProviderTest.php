@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\DailymotionEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\TestCase;
 
 final class DailymotionEmbedProviderTest extends TestCase
@@ -70,8 +71,12 @@ final class DailymotionEmbedProviderTest extends TestCase
         self::assertFalse($this->provider->matches('https://www.dailymotion.com.evil.test/embed/video/x7tgad0'));
     }
 
-    public function testIsAVideoPlayer(): void
+    public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        self::assertSame(EmbedKind::Video, $this->provider->kind());
+        $frames = $this->provider->frames();
+
+        self::assertCount(1, $frames);
+        self::assertSame(EmbedKind::Video, $frames[0]->kind);
+        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
     }
 }

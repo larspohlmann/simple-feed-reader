@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 use PHPUnit\Framework\TestCase;
 
 final class BrightcoveEmbedProviderTest extends TestCase
@@ -68,8 +69,12 @@ final class BrightcoveEmbedProviderTest extends TestCase
         self::assertSame('Watch the video', $this->provider->label());
     }
 
-    public function testIsAVideoPlayer(): void
+    public function testIsAVideoPlayerInALandscapeBox(): void
     {
-        self::assertSame(EmbedKind::Video, $this->provider->kind());
+        $frames = $this->provider->frames();
+
+        self::assertCount(1, $frames);
+        self::assertSame(EmbedKind::Video, $frames[0]->kind);
+        self::assertSame(EmbedShape::Landscape, $frames[0]->shape);
     }
 }

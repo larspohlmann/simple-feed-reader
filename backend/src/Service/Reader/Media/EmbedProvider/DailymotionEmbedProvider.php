@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedShape;
 
 /**
  * Dailymotion's player embed. The video id is the whole payload (a page URL adds a `_title-slug`, the query holds
@@ -38,14 +40,13 @@ final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
         return 'Watch on Dailymotion';
     }
 
-    public function framePattern(): string
+    public function frames(): array
     {
-        return '^https://www\.dailymotion\.com/embed/video/' . self::ID . '$';
-    }
-
-    public function kind(): EmbedKind
-    {
-        return EmbedKind::Video;
+        return [new EmbedFrameModel(
+            '^https://www\.dailymotion\.com/embed/video/' . self::ID . '$',
+            EmbedKind::Video,
+            EmbedShape::Landscape,
+        )];
     }
 
     public function sourceHosts(): array

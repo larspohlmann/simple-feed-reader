@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
-use App\Service\Reader\Media\Model\EmbedKind;
+use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -32,22 +32,28 @@ final readonly class EmbedProviders
     }
 
     /**
-     * Every provider's frame pattern, sorted for a stable dump.
+     * Every provider's frames, sorted by pattern for a stable dump.
      *
-     * @return list<string>
+     * @return list<EmbedFrameModel>
      */
-    public function framePatterns(): array
+    public function frames(): array
     {
-        return array_keys($this->kindsByFramePattern());
+        $frames = [];
+        foreach ($this->providers as $provider) {
+            array_push($frames, ...$provider->frames());
+        }
+        usort(
+            $frames,
+            static fn (EmbedFrameModel $left, EmbedFrameModel $right): int => strcmp($left->pattern, $right->pattern),
+        );
+
+        return $frames;
     }
 
-    /** Every frame pattern with the kind of player it embeds, as the reader client's committed allow-list file. */
+    /** Every frame with its player kind and box shape, as the reader client's committed allow-list file. */
     public function allowlistJson(): string
     {
-        $entries = [];
-        foreach ($this->kindsByFramePattern() as $pattern => $kind) {
-            $entries[] = ['pattern' => $pattern, 'kind' => $kind->value];
-        }
+        $entries = array_map(static fn (EmbedFrameModel $frame): array => $frame->toAllowlistEntry(), $this->frames());
 
         return json_encode($entries, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
     }
@@ -63,17 +69,5 @@ final readonly class EmbedProviders
         }
 
         return '#//(?:' . implode('|', $hosts) . ')#i';
-    }
-
-    /** @return array<string, EmbedKind> sorted by pattern */
-    private function kindsByFramePattern(): array
-    {
-        $kinds = [];
-        foreach ($this->providers as $provider) {
-            $kinds[$provider->framePattern()] = $provider->kind();
-        }
-        ksort($kinds, \SORT_STRING);
-
-        return $kinds;
     }
 }
