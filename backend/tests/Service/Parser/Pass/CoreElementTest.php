@@ -10,26 +10,21 @@ use PHPUnit\Framework\TestCase;
 final class CoreElementTest extends TestCase
 {
     private const string CORE_NAMESPACE = 'urn:example:core';
+    private const string OTHER_NAMESPACE = ' xmlns:x="urn:example:other"';
 
     public function testReadsTheTrimmedTextOfACoreChild(): void
     {
-        $item = $this->core('<item xmlns="urn:example:core"><title> Hello </title></item>');
-
-        self::assertSame('Hello', $item->text('title'));
+        self::assertSame('Hello', $this->core('<title> Hello </title>')->text('title'));
     }
 
     public function testSkipsAnEmptyCoreChildForOneWithText(): void
     {
-        $item = $this->core('<item xmlns="urn:example:core"><title>  </title><title>Second</title></item>');
-
-        self::assertSame('Second', $item->text('title'));
+        self::assertSame('Second', $this->core('<title>  </title><title>Second</title>')->text('title'));
     }
 
     public function testAPrefixedChildDoesNotShadowTheCoreOne(): void
     {
-        $item = $this->core(
-            '<item xmlns="urn:example:core" xmlns:x="urn:example:other"><x:title>Wrong</x:title><title>Right</title></item>',
-        );
+        $item = $this->core('<x:title' . self::OTHER_NAMESPACE . '>Wrong</x:title><title>Right</title>');
 
         self::assertSame('Right', $item->text('title'));
     }
@@ -37,7 +32,11 @@ final class CoreElementTest extends TestCase
     public function testANullNamespaceReadsOnlyUnnamespacedChildren(): void
     {
         $item = new CoreElement(
-            self::element('<item xmlns:x="urn:example:other"><x:link>https://wrong.example/</x:link><link>https://right.example/</link></item>'),
+            self::element(
+                '<item xmlns:x="urn:example:other">'
+                . '<x:link>https://wrong.example/</x:link><link>https://right.example/</link>'
+                . '</item>',
+            ),
             null,
         );
 
@@ -46,27 +45,21 @@ final class CoreElementTest extends TestCase
 
     public function testReadsTheFirstCoreChildThatIsAnHttpUrl(): void
     {
-        $item = $this->core(
-            '<item xmlns="urn:example:core"><comments>not a url</comments><comments> https://example.com/c </comments></item>',
-        );
+        $item = $this->core('<comments>not a url</comments><comments> https://example.com/c </comments>');
 
         self::assertSame('https://example.com/c', $item->httpUrl('comments'));
     }
 
     public function testAnHttpUrlOutsideTheCoreNamespaceIsNotRead(): void
     {
-        $item = $this->core(
-            '<item xmlns="urn:example:core" xmlns:x="urn:example:other"><x:comments>https://example.com/c</x:comments></item>',
-        );
+        $item = $this->core('<x:comments' . self::OTHER_NAMESPACE . '>https://example.com/c</x:comments>');
 
         self::assertNull($item->httpUrl('comments'));
     }
 
     public function testFindsTheFirstCoreChildElement(): void
     {
-        $feed = $this->core(
-            '<feed xmlns="urn:example:core" xmlns:x="urn:example:other"><x:author/><author><name>A</name></author></feed>',
-        );
+        $feed = $this->core('<x:author' . self::OTHER_NAMESPACE . '/><author><name>A</name></author>');
 
         self::assertSame(self::CORE_NAMESPACE, $feed->child('author')?->namespaceURI);
         self::assertNull($feed->child('missing'));
@@ -74,31 +67,29 @@ final class CoreElementTest extends TestCase
 
     public function testListsEveryCoreChildElementInOrder(): void
     {
-        $feed = $this->core(
-            '<feed xmlns="urn:example:core" xmlns:x="urn:example:other"><link href="a"/><x:link href="x"/><link href="b"/></feed>',
-        );
+        $feed = $this->core('<link rel="a"/><x:link' . self::OTHER_NAMESPACE . ' rel="x"/><link rel="b"/>');
 
-        $hrefs = array_map(
-            static fn (\DOMElement $link): string => $link->getAttribute('href'),
+        $relations = array_map(
+            static fn (\DOMElement $link): string => $link->getAttribute('rel'),
             iterator_to_array($feed->children('link'), false),
         );
 
-        self::assertSame(['a', 'b'], $hrefs);
+        self::assertSame(['a', 'b'], $relations);
     }
 
     public function testAtReadsAnotherElementInTheSameNamespace(): void
     {
-        $feed = $this->core(
-            '<feed xmlns="urn:example:core" xmlns:x="urn:example:other"><author><x:name>Wrong</x:name><name>Right</name></author></feed>',
-        );
+        $feed = $this->core('<author><x:name' . self::OTHER_NAMESPACE . '>Wrong</x:name><name>Right</name></author>');
         $author = $feed->child('author');
         self::assertNotNull($author);
 
         self::assertSame('Right', $feed->at($author)->text('name'));
     }
 
-    private function core(string $xml): CoreElement
+    private function core(string $children): CoreElement
     {
+        $xml = '<root xmlns="' . self::CORE_NAMESPACE . '">' . $children . '</root>';
+
         return new CoreElement(self::element($xml), self::CORE_NAMESPACE);
     }
 

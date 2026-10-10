@@ -251,7 +251,7 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testAnAtomFeedWithoutALogoFallsBackToItsPodcastArtwork(): void
     {
-        $root = $this->atomRoot(<<<'XML'
+        $root = $this->atomRoot(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <title>Example</title>
@@ -264,7 +264,7 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testAnAtomLogoBeatsThePodcastArtwork(): void
     {
-        $root = $this->atomRoot(<<<'XML'
+        $root = $this->atomRoot(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <itunes:image href="https://example.com/avatar.jpg"/>
@@ -285,6 +285,10 @@ final class FeedImageExtractorTest extends TestCase
                 </channel>
             </rss>
             XML);
-        self::assertSame('https://example.com/logo.png', FeedImageExtractor::fromRss2Channel(self::channelOf($document)));
+
+        self::assertSame(
+            'https://example.com/logo.png',
+            FeedImageExtractor::fromRss2Channel(self::channelOf($document)),
+        );
     }
 }
