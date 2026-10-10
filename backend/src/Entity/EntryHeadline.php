@@ -18,6 +18,7 @@ final class EntryHeadline
     public function store(string $title): void
     {
         $this->title = $title;
+        $this->derived = false;
     }
 
     public function getTitle(): string
