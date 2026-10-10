@@ -195,4 +195,30 @@ describe('upgradeMediaEmbeds', () => {
     expect(element.querySelector('.reader-embed')).not.toBeNull();
     expect(element.querySelector('.reader-embed--portrait')).toBeNull();
   });
+
+  it.each([
+    'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908',
+    'https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT',
+  ])('marks the audio player %s as audio', (url) => {
+    const element = host(`<a href="${url}">x</a>`);
+
+    expect(element.querySelector('div.reader-embed.reader-embed--audio')).not.toBeNull();
+  });
+
+  it('marks a Spotify collection as audio and keeps its tall box', () => {
+    const element = host(
+      '<a href="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4">x</a>',
+    );
+
+    expect(element.querySelector('div')!.className).toBe(
+      'reader-embed reader-embed--audio reader-embed--tall',
+    );
+  });
+
+  it('does not mark a YouTube video as audio', () => {
+    const element = host('<a href="https://www.youtube-nocookie.com/embed/GhUuOxrCato">x</a>');
+
+    expect(element.querySelector('.reader-embed')).not.toBeNull();
+    expect(element.querySelector('.reader-embed--audio')).toBeNull();
+  });
 });

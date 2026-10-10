@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Reader\Media\Support\YouTubeVideoId;
 
@@ -54,6 +55,11 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
     {
         return '^https://www\.youtube-nocookie\.com/embed/' . YouTubeVideoId::PATTERN
             . '(?:' . YouTubeShortUrl::FRAGMENT . ')?$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Video;
     }
 
     public function sourceHosts(): array

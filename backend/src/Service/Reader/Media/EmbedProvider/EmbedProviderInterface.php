@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * Recognises one embed host and reduces any of its URL spellings to one durable embed URL that keeps only what
  * identifies the media, so share tokens, autoplay and player chrome never survive.
@@ -27,6 +29,9 @@ interface EmbedProviderInterface
      * generated from every provider's pattern, so the two never drift.
      */
     public function framePattern(): string;
+
+    /** Whether the player plays audio or video; the reader client sizes it and offers cinema mode by it. */
+    public function kind(): EmbedKind;
 
     /**
      * The embed-source hosts this provider claims. Readability's in-body keep-list is built from them, so a supported

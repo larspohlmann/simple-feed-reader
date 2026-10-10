@@ -17,17 +17,10 @@ import { Subject, debounceTime } from 'rxjs';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SpinnerComponent } from '../../../shared/spinner/spinner.component';
+import { isTextEntryTarget } from '../../../shared/text-entry-target';
 import { isTooShortToSearch, normalizeSearchInput } from '../../query/query';
 
 const DEBOUNCE_MS = 300;
-
-/** Elements a bare `/` must type into rather than be stolen from. Matches the
- *  target itself, not `document.activeElement` by name, so a `/` typed inside
- *  this very field's own input takes this branch and is left alone. */
-function isTextEntryTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-}
 
 /**
  * The entry-search input. It owns the debounce and minimum-length floor, so no

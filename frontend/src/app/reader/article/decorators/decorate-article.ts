@@ -9,6 +9,7 @@ import { markNarrationPlayers } from './reader-narration';
 import { expandFaqDisclosures } from './reader-faq';
 import { hydrateSlideshows } from './reader-slideshow';
 import { removeEnclosurePlayers } from './enclosure-players';
+import { addCinemaToggles } from './reader-cinema';
 
 /** Every decoration the rendered article body gets, in order. */
 export function decorateArticle(
@@ -23,6 +24,10 @@ export function decorateArticle(
   fitReaderImages(host);
   void highlightCodeBlocks(host);
   upgradeMediaEmbeds(host);
+  addCinemaToggles(host, {
+    enter: i18n.translate('reader.cinema'),
+    exit: i18n.translate('reader.cinemaExit'),
+  });
   markNarrationPlayers(host, i18n.translate('reader.narrationPlayer'));
   expandFaqDisclosures(host);
   hydrateSlideshows(host, {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
+use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -37,19 +38,18 @@ final readonly class EmbedProviders
      */
     public function framePatterns(): array
     {
-        $patterns = [];
-        foreach ($this->providers as $provider) {
-            $patterns[] = $provider->framePattern();
-        }
-        sort($patterns);
-
-        return $patterns;
+        return array_keys($this->kindsByFramePattern());
     }
 
-    /** The frame patterns as the reader client's committed allow-list file. */
+    /** Every frame pattern with the kind of player it embeds, as the reader client's committed allow-list file. */
     public function allowlistJson(): string
     {
-        return json_encode($this->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
+        $entries = [];
+        foreach ($this->kindsByFramePattern() as $pattern => $kind) {
+            $entries[] = ['pattern' => $pattern, 'kind' => $kind->value];
+        }
+
+        return json_encode($entries, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR) . "\n";
     }
 
     /** The case-insensitive regex readability keeps an in-body frame by, built from every provider's sourceHosts(). */
@@ -63,5 +63,17 @@ final readonly class EmbedProviders
         }
 
         return '#//(?:' . implode('|', $hosts) . ')#i';
+    }
+
+    /** @return array<string, EmbedKind> sorted by pattern */
+    private function kindsByFramePattern(): array
+    {
+        $kinds = [];
+        foreach ($this->providers as $provider) {
+            $kinds[$provider->framePattern()] = $provider->kind();
+        }
+        ksort($kinds, \SORT_STRING);
+
+        return $kinds;
     }
 }

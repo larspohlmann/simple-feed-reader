@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\TestCase;
 
 final class BrightcoveEmbedProviderTest extends TestCase
@@ -65,5 +66,10 @@ final class BrightcoveEmbedProviderTest extends TestCase
     {
         self::assertNull($this->provider->poster(self::AL_JAZEERA));
         self::assertSame('Watch the video', $this->provider->label());
+    }
+
+    public function testIsAVideoPlayer(): void
+    {
+        self::assertSame(EmbedKind::Video, $this->provider->kind());
     }
 }

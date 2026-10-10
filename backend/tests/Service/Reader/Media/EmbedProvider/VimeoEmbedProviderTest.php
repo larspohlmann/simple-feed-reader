@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -73,5 +74,10 @@ final class VimeoEmbedProviderTest extends TestCase
     {
         self::assertNull($this->provider->poster('https://vimeo.com/1226652197'));
         self::assertSame('Watch on Vimeo', $this->provider->label());
+    }
+
+    public function testIsAVideoPlayer(): void
+    {
+        self::assertSame(EmbedKind::Video, $this->provider->kind());
     }
 }

@@ -990,6 +990,8 @@
     "slideshowPrevious": "Previous slide",
     "slideshowNext": "Next slide",
     "slideshowPosition": "{{current}} of {{total}}",
+    "cinema": "Cinema mode",
+    "cinemaExit": "Exit cinema mode",
     "audioPlayer": {
       "listen": "Listen",
       "label": "Audio player",

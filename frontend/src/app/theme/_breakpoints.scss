@@ -10,3 +10,4 @@ $bp-lg: 900px; // desktop layout switch
 $container-kicker-narrow: 17rem; // measured against a split-card kicker line at 249.64px
 $container-list-header-compact: $bp-sm; // measured against the header's content box, so the compact form reaches a ~592px viewport
 $container-list-corner-buttons: 13rem; // list height: header clearance (~120px) plus the corner buttons' own (~80px)
+$container-reader-cinema: $bp-lg; // reader pane width at or below which a widened video gains too little to offer

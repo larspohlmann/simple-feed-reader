@@ -1,4 +1,11 @@
-import framePatterns from './embed-frame-allowlist.generated.json';
+import generatedFrames from './embed-frame-allowlist.generated.json';
+
+type EmbedKind = 'audio' | 'video';
+
+interface EmbedFrame {
+  pattern: string;
+  kind: EmbedKind;
+}
 
 /**
  * Turns a recovered media link into a real player. The backend can't ship an
@@ -9,11 +16,15 @@ import framePatterns from './embed-frame-allowlist.generated.json';
  * takes effect on already-cached articles. Runs beside `markInsetCards`;
  * idempotent since the anchor is gone after the first pass.
  *
- * The allow-list is generated from the backend embed providers (one per
- * `framePattern()`), so a provider is added in exactly one place and the two
- * sides never drift (#1048). Regenerate with `app:embed:dump-frame-allowlist`.
+ * The allow-list is generated from the backend embed providers (one entry per
+ * provider: its `framePattern()` and whether it plays audio or video), so a
+ * provider is added in exactly one place and the two sides never drift (#1048).
+ * Regenerate with `app:embed:dump-frame-allowlist`.
  */
-const ALLOWED = framePatterns.map((pattern) => new RegExp(pattern));
+const ALLOWED = (generatedFrames as EmbedFrame[]).map(({ pattern, kind }) => ({
+  pattern: new RegExp(pattern),
+  kind,
+}));
 
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
    URL is cross-origin: the frame gets its own origin and cannot reach the
@@ -30,20 +41,22 @@ const SHORTS_FRAGMENT = '#shorts';
 export function upgradeMediaEmbeds(host: HTMLElement): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
     const url = anchor.getAttribute('href') ?? '';
-    if (!ALLOWED.some((pattern) => pattern.test(url))) continue;
-    anchor.replaceWith(embedFrame(url, anchor.textContent?.trim() || 'Embedded media'));
+    const frame = ALLOWED.find(({ pattern }) => pattern.test(url));
+    if (!frame) continue;
+    anchor.replaceWith(embedFrame(url, frame.kind, anchor.textContent?.trim() || 'Embedded media'));
   }
 }
 
-function boxClass(url: string): string {
-  if (SPOTIFY_COLLECTION.test(url)) return 'reader-embed reader-embed--tall';
-  if (url.endsWith(SHORTS_FRAGMENT)) return 'reader-embed reader-embed--portrait';
-  return 'reader-embed';
+function boxClass(url: string, kind: EmbedKind): string {
+  const base = kind === 'audio' ? 'reader-embed reader-embed--audio' : 'reader-embed';
+  if (SPOTIFY_COLLECTION.test(url)) return `${base} reader-embed--tall`;
+  if (url.endsWith(SHORTS_FRAGMENT)) return `${base} reader-embed--portrait`;
+  return base;
 }
 
-function embedFrame(url: string, title: string): HTMLElement {
+function embedFrame(url: string, kind: EmbedKind, title: string): HTMLElement {
   const box = document.createElement('div');
-  box.className = boxClass(url);
+  box.className = boxClass(url, kind);
 
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);

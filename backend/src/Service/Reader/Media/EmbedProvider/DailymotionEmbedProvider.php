@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\EmbedProvider;
 
+use App\Service\Reader\Media\Model\EmbedKind;
+
 /**
  * Dailymotion's player embed. The video id is the whole payload (a page URL adds a `_title-slug`, the query holds
  * player preferences), so every spelling, `dai.ly` and `/video/` included, folds to `/embed/video/<id>`.
@@ -39,6 +41,11 @@ final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
     public function framePattern(): string
     {
         return '^https://www\.dailymotion\.com/embed/video/' . self::ID . '$';
+    }
+
+    public function kind(): EmbedKind
+    {
+        return EmbedKind::Video;
     }
 
     public function sourceHosts(): array

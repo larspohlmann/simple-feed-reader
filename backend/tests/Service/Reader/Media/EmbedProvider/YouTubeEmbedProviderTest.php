@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\EmbedProvider;
 
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\Model\EmbedKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -109,5 +110,10 @@ final class YouTubeEmbedProviderTest extends TestCase
         self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts'));
         self::assertSame(1, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato'));
         self::assertSame(0, preg_match($pattern, 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'));
+    }
+
+    public function testIsAVideoPlayer(): void
+    {
+        self::assertSame(EmbedKind::Video, $this->provider->kind());
     }
 }
