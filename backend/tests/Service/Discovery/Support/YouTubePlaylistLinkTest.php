@@ -32,6 +32,7 @@ final class YouTubePlaylistLinkTest extends TestCase
         yield 'a short link watched inside the playlist' => [
             'https://youtu.be/EeS-cBgIoxI?list=' . self::LIST . '&si=abc',
         ];
+        yield 'a mixed-case short-link host' => ['https://YouTu.be/EeS-cBgIoxI?list=' . self::LIST];
         yield 'a share tracking parameter' => ['https://www.youtube.com/playlist?list=' . self::LIST . '&si=abc'];
     }
 
@@ -58,6 +59,8 @@ final class YouTubePlaylistLinkTest extends TestCase
         yield 'a list given twice as an array' => ['https://www.youtube.com/playlist?list[]=' . self::LIST];
         yield 'a channel page carrying a list' => ['https://www.youtube.com/@veritasium?list=' . self::LIST];
         yield 'a look-alike host' => ['https://www.youtube.com.evil.example/playlist?list=' . self::LIST];
+        yield 'a short-link host without a video' => ['https://youtu.be/playlist?list=' . self::LIST];
+        yield 'a video-shaped path on another host' => ['https://vimeo.com/EeS-cBgIoxI?list=' . self::LIST];
         yield 'another host' => ['https://vimeo.com/playlist?list=' . self::LIST];
         yield 'text that is not a URL' => ['not a url'];
     }
