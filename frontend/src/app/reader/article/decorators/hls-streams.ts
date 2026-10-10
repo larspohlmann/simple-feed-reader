@@ -30,6 +30,11 @@ export function attachHlsStreams(host: HTMLElement): void {
   }
 }
 
+/** hls.js swaps a managed video's source on first play, so the native attempt's error is not a failure. */
+export function isHlsManaged(video: HTMLVideoElement): boolean {
+  return armed.has(video);
+}
+
 async function play(video: HTMLVideoElement, source: string): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
   if (!HlsPlayer.isSupported() || !video.isConnected) return;
