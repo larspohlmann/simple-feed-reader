@@ -1167,6 +1167,10 @@ row-density tokens, so the layout does not shift when the real rows arrive.
 rows are `aria-hidden`; the `role="status"` label is what gets announced. The
 pulse animation is disabled under `prefers-reduced-motion`.
 
+The pulse is the app's one loading idiom. It lives in `theme/_loading-pulse.scss`, so
+anything else that is still loading pulses the same way. The link-card placeholder
+of a post still being completed (#1502) is the second user.
+
 **Not for:** a non-list fetch — use `<app-spinner>`, which does not pretend to
 know the shape of what is coming.
 
