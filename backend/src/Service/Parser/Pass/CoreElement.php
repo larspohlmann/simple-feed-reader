@@ -13,6 +13,12 @@ final readonly class CoreElement
     {
     }
 
+    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
+    public static function inOwnNamespace(\DOMElement $element): self
+    {
+        return new self($element, $element->namespaceURI);
+    }
+
     public function at(\DOMElement $element): self
     {
         return new self($element, $this->namespaceUri);

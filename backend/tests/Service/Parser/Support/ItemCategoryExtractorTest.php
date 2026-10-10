@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Support;
 
+use App\Service\Parser\Model\ParsedCategoryModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\ItemCategoryExtractor;
 use App\Tests\Support\FeedFormatParsers;
@@ -18,7 +19,7 @@ final class ItemCategoryExtractorTest extends TestCase
         $item = $document->getElementsByTagName('*')->item(0);
         \assert($item instanceof \DOMElement);
 
-        return new CoreElement($item, $item->namespaceURI);
+        return CoreElement::inOwnNamespace($item);
     }
 
     public function testRss2CategoryTextAndDomain(): void
@@ -148,9 +149,7 @@ final class ItemCategoryExtractorTest extends TestCase
             . '</item>',
         );
 
-        $labels = array_map(static fn ($category) => $category->label, ItemCategoryExtractor::extract($item));
-
-        self::assertSame(['World'], $labels);
+        self::assertSame(['World'], self::labelsOf($item));
     }
 
     public function testAnAtomEntryReadsOnlyAtomCategories(): void
@@ -161,8 +160,15 @@ final class ItemCategoryExtractorTest extends TestCase
             . '</entry>',
         );
 
-        $labels = array_map(static fn ($category) => $category->label, ItemCategoryExtractor::extract($item));
+        self::assertSame(['Right'], self::labelsOf($item));
+    }
 
-        self::assertSame(['Right'], $labels);
+    /** @return list<string> */
+    private static function labelsOf(CoreElement $item): array
+    {
+        return array_map(
+            static fn (ParsedCategoryModel $category): string => $category->label,
+            ItemCategoryExtractor::extract($item),
+        );
     }
 }

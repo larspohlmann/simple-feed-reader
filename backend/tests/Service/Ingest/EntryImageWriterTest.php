@@ -234,7 +234,7 @@ final class EntryImageWriterTest extends TestCase
             . $folder . 'photo-50x50.jpg 50w">';
 
         $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2(
-            new CoreElement($item, $item->namespaceURI),
+            CoreElement::inOwnNamespace($item),
             $excerpt,
         );
         self::assertNotNull($image);

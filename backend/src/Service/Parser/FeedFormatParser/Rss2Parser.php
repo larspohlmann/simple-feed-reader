@@ -52,7 +52,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         if (!$channelElement instanceof \DOMElement) {
             throw new FeedParseException('RSS document without <channel>');
         }
-        $channel = self::core($channelElement);
+        $channel = CoreElement::inOwnNamespace($channelElement);
 
         return (new ParsedFeedModel(
             PlainText::from($channel->text('title')),
@@ -65,7 +65,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $item = self::core($entry);
+        $item = CoreElement::inOwnNamespace($entry);
         $title = $item->text('title');
         $link = $item->text('link');
         if ($title === null && $link === null) {
@@ -90,12 +90,6 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );
-    }
-
-    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
-    private static function core(\DOMElement $element): CoreElement
-    {
-        return new CoreElement($element, $element->namespaceURI);
     }
 
     private static function coreOrDublinCore(CoreElement $item, string $coreName, string $dublinCoreName): ?string

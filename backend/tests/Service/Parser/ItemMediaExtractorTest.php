@@ -5,42 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class ItemMediaExtractorTest extends TestCase
 {
+    use FeedItemFixtures;
+
     private ItemMediaExtractor $extractor;
 
     protected function setUp(): void
     {
         $this->extractor = new ItemMediaExtractor();
-    }
-
-    private function rssItem(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        /** @noinspection XmlUnusedNamespaceDeclaration */
-        $root = '<rss xmlns:media="http://search.yahoo.com/mrss/"'
-            . ' xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><item>'
-            . $innerXml . '</item></channel></rss>';
-        $document->loadXML($root);
-        $item = $document->getElementsByTagName('item')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $item);
-
-        return new CoreElement($item, $item->namespaceURI);
-    }
-
-    private function atomEntry(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        $document->loadXML('<feed xmlns="http://www.w3.org/2005/Atom"><entry>' . $innerXml . '</entry></feed>');
-        $entry = $document->getElementsByTagName('entry')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $entry);
-
-        return new CoreElement($entry, $entry->namespaceURI);
     }
 
     public function testPodcastEnclosureBecomesAnAttachmentWithMimeDurationAndSize(): void

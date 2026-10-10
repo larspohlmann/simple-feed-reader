@@ -163,13 +163,8 @@ final readonly class ItemMediaExtractor
 
     private static function isItemMediaNode(CoreElement $item, \DOMElement $node): bool
     {
-        if ($item->isCore($node, 'enclosure')) {
-            return true;
-        }
-        if ($item->isCore($node, 'link') && $node->getAttribute('rel') === 'enclosure') {
-            return true;
-        }
-
-        return MediaRssSlot::isContentOrThumbnail($node);
+        return $item->isCore($node, 'enclosure')
+            || ($item->isCore($node, 'link') && $node->getAttribute('rel') === 'enclosure')
+            || MediaRssSlot::isContentOrThumbnail($node);
     }
 }

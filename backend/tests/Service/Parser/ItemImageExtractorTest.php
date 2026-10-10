@@ -6,12 +6,13 @@ namespace App\Tests\Service\Parser;
 
 use App\Entity\ImageRendition;
 use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\Pass\CoreElement;
+use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase
 {
-    private const ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom';
+    use FeedItemFixtures;
+
 
     private ItemImageExtractor $extractor;
 
@@ -22,16 +23,7 @@ final class ItemImageExtractorTest extends TestCase
 
     private function item(string $innerXml): \DOMElement
     {
-        $document = new \DOMDocument();
-        /** @noinspection XmlUnusedNamespaceDeclaration */
-        $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
-            . $innerXml
-            . '</item></channel></rss>';
-        $document->loadXML($rss);
-        $item = $document->getElementsByTagName('item')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $item);
-
-        return $item;
+        return $this->rssItem($innerXml)->element;
     }
 
     public function testPicksTheWidestMediaContentVariant(): void
@@ -157,9 +149,9 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReadsAnRssEnclosure(): void
     {
-        $image = $this->extractor->fromRssEnclosure(self::core($this->item(
+        $image = $this->extractor->fromRssEnclosure($this->rssItem(
             '<enclosure url="https://i/e.jpg" type="image/jpeg" length="0"/>',
-        )));
+        ));
 
         self::assertNotNull($image);
         self::assertSame('https://i/e.jpg', $image->url);
@@ -168,9 +160,9 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresANonImageEnclosure(): void
     {
-        self::assertNull($this->extractor->fromRssEnclosure(self::core($this->item(
+        self::assertNull($this->extractor->fromRssEnclosure($this->rssItem(
             '<enclosure url="https://i/a.mp3" type="audio/mpeg" length="10"/>',
-        ))));
+        )));
     }
 
     public function testReadsAnInlineImgWithoutDimensions(): void
@@ -395,21 +387,6 @@ final class ItemImageExtractorTest extends TestCase
         ));
     }
 
-    private static function core(\DOMElement $item): CoreElement
-    {
-        return new CoreElement($item, $item->namespaceURI);
-    }
-
-    private function atomEntry(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        $document->loadXML('<feed xmlns="' . self::ATOM_NAMESPACE . '"><entry>' . $innerXml . '</entry></feed>');
-        $entry = $document->getElementsByTagName('entry')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $entry);
-
-        return new CoreElement($entry, self::ATOM_NAMESPACE);
-    }
-
     public function testReadsTheWidthDescribedSrcsetOfABodyImage(): void
     {
         $image = $this->extractor->fromHtml(
@@ -489,7 +466,7 @@ final class ItemImageExtractorTest extends TestCase
     public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
     {
         $image = $this->extractor->fromRssEnclosure(
-            self::core($this->item('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>')),
+            $this->rssItem('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
         );
 
         self::assertNotNull($image);
@@ -561,16 +538,16 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAPrefixedEnclosureIsNotTheRssEnclosure(): void
     {
-        self::assertNull($this->extractor->fromRssEnclosure(self::core($this->item(
+        self::assertNull($this->extractor->fromRssEnclosure($this->rssItem(
             '<x:enclosure xmlns:x="urn:example:other" url="https://i/x.jpg" type="image/jpeg"/>',
-        ))));
+        )));
     }
 
     public function testAnRssEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(): void
     {
-        $image = $this->extractor->fromRssEnclosure(self::core($this->item(
+        $image = $this->extractor->fromRssEnclosure($this->rssItem(
             '<enclosure url="  https://i/e.jpg  " type="IMAGE/JPEG"/>',
-        )));
+        ));
 
         self::assertSame('https://i/e.jpg', $image?->url);
     }

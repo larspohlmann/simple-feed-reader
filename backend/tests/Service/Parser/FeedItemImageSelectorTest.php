@@ -7,11 +7,13 @@ namespace App\Tests\Service\Parser;
 use App\Entity\ImageRendition;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\Pass\CoreElement;
+use App\Tests\Support\FeedItemFixtures;
 use PHPUnit\Framework\TestCase;
 
 final class FeedItemImageSelectorTest extends TestCase
 {
+    use FeedItemFixtures;
+
     private FeedItemImageSelector $selector;
 
     protected function setUp(): void
@@ -19,38 +21,14 @@ final class FeedItemImageSelectorTest extends TestCase
         $this->selector = new FeedItemImageSelector(new ItemImageExtractor());
     }
 
-    private function rss2Item(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        /** @noinspection XmlUnusedNamespaceDeclaration */
-        $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
-            . $innerXml . '</item></channel></rss>';
-        $document->loadXML($rss);
-        $item = $document->getElementsByTagName('item')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $item);
-
-        return new CoreElement($item, $item->namespaceURI);
-    }
-
     private static function itunesImage(string $href): string
     {
         return '<itunes:image xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" href="' . $href . '"/>';
     }
 
-    private function atomEntry(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        $atom = '<entry xmlns="http://www.w3.org/2005/Atom">' . $innerXml . '</entry>';
-        $document->loadXML($atom);
-        $entry = $document->documentElement;
-        self::assertInstanceOf(\DOMElement::class, $entry);
-
-        return new CoreElement($entry, 'http://www.w3.org/2005/Atom');
-    }
-
     public function testAnHttpEnclosureKeepsItsPrecedenceOverAnHttpsBodyImage(): void
     {
-        $item = $this->rss2Item('<enclosure url="http://files.example/lead.jpg" type="image/jpeg" length="0"/>');
+        $item = $this->rssItem('<enclosure url="http://files.example/lead.jpg" type="image/jpeg" length="0"/>');
         $body = '<p>x</p><img src="https://files.example/diagram.jpg" width="900" height="600">';
 
         $image = $this->selector->fromRss2($item, $body);
@@ -61,7 +39,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testAnHttpsEmojiInTheBodyNeverDisplacesTheFeedsLeadImage(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             '<media:content url="http://site.example/lead-1200.jpg" medium="image" width="1200"/>',
         );
         $body = '<p>Hi <img src="https://s.w.org/images/core/emoji/15/72x72/1f642.png" class="wp-smiley"></p>';
@@ -74,7 +52,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testFallsBackToTheHttpEnclosureWhenNoHttpsCandidateExists(): void
     {
-        $item = $this->rss2Item('<enclosure url="http://files.example/e.jpg" type="image/jpeg" length="0"/>');
+        $item = $this->rssItem('<enclosure url="http://files.example/e.jpg" type="image/jpeg" length="0"/>');
 
         $image = $this->selector->fromRss2($item, '<p>no image here</p>');
 
@@ -85,7 +63,7 @@ final class FeedItemImageSelectorTest extends TestCase
     public function testReturnsAnHttpBodyImageWhenThatIsAllThereIs(): void
     {
         $image = $this->selector->fromRss2(
-            $this->rss2Item('<description>no media</description>'),
+            $this->rssItem('<description>no media</description>'),
             '<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">',
         );
 
@@ -96,14 +74,14 @@ final class FeedItemImageSelectorTest extends TestCase
     public function testReturnsNullWhenNoSourceYieldsAnImage(): void
     {
         self::assertNull($this->selector->fromRss2(
-            $this->rss2Item('<description>nothing</description>'),
+            $this->rssItem('<description>nothing</description>'),
             '<p>words only</p>',
         ));
     }
 
     public function testAnRss2ItemWithOnlyPodcastArtworkTakesIt(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             self::itunesImage('https://i/art.jpg'),
         );
 
@@ -112,7 +90,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testAMediaRssImageBeatsPodcastArtwork(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             self::itunesImage('https://i/art.jpg')
             . '<media:content url="https://i/media.jpg" medium="image"/>',
         );
@@ -122,7 +100,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testACustomImageElementBeatsPodcastArtwork(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             self::itunesImage('https://i/art.jpg')
             . '<image url="https://i/custom.jpg"/>',
         );
@@ -132,7 +110,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testAnImageEnclosureBeatsPodcastArtwork(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             self::itunesImage('https://i/art.jpg')
             . '<enclosure url="https://i/enclosure.jpg" type="image/jpeg" length="0"/>',
         );
@@ -142,7 +120,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testThePostsOwnBodyImageBeatsPodcastArtwork(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             self::itunesImage('https://i/show.jpg'),
         );
 
@@ -175,7 +153,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testKeepsNativeHttpsMediaImmediately(): void
     {
-        $item = $this->rss2Item('<media:content url="https://i/big.jpg" medium="image" width="700"/>');
+        $item = $this->rssItem('<media:content url="https://i/big.jpg" medium="image" width="700"/>');
 
         $image = $this->selector->fromRss2($item, '<img src="https://i/body.jpg">');
 
@@ -205,23 +183,9 @@ final class FeedItemImageSelectorTest extends TestCase
         return 'https://substackcdn.com/image/fetch/$s_!v2GA!,' . $transforms . '/' . self::SUBSTACK_SOURCE;
     }
 
-    private function rss1Item(string $innerXml): CoreElement
-    {
-        $document = new \DOMDocument();
-        /** @noinspection XmlUnusedNamespaceDeclaration */
-        $rdf = '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"'
-            . ' xmlns="http://purl.org/rss/1.0/" xmlns:media="http://search.yahoo.com/mrss/"><item>'
-            . $innerXml . '</item></rdf:RDF>';
-        $document->loadXML($rdf);
-        $item = $document->getElementsByTagName('item')->item(0);
-        self::assertInstanceOf(\DOMElement::class, $item);
-
-        return new CoreElement($item, $item->namespaceURI);
-    }
-
     public function testASubstackEnclosureTakesTheBodyImagesLadder(): void
     {
-        $item = $this->rss2Item(
+        $item = $this->rssItem(
             '<enclosure url="' . self::substack('f_auto,q_auto:good,fl_progressive:steep')
             . '" length="0" type="image/jpeg"/>',
         );
@@ -244,7 +208,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testABodyImageOfAnotherPictureLendsNoRenditions(): void
     {
-        $item = $this->rss2Item('<media:content url="https://i/harbor-lighthouse.jpg" medium="image" width="700"/>');
+        $item = $this->rssItem('<media:content url="https://i/harbor-lighthouse.jpg" medium="image" width="700"/>');
         $body = '<img src="https://i/mountain-summit.jpg" srcset="https://i/mountain-summit-300.jpg 300w">';
 
         $image = $this->selector->fromRss2($item, $body);
@@ -256,7 +220,7 @@ final class FeedItemImageSelectorTest extends TestCase
     public function testABodyImageAloneKeepsItsOwnLadder(): void
     {
         $image = $this->selector->fromRss2(
-            $this->rss2Item('<description>no media</description>'),
+            $this->rssItem('<description>no media</description>'),
             '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
             . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
         );

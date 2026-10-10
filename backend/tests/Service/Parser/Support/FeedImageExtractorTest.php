@@ -42,7 +42,7 @@ final class FeedImageExtractorTest extends TestCase
         $channel = $document->getElementsByTagName('channel')->item(0);
         self::assertInstanceOf(\DOMElement::class, $channel);
 
-        return new CoreElement($channel, $channel->namespaceURI);
+        return CoreElement::inOwnNamespace($channel);
     }
 
     private static function rss1Root(\DOMDocument $document): CoreElement
