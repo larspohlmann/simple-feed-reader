@@ -10,6 +10,11 @@ final class YouTubeVideoId
 
     public const array YOUTUBE_COM_HOSTS = ['youtube.com', 'www.youtube.com', 'm.youtube.com'];
 
+    public static function matches(string $candidate): bool
+    {
+        return 1 === preg_match('#^' . self::PATTERN . '\z#', $candidate);
+    }
+
     public static function isYouTubeComHost(string $host): bool
     {
         return \in_array(strtolower($host), self::YOUTUBE_COM_HOSTS, true);

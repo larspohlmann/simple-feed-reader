@@ -23,7 +23,6 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInterface
 {
     private const string VIDEO_ID_ATTRIBUTE = 'data-video-id';
-    private const string ID_PATTERN = '#^' . YouTubeVideoId::PATTERN . '$#';
     private const string YOUTUBE_MARKER = '#youtube|(?:^|[^a-z])yt[-_]#i';
 
     public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
@@ -56,7 +55,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
             return null;
         }
 
-        if (preg_match(self::ID_PATTERN, $id) !== 1 || !$this->namesYouTube($element)) {
+        if (!YouTubeVideoId::matches($id) || !$this->namesYouTube($element)) {
             return null;
         }
 

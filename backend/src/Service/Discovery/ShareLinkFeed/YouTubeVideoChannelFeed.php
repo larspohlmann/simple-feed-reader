@@ -17,11 +17,9 @@ final readonly class YouTubeVideoChannelFeed implements ShareLinkFeedInterface
 {
     private const string SHORT_LINK_HOST = 'youtu.be';
 
-    private const string SHORT_LINK_PATH = '#^/(' . YouTubeVideoId::PATTERN . ')$#';
+    private const string SHORT_LINK_PATH = '#^/(' . YouTubeVideoId::PATTERN . ')/?\z#';
 
-    private const string VIDEO_PATH = '#^/(?:shorts|live)/(' . YouTubeVideoId::PATTERN . ')/?$#';
-
-    private const string VIDEO_ID = '#^' . YouTubeVideoId::PATTERN . '$#';
+    private const string VIDEO_PATH = '#^/(?:shorts|live)/(' . YouTubeVideoId::PATTERN . ')/?\z#';
 
     private const string CHANNEL_ID = '#"externalChannelId":"(UC[A-Za-z0-9_-]{22})"#';
 
@@ -35,7 +33,11 @@ final readonly class YouTubeVideoChannelFeed implements ShareLinkFeedInterface
 
     public function feedUrl(string $enteredUrl): ?string
     {
-        $videoId = null === YouTubePlaylistLink::listId($enteredUrl) ? $this->videoId($enteredUrl) : null;
+        if (null !== YouTubePlaylistLink::listId($enteredUrl)) {
+            return null;
+        }
+
+        $videoId = $this->videoId($enteredUrl);
         if (null === $videoId) {
             return null;
         }
@@ -69,7 +71,7 @@ final readonly class YouTubeVideoChannelFeed implements ShareLinkFeedInterface
         parse_str((string) parse_url($enteredUrl, PHP_URL_QUERY), $query);
         $videoId = $query['v'] ?? null;
 
-        return \is_string($videoId) && 1 === preg_match(self::VIDEO_ID, $videoId) ? $videoId : null;
+        return \is_string($videoId) && YouTubeVideoId::matches($videoId) ? $videoId : null;
     }
 
     private function channelId(string $videoId): ?string

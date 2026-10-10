@@ -54,5 +54,6 @@ final class PlatformLinkDiscoveryTest extends KernelTestCase
 
         self::assertNotNull($result->feed);
         self::assertSame($feed, $result->feed->url);
+        self::assertSame(['https://www.youtube.com/watch?v=EeS-cBgIoxI', $feed], $fetcher->fetchedUrls);
     }
 }

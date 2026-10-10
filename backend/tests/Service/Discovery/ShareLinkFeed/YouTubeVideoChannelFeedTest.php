@@ -45,6 +45,8 @@ final class YouTubeVideoChannelFeedTest extends TestCase
         yield 'the short link' => ['https://youtu.be/EeS-cBgIoxI'];
         yield 'the short link with a share id' => ['https://youtu.be/EeS-cBgIoxI?si=AbCdEf'];
         yield 'a mixed-case short-link host' => ['https://YouTu.be/EeS-cBgIoxI'];
+        yield 'the short link with a trailing slash' => ['https://youtu.be/EeS-cBgIoxI/'];
+        yield 'watched from watch later' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI&list=WL'];
         yield 'a Short' => ['https://www.youtube.com/shorts/EeS-cBgIoxI'];
         yield 'a Short with a trailing slash' => ['https://www.youtube.com/shorts/EeS-cBgIoxI/'];
         yield 'a live stream' => ['https://www.youtube.com/live/EeS-cBgIoxI'];
@@ -65,6 +67,10 @@ final class YouTubeVideoChannelFeedTest extends TestCase
         yield 'a video inside a playlist' => [
             'https://www.youtube.com/watch?v=EeS-cBgIoxI&list=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF',
         ];
+        yield 'a short link watched inside a playlist' => [
+            'https://youtu.be/EeS-cBgIoxI?list=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF',
+        ];
+        yield 'a video id with a trailing newline' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI%0A'];
         yield 'a playlist page' => ['https://www.youtube.com/playlist?list=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF'];
         yield 'a channel page' => ['https://www.youtube.com/@veritasium'];
         yield 'a watch page without a video' => ['https://www.youtube.com/watch'];

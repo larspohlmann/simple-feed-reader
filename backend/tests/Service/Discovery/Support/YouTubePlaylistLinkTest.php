@@ -29,6 +29,9 @@ final class YouTubePlaylistLinkTest extends TestCase
         yield 'a video watched inside the playlist' => [
             'https://www.youtube.com/watch?v=EeS-cBgIoxI&list=' . self::LIST . '&index=3',
         ];
+        yield 'a short link watched inside the playlist' => [
+            'https://youtu.be/EeS-cBgIoxI?list=' . self::LIST . '&si=abc',
+        ];
         yield 'a share tracking parameter' => ['https://www.youtube.com/playlist?list=' . self::LIST . '&si=abc'];
     }
 
@@ -42,6 +45,12 @@ final class YouTubePlaylistLinkTest extends TestCase
     public static function otherLinks(): iterable
     {
         yield 'an auto-generated mix' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI&list=RDEeS-cBgIoxI'];
+        yield 'watch later' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI&list=WL'];
+        yield 'liked videos' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI&list=LL'];
+        yield 'music likes' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI&list=LM'];
+        yield 'a list with a trailing newline' => [
+            'https://www.youtube.com/playlist?list=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF%0A',
+        ];
         yield 'a video without a playlist' => ['https://www.youtube.com/watch?v=EeS-cBgIoxI'];
         yield 'a playlist page without a list' => ['https://www.youtube.com/playlist'];
         yield 'an empty list' => ['https://www.youtube.com/playlist?list='];
