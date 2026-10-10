@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\ReadsFixtures;
+use App\Tests\Support\ReadsCandidateUrls;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -15,6 +16,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 final class HostAgnosticDiscoveryTest extends KernelTestCase
 {
     use ReadsFixtures;
+    use ReadsCandidateUrls;
     use ScansWithTheWiredSources;
 
 
@@ -103,13 +105,12 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             'https://www.vice.com/en/article/4-remixes-from-the-2000s/',
         );
 
-        $urls = array_map(static fn ($candidate): string => $candidate->url, $media->candidates);
         self::assertSame([
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa1',
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa2',
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa3',
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa4',
-        ], $urls, 'four unique players in page order, the sidebar teaser excluded');
+        ], $this->urlsOf($media->candidates), 'four unique players in page order, the sidebar teaser excluded');
         foreach ($media->candidates as $candidate) {
             self::assertNotNull($candidate->precedingText, 'every player knows the section it follows');
         }

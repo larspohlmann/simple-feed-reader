@@ -11,11 +11,13 @@ use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Tests\Support\ReadsCandidateUrls;
 use PHPUnit\Framework\TestCase;
 
 final class ScriptEmbedSourceTest extends TestCase
 {
     use FindsMediaInRawPage;
+    use ReadsCandidateUrls;
 
     private function source(): ScriptEmbedSource
     {
@@ -107,7 +109,7 @@ final class ScriptEmbedSourceTest extends TestCase
         );
 
         self::assertCount(2, $found);
-        $urls = array_map(static fn($candidate) => $candidate->url, $found);
+        $urls = $this->urlsOf($found);
         self::assertContains('https://player.vimeo.com/video/1226652197', $urls);
         self::assertContains('https://www.youtube-nocookie.com/embed/aaaaaaaaaa1', $urls);
     }

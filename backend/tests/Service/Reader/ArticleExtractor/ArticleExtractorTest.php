@@ -880,6 +880,15 @@ final class ArticleExtractorTest extends TestCase
         self::assertLessThan(strpos($body, 'Der vierte Absatz'), strpos($body, '<video'), 'before the next one');
     }
 
+    public function testAPageVideoYieldsToThePlayerTheBodyAlreadyCarries(): void
+    {
+        $body = (string) $this->extractFixture('media/jsonld-master-beside-body-video.html')->contentHtml;
+
+        self::assertSame(1, substr_count($body, '<video'));
+        self::assertStringContainsString('the_story_social_16x9.mp4', $body);
+        self::assertStringNotContainsString('.mov', $body);
+    }
+
     public function testFlagsAPaywalledArticleDeclaredInJsonLd(): void
     {
         $result = $this->extractFixture('article-paywalled-jsonld-boolean.html');
