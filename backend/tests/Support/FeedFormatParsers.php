@@ -14,6 +14,7 @@ use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ItemImageExtractor;
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /** The format parsers over the real image and media policies, wired as the container wires them. */
@@ -52,6 +53,12 @@ final class FeedFormatParsers
     public static function feed(string $xml): ParsedFeedModel
     {
         return new FeedParser(new FeedParserFactory(self::all()))->parse($xml);
+    }
+
+    /** @return list<string> */
+    public static function entryTitles(ParsedFeedModel $feed): array
+    {
+        return array_map(static fn (ParsedEntryModel $entry): string => $entry->title, $feed->entries);
     }
 
     private static function imageSelector(): FeedItemImageSelector

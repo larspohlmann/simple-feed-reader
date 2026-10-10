@@ -94,7 +94,7 @@ final class StreamedFeedDocument
     private function placeElement(FeedFormatParserInterface $parser): bool
     {
         $element = $this->currentElement();
-        if ($parser->isEntry($element, $this->reader->depth)) {
+        if ($parser->isEntry($element, $this->openNode)) {
             $this->addEntry($parser->parseEntry($this->expandedEntry()));
 
             return $this->skipEntry();

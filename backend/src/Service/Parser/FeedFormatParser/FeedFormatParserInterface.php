@@ -15,8 +15,8 @@ interface FeedFormatParserInterface
 {
     public function supports(\DOMElement $root): bool;
 
-    /** Asked of each element as the document streams past; the root sits at depth 0. */
-    public function isEntry(\DOMElement $element, int $depth): bool;
+    /** Asked of each element as the document streams past, with the skeleton node it would be placed under. */
+    public function isEntry(\DOMElement $element, \DOMNode $parent): bool;
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel;
 

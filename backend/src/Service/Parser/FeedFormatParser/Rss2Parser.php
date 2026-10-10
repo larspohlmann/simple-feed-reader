@@ -40,10 +40,16 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         return $root->localName === 'rss';
     }
 
-    /** Any unprefixed <item> at any depth. */
-    public function isEntry(\DOMElement $element, int $depth): bool
+    public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
-        return $element->nodeName === 'item';
+        $root = $element->ownerDocument?->documentElement;
+        if ($root === null) {
+            return false;
+        }
+        $core = CoreElement::inOwnNamespace($root);
+        $channel = $core->isCore($element, 'item') ? $core->child('channel') : null;
+
+        return $channel !== null && $parent->isSameNode($channel);
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel

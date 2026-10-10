@@ -429,10 +429,7 @@ final class Atom10ParserTest extends TestCase
             </feed>
             XML);
 
-        self::assertSame(
-            ['Real'],
-            array_map(static fn (ParsedEntryModel $entry): string => $entry->title, $feed->entries),
-        );
+        self::assertSame(['Real'], FeedFormatParsers::entryTitles($feed));
     }
 
     public function testALinkOutsideTheAtomNamespaceIsNotTheEntryUrl(): void

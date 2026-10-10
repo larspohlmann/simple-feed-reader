@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedParser;
 use App\Tests\Support\FeedFormatParsers;
 use App\Tests\Support\ReadsFixtures;
 use PHPUnit\Framework\TestCase;
@@ -15,15 +13,9 @@ final class FeedParserTest extends TestCase
 {
     use ReadsFixtures;
 
-    private function parser(): FeedParser
-    {
-        return new FeedParser(new FeedParserFactory(FeedFormatParsers::all()));
-    }
-
-
     public function testParsesRss2Basic(): void
     {
-        $feed = $this->parser()->parse($this->fixture('feeds/rss2-basic.xml'));
+        $feed = FeedFormatParsers::feed($this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
         self::assertSame('https://blog.example.com/', $feed->siteUrl);
@@ -49,7 +41,7 @@ final class FeedParserTest extends TestCase
 
     public function testASoundCloudFeedGivesEachTrackItsArtworkAndTheFeedItsImage(): void
     {
-        $feed = $this->parser()->parse($this->fixture('soundcloud/sounds.rss'));
+        $feed = FeedFormatParsers::feed($this->fixture('soundcloud/sounds.rss'));
 
         self::assertSame('https://i1.sndcdn.com/avatars-CJw9fKUiJYURN68j-qm5fdw-original.jpg', $feed->imageUrl);
         self::assertSame(
@@ -63,7 +55,7 @@ final class FeedParserTest extends TestCase
 
     public function testAnEpisodeWithoutArtworkOfItsOwnTakesTheShowsAndOtherItemsDoNot(): void
     {
-        $feed = $this->parser()->parse(<<<'XML'
+        $feed = FeedFormatParsers::feed(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <channel>
@@ -89,7 +81,7 @@ final class FeedParserTest extends TestCase
 
     public function testAnAtomEpisodeWithoutArtworkTakesTheShows(): void
     {
-        $feed = $this->parser()->parse(<<<'XML'
+        $feed = FeedFormatParsers::feed(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
                 <title>Show</title>
@@ -106,7 +98,7 @@ final class FeedParserTest extends TestCase
 
     public function testMissingGuidFallsBackToHashAndBrokenDateBecomesNull(): void
     {
-        $feed = $this->parser()->parse($this->fixture('feeds/rss2-no-guid.xml'));
+        $feed = FeedFormatParsers::feed($this->fixture('feeds/rss2-no-guid.xml'));
 
         self::assertCount(2, $feed->entries);
         $first = $feed->entries[0];
@@ -121,24 +113,24 @@ final class FeedParserTest extends TestCase
     public function testRejectsNonXml(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse('this is { not xml');
+        FeedFormatParsers::feed('this is { not xml');
     }
 
     public function testRejectsEmptyBody(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse('');
+        FeedFormatParsers::feed('');
     }
 
     public function testRejectsWhitespaceOnlyBody(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse("  \n\t ");
+        FeedFormatParsers::feed("  \n\t ");
     }
 
     public function testParsesFeedPrecededByBlankLines(): void
     {
-        $feed = $this->parser()->parse("\n\n" . $this->fixture('feeds/rss2-basic.xml'));
+        $feed = FeedFormatParsers::feed("\n\n" . $this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
         self::assertCount(2, $feed->entries);
@@ -146,7 +138,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesFeedPrecededByUtf8Bom(): void
     {
-        $feed = $this->parser()->parse("\u{FEFF}" . $this->fixture('feeds/atom-basic.xml'));
+        $feed = FeedFormatParsers::feed("\u{FEFF}" . $this->fixture('feeds/atom-basic.xml'));
 
         self::assertSame('Atom Example', $feed->title);
         self::assertCount(2, $feed->entries);
@@ -154,7 +146,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesFeedPrecededByBomAndBlankLines(): void
     {
-        $feed = $this->parser()->parse("\u{FEFF}\r\n \n" . $this->fixture('feeds/rss2-basic.xml'));
+        $feed = FeedFormatParsers::feed("\u{FEFF}\r\n \n" . $this->fixture('feeds/rss2-basic.xml'));
 
         self::assertSame('Example Tech Blog', $feed->title);
     }
@@ -162,18 +154,18 @@ final class FeedParserTest extends TestCase
     public function testRejectsBodyOfNothingButABom(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse("\u{FEFF}");
+        FeedFormatParsers::feed("\u{FEFF}");
     }
 
     public function testRejectsBodyOfNothingButABomAndBlankLines(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse("\u{FEFF}\r\n  \n");
+        FeedFormatParsers::feed("\u{FEFF}\r\n  \n");
     }
 
     public function testStripsIllegalControlCharactersBeforeParsing(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             "<?xml version=\"1.0\"?><rss version=\"2.0\"><channel>"
             . "<title>Konkret\x1DFeed</title><link>https://konkret.example.com/</link>"
             . "<item><title>First\x1DItem</title><link>https://konkret.example.com/1</link>"
@@ -196,7 +188,7 @@ final class FeedParserTest extends TestCase
         $address = (string) stream_socket_get_name($listener, false);
 
         try {
-            $this->parser()->parse(
+            FeedFormatParsers::feed(
                 '<?xml version="1.0"?><!DOCTYPE rss SYSTEM "http://' . $address . '/feed.dtd">'
                 . '<rss version="2.0"><channel><title>x</title><link>y</link></channel></rss>',
             );
@@ -214,7 +206,7 @@ final class FeedParserTest extends TestCase
     public function testRejectsDocumentsDeclaringADtd(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><!DOCTYPE rss [<!ENTITY z "zz">]>'
             . '<rss version="2.0"><channel><title>&z;</title><link>x</link></channel></rss>',
         );
@@ -228,13 +220,13 @@ final class FeedParserTest extends TestCase
             . ']><rss version="2.0"><channel><title>&d;</title><link>x</link></channel></rss>';
 
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse($bomb);
+        FeedFormatParsers::feed($bomb);
     }
 
     public function testDoesNotResolveExternalEntities(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]>'
             . '<rss version="2.0"><channel><title>&x;</title><link>y</link></channel></rss>',
         );
@@ -243,12 +235,12 @@ final class FeedParserTest extends TestCase
     public function testRejectsUnknownRootElement(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(/** @lang TEXT */ '<?xml version="1.0"?><html><body>nope</body></html>');
+        FeedFormatParsers::feed(/** @lang TEXT */ '<?xml version="1.0"?><html><body>nope</body></html>');
     }
 
     public function testParsesAtom(): void
     {
-        $feed = $this->parser()->parse($this->fixture('feeds/atom-basic.xml'));
+        $feed = FeedFormatParsers::feed($this->fixture('feeds/atom-basic.xml'));
 
         self::assertSame('Atom Example', $feed->title);
         self::assertSame('https://atom.example.com/', $feed->siteUrl);
@@ -271,7 +263,7 @@ final class FeedParserTest extends TestCase
 
     public function testParsesAtom03Dialect(): void
     {
-        $feed = $this->parser()->parse($this->fixture('feeds/atom-03-basic.xml'));
+        $feed = FeedFormatParsers::feed($this->fixture('feeds/atom-03-basic.xml'));
 
         self::assertSame('Atom 0.3 Example', $feed->title);
         self::assertSame('https://atom03.example.com/', $feed->siteUrl);
@@ -292,20 +284,20 @@ final class FeedParserTest extends TestCase
     public function testRejectsAtomWithNeitherTitleNorEntries(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>');
+        FeedFormatParsers::feed('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>');
     }
 
     public function testRejectsUnknownAtomNamespace(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><feed xmlns="http://example.com/not-atom"><title>x</title></feed>',
         );
     }
 
     public function testParsesRss1(): void
     {
-        $feed = $this->parser()->parse($this->fixture('feeds/rss1-basic.xml'));
+        $feed = FeedFormatParsers::feed($this->fixture('feeds/rss1-basic.xml'));
 
         self::assertSame('RSS 1.0 Example', $feed->title);
         self::assertCount(1, $feed->entries);
@@ -319,20 +311,20 @@ final class FeedParserTest extends TestCase
 
     public function testAnUndeclaredNamespacePrefixDoesNotFailTheFeed(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Loose</title><itunes:author>A</itunes:author>'
             . '<item><title>One</title><link>https://loose.example.com/1</link><media:thumbnail url="x"/></item>'
             . '</channel></rss>',
         );
 
         self::assertSame('Loose', $feed->title);
-        self::assertSame(['One'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+        self::assertSame(['One'], FeedFormatParsers::entryTitles($feed));
     }
 
     public function testAMalformedItemAfterGoodOnesFailsTheWholeFeed(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Broken</title>'
             . '<item><title>Good</title><link>https://broken.example.com/1</link></item>'
             . '<item><title>Bad<link>https://broken.example.com/2</link></item>'
@@ -343,7 +335,7 @@ final class FeedParserTest extends TestCase
     public function testATruncatedBodyFailsTheWholeFeed(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Cut</title>'
             . '<item><title>Good</title><link>https://cut.example.com/1</link></item><item><title>Ha',
         );
@@ -351,7 +343,7 @@ final class FeedParserTest extends TestCase
 
     public function testChannelMetadataAfterTheItemsStillCounts(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel>'
             . '<item><title>One</title><link>https://late.example.com/1</link></item>'
             . '<title><![CDATA[Late & Titled]]></title><!-- note --><link>https://late.example.com/</link>'
@@ -365,38 +357,38 @@ final class FeedParserTest extends TestCase
         self::assertCount(1, $feed->entries);
     }
 
-    public function testAnItemInsideAnExtensionElementOfTheChannelIsStillAnEntry(): void
+    public function testAnItemInsideAnExtensionElementOfTheChannelIsNotAnEntry(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Nested</title>'
             . '<section><item><title>Deep</title><link>https://nested.example.com/1</link></item></section>'
-            . '</channel></rss>',
+            . '<item><title>Shown</title><link>https://nested.example.com/2</link></item></channel></rss>',
         );
 
-        self::assertSame(['Deep'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+        self::assertSame(['Shown'], FeedFormatParsers::entryTitles($feed));
     }
 
     public function testAnEmptyRssRootIsAFeedWithoutAChannel(): void
     {
         $this->expectException(FeedParseException::class);
         $this->expectExceptionMessage('RSS document without <channel>');
-        $this->parser()->parse('<?xml version="1.0"?><rss version="2.0"/>');
+        FeedFormatParsers::feed('<?xml version="1.0"?><rss version="2.0"/>');
     }
 
     public function testAnAtomEntryOutsideTheFeedRootLevelIsNotAnEntry(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>Atom</title>'
             . '<wrapper><entry><title>Hidden</title><link href="https://a.example.com/h"/></entry></wrapper>'
             . '<entry><title>Shown</title><link href="https://a.example.com/s"/></entry></feed>',
         );
 
-        self::assertSame(['Shown'], array_map(static fn ($entry) => $entry->title, $feed->entries));
+        self::assertSame(['Shown'], FeedFormatParsers::entryTitles($feed));
     }
 
     public function testAnAtomXhtmlContentKeepsItsMarkupAndNamespace(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             '<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom" xmlns:x="http://www.w3.org/1999/xhtml">'
             . '<title>Atom</title><entry><title>E</title><link href="https://a.example.com/e"/>'
             . '<content type="xhtml"><x:div><x:p>Hi <x:b>there</x:b></x:p></x:div></content></entry></feed>',
@@ -408,7 +400,7 @@ final class FeedParserTest extends TestCase
     public function testABodyCutOffBetweenItemsFailsTheWholeFeed(): void
     {
         $this->expectException(FeedParseException::class);
-        $this->parser()->parse(
+        FeedFormatParsers::feed(
             '<?xml version="1.0"?><rss version="2.0"><channel><title>Cut</title>'
             . '<item><title>Good</title><link>https://cut.example.com/1</link></item><link>https://cut',
         );
@@ -419,7 +411,7 @@ final class FeedParserTest extends TestCase
         $previousErrorMode = libxml_use_internal_errors(true);
         try {
             new \DOMDocument()->loadXML('<broken');
-            $feed = $this->parser()->parse($this->fixture('feeds/rss2-basic.xml'));
+            $feed = FeedFormatParsers::feed($this->fixture('feeds/rss2-basic.xml'));
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previousErrorMode);
@@ -432,7 +424,7 @@ final class FeedParserTest extends TestCase
     {
         $previousErrorMode = libxml_use_internal_errors(false);
         try {
-            $this->parser()->parse('<rss><channel>');
+            FeedFormatParsers::feed('<rss><channel>');
             self::fail('A truncated document must be rejected');
         } catch (FeedParseException) {
             self::assertFalse(libxml_use_internal_errors());
@@ -445,7 +437,7 @@ final class FeedParserTest extends TestCase
     {
         $previousErrorMode = libxml_use_internal_errors(true);
         try {
-            $this->parser()->parse(
+            FeedFormatParsers::feed(
                 '<?xml version="1.0"?><rss version="2.0"><channel><title>Loose</title><itunes:author>A</itunes:author>'
                 . '</channel></rss>',
             );
@@ -457,7 +449,7 @@ final class FeedParserTest extends TestCase
 
     public function testALatin1FeedIsDecodedByItsDeclaredEncoding(): void
     {
-        $feed = $this->parser()->parse(
+        $feed = FeedFormatParsers::feed(
             "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><rss version=\"2.0\"><channel><title>Gr\xFC\xDFe</title>"
             . "<item><title>\xC4pfel</title><link>https://latin1.example.com/1</link></item></channel></rss>",
         );
