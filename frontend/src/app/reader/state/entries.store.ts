@@ -171,6 +171,20 @@ export class EntriesStore {
       });
   }
 
+  /** Lays finished copies of listed rows over them (#1502). The list's own collapse and
+   *  ranking stay: a completed row carries neither duplicates nor recommendation fields. */
+  mergeCompleted(rows: EntryDto[]): void {
+    const finished = new Map(rows.map((row) => [row.id, row]));
+    this.rawEntries.update((current) =>
+      this.withInFlightPatches(
+        current.map((entry) => {
+          const row = finished.get(entry.id);
+          return row ? { ...entry, ...row, duplicates: entry.duplicates } : entry;
+        }),
+      ),
+    );
+  }
+
   /** Restyle entries as read in place — no request. The caller marks them read
    *  on the server first (mark-read-batch); this only reflects it in an
    *  all-items list, where the rows stay visible. */

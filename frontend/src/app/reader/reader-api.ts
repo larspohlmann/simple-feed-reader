@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
@@ -10,6 +10,7 @@ import {
   CommentsResponse,
   EntriesPage,
   EntryDetailDto,
+  EntryDto,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
@@ -148,6 +149,13 @@ export class ReaderApi {
    *  self-describing, so it serves every list including the ranked ones. */
   markEntriesRead(ids: number[]): Observable<void> {
     return this.http.post<void>(`${this.base}/api/entries/mark-read-batch`, { ids });
+  }
+
+  /** Finishes the given pending entries (at most 25) and answers with their list rows (#1502). */
+  complete(ids: number[]): Observable<EntryDto[]> {
+    return this.http
+      .post<{ entries: EntryDto[] }>(`${this.base}/api/entries/complete`, { ids })
+      .pipe(map((response) => response.entries));
   }
 
   readerContent(entryId: number): Observable<ReaderContent> {

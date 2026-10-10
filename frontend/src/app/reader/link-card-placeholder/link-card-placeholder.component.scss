@@ -1,0 +1,44 @@
+@use '../../theme/glass-rim';
+
+:host {
+  @include glass-rim.filled(var(--surface-1));
+
+  display: block;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.image {
+  aspect-ratio: 1.91 / 1;
+  background: linear-gradient(
+    90deg,
+    var(--surface-0) 30%,
+    var(--surface-2) 50%,
+    var(--surface-0) 70%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    animation: none;
+  }
+}
+
+.label {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

@@ -4,6 +4,7 @@ import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
+import { LinkCardPlaceholderComponent } from '../../../../link-card-placeholder/link-card-placeholder.component';
 
 @Component({
   selector: 'app-entry-link',
@@ -13,6 +14,7 @@ import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxi
     EntryMetaComponent,
     EntryDuplicatesComponent,
     ProxiedImageDirective,
+    LinkCardPlaceholderComponent,
   ],
   templateUrl: './entry-link.component.html',
   styleUrl: './entry-link.component.scss',

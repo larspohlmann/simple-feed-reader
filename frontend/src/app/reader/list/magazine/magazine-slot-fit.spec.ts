@@ -27,6 +27,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isShort: false,
   titleDerived: false,
   linkCards: [],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -40,5 +41,9 @@ describe('settle', () => {
 
   it('demotes a link slot down the hero ladder for an entry without a picture', () => {
     expect(settle('link', entry({ imageUrl: null, excerpt: 'Some copy' }), 'thumb')).toBe('kicker');
+  });
+
+  it('settles a post still being completed as a link block whatever its slot', () => {
+    expect(settle('thumb', entry({ titleDerived: true, pending: true }), 'thumb')).toBe('link');
   });
 });

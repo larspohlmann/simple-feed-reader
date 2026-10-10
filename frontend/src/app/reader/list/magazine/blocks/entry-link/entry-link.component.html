@@ -38,6 +38,8 @@
         }
       </div>
     </a>
+  } @else if (entry().pending) {
+    <app-link-card-placeholder />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />

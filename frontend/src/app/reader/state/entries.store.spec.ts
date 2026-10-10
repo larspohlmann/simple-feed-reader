@@ -38,6 +38,7 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isShort: false,
   titleDerived: false,
   linkCards: [],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -434,6 +435,51 @@ describe('EntriesStore', () => {
     expect(byId.get(2)).toBe(false);
     expect(byId.get(3)).toBe(true);
     ctrl.expectNone(() => true);
+  });
+
+  describe('merging completed rows (#1502)', () => {
+    const card = {
+      url: 'https://news.test/',
+      title: 'Story',
+      description: null,
+      imageUrl: null,
+      siteName: 'news.test',
+    };
+
+    beforeEach(() => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            entry(1, { pending: true, duplicates: [entry(9)], recommendationReason: 'Because' }),
+            entry(2, { pending: true }),
+          ],
+          nextCursor: null,
+        });
+    });
+
+    it('replaces a listed row with its finished copy, keeping what only the list knows', () => {
+      store.mergeCompleted([entry(1, { linkCards: [card], duplicates: [] }), entry(7)]);
+
+      const [first, second] = store.entries();
+      expect(first.pending).toBe(false);
+      expect(first.linkCards).toEqual([card]);
+      expect(first.duplicates!.map((duplicate) => duplicate.id)).toEqual([9]);
+      expect(first.recommendationReason).toBe('Because');
+      expect(second.pending).toBe(true);
+      expect(store.entries().map((listed) => listed.id)).toEqual([1, 2]);
+    });
+
+    it('lays a state change still on the wire over the finished copy', () => {
+      store.setState(2, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
+
+      store.mergeCompleted([entry(2)]);
+
+      expect(store.entries()[1].isFavorite).toBe(true);
+      patch.flush({ state: {} });
+    });
   });
 
   it('invokes the onError callback on a failed state PATCH', () => {

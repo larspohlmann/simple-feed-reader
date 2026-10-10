@@ -34,6 +34,17 @@ describe('ReaderApi', () => {
     testRequest.flush({ subscriptions: [] });
   });
 
+  it('POSTs the ids to complete and answers with the finished rows', () => {
+    let rows: unknown;
+    api.complete([4, 2]).subscribe((entries) => (rows = entries));
+    const testRequest = ctrl.expectOne('https://api.test/api/entries/complete');
+    expect(testRequest.request.method).toBe('POST');
+    expect(testRequest.request.body).toEqual({ ids: [4, 2] });
+    testRequest.flush({ entries: [{ id: 4 }] });
+
+    expect(rows).toEqual([{ id: 4 }]);
+  });
+
   describe('transient gateway failures (#1420)', () => {
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());

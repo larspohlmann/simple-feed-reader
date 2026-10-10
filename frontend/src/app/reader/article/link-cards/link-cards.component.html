@@ -19,3 +19,6 @@
     </a>
   </figure>
 }
+@if (cards().length === 0 && pending()) {
+  <app-link-card-placeholder />
+}

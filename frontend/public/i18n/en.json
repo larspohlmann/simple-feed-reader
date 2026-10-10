@@ -1151,6 +1151,7 @@
       "empty": "The page has no more text than the feed — showing the feed's version.",
       "mismatch": "The page didn't match this entry — showing the feed's summary."
     },
+    "loadingPreview": "Loading preview…",
     "bodyLoadFailed": "Couldn't load the full article — showing the summary.",
     "retry": "Retry",
     "showError": "Show error",

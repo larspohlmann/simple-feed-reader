@@ -107,6 +107,7 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
     isShort: false,
     titleDerived: false,
     linkCards: [],
+    pending: false,
     imageAspectRatio: null,
     discussionUrl: null,
     comments: null,

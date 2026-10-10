@@ -54,6 +54,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isShort: false,
   titleDerived: true,
   linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -139,5 +140,21 @@ describe('EntryLinkComponent', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 
     expect(element.querySelectorAll('app-entry-meta app-entry-actions button').length).toBe(3);
+  });
+
+  it('holds the card place with a placeholder while the post is still being completed', () => {
+    const element = mount(entry({ linkCards: [], pending: true })).nativeElement as HTMLElement;
+
+    expect(element.querySelector('a.card')).toBeNull();
+    expect(element.querySelector('app-link-card-placeholder')!.textContent).toContain(
+      'Loading preview…',
+    );
+  });
+
+  it('shows the card, not the placeholder, once the post has one', () => {
+    const element = mount(entry({ pending: true })).nativeElement as HTMLElement;
+
+    expect(element.querySelector('a.card')).not.toBeNull();
+    expect(element.querySelector('app-link-card-placeholder')).toBeNull();
   });
 });

@@ -227,6 +227,8 @@ export interface EntryDto {
   titleDerived: boolean;
   /** Preview cards for the links a post shares, in the order the post names them (#1502). */
   linkCards: LinkCardDto[];
+  /** The post's cards or embed are still being filled in; `POST /api/entries/complete` finishes it (#1502). */
+  pending: boolean;
   /** The entry's discussion page — Reddit thread, HN item — or null. */
   discussionUrl: string | null;
   /** Whether the entry has a comments feed, and whether it loads without a click. */

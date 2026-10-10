@@ -41,6 +41,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isShort: false,
   titleDerived: false,
   linkCards: [],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -837,6 +838,26 @@ describe('planMagazine', () => {
 
       expect(blockKinds).not.toContain('link');
       expect(blockKinds).toContain('hero');
+    });
+
+    it('is a link block while it is still being completed, before it has any card', () => {
+      const entries = many(60, (index) =>
+        index % 3 === 0 ? big(index, { titleDerived: true, pending: true }) : big(index),
+      );
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      const pendingKinds = blocks
+        .filter((block) => block.kind !== 'group' && block.entry.pending)
+        .map((block) => block.kind);
+      expect(pendingKinds).toHaveLength(20);
+      expect(pendingKinds.every((kind) => kind === 'link')).toBe(true);
+    });
+
+    it('keeps the kind of a pending article, which is no post', () => {
+      const entries = many(60, (index) => big(index, { pending: true }));
+      const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(blockKinds).not.toContain('link');
     });
 
     it('counts a link block against the page height cap', () => {

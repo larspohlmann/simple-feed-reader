@@ -52,9 +52,10 @@ function hasSummary(entry: EntryDto): boolean {
   return entryDek(entry).length > 0;
 }
 
-/** A post that shares a link takes the `link` block whatever slot it was given (#1502). */
+/** A post that shares a link, or is still being completed, takes the `link` block
+ *  whatever slot it was given (#1502). */
 export function isLinkPost(entry: EntryDto): boolean {
-  return entry.titleDerived && entry.linkCards.length > 0;
+  return entry.titleDerived && (entry.linkCards.length > 0 || entry.pending);
 }
 
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {

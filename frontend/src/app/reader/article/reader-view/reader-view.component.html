@@ -230,8 +230,8 @@
               />
             }
             <div #content class="content" [innerHTML]="source.displayHtml()"></div>
-            @if (e.linkCards.length) {
-              <app-link-cards class="link-cards" [cards]="e.linkCards" />
+            @if (e.linkCards.length || e.pending) {
+              <app-link-cards class="link-cards" [cards]="e.linkCards" [pending]="e.pending" />
             }
           }
           @if (e.categories.length) {

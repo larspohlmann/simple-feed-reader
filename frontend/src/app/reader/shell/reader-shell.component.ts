@@ -53,6 +53,7 @@ import { ManageActions } from '../feeds/manage/manage-actions.service';
 import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
+import { PendingEntriesPoll } from './pending-entries-poll.service';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
@@ -82,6 +83,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
   // Per-reader state: provided here so none of it outlives the reader.
   providers: [
     SidebarCountsPoll,
+    PendingEntriesPoll,
     ReaderRouteState,
     ListHeading,
     EntryStateActions,
@@ -123,6 +125,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  list heading, tab title, all reading the same two stores (#709) — moving
    *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
+  /** Injected for its timer: holding it fills in the listed entries still pending (#1502). */
+  private readonly pendingPoll = inject(PendingEntriesPoll);
 
   protected readonly onboarding = inject(ReaderOnboarding);
   /** Injected for its effect: holding it opens the passkey offer when due. */

@@ -134,6 +134,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isShort: false,
   titleDerived: false,
   linkCards: [],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -331,6 +332,17 @@ describe('ReaderViewComponent', () => {
 
       expect(element.querySelector('figure.link-card')).toBeNull();
       expect(element.querySelector('app-link-cards')).toBeNull();
+    });
+
+    it('holds the cards place with a placeholder under the body while the post is completed', () => {
+      const element = mount(
+        entryWithBody('<p>Just a post</p>', { titleDerived: true, pending: true }),
+      ).nativeElement as HTMLElement;
+
+      expect(element.querySelector('figure.link-card')).toBeNull();
+      expect(element.querySelector('.link-cards app-link-card-placeholder')!.textContent).toContain(
+        'Loading preview…',
+      );
     });
 
     it('leaves an ordinary entry title visible', () => {

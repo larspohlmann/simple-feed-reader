@@ -58,6 +58,14 @@ export class EntryBodyService {
     this.fetch(id, state);
   }
 
+  /** Refetch a shown body that the server has since changed, keeping it on screen
+   *  until the new one lands — and for good if the refetch fails. */
+  refresh(id: number): void {
+    const state = this.cache.get(id);
+    if (state?.().status !== 'ok') return;
+    this.request(id, state, () => undefined);
+  }
+
   private stateFor(id: number): WritableSignal<EntryBodyState> {
     const existing = this.cache.get(id);
     if (existing) {
@@ -81,6 +89,10 @@ export class EntryBodyService {
   }
 
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
+    this.request(id, state, () => state.set({ status: 'error' }));
+  }
+
+  private request(id: number, state: WritableSignal<EntryBodyState>, onError: () => void): void {
     const generation = this.generation;
     this.api.entry(id).subscribe({
       next: (response) => {
@@ -89,7 +101,7 @@ export class EntryBodyService {
       },
       error: () => {
         if (generation !== this.generation) return;
-        state.set({ status: 'error' });
+        onError();
       },
     });
   }
