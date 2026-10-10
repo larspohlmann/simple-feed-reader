@@ -937,3 +937,12 @@ git commit -m "refactor(#1484): gate fixes"
 ```
 
 (Skip if nothing changed.)
+
+---
+
+## Execution notes
+
+- `CoreElementTest` was reshaped during the gates: each case passes only its children, which `core()` wraps in a root element in the core namespace. Cases that need a foreign element declare `xmlns:x` inline through `OTHER_NAMESPACE` (PHPCS line length; PhpStorm flagged an unused namespace declaration on the shared root). The `children()` case reads `rel` instead of `href`, because PhpStorm resolves `href` values as files.
+- Two pre-existing `atomRoot(<<<'XML'` heredocs in `FeedImageExtractorTest` got `/** @lang TEXT */`, like the rest of the file, which clears PhpStorm's "XML declaration should precede" ERRORs.
+- Infection let the nullsafe `ownerDocument?->` in `fromRss1Channel` escape. `testAChannelOutsideAnyDocumentYieldsNoRss1Image` pins it with a detached `\DOMElement`; the mutant fails it via `failOnWarning`.
+- phptramp reported no chains at all after Task 4, so no suppression was needed.
