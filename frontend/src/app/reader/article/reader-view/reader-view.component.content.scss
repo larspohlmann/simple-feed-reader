@@ -648,8 +648,6 @@
   }
 }
 
-/* Bluesky embeds (#1499), filled from the AppView after ingest. A link card is
-   one quiet block: thumbnail edge to edge, then title, description and host. */
 .content ::ng-deep .link-card {
   @include glass-rim.filled(var(--surface-1));
 
@@ -665,6 +663,12 @@
   padding-bottom: var(--space-3);
   color: var(--text-primary);
   text-decoration: none;
+}
+
+/* The card clips its thumbnail to its corners, so the focus ring is drawn inside the link. */
+.content ::ng-deep .link-card a[href]:focus-visible {
+  border-radius: inherit;
+  outline-offset: -2px;
 }
 
 .content ::ng-deep .link-card img {
