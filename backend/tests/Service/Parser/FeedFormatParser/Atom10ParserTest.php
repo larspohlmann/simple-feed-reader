@@ -557,6 +557,17 @@ final class Atom10ParserTest extends TestCase
         self::assertTrue($entry->titleDerived);
     }
 
+    public function testTheContentOutranksTheSummaryAsTheSourceOfADerivedTitle(): void
+    {
+        $entry = $this->parseSingleEntry(
+            '<entry><id>tag:example.social,2026:4</id><link rel="alternate" href="https://example.social/@a/4"/>'
+            . '<summary>From the summary.</summary>'
+            . '<content type="html">&lt;p&gt;From the content.&lt;/p&gt;</content></entry>',
+        );
+
+        self::assertSame('From the content.', $entry->title);
+    }
+
     public function testAnEntryWithoutATitleOrContentTakesItsTitleFromTheSummary(): void
     {
         $entry = $this->parseSingleEntry(

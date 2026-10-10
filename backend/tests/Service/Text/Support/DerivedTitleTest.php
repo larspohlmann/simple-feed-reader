@@ -48,6 +48,26 @@ final class DerivedTitleTest extends TestCase
             '<p>' . str_repeat('a', 100) . '</p>',
             str_repeat('a', 79) . '…',
         ];
+        yield 'a title of exactly eighty characters is kept whole' => [
+            '<p>' . str_repeat('a', 80) . '</p>',
+            str_repeat('a', 80),
+        ];
+        yield 'eighty multibyte characters are kept whole' => [
+            '<p>' . str_repeat('ä', 80) . '</p>',
+            str_repeat('ä', 80),
+        ];
+        yield 'a long multibyte sentence is cut at a word boundary by characters' => [
+            '<p>' . str_repeat('äääää ', 20) . '</p>',
+            implode(' ', array_fill(0, 13, 'äääää')) . '…',
+        ];
+        yield 'a long multibyte word is cut hard by characters' => [
+            '<p>' . str_repeat('ä', 100) . '</p>',
+            str_repeat('ä', 79) . '…',
+        ];
+        yield 'a cut right after a comma drops the comma' => [
+            '<p>' . str_repeat('a', 70) . ', ' . str_repeat('b', 20) . '</p>',
+            str_repeat('a', 70) . '…',
+        ];
         yield 'entities are decoded' => ['<p>Fish &amp; chips</p>', 'Fish & chips'];
         yield 'no words at all' => ['<p>https://example.com/a</p>', null];
         yield 'empty body' => ['', null];

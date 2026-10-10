@@ -209,6 +209,15 @@ final class WordPressJsonParserTest extends TestCase
         self::assertTrue($entry->titleDerived);
     }
 
+    public function testTheContentOutranksTheExcerptAsTheSourceOfADerivedTitle(): void
+    {
+        $body = '[{"id": 8, "link": "https://site.example/8/", "title": {"rendered": ""},'
+            . ' "content": {"rendered": "<p>From the content.</p>"},'
+            . ' "excerpt": {"rendered": "<p>From the excerpt.</p>"}}]';
+
+        self::assertSame('From the content.', $this->parse($body)->entries[0]->title);
+    }
+
     public function testATitledPostIsNotDerived(): void
     {
         $entry = $this->parse(self::POST)->entries[0];

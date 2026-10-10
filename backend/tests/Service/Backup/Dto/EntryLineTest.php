@@ -52,6 +52,30 @@ final class EntryLineTest extends TestCase
         self::assertFalse(EntryLine::fromLine($this->baseLine())->titleDerived);
     }
 
+    public function testAConstructedLineIsNotDerivedUnlessSaid(): void
+    {
+        $moment = new \DateTimeImmutable('2026-09-07T00:00:00+00:00');
+
+        $line = new EntryLine(
+            feedUrl: 'https://f/feed',
+            guid: 'g',
+            guidHash: str_repeat('a', 64),
+            url: 'https://f/one',
+            title: 'One',
+            author: null,
+            summary: null,
+            contentHtml: null,
+            imageUrl: null,
+            imageWidth: null,
+            imageHeight: null,
+            publishedAt: null,
+            createdAt: $moment,
+            effectiveDate: $moment,
+        );
+
+        self::assertFalse($line->titleDerived);
+    }
+
     public function testReadsTheImageRenditions(): void
     {
         $line = EntryLine::fromLine($this->baseLine() + [
