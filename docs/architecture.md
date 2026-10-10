@@ -152,6 +152,9 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
   class in `src/Repository/`, named for its concern (`RetentionRepository`, `ReadingHistoryRepository`,
   `RecommendationCallRepository`). It injects `EntityManagerInterface`, or the DBAL `Connection` for raw SQL. It
   returns entities, scalars or small row objects (`TitledEntry`); mapping those into domain values stays in the service.
+- **A store kept in a cache pool, not in a table,** is still a repository when persistence code reads it:
+  `TriedPostRepository` keeps which posts already had their link cards tried (#1502) in `post_link_cards.cache`,
+  and `EntryPendingLoader` reads it.
 - **`*Query` names are taken.** `EntryQuery`, `ForYouFeedQuery` and `SavedSearchListQuery` are request value objects.
   A class that runs queries is a `*Repository`, and there is no `Repository/Query/` subdirectory.
 - **Composition, not inheritance.** Shared query construction is an injected collaborator (`EntryScopePredicates`,
