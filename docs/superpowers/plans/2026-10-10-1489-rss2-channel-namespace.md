@@ -97,3 +97,11 @@ with
 ### Task 2: Gates
 
 - [ ] Run `composer cs`, `stan`, `md`, `tramp` and PhpStorm `lint_files` on the changed files. Then `composer test:parallel`, `docker compose exec php composer test` (repo root) and `composer infection:diff`. Kill any escaped mutant on a touched line.
+
+---
+
+## Execution notes
+
+- The plan held as written. Both decoy tests failed first with `'Decoy'`, and the missing-channel and default-namespace assertions passed on `develop` already.
+- Corpus: the parser output for all 235 feeds (224 parsed), covering titles, site URLs, descriptions, images and entries, is byte-identical between `develop` and the branch.
+- Gates: `infection:diff` killed 2/2 mutants. Both suites pass with 7686 tests each.
