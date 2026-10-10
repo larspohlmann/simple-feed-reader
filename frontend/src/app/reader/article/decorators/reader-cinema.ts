@@ -31,7 +31,7 @@ function toggleBar(box: HTMLElement, labels: CinemaLabels): HTMLElement {
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
-  toggle.className = 'list-action reader-cinema__toggle';
+  toggle.className = 'reader-cinema__toggle';
   toggle.setAttribute('aria-keyshortcuts', 't');
   toggle.append(icon, label, key);
 

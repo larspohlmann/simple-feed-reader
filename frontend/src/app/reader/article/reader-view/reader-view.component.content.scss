@@ -403,7 +403,24 @@
 }
 
 .content ::ng-deep .reader-cinema__toggle {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font: inherit;
   font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  background: none;
+
+  @include glass-rim.ring(var(--border), control);
+
+  @media (hover: hover) {
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
 }
 
 .content ::ng-deep .reader-cinema__toggle .material-symbols-outlined {

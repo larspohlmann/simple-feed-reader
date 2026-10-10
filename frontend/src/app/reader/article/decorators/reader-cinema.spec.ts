@@ -22,7 +22,6 @@ describe('addCinemaToggles', () => {
     const box = element.querySelector('.reader-cinema')!;
     expect(box.firstElementChild!.classList.contains('reader-embed')).toBe(true);
     const toggle = box.querySelector('.reader-cinema__bar > button.reader-cinema__toggle')!;
-    expect(toggle.classList.contains('list-action')).toBe(true);
     expect(toggle.getAttribute('type')).toBe('button');
     expect(toggle.getAttribute('aria-keyshortcuts')).toBe('t');
     expect(toggle.textContent).toBe('width_wideCinema(t)');
