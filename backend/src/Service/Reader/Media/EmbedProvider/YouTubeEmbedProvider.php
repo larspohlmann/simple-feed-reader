@@ -116,6 +116,6 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
         parse_str($query, $queryParameters);
         $id = $queryParameters['v'] ?? null;
 
-        return \is_string($id) && preg_match('#^' . YouTubeVideoId::PATTERN . '$#', $id) === 1 ? $id : null;
+        return \is_string($id) && YouTubeVideoId::matches($id) ? $id : null;
     }
 }

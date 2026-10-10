@@ -9,9 +9,12 @@ use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
 use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
 use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
+use App\Service\Discovery\ShareLinkFeed\YouTubePlaylistFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -26,7 +29,12 @@ trait BuildsFeedDiscovery
     {
         return $this->discoveryResolving(
             $fetcher,
-            [new SubstackProfileFeed($fetcher), new ApplePodcastShowFeed($fetcher)],
+            [
+                new SubstackProfileFeed($fetcher),
+                new ApplePodcastShowFeed($fetcher),
+                new GitHubRepositoryFeed(),
+                new YouTubePlaylistFeed(),
+            ],
         );
     }
 
@@ -46,7 +54,7 @@ trait BuildsFeedDiscovery
             new WellKnownFeedProbe($fetcher, $parser),
             new BotChallengePage(),
             $shareLinks,
-            [new WordPressRestProbe($fetcher), new SoundCloudProfileFeed()],
+            [new WordPressRestProbe($fetcher), new SoundCloudProfileFeed(), new YouTubeVideoChannelFeed()],
         );
     }
 

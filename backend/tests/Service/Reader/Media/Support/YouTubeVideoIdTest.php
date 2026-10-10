@@ -42,4 +42,25 @@ final class YouTubeVideoIdTest extends TestCase
         yield 'nocookie' => ['www.youtube-nocookie.com'];
         yield 'look-alike' => ['notyoutube.com'];
     }
+
+    #[DataProvider('malformedIds')]
+    public function testRejectsAMalformedId(string $candidate): void
+    {
+        self::assertFalse(YouTubeVideoId::matches($candidate));
+    }
+
+    public function testAcceptsAnId(): void
+    {
+        self::assertTrue(YouTubeVideoId::matches('EeS-cBgIoxI'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedIds(): iterable
+    {
+        yield 'too short' => ['EeS-cBgIox'];
+        yield 'too long' => ['EeS-cBgIoxIx'];
+        yield 'a trailing newline' => ["EeS-cBgIoxI\n"];
+    }
 }

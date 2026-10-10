@@ -20,6 +20,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
@@ -61,7 +62,10 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
     public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
     {
-        $url = $this->shareLinkFeedUrl($url) ?? $url;
+        $shareLinkFeed = $this->shareLinkFeed($url);
+        if (null !== $shareLinkFeed) {
+            return $shareLinkFeed;
+        }
 
         try {
             $response = $this->fetcher->fetch($url);
@@ -81,14 +85,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $body = $response->modifiedBody();
 
         try {
-            $document = $this->parser->parse($body);
-
-            return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
-                $response->finalUrl,
-                $document,
-                $response->etag,
-                $response->lastModified,
-            ));
+            return $this->directFeed($response);
         } catch (FeedParseException) {
             // Not a feed — treat it as a page that may point at one.
         }
@@ -109,6 +106,35 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         return [] !== $candidates
             ? FeedDiscoveryResultModel::candidates($candidates)
             : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
+    }
+
+    /**
+     * The feed a share link resolves to, or null when none resolves or the resolved address serves no feed: a
+     * resolver guesses from the link's shape, so a wrong guess falls back to discovering the entered page.
+     */
+    private function shareLinkFeed(string $enteredUrl): ?FeedDiscoveryResultModel
+    {
+        $feedUrl = $this->shareLinkFeedUrl($enteredUrl);
+        if (null === $feedUrl) {
+            return null;
+        }
+
+        try {
+            return $this->directFeed($this->fetcher->fetch($feedUrl));
+        } catch (FetchException | FeedParseException) {
+            return null;
+        }
+    }
+
+    /** @throws FeedParseException when the body is not a feed */
+    private function directFeed(FetchResponseModel $response): FeedDiscoveryResultModel
+    {
+        return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
+            $response->finalUrl,
+            $this->parser->parse($response->modifiedBody()),
+            $response->etag,
+            $response->lastModified,
+        ));
     }
 
     private function shareLinkFeedUrl(string $enteredUrl): ?string
