@@ -14,7 +14,7 @@ derived, and lets the SPA and the reader treat the entry as a post.
 - **Generic, no host list.** The trigger is the item's shape (no title, a non-empty
   body), never the host: Mastodon runs on thousands of hosts.
 - **No backfill.** Entries already stored as `(untitled)` stay as they are and age out.
-- **Out of scope** (follow-up issue): Bluesky images, video and quote posts from the
+- **Out of scope** (follow-up #1499): Bluesky images, video and quote posts from the
   public AppView, including the `[contains quote post or other embedded content]`
   placeholder, which stays in the body for now.
 
