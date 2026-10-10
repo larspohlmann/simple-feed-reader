@@ -468,6 +468,7 @@ final class AccountRestorerTest extends DbTestCase
             [
                 'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
+                'headline.title', 'headline.derived',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
@@ -478,6 +479,9 @@ final class AccountRestorerTest extends DbTestCase
             $targetRows['entry']->getImage()->getRenditions(),
         );
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
+        self::assertSame($sourceRows['entry']->getTitle(), $targetRows['entry']->getTitle());
+        self::assertTrue($sourceRows['entry']->isTitleDerived());
+        self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
 
         $this->assertFieldsRoundTripped(

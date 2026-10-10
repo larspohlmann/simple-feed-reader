@@ -66,6 +66,41 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame('2026-09-21 12:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
     }
 
+    public function testAnItemWhoseTitleWasDerivedMarksTheEntry(): void
+    {
+        $parsed = new ParsedEntryModel(
+            'g-3',
+            null,
+            'Derived',
+            null,
+            null,
+            '<p>Derived. Rest</p>',
+            null,
+            titleDerived: true,
+        );
+
+        $entry = $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-3'), null),
+            self::context(),
+        );
+
+        self::assertTrue($entry->isTitleDerived());
+    }
+
+    public function testAnItemWithAFeedTitleLeavesTheEntryUnmarked(): void
+    {
+        $parsed = new ParsedEntryModel('g-4', null, 'Given', null, null, '<p>Body</p>', null);
+
+        $entry = $this->factory()->create(
+            new Feed('https://example.com/feed'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-4'), null),
+            self::context(),
+        );
+
+        self::assertFalse($entry->isTitleDerived());
+    }
+
     public function testMultibyteColumnsAreCutByCharactersNotBytes(): void
     {
         $parsed = new ParsedEntryModel(

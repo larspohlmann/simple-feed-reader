@@ -103,7 +103,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         [$headers, $user] = $this->auth('s-excerpt@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
-        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $entry->setContentHtml('<p>Angular body text.</p>');
         $entityManager->flush();
@@ -125,7 +125,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         [$headers, $user] = $this->auth('s-categories@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
-        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $category = new Category('frontend', '');
         $entityManager->persist($category);
@@ -148,7 +148,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         [$headers, $user] = $this->auth('s-saved-search@example.com');
         $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
         $entityManager = $this->entityManager();
-        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Angular Post 1']);
         self::assertInstanceOf(Entry::class, $entry);
         $search = new SavedSearch($user, 'angular', false);
         $entityManager->persist($search);
@@ -193,8 +193,9 @@ final class EntrySearchControllerTest extends ApiTestCase
         $entityManager = $this->entityManager();
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
 
-        $belowWatermark = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
-        $aboveWatermark = $entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 3']);
+        $entries = $entityManager->getRepository(Entry::class);
+        $belowWatermark = $entries->findOneBy(['headline.title' => 'Angular Post 1']);
+        $aboveWatermark = $entries->findOneBy(['headline.title' => 'Angular Post 3']);
         self::assertInstanceOf(Entry::class, $belowWatermark);
         self::assertInstanceOf(Entry::class, $aboveWatermark);
 

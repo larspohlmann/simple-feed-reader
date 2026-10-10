@@ -17,7 +17,7 @@ final class NormalizeWordBoundariesRenderingTest extends DbTestCase
     public function testSqliteCallsTheNativeFunctionAndMysqlUnrollsTheReplaceChain(): void
     {
         $sql = $this->entityManager
-            ->createQuery(\sprintf('SELECT NORMALIZE_WORD_BOUNDARIES(e.title) FROM %s e', Entry::class))
+            ->createQuery(\sprintf('SELECT NORMALIZE_WORD_BOUNDARIES(e.headline.title) FROM %s e', Entry::class))
             ->getSQL();
         self::assertIsString($sql);
 

@@ -38,8 +38,8 @@ final class Entry
     #[ORM\Embedded(class: EntryLocation::class, columnPrefix: false)]
     private EntryLocation $location;
 
-    #[ORM\Column(length: 1024)]
-    private string $title;
+    #[ORM\Embedded(class: EntryHeadline::class, columnPrefix: false)]
+    private EntryHeadline $headline;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $author = null;
@@ -86,7 +86,8 @@ final class Entry
         $this->guidHash = hash('sha256', $guid);
         $this->location = new EntryLocation();
         $this->location->store($url, $urlHash);
-        $this->title = $title;
+        $this->headline = new EntryHeadline();
+        $this->headline->store($title);
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
@@ -126,12 +127,22 @@ final class Entry
 
     public function getTitle(): string
     {
-        return $this->title;
+        return $this->headline->getTitle();
     }
 
     public function setTitle(string $title): void
     {
-        $this->title = $title;
+        $this->headline->store($title);
+    }
+
+    public function isTitleDerived(): bool
+    {
+        return $this->headline->isDerived();
+    }
+
+    public function markTitleDerived(): void
+    {
+        $this->headline->markDerived();
     }
 
     public function getAuthor(): ?string

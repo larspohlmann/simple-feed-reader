@@ -103,7 +103,7 @@ final class ForYouFeedTest extends DbTestCase
 
     public function testEntryCategoriesAreEnrichedOnTheForYouFeed(): void
     {
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Title g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $category = new Category('world', '');
         $this->entityManager->persist($category);
@@ -117,7 +117,7 @@ final class ForYouFeedTest extends DbTestCase
 
     public function testEntrySavedSearchesAreEnrichedOnTheForYouFeed(): void
     {
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['headline.title' => 'Title g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $search = new SavedSearch($this->user, 'title', false);
         $this->entityManager->persist($search);

@@ -141,6 +141,7 @@ final readonly class FullyPopulatedAccount
             'https://populated.example/article/comments.rss',
             CommentsLoad::Auto,
         ));
+        $entry->markTitleDerived();
 
         return $entry;
     }

@@ -40,6 +40,18 @@ final class EntryLineTest extends TestCase
         self::assertSame([], $line->attachments);
     }
 
+    public function testReadsWhetherTheTitleWasDerived(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['titleDerived' => true]);
+
+        self::assertTrue($line->titleDerived);
+    }
+
+    public function testAnOlderFileWithoutTitleDerivedReadsAsNotDerived(): void
+    {
+        self::assertFalse(EntryLine::fromLine($this->baseLine())->titleDerived);
+    }
+
     public function testReadsTheImageRenditions(): void
     {
         $line = EntryLine::fromLine($this->baseLine() + [

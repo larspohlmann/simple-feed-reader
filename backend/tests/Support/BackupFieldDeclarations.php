@@ -62,7 +62,8 @@ final class BackupFieldDeclarations
         Entry::class => [
             'feed' => 'feedUrl',
             'guid' => 'guid', 'guidHash' => 'guidHash', 'location.url' => 'url',
-            'title' => 'title', 'author' => 'author', 'summary' => 'summary',
+            'headline.title' => 'title', 'headline.derived' => 'titleDerived',
+            'author' => 'author', 'summary' => 'summary',
             'contentHtml' => 'contentHtml',
             'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
             'image.height' => 'imageHeight', 'image.renditions' => 'imageRenditions',
