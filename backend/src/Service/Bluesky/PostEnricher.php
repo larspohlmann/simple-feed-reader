@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\PendingPostEnrichment;
 use App\Repository\PendingPostEnrichmentRepository;
+use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
@@ -25,7 +26,7 @@ final readonly class PostEnricher
         private PendingPostEnrichmentRepository $pendingPosts,
         private PendingPostQueue $queue,
         private AppViewClient $appView,
-        private EntryEmbedWriter $embedWriter,
+        private EntryEmbedWriterInterface $embedWriter,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {

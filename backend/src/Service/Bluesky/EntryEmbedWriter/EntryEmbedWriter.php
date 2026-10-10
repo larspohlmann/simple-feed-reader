@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky;
+namespace App\Service\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\Support\TrailingUrl;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
@@ -13,7 +14,7 @@ use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Sanitize\EntrySanitizer;
 
-final readonly class EntryEmbedWriter
+final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
 {
     public function __construct(
         private PostEmbedRenderer $renderer,

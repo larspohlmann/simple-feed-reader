@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky;
+namespace App\Tests\Service\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
-use App\Service\Bluesky\EntryEmbedWriter;
+use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Ingest\EntryImageWriter;

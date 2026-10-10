@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\PendingPostEnrichment;
 use App\Repository\PendingPostEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
-use App\Service\Bluesky\EntryEmbedWriter;
+use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\PendingPostQueue;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
