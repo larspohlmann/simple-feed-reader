@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\MediaDuration;
 use App\Service\Parser\Support\MediaRssSlot;
@@ -18,13 +19,13 @@ use App\Service\Parser\Support\XmlHelper;
  */
 final readonly class ItemMediaExtractor
 {
-    public function extract(\DOMElement $item): ParsedMediaBundleModel
+    public function extract(CoreElement $item): ParsedMediaBundleModel
     {
-        $fallbackDuration = self::itunesDuration($item);
+        $fallbackDuration = self::itunesDuration($item->element);
         $media = [];
         $attachments = [];
-        foreach ($item->childNodes as $child) {
-            $bundle = self::fromChild($child, $fallbackDuration);
+        foreach ($item->element->childNodes as $child) {
+            $bundle = self::fromChild($item, $child, $fallbackDuration);
             if ($bundle === null) {
                 continue;
             }
@@ -35,17 +36,18 @@ final readonly class ItemMediaExtractor
         return new ParsedMediaBundleModel($media, $attachments);
     }
 
-    private static function fromChild(\DOMNode $child, ?int $fallbackDuration): ?ParsedMediaBundleModel
-    {
-        if (!$child instanceof \DOMElement) {
-            return null;
-        }
+    private static function fromChild(
+        CoreElement $item,
+        \DOMNode $child,
+        ?int $fallbackDuration,
+    ): ?ParsedMediaBundleModel {
         if (XmlHelper::isElement($child, 'group', XmlHelper::MEDIA_RSS_NAMESPACE)) {
             return self::fromGroup($child, $fallbackDuration);
         }
-        $node = self::mediaNode($child);
 
-        return $node === null ? null : self::fromNode($node, $fallbackDuration);
+        return self::isItemMediaNode($item, $child)
+            ? self::fromNode(new FeedMediaNode($child), $fallbackDuration)
+            : null;
     }
 
     private static function fromNode(FeedMediaNode $node, ?int $fallbackDuration): ?ParsedMediaBundleModel
@@ -125,22 +127,20 @@ final readonly class ItemMediaExtractor
     }
 
     /** @return list<FeedMediaNode> */
-    private static function mediaNodesIn(\DOMElement $parent): array
+    private static function mediaNodesIn(\DOMElement $group): array
     {
         $nodes = [];
-        foreach ($parent->childNodes as $child) {
-            $node = $child instanceof \DOMElement ? self::mediaNode($child) : null;
-            if ($node !== null && $node->url() !== '') {
+        foreach ($group->childNodes as $child) {
+            if (!$child instanceof \DOMElement || !MediaRssSlot::isContentOrThumbnail($child)) {
+                continue;
+            }
+            $node = new FeedMediaNode($child);
+            if ($node->url() !== '') {
                 $nodes[] = $node;
             }
         }
 
         return $nodes;
-    }
-
-    private static function mediaNode(\DOMElement $element): ?FeedMediaNode
-    {
-        return self::isMediaNode($element) ? new FeedMediaNode($element) : null;
     }
 
     private static function posterIn(\DOMElement $group): ?string
@@ -158,12 +158,13 @@ final readonly class ItemMediaExtractor
         return $duration === null ? null : MediaDuration::seconds($duration->textContent);
     }
 
-    private static function isMediaNode(\DOMElement $node): bool
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    private static function isItemMediaNode(CoreElement $item, \DOMNode $node): bool
     {
-        if ($node->localName === 'enclosure') {
+        if ($item->isCore($node, 'enclosure')) {
             return true;
         }
-        if ($node->localName === 'link' && $node->getAttribute('rel') === 'enclosure') {
+        if ($item->isCore($node, 'link') && $node->getAttribute('rel') === 'enclosure') {
             return true;
         }
 

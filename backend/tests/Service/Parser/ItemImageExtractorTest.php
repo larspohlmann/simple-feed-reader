@@ -157,9 +157,9 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReadsAnRssEnclosure(): void
     {
-        $image = $this->extractor->fromRssEnclosure($this->item(
+        $image = $this->extractor->fromRssEnclosure(self::core($this->item(
             '<enclosure url="https://i/e.jpg" type="image/jpeg" length="0"/>',
-        ));
+        )));
 
         self::assertNotNull($image);
         self::assertSame('https://i/e.jpg', $image->url);
@@ -168,9 +168,9 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresANonImageEnclosure(): void
     {
-        self::assertNull($this->extractor->fromRssEnclosure($this->item(
+        self::assertNull($this->extractor->fromRssEnclosure(self::core($this->item(
             '<enclosure url="https://i/a.mp3" type="audio/mpeg" length="10"/>',
-        )));
+        ))));
     }
 
     public function testReadsAnInlineImgWithoutDimensions(): void
@@ -395,6 +395,11 @@ final class ItemImageExtractorTest extends TestCase
         ));
     }
 
+    private static function core(\DOMElement $item): CoreElement
+    {
+        return new CoreElement($item, $item->namespaceURI);
+    }
+
     private function atomEntry(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
@@ -484,7 +489,7 @@ final class ItemImageExtractorTest extends TestCase
     public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
     {
         $image = $this->extractor->fromRssEnclosure(
-            $this->item('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
+            self::core($this->item('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>')),
         );
 
         self::assertNotNull($image);
@@ -552,5 +557,12 @@ final class ItemImageExtractorTest extends TestCase
             [new ImageRendition($uploads . 'GettyImages-1042124682-1152x648.jpg', 1152)],
             $image->renditions,
         );
+    }
+
+    public function testAPrefixedEnclosureIsNotTheRssEnclosure(): void
+    {
+        self::assertNull($this->extractor->fromRssEnclosure(self::core($this->item(
+            '<x:enclosure xmlns:x="urn:example:other" url="https://i/x.jpg" type="image/jpeg"/>',
+        ))));
     }
 }

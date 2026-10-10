@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\VisualMediaKind;
 use PHPUnit\Framework\TestCase;
@@ -18,7 +19,7 @@ final class ItemMediaExtractorTest extends TestCase
         $this->extractor = new ItemMediaExtractor();
     }
 
-    private function rssItem(string $innerXml): \DOMElement
+    private function rssItem(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
@@ -29,17 +30,17 @@ final class ItemMediaExtractorTest extends TestCase
         $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
-        return $item;
+        return new CoreElement($item, $item->namespaceURI);
     }
 
-    private function atomEntry(string $innerXml): \DOMElement
+    private function atomEntry(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         $document->loadXML('<feed xmlns="http://www.w3.org/2005/Atom"><entry>' . $innerXml . '</entry></feed>');
         $entry = $document->getElementsByTagName('entry')->item(0);
         self::assertInstanceOf(\DOMElement::class, $entry);
 
-        return $entry;
+        return new CoreElement($entry, $entry->namespaceURI);
     }
 
     public function testPodcastEnclosureBecomesAnAttachmentWithMimeDurationAndSize(): void
@@ -220,6 +221,24 @@ final class ItemMediaExtractorTest extends TestCase
         ));
 
         self::assertSame([], $bundle->media);
+        self::assertSame([], $bundle->attachments);
+    }
+
+    public function testAPrefixedEnclosureIsNoAttachment(): void
+    {
+        $bundle = $this->extractor->extract($this->rssItem(
+            '<x:enclosure xmlns:x="urn:example:other" url="https://cdn.test/a.mp3" type="audio/mpeg"/>',
+        ));
+
+        self::assertSame([], $bundle->attachments);
+    }
+
+    public function testAnEnclosureLinkOutsideTheAtomNamespaceIsNoAttachment(): void
+    {
+        $bundle = $this->extractor->extract($this->atomEntry(
+            '<x:link xmlns:x="urn:example:other" rel="enclosure" href="https://cdn.test/a.mp3" type="audio/mpeg"/>',
+        ));
+
         self::assertSame([], $bundle->attachments);
     }
 }

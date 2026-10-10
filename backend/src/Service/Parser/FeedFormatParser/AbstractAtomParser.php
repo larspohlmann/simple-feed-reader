@@ -103,7 +103,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             $atomEntry,
             [$contentHtml, self::elementMarkup($atomEntry, 'summary')],
         );
-        $mediaBundle = $this->mediaExtractor->extract($entry);
+        $mediaBundle = $this->mediaExtractor->extract($atomEntry);
         $summary = $atomEntry->text('summary');
 
         return new ParsedEntryModel(

@@ -19,7 +19,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $this->selector = new FeedItemImageSelector(new ItemImageExtractor());
     }
 
-    private function rss2Item(string $innerXml): \DOMElement
+    private function rss2Item(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
@@ -29,7 +29,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
-        return $item;
+        return new CoreElement($item, $item->namespaceURI);
     }
 
     private static function itunesImage(string $href): string
@@ -205,7 +205,7 @@ final class FeedItemImageSelectorTest extends TestCase
         return 'https://substackcdn.com/image/fetch/$s_!v2GA!,' . $transforms . '/' . self::SUBSTACK_SOURCE;
     }
 
-    private function rss1Item(string $innerXml): \DOMElement
+    private function rss1Item(string $innerXml): CoreElement
     {
         $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
@@ -216,7 +216,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
-        return $item;
+        return new CoreElement($item, $item->namespaceURI);
     }
 
     public function testASubstackEnclosureTakesTheBodyImagesLadder(): void

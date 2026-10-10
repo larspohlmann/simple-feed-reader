@@ -34,18 +34,15 @@ final readonly class ItemImageExtractor
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
-    public function fromRssEnclosure(\DOMElement $item): ?DeclaredImageModel
+    public function fromRssEnclosure(CoreElement $item): ?DeclaredImageModel
     {
-        foreach ($item->childNodes as $child) {
-            if (!$child instanceof \DOMElement || $child->localName !== 'enclosure') {
+        foreach ($item->children('enclosure') as $enclosure) {
+            if (!str_starts_with(strtolower($enclosure->getAttribute('type')), 'image/')) {
                 continue;
             }
-            if (!str_starts_with(strtolower($child->getAttribute('type')), 'image/')) {
-                continue;
-            }
-            $url = trim($child->getAttribute('url'));
+            $url = trim($enclosure->getAttribute('url'));
             if ($url !== '') {
-                return DeclaredImages::fromElement($child, $url);
+                return DeclaredImages::fromElement($enclosure, $url);
             }
         }
 

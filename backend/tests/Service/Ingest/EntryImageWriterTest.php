@@ -11,6 +11,7 @@ use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
 final class EntryImageWriterTest extends TestCase
@@ -232,7 +233,10 @@ final class EntryImageWriterTest extends TestCase
             . $folder . 'photo-150x150.jpg 150w, ' . $folder . 'photo-100x100.jpg 100w, '
             . $folder . 'photo-50x50.jpg 50w">';
 
-        $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2($item, $excerpt);
+        $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2(
+            new CoreElement($item, $item->namespaceURI),
+            $excerpt,
+        );
         self::assertNotNull($image);
         $this->writer()->write($entry, $image);
     }
