@@ -10,12 +10,14 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ReadsCandidateUrls;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class BodyCleaningPassTest extends TestCase
 {
     use ParsesHtml;
+    use ReadsCandidateUrls;
 
     public function testTheDiscoveredMediaAreTheInputMediaWhileTheBodyRecoveredNoEmbed(): void
     {
@@ -35,7 +37,7 @@ final class BodyCleaningPassTest extends TestCase
 
         $pass->recordEmbedsRecoveredInBody();
 
-        self::assertSame(['https://x.test/a.mp3'], $this->urlsOf($pass->discoveredMedia()));
+        self::assertSame(['https://x.test/a.mp3'], $this->urlsOf($pass->discoveredMedia()->candidates));
     }
 
     /** @return iterable<string, array{string}> */
@@ -55,7 +57,7 @@ final class BodyCleaningPassTest extends TestCase
 
         self::assertSame(
             ['https://www.youtube-nocookie.com/embed/bbbbbbbbbbb', 'https://x.test/a.mp3'],
-            $this->urlsOf($pass->discoveredMedia()),
+            $this->urlsOf($pass->discoveredMedia()->candidates),
         );
     }
 
@@ -69,12 +71,6 @@ final class BodyCleaningPassTest extends TestCase
         );
 
         self::assertSame($media, $pass->discoveredMedia());
-    }
-
-    /** @return list<string> */
-    private function urlsOf(ArticleMediaModel $media): array
-    {
-        return array_map(static fn (MediaCandidateModel $candidate): string => $candidate->url, $media->candidates);
     }
 
     private function everyKind(): ArticleMediaModel

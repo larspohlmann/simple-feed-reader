@@ -27,10 +27,7 @@ final class BodyCleaningPass
         $this->embedsRecoveredInBody = true;
     }
 
-    /**
-     * The page's media to place, so a video never shows twice: no embed once the body recovered its own, and no
-     * video or stream while the body carries a player of its own.
-     */
+    /** The page's media to place, so a video never shows twice. */
     public function discoveredMedia(): ArticleMediaModel
     {
         $media = $this->embedsRecoveredInBody ? $this->input->media->withoutEmbeds() : $this->input->media;
