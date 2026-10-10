@@ -65,7 +65,7 @@ final class AppViewClientTest extends TestCase
     {
         $this->fetcher->willThrow(
             Bluesky::GET_POSTS . '?' . self::TISCH_QUERY,
-            new FeedThrottledException('HTTP 429', 300),
+            new FeedThrottledException('HTTP 429', 600),
         );
         $client = $this->client();
         self::assertFalse($client->isThrottled());
@@ -77,7 +77,7 @@ final class AppViewClientTest extends TestCase
         }
 
         self::assertTrue($client->isThrottled());
-        self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
+        self::assertSame(600, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
     }
 
     /** @return iterable<string, array{FetchException}> */

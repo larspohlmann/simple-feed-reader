@@ -158,7 +158,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     private function readSuccessfulResponse(ResponseInterface $response, int $status): array
     {
         $this->assertOk($status);
-        $declaredType = self::declaredType($response->getHeaders(false));
+        $declaredType = self::declaredType($response);
         if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
             $this->assertAllowedType($declaredType);
 
@@ -172,10 +172,9 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         return [$bytes, $sniffedType];
     }
 
-    /** @param array<string, list<string>> $headers */
-    private static function declaredType(array $headers): string
+    private static function declaredType(ResponseInterface $response): string
     {
-        return mb_strtolower(trim(explode(';', $headers['content-type'][0] ?? '')[0]));
+        return strtolower(trim(explode(';', ResponseHeader::first($response, 'content-type') ?? '')[0]));
     }
 
     private function assertOk(int $status): void

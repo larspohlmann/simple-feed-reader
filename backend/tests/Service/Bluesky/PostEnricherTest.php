@@ -247,6 +247,8 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky enrichment failed for {url}', $this->logger->records[0]['message']);
+        self::assertSame($this->feed->getUrl(), $this->logger->records[0]['context']['url']);
+        self::assertInstanceOf(\LogicException::class, $this->logger->records[0]['context']['exception']);
         self::assertSame(1, $this->pendingCount());
     }
 

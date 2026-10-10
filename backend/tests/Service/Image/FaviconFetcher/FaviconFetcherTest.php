@@ -331,6 +331,15 @@ final class FaviconFetcherTest extends TestCase
         self::assertSame($type, $icon->contentType);
     }
 
+    public function testADeclaredTypeIsTrustedOverTheLeadingBytes(): void
+    {
+        $client = new MockHttpClient(new MockResponse('GIF89a', [
+            'response_headers' => ['content-type' => ['Image/PNG ; charset=binary']],
+        ]));
+
+        self::assertSame('image/png', $this->fetcher($client)->download(self::ICON_URL)->contentType);
+    }
+
     public function testAnUndeclaredAvifIsRejectedLikeADeclaredOne(): void
     {
         $client = new MockHttpClient(new MockResponse("\x00\x00\x00\x1CftypavifmiaF", [
