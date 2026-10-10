@@ -14,6 +14,7 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Parser\Support\EntryTitle;
 use App\Service\Parser\Support\FeedBodyHtml;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
@@ -85,17 +86,21 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
+        $contentHtml = FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry);
+        $entryTitle = EntryTitle::of($title, $contentHtml);
+
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->text('guid'), $link, $title),
             url: $link,
-            title: PlainText::from($title) ?? '(untitled)',
+            title: $entryTitle->text,
             author: self::coreOrDublinCore($item, 'author', 'creator'),
             summary: $contentEncoded !== null ? $description : null,
-            contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
+            contentHtml: $contentHtml,
             publishedAt: DateParser::parse(self::coreOrDublinCore($item, 'pubDate', 'date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
+            titleDerived: $entryTitle->derived,
         );
     }
 

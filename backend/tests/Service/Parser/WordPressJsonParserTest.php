@@ -197,4 +197,22 @@ final class WordPressJsonParserTest extends TestCase
         self::assertSame('1', $entries[0]->guid);
         self::assertSame('2', $entries[1]->guid);
     }
+
+    public function testAPostWithoutATitleTakesItsTitleFromTheContent(): void
+    {
+        $body = '[{"id": 7, "link": "https://site.example/7/", "title": {"rendered": ""},'
+            . ' "content": {"rendered": "<p>Hello there.</p>"}, "excerpt": {"rendered": ""}}]';
+
+        $entry = $this->parse($body)->entries[0];
+
+        self::assertSame('Hello there.', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
+
+    public function testATitledPostIsNotDerived(): void
+    {
+        $entry = $this->parse(self::POST)->entries[0];
+
+        self::assertFalse($entry->titleDerived);
+    }
 }

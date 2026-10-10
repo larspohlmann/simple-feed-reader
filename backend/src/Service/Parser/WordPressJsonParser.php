@@ -9,7 +9,7 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Text\Support\PlainText;
+use App\Service\Parser\Support\EntryTitle;
 
 /**
  * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`) into a ParsedFeedModel, for the refresh
@@ -46,18 +46,22 @@ final readonly class WordPressJsonParser
     private function entry(array $post): ParsedEntryModel
     {
         $image = $this->image($post);
+        $contentHtml = $this->rendered($post, 'content');
+        $summary = $this->rendered($post, 'excerpt');
+        $entryTitle = EntryTitle::of($this->rendered($post, 'title'), $contentHtml ?? $summary);
 
         return new ParsedEntryModel(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
-            title: PlainText::from($this->rendered($post, 'title')) ?? '(untitled)',
+            title: $entryTitle->text,
             // No author NAME without _embed (only an id), and _embed is too
             // heavy to request; bylines usually live in content.rendered anyway.
             author: null,
-            summary: $this->rendered($post, 'excerpt'),
-            contentHtml: $this->rendered($post, 'content'),
+            summary: $summary,
+            contentHtml: $contentHtml,
             publishedAt: $this->publishedAt($post),
             media: new ParsedEntryMediaModel($image),
+            titleDerived: $entryTitle->derived,
         );
     }
 
