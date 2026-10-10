@@ -52,7 +52,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         if (!$channelElement instanceof \DOMElement) {
             throw new FeedParseException('RSS document without <channel>');
         }
-        $channel = self::core($channelElement);
+        $channel = CoreElement::inOwnNamespace($channelElement);
 
         return (new ParsedFeedModel(
             PlainText::from($channel->text('title')),
@@ -65,7 +65,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $item = self::core($entry);
+        $item = CoreElement::inOwnNamespace($entry);
         $title = $item->text('title');
         $link = $item->text('link');
         if ($title === null && $link === null) {
@@ -75,8 +75,8 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $description = self::coreOrDublinCore($item, 'description', 'description');
         $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
 
-        $image = $this->imageSelector->fromRss2($entry, $contentEncoded ?? $description);
-        $mediaBundle = $this->mediaExtractor->extract($entry);
+        $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->text('guid'), $link, $title),
@@ -87,15 +87,9 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             contentHtml: FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry),
             publishedAt: DateParser::parse(self::coreOrDublinCore($item, 'pubDate', 'date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
-            categories: ItemCategoryExtractor::extract($entry),
+            categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );
-    }
-
-    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
-    private static function core(\DOMElement $element): CoreElement
-    {
-        return new CoreElement($element, $element->namespaceURI);
     }
 
     private static function coreOrDublinCore(CoreElement $item, string $coreName, string $dublinCoreName): ?string

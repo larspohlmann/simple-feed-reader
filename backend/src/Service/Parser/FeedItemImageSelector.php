@@ -18,18 +18,20 @@ final readonly class FeedItemImageSelector
     {
     }
 
-    public function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    public function fromRss2(CoreElement $item, ?string $bodyHtml): ?DeclaredImageModel
     {
-        $declared = $this->extractor->fromMedia($item)
+        $declared = $this->extractor->fromMedia($item->element)
             ?? $this->extractor->fromRssEnclosure($item)
-            ?? $this->extractor->fromCustomImageElement($item);
+            ?? $this->extractor->fromCustomImageElement($item->element);
 
-        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml)) ?? PodcastArtwork::of($item);
+        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml))
+            ?? PodcastArtwork::of($item->element);
     }
 
-    public function fromRss1(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    public function fromRss1(CoreElement $item, ?string $bodyHtml): ?DeclaredImageModel
     {
-        $declared = $this->extractor->fromMedia($item) ?? $this->extractor->fromCustomImageElement($item);
+        $declared = $this->extractor->fromMedia($item->element)
+            ?? $this->extractor->fromCustomImageElement($item->element);
 
         return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
     }

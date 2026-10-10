@@ -13,9 +13,21 @@ final readonly class CoreElement
     {
     }
 
+    /** RSS 2.0 core elements share their parent's namespace: none, or the document's default one. */
+    public static function inOwnNamespace(\DOMElement $element): self
+    {
+        return new self($element, $element->namespaceURI);
+    }
+
     public function at(\DOMElement $element): self
     {
         return new self($element, $this->namespaceUri);
+    }
+
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    public function isCore(\DOMNode $node, string $localName): bool
+    {
+        return XmlHelper::isElement($node, $localName, $this->namespaceUri);
     }
 
     public function text(string $localName): ?string
