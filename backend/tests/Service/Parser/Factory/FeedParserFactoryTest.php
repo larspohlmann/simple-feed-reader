@@ -85,4 +85,20 @@ final class FeedParserFactoryTest extends TestCase
             $this->root('<feed xmlns="http://example.com/not-atom"><title>x</title></feed>'),
         );
     }
+
+    public function testThrowsForAnRdfRootWithoutANamespace(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->expectExceptionMessage('No parser for feed root <RDF>');
+        $this->factory()->parserFor($this->root('<RDF><channel><title>x</title></channel></RDF>'));
+    }
+
+    public function testThrowsForAnRdfRootInAForeignNamespace(): void
+    {
+        $this->expectException(FeedParseException::class);
+        $this->expectExceptionMessage('No parser for feed root <RDF>');
+        $this->factory()->parserFor(
+            $this->root('<x:RDF xmlns:x="urn:example:other"><channel><title>x</title></channel></x:RDF>'),
+        );
+    }
 }
