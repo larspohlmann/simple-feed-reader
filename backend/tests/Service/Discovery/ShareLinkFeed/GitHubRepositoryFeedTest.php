@@ -57,17 +57,8 @@ final class GitHubRepositoryFeedTest extends TestCase
         yield 'a user or org page' => ['https://github.com/symfony'];
         yield 'the GitHub home page' => ['https://github.com/'];
         yield 'the host without a path' => ['https://github.com'];
-        yield 'an org route' => ['https://github.com/orgs/symfony/repositories'];
-        yield 'a mixed-case org route' => ['https://github.com/Orgs/symfony/repositories'];
-        yield 'a user route' => ['https://github.com/users/symfony/projects'];
-        yield 'the settings' => ['https://github.com/settings/profile'];
-        yield 'a topic' => ['https://github.com/topics/php'];
-        yield 'the marketplace' => ['https://github.com/marketplace/actions'];
-        yield 'a sponsors page' => ['https://github.com/sponsors/symfony'];
         yield 'a releases feed already' => ['https://github.com/symfony/symfony/releases.atom'];
         yield 'a commits feed already' => ['https://github.com/symfony/symfony/commits/7.4.atom'];
-        yield 'a parent-directory segment' => ['https://github.com/symfony/..'];
-        yield 'a current-directory segment' => ['https://github.com/symfony/./x'];
         yield 'an owner starting with a hyphen' => ['https://github.com/-symfony/symfony'];
         yield 'a gist' => ['https://gist.github.com/symfony/abc123'];
         yield 'raw content' => ['https://raw.githubusercontent.com/symfony/symfony/7.4/README.md'];

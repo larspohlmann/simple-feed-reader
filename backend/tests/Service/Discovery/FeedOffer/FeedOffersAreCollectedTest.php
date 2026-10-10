@@ -8,6 +8,7 @@ use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedOffer\FeedOfferInterface;
 use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
+use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /** An untagged interface leaves #[AutowireIterator] empty without an error; this reads what discovery really got. */
@@ -29,5 +30,6 @@ final class FeedOffersAreCollectedTest extends KernelTestCase
 
         self::assertContains(WordPressRestProbe::class, $classes);
         self::assertContains(SoundCloudProfileFeed::class, $classes);
+        self::assertContains(YouTubeVideoChannelFeed::class, $classes);
     }
 }
