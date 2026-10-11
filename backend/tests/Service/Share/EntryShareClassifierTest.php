@@ -80,6 +80,25 @@ final class EntryShareClassifierTest extends TestCase
         self::assertCount(2, $entry->getMedia());
     }
 
+    public function testATitledShareOfAnImageFileAlreadyAmongItsMediaMovesItFirst(): void
+    {
+        $entry = self::hackerNews('https://i.example/chart.png');
+        $entry->setMedia([
+            new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
+            new EntryMedium('https://i.example/chart.png', 'image', 800, 600),
+        ], []);
+
+        $this->classified($entry);
+
+        self::assertEquals(
+            [
+                new EntryMedium('https://i.example/chart.png', 'image', 800, 600),
+                new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
+            ],
+            $entry->getMedia(),
+        );
+    }
+
     public function testALinkBlogItemWithShortCommentaryKeepsItAsItsText(): void
     {
         $entry = $this->classified(self::entry(

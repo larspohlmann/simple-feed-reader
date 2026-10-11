@@ -70,7 +70,7 @@ final readonly class EntryShareClassifier
     {
         $medium = $share->url === null ? null : VisualMedium::at($share->url);
         if ($medium !== null) {
-            $entry->setMedia([$medium, ...$entry->getMedia()], $entry->getAttachments());
+            $entry->putMediumFirst($medium);
         }
     }
 }

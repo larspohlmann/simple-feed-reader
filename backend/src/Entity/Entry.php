@@ -231,6 +231,11 @@ final class Entry
         $this->mediaSet->set($media, $attachments);
     }
 
+    public function putMediumFirst(EntryMedium $medium): void
+    {
+        $this->mediaSet->putFirst($medium);
+    }
+
     public function getPublishedAt(): ?\DateTimeImmutable
     {
         return $this->publishedAt;

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\LinkCard;
 
 use App\Entity\Entry;
+use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
@@ -291,6 +292,27 @@ final class ShareLinkCardsTest extends DbTestCase
 
         self::assertEquals(Share::media('https://i.example.com/chart'), $chart->getShare());
         self::assertSame('https://i.example.com/chart', $chart->getMedia()[0]->url);
+    }
+
+    public function testATitledShareWhosePictureIsAlreadyAMediumMovesItFirstInsteadOfAddingItAgain(): void
+    {
+        $chart = $this->queuedTitledShare(1, 'https://i.example.com/chart');
+        $chart->setMedia([
+            new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
+            new EntryMedium('https://i.example.com/chart', 'image', 800, 600),
+        ], []);
+        $this->entityManager->flush();
+
+        $this->shareLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($chart);
+
+        self::assertEquals(
+            [
+                new EntryMedium('https://i.example.com/chart', 'image', 800, 600),
+                new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
+            ],
+            $chart->getMedia(),
+        );
     }
 
     public function testAPostSharingAPictureStaysALinkShare(): void

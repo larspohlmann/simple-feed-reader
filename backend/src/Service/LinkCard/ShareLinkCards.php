@@ -124,7 +124,7 @@ final readonly class ShareLinkCards
             return;
         }
         $entry->setShare(Share::media($target));
-        $entry->setMedia([$medium, ...$entry->getMedia()], $entry->getAttachments());
+        $entry->putMediumFirst($medium);
     }
 
     /** @param list<LinkCardContent> $cards */
