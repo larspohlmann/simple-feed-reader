@@ -1198,43 +1198,27 @@ describe('ReaderShellComponent', () => {
     jest.useRealTimers();
   });
 
-  it('shows a placeholder for a listed post the open queues, polls it and shows its card (#1502)', () => {
+  it('keeps a post settled when a poll answer computed while a worker held it lands late (#1517)', () => {
     jest.useFakeTimers();
     reconfigureShell([{ provide: AuthService, useValue: auth }], EntryBodyService);
     const post = { titleDerived: true, isHidden: true, isViewed: true };
-    const fixture = boot(post);
+    const fixture = boot({ ...post, pending: true });
     const element = fixture.nativeElement as HTMLElement;
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    const completion = ctrl.expectOne('https://api.test/api/entries/complete');
+
     qp.next(convertToParamMap({ entry: '1' }));
     fixture.detectChanges();
     jest.advanceTimersByTime(0);
-
     ctrl
       .expectOne('https://api.test/api/entries/1')
-      .flush({ entry: { ...entry, ...post, pending: true, contentHtml: '<p>A post</p>' } });
-    fixture.detectChanges();
-    expect(element.querySelector('app-reader-view app-link-card-placeholder')).not.toBeNull();
-
-    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
-    const completion = ctrl.expectOne('https://api.test/api/entries/complete');
-    expect(completion.request.body).toEqual({ ids: [1] });
-    const card = {
-      url: 'https://news.test/story',
-      title: 'A shared story',
-      description: null,
-      imageUrl: null,
-      siteName: 'news.test',
-    };
-    const completed = { ...entry, ...post, pending: false, linkCards: [card] };
-    completion.flush({ entries: [completed] });
-    ctrl
-      .expectOne('https://api.test/api/entries/1')
-      .flush({ entry: { ...completed, contentHtml: '<p>A post</p>' } });
+      .flush({ entry: { ...entry, ...post, pending: false, contentHtml: '<p>A post</p>' } });
+    completion.flush({ entries: [{ ...entry, ...post, pending: true }] });
     fixture.detectChanges();
 
     expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
-    expect(element.querySelector('app-reader-view .link-card strong')!.textContent).toBe(
-      'A shared story',
-    );
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    ctrl.expectNone('https://api.test/api/entries/complete');
     jest.useRealTimers();
   });
 
