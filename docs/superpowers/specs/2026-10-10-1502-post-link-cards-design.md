@@ -182,3 +182,78 @@ is browser-only.
 - **Frontend:** placeholder rendering, and a polling service test with fake timers: it stops when nothing is
   pending, at 20 rounds, and on a list change.
 - **Real render:** subscribe to a new Bluesky feed in Docker, and watch the placeholders fill in without a reload.
+
+## 9. One durable queue (rework, agreed 2026-10-11)
+
+The final review and /simplify found the root cause of several defects: a post's link cards were tracked as a
+cache marker, a 3-day age rule and an HTML parse on every list request, while Bluesky used a queue row. The
+consequences were page fetches inside the refresh loop (#2), a slow first open (#3), a never-pruned marker per
+post (#5) and duplicate builds racing on the unique pair (#6). The user chose to replace this with one durable
+queue. This section supersedes §4 and the "Pending, as data" part of §8 where they differ.
+
+### The queue
+
+`PendingPostEnrichment` becomes `PostEnrichment` (table `post_enrichment`, renamed by a migration that keeps the
+existing rows as kind `appview`). Its columns:
+
+| Column | Meaning |
+|---|---|
+| `entry` | OneToOne to the entry, unique, `ON DELETE CASCADE` |
+| `kind` | `appview` (a Bluesky AT post) or `link_cards` (any other post that shares links) |
+| `queued_at` | naive UTC |
+| `claimed_at` | nullable; a lease of **60 s** that one worker holds while it works the row |
+| `done_at` | nullable; set when a `link_cards` row was attempted, successfully or not |
+
+- **Pending** means a row exists and `done_at` is null. `EntryPendingLoader` makes one query per page and does no
+  HTML parse, no cache read and no age rule.
+- **Claiming** is atomic: `UPDATE … SET claimed_at = now WHERE id IN (…) AND done_at IS NULL AND (claimed_at IS
+  NULL OR claimed_at < now - 60 s)`. Only rows this call claimed are worked. Two concurrent callers never work the
+  same row, so `replaceFor` can no longer race.
+- **`appview` rows** keep #1499's semantics:
+  - filled → the row is deleted;
+  - the AppView omits the post → the row is deleted;
+  - the AppView fails or is throttled → the claim is cleared, so the row retries;
+  - after 3 days → the row is deleted (give-up).
+- **`link_cards` rows** get exactly one attempt: success or failure sets `done_at`, and the row stays as the
+  durable "tried" fact. It cascades away with its entry, so nothing needs pruning. These rows have no age give-up:
+  a post's cards are built the first time a client shows it.
+
+### Queueing
+
+`PostEnrichmentQueue::queue(list<Entry>)` runs in both ingest paths, `FeedOutcomePersister::storeFetched` and
+`FirstFetchRecorder`, before their flush:
+- an AT post gets an `appview` row;
+- any other post first has its bare URLs linked in the body (`SharedLinks`, one parse that returns both the linked
+  HTML and the shared URLs). It gets a `link_cards` row only if it shares at least one link.
+
+`GET /api/entries/{id}` never fetches a page:
+- A post with no row, no cards and at least one shared link is queued there. This is the open fallback for posts
+  ingested before #1502; it is an idempotent insert.
+- The response then reads `pending: true`. The reader shows the placeholder, and the client's poll completes it.
+
+### Draining
+
+- **The refresh** drains only `appview` rows (cheap: one AppView call per 25), as before. It never fetches a page.
+- **`POST /api/entries/complete`** claims the caller's pending rows among the ids:
+  1. `appview` rows go first, through one AppView call.
+  2. Then the `link_cards` rows, at most **3** page fetches per call, oldest `queued_at` first.
+- **Card fetches** use their own fetch options through the same guarded chain (`UrlGuard`, `RedirectFollower`): a
+  **5 s** timeout, `max_duration` **8 s**, a **512 KB** byte cap, and no meta-refresh chase. One call costs at
+  most 3 × 8 s of worker time.
+
+### Bounds on stored values (final review #1)
+
+Every card goes through one named constructor on `LinkCardContent`:
+- a `url` over 2048 characters gives no card;
+- an `imageUrl` over 2048 is dropped;
+- `title` is clamped to 500 and `siteName` to 255;
+- `description` is capped at 300 on a word boundary.
+
+`SharedLinks` skips hrefs over 2048 characters. A test on the MySQL leg pins this.
+
+### Other rulings
+
+- **Backup (#4):** `link_card` rows travel with their entry in the backup, and `docs/backup.md` says so. Pending
+  rows stay instance data.
+- **Duplicates (#8):** only top-level rows carry `pending`; duplicates are not flagged.
+- **The client poll** also includes the open entry's id when it is pending, which closes the deep-link gap.
