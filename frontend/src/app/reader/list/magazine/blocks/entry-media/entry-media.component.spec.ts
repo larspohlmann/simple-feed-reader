@@ -120,7 +120,7 @@ describe('EntryMediaComponent', () => {
   });
 
   it('shows no caption for a post without text', async () => {
-    const element = await mount(entry({ title: '(untitled)', excerpt: '' }));
+    const element = await mount(entry({ title: '', excerpt: '' }));
 
     expect(element.querySelector('.caption')).toBeNull();
   });
@@ -182,7 +182,7 @@ describe('EntryMediaComponent', () => {
     );
     TestBed.resetTestingModule();
 
-    const bare = await mount(entry({ media: [clip], title: '(untitled)', excerpt: '' }));
+    const bare = await mount(entry({ media: [clip], title: '', excerpt: '' }));
     expect(bare.querySelector('video')!.getAttribute('aria-label')).toBe('Video');
   });
 

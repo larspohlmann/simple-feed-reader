@@ -9,8 +9,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Embeddable]
 final class EntryHeadline
 {
-    public const string UNTITLED = '(untitled)';
-
     #[ORM\Column(name: 'title', length: 1024)]
     private string $title = '';
 
@@ -40,7 +38,7 @@ final class EntryHeadline
 
     public function isUntitled(): bool
     {
-        return $this->title === self::UNTITLED;
+        return $this->title === '';
     }
 
     public function isUntitledPost(): bool

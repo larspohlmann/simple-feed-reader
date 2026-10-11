@@ -12,7 +12,7 @@ export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
 export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
   const pinned = postKind(entry);
   if (pinned) return pinned;
-  const slot = POST_KINDS.includes(kind as PostKind) ? 'hero' : kind;
+  const slot = isPostKind(kind) ? 'hero' : kind;
   const settled = demoteUntilFit(slot, entry);
   if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
@@ -63,10 +63,25 @@ const MAX_POST_MEDIA = 4;
 
 /** The blocks a post claims whatever slot it was given (#1502, #1522). */
 export type PostKind = Extract<EntryKind, 'link' | 'media'>;
-export const POST_KINDS: readonly PostKind[] = ['link', 'media'];
+const POST_KINDS: readonly EntryKind[] = ['link', 'media'];
+
+export function isPostKind(kind: EntryKind): kind is PostKind {
+  return POST_KINDS.includes(kind);
+}
+
+const postMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
 
 /** The pictures and videos a post shows, at most four; a video's poster is not shown twice. */
 export function postMedia(entry: EntryDto): EntryMediumDto[] {
+  let media = postMediaOf.get(entry);
+  if (!media) {
+    media = collectPostMedia(entry);
+    postMediaOf.set(entry, media);
+  }
+  return media;
+}
+
+function collectPostMedia(entry: EntryDto): EntryMediumDto[] {
   const posters = new Set(entry.media.map((medium) => medium.previewImageUrl));
   const shown = entry.media.filter((medium) => medium.kind === 'video' || !posters.has(medium.url));
   return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_POST_MEDIA);

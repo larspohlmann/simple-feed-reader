@@ -17,8 +17,13 @@ final readonly class DigestEntryModel
     ) {
     }
 
+    public function isUntitled(): bool
+    {
+        return '' === $this->title;
+    }
+
     public function headline(): string
     {
-        return '' === $this->title ? $this->feedName : $this->title;
+        return $this->isUntitled() ? $this->feedName : $this->title;
     }
 }

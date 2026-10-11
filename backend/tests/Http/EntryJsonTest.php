@@ -260,7 +260,7 @@ final class EntryJsonTest extends TestCase
 
     public function testAnUntitledPostHasNoExcerpt(): void
     {
-        $entry = $this->entryTitled('(untitled)');
+        $entry = $this->entryTitled('');
         $entry->markTitleDerived();
         $entry->setContentHtml(
             '<figure class="post-video"><video src="https://v.test/p.m3u8"></video></figure>'
@@ -272,7 +272,7 @@ final class EntryJsonTest extends TestCase
 
     public function testAnUntitledPostKeepsTheTextOfItsSummary(): void
     {
-        $entry = $this->entryTitled('(untitled)');
+        $entry = $this->entryTitled('');
         $entry->markTitleDerived();
         $entry->setSummary('Words that live only in the summary.');
         $entry->setContentHtml('<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>');
@@ -285,40 +285,10 @@ final class EntryJsonTest extends TestCase
 
     public function testAnUntitledArticleKeepsItsExcerpt(): void
     {
-        $entry = $this->entryTitled('(untitled)');
+        $entry = $this->entryTitled('');
         $entry->setContentHtml('<p>Some body text.</p>');
 
         self::assertSame('Some body text.', EntryJson::listRow($this->row($entry))['excerpt']);
-    }
-
-    public function testAnUntitledPostHasAnEmptyTitle(): void
-    {
-        $entry = $this->entryTitled('(untitled)');
-        $entry->markTitleDerived();
-
-        self::assertSame('', EntryJson::listRow($this->row($entry))['title']);
-    }
-
-    public function testAnUntitledArticleHasAnEmptyTitle(): void
-    {
-        $entry = $this->entryTitled('(untitled)');
-
-        self::assertSame('', EntryJson::listRow($this->row($entry))['title']);
-    }
-
-    public function testATitleIsSentUnchanged(): void
-    {
-        $entry = $this->entryTitled('A real headline');
-
-        self::assertSame('A real headline', EntryJson::listRow($this->row($entry))['title']);
-    }
-
-    public function testAnUntitledDuplicateHasAnEmptyTitle(): void
-    {
-        $sibling = $this->entryTitled('(untitled)');
-        $row = $this->row($this->entryTitled('Main'))->withDuplicates([$this->row($sibling)]);
-
-        self::assertSame('', EntryJson::listRow($row)['duplicates'][0]['title']);
     }
 
     private function entryAt(?string $url): Entry

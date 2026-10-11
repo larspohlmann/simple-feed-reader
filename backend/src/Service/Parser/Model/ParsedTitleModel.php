@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Model;
 
-use App\Entity\EntryHeadline;
-
 final readonly class ParsedTitleModel
 {
     private function __construct(
@@ -26,6 +24,6 @@ final readonly class ParsedTitleModel
 
     public static function untitledPost(): self
     {
-        return new self(EntryHeadline::UNTITLED, true);
+        return new self('', true);
     }
 }

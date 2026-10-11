@@ -34,7 +34,7 @@ final class EntryTitleTest extends TestCase
     {
         $title = EntryTitle::of(null, null);
 
-        self::assertSame('(untitled)', $title->text);
+        self::assertSame('', $title->text);
         self::assertTrue($title->derived);
     }
 }

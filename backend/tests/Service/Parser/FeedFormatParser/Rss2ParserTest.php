@@ -621,7 +621,7 @@ final class Rss2ParserTest extends TestCase
             . '</item>',
         );
 
-        self::assertSame('(untitled)', $entry->title);
+        self::assertSame('', $entry->title);
         self::assertTrue($entry->titleDerived);
     }
 

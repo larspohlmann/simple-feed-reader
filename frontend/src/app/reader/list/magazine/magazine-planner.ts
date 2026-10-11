@@ -1,15 +1,7 @@
 import { EntryDto } from '../../models';
 import { entryDek, entryImage } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
-import {
-  fits,
-  ImageBar,
-  POST_KINDS,
-  postKind,
-  PostKind,
-  QUOTE_MIN_TEXT,
-  settle,
-} from './magazine-slot-fit';
+import { fits, ImageBar, isPostKind, postKind, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -388,7 +380,7 @@ function tallestWhere(
  */
 function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
   const order = [...slice];
-  const tallest = tallestWhere(kinds, (kind) => !POST_KINDS.includes(kind as PostKind));
+  const tallest = tallestWhere(kinds, (kind) => !isPostKind(kind));
 
   if (tallest !== null && !fits(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);

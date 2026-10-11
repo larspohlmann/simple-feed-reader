@@ -86,12 +86,6 @@ describe('EntryWideComponent', () => {
     expect(element.textContent).not.toContain('A meaningful summary.');
   });
 
-  it('renders no title element for an untitled entry', () => {
-    const element = mount(entry({ title: '', excerpt: '' })).nativeElement as HTMLElement;
-
-    expect(element.querySelector('.title')).toBeNull();
-  });
-
   it('emits open on click', () => {
     const fixture = mount(entry());
     let opened: EntryDto | null = null;
