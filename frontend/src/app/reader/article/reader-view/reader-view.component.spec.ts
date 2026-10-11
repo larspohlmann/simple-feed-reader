@@ -663,15 +663,7 @@ describe('ReaderViewComponent', () => {
       const fixture = mount(
         entry({
           titleDerived: true,
-          linkCards: [
-            {
-              url: 'https://news.test/story',
-              title: 'A shared story',
-              description: null,
-              imageUrl: null,
-              siteName: 'news.test',
-            },
-          ],
+          linkCards: [aLinkCard()],
         }),
       );
       const cards = (fixture.nativeElement as HTMLElement).querySelector(

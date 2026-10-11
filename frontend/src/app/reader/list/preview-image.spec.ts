@@ -7,44 +7,38 @@ import {
   showsShortPill,
   widestRenditionWidth,
 } from './preview-image';
-import { EntryDto } from '../models';
 import { SHORT_PLAYER_URL } from '../../../testing/short-marking-testing';
 import { anEntry } from '../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto =>
-  anEntry({
-    ...over,
-  });
-
 describe('entrySnippet', () => {
   it('returns the server-supplied excerpt', () => {
-    expect(entrySnippet(entry({ excerpt: 'Some copy' }))).toBe('Some copy');
+    expect(entrySnippet(anEntry({ excerpt: 'Some copy' }))).toBe('Some copy');
   });
 
   it('returns an empty string when the entry has none', () => {
-    expect(entrySnippet(entry())).toBe('');
+    expect(entrySnippet(anEntry())).toBe('');
   });
 });
 
 describe('entryDek', () => {
   it('is the excerpt of an ordinary entry', () => {
-    expect(entryDek(entry({ excerpt: 'Some copy' }))).toBe('Some copy');
+    expect(entryDek(anEntry({ excerpt: 'Some copy' }))).toBe('Some copy');
   });
 
   it('is empty for a post, whose text is already its headline', () => {
-    expect(entryDek(entry({ excerpt: 'Some copy', titleDerived: true }))).toBe('');
+    expect(entryDek(anEntry({ excerpt: 'Some copy', titleDerived: true }))).toBe('');
   });
 });
 
 describe('entryImage', () => {
   it('reads the persisted image and carries its dimensions', () => {
     expect(
-      entryImage(entry({ imageUrl: 'https://i/a.jpg', imageWidth: 948, imageHeight: 474 })),
+      entryImage(anEntry({ imageUrl: 'https://i/a.jpg', imageWidth: 948, imageHeight: 474 })),
     ).toEqual({ url: 'https://i/a.jpg', width: 948, height: 474 });
   });
 
   it('returns null when the entry has no image', () => {
-    expect(entryImage(entry())).toBeNull();
+    expect(entryImage(anEntry())).toBeNull();
   });
 
   const ladderTo1920 = [
@@ -55,7 +49,7 @@ describe('entryImage', () => {
   it('takes the width of a ladder that tops the lead image, scaling the height with it', () => {
     expect(
       entryImage(
-        entry({
+        anEntry({
           imageUrl: 'https://i/a.jpg',
           imageWidth: 367,
           imageHeight: 245,
@@ -68,21 +62,21 @@ describe('entryImage', () => {
   it('keeps an unknown height unknown when the ladder tops the lead image', () => {
     expect(
       entryImage(
-        entry({ imageUrl: 'https://i/a.jpg', imageWidth: 367, imageRenditions: ladderTo1920 }),
+        anEntry({ imageUrl: 'https://i/a.jpg', imageWidth: 367, imageRenditions: ladderTo1920 }),
       ),
     ).toEqual({ url: 'https://i/a.jpg', width: 1920, height: null });
   });
 
   it('keeps the dimensions of a lead image that declares none, whatever the ladder', () => {
     expect(
-      entryImage(entry({ imageUrl: 'https://i/a.jpg', imageRenditions: ladderTo1920 })),
+      entryImage(anEntry({ imageUrl: 'https://i/a.jpg', imageRenditions: ladderTo1920 })),
     ).toEqual({ url: 'https://i/a.jpg', width: null, height: null });
   });
 
   it('keeps the dimensions of a lead image at least as wide as its ladder', () => {
     expect(
       entryImage(
-        entry({
+        anEntry({
           imageUrl: 'https://i/a.jpg',
           imageWidth: 1920,
           imageHeight: 1280,
@@ -134,37 +128,37 @@ describe('widestRenditionWidth', () => {
 
 describe('showsShortPill', () => {
   it('marks a Short whose image is not shown', () => {
-    expect(showsShortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).toBe(true);
+    expect(showsShortPill(anEntry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).toBe(true);
   });
 
   it('leaves a Short whose image is shown to the image badge', () => {
-    expect(showsShortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBe(false);
+    expect(showsShortPill(anEntry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBe(false);
   });
 
   it('marks no other entry', () => {
-    expect(showsShortPill(entry(), false)).toBe(false);
+    expect(showsShortPill(anEntry(), false)).toBe(false);
   });
 });
 
 describe('entryHeadline', () => {
   it('is empty for an untitled entry', () => {
-    expect(entryHeadline(entry({ title: '', excerpt: '', titleDerived: true }))).toBe('');
-    expect(entryHeadline(entry({ title: '', excerpt: '', titleDerived: false }))).toBe('');
+    expect(entryHeadline(anEntry({ title: '', excerpt: '', titleDerived: true }))).toBe('');
+    expect(entryHeadline(anEntry({ title: '', excerpt: '', titleDerived: false }))).toBe('');
   });
 
   it('is the title of an ordinary entry', () => {
-    expect(entryHeadline(entry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
+    expect(entryHeadline(anEntry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
       'Real',
     );
   });
 
   it('is the excerpt of a post, whose title only repeats it', () => {
     expect(
-      entryHeadline(entry({ title: 'Body', excerpt: 'Body and more', titleDerived: true })),
+      entryHeadline(anEntry({ title: 'Body', excerpt: 'Body and more', titleDerived: true })),
     ).toBe('Body and more');
   });
 
   it('falls back to the derived title when a post has no excerpt', () => {
-    expect(entryHeadline(entry({ title: 'null', excerpt: '', titleDerived: true }))).toBe('null');
+    expect(entryHeadline(anEntry({ title: 'null', excerpt: '', titleDerived: true }))).toBe('null');
   });
 });

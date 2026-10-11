@@ -12,7 +12,7 @@ import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
-import { anEntry } from '../../../testing/entry-testing';
+import { aLinkCard, anEntry } from '../../../testing/entry-testing';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
@@ -413,13 +413,7 @@ describe('EntriesStore', () => {
   });
 
   describe('merging completed rows (#1502)', () => {
-    const card = {
-      url: 'https://news.test/',
-      title: 'Story',
-      description: null,
-      imageUrl: null,
-      siteName: 'news.test',
-    };
+    const card = aLinkCard({ url: 'https://news.test/', title: 'Story' });
     const completed = (id: number, over: Partial<CompletedEntryDto> = {}): CompletedEntryDto => ({
       id,
       pending: false,

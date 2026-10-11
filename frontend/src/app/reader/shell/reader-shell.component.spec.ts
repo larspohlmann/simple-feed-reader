@@ -53,7 +53,7 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
-import { anEntry } from '../../../testing/entry-testing';
+import { aLinkCard, anEntry } from '../../../testing/entry-testing';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -1156,14 +1156,7 @@ describe('ReaderShellComponent', () => {
     jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
     const completion = ctrl.expectOne('https://api.test/api/entries/complete');
     expect(completion.request.body).toEqual({ ids: [514] });
-    const card = {
-      url: 'https://news.test/story',
-      title: 'A shared story',
-      description: null,
-      imageUrl: null,
-      siteName: 'news.test',
-    };
-    completion.flush({ entries: [{ ...post, pending: false, linkCards: [card] }] });
+    completion.flush({ entries: [{ ...post, pending: false, linkCards: [aLinkCard()] }] });
     fixture.detectChanges();
 
     const element = fixture.nativeElement as HTMLElement;

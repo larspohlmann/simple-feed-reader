@@ -15,6 +15,8 @@
   `state:` bodies of a PATCH response); only that one migrates.
 - Specs that build a partial entry with `as EntryDto` (`for-you-runs`, `hidden-overlay`,
   `entry-audio`, `pending-entries-poll`) are untouched: a new field never edits them.
+- The e2e `entryWire()` builds on `anEntry` and keeps only its fixture values, so the field
+  list lives in one file for both suites.
 - `aLinkCard()` joins it: five specs spelled out a full `LinkCardDto`.
 - A `title`, `source` or `subscriptionId` override that no test reads is dropped, kept only
   where removing it fails the spec (checked one field at a time).
