@@ -8,6 +8,8 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\Share;
+use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
@@ -270,6 +272,40 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame([], $this->claimable());
     }
 
+    public function testATitledShareGetsTheCardOfItsTarget(): void
+    {
+        $story = $this->queuedTitledShare(1, 'https://example.com/story');
+
+        $this->shareLinkCards->complete($this->claimable());
+
+        self::assertSame(['Card for https://example.com/story'], $this->cardTitles($story));
+        self::assertSame([], $this->claimable());
+    }
+
+    public function testATitledShareWhoseTargetIsAPictureBecomesAMediaShare(): void
+    {
+        $chart = $this->queuedTitledShare(1, 'https://i.example.com/chart');
+
+        $this->shareLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($chart);
+
+        self::assertEquals(Share::media('https://i.example.com/chart'), $chart->getShare());
+        self::assertSame('https://i.example.com/chart', $chart->getMedia()[0]->url);
+    }
+
+    public function testAPostSharingAPictureStaysALinkShare(): void
+    {
+        $post = $this->queuedPost(1, '<p>https://i.example.com/chart</p>');
+        $post->setShare(Share::link(null));
+        $this->entityManager->flush();
+
+        $this->shareLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($post);
+
+        self::assertSame(ShareKind::Link, $post->getShare()->kind);
+        self::assertSame([], $post->getMedia());
+    }
+
     public function testAFailedFlushIsRethrownAndLeavesThePostPending(): void
     {
         $post = $this->queuedPost(1, self::sharing(1, 1));
@@ -295,6 +331,9 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         if (str_contains($url, '/missing')) {
             return new MockResponse('Not found', ['http_code' => 404]);
+        }
+        if (str_contains($url, '/chart')) {
+            return new MockResponse('PNG', ['http_code' => 200, 'response_headers' => ['content-type' => 'image/png']]);
         }
         if (str_contains($url, '/untitled')) {
             return new MockResponse(
@@ -327,6 +366,16 @@ final class ShareLinkCardsTest extends DbTestCase
             ShareEnrichmentKind::LinkCards,
             $this->clock->now()->modify(sprintf('-%d minutes', 10 - $number)),
         ));
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function queuedTitledShare(int $number, string $target): Entry
+    {
+        $entry = $this->queuedPost($number, null);
+        $entry->setTitle('A story');
+        $entry->setShare(Share::link($target));
         $this->entityManager->flush();
 
         return $entry;

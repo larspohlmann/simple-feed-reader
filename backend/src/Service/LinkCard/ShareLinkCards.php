@@ -6,13 +6,16 @@ namespace App\Service\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
+use App\Entity\Share;
 use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\Support\EntrySnippet;
+use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\SharedLinks;
+use App\Service\LinkCard\Support\ShareTargets;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Sanitize\EntrySanitizer;
@@ -20,7 +23,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Builds the cards a queued post's shared links still lack, oldest post first: one attempt each, the row marked done
+ * Builds the cards a queued share's targets still lack, oldest share first: one attempt each, the row marked done
  * even when a page fails. A carded quote's RE: line leaves the body.
  */
 final readonly class ShareLinkCards
@@ -52,29 +55,29 @@ final readonly class ShareLinkCards
             $claimedAt,
         );
 
-        $cardsByRowId = [];
+        $pageCardsByRowId = [];
         foreach ($claimed as $index => $row) {
             $uncardedUrls = $uncardedUrlsByRowId[$row->requireId()];
             if ($index > 0 && !$this->hasTimeFor($uncardedUrls, $claimedAt)) {
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
-            $cardsByRowId[$row->requireId()] = $this->cardsFor($uncardedUrls);
+            $pageCardsByRowId[$row->requireId()] = $this->pageCardsFor($uncardedUrls);
         }
-        $this->store($claimed, $cardsByRowId, $claimedAt);
+        $this->store($claimed, $pageCardsByRowId, $claimedAt);
     }
 
     /**
      * Only rows the claim still holds are written: no other worker cards their posts meanwhile.
      *
      * @param list<ShareEnrichment>                $claimed
-     * @param array<int, list<LinkCardContent>> $cardsByRowId the rows this call worked
+     * @param array<int, list<PageCardModel>> $pageCardsByRowId the rows this call worked
      */
-    private function store(array $claimed, array $cardsByRowId, \DateTimeImmutable $claimedAt): void
+    private function store(array $claimed, array $pageCardsByRowId, \DateTimeImmutable $claimedAt): void
     {
         $worked = array_values(array_filter(
             $claimed,
-            static fn (ShareEnrichment $row): bool => isset($cardsByRowId[$row->requireId()]),
+            static fn (ShareEnrichment $row): bool => isset($pageCardsByRowId[$row->requireId()]),
         ));
         $held = $this->enrichments->stillHeld($worked, $claimedAt);
         if ($held === []) {
@@ -83,13 +86,45 @@ final readonly class ShareLinkCards
 
         $cardedUrls = $this->cardedUrls($held);
         foreach ($held as $row) {
-            $cards = $cardsByRowId[$row->requireId()];
+            $pageCards = $pageCardsByRowId[$row->requireId()];
+            $cards = self::cardsOf($pageCards);
             $storedCount = \count($cardedUrls[$row->getEntry()->requireId()] ?? []);
             $this->linkCards->add($row->getEntry(), $storedCount, $cards);
             $this->dropCardedQuoteLines($row->getEntry(), $cards);
+            $this->settleMediaTarget($row->getEntry(), $pageCards);
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);
+    }
+
+    /**
+     * @param list<PageCardModel> $pageCards
+     *
+     * @return list<LinkCardContent>
+     */
+    private static function cardsOf(array $pageCards): array
+    {
+        return array_values(array_filter(array_map(
+            static fn (PageCardModel $pageCard): ?LinkCardContent => $pageCard->card,
+            $pageCards,
+        )));
+    }
+
+    /**
+     * A titled share whose page is a picture or video file is shown as that medium. A post keeps its link card: its
+     * own media, not a linked file, make it a media post.
+     *
+     * @param list<PageCardModel> $pageCards
+     */
+    private function settleMediaTarget(Entry $entry, array $pageCards): void
+    {
+        $target = $entry->getShare()->url;
+        $medium = $pageCards[0]->medium ?? null;
+        if ($target === null || $medium === null) {
+            return;
+        }
+        $entry->setShare(Share::media($target));
+        $entry->setMedia([$medium, ...$entry->getMedia()], $entry->getAttachments());
     }
 
     /** @param list<LinkCardContent> $cards */
@@ -157,8 +192,7 @@ final readonly class ShareLinkCards
         $uncardedUrlsByRowId = [];
         foreach ($queued as $row) {
             $entry = $row->getEntry();
-            $uncardedUrls = SharedLinks::of((string) $entry->getContentHtml())
-                ->uncardedBy($cardedUrls[$entry->requireId()] ?? []);
+            $uncardedUrls = ShareTargets::uncardedOf($entry, $cardedUrls[$entry->requireId()] ?? []);
             if ($uncardedUrlsByRowId !== [] && \count($uncardedUrls) > $remaining) {
                 break;
             }
@@ -172,14 +206,14 @@ final readonly class ShareLinkCards
     /**
      * @param list<string> $uncardedUrls
      *
-     * @return list<LinkCardContent>
+     * @return list<PageCardModel>
      */
-    private function cardsFor(array $uncardedUrls): array
+    private function pageCardsFor(array $uncardedUrls): array
     {
-        $cards = [];
+        $pageCards = [];
         foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $cards[] = $this->pageCards->read($uncardedUrl)->card;
+                $pageCards[] = $this->pageCards->read($uncardedUrl);
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',
@@ -188,6 +222,6 @@ final readonly class ShareLinkCards
             }
         }
 
-        return array_values(array_filter($cards));
+        return $pageCards;
     }
 }
