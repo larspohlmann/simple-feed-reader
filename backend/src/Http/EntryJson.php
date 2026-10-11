@@ -13,8 +13,9 @@ use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Text\Support\EntryExcerpt;
 
 /**
- * Two shapes off one row: listRow() drops contentHtml for a plain-text
- * excerpt; detail() adds contentHtml back for the single body-rendering page.
+ * Three shapes off one row: listRow() drops contentHtml for a plain-text
+ * excerpt; detail() adds contentHtml back for the single body-rendering page;
+ * completed() holds only what completing a pending entry can change (#1551).
  *
  * @phpstan-type LinkCardRow array{
  *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
@@ -36,6 +37,14 @@ use App\Service\Text\Support\EntryExcerpt;
  *   duplicates: list<array<string, mixed>>,
  *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
  * }
+ * @phpstan-type CompletedEntryRow array{
+ *   id: int|null, pending: bool, summary: string|null, excerpt: string,
+ *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null,
+ *   imageRenditions: list<array{url: string, width: int}>,
+ *   media: list<array<string, string|int>>,
+ *   linkCards: list<LinkCardRow>,
+ *   share: 'link'|'media'|null,
+ * }
  */
 final class EntryJson
 {
@@ -47,23 +56,15 @@ final class EntryJson
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
 
-        return [
-            'id' => $entry->getId(),
+        return self::completed($row) + [
             'title' => $entry->getTitle(),
             'url' => $entry->getUrl(),
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
             'author' => $entry->getAuthor(),
-            'summary' => $entry->getSummary(),
-            'imageUrl' => $entry->getImageUrl(),
-            'imageWidth' => $entry->getImageWidth(),
-            'imageHeight' => $entry->getImageHeight(),
             'imageAspectRatio' => CoverAspectRatio::of($entry->getUrl()),
-            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
-            'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'categories' => $row->categories,
-            'linkCards' => array_map(self::linkCard(...), $row->linkCards),
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
@@ -76,14 +77,33 @@ final class EntryJson
             'isViewed' => $row->isViewed,
             'isShort' => YouTubeShortUrl::is($entry->getUrl()),
             'titleDerived' => $entry->isTitleDerived(),
-            'share' => $entry->getShare()->kind?->value,
             'savedSearches' => $row->savedSearches,
+            'duplicates' => array_map(self::listRow(...), $row->duplicates),
+        ];
+    }
+
+    /**
+     * @return CompletedEntryRow
+     */
+    public static function completed(EntryListRow $row): array
+    {
+        $entry = $row->entry;
+
+        return [
+            'id' => $entry->getId(),
             'pending' => $row->pending,
+            'summary' => $entry->getSummary(),
             'excerpt' => EntryExcerpt::of(
                 $entry->getSummary(),
                 $entry->bodyStandsInForSummary() ? $entry->getContentHtml() : null,
             ),
-            'duplicates' => array_map(self::listRow(...), $row->duplicates),
+            'imageUrl' => $entry->getImageUrl(),
+            'imageWidth' => $entry->getImageWidth(),
+            'imageHeight' => $entry->getImageHeight(),
+            'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
+            'media' => EntryMedia::toJsonList($entry->getMedia()),
+            'linkCards' => array_map(self::linkCard(...), $row->linkCards),
+            'share' => $entry->getShare()->kind?->value,
         ];
     }
 

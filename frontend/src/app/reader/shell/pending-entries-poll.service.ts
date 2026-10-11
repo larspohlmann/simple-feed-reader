@@ -13,8 +13,8 @@ import { onIdentityChange } from '../../core/auth/session-identity';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { PreviewProgress } from '../link-card/preview-progress';
-import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
+import { CompletedEntryDto } from '../state/completed-entry';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -139,7 +139,7 @@ export class PendingEntriesPoll implements PreviewProgress {
     this.schedule();
   }
 
-  private merge(rows: EntryDto[], sent: number[]): void {
+  private merge(rows: CompletedEntryDto[], sent: number[]): void {
     this.store.mergeCompleted(rows);
     this.routeState.mergeCompleted(rows);
     const openId = this.routeState.openEntry()?.id;

@@ -15,7 +15,11 @@ open entry.
 - `listRow()` starts from `completed()`, so the two shapes cannot drift apart.
 - A round that fills nothing still keeps the list's identity (the `sameValue` comparison stays, over the
   received keys).
-- The only client consumer is `PendingEntriesPoll` via `ReaderApi.complete`; its type becomes
+- `PendingEntriesPoll` via `ReaderApi.complete` is not the only consumer: `ReaderRouteState` also merges
+  each body fetch's `GET /api/entries/{id}` detail through `withCompleted` (#1502), and a full detail merged
+  whole would overwrite user state, list context (`duplicates`) and add `contentHtml` to list rows. Rather
+  than keep a client key list for that path, the detail response gains a sibling `completed:
+  EntryJson::completed()` (additive), and the body service publishes that. Both client paths take
   `CompletedEntryDto`. Store specs that relied on the answer carrying user state are reshaped or dropped, since
   the answer can no longer carry it.
 
@@ -23,9 +27,13 @@ open entry.
 
 - `backend/src/Http/EntryJson.php` — `CompletedEntryRow` alias, `completed()`, `listRow()` built on it.
 - `backend/src/Controller/Api/EntryCompletionController.php` — maps with `completed()`.
+- `backend/src/Controller/Api/EntryController.php` — `GET /{id}` adds `completed`.
 - `backend/tests/Http/EntryJsonTest.php`, `backend/tests/Controller/Api/EntryCompletionControllerTest.php` —
   pin the declared key set.
-- `frontend/src/app/reader/models.ts` — `CompletedEntryDto`.
+- `frontend/src/app/reader/state/completed-entry.ts` — `CompletedEntryDto`, `EntryDetailResponse` (beside
+  `withCompleted`; `models.ts` is at its line cap).
+- `frontend/src/app/reader/article/content/entry-body.service.ts` — publishes `response.completed`.
+- `frontend/e2e/support/reader.ts` — the detail stub carries `completed`.
 - `frontend/src/app/reader/reader-api.ts`, `state/completed-entry.ts`, `state/entries.store.ts`,
   `shell/reader-route-state.service.ts`, `shell/pending-entries-poll.service.ts` — take `CompletedEntryDto`.
 - Specs: store, poll, shell (acceptance: a `share` change reaches the store and the open entry).

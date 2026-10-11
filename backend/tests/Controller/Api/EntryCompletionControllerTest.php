@@ -113,6 +113,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $row = $this->rowOf($this->payload($this->client)['entries'], $item);
         self::assertSame('media', $row['share']);
+        self::assertArrayNotHasKey('isFavorite', $row);
         self::assertIsArray($row['media']);
         self::assertIsArray($row['media'][0]);
         self::assertSame('https://i.example/chart', $row['media'][0]['url']);

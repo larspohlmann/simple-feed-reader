@@ -158,6 +158,31 @@ final class EntryJsonTest extends TestCase
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['share']);
     }
 
+    public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
+    {
+        $shared = $this->entryTitled('Shared');
+        $shared->setShare(Share::media('https://i.example/chart'));
+
+        $json = EntryJson::completed($this->row($shared));
+
+        self::assertSame(
+            [
+                'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
+                'imageRenditions', 'media', 'linkCards', 'share',
+            ],
+            array_keys($json),
+        );
+        self::assertSame('media', $json['share']);
+    }
+
+    public function testAListRowCarriesEveryCompletedField(): void
+    {
+        $row = $this->row($this->entryTitled('Article'));
+        $completed = EntryJson::completed($row);
+
+        self::assertSame($completed, array_intersect_key(EntryJson::listRow($row), $completed));
+    }
+
     public function testAShareWithoutOwnTextHasNoExcerptFromItsBody(): void
     {
         $shared = $this->entryTitled('Shared');
