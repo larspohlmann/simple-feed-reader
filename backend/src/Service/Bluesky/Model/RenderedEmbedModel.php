@@ -10,18 +10,21 @@ use App\Service\Parser\Model\ParsedMediumModel;
 
 final readonly class RenderedEmbedModel
 {
-    /** @param list<ParsedMediumModel> $media */
+    /**
+     * @param list<ParsedMediumModel> $media
+     * @param list<LinkCardContent>   $linkCards in post order
+     */
     public function __construct(
         public string $html,
         public ?DeclaredImageModel $leadImage = null,
         public array $media = [],
-        public ?LinkCardContent $linkCard = null,
+        public array $linkCards = [],
     ) {
     }
 
     public static function card(LinkCardContent $card, ?DeclaredImageModel $leadImage): self
     {
-        return new self('', $leadImage, linkCard: $card);
+        return new self('', $leadImage, linkCards: [$card]);
     }
 
     public function followedBy(self $next): self
@@ -30,7 +33,7 @@ final readonly class RenderedEmbedModel
             $this->html . $next->html,
             $this->leadImage ?? $next->leadImage,
             [...$this->media, ...$next->media],
-            $this->linkCard ?? $next->linkCard,
+            [...$this->linkCards, ...$next->linkCards],
         );
     }
 }
