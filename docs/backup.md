@@ -207,7 +207,7 @@ writes none of them.
 | `EntryCategory` | The link between an article and a category it was published under. It names no account. |
 | `WorkerHeartbeat` | The liveness record of the processes that drive "For you" runs: the worker, a drainer and the cron sweep. It is a machine record, not your data. |
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
-| `PendingPostEnrichment` | The transient retry queue for Bluesky post embeds. Refreshes rebuild it. It is a machine record, not your data. |
+| `PostEnrichment` | The queue of posts whose Bluesky embed or link cards are still to come. It is a machine record, not your data. |
 | `LinkCard` | The preview card of a page a post shares. Opening the post rebuilds it. It names no account. |
 
 ### 6.2 Account data that the file drops in full

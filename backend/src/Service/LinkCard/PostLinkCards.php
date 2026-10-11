@@ -4,102 +4,103 @@ declare(strict_types=1);
 
 namespace App\Service\LinkCard;
 
-use App\Entity\Entry;
-use App\Repository\EntryRepository;
+use App\Entity\LinkCardContent;
+use App\Entity\PostEnrichment;
 use App\Repository\LinkCardRepository;
-use App\Repository\TriedPostRepository;
-use App\Service\LinkCard\Exception\FetchBudgetSpentException;
-use App\Service\LinkCard\Pass\FetchBudget;
-use App\Service\LinkCard\Support\LinkPost;
+use App\Repository\PostEnrichmentRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\Support\SharedLinks;
+use App\Service\Reader\Exception\PageFetchException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Builds the link cards of the posts a refresh creates, and of any post still without them when it is opened or a
- * client asks to complete it.
+ * Builds the link cards of queued posts, oldest first, within one call's page fetches. Each post gets one attempt:
+ * a page that fails is logged and skipped, and the row is marked done either way.
  */
 final readonly class PostLinkCards
 {
-    private const int FETCHES_PER_REFRESH = 10;
-    private const int FETCHES_PER_COMPLETION = 5;
+    private const int FETCHES_PER_CALL = 3;
 
     public function __construct(
-        private PostCardWriter $writer,
-        private TriedPostRepository $triedPosts,
-        private EntryRepository $entries,
+        private PageCardReader $pageCards,
+        private PostEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,
+        private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
     }
 
+    /** @param list<PostEnrichment> $queued link-card rows, oldest first */
+    public function complete(array $queued): void
+    {
+        $sharedUrlsByRowId = self::withinBudget($queued);
+        $now = $this->clock->now();
+        $claimed = $this->enrichments->claim(
+            array_values(array_filter(
+                $queued,
+                static fn (PostEnrichment $row): bool => isset($sharedUrlsByRowId[$row->requireId()]),
+            )),
+            $now,
+        );
+        if ($claimed === []) {
+            return;
+        }
+
+        foreach ($claimed as $row) {
+            $this->linkCards->add($row->getEntry(), $this->cardsFor($sharedUrlsByRowId[$row->requireId()]));
+        }
+        $this->entityManager->flush();
+        $this->enrichments->markDone($claimed, $now);
+    }
+
     /**
-     * The post the budget runs out on, and every post after it, is left unmarked for its first open.
+     * The oldest rows whose links fit the call's fetches, by row id. The first row is always taken, so a post sharing
+     * more links than one call fetches gets cards for as many as it does.
      *
-     * @param list<Entry> $createdEntries already flushed
+     * @param list<PostEnrichment> $queued
+     *
+     * @return array<int, list<string>>
      */
-    public function forCreated(array $createdEntries): void
+    private static function withinBudget(array $queued): array
     {
-        $this->forPosts(array_filter($createdEntries, LinkPost::matches(...)), self::FETCHES_PER_REFRESH);
+        $remaining = self::FETCHES_PER_CALL;
+        $sharedUrlsByRowId = [];
+        foreach ($queued as $row) {
+            if ($remaining === 0) {
+                break;
+            }
+            $sharedUrls = SharedLinks::of((string) $row->getEntry()->getContentHtml())->urls;
+            if ($sharedUrlsByRowId !== [] && \count($sharedUrls) > $remaining) {
+                break;
+            }
+            $sharedUrlsByRowId[$row->requireId()] = \array_slice($sharedUrls, 0, $remaining);
+            $remaining -= \count($sharedUrlsByRowId[$row->requireId()]);
+        }
+
+        return $sharedUrlsByRowId;
     }
 
     /**
-     * The post the budget runs out on, and every post after it, stays untried for the client's next call.
+     * @param list<string> $sharedUrls
      *
-     * @param list<Entry> $pendingEntries
+     * @return list<LinkCardContent>
      */
-    public function forPending(array $pendingEntries): void
+    private function cardsFor(array $sharedUrls): array
     {
-        $this->forPosts(array_filter($pendingEntries, $this->isUntriedPost(...)), self::FETCHES_PER_COMPLETION);
-    }
-
-    public function forOpened(int $entryId): void
-    {
-        if ($this->triedPosts->wasTried($entryId)) {
-            return;
-        }
-        $entry = $this->entries->find($entryId);
-        if ($entry === null || !LinkPost::matches($entry) || $this->linkCards->hasAnyFor($entry)) {
-            return;
-        }
-        $this->writeAndMark($entry, new FetchBudget(SharedLinks::MAX));
-    }
-
-    /** A failure is logged, unless it closed the EntityManager: rethrown, so the caller stops. */
-    private function writeAndMark(Entry $post, FetchBudget $budget): void
-    {
-        try {
-            $this->writer->write($post, $budget);
-        } catch (\Exception $exception) {
-            if ($exception instanceof FetchBudgetSpentException || !$this->entityManager->isOpen()) {
-                throw $exception;
+        $cards = [];
+        foreach ($sharedUrls as $sharedUrl) {
+            try {
+                $cards[] = $this->pageCards->read($sharedUrl);
+            } catch (PageFetchException $exception) {
+                $this->logger->warning(
+                    'No link card for {url}',
+                    ['url' => $sharedUrl, 'exception' => $exception::class],
+                );
             }
-            $this->logger->error(
-                'Link cards failed for entry {entry}',
-                ['entry' => $post->requireId(), 'exception' => $exception],
-            );
-
-            return;
         }
-        $this->triedPosts->mark($post->requireId());
-    }
 
-    /** @param array<Entry> $posts */
-    private function forPosts(array $posts, int $fetches): void
-    {
-        $budget = new FetchBudget($fetches);
-        try {
-            foreach ($posts as $post) {
-                $this->writeAndMark($post, $budget);
-            }
-        } catch (FetchBudgetSpentException) {
-            return;
-        }
-    }
-
-    private function isUntriedPost(Entry $entry): bool
-    {
-        return LinkPost::matches($entry) && !$this->triedPosts->wasTried($entry->requireId());
+        return array_values(array_filter($cards));
     }
 }

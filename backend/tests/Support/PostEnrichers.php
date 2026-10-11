@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\LinkCard;
-use App\Entity\PendingPostEnrichment;
+use App\Entity\PostEnrichment;
 use App\Repository\LinkCardRepository;
-use App\Repository\PendingPostEnrichmentRepository;
+use App\Repository\PostEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
-use App\Service\Bluesky\PendingPostQueue;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Completion\PostEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
@@ -36,14 +36,11 @@ final class PostEnrichers
         AppViewClient $appView,
         LoggerInterface $logger,
     ): PostEnricher {
-        /** @var PendingPostEnrichmentRepository $pendingPosts */
-        $pendingPosts = $entityManager->getRepository(PendingPostEnrichment::class);
         $naiveUtcClock = new NaiveUtcClock($clock);
 
         return new PostEnricher(
             $entityManager,
-            $pendingPosts,
-            new PendingPostQueue($entityManager, $naiveUtcClock),
+            self::enrichments($entityManager),
             $appView,
             new EntryEmbedWriter(
                 new PostEmbedRenderer(),
@@ -64,7 +61,25 @@ final class PostEnrichers
         return self::build($entityManager, $clock, $appView, new NullLogger());
     }
 
-    private static function linkCards(EntityManagerInterface $entityManager): LinkCardRepository
+    public static function queue(EntityManagerInterface $entityManager, ClockInterface $clock): PostEnrichmentQueue
+    {
+        return new PostEnrichmentQueue(
+            $entityManager,
+            self::enrichments($entityManager),
+            new EntrySanitizer(new TrailingBlankRemover()),
+            new NaiveUtcClock($clock),
+        );
+    }
+
+    public static function enrichments(EntityManagerInterface $entityManager): PostEnrichmentRepository
+    {
+        /** @var PostEnrichmentRepository $enrichments */
+        $enrichments = $entityManager->getRepository(PostEnrichment::class);
+
+        return $enrichments;
+    }
+
+    public static function linkCards(EntityManagerInterface $entityManager): LinkCardRepository
     {
         /** @var LinkCardRepository $linkCards */
         $linkCards = $entityManager->getRepository(LinkCard::class);

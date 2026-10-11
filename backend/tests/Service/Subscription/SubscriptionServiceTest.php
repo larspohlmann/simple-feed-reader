@@ -11,8 +11,6 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
 use App\Repository\OrphanedFeedRepository;
-use App\Service\Bluesky\PendingPostQueue;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
@@ -35,6 +33,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -105,7 +104,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 $this->entityManager,
                 $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
-                new PendingPostQueue($this->entityManager, new NaiveUtcClock($clock)),
+                PostEnrichers::queue($this->entityManager, $clock),
             ),
             new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->entityManager)),
             $this->entityManager,

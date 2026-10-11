@@ -18,52 +18,53 @@ final class LinkCardRepository extends ServiceEntityRepository
         parent::__construct($registry, LinkCard::class);
     }
 
-    /** @param list<LinkCardContent> $cards */
-    public function replaceFor(Entry $entry, array $cards): void
+    /** @param list<LinkCardContent> $cards the entry's first cards, in post order: it holds none yet */
+    public function add(Entry $entry, array $cards): void
     {
-        $entityManager = $this->getEntityManager();
-        $entityManager->createQuery(\sprintf('DELETE FROM %s card WHERE card.entry = :entry', LinkCard::class))
-            ->setParameter('entry', $entry)
-            ->execute();
         foreach ($cards as $position => $content) {
-            $entityManager->persist(new LinkCard($entry, $position, $content));
+            $this->getEntityManager()->persist(new LinkCard($entry, $position, $content));
         }
-    }
-
-    public function hasAnyFor(Entry $entry): bool
-    {
-        return $this->createQueryBuilder('card')
-            ->select('card.id')
-            ->andWhere('card.entry = :entry')
-            ->setParameter('entry', $entry)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getScalarResult() !== [];
     }
 
     /**
      * @param list<int> $entryIds
      *
-     * @return array<int, list<LinkCard>>
+     * @return array<int, list<LinkCardContent>> in post order, by entry id
      */
-    public function findByEntryIds(array $entryIds): array
+    public function contentsByEntryIds(array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
         }
-        /** @var list<LinkCard> $cards */
-        $cards = $this->createQueryBuilder('card')
-            ->addSelect('IDENTITY(card.entry) AS HIDDEN entryId')
-            ->andWhere('IDENTITY(card.entry) IN (:entryIds)')
+        /**
+         * @var list<array{
+         *   entryId: int|string, url: string, title: string, description: ?string, imageUrl: ?string, siteName: string
+         * }> $rows
+         */
+        $rows = $this->createQueryBuilder('card')
+            ->select(
+                'IDENTITY(card.entry) AS entryId',
+                'card.url',
+                'card.title',
+                'card.description',
+                'card.imageUrl',
+                'card.siteName',
+            )
+            ->andWhere('card.entry IN (:entryIds)')
             ->setParameter('entryIds', $entryIds)
-            ->orderBy('entryId', 'ASC')
-            ->addOrderBy('card.position', 'ASC')
+            ->orderBy('card.position', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getArrayResult();
 
         $grouped = [];
-        foreach ($cards as $card) {
-            $grouped[$card->getEntryId()][] = $card;
+        foreach ($rows as $row) {
+            $grouped[(int) $row['entryId']][] = new LinkCardContent(
+                $row['url'],
+                $row['title'],
+                $row['description'],
+                $row['imageUrl'],
+                $row['siteName'],
+            );
         }
 
         return $grouped;

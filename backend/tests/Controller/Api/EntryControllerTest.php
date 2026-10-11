@@ -29,9 +29,9 @@ use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -1392,7 +1392,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
     }
 
-    public function testOpeningAPostBuildsItsCardsAndAnswersWithTheLinkedBody(): void
+    public function testOpeningAPostFromBeforeLinkCardsQueuesItWithoutAFetch(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-post@example.com');
@@ -1402,26 +1402,28 @@ final class EntryControllerTest extends WebTestCase
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(1, $pages->getRequestsCount());
+        self::assertSame(0, $pages->getRequestsCount());
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertIsArray($body['entry']);
+        self::assertTrue($body['entry']['pending']);
+        self::assertSame([], $body['entry']['linkCards']);
         self::assertIsString($body['entry']['contentHtml']);
         self::assertStringContainsString('<a href="https://example.com/story"', $body['entry']['contentHtml']);
+        self::assertSame(1, $this->queuedRowsFor($entryId));
     }
 
-    public function testOpeningAStrangersPostIs404WithoutFetchingAPage(): void
+    public function testOpeningAStrangersPostIs404AndQueuesNothing(): void
     {
         $client = self::createClient();
         [$headers] = $this->auth('e-get-post-idor@example.com');
         [, $stranger] = $this->auth('e-get-post-owner@example.com');
-        $pages = $this->installPageClient();
         $entryId = $this->seedPostSharing($stranger, 'https://example.com/story');
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
         self::assertResponseStatusCodeSame(404);
-        self::assertSame(0, $pages->getRequestsCount());
+        self::assertSame(0, $this->queuedRowsFor($entryId));
     }
 
     private function installPageClient(): MockHttpClient
@@ -1434,10 +1436,21 @@ final class EntryControllerTest extends WebTestCase
         ));
         self::getContainer()->set(
             PostLinkCards::class,
-            PostLinkCardsWiring::build($entityManager, $pages, new NullLogger()),
+            PostLinkCardsWiring::build($entityManager, $pages, new MockClock()),
         );
 
         return $pages;
+    }
+
+    private function queuedRowsFor(int $entryId): int
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        return \count($entityManager->getConnection()->fetchFirstColumn(
+            'SELECT id FROM post_enrichment WHERE entry_id = ?',
+            [$entryId],
+        ));
     }
 
     private function seedPostSharing(User $user, string $sharedUrl): int

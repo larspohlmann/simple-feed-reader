@@ -6,8 +6,8 @@ namespace App\Service\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PendingPostEnrichment;
-use App\Repository\PendingPostEnrichmentRepository;
+use App\Entity\PostEnrichment;
+use App\Repository\PostEnrichmentRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -23,12 +23,10 @@ use Psr\Log\LoggerInterface;
 final readonly class PostEnricher
 {
     private const int POSTS_PER_PASS = 100;
-    private const string ON_REQUEST = 'a completion request';
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private PendingPostEnrichmentRepository $pendingPosts,
-        private PendingPostQueue $queue,
+        private PostEnrichmentRepository $enrichments,
         private AppViewClient $appView,
         private EntryEmbedWriterInterface $embedWriter,
         private NaiveUtcClock $clock,
@@ -43,19 +41,24 @@ final readonly class PostEnricher
      */
     public function enrich(Feed $feed, array $createdEntries): array
     {
-        return $this->guarded($feed->getUrl(), fn (): array => $this->enrichQueued($feed, $createdEntries));
+        $filled = $this->guarded(fn (): array => $this->enrichQueued($feed));
+
+        return array_values(array_filter(
+            $filled,
+            static fn (Entry $entry): bool => !\in_array($entry, $createdEntries, true),
+        ));
     }
 
     /**
-     * Fills those of these entries that are queued now, as a refresh would, without waiting for one.
-     *
-     * @param list<Entry> $entries
+     * @param list<PostEnrichment> $queued AppView rows, oldest first
      *
      * @return list<Entry> the entries it filled
      */
-    public function enrichEntries(array $entries): array
+    public function complete(array $queued): array
     {
-        return $this->guarded(self::ON_REQUEST, fn (): array => $this->enrichListed($entries));
+        return $this->guarded(
+            fn (): array => $this->settleAll($this->enrichments->claim($queued, $this->clock->now())),
+        );
     }
 
     /**
@@ -65,7 +68,7 @@ final readonly class PostEnricher
      *
      * @return list<Entry>
      */
-    private function guarded(string $source, callable $enrichment): array
+    private function guarded(callable $enrichment): array
     {
         try {
             return $enrichment();
@@ -73,68 +76,50 @@ final readonly class PostEnricher
             if (!$this->entityManager->isOpen()) {
                 throw $exception;
             }
-            $this->logger->error(
-                'Bluesky enrichment failed for {source}',
-                ['source' => $source, 'exception' => $exception],
-            );
+            $this->logger->error('Bluesky enrichment failed', ['exception' => $exception]);
 
             return [];
         }
     }
 
-    /**
-     * @param list<Entry> $createdEntries
-     *
-     * @return list<Entry>
-     */
-    private function enrichQueued(Feed $feed, array $createdEntries): array
+    /** @return list<Entry> */
+    private function enrichQueued(Feed $feed): array
     {
-        if ($this->queue->queue($createdEntries) > 0) {
-            $this->entityManager->flush();
-        } elseif (!$this->pendingPosts->hasPendingForFeed($feed)) {
+        if (!$this->enrichments->hasAppViewPendingForFeed($feed)) {
             return [];
         }
-        $this->pendingPosts->deleteQueuedBefore(
+        $now = $this->clock->now();
+        $this->enrichments->deleteAppViewQueuedBefore(
             $feed,
-            $this->clock->now()->sub(new \DateInterval(PendingPostEnrichment::GIVE_UP_AFTER)),
+            $now->sub(new \DateInterval(PostEnrichment::APPVIEW_GIVE_UP_AFTER)),
         );
-        $filled = $this->settleAll(
-            $this->pendingPosts->findOldestForFeed($feed, self::POSTS_PER_PASS),
-            $feed->getUrl(),
-        );
+        $queued = $this->enrichments->findClaimableAppViewForFeed($feed, $now, self::POSTS_PER_PASS);
 
-        return array_values(array_filter(
-            $filled,
-            static fn (Entry $entry): bool => !\in_array($entry, $createdEntries, true),
-        ));
+        return $this->settleAll($this->enrichments->claim($queued, $now));
     }
 
     /**
-     * @param list<Entry> $entries
+     * @param list<PostEnrichment> $claimed
      *
      * @return list<Entry>
      */
-    private function enrichListed(array $entries): array
+    private function settleAll(array $claimed): array
     {
-        $pending = $this->pendingPosts->findForEntries($entries);
-
-        return $pending === [] ? [] : $this->settleAll($pending, self::ON_REQUEST);
-    }
-
-    /**
-     * @param list<PendingPostEnrichment> $pending
-     *
-     * @return list<Entry>
-     */
-    private function settleAll(array $pending, string $source): array
-    {
-        $filled = [];
-        foreach (array_chunk($pending, AppViewClient::URIS_PER_CALL) as $chunk) {
-            if ($this->appView->isThrottled()) {
-                break;
-            }
-            array_push($filled, ...$this->settle($chunk, $source));
+        if ($claimed === []) {
+            return [];
         }
+
+        $filled = [];
+        $unsettled = [];
+        foreach (array_chunk($claimed, AppViewClient::URIS_PER_CALL) as $chunk) {
+            $settled = $this->appView->isThrottled() ? null : $this->settle($chunk);
+            if ($settled === null) {
+                array_push($unsettled, ...$chunk);
+                continue;
+            }
+            array_push($filled, ...$settled);
+        }
+        $this->enrichments->release($unsettled);
         $this->entityManager->flush();
 
         return $filled;
@@ -143,24 +128,21 @@ final readonly class PostEnricher
     /**
      * A post the AppView omits was deleted or hidden, so it is dequeued unfilled.
      *
-     * @param list<PendingPostEnrichment> $chunk
+     * @param list<PostEnrichment> $chunk
      *
-     * @return list<Entry>
+     * @return list<Entry>|null the entries it filled; null when the AppView gave no usable answer
      */
-    private function settle(array $chunk, string $source): array
+    private function settle(array $chunk): ?array
     {
         try {
             $posts = $this->appView->posts(array_map(
-                static fn (PendingPostEnrichment $pending): string => $pending->getEntry()->getGuid(),
+                static fn (PostEnrichment $pending): string => $pending->getEntry()->getGuid(),
                 $chunk,
             ));
         } catch (FetchException | AppViewAnswerException $exception) {
-            $this->logger->warning(
-                'Bluesky AppView gave no usable answer for {source}',
-                ['source' => $source, 'exception' => $exception],
-            );
+            $this->logger->warning('Bluesky AppView gave no usable answer', ['exception' => $exception]);
 
-            return [];
+            return null;
         }
 
         $filled = [];

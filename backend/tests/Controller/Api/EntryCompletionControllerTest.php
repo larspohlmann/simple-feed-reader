@@ -7,10 +7,10 @@ namespace App\Tests\Controller\Api;
 use App\Dto\Entry\CompleteEntriesRequest;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PendingPostEnrichment;
+use App\Entity\PostEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\TriedPostRepository;
+use App\Enum\PostEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Fetch\HostThrottle;
@@ -46,7 +46,6 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->client = self::createClient();
         $this->client->disableReboot();
         $this->clearPool('test.cache.rate_limiter');
-        $this->clearPool('test.cache.post_link_cards');
         $this->clock = new MockClock('2026-10-10 12:00:00', 'UTC');
         $this->appView = new FakeAppView();
         $this->throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
@@ -59,7 +58,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         [$headers, $user] = $this->auth('complete-fill@example.com');
         $feed = $this->subscribedFeed($user);
         $blueskyPost = $this->queuedPost($feed, self::TISCH);
-        $linkPost = $this->post($feed, 'https://mastodon.example/@a/1', '<p>See https://example.com/story</p>');
+        $linkPost = $this->queuedLinkPost($feed, 1, '<p>See https://example.com/story</p>');
         $this->appView->knowsFixture('external');
 
         $this->client->request('GET', '/api/entries', server: $headers);
@@ -78,8 +77,11 @@ final class EntryCompletionControllerTest extends ApiTestCase
         );
         self::assertSame([[self::TISCH]], $this->appView->requests);
         self::assertSame(1, $this->pages->getRequestsCount());
-        self::assertSame(['Card for https://example.com/story'], $this->cardTitlesOf($entries, $linkPost));
-        self::assertSame([Bluesky::CARD], $this->cardUrlsOf($entries, $blueskyPost));
+        self::assertSame(
+            ['Card for https://example.com/story'],
+            array_column($this->cardsOf($entries, $linkPost), 'title'),
+        );
+        self::assertSame([Bluesky::CARD], array_column($this->cardsOf($entries, $blueskyPost), 'url'));
     }
 
     public function testAStrangersIdsAreDroppedWithoutWork(): void
@@ -89,11 +91,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $own = $this->post($this->subscribedFeed($user), 'https://mastodon.example/@a/1', '<p>Just words.</p>');
         $strangersFeed = $this->subscribedFeed($stranger);
         $strangersBlueskyPost = $this->queuedPost($strangersFeed, self::TISCH);
-        $strangersLinkPost = $this->post(
-            $strangersFeed,
-            'https://mastodon.example/@b/1',
-            '<p>See https://example.com/story</p>',
-        );
+        $strangersLinkPost = $this->queuedLinkPost($strangersFeed, 2, '<p>See https://example.com/story</p>');
 
         $this->complete(
             $headers,
@@ -106,23 +104,42 @@ final class EntryCompletionControllerTest extends ApiTestCase
         self::assertSame(0, $this->pages->getRequestsCount());
     }
 
-    public function testACallSpendsAtMostFivePageFetches(): void
+    public function testACallSpendsAtMostThreePageFetchesOnTheOldestPosts(): void
     {
         [$headers, $user] = $this->auth('complete-budget@example.com');
         $feed = $this->subscribedFeed($user);
-        $links = static fn (int $post): string => '<p>' . implode(' ', array_map(
-            static fn (int $link): string => 'https://example.com/' . $post . '/' . $link,
-            range(1, 4),
-        )) . '</p>';
-        $first = $this->post($feed, 'https://mastodon.example/@a/1', $links(1));
-        $second = $this->post($feed, 'https://mastodon.example/@a/2', $links(2));
+        $posts = array_map(
+            fn (int $number): Entry => $this->queuedLinkPost($feed, $number, self::sharing($number)),
+            [4, 1, 3, 2],
+        );
 
-        $this->complete($headers, [$first->requireId(), $second->requireId()]);
+        $this->complete($headers, array_map(static fn (Entry $post): int => $post->requireId(), $posts));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(5, $this->pages->getRequestsCount());
-        $pending = $this->pendingById($this->payload($this->client)['entries']);
-        self::assertEqualsCanonicalizing([false, true], array_values($pending));
+        self::assertSame(3, $this->pages->getRequestsCount());
+        [$newest, $oldest, $third, $second] = $posts;
+        $expected = [
+            $oldest->requireId() => false,
+            $second->requireId() => false,
+            $third->requireId() => false,
+            $newest->requireId() => true,
+        ];
+        ksort($expected);
+        self::assertSame($expected, $this->pendingById($this->payload($this->client)['entries']));
+    }
+
+    public function testAPostAnotherCallIsWorkingIsLeftToIt(): void
+    {
+        [$headers, $user] = $this->auth('complete-held@example.com');
+        $post = $this->queuedLinkPost($this->subscribedFeed($user), 1, '<p>https://example.com/1</p>');
+        $enrichments = PostEnrichers::enrichments($this->entityManager());
+        $enrichments->claim($enrichments->findBy(['entry' => $post]), $this->clock->now());
+
+        $this->complete($headers, [$post->requireId()]);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $this->pages->getRequestsCount());
+        self::assertSame([$post->requireId() => true], $this->pendingById($this->payload($this->client)['entries']));
     }
 
     public function testAThrottledAppViewLeavesThePostQueuedAndPending(): void
@@ -139,7 +156,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
             $this->pendingById($this->payload($this->client)['entries']),
         );
         self::assertSame([], $this->appView->requests);
-        self::assertSame(1, $this->entityManager()->getRepository(PendingPostEnrichment::class)->count([]));
+        self::assertSame(1, $this->entityManager()->getRepository(PostEnrichment::class)->count([]));
     }
 
     public function testMoreThanTwentyFiveIdsAreRejected(): void
@@ -211,19 +228,19 @@ final class EntryCompletionControllerTest extends ApiTestCase
         self::assertTrue($readerBudget->consume()->isAccepted());
     }
 
+    public function testAnAnonymousCallIsUnauthorized(): void
+    {
+        $this->complete([], [1]);
+
+        self::assertResponseStatusCodeSame(401);
+    }
+
     private function limiter(string $id): RateLimiterFactoryInterface
     {
         $limiter = self::getContainer()->get($id);
         self::assertInstanceOf(RateLimiterFactoryInterface::class, $limiter);
 
         return $limiter;
-    }
-
-    public function testAnAnonymousCallIsUnauthorized(): void
-    {
-        $this->complete([], [1]);
-
-        self::assertResponseStatusCodeSame(401);
     }
 
     /**
@@ -250,8 +267,6 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private function installFakes(): void
     {
         $container = self::getContainer();
-        $triedPosts = $container->get(TriedPostRepository::class);
-        self::assertInstanceOf(TriedPostRepository::class, $triedPosts);
         $container->set(
             PostEnricher::class,
             PostEnrichers::build(
@@ -263,8 +278,13 @@ final class EntryCompletionControllerTest extends ApiTestCase
         );
         $container->set(
             PostLinkCards::class,
-            PostLinkCardsWiring::sharingTriedPosts($this->entityManager(), $this->pages, $triedPosts),
+            PostLinkCardsWiring::build($this->entityManager(), $this->pages, $this->clock),
         );
+    }
+
+    private static function sharing(int $number): string
+    {
+        return '<p>https://example.com/' . $number . '</p>';
     }
 
     private static function page(string $method, string $url): MockResponse
@@ -298,7 +318,23 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private function queuedPost(Feed $feed, string $guid): Entry
     {
         $post = $this->post($feed, $guid, '<p>Read this.</p>');
-        $this->entityManager()->persist(new PendingPostEnrichment($post, new \DateTimeImmutable('2026-10-10 11:00')));
+        $this->entityManager()->persist(
+            new PostEnrichment($post, PostEnrichmentKind::AppView, new \DateTimeImmutable('2026-10-10 11:00')),
+        );
+        $this->entityManager()->flush();
+
+        return $post;
+    }
+
+    /** Queued $number minutes after 11:00, so a lower number is older. */
+    private function queuedLinkPost(Feed $feed, int $number, string $contentHtml): Entry
+    {
+        $post = $this->post($feed, 'https://mastodon.example/@a/' . $number, $contentHtml);
+        $this->entityManager()->persist(new PostEnrichment(
+            $post,
+            PostEnrichmentKind::LinkCards,
+            new \DateTimeImmutable(sprintf('2026-10-10 11:%02d', $number)),
+        ));
         $this->entityManager()->flush();
 
         return $post;
@@ -331,18 +367,6 @@ final class EntryCompletionControllerTest extends ApiTestCase
         ksort($pending);
 
         return $pending;
-    }
-
-    /** @return list<mixed> */
-    private function cardTitlesOf(mixed $rows, Entry $entry): array
-    {
-        return array_column($this->cardsOf($rows, $entry), 'title');
-    }
-
-    /** @return list<mixed> */
-    private function cardUrlsOf(mixed $rows, Entry $entry): array
-    {
-        return array_column($this->cardsOf($rows, $entry), 'url');
     }
 
     /** @return array<array-key, array<array-key, mixed>> */

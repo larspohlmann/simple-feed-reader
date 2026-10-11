@@ -6,9 +6,8 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PendingPostEnrichment;
-use App\Service\Bluesky\PendingPostQueue;
-use App\Service\Clock\NaiveUtcClock;
+use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -18,6 +17,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\PostEnrichers;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
@@ -38,7 +38,7 @@ final class FirstFetchRecorderTest extends DbTestCase
             $this->entityManager,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),
-            new PendingPostQueue($this->entityManager, new NaiveUtcClock($clock)),
+            PostEnrichers::queue($this->entityManager, $clock),
         );
     }
 
@@ -54,22 +54,35 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'a'));
     }
 
-    public function testAFirstFetchQueuesItsBlueskyPostsForTheAppView(): void
+    public function testAFirstFetchQueuesItsBlueskyPostsAndItsLinkPosts(): void
     {
         $feed = $this->feed();
         $post = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
         $discovered = $this->discovered($feed, [
             $this->parsedEntry($post, new \DateTimeImmutable('2026-10-10 16:01:00')),
             $this->parsedEntry('article', new \DateTimeImmutable('2026-10-10 15:00:00')),
+            new ParsedEntryModel(
+                guid: 'link-post',
+                url: 'https://mastodon.example/@a/1',
+                title: 'Worth a read',
+                author: null,
+                summary: null,
+                contentHtml: '<p>Worth a read: https://example.com/story</p>',
+                publishedAt: new \DateTimeImmutable('2026-10-10 14:00:00'),
+                titleDerived: true,
+            ),
         ]);
 
         $this->recorder->record($feed, $discovered);
 
-        $queued = $this->entityManager->getRepository(PendingPostEnrichment::class)->findAll();
-        self::assertSame([$post], array_map(
-            static fn (PendingPostEnrichment $pending): string => $pending->getEntry()->getGuid(),
-            $queued,
-        ));
+        $kinds = [];
+        foreach ($this->entityManager->getRepository(PostEnrichment::class)->findAll() as $pending) {
+            $kinds[$pending->getEntry()->getGuid()] = $pending->getKind();
+        }
+        self::assertEqualsCanonicalizing(
+            [$post => PostEnrichmentKind::AppView, 'link-post' => PostEnrichmentKind::LinkCards],
+            $kinds,
+        );
     }
 
     public function testAFirstFetchStoresTheDiscoveredCacheValidators(): void

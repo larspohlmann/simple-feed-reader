@@ -5,71 +5,60 @@ declare(strict_types=1);
 namespace App\Service\Completion;
 
 use App\Entity\Entry;
+use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
+use App\Repository\PostEnrichmentRepository;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\PostLinkCards;
 
-/** Completes the posts a client still shows as pending, without waiting for the next refresh or an open. */
 final readonly class EntryCompletion
 {
     public function __construct(
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
+        private PostEnrichmentRepository $enrichments,
         private PostEnricher $postEnricher,
         private PostLinkCards $postLinkCards,
+        private NaiveUtcClock $clock,
     ) {
     }
 
     /**
-     * Bluesky posts are filled first, as they cost one AppView call between them; link posts then share what page
-     * fetches the call allows.
-     *
      * @param list<int> $entryIds
      *
      * @return list<EntryListRow> the caller's rows among them, as far as this call completed them
      */
     public function complete(int $userId, array $entryIds): array
     {
-        $rows = $this->rowsFor($userId, $entryIds);
-        $pendingEntries = self::pendingEntriesOf($rows);
-        if ($pendingEntries === []) {
-            return $rows;
-        }
+        $rows = $this->entryList->rowsByIdsForUser($userId, $entryIds);
+        $this->completeQueued(array_map(static fn (EntryListRow $row): Entry => $row->entry, $rows));
 
-        $this->postEnricher->enrichEntries($pendingEntries);
-        $this->postLinkCards->forPending($pendingEntries);
-
-        return $this->rowsFor($userId, $entryIds);
+        return $this->enricher->enrich($rows, $userId);
     }
 
     /**
-     * @param list<int> $entryIds
+     * Bluesky posts go first, as one AppView call fills them all; link posts then share the call's page fetches.
      *
-     * @return list<EntryListRow>
+     * @param list<Entry> $entries
      */
-    private function rowsFor(int $userId, array $entryIds): array
+    private function completeQueued(array $entries): void
     {
-        return $this->enricher->enrich($this->entryList->rowsByIdsForUser($userId, $entryIds), $userId);
+        $queued = $this->enrichments->findClaimableFor($entries, $this->clock->now());
+        $this->postEnricher->complete(self::ofKind($queued, PostEnrichmentKind::AppView));
+        $this->postLinkCards->complete(self::ofKind($queued, PostEnrichmentKind::LinkCards));
     }
 
     /**
-     * @param list<EntryListRow> $rows
+     * @param list<PostEnrichment> $queued
      *
-     * @return list<Entry>
+     * @return list<PostEnrichment>
      */
-    private static function pendingEntriesOf(array $rows): array
+    private static function ofKind(array $queued, PostEnrichmentKind $kind): array
     {
-        $pendingEntries = [];
-        foreach ($rows as $row) {
-            foreach ([$row, ...$row->duplicates] as $member) {
-                if ($member->pending) {
-                    $pendingEntries[] = $member->entry;
-                }
-            }
-        }
-
-        return $pendingEntries;
+        return array_values(array_filter($queued, static fn (PostEnrichment $row): bool => $row->getKind() === $kind));
     }
 }

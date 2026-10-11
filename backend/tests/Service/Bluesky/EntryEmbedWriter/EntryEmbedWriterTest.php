@@ -216,10 +216,7 @@ final class EntryEmbedWriterTest extends DbTestCase
     {
         $this->entityManager->clear();
 
-        return array_map(
-            static fn (LinkCard $card): LinkCardContent => $card->getContent(),
-            $this->linkCards()->findByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [],
-        );
+        return $this->linkCards()->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
     }
 
     private function linkCards(): LinkCardRepository

@@ -157,8 +157,8 @@ final readonly class RefreshRunners
                 EntryIngestors::build($this->entityManager, $this->clock),
                 FeedSchedulers::build($this->clock),
                 $indexer,
+                PostEnrichers::queue($this->entityManager, $this->clock),
                 PostEnrichers::idle($this->entityManager, $this->clock),
-                PostLinkCardsWiring::offline($this->entityManager),
                 new NullLogger(),
             ),
             new MissingFaviconResolver(

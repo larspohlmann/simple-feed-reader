@@ -1,0 +1,254 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Repository;
+
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
+use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
+use App\Repository\PostEnrichmentRepository;
+use App\Tests\DbTestCase;
+
+final class PostEnrichmentRepositoryTest extends DbTestCase
+{
+    private const string NOW = '2026-10-11 12:00:00';
+
+    public function testFindsAFeedsClaimableAppViewRowsOldestFirstUpToTheLimit(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $other = $this->feed('https://bsky.app/profile/b/rss');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/new', '2026-10-10 11:00:00');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/old', '2026-10-10 09:00:00');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/mid', '2026-10-10 10:00:00');
+        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-10 08:00:00', PostEnrichmentKind::LinkCards);
+        $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
+        $this->entityManager->flush();
+
+        $rows = $this->repository()->findClaimableAppViewForFeed($feed, $this->now(), 2);
+
+        self::assertSame(
+            ['at://did:plc:a/app.bsky.feed.post/old', 'at://did:plc:a/app.bsky.feed.post/mid'],
+            self::guidsOf($rows),
+        );
+    }
+
+    public function testDeletesOnlyTheFeedsAppViewRowsQueuedBeforeTheCutoff(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $other = $this->feed('https://bsky.app/profile/b/rss');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/old', '2026-10-10 09:59:59');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/at-cutoff', '2026-10-10 10:00:00');
+        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-01 08:00:00', PostEnrichmentKind::LinkCards);
+        $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
+        $this->entityManager->flush();
+
+        $this->repository()->deleteAppViewQueuedBefore($feed, new \DateTimeImmutable('2026-10-10 10:00:00'));
+
+        self::assertSame(
+            ['https://mastodon.test/@a/1', 'at://did:plc:a/app.bsky.feed.post/at-cutoff'],
+            self::guidsOf($this->repository()->findClaimableFor($this->entriesOf($feed), $this->now())),
+        );
+        self::assertCount(1, $this->repository()->findClaimableAppViewForFeed($other, $this->now(), 10));
+    }
+
+    public function testTellsWhetherAFeedHasAnAppViewRow(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $linkPosts = $this->feed('https://mastodon.test/@a.rss');
+        $empty = $this->feed('https://bsky.app/profile/c/rss');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/one', '2026-10-10 09:00:00');
+        $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/two', '2026-10-10 09:00:00');
+        $this->queued($linkPosts, 'https://mastodon.test/@a/1', '2026-10-10 09:00:00', PostEnrichmentKind::LinkCards);
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository()->hasAppViewPendingForFeed($feed));
+        self::assertFalse($this->repository()->hasAppViewPendingForFeed($linkPosts));
+        self::assertFalse($this->repository()->hasAppViewPendingForFeed($empty));
+    }
+
+    public function testARowGoesWithItsEntry(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $entry = $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/gone', '2026-10-10 09:00:00')->getEntry();
+        $this->entityManager->flush();
+        $connection = $this->entityManager->getConnection();
+
+        $connection->executeStatement('DELETE FROM entry WHERE id = ?', [$entry->requireId()]);
+
+        self::assertSame([], $this->repository()->findAll());
+    }
+
+    public function testOfTwoClaimsOnOneRowOnlyOneGetsIt(): void
+    {
+        $row = $this->queuedLinkPost($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
+        $this->entityManager->flush();
+
+        $first = $this->repository()->claim([$row], $this->now());
+        $second = $this->repository()->claim([$row], $this->now());
+
+        self::assertSame([$row], $first);
+        self::assertSame([], $second);
+    }
+
+    public function testAClaimHoldsTheRowForItsLeaseOnly(): void
+    {
+        $feed = $this->feed('https://mastodon.test/@a.rss');
+        $row = $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-11 11:00:00');
+        $this->entityManager->flush();
+        $this->repository()->claim([$row], $this->now());
+
+        self::assertSame([], $this->repository()->claim([$row], $this->now()->modify('+60 seconds')));
+        self::assertSame(
+            [],
+            $this->repository()->findClaimableFor([$row->getEntry()], $this->now()->modify('+60 seconds')),
+        );
+        self::assertSame([$row], $this->repository()->claim([$row], $this->now()->modify('+61 seconds')));
+    }
+
+    public function testAReleasedRowCanBeClaimedAgainAtOnce(): void
+    {
+        $feed = $this->feed('https://bsky.app/profile/a/rss');
+        $row = $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/one', '2026-10-11 11:00:00');
+        $this->entityManager->flush();
+        $this->repository()->claim([$row], $this->now());
+
+        $this->repository()->release([$row]);
+
+        self::assertSame([$row], $this->repository()->claim([$row], $this->now()));
+    }
+
+    public function testADoneRowIsNeitherPendingNorClaimable(): void
+    {
+        $feed = $this->feed('https://mastodon.test/@a.rss');
+        $done = $this->queuedLinkPost($feed, 'https://mastodon.test/@a/1', '2026-10-11 10:00:00');
+        $waiting = $this->queuedLinkPost($feed, 'https://mastodon.test/@a/2');
+        $plain = $this->entry($feed, 'https://mastodon.test/@a/3');
+        $this->entityManager->flush();
+        $this->repository()->claim([$done], $this->now());
+
+        $this->repository()->markDone([$done], $this->now());
+
+        self::assertSame(
+            [$waiting->getEntry()->requireId()],
+            $this->repository()->pendingEntryIdsAmong([
+                $done->getEntry()->requireId(),
+                $waiting->getEntry()->requireId(),
+                $plain->requireId(),
+            ]),
+        );
+        self::assertSame([], $this->repository()->claim([$done], $this->now()->modify('+1 day')));
+        self::assertSame([$waiting], $this->repository()->findClaimableFor($this->entriesOf($feed), $this->now()));
+    }
+
+    public function testAHeldRowIsStillPending(): void
+    {
+        $row = $this->queuedLinkPost($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
+        $this->entityManager->flush();
+
+        $this->repository()->claim([$row], $this->now());
+
+        self::assertSame(
+            [$row->getEntry()->requireId()],
+            $this->repository()->pendingEntryIdsAmong([$row->getEntry()->requireId()]),
+        );
+    }
+
+    public function testAnOpenedPostIsQueuedOnce(): void
+    {
+        $entry = $this->entry($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
+        $this->entityManager->flush();
+
+        self::assertTrue($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
+        self::assertFalse($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
+        $rows = $this->repository()->findAll();
+        self::assertCount(1, $rows);
+        self::assertSame(PostEnrichmentKind::LinkCards, $rows[0]->getKind());
+    }
+
+    public function testAnOpenedPostWithCardsIsNotQueued(): void
+    {
+        $entry = $this->entry($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
+        $this->entityManager->persist(new LinkCard(
+            $entry,
+            0,
+            new LinkCardContent('https://example.com/a', 'A', null, null, 'example.com'),
+        ));
+        $this->entityManager->flush();
+
+        self::assertFalse($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
+        self::assertSame([], $this->repository()->findAll());
+    }
+
+    /**
+     * @param list<PostEnrichment> $rows
+     *
+     * @return list<string>
+     */
+    private static function guidsOf(array $rows): array
+    {
+        return array_map(static fn (PostEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
+    }
+
+    /** @return list<Entry> */
+    private function entriesOf(Feed $feed): array
+    {
+        return $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
+    }
+
+    private function now(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable(self::NOW);
+    }
+
+    private function feed(string $url): Feed
+    {
+        $feed = new Feed($url);
+        $this->entityManager->persist($feed);
+
+        return $feed;
+    }
+
+    private function queued(
+        Feed $feed,
+        string $guid,
+        string $queuedAt,
+        PostEnrichmentKind $kind = PostEnrichmentKind::AppView,
+    ): PostEnrichment {
+        $pending = new PostEnrichment($this->entry($feed, $guid), $kind, new \DateTimeImmutable($queuedAt));
+        $this->entityManager->persist($pending);
+
+        return $pending;
+    }
+
+    private function queuedLinkPost(Feed $feed, string $guid, string $queuedAt = '2026-10-11 11:00:00'): PostEnrichment
+    {
+        return $this->queued($feed, $guid, $queuedAt, PostEnrichmentKind::LinkCards);
+    }
+
+    private function entry(Feed $feed, string $guid): Entry
+    {
+        $entry = new Entry(
+            $feed,
+            $guid,
+            null,
+            'Post',
+            new \DateTimeImmutable('2026-10-10 08:00:00'),
+            new \DateTimeImmutable('2026-10-10 08:00:00'),
+        );
+        $this->entityManager->persist($entry);
+
+        return $entry;
+    }
+
+    private function repository(): PostEnrichmentRepository
+    {
+        $repository = self::getContainer()->get(PostEnrichmentRepository::class);
+        self::assertInstanceOf(PostEnrichmentRepository::class, $repository);
+
+        return $repository;
+    }
+}

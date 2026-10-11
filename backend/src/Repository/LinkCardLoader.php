@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 
-/** Batch-loads the link cards of a page of entry rows, duplicates included, in one query. */
 final readonly class LinkCardLoader
 {
     public function __construct(private LinkCardRepository $linkCards)
@@ -25,7 +23,7 @@ final readonly class LinkCardLoader
             return [];
         }
 
-        $cardsByEntryId = $this->linkCards->findByEntryIds(EntryListRow::entryIdsOf($rows));
+        $cardsByEntryId = $this->linkCards->contentsByEntryIds(EntryListRow::entryIdsOf($rows));
 
         return array_map(
             fn (EntryListRow $row): EntryListRow => $this->enrich($row, $cardsByEntryId),
@@ -33,20 +31,14 @@ final readonly class LinkCardLoader
         );
     }
 
-    /**
-     * @param array<int, list<LinkCard>> $cardsByEntryId
-     */
+    /** @param array<int, list<LinkCardContent>> $cardsByEntryId */
     private function enrich(EntryListRow $row, array $cardsByEntryId): EntryListRow
     {
         $enrichedDuplicates = array_map(
             fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $cardsByEntryId),
             $row->duplicates,
         );
-        $contents = array_map(
-            static fn (LinkCard $card): LinkCardContent => $card->getContent(),
-            $cardsByEntryId[$row->entry->getId()] ?? [],
-        );
 
-        return $row->withDuplicates($enrichedDuplicates)->withLinkCards($contents);
+        return $row->withDuplicates($enrichedDuplicates)->withLinkCards($cardsByEntryId[$row->entry->getId()] ?? []);
     }
 }

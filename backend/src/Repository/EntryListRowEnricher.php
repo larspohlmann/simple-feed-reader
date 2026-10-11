@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/**
- * The batch loads every entry list runs over its page: category labels, link cards, whether each post is still being
- * completed, then the owner's saved-search pills.
- */
 final readonly class EntryListRowEnricher
 {
     public function __construct(

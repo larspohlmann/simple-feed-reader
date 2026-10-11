@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\LinkCard\Support;
 
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Entity\LinkCardContent;
 use App\Service\Fetch\Support\HostKey;
+use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\LinkCard\Model\SharedLinksModel;
 use App\Service\Text\Support\LinkedPlainText;
 use App\Service\Text\Support\Whitespace;
 use App\Service\Url\Support\AbsoluteHttpUrl;
@@ -22,26 +24,21 @@ final class SharedLinks
     private const string BARE_URL_SPLIT = '#(' . LinkedPlainText::URL . ')#iu';
     private const string TRUNCATION = '…';
 
-    public static function linked(string $bodyHtml): string
+    public static function of(string $bodyHtml): SharedLinksModel
     {
         if (stripos($bodyHtml, 'http') === false) {
-            return $bodyHtml;
+            return new SharedLinksModel([], $bodyHtml);
         }
 
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
-        if (self::linkBareUrls($document) === 0) {
-            return $bodyHtml;
-        }
+        $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        return $document->body->innerHTML ?? $bodyHtml;
+        return new SharedLinksModel(self::sharedUrlsIn($document), $linkedHtml);
     }
 
     /** @return list<string> */
-    public static function in(string $bodyHtml): array
+    private static function sharedUrlsIn(HTMLDocument $document): array
     {
-        $document = HtmlDocumentParser::parseFragment($bodyHtml);
-        self::linkBareUrls($document);
-
         $urls = [];
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
             if (self::isShare($anchor)) {
@@ -93,7 +90,8 @@ final class SharedLinks
     {
         $href = (string) $anchor->getAttribute('href');
 
-        return AbsoluteHttpUrl::matches($href)
+        return mb_strlen($href) <= LinkCardContent::URL_MAX
+            && AbsoluteHttpUrl::matches($href)
             && self::readsAsItsUrl($anchor, $href)
             && !self::isQuote($anchor);
     }

@@ -7,6 +7,8 @@ namespace App\Tests\Service\Refresh;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
+use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -14,7 +16,6 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\LinkCard\PostLinkCards;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
@@ -26,15 +27,12 @@ use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class FeedOutcomePersisterTest extends DbTestCase
 {
@@ -68,16 +66,11 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame([], $this->logger->records);
     }
 
-    public function testAFetchedPostGetsACardForTheLinkItShares(): void
+    public function testAFetchedPostIsQueuedForItsCardsAndNoPageIsFetched(): void
     {
         $feed = $this->feed('https://mastodon.example/@someone.rss');
-        $client = new MockHttpClient(new MockResponse(
-            '<html lang="en"><head><meta property="og:title" content="Shared story"></head></html>',
-            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-        ));
-        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, $client, new NullLogger());
 
-        $this->persister($this->entityManager, $postLinkCards)->persist(
+        $this->persister($this->entityManager)->persist(
             $feed,
             FetchOutcomeModel::succeeded(
                 FetchResponseModel::fetched($feed->getUrl(), false, $this->postRss(), null, null),
@@ -87,10 +80,11 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'post-1']);
         self::assertInstanceOf(Entry::class, $post);
-        $cards = $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]);
-        self::assertCount(1, $cards);
-        self::assertSame('https://example.com/story', $cards[0]->getContent()->url);
-        self::assertSame('Shared story', $cards[0]->getContent()->title);
+        $queued = $this->entityManager->getRepository(PostEnrichment::class)->findBy(['entry' => $post]);
+        self::assertCount(1, $queued);
+        self::assertSame(PostEnrichmentKind::LinkCards, $queued[0]->getKind());
+        self::assertStringContainsString('<a href="https://example.com/story"', (string) $post->getContentHtml());
+        self::assertSame([], $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]));
     }
 
     public function testAThrottledFetchIsLoggedAtInfo(): void
@@ -242,10 +236,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame($target, $feed->getUrl());
     }
 
-    private function persister(
-        EntityManagerInterface $entityManager,
-        ?PostLinkCards $postLinkCards = null,
-    ): FeedOutcomePersister {
+    private function persister(EntityManagerInterface $entityManager): FeedOutcomePersister
+    {
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
         $bodyParser = self::getContainer()->get(FeedBodyParser::class);
@@ -258,8 +250,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
             EntryIngestors::build($this->entityManager, $this->clock),
             FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+            PostEnrichers::queue($this->entityManager, $this->clock),
             PostEnrichers::idle($this->entityManager, $this->clock),
-            $postLinkCards ?? PostLinkCardsWiring::offline($this->entityManager),
             $this->logger,
         );
     }

@@ -76,6 +76,11 @@ final class SharedLinksTest extends TestCase
             '<p>https://example.com/a and again https://example.com/a</p>',
             ['https://example.com/a'],
         ];
+        yield 'an href too long to store' => [
+            '<p>https://example.com/' . str_repeat('a', 2029)
+            . ' https://example.com/' . str_repeat('b', 2028) . '</p>',
+            ['https://example.com/' . str_repeat('b', 2028)],
+        ];
         yield 'six links give five' => [
             '<p>' . implode(' ', self::urls(6)) . '</p>',
             self::urls(5),
@@ -92,14 +97,14 @@ final class SharedLinksTest extends TestCase
     #[DataProvider('bodies')]
     public function testFindsTheSharedUrls(string $body, array $expected): void
     {
-        self::assertSame($expected, SharedLinks::in($body));
+        self::assertSame($expected, SharedLinks::of($body)->urls);
     }
 
     public function testLinksABareUrlAndKeepsPunctuationOutside(): void
     {
         self::assertSame(
             '<p>See <a href="https://example.com/a">https://example.com/a</a>.</p>',
-            SharedLinks::linked('<p>See https://example.com/a.</p>'),
+            SharedLinks::of('<p>See https://example.com/a.</p>')->linkedHtml,
         );
     }
 
@@ -107,7 +112,7 @@ final class SharedLinksTest extends TestCase
     {
         self::assertStringContainsString(
             '<a href="HTTPS://EXAMPLE.COM/A">',
-            SharedLinks::linked('<p>HTTPS://EXAMPLE.COM/A</p>'),
+            SharedLinks::of('<p>HTTPS://EXAMPLE.COM/A</p>')->linkedHtml,
         );
     }
 
@@ -115,11 +120,11 @@ final class SharedLinksTest extends TestCase
     {
         $body = '<p><a href="https://example.com/a">https://example.com/a</a></p>';
 
-        self::assertSame($body, SharedLinks::linked($body));
+        self::assertSame($body, SharedLinks::of($body)->linkedHtml);
     }
 
     public function testLeavesABodyWithoutUrlsByteForByte(): void
     {
-        self::assertSame('<p>a &#64; b</p>', SharedLinks::linked('<p>a &#64; b</p>'));
+        self::assertSame('<p>a &#64; b</p>', SharedLinks::of('<p>a &#64; b</p>')->linkedHtml);
     }
 }

@@ -6,7 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PendingPostEnrichment;
+use App\Entity\PostEnrichment;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
@@ -29,7 +29,6 @@ use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\ReadsFixtures;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -182,8 +181,8 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             ),
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
+            PostEnrichers::queue($this->entityManager, $this->clock),
             $postEnricher,
-            PostLinkCardsWiring::offline($this->entityManager),
             new NullLogger(),
         );
     }
@@ -208,6 +207,6 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
     private function pendingCount(): int
     {
-        return $this->entityManager->getRepository(PendingPostEnrichment::class)->count([]);
+        return $this->entityManager->getRepository(PostEnrichment::class)->count([]);
     }
 }

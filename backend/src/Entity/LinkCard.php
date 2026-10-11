@@ -50,14 +50,4 @@ final class LinkCard
         $this->imageUrl = $content->imageUrl;
         $this->siteName = $content->siteName;
     }
-
-    public function getEntryId(): int
-    {
-        return $this->entry->requireId();
-    }
-
-    public function getContent(): LinkCardContent
-    {
-        return new LinkCardContent($this->url, $this->title, $this->description, $this->imageUrl, $this->siteName);
-    }
 }
