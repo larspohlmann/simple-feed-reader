@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
+use App\Entity\Share;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\LinkCardRepository;
@@ -136,6 +137,17 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame('<p>Deleted since.</p>', $this->reload($post)->getContentHtml());
         self::assertSame(0, $this->pendingCount());
+    }
+
+    public function testAnUnfilledPostSharesNothingOnceDequeued(): void
+    {
+        $post = $this->queuedEntry(self::TEST_POST . 'deleted', '<p>Deleted since.</p>');
+        $post->setShare(Share::link(null));
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed, [$post]);
+
+        self::assertTrue($this->reload($post)->getShare()->isNone());
     }
 
     public function testThirtyQueuedPostsTakeTwoRequests(): void

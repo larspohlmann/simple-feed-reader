@@ -6,6 +6,7 @@ namespace App\Service\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Share;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
@@ -177,6 +178,9 @@ final readonly class PostEnricher
             if ($outcome === FillOutcome::AwaitingLinkCards) {
                 $pending->awaitLinkCards();
                 continue;
+            }
+            if ($outcome === FillOutcome::Unfilled) {
+                $entry->setShare(Share::none());
             }
             $this->entityManager->remove($pending);
         }

@@ -281,6 +281,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->writer()->fill($entry, Bluesky::post('images'));
 
         self::assertSame(ShareKind::Media, $entry->getShare()->kind);
+        self::assertNull($entry->getShare()->url);
     }
 
     public function testAPostWithOnlyTextSharesNothing(): void
