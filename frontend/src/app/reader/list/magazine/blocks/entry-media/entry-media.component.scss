@@ -35,15 +35,15 @@
 }
 
 .media {
-  align-self: center;
   display: grid;
   gap: var(--space-1);
   overflow: hidden;
   border-radius: var(--radius);
 }
 
-/* One item keeps its shape: a portrait narrows under the height cap rather than being cropped. */
+/* One item keeps its shape, centred: a portrait narrows under the height cap rather than being cropped. */
 .media[data-count='1'] {
+  align-self: center;
   width: min(100%, calc(var(--media-post-max-h) * var(--ratio)));
   aspect-ratio: var(--ratio);
 }
