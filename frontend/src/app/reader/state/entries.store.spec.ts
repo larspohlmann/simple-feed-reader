@@ -492,6 +492,20 @@ describe('EntriesStore', () => {
       expect(store.entries()[1].pending).toBe(false);
     });
 
+    it('keeps what a round filled in when a state change on the wire fails', () => {
+      store.setState(2, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
+      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+
+      patch.flush('nope', { status: 500, statusText: 'Server Error' });
+
+      expect(store.entries()[1]).toMatchObject({
+        isFavorite: false,
+        pending: false,
+        linkCards: [card],
+      });
+    });
+
     it('keeps a state change still on the wire', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');

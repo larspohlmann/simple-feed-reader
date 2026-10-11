@@ -148,11 +148,12 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const before = this.rawEntries().find((entry) => entry.id === entryId);
-    if (!before) return;
+    const listed = this.rawEntries().find((entry) => entry.id === entryId);
+    if (!listed) return;
     this.error.set(null);
     this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
+    const before = stateBefore(listed, inFlight.patch);
     this.inFlightPatches.add(inFlight);
     this.patchEntries([entryId], (entry) => ({ ...entry, ...inFlight.patch }));
     this.api
@@ -160,7 +161,7 @@ export class EntriesStore {
       .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
       .subscribe({
         error: (error: HttpErrorResponse) => {
-          this.patchEntries([entryId], () => before);
+          this.patchEntries([entryId], (entry) => ({ ...entry, ...before }));
           this.error.set(parseProblem(error));
           this.failedOperation.set(() => this.setState(entryId, patch, onError));
           onError?.();
@@ -219,6 +220,12 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
   }
+}
+
+/** What `entry` held under the keys `patch` changes, for a failed PATCH to put back. */
+function stateBefore(entry: EntryDto, patch: EntryStatePatch): EntryStatePatch {
+  const keys = Object.keys(patch) as (keyof EntryStatePatch)[];
+  return Object.fromEntries(keys.map((key) => [key, entry[key]]));
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

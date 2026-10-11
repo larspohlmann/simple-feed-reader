@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
@@ -47,6 +47,9 @@ export class ReaderRouteState {
   readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
 
   constructor() {
+    this.bodyService.details
+      .pipe(takeUntilDestroyed())
+      .subscribe((detail) => this.takeCompleted([detail]));
     effect(() => {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
@@ -90,6 +93,11 @@ export class ReaderRouteState {
       const row = fetched && rows.find((finished) => finished.id === fetched.id);
       return row ? withCompleted(fetched, row) : fetched;
     });
+  }
+
+  private takeCompleted(rows: EntryDto[]): void {
+    this.entries.mergeCompleted(rows);
+    this.mergeCompleted(rows);
   }
 
   private fetchUnlistedEntry(id: number | null): void {

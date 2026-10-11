@@ -178,6 +178,18 @@ describe('PendingEntriesPoll', () => {
     expect(complete).toHaveBeenCalledTimes(PENDING_POLL_MAX_ROUNDS);
   });
 
+  it('gives an entry opened after the list spent its rounds a budget of its own', () => {
+    start([row(1)]);
+    rounds(PENDING_POLL_MAX_ROUNDS);
+
+    openEntry.set(row(9));
+    TestBed.tick();
+    rounds(PENDING_POLL_MAX_ROUNDS + 5);
+
+    expect(complete).toHaveBeenCalledTimes(2 * PENDING_POLL_MAX_ROUNDS);
+    expect(complete).toHaveBeenLastCalledWith([9]);
+  });
+
   it('counts a failed call as a round and keeps polling after it', () => {
     start([row(1)]);
     complete.mockImplementation(() => throwError(() => new Error('429')));

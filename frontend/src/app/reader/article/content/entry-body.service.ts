@@ -1,5 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
+import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 
 /** How many article bodies stay cached at once — one browsing session's worth
@@ -22,6 +24,9 @@ export class EntryBodyService {
    *  account can't write itself into the next one's cache. */
   private generation = 0;
   private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
+  private readonly arrivedDetails = new Subject<EntryDto>();
+  /** Each entry a body fetch brings back: opening a post can queue it, so the row may now be pending (#1502). */
+  readonly details = this.arrivedDetails.asObservable();
 
   constructor() {
     onIdentityChange(() => this.clear());
@@ -104,6 +109,7 @@ export class EntryBodyService {
       next: (response) => {
         if (superseded()) return;
         state.set({ status: 'ok', html: response.entry.contentHtml });
+        this.arrivedDetails.next(response.entry);
       },
       error: () => {
         if (superseded() || state().status === 'ok') return;
