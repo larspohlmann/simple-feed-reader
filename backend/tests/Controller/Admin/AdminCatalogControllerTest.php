@@ -6,9 +6,9 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Image\FaviconFetcher\FaviconFetcher;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloader;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
 use App\Tests\Support\UserFactory;
@@ -26,9 +26,9 @@ final class AdminCatalogControllerTest extends WebTestCase
      */
     private function stubFaviconServicesToFail(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willThrowException(new FaviconUnavailableException('offline'));
-        self::getContainer()->set(FaviconFetcher::class, $fetcher);
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willThrowException(new GuardedImageUnavailableException('offline'));
+        self::getContainer()->set(GuardedImageDownloader::class, $downloader);
 
         $resolver = $this->createStub(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
@@ -152,7 +152,7 @@ final class AdminCatalogControllerTest extends WebTestCase
         $entityManager->flush();
 
         // Stub BEFORE the first admin request: AdminCatalogController eagerly builds
-        // CatalogFaviconWarmer, which eagerly builds the fetcher — once a request has
+        // CatalogFaviconWarmer, which eagerly builds the downloader — once a request has
         // constructed it, the test container refuses to replace it.
         $this->stubFaviconServicesToFail();
 

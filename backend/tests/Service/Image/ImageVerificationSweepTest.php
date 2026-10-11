@@ -7,23 +7,23 @@ namespace App\Tests\Service\Image;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\PendingImageVerificationRepository;
-use App\Service\Image\Exception\FaviconRejectedException;
-use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\Exception\GuardedImageRejectedException;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PngImageFactory;
-use App\Tests\Support\StubFaviconFetcher;
+use App\Tests\Support\StubGuardedImageDownloader;
 use Symfony\Component\Clock\MockClock;
 
 final class ImageVerificationSweepTest extends DbTestCase
 {
-    private function sweep(StubFaviconFetcher $fetcher): ImageVerificationSweep
+    private function sweep(StubGuardedImageDownloader $downloader): ImageVerificationSweep
     {
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        $verifier = new ImageVerifier($fetcher, new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')));
+        $verifier = new ImageVerifier($downloader, new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')));
 
         return new ImageVerificationSweep($repository, $verifier, $this->entityManager);
     }
@@ -51,12 +51,12 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->pendingEntry($feed, 'rejected', 'https://i/rejected.png');
         $this->entityManager->flush();
 
-        $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/good.png', PngImageFactory::bytes(600, 400));
-        $fetcher->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
-        $fetcher->willFail('https://i/rejected.png', new FaviconRejectedException('Icon responded 403.'));
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes('https://i/good.png', PngImageFactory::bytes(600, 400));
+        $downloader->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
+        $downloader->willFail('https://i/rejected.png', new GuardedImageRejectedException('Image responded 403.'));
 
-        $report = $this->sweep($fetcher)->verifyDue();
+        $report = $this->sweep($downloader)->verifyDue();
 
         self::assertSame(1, $report->measured);
         self::assertSame(1, $report->kept);
@@ -84,10 +84,10 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->pendingEntry($feed, 'gone', 'https://i/gone.png');
         $this->entityManager->flush();
 
-        $fetcher = new StubFaviconFetcher();
-        $fetcher->willFail('https://i/gone.png', new FaviconUnavailableException('timeout'));
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willFail('https://i/gone.png', new GuardedImageUnavailableException('timeout'));
 
-        $report = $this->sweep($fetcher)->verifyDue();
+        $report = $this->sweep($downloader)->verifyDue();
 
         self::assertSame(0, $report->measured);
         self::assertSame(0, $report->dropped);
@@ -112,7 +112,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         );
         $this->entityManager->clear();
 
-        $report = $this->sweep(new StubFaviconFetcher())->verifyDue();
+        $report = $this->sweep(new StubGuardedImageDownloader())->verifyDue();
 
         self::assertSame(1, $report->dropped);
         /** @var PendingImageVerificationRepository $repository */
@@ -127,9 +127,9 @@ final class ImageVerificationSweepTest extends DbTestCase
         $this->pendingEntry($feed, 'good', 'https://i/good.png');
         $this->entityManager->flush();
 
-        $fetcher = new StubFaviconFetcher();
-        $fetcher->willAlwaysReturn(PngImageFactory::bytes(600, 400));
-        $this->sweep($fetcher)->verifyDue();
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willAlwaysReturn(PngImageFactory::bytes(600, 400));
+        $this->sweep($downloader)->verifyDue();
         $this->entityManager->clear();
 
         /** @var PendingImageVerificationRepository $repository */

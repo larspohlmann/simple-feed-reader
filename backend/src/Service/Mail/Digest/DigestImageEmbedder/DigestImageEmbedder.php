@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Mail\Digest\DigestImageResizer\DigestImageResizerInterface;
 use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use App\Service\Mail\Digest\Model\DigestImageKind;
@@ -26,7 +26,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
     private const int FAVICON_SIZE = 32;
 
     public function __construct(
-        private FaviconFetcherInterface $downloader,
+        private GuardedImageDownloaderInterface $downloader,
         private DigestImageResizerInterface $resizer,
         private LoggerInterface $logger,
     ) {
@@ -40,7 +40,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
         foreach ($this->requests($page) as $url => $kind) {
             try {
                 $image = $this->embedOne($url, $kind);
-            } catch (FaviconUnavailableException | ImageProcessingException $exception) {
+            } catch (GuardedImageUnavailableException | ImageProcessingException $exception) {
                 $this->logger->debug('Digest image skipped: {url}', ['url' => $url, 'exception' => $exception]);
                 continue;
             }
@@ -76,7 +76,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
     }
 
     /**
-     * @throws FaviconUnavailableException
+     * @throws GuardedImageUnavailableException
      * @throws ImageProcessingException
      */
     private function embedOne(string $url, DigestImageKind $kind): EmbeddedImageModel

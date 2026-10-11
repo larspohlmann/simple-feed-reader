@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\Model\DownloadedImageModel;
 
-final class StubFaviconFetcher implements FaviconFetcherInterface
+final class StubGuardedImageDownloader implements GuardedImageDownloaderInterface
 {
     /** @var array<string, string|\Throwable> */
     private array $byUrl = [];
@@ -35,16 +35,16 @@ final class StubFaviconFetcher implements FaviconFetcherInterface
         $this->default = $error;
     }
 
-    public function download(string $iconUrl): FetchedFaviconModel
+    public function download(string $imageUrl): DownloadedImageModel
     {
-        $result = $this->byUrl[$iconUrl] ?? $this->default;
+        $result = $this->byUrl[$imageUrl] ?? $this->default;
         if ($result === null) {
-            throw new FaviconUnavailableException('no stub configured for ' . $iconUrl);
+            throw new GuardedImageUnavailableException('no stub configured for ' . $imageUrl);
         }
         if ($result instanceof \Throwable) {
             throw $result;
         }
 
-        return new FetchedFaviconModel($iconUrl, $result, $this->contentType);
+        return new DownloadedImageModel($imageUrl, $result, $this->contentType);
     }
 }

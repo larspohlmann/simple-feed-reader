@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Image\FaviconFetcher;
+namespace App\Service\Image\GuardedImageDownloader;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -10,21 +10,21 @@ use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
-use App\Service\Image\Exception\FaviconRejectedException;
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\Exception\GuardedImageRejectedException;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\Model\DownloadedImageModel;
 use App\Service\Image\Support\ImageType;
 use App\Service\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 /**
- * Downloads one resolved icon URL over RedirectFollower's guarded chain, with a timeout, size caps, no compression
- * and an image content-type allow-list. Resolving a homepage to its icon URL is FaviconResolver's job.
+ * Downloads one resolved image URL over RedirectFollower's guarded chain, with a timeout, size caps, no compression
+ * and an image content-type allow-list.
  */
-final readonly class FaviconFetcher implements FaviconFetcherInterface
+final readonly class GuardedImageDownloader implements GuardedImageDownloaderInterface
 {
-    /** Also bounds digest article thumbnails; GdImageResizer's pixel cap is the real memory guard. */
+    /** GdImageResizer's pixel cap is the real memory guard. */
     public const int MAX_BYTES = 3_145_728;
 
     private const int TIMEOUT_SECONDS = 8;
@@ -51,10 +51,10 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     ) {
     }
 
-    public function download(string $iconUrl): FetchedFaviconModel
+    public function download(string $imageUrl): DownloadedImageModel
     {
         try {
-            $landed = $this->redirects->follow($iconUrl, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
+            $landed = $this->redirects->follow($imageUrl, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
             [$bytes, $contentType] = $this->readSuccessfulResponse($landed);
         } catch (FetchException | TransportExceptionInterface $exception) {
             throw $this->asFetchFailure($exception);
@@ -63,17 +63,17 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         $this->assertNotEmpty($bytes);
         $this->assertWithinSizeCap($bytes);
 
-        return new FetchedFaviconModel($iconUrl, $bytes, $contentType);
+        return new DownloadedImageModel($imageUrl, $bytes, $contentType);
     }
 
     /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */
-    private function asFetchFailure(\Throwable $exception): FaviconUnavailableException
+    private function asFetchFailure(\Throwable $exception): GuardedImageUnavailableException
     {
         if ($this->causedByOversizedResponse($exception)) {
-            return new FaviconRejectedException($exception->getMessage(), 0, $exception);
+            return new GuardedImageRejectedException($exception->getMessage(), 0, $exception);
         }
 
-        return new FaviconUnavailableException($exception->getMessage(), 0, $exception);
+        return new GuardedImageUnavailableException($exception->getMessage(), 0, $exception);
     }
 
     private function causedByOversizedResponse(\Throwable $exception): bool
@@ -128,23 +128,23 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
             && $status < Response::HTTP_INTERNAL_SERVER_ERROR
             && !\in_array($status, self::GONE_STATUSES, true)
         ) {
-            throw new FaviconRejectedException('Icon responded ' . $status . '.');
+            throw new GuardedImageRejectedException('Image responded ' . $status . '.');
         }
 
-        throw new FaviconUnavailableException('Icon responded ' . $status . '.');
+        throw new GuardedImageUnavailableException('Image responded ' . $status . '.');
     }
 
     private function assertNotEmpty(string $bytes): void
     {
         if ('' === $bytes) {
-            throw new FaviconUnavailableException('Icon body was empty.');
+            throw new GuardedImageUnavailableException('Image body was empty.');
         }
     }
 
     private function assertWithinSizeCap(string $bytes): void
     {
         if (\strlen($bytes) > self::MAX_BYTES) {
-            throw new FaviconRejectedException('Icon exceeded ' . self::MAX_BYTES . ' bytes.');
+            throw new GuardedImageRejectedException('Image exceeded ' . self::MAX_BYTES . ' bytes.');
         }
     }
 
@@ -163,7 +163,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         $message = \sprintf('Content type "%s" is not an allowed image type.', $type);
 
         throw str_starts_with($type, 'image/')
-            ? new FaviconRejectedException($message)
-            : new FaviconUnavailableException($message);
+            ? new GuardedImageRejectedException($message)
+            : new GuardedImageUnavailableException($message);
     }
 }

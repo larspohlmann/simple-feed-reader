@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Image\Model;
 
-final readonly class FetchedFaviconModel
+final readonly class DownloadedImageModel
 {
     public function __construct(
         public string $sourceUrl,

@@ -6,15 +6,15 @@ namespace App\Service\Image;
 
 use App\Entity\Entry;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\Exception\FaviconRejectedException;
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Exception\GuardedImageRejectedException;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use App\Service\Image\Model\ImageDimensionsModel;
 use App\Service\Image\Model\ImageVerifyOutcome;
 
 /**
- * Verifies one pending image via the SSRF-guarded fetcher, retrying a bounded
- * number of times before dropping it. A refusal the fetcher cannot recover
+ * Verifies one pending image via the SSRF-guarded downloader, retrying a bounded
+ * number of times before dropping it. A refusal the downloader cannot recover
  * from keeps the image unmeasured instead — a browser may still render it.
  */
 final readonly class ImageVerifier
@@ -22,7 +22,7 @@ final readonly class ImageVerifier
     private const int MAX_ATTEMPTS = 3;
 
     public function __construct(
-        private FaviconFetcherInterface $fetcher,
+        private GuardedImageDownloaderInterface $downloader,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -37,12 +37,12 @@ final readonly class ImageVerifier
         }
 
         try {
-            $bytes = $this->fetcher->download($url)->bytes;
-        } catch (FaviconRejectedException) {
+            $bytes = $this->downloader->download($url)->bytes;
+        } catch (GuardedImageRejectedException) {
             $entry->getImage()->keepUnmeasured($this->clock->now());
 
             return ImageVerifyOutcome::Kept;
-        } catch (FaviconUnavailableException) {
+        } catch (GuardedImageUnavailableException) {
             return $this->recordFailure($entry);
         }
 

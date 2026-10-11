@@ -9,8 +9,8 @@ use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\Model\CatalogWarmReportModel;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -27,7 +27,7 @@ final readonly class CatalogFaviconWarmer
     public function __construct(
         private CatalogFeedRepository $feeds,
         private FaviconResolverInterface $faviconResolver,
-        private FaviconFetcherInterface $fetcher,
+        private GuardedImageDownloaderInterface $downloader,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
@@ -109,12 +109,12 @@ final readonly class CatalogFaviconWarmer
     {
         if (null !== $iconUrl) {
             try {
-                $icon = $this->fetcher->download($iconUrl);
+                $icon = $this->downloader->download($iconUrl);
                 $feed->storeFavicon($icon->sourceUrl, $icon->bytes, $icon->contentType, $now);
                 $this->entityManager->flush();
 
                 return true;
-            } catch (FaviconUnavailableException) {
+            } catch (GuardedImageUnavailableException) {
                 // Fall through: an undownloadable icon is a recorded failure.
             }
         }
