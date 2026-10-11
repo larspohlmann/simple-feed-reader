@@ -530,6 +530,7 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(1, $this->pendingCount());
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky AppView gave no usable answer', $this->logger->records[0]['message']);
+        self::assertInstanceOf(FeedUnreachableException::class, $this->logger->records[0]['context']['exception']);
     }
 
     public function testAnUnexpectedFailureWhileEnrichingEntriesIsLoggedAndFillsNothing(): void
