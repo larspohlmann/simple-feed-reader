@@ -164,6 +164,33 @@ final class PostLinkCardsTest extends DbTestCase
         self::assertSame([], $this->claimable());
     }
 
+    public function testACardedQuoteLeavesTheBodyAndTheSummaryIsDerivedAgain(): void
+    {
+        $post = $this->queuedPost(1, '<p>RE: <a href="https://q.example/@a/1">https://q.example/@a/1</a></p>'
+            . '<p>Reposting for the morning crew</p>');
+        $post->setSummary('RE: https://q.example/@a/1 Reposting for the morning crew');
+        $this->entityManager->flush();
+
+        $this->postLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($post);
+
+        self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
+        self::assertSame('<p>Reposting for the morning crew</p>', $post->getContentHtml());
+        self::assertSame('Reposting for the morning crew', $post->getSummary());
+    }
+
+    public function testAQuoteWhosePageFailsKeepsItsLine(): void
+    {
+        $body = '<p>RE: <a href="https://q.example/missing">https://q.example/missing</a></p><p>Look.</p>';
+        $post = $this->queuedPost(1, $body);
+
+        $this->postLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($post);
+
+        self::assertSame([], $this->cardTitles($post));
+        self::assertSame($body, $post->getContentHtml());
+    }
+
     public function testAMissingPageGivesNoCardAndTheRowIsStillDone(): void
     {
         $post = $this->queuedPost(1, '<p>https://example.com/missing https://example.com/found</p>');

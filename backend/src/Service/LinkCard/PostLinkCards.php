@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\LinkCard;
 
+use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Repository\LinkCardRepository;
 use App\Repository\PostEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Ingest\Support\EntrySnippet;
+use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -79,11 +82,27 @@ final readonly class PostLinkCards
         )));
         foreach ($held as $row) {
             if (!isset($carded[$row->getEntry()->requireId()])) {
-                $this->linkCards->add($row->getEntry(), $cardsByRowId[$row->requireId()]);
+                $this->storeCards($row->getEntry(), $cardsByRowId[$row->requireId()]);
             }
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);
+    }
+
+    /** @param list<LinkCardContent> $cards */
+    private function storeCards(Entry $entry, array $cards): void
+    {
+        $this->linkCards->add($entry, $cards);
+        $html = (string) $entry->getContentHtml();
+        $withoutQuote = array_reduce(
+            $cards,
+            static fn (string $body, LinkCardContent $card): string => QuoteLine::removedFrom($body, $card->url),
+            $html,
+        );
+        if ($withoutQuote !== $html) {
+            $entry->setContentHtml($withoutQuote);
+            $entry->setSummary(EntrySnippet::from($withoutQuote));
+        }
     }
 
     /**

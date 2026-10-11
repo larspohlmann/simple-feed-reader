@@ -10,13 +10,12 @@ use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Html\Support\TextNodes;
 use App\Service\LinkCard\Model\SharedLinksModel;
 use App\Service\Text\Support\LinkedPlainText;
-use App\Service\Text\Support\Whitespace;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 
-/** The links a post shares, as opposed to the hashtags, mentions, quotes and words that merely link. */
+/** The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link. */
 final class SharedLinks
 {
     public const int MAX = 5;
@@ -92,8 +91,7 @@ final class SharedLinks
 
         return mb_strlen($href) <= LinkCardContent::URL_MAX
             && AbsoluteHttpUrl::matches($href)
-            && self::readsAsItsUrl($anchor, $href)
-            && !self::isQuote($anchor);
+            && self::readsAsItsUrl($anchor, $href);
     }
 
     private static function readsAsItsUrl(Element $anchor, string $href): bool
@@ -105,24 +103,6 @@ final class SharedLinks
         return str_starts_with($visible, 'http://')
             || str_starts_with($visible, 'https://')
             || preg_match('#^' . preg_quote(HostKey::forUrl($href), '#') . '(?:[/:?\#]|$)#', $withoutWww) === 1;
-    }
-
-    private static function isQuote(Element $anchor): bool
-    {
-        $paragraph = $anchor->closest('p');
-        if ($paragraph === null) {
-            return false;
-        }
-
-        $before = '';
-        foreach (TextNodes::in($paragraph) as $text) {
-            if ($anchor->contains($text)) {
-                break;
-            }
-            $before .= $text->data;
-        }
-
-        return Whitespace::collapse($before) === 'RE:';
     }
 
     private function __construct()
