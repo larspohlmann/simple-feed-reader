@@ -111,9 +111,12 @@ final readonly class PostEmbedRenderer
     private function linkCard(JsonNodeModel $external): ?RenderedEmbedModel
     {
         $url = AbsoluteHttpUrl::orNull($external->string('uri'));
-        $title = $external->string('title');
-        if ($url === null || $title === null) {
+        if ($url === null) {
             return null;
+        }
+        $title = $external->string('title');
+        if ($title === null) {
+            return RenderedEmbedModel::uncarded($url);
         }
         $thumbnail = HttpsImageUrl::orNull($external->string('thumb'));
         $card = StorableLinkCard::of(

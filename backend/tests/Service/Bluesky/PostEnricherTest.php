@@ -7,6 +7,7 @@ namespace App\Tests\Service\Bluesky;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
 use App\Repository\LinkCardRepository;
@@ -29,6 +30,7 @@ use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
@@ -37,6 +39,8 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class PostEnricherTest extends DbTestCase
 {
@@ -45,6 +49,7 @@ final class PostEnricherTest extends DbTestCase
     private const string TISCH = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
     private const string APPLES = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
     private const string TEST_POST = 'at://did:plc:test/app.bsky.feed.post/';
+    private const string UNTITLED = self::TEST_POST . 'untitled';
 
     private MockClock $clock;
     private HostThrottle $throttle;
@@ -410,6 +415,43 @@ final class PostEnricherTest extends DbTestCase
         self::assertCount(1, $this->cardsOf($this->reload($tisch)));
     }
 
+    public function testAPostWhoseLinkCameWithoutAPreviewIsHandedToTheLinkCardPass(): void
+    {
+        $this->appView->knowsPost(self::untitledLinkView());
+        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([$post], $this->enricher()->complete($this->rowsOf([$post])));
+
+        $rows = PostEnrichers::enrichments($this->entityManager)->findClaimableFor([$post], $this->clock->now());
+        self::assertSame([PostEnrichmentKind::LinkCards], array_map(
+            static fn (PostEnrichment $row): PostEnrichmentKind => $row->getKind(),
+            $rows,
+        ));
+        self::assertStringNotContainsString('View embedded content', (string) $this->reload($post)->getContentHtml());
+    }
+
+    public function testTheLinkCardPassCardsAPostTheAppViewHandedOver(): void
+    {
+        $this->appView->knowsPost(self::untitledLinkView());
+        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $this->entityManager->flush();
+        $this->enricher()->complete($this->rowsOf([$post]));
+        $page = new MockResponse(
+            '<html><head><meta property="og:title" content="The story"></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
+        );
+        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
+
+        $postLinkCards->complete($this->rowsOf([$post]));
+
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$post->requireId()]);
+        self::assertSame(['The story'], array_map(
+            static fn (LinkCardContent $card): string => $card->title,
+            $cards[$post->requireId()] ?? [],
+        ));
+    }
+
     public function testCompletingNoRowsAsksNothing(): void
     {
         self::assertSame([], $this->enricher()->complete([]));
@@ -462,6 +504,18 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky enrichment failed', $this->logger->records[0]['message']);
         self::assertSame(1, $this->pendingCount());
+    }
+
+    /** @return array<mixed> */
+    private static function untitledLinkView(): array
+    {
+        return [
+            'uri' => self::UNTITLED,
+            'embed' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => 'https://example.com/story', 'title' => '', 'description' => ''],
+            ],
+        ];
     }
 
     private function enricher(): PostEnricher
