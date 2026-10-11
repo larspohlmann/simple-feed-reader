@@ -29,6 +29,7 @@ import { ListHeaderComponent } from '../list/list-header/list-header.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
+import { CompletedEntryDto } from '../state/completed-entry';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -115,7 +116,7 @@ describe('ReaderShellComponent', () => {
     seed: jest.Mock;
     body: jest.Mock;
     retry: jest.Mock;
-    completedEntries: Observable<EntryDto>;
+    completedEntries: Observable<CompletedEntryDto>;
   };
 
   beforeEach(() => {

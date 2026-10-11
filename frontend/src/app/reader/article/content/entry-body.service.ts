@@ -101,13 +101,13 @@ export class EntryBodyService {
 
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
     this.cancel(state);
-    const request = this.api.entry(id).pipe(
-      subscribeOn(asapScheduler),
-      finalize(() => this.inFlight.delete(state)),
-    );
-    this.inFlight.set(
-      state,
-      request.subscribe({
+    const request = this.api
+      .entry(id)
+      .pipe(
+        subscribeOn(asapScheduler),
+        finalize(() => this.inFlight.delete(state)),
+      )
+      .subscribe({
         next: (response) => {
           state.set({ status: 'ok', html: response.entry.contentHtml });
           this.arrivedCompletions.next(response.completed);
@@ -115,8 +115,8 @@ export class EntryBodyService {
         error: () => {
           if (state().status !== 'ok') state.set({ status: 'error' });
         },
-      }),
-    );
+      });
+    this.inFlight.set(state, request);
   }
 
   private cancel(state: WritableSignal<EntryBodyState>): void {
@@ -124,7 +124,7 @@ export class EntryBodyService {
   }
 
   private clear(): void {
-    for (const request of [...this.inFlight.values()]) request.unsubscribe();
+    this.inFlight.forEach((request) => request.unsubscribe());
     this.cache.clear();
   }
 }
