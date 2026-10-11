@@ -50,6 +50,7 @@ const entry: EntryDto = {
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  share: null,
   linkCards: [],
   pending: false,
   imageAspectRatio: null,

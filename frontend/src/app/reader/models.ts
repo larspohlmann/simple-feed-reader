@@ -164,6 +164,8 @@ export interface ImageRenditionDto {
   width: number;
 }
 
+export type EntryShare = 'link' | 'media';
+
 export type CommentsLoad = 'auto' | 'manual';
 
 export interface EntryCommentDto {
@@ -225,6 +227,8 @@ export interface EntryDto {
   isShort: boolean;
   /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
   titleDerived: boolean;
+  /** What the entry shares, so it takes the link or the media card; null for an article (#1524). */
+  share: EntryShare | null;
   /** Preview cards for the links a post shares, in the order the post names them (#1502). */
   linkCards: LinkCardDto[];
   /** The post's cards or embed are still being filled in; `POST /api/entries/complete` finishes it (#1502). */

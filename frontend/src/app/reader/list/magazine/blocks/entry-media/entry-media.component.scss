@@ -24,10 +24,18 @@
 }
 
 .caption {
-  @include post-text.post-text(6);
-
   margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 500;
   color: var(--text-primary);
+}
+
+.caption.post {
+  @include post-text.post-text(6);
+}
+
+.dek {
+  @include magazine-card.dek;
 }
 
 .media-post.read .caption {

@@ -10,3 +10,14 @@
 @mixin image-rim {
   @include glass-rim.filled(var(--airy-sheet-fill));
 }
+
+@mixin dek($lines: 3) {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

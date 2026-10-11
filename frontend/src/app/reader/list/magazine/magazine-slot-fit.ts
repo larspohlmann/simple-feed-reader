@@ -53,10 +53,10 @@ function hasSummary(entry: EntryDto): boolean {
   return entryDek(entry).length > 0;
 }
 
-/** A post that shares a link, or is still being completed, takes the `link` block
- *  whatever slot it was given (#1502). */
+/** A link share with its card, or one still being completed, takes the `link` block
+ *  whatever slot it was given (#1502, #1524). */
 export function isLinkPost(entry: EntryDto): boolean {
-  return entry.titleDerived && (entry.linkCards.length > 0 || entry.pending);
+  return entry.share === 'link' && (entry.linkCards.length > 0 || entry.pending);
 }
 
 const MAX_POST_MEDIA = 4;
@@ -99,10 +99,9 @@ function leadImage(entry: EntryDto): EntryMediumDto[] {
   ];
 }
 
-/** A post, or a YouTube Short, whose point is its picture or video. */
+/** A share whose point is its picture or video (#1522, #1524). */
 export function isMediaPost(entry: EntryDto): boolean {
-  const claims = entry.isShort || (entry.titleDerived && !isLinkPost(entry));
-  return claims && postMedia(entry).length > 0;
+  return entry.share === 'media' && postMedia(entry).length > 0;
 }
 
 export function postKind(entry: EntryDto): PostKind | null {

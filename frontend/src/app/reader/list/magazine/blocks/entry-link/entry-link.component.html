@@ -9,7 +9,10 @@
 >
   <app-entry-kicker-line [entry]="entry()" />
   @if (headline()) {
-    <p class="title">{{ headline() }}</p>
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+  }
+  @if (snippet()) {
+    <p class="dek">{{ snippet() }}</p>
   }
   @if (entry().linkCards[0]; as shared) {
     <app-link-card

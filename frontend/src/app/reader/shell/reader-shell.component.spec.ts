@@ -123,6 +123,7 @@ describe('ReaderShellComponent', () => {
     isViewed: false,
     isShort: false,
     titleDerived: false,
+    share: null,
     linkCards: [],
     pending: false,
     imageAspectRatio: null,

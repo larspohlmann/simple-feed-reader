@@ -40,6 +40,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  share: null,
   linkCards: [],
   pending: false,
   imageAspectRatio: null,
@@ -73,9 +74,9 @@ const CARD: LinkCardDto = {
   siteName: 'news.test',
 };
 const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
-  big(id, { titleDerived: true, linkCards: [CARD], ...over });
+  big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
 const mediaPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
-  big(id, { titleDerived: true, ...over });
+  big(id, { titleDerived: true, share: 'media', ...over });
 
 const imageless = (id: number): EntryDto => entryAt(id, { summary: null });
 const cycle = (index: number, makers: ((id: number) => EntryDto)[]): EntryDto =>
@@ -841,7 +842,7 @@ describe('planMagazine', () => {
     it('keeps the kinds of a post without cards and of an article with them', () => {
       const entries = many(60, (index) =>
         index % 2 === 0
-          ? entryAt(index, { titleDerived: true })
+          ? entryAt(index, { titleDerived: true, share: 'link' })
           : big(index, { linkCards: [CARD] }),
       );
       const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
@@ -852,7 +853,9 @@ describe('planMagazine', () => {
 
     it('is a link block while it is still being completed, before it has any card', () => {
       const entries = many(60, (index) =>
-        index % 3 === 0 ? big(index, { titleDerived: true, pending: true }) : big(index),
+        index % 3 === 0
+          ? big(index, { titleDerived: true, share: 'link', pending: true })
+          : big(index),
       );
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 

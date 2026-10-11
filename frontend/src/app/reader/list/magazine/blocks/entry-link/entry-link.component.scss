@@ -24,10 +24,18 @@
 }
 
 .title {
-  @include post-text.post-text;
-
   margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 500;
   color: var(--text-primary);
+}
+
+.title.post {
+  @include post-text.post-text;
+}
+
+.dek {
+  @include magazine-card.dek;
 }
 
 .link.read .title {
