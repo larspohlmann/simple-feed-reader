@@ -133,6 +133,13 @@ final class EntryShareClassifierTest extends TestCase
         self::assertEquals(Share::link(null), $entry->getShare());
     }
 
+    public function testAMastodonPostWhoseLinkTextIsSplitIntoSpansKeepsItsLinkCard(): void
+    {
+        $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Mastodon/discovery-week-post.html');
+
+        self::assertEquals(Share::link(null), $this->classified(self::post($body))->getShare());
+    }
+
     public function testAPostWithAPictureAndNoLinkIsMedia(): void
     {
         $picture = new EntryMedium('https://files.example/a.jpg', 'image');

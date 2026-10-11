@@ -34,6 +34,22 @@ final class OwnProseTest extends TestCase
         );
     }
 
+    public function testDropsALinkWhoseUrlTextIsSplitAcrossInlineMarkup(): void
+    {
+        $body = '<p>Visit <a href="https://shop.joinmastodon.org/"><span class="invisible">https://</span>'
+            . '<span>shop.joinmastodon.org/</span><span class="invisible"></span></a> today.</p>';
+
+        self::assertSame('Visit today.', OwnProse::of($body));
+    }
+
+    public function testKeepsAWordedLinkWrappedInInlineMarkup(): void
+    {
+        self::assertSame(
+            'Read the post now.',
+            OwnProse::of('<p>Read <a href="https://example.com/a"><span>the post</span></a> now.</p>'),
+        );
+    }
+
     public function testReadsPlainText(): void
     {
         self::assertSame('Just words.', OwnProse::of('Just words.'));
