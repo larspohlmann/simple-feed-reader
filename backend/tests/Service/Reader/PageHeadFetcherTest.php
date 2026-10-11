@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\PageHeadFetcher;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
+use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -26,17 +26,10 @@ final class PageHeadFetcherTest extends TestCase
     /** @param callable|iterable<MockResponse> $responses */
     private function fetcher(callable|iterable $responses): PageHeadFetcher
     {
-        $resolver = new class implements DnsResolverInterface {
-            public function resolve(string $hostname): array
-            {
-                return $hostname === 'example.com' ? ['93.184.216.34'] : [];
-            }
-        };
-
         return new PageHeadFetcher(FetchWiring::pageLanding(FetchWiring::redirectFollower(
             new MockHttpClient($responses),
             $this->noEgressProxy(),
-            new UrlGuard($resolver, new IpValidator()),
+            new UrlGuard(new StaticDnsResolver(['example.com' => ['93.184.216.34']]), new IpValidator()),
         )));
     }
 

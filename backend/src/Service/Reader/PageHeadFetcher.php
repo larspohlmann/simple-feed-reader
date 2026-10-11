@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\Pass\RedirectBudget;
+use App\Service\Image\Support\MediaType;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageHeadModel;
 use Symfony\Component\HttpClient\Response\StreamWrapper;
@@ -18,7 +19,6 @@ use Symfony\Component\HttpClient\Response\StreamWrapper;
 final readonly class PageHeadFetcher
 {
     public const float MAX_DURATION_SECONDS = 8.0;
-    private const int MAX_REDIRECTS = 5;
     private const float TIMEOUT_SECONDS = 5.0;
     private const int MAX_BYTES = 1_048_576;
     private const int CHUNK_BYTES = 8_192;
@@ -39,13 +39,13 @@ final readonly class PageHeadFetcher
         $landed = $this->landing->land(
             $url,
             self::options(),
-            new RedirectBudget(self::MAX_REDIRECTS, self::MAX_DURATION_SECONDS),
+            new RedirectBudget(PageLanding::MAX_REDIRECTS, self::MAX_DURATION_SECONDS),
         );
-        $contentType = $landed->header('content-type');
-        if ($contentType !== null && !self::isMarkup($contentType)) {
+        $mediaType = MediaType::of($landed->header('content-type'));
+        if (!self::isMarkup($mediaType)) {
             $landed->response->cancel();
 
-            return PageHeadModel::ofFile($landed->url, $contentType);
+            return PageHeadModel::ofFile($landed->url, $mediaType);
         }
         $head = $this->landing->utf8(self::firstBytes($landed), $landed);
         $this->landing->assertNotChallenge($head, $landed);
@@ -53,10 +53,8 @@ final readonly class PageHeadFetcher
         return PageHeadModel::ofPage($landed->url, $head);
     }
 
-    private static function isMarkup(string $contentType): bool
+    private static function isMarkup(string $mediaType): bool
     {
-        $mediaType = strtolower(trim(explode(';', $contentType)[0]));
-
         return $mediaType === ''
             || str_starts_with($mediaType, 'text/')
             || \in_array($mediaType, self::MARKUP_TYPES, true);

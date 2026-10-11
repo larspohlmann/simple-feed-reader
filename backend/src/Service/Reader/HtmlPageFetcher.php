@@ -16,7 +16,6 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
  */
 final readonly class HtmlPageFetcher
 {
-    private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
 
@@ -28,7 +27,7 @@ final readonly class HtmlPageFetcher
 
     public function fetch(string $url): PageResponseModel
     {
-        $budget = new RedirectBudget(self::MAX_REDIRECTS);
+        $budget = new RedirectBudget(PageLanding::MAX_REDIRECTS);
         $target = $url;
         while (true) {
             $landed = $this->landing->land($target, self::options(), $budget);
@@ -43,7 +42,7 @@ final readonly class HtmlPageFetcher
 
             $landed->response->cancel();
             if (!$budget->takeRedirect()) {
-                throw new PageFetchException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
+                throw new PageFetchException(sprintf('%s: more than %d redirects', $url, PageLanding::MAX_REDIRECTS));
             }
             $target = $next;
         }

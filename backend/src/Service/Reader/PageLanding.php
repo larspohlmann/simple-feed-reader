@@ -23,6 +23,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  */
 final readonly class PageLanding
 {
+    public const int MAX_REDIRECTS = 5;
     public const int CHALLENGE_SCAN_LENGTH = 20_000;
     private const int SNIPPET_LENGTH = 200;
     private const int SNIPPET_SCAN_LENGTH = 20_000;
