@@ -30,11 +30,11 @@ final class EntryTitleTest extends TestCase
         self::assertTrue(EntryTitle::of('   ', '<p>Body text here.</p>')->derived);
     }
 
-    public function testAnItemWithNeitherIsUntitledAndNotDerived(): void
+    public function testAnItemWithNeitherIsAnUntitledPost(): void
     {
         $title = EntryTitle::of(null, null);
 
         self::assertSame('(untitled)', $title->text);
-        self::assertFalse($title->derived);
+        self::assertTrue($title->derived);
     }
 }
