@@ -16,6 +16,7 @@ use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\Share\Support\ShareTargets;
+use App\Service\Share\Support\TitledShareTarget;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
@@ -119,7 +120,7 @@ final readonly class ShareLinkCards
      */
     private function settleMediaTarget(Entry $entry, array $pageCards): void
     {
-        $target = ShareTargets::titledOf($entry);
+        $target = TitledShareTarget::of($entry);
         $medium = $pageCards[0]->medium ?? null;
         if ($target === null || $medium === null) {
             return;

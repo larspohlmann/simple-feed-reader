@@ -15,13 +15,14 @@
 
 ## Rulings
 
-1. **Derived target.** `ShareTargets::titledOf($entry)`: null for a post (title derived), else
-   `TitledShareTarget::of($entry)`. Recomputing the host rule (not "the entry's url") keeps today's
+1. **Derived target.** `TitledShareTarget::of($entry)` is the one definition: null for a post (title
+   derived), else the host rule; `ShareTargets` and `ShareLinkCards` read it. Recomputing the host rule (not "the entry's url") keeps today's
    behaviour exactly where the stored url was null for a titled entry:
    - a titled AT post awaiting its embed is `link` with no target today; on a Bluesky feed its url is on the
      feed's site, so `TitledShareTarget` gives null and it still takes its body's links (pinned by a test);
    - a titled YouTube short is `media` with no target; `VisualMedium::at()` of a shorts url is null, so
      `describeTitledShare()` still puts no medium first.
+   The link-card claim query fetch-joins the entry's feed, since the derivation reads its site url.
    Residual difference, accepted: a titled share whose feed later changes its site url derives its target
    anew rather than keeping the one stored at classification.
 2. **`Share` goes.** With the url gone it is only its kind, so `Entry` takes a plain `?ShareKind`
@@ -45,7 +46,7 @@
 
 ## Tasks
 
-1. Tests first: `ShareTargetsTest` (titled target derived; titled AT post on a Bluesky feed takes its body links),
+1. Tests first: `ShareTargetsTest`/`TitledShareTargetTest` (titled target derived, none for a post; titled AT post on a Bluesky feed takes its body links),
    restore tolerates `shareUrl`.
 2. `EntryGuid` embeddable; `Entry` gets `?ShareKind $shareKind`; `EntryLocation` back to url + urlHash; delete `Share`.
 3. Callers move to `ShareKind` and to `ShareTargets::titledOf()`.

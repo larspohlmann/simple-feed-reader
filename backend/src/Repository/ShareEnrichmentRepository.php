@@ -204,7 +204,8 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('pending')
             ->innerJoin('pending.entry', 'queuedEntry')
-            ->addSelect('queuedEntry')
+            ->innerJoin('queuedEntry.feed', 'queuedFeed')
+            ->addSelect('queuedEntry', 'queuedFeed')
             ->andWhere('pending.doneAt IS NULL')
             ->andWhere('pending.claimedAt IS NULL OR pending.claimedAt < :leaseStart')
             ->setParameter('leaseStart', self::leaseStart($now), Types::DATETIME_IMMUTABLE)

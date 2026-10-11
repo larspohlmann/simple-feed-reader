@@ -37,7 +37,6 @@ final class ShareTargetsTest extends TestCase
     {
         $entry = self::titledShare();
 
-        self::assertSame(self::TARGET, ShareTargets::titledOf($entry));
         self::assertSame([self::TARGET], ShareTargets::uncardedOf($entry, []));
         self::assertSame([], ShareTargets::uncardedOf($entry, [self::TARGET]));
     }
@@ -49,7 +48,6 @@ final class ShareTargetsTest extends TestCase
         $entry->setContentHtml('<p><a href="https://a.example/1">https://a.example/1</a> '
             . '<a href="https://b.example/2">https://b.example/2</a></p>');
 
-        self::assertNull(ShareTargets::titledOf($entry));
         self::assertSame(['https://b.example/2'], ShareTargets::uncardedOf($entry, ['https://a.example/1']));
     }
 
@@ -61,7 +59,6 @@ final class ShareTargetsTest extends TestCase
             'https://bsky.app/profile/someone/post/3abc',
         );
 
-        self::assertNull(ShareTargets::titledOf($entry));
         self::assertSame([self::BODY_LINK], ShareTargets::uncardedOf($entry, []));
     }
 }
