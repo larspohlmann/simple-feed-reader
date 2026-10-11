@@ -64,8 +64,7 @@ export class EntryBodyService {
   refresh(id: number): void {
     const state = this.cache.get(id);
     if (!state) return;
-    const shown = state();
-    this.request(id, state, () => state.set(shown.status === 'ok' ? shown : { status: 'error' }));
+    this.fetch(id, state);
   }
 
   /** Drop a cached body the server has since changed, so it is fetched afresh when next asked for. */
@@ -95,11 +94,8 @@ export class EntryBodyService {
     if (oldest !== undefined) this.cache.delete(oldest);
   }
 
+  /** A failed fetch leaves a body already shown on screen. */
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
-    this.request(id, state, () => state.set({ status: 'error' }));
-  }
-
-  private request(id: number, state: WritableSignal<EntryBodyState>, onError: () => void): void {
     const generation = this.generation;
     const ticket = {};
     this.latestRequest.set(state, ticket);
@@ -111,8 +107,8 @@ export class EntryBodyService {
         state.set({ status: 'ok', html: response.entry.contentHtml });
       },
       error: () => {
-        if (superseded()) return;
-        onError();
+        if (superseded() || state().status === 'ok') return;
+        state.set({ status: 'error' });
       },
     });
   }
