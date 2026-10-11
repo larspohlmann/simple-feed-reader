@@ -75,6 +75,13 @@ final class EntryReaderControllerTest extends WebTestCase
         return $entry;
     }
 
+    private function spendReaderBudget(User $user): void
+    {
+        $readerLimiter = self::getContainer()->get('limiter.reader');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
+        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+    }
+
     private function installFake(): FakeArticleExtractor
     {
         $fake = new FakeArticleExtractor();
@@ -362,14 +369,25 @@ final class EntryReaderControllerTest extends WebTestCase
         $post = $this->seedEntry($user, 'https://example.social/@a/2');
         $post->markTitleDerived();
         $article = $this->seedEntry($user, 'https://example.com/article');
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+        $this->spendReaderBudget($user);
 
         $client->request('GET', '/api/entries/' . $post->getId() . '/reader', server: $headers);
         self::assertResponseIsSuccessful();
         $client->request('GET', '/api/entries/' . $article->getId() . '/reader', server: $headers);
         self::assertResponseStatusCodeSame(429);
+    }
+
+    public function testAUrlLessEntryIsAnsweredWhenTheReaderBudgetIsSpent(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-nourl-budget@example.com');
+        $this->installFake();
+        $entry = $this->seedEntry($user, null);
+        $this->spendReaderBudget($user);
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
     }
 
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void
@@ -384,6 +402,20 @@ final class EntryReaderControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame([], $fake->calls);
+    }
+
+    public function testOwnershipIsCheckedBeforeTheReaderBudget(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-idor-budget@example.com');
+        [, $stranger] = $this->auth('reader-owner-budget@example.com');
+        $this->installFake();
+        $entry = $this->seedEntry($stranger, 'https://example.com/article');
+        $this->spendReaderBudget($user);
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAnonymousIsRejected(): void

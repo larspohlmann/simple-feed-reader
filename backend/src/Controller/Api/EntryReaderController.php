@@ -8,12 +8,7 @@ use App\Entity\User;
 use App\Http\ReaderJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\Model\EntryHintsModel;
-use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Reader\EntryArticleReader;
 use App\Service\Reader\OriginalHeroResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,8 +22,7 @@ final readonly class EntryReaderController
     public function __construct(
         private EntryListRepository $entryList,
         private ClockInterface $clock,
-        private ArticleExtractorInterface $extractor,
-        private ExtractionCoverageGate $coverageGate,
+        private EntryArticleReader $articleReader,
         private OriginalHeroResolver $originalHero,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $readerLimiter,
@@ -40,31 +34,17 @@ final readonly class EntryReaderController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        // Ownership is checked BEFORE the limiter so an unowned id 404s without
-        // spending the caller's reader budget; a post fetches nothing, so it spends none.
+        // Ownership is checked BEFORE the limiter so an unowned id 404s without spending the caller's reader budget.
         $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
 
-        if (!$entry->isTitleDerived()) {
+        if ($this->articleReader->hasPageToFetch($entry)) {
             $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
         }
 
-        $url = $entry->getUrl();
-        $result = match (true) {
-            $entry->isTitleDerived() => ExtractionResultModel::failed(null, ExtractionFailure::FeedBodyIsPost),
-            $url === null || $url === '' => ExtractionResultModel::failed(null, ExtractionFailure::NoUrl),
-            default => $this->extractor->extract($url, new EntryHintsModel(
-                title: $entry->getTitle(),
-                author: $entry->getAuthor(),
-                feedMedia: FeedMediaModel::fromEntry($entry),
-            )),
-        };
-
-        // A confident-but-wrong extraction (page furniture instead of the article)
-        // is failed here so the client falls back to the feed body.
-        $result = $this->coverageGate->verify($result, $entry->getContentHtml());
-
-        $originalHero = $this->originalHero->resolve($entry);
-
-        return new JsonResponse(ReaderJson::one($result, $originalHero, $this->clock->now()));
+        return new JsonResponse(ReaderJson::one(
+            $this->articleReader->read($entry),
+            $this->originalHero->resolve($entry),
+            $this->clock->now(),
+        ));
     }
 }
