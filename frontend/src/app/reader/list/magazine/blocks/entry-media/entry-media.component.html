@@ -12,14 +12,14 @@
     <p class="caption">{{ caption() }}</p>
   }
   @let items = media();
-  <div class="media" [attr.data-count]="items.length" [style.--ratio]="ratio(items[0])">
+  <div class="media" [attr.data-count]="shortPlayer() ? 1 : items.length" [style.--ratio]="ratio(items[0])">
     @if (shortPlayer(); as player) {
-      <div class="item short">
+      <div class="item short-player">
         @if (playingShort()) {
           <iframe
             class="item"
             [src]="player"
-            [title]="caption()"
+            [title]="caption() || ('reader.playShort' | transloco)"
             sandbox="allow-scripts allow-same-origin allow-presentation"
             allow="autoplay; fullscreen"
             allowfullscreen

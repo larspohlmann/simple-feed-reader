@@ -272,8 +272,10 @@ describe('EntryMediaComponent', () => {
       element.querySelector<HTMLButtonElement>('.play')!.click();
       fixture.detectChanges();
       await fixture.whenStable();
-      const frame = element.querySelector('.short')!;
+      const frame = element.querySelector('.short-player')!;
+      const pill = element.querySelector('.pill.short')!;
       expect(observed).toContain(frame);
+      expect(observed).not.toContain(pill);
 
       callbacks[0]([sighting(frame, true)], {} as IntersectionObserver);
       fixture.detectChanges();
@@ -286,5 +288,23 @@ describe('EntryMediaComponent', () => {
     } finally {
       globalThis.IntersectionObserver = real;
     }
+  });
+
+  it('counts a Short as one picture even when the post carries more media', async () => {
+    const element = await mount(short({ media: [image(1), image(2), image(3)] }));
+
+    expect(element.querySelector('.media')!.getAttribute('data-count')).toBe('1');
+  });
+
+  it('titles the player of an untitled Short by its play label', async () => {
+    const fixture = await mountFixture(short({ title: '', titleDerived: true, excerpt: '' }));
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+
+    const label = element.querySelector('iframe')!.getAttribute('title');
+    expect(label).toBeTruthy();
+    expect(label).not.toBe('');
   });
 });

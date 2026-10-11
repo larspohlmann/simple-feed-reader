@@ -78,7 +78,7 @@ export class EntryMediaComponent extends EntryBlockBase {
         else this.stopShort();
       }
     });
-    for (const target of Array.from(this.host.querySelectorAll('video, .short'))) {
+    for (const target of Array.from(this.host.querySelectorAll('video, .short-player'))) {
       this.scrollAway.observe(target);
     }
   }
