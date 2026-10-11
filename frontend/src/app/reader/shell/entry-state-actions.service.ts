@@ -81,7 +81,7 @@ export class EntryStateActions implements EntryActionHandler {
   readonly openOriginal = (entry: EntryDto): void => {
     if (entry.isViewed) return;
     this.subscriptions.bumpViewed(1);
-    this.patchOpen(entry, { isViewed: true }, () => this.subscriptions.bumpViewed(-1));
+    this.entries.setState(entry.id, { isViewed: true }, () => this.subscriptions.bumpViewed(-1));
   };
 
   clearLeaving(): void {
@@ -95,7 +95,7 @@ export class EntryStateActions implements EntryActionHandler {
       this.savedSearches.markEntryRead(entry.id);
     }
     this.subscriptions.bumpViewed(1);
-    this.patchOpen(entry, { isViewed: true }, () => {
+    this.entries.setState(entry.id, { isViewed: true }, () => {
       if (alsoReads) {
         this.subscriptions.incrementUnread(entry.subscriptionId);
         this.savedSearches.markEntryUnread(entry.id);
@@ -104,10 +104,9 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
-  /** The leaving row stays in the list data, so patchOpen still finds it. */
   private patchInList(entry: EntryDto, patch: EntryStatePatch, onError: () => void): void {
     const revertLeave = this.leaveExcludedRow(entry, patch);
-    this.patchOpen(entry, patch, () => {
+    this.entries.setState(entry.id, patch, () => {
       onError();
       revertLeave();
     });
@@ -120,14 +119,6 @@ export class EntryStateActions implements EntryActionHandler {
     if (stillMember) return () => undefined;
     this.leaving.update((ids) => new Set(ids).add(entry.id));
     return () => this.leaving.update((ids) => withoutId(ids, entry.id));
-  }
-
-  private patchOpen(entry: EntryDto, patch: EntryStatePatch, onError?: () => void): void {
-    if (this.entries.entries().some((listed) => listed.id === entry.id)) {
-      this.entries.setState(entry.id, patch, onError);
-      return;
-    }
-    this.routeState.patchFetchedEntry(entry.id, patch, onError);
   }
 }
 

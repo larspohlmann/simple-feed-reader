@@ -141,7 +141,6 @@ export class PendingEntriesPoll implements PreviewProgress {
 
   private merge(rows: CompletedEntryDto[], sent: number[]): void {
     this.store.mergeCompleted(rows);
-    this.routeState.mergeCompleted(rows);
     const openId = this.routeState.openEntry()?.id;
     for (const row of rows) {
       if (row.pending || !sent.includes(row.id)) continue;

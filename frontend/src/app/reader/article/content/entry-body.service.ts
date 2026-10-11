@@ -1,7 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Subject, Subscription, asapScheduler, finalize, subscribeOn } from 'rxjs';
+import { Subscription, asapScheduler, finalize, subscribeOn } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { CompletedEntryDto } from '../../state/completed-entry';
+import { EntriesStore } from '../../state/entries.store';
 import { ReaderApi } from '../../reader-api';
 
 /** How many article bodies stay cached at once — one browsing session's worth
@@ -20,10 +20,8 @@ export type EntryBodyState =
 export class EntryBodyService {
   private readonly api = inject(ReaderApi);
   private readonly cache = new Map<number, WritableSignal<EntryBodyState>>();
+  private readonly entries = inject(EntriesStore);
   private readonly inFlight = new Map<WritableSignal<EntryBodyState>, Subscription>();
-  private readonly arrivedCompletions = new Subject<CompletedEntryDto>();
-  /** What completing each entry a body fetch brings back has filled in (#1502). */
-  readonly completedEntries = this.arrivedCompletions.asObservable();
 
   constructor() {
     onIdentityChange(() => this.clear());
@@ -110,7 +108,7 @@ export class EntryBodyService {
       .subscribe({
         next: (response) => {
           state.set({ status: 'ok', html: response.entry.contentHtml });
-          this.arrivedCompletions.next(response.completed);
+          this.entries.mergeCompleted([response.completed]);
         },
         error: () => {
           if (state().status !== 'ok') state.set({ status: 'error' });

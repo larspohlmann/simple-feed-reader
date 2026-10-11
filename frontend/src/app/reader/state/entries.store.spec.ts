@@ -20,6 +20,21 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
+const completed = (id: number, over: Partial<CompletedEntryDto> = {}): CompletedEntryDto => ({
+  id,
+  pending: false,
+  summary: null,
+  excerpt: '',
+  imageUrl: null,
+  imageWidth: null,
+  imageHeight: null,
+  imageRenditions: [],
+  media: [],
+  linkCards: [],
+  share: null,
+  ...over,
+});
+
 describe('EntriesStore', () => {
   let store: EntriesStore;
   let ctrl: HttpTestingController;
@@ -414,20 +429,6 @@ describe('EntriesStore', () => {
 
   describe('merging completed rows (#1502)', () => {
     const card = aLinkCard({ url: 'https://news.test/', title: 'Story' });
-    const completed = (id: number, over: Partial<CompletedEntryDto> = {}): CompletedEntryDto => ({
-      id,
-      pending: false,
-      summary: null,
-      excerpt: '',
-      imageUrl: null,
-      imageWidth: null,
-      imageHeight: null,
-      imageRenditions: [],
-      media: [],
-      linkCards: [],
-      share: null,
-      ...over,
-    });
 
     beforeEach(() => {
       store.load({ view: 'all' });
@@ -504,6 +505,81 @@ describe('EntriesStore', () => {
       store.mergeCompleted([completed(2, { pending: true, excerpt: 'Stale' })]);
 
       expect(store.entries()[1]).toMatchObject({ pending: false, excerpt: 'Filled' });
+    });
+  });
+
+  describe('an entry the list does not hold (#1553)', () => {
+    const card = aLinkCard({ url: 'https://news.test/', title: 'Story' });
+    const failure = { type: 'x', title: 't', status: 500 };
+
+    beforeEach(() => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({ entries: [entry(1)], nextCursor: null });
+      store.holdUnlisted(entry(9, { pending: true }));
+    });
+
+    it('finds it by id without showing it in the list', () => {
+      expect(store.entry(9)?.id).toBe(9);
+      expect(store.entries().map((listed) => listed.id)).toEqual([1]);
+    });
+
+    it('prefers the listed row once the list holds the same entry', () => {
+      store.holdUnlisted(entry(1, { title: 'Held copy' }));
+
+      expect(store.entry(1)).toBe(store.entries()[0]);
+    });
+
+    it('keeps its cards when a state change on the wire fails after a completion', () => {
+      store.setState(9, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/9/state');
+      store.mergeCompleted([completed(9, { linkCards: [card] })]);
+
+      patch.flush(failure, { status: 500, statusText: 'err' });
+
+      expect(store.entry(9)).toMatchObject({
+        isFavorite: false,
+        pending: false,
+        linkCards: [card],
+      });
+    });
+
+    it('mirrors the viewed-hides coupling on a state change', () => {
+      store.setState(9, { isViewed: true });
+
+      expect(store.entry(9)).toMatchObject({ isViewed: true, isHidden: true });
+      expect(ctrl.expectOne('https://api.test/api/entries/9/state').request.body).toEqual({
+        isViewed: true,
+      });
+    });
+
+    it('keeps an in-flight optimistic state when it is held again before the PATCH lands', () => {
+      store.setState(9, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/9/state');
+
+      store.holdUnlisted(entry(9));
+
+      expect(store.entry(9)?.isFavorite).toBe(true);
+      patch.flush({ state: {} });
+    });
+
+    it('keeps the held entry as it is when a round fills nothing in', () => {
+      const before = store.entry(9);
+
+      store.mergeCompleted([completed(9, { pending: true })]);
+
+      expect(store.entry(9)).toBe(before);
+    });
+
+    it('lets go of it on release and on an identity change', () => {
+      store.releaseUnlisted();
+      expect(store.entry(9)).toBeNull();
+
+      store.holdUnlisted(entry(9));
+      tokens.clear();
+      TestBed.tick();
+      expect(store.entry(9)).toBeNull();
     });
   });
 
