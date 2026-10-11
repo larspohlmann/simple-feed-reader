@@ -1,7 +1,7 @@
 import { EntryDto, EntryMediumDto } from '../../models';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage, portraitCoverRatio } from '../preview-image';
-import { BLOCK_HEIGHT, DEMOTION, ShareKind, TemplateKind } from './magazine-block';
+import { BLOCK_HEIGHT, DEMOTION, SHARE_KINDS, ShareKind, TemplateKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
 /** The blocks that show the entry's image, tallest first. */
@@ -95,9 +95,13 @@ export function sharesMedia(entry: EntryDto): boolean {
   return entry.share === 'media' && sharedMedia(entry).length > 0;
 }
 
+const SHARES: Record<ShareKind, (entry: EntryDto) => boolean> = {
+  link: sharesLink,
+  media: sharesMedia,
+};
+
 export function shareKind(entry: EntryDto): ShareKind | null {
-  if (sharesLink(entry)) return 'link';
-  return sharesMedia(entry) ? 'media' : null;
+  return SHARE_KINDS.find((kind) => SHARES[kind](entry)) ?? null;
 }
 
 const FITS: Record<TemplateKind, (entry: EntryDto) => boolean> = {

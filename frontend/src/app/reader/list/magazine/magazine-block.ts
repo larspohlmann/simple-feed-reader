@@ -1,26 +1,17 @@
 import { EntryDto } from '../../models';
 
-/** Every block kind that can carry a single entry. Ordered by height, largest
- *  first — `DEMOTION` walks this ladder and the planner's budget compares on it. */
-export const ENTRY_KINDS = [
-  'hero',
-  'link',
-  'media',
-  'wide',
-  'quote',
-  'split',
-  'kicker',
-  'thumb',
-  'compact',
-] as const;
-
-export type EntryKind = (typeof ENTRY_KINDS)[number];
+/** The kinds a template authors, and the only ones the demotion ladder walks. */
+const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;
 
 /** The blocks a share claims whatever slot it was given (#1502, #1522). */
-export type ShareKind = Extract<EntryKind, 'link' | 'media'>;
+export const SHARE_KINDS = ['link', 'media'] as const;
 
-/** The kinds a template authors, and the only ones the demotion ladder walks. */
-export type TemplateKind = Exclude<EntryKind, ShareKind>;
+/** Every block kind that can carry a single entry. */
+export const ENTRY_KINDS = [...TEMPLATE_KINDS, ...SHARE_KINDS] as const;
+
+export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
+export type ShareKind = (typeof SHARE_KINDS)[number];
+export type EntryKind = TemplateKind | ShareKind;
 
 export type MagazineBlock =
   | { kind: Exclude<EntryKind, 'split'>; entry: EntryDto }
