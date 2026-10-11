@@ -13,6 +13,7 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Service\Logging\Loki\LokiClient;
+use App\Service\LinkCard\LinkCardSweep;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\DigestComposer;
@@ -139,11 +140,15 @@ final class MaintenanceTickTest extends DbTestCase
             $clock,
         );
 
+        $linkCardSweep = self::getContainer()->get(LinkCardSweep::class);
+        self::assertInstanceOf(LinkCardSweep::class, $linkCardSweep);
+
         $tick = new MaintenanceTick(
             $refreshRunner,
             $forYouSweep,
             $sendDueDigests,
             $imageVerificationSweep,
+            $linkCardSweep,
             $membershipSweep,
             $logSpoolShipper,
             $clock,

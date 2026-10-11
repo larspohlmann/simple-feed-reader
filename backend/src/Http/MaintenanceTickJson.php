@@ -32,6 +32,7 @@ final class MaintenanceTickJson
                 $sweeps,
                 self::imageVerification($sweeps->imageVerification),
             ),
+            'linkCards' => self::markedIfSkipped($sweeps, $sweeps->linkCards->toLogContext()),
             'savedSearchMemberships' => self::markedIfSkipped(
                 $sweeps,
                 self::memberships($sweeps->savedSearchMemberships),

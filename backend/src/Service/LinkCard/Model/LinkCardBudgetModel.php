@@ -22,6 +22,15 @@ final readonly class LinkCardBudgetModel
         return new self($count);
     }
 
+    /** The whole fetches that end before $deadline, at most $maxFetches: none once less than one fits. */
+    public static function fittingBefore(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $maxFetches): self
+    {
+        $remaining = $deadline->getTimestamp() - $now->getTimestamp();
+        $fitting = (int) floor(max(0, $remaining) / HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS);
+
+        return self::fetches(min($maxFetches, $fitting));
+    }
+
     public function seconds(): float
     {
         return $this->fetches * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS;
