@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Discovery\ShareLinkFeed;
 
 /**
- * Maps a profile seen through another instance (`/@user@home.host`, any instance, any page under it) to the
- * account's feed on its home instance. The viewing instance sends a non-browser client to an interstitial that
- * links no feed, so that page is never fetched.
+ * Maps a profile seen through another instance to the account's feed on its home instance; the viewing instance
+ * sends a non-browser client to an interstitial that links no feed.
  */
 final readonly class FediverseRemoteProfileFeed implements ShareLinkFeedInterface
 {
