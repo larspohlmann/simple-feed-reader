@@ -100,11 +100,10 @@ final readonly class PostLinkCards
     private function dropCardedQuoteLines(Entry $entry, array $cards): void
     {
         $html = (string) $entry->getContentHtml();
-        $withoutQuotes = array_reduce(
-            $cards,
-            static fn (string $body, LinkCardContent $card): string => QuoteLine::removedFrom($body, $card->url),
-            $html,
-        );
+        $withoutQuotes = $html;
+        foreach ($cards as $card) {
+            $withoutQuotes = QuoteLine::removedFrom($withoutQuotes, $card->url);
+        }
         if ($withoutQuotes === $html) {
             return;
         }

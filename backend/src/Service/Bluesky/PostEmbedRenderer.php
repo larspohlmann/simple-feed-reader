@@ -136,7 +136,7 @@ final readonly class PostEmbedRenderer
             $quotedUrl,
             self::authorName($record->node('author')),
             $value->string('text'),
-            self::quotedImage($record->nodes('embeds')[0] ?? JsonNodeModel::of(null)),
+            self::quotedImage($record->first('embeds')),
             HostKey::forUrl($quotedUrl),
         ));
 
@@ -146,7 +146,7 @@ final readonly class PostEmbedRenderer
     private static function quotedImage(JsonNodeModel $embed): ?string
     {
         return match ($embed->type()) {
-            self::IMAGES => ($embed->nodes('images')[0] ?? JsonNodeModel::of(null))->string('thumb'),
+            self::IMAGES => $embed->first('images')->string('thumb'),
             self::VIDEO => $embed->string('thumbnail'),
             self::EXTERNAL => $embed->node('external')->string('thumb'),
             self::RECORD_WITH_MEDIA => self::quotedImage($embed->node('media')),

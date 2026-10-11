@@ -10,30 +10,16 @@ use PHPUnit\Framework\TestCase;
 
 final class RenderedEmbedModelTest extends TestCase
 {
-    public function testFollowedByKeepsEveryCardInPostOrder(): void
-    {
-        $first = self::cardOf('https://a.test/');
-        $second = self::cardOf('https://b.test/');
-
-        $both = RenderedEmbedModel::card($first, null)->followedBy(RenderedEmbedModel::card($second, null));
-
-        self::assertSame([$first, $second], $both->linkCards);
-    }
-
     public function testFollowedByKeepsEveryCardWhenEitherSideHoldsSeveral(): void
     {
-        $first = self::cardOf('https://a.test/');
-        $second = self::cardOf('https://b.test/');
-        $third = self::cardOf('https://c.test/');
-        $firstEmbed = RenderedEmbedModel::card($first, null);
-        $secondEmbed = RenderedEmbedModel::card($second, null);
-        $thirdEmbed = RenderedEmbedModel::card($third, null);
+        $cards = array_map(self::cardOf(...), ['https://a.test/', 'https://b.test/', 'https://c.test/']);
+        [$first, $second, $third] = array_map(
+            static fn (LinkCardContent $card): RenderedEmbedModel => RenderedEmbedModel::card($card, null),
+            $cards,
+        );
 
-        $leftHeavy = $firstEmbed->followedBy($secondEmbed)->followedBy($thirdEmbed);
-        $rightHeavy = $firstEmbed->followedBy($secondEmbed->followedBy($thirdEmbed));
-
-        self::assertSame([$first, $second, $third], $leftHeavy->linkCards);
-        self::assertSame([$first, $second, $third], $rightHeavy->linkCards);
+        self::assertSame($cards, $first->followedBy($second)->followedBy($third)->linkCards);
+        self::assertSame($cards, $first->followedBy($second->followedBy($third))->linkCards);
     }
 
     private static function cardOf(string $url): LinkCardContent

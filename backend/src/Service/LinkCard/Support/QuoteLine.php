@@ -23,9 +23,9 @@ final class QuoteLine
             if ($paragraph === null || $anchor->getAttribute('href') !== $url) {
                 continue;
             }
-            $before = self::textNodesBefore($anchor, $paragraph);
-            if (self::readsQuoteMarker($before)) {
-                self::remove($anchor, $paragraph, $before);
+            $marker = self::markerBefore($anchor, $paragraph);
+            if ($marker !== null) {
+                self::remove($anchor, $paragraph, $marker);
 
                 return $document->body->innerHTML ?? $html;
             }
@@ -34,16 +34,8 @@ final class QuoteLine
         return $html;
     }
 
-    /** @param list<Text> $before */
-    private static function readsQuoteMarker(array $before): bool
-    {
-        $text = implode('', array_map(static fn (Text $node): string => $node->data, $before));
-
-        return Whitespace::collapse($text) === self::MARKER;
-    }
-
-    /** @return list<Text> */
-    private static function textNodesBefore(Element $anchor, Element $paragraph): array
+    /** @return list<Text>|null the paragraph's text before the anchor, when it reads "RE:" */
+    private static function markerBefore(Element $anchor, Element $paragraph): ?array
     {
         $before = [];
         foreach (TextNodes::in($paragraph) as $text) {
@@ -52,14 +44,15 @@ final class QuoteLine
             }
             $before[] = $text;
         }
+        $read = implode('', array_map(static fn (Text $text): string => $text->data, $before));
 
-        return $before;
+        return Whitespace::collapse($read) === self::MARKER ? $before : null;
     }
 
-    /** @param list<Text> $before */
-    private static function remove(Element $anchor, Element $paragraph, array $before): void
+    /** @param list<Text> $marker */
+    private static function remove(Element $anchor, Element $paragraph, array $marker): void
     {
-        foreach ($before as $text) {
+        foreach ($marker as $text) {
             $text->remove();
         }
         $anchor->remove();

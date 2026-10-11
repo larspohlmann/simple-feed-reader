@@ -45,6 +45,11 @@ final readonly class JsonNodeModel
         return self::of($this->fields[$key] ?? null);
     }
 
+    public function first(string $key): self
+    {
+        return $this->nodes($key)[0] ?? self::of(null);
+    }
+
     /** @return list<self> */
     public function nodes(string $key): array
     {

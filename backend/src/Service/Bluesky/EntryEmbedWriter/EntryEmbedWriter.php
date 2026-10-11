@@ -36,9 +36,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         foreach ($embed->linkCards as $card) {
             $body = TrailingUrl::removedFrom($body, $card->url);
         }
-        if ($embed->linkCards !== []) {
-            $this->linkCards->add($entry, $embed->linkCards);
-        }
+        $this->linkCards->add($entry, $embed->linkCards);
         $entry->setContentHtml($this->sanitizer->sanitize($body . $embed->html));
         $entry->setSummary(EntrySnippet::from($body));
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {

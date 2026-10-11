@@ -175,9 +175,8 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertNotNull($rendered);
-        self::assertSame($expected, $rendered->linkCards[0]->imageUrl);
-        self::assertNull($rendered->leadImage);
+        self::assertSame($expected, self::onlyCard($rendered)->imageUrl);
+        self::assertNull($rendered?->leadImage);
     }
 
     public function testAStarterPackLinksThePostOnBluesky(): void
@@ -311,8 +310,7 @@ final class PostEmbedRendererTest extends TestCase
             'external' => ['uri' => 'https://WWW.Example.COM/Story', 'title' => 'Story'],
         ]));
 
-        self::assertNotNull($rendered);
-        self::assertSame('example.com', $rendered->linkCards[0]->siteName);
+        self::assertSame('example.com', self::onlyCard($rendered)->siteName);
     }
 
     public function testALinkCardWithoutATitleIsNoCardAndLinksThePost(): void
@@ -348,9 +346,9 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertNotNull($rendered);
-        self::assertSame(str_repeat('t', 500), $rendered->linkCards[0]->title);
-        self::assertSame(str_repeat('word ', 58) . 'word…', $rendered->linkCards[0]->description);
+        $card = self::onlyCard($rendered);
+        self::assertSame(str_repeat('t', 500), $card->title);
+        self::assertSame(str_repeat('word ', 58) . 'word…', $card->description);
     }
 
     public function testAnHttpImageIsDroppedAndAProtocolRelativeOneUpgraded(): void
@@ -413,10 +411,10 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertNotNull($rendered);
-        self::assertSame('', $rendered->html);
-        self::assertSame('<img src=x onerror=alert(1)> (@evil.example)', $rendered->linkCards[0]->title);
-        self::assertSame("one <b>\ntwo", $rendered->linkCards[0]->description);
+        $card = self::onlyCard($rendered);
+        self::assertSame('', $rendered?->html);
+        self::assertSame('<img src=x onerror=alert(1)> (@evil.example)', $card->title);
+        self::assertSame("one <b>\ntwo", $card->description);
     }
 
     public function testAQuotedAuthorWithoutADisplayNameIsTitledByHandleAndBlankTextIsNoDescription(): void
@@ -467,6 +465,14 @@ final class PostEmbedRendererTest extends TestCase
         foreach ($parts as $part) {
             self::assertStringContainsString($part, $sanitized);
         }
+    }
+
+    private static function onlyCard(?RenderedEmbedModel $rendered): LinkCardContent
+    {
+        self::assertNotNull($rendered);
+        self::assertCount(1, $rendered->linkCards);
+
+        return $rendered->linkCards[0];
     }
 
     private function rendered(string $fixture): RenderedEmbedModel

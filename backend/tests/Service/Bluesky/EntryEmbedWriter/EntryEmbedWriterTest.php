@@ -100,7 +100,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame('<p>Look.</p>', $entry->getContentHtml());
         self::assertSame(
             ['Amy Littlefield (@amylittlefield.bsky.social)', 'From the IAmA community on Reddit'],
-            array_map(static fn (LinkCardContent $card): string => $card->title, $this->storedCards($entry)),
+            $this->storedTitles($entry),
         );
     }
 
@@ -115,7 +115,7 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertNull($entry->getImageUrl());
         self::assertSame(
             ['Mother Jones (@motherjones.com)'],
-            array_map(static fn (LinkCardContent $card): string => $card->title, $this->storedCards($entry)),
+            $this->storedTitles($entry),
         );
     }
 
@@ -234,6 +234,12 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->entityManager->clear();
 
         return $this->linkCards()->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
+    }
+
+    /** @return list<string> */
+    private function storedTitles(Entry $entry): array
+    {
+        return array_map(static fn (LinkCardContent $card): string => $card->title, $this->storedCards($entry));
     }
 
     private function linkCards(): LinkCardRepository
