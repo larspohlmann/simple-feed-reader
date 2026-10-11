@@ -36,7 +36,6 @@ final readonly class MaintenanceTick
     /** The membership sweep's own cap inside that window: enough for ~50 chunks on Strato. */
     private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
-    /** Link cards fill the tick's spare window, two page fetches at most. */
     private const int LINK_CARD_MAX_FETCHES = 2;
 
     public function __construct(

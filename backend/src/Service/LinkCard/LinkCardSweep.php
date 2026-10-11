@@ -9,7 +9,6 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 
-/** Cards the oldest queued link posts of every feed, outside any request. */
 final readonly class LinkCardSweep
 {
     public function __construct(

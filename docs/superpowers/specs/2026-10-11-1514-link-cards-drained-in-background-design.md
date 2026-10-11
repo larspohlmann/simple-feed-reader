@@ -67,7 +67,7 @@ whole rather than being carded across calls (that would need a per-row cursor co
   stateful checkpoint stores a position). Budget: 5 fetches (40 s).
 - Strato: `MaintenanceTick::sweep()` runs the link-card sweep before the saved-search membership sweep.
   - Its budget is the whole fetches that fit before the tick's deadline, at most 2. With less than one fetch
-    (8 s) left it does not run and reports itself skipped.
+    (8 s) left it does not run; the tick reports it as `{considered: 0, completed: 0}`.
   - The membership sweep keeps taking what is left. The cron cadence and the 25 s window do not change.
   - `MaintenanceSweepsModel` gains the report. `skippedAfterAbortedRefresh()` gives an empty one, and
     `MaintenanceTickJson` adds a `linkCards` section in the same shape as the others.
@@ -78,6 +78,7 @@ whole rather than being carded across calls (that would need a per-row cursor co
 - The sweep runs inside the tick's EntityManager rules: it is skipped after an aborted refresh like the other
   sweeps.
 - A worker run that overruns its lease writes nothing for rows another holder took over (`stillHeld`, unchanged).
+- A budget whose fetches would outlast the 60 s claim lease is refused when it is built.
 
 ## Testing
 
