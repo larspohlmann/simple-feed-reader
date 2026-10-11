@@ -51,11 +51,14 @@ An entry is a **share** when all three hold.
 2. **Its own prose is ≤ 500 characters**: the body's text without link-only lines and
    `Label: number` metadata lines.
 3. **Its kind is known or can be learned.**
-   - `media` at once: the target is a media file (image by extension, or `MediaUrlKind`
-     video/stream), the target resolves through `EmbedProviders`, a post carries its own
-     media and shares no link, or the entry's own URL is a YouTube Short
-     (`YouTubeShortUrl`) — the one own-URL case, kept as today.
-   - otherwise `link`. The card pass may later turn it into `media` (below).
+   - `media` at once: the target is an image or video file (by extension), a post carries
+     its own media and shares no link, or the entry's own URL is a YouTube Short
+     (`YouTubeShortUrl`) — the one own-URL case, kept as today and exempt from the prose
+     limit.
+   - otherwise `link`. The card pass may later turn a titled share into `media` (below).
+   - The media card shows only what it can play or show: images and video files. A player
+     page (YouTube, Vimeo: `og:video` is an iframe) stays a link card, consistent with
+     "only Shorts" for own-URL video.
 
 ## Components
 
@@ -65,15 +68,19 @@ An entry is a **share** when all three hold.
   nullable (the target of a titled share — a post's targets stay in its body). One schema
   migration, verified by the CI migrate-from-empty leg.
 
-### Ingest — new module `Service/Share`
+### Classification — new module `Service/Share`
 
-- `EntryShareClassifier` (root service) applies the classification to the
-  `ParsedEntryModel` after `PlatformEntryRules`, returning a `ShareModel` (kind, target URL
-  or null).
+- `EntryShareClassifier` (root service) classifies a stored `Entry` and writes its share.
+  It runs from `ShareEnrichmentQueue` right after ingest, not in the entry factory:
+  `LinkCard` already depends on `Ingest`, so `Ingest → Share → LinkCard` would be a module
+  cycle. Classifying the `Entry` also lets the one-off backfill reuse it unchanged.
+- The share is an `App\Entity\Share` value (kind `App\Enum\ShareKind`, target url) held by
+  an `EntryShare` embeddable (`share_kind`, `share_url`).
 - `Support/OwnProse` — one helper both the 500-char measure and the card text use: drops
   link-only lines and `Label: number` lines, returns the text.
-- `IngestedEntryFactory` persists `share`/`share_url`; for a titled share the `summary`
-  becomes the own prose, so the existing excerpt carries the card text.
+- For a titled share the classifier sets `summary` to the own prose, and `EntryJson`'s
+  excerpt no longer falls back to the body for a share, so the card text is the own prose
+  or nothing. Backup carries `share_kind`/`share_url` like every entry column.
 
 ### Enrichment — rename the post-only names
 
@@ -83,12 +90,13 @@ An entry is a **share** when all three hold.
   `PostLinkCards` → `ShareLinkCards`. Bluesky's AppView kind is unchanged in behaviour.
 - A titled share's targets are `[share_url]`; a post's stay `SharedLinks::of(body)`. One
   `ShareTargets` support answers both, used by the queue and the budget.
-- `PageCardReader` returns the card **and** what the page declares: `Content-Type`
-  image/video, `og:type video.*`, `twitter:card` player/photo, `og:video`, oEmbed type
-  photo/video. A titled `link` share whose target declares media becomes `media`, its
-  medium added to `entry.media` (the file itself, `og:video` with `og:image` as poster, or
-  `og:image` for a photo page). `HtmlPageFetcher::fetchHead` exposes the response's
-  content type for this.
+- `PageCardReader` returns the card **and** the medium the page declares: the file itself
+  when `Content-Type` is image/video, an `og:video` that is a video file (with `og:image`
+  as poster), or `og:image` on a photo page (`twitter:card=photo`, `og:type` ending in
+  `photo`). A titled `link` share whose target declares a medium becomes `media`, the
+  medium put first in `entry.media`. `HtmlPageFetcher::fetchHead` exposes the response's
+  content type. oEmbed is not read: it costs a second fetch per page and no measured
+  target needed it.
 - `EntryEmbedWriter` (Bluesky) sets `share` from what the embed brings: media → `media`,
   cards or an awaited card → `link`.
 
