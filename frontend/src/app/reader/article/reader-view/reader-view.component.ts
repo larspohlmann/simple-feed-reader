@@ -41,7 +41,7 @@ import { LanguageService } from '../../../core/i18n/language.service';
 import { LayoutService } from '../../layout.service';
 import { nextHeaderHidden } from '../../scroll/header-scroll';
 import { ArticleScrollRestore } from '../reading/article-scroll-restore.service';
-import { ReadingScope } from '../reading/reading-scope.service';
+import { ReadingScope, type TrailingPart } from '../reading/reading-scope.service';
 import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
@@ -109,6 +109,10 @@ export class ReaderViewComponent {
     read: ElementRef<HTMLElement>,
   });
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
+  private readonly trailingParts: readonly TrailingPart[] = [
+    { query: this.linkCards, carriesText: false },
+    { query: this.commentsSection, carriesText: true },
+  ];
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -208,8 +212,7 @@ export class ReaderViewComponent {
     this.scope.connect({
       scroller: this.scroller,
       content: this.content,
-      linkCards: this.linkCards,
-      comments: this.commentsSection,
+      trailing: this.trailingParts,
     });
 
     // Body media arrive through [innerHTML], so one capturing listener gives images the proxy

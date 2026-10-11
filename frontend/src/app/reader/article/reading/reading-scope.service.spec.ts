@@ -60,8 +60,10 @@ function connectScope(parts: {
   scope.connect({
     scroller: signal(scrollerOfViewport()),
     content: query(parts.content),
-    linkCards: query(parts.linkCards),
-    comments: query(parts.comments),
+    trailing: [
+      { query: query(parts.linkCards), carriesText: false },
+      { query: query(parts.comments), carriesText: true },
+    ],
   });
   scope.observeResizes();
   TestBed.tick();

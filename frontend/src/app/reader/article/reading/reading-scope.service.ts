@@ -20,11 +20,17 @@ import { prefersReducedMotion } from './reduced-motion';
 
 type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 
+/** A section below the article body; one that carries text joins the reading focus. */
+export interface TrailingPart {
+  readonly query: ElementQuery;
+  readonly carriesText: boolean;
+}
+
 export interface ReadingScopeParts {
   readonly scroller: Signal<HTMLElement | undefined>;
   readonly content: ElementQuery;
-  readonly linkCards: ElementQuery;
-  readonly comments: ElementQuery;
+  /** The sections below the body, in document order. */
+  readonly trailing: readonly TrailingPart[];
 }
 
 function bottomWithin(scroller: HTMLElement, element: HTMLElement): number {
@@ -39,7 +45,7 @@ function isPresent(element: HTMLElement | undefined): element is HTMLElement {
   return element !== undefined;
 }
 
-/** The article's reading scope — the body, its link cards and its comments: the reading-focus
+/** The article's reading scope — the body and the sections below it: the reading-focus
  *  dimming, the tail space below it and where the progress rail ends. `connect` and
  *  `observeResizes` create its effects, so the host decides where they fall in
  *  its own effect order. */
@@ -56,14 +62,11 @@ export class ReadingScope {
   private readonly reduceMotion = prefersReducedMotion();
   private scroller: Signal<HTMLElement | undefined> = signal(undefined);
   private content: ElementQuery = signal(undefined);
-  private linkCards: ElementQuery = signal(undefined);
-  private comments: ElementQuery = signal(undefined);
+  private trailing: readonly TrailingPart[] = [];
   private applier?: ReadingFocusApplier;
   private scopeObserver?: ResizeObserver;
 
-  // The reading scope's extent, re-measured whenever the content, the comments
-  // or the pane changes size — see measureScrollRange(). The tail keys on the
-  // scope's bottom (body + link cards + comments); the progress rail keys on the body alone.
+  // The tail keys on the scope's bottom; the progress rail keys on the body alone.
   private readonly measuredContentBottom = signal(0);
   private readonly readingBottom = signal(0);
   private readonly viewportHeight = signal(0);
@@ -81,12 +84,12 @@ export class ReadingScope {
     });
   }
 
-  /** Bind the article body and comments, and create the focus effects. */
+  /** Bind the scope's parts, and create the focus effects. */
   connect(parts: ReadingScopeParts): void {
     this.scroller = parts.scroller;
     this.content = parts.content;
-    this.linkCards = parts.linkCards;
-    this.comments = parts.comments;
+    this.trailing = parts.trailing;
+    const textParts = parts.trailing.filter((part) => part.carriesText);
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
     effect(
@@ -99,7 +102,7 @@ export class ReadingScope {
         this.applier = new ReadingFocusApplier({
           scroller,
           blocks: () =>
-            [element, this.commentsHost()].filter(isPresent).flatMap((root) => readingBlocks(root)),
+            [element, ...this.presentElements(textParts)].flatMap((root) => readingBlocks(root)),
           curve: ARTICLE_FOCUS_CURVE,
           isActive: () =>
             this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
@@ -118,8 +121,8 @@ export class ReadingScope {
     );
   }
 
-  /** Re-measure as the scope's size settles: a viewport resize, and the body
-   *  or the comments changing height after first paint. */
+  /** Re-measure as the scope's size settles: a viewport resize, and any part
+   *  changing height after first paint. */
   observeResizes(): void {
     // A viewport resize changes whether the article still needs tail space —
     // the applier observes its own geometry and needs no nudge here.
@@ -130,16 +133,15 @@ export class ReadingScope {
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
     // The scope's height firms up after first paint (images, fonts, the original→reader
-    // swap), and the comments load after the article, past the applier's last refresh.
+    // swap), and the trailing parts load after the article, past the applier's last refresh.
     effect(
       () => {
-        const content = this.content()?.nativeElement;
-        const linkCards = this.linkCards()?.nativeElement;
-        const comments = this.comments()?.nativeElement;
+        const targets = [this.content, ...this.trailing.map((part) => part.query)]
+          .map((query) => query()?.nativeElement)
+          .filter(isPresent);
         this.scopeObserver?.disconnect();
         this.scopeObserver = undefined;
         if (typeof ResizeObserver === 'undefined') return;
-        const targets = [content, linkCards, comments].filter(isPresent);
         if (targets.length === 0) return;
         const observer = new ResizeObserver(() => this.refresh());
         for (const target of targets) observer.observe(target);
@@ -156,7 +158,7 @@ export class ReadingScope {
   }
 
   /**
-   * Measure how far the article and its comments reach inside the pane. Takes
+   * Measure how far the body and the whole scope reach inside the pane. Takes
    * the article's own content box — never the panel's, which already includes
    * the tail and would feed the measurement back into itself.
    */
@@ -171,12 +173,12 @@ export class ReadingScope {
     }
     this.viewportHeight.set(scroller.clientHeight);
     this.measuredContentBottom.set(bottomWithin(scroller, content));
-    const lastPart = this.commentsHost() ?? untracked(this.linkCards)?.nativeElement ?? content;
+    const lastPart = this.presentElements(this.trailing).at(-1) ?? content;
     this.readingBottom.set(bottomWithin(scroller, lastPart));
   }
 
-  // `blocks()` runs inside effects, which must not rerun when the comments mount.
-  private commentsHost(): HTMLElement | undefined {
-    return untracked(this.comments)?.nativeElement;
+  // Untracked: `blocks()` runs inside effects, which must not rerun when a trailing part mounts.
+  private presentElements(parts: readonly TrailingPart[]): HTMLElement[] {
+    return parts.map((part) => untracked(part.query)?.nativeElement).filter(isPresent);
   }
 }
