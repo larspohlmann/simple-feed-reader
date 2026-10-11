@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Dto\Entry\CompleteEntriesRequest;
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\ShareEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CommentsLoad;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Tests\Support\ApiTestCase;
@@ -82,6 +85,37 @@ final class EntryCompletionControllerTest extends ApiTestCase
             array_column($this->cardsOf($entries, $linkPost), 'title'),
         );
         self::assertSame([Bluesky::CARD], array_column($this->cardsOf($entries, $blueskyPost), 'url'));
+    }
+
+    public function testATitledShareOffTheFeedsSiteComesBackWithItsLinkCard(): void
+    {
+        [$headers, $user] = $this->auth('complete-titled-link@example.com');
+        $item = $this->queuedHackerNewsItem($this->subscribedFeed($user), 'https://ghuntley.com/unikernels/');
+
+        $this->complete($headers, [$item->requireId()]);
+
+        self::assertResponseIsSuccessful();
+        $row = $this->rowOf($this->payload($this->client)['entries'], $item);
+        self::assertSame('link', $row['share']);
+        self::assertSame(
+            ['Card for https://ghuntley.com/unikernels/'],
+            array_column($this->cardsOf([$row], $item), 'title'),
+        );
+    }
+
+    public function testATitledShareOfAPictureComesBackAsMediaWithThePictureFirst(): void
+    {
+        [$headers, $user] = $this->auth('complete-titled-media@example.com');
+        $item = $this->queuedHackerNewsItem($this->subscribedFeed($user), 'https://i.example/chart');
+
+        $this->complete($headers, [$item->requireId()]);
+
+        self::assertResponseIsSuccessful();
+        $row = $this->rowOf($this->payload($this->client)['entries'], $item);
+        self::assertSame('media', $row['share']);
+        self::assertIsArray($row['media']);
+        self::assertIsArray($row['media'][0]);
+        self::assertSame('https://i.example/chart', $row['media'][0]['url']);
     }
 
     public function testAStrangersIdsAreDroppedWithoutWork(): void
@@ -287,6 +321,10 @@ final class EntryCompletionControllerTest extends ApiTestCase
 
     private static function page(string $method, string $url): MockResponse
     {
+        if (str_starts_with($url, 'https://i.example/')) {
+            return new MockResponse('', ['http_code' => 200, 'response_headers' => ['content-type' => 'image/png']]);
+        }
+
         return new MockResponse(
             '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
             ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
@@ -322,6 +360,23 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->entityManager()->flush();
 
         return $post;
+    }
+
+    private function queuedHackerNewsItem(Feed $feed, string $target): Entry
+    {
+        $itemUrl = 'https://news.ycombinator.com/item?id=5';
+        $feed->setSiteUrl('https://news.ycombinator.com/');
+        $createdAt = new \DateTimeImmutable('-1 hour', new \DateTimeZone('UTC'));
+        $item = new Entry($feed, $itemUrl, $target, 'A real headline', $createdAt, $createdAt);
+        $item->setContentHtml('<p>Article URL: <a href="' . $target . '">' . $target . '</a></p><p>Points: 110</p>');
+        $item->setDiscussion(Discussion::of($itemUrl, null, CommentsLoad::Manual));
+        $this->entityManager()->persist($item);
+        $queue = self::getContainer()->get(ShareEnrichmentQueue::class);
+        self::assertInstanceOf(ShareEnrichmentQueue::class, $queue);
+        $queue->queue([$item]);
+        $this->entityManager()->flush();
+
+        return $item;
     }
 
     /** Queued $number minutes after 11:00, so a lower number is older. */
@@ -365,6 +420,19 @@ final class EntryCompletionControllerTest extends ApiTestCase
         ksort($pending);
 
         return $pending;
+    }
+
+    /** @return array<array-key, mixed> */
+    private function rowOf(mixed $rows, Entry $entry): array
+    {
+        self::assertIsArray($rows);
+        foreach ($rows as $row) {
+            self::assertIsArray($row);
+            if ($row['id'] === $entry->requireId()) {
+                return $row;
+            }
+        }
+        self::fail('No row for entry ' . $entry->requireId());
     }
 
     /** @return array<array-key, array<array-key, mixed>> */
