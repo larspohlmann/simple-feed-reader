@@ -23,7 +23,7 @@
       (keydown.space)="$event.stopPropagation()"
     />
   } @else if (entry().pending) {
-    <app-link-card-placeholder />
+    <app-link-card-placeholder [entryId]="entry().id" />
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />

@@ -1,8 +1,18 @@
-import { DestroyRef, Injectable, NgZone, computed, effect, inject, untracked } from '@angular/core';
+import {
+  DestroyRef,
+  Injectable,
+  NgZone,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
 import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { EntryBodyService } from '../article/content/entry-body.service';
+import { PreviewProgress } from '../link-card/preview-progress';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
 import { EntriesStore } from '../state/entries.store';
@@ -14,9 +24,10 @@ const PENDING_POLL_BATCH = 25;
 
 /** Completes the listed entries still pending (#1502), and the open one, and merges the finished
  *  rows back. The list and the open entry each spend their own rounds, a failed call too; a new
- *  list load starts both counts afresh, and a newly opened entry its own. */
+ *  list load starts both counts afresh, and a newly opened entry its own. Once a count is spent
+ *  and its last answer is in, its entries no longer read as loading (#1516). */
 @Injectable()
-export class PendingEntriesPoll {
+export class PendingEntriesPoll implements PreviewProgress {
   private readonly store = inject(EntriesStore);
   private readonly api = inject(ReaderApi);
   private readonly bodies = inject(EntryBodyService);
@@ -40,7 +51,15 @@ export class PendingEntriesPoll {
     const open = this.routeState.openEntry();
     return open?.pending ? open.id : null;
   });
-  readonly previewsLoading = computed(() => this.listedPending().length > 0);
+  private readonly listGivenUp = signal(false);
+  private readonly givenUpOpenId = signal<number | null>(null);
+  private readonly loadingIds = computed(() => {
+    const ids = new Set(this.listGivenUp() ? [] : this.listedPending().map((entry) => entry.id));
+    const open = this.openPendingId();
+    if (open !== null && open !== this.givenUpOpenId()) ids.add(open);
+    return ids;
+  });
+  readonly previewsLoading = computed(() => !this.listGivenUp() && this.listedPending().length > 0);
 
   private timerId: ReturnType<typeof setTimeout> | null = null;
   private request: Subscription | null = null;
@@ -70,6 +89,7 @@ export class PendingEntriesPoll {
     if (openId !== this.roundsOpenId) {
       this.roundsOpenId = openId;
       this.openRounds = 0;
+      this.givenUpOpenId.set(null);
     }
     this.schedule();
   }
@@ -80,6 +100,12 @@ export class PendingEntriesPoll {
     this.request = null;
     this.listRounds = 0;
     this.openRounds = 0;
+    this.listGivenUp.set(false);
+    this.givenUpOpenId.set(null);
+  }
+
+  isLoading(entryId: number): boolean {
+    return this.loadingIds().has(entryId);
   }
 
   private schedule(): void {
@@ -108,6 +134,8 @@ export class PendingEntriesPoll {
 
   private settle(): void {
     this.request = null;
+    if (this.listRounds >= PENDING_POLL_MAX_ROUNDS) this.listGivenUp.set(true);
+    if (this.openRounds >= PENDING_POLL_MAX_ROUNDS) this.givenUpOpenId.set(this.roundsOpenId);
     this.schedule();
   }
 

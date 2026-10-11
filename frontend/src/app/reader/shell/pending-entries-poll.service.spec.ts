@@ -178,6 +178,63 @@ describe('PendingEntriesPoll', () => {
     expect(complete).toHaveBeenCalledTimes(PENDING_POLL_MAX_ROUNDS);
   });
 
+  describe('whether a preview still loads (#1516)', () => {
+    it('stops once the rounds are spent and the last answer is in', () => {
+      start([row(1)]);
+      const poll = TestBed.inject(PendingEntriesPoll);
+      const answer = new Subject<EntryDto[]>();
+      rounds(PENDING_POLL_MAX_ROUNDS - 1);
+      complete.mockReturnValueOnce(answer);
+      rounds(1);
+      expect(poll.isLoading(1)).toBe(true);
+      expect(poll.previewsLoading()).toBe(true);
+
+      answer.next([row(1)]);
+      answer.complete();
+
+      expect(poll.isLoading(1)).toBe(false);
+      expect(poll.previewsLoading()).toBe(false);
+    });
+
+    it('loads again for an entry opened afterwards, until its own rounds are spent', () => {
+      start([row(1)]);
+      const poll = TestBed.inject(PendingEntriesPoll);
+      rounds(PENDING_POLL_MAX_ROUNDS);
+
+      openEntry.set(row(1));
+      TestBed.tick();
+      expect(poll.isLoading(1)).toBe(true);
+      expect(poll.previewsLoading()).toBe(false);
+
+      rounds(PENDING_POLL_MAX_ROUNDS);
+      expect(poll.isLoading(1)).toBe(false);
+
+      openEntry.set(null);
+      TestBed.tick();
+      openEntry.set(row(1));
+      TestBed.tick();
+      expect(poll.isLoading(1)).toBe(true);
+    });
+
+    it('loads again on the next list load', () => {
+      start([row(1)]);
+      const poll = TestBed.inject(PendingEntriesPoll);
+      rounds(PENDING_POLL_MAX_ROUNDS);
+
+      loadedAt.set('load-2');
+      TestBed.tick();
+
+      expect(poll.isLoading(1)).toBe(true);
+      expect(poll.previewsLoading()).toBe(true);
+    });
+
+    it('never loads an entry that is not pending', () => {
+      start([row(1, { pending: false })]);
+
+      expect(TestBed.inject(PendingEntriesPoll).isLoading(1)).toBe(false);
+    });
+  });
+
   it('gives an entry opened after the list spent its rounds a budget of its own', () => {
     start([row(1)]);
     rounds(PENDING_POLL_MAX_ROUNDS);

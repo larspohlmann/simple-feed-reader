@@ -1154,6 +1154,7 @@
       "mismatch": "The page didn't match this entry — showing the feed's summary."
     },
     "loadingPreview": "Loading preview…",
+    "noPreviewYet": "No preview yet",
     "bodyLoadFailed": "Couldn't load the full article — showing the summary.",
     "retry": "Retry",
     "showError": "Show error",

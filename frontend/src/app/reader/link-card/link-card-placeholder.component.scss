@@ -8,9 +8,12 @@
 }
 
 .image {
-  @include loading-pulse.block;
-
   aspect-ratio: link-card.$image-ratio;
+  background: var(--surface-2);
+}
+
+:host(.loading) .image {
+  @include loading-pulse.block;
 }
 
 @include loading-pulse.keyframes;
