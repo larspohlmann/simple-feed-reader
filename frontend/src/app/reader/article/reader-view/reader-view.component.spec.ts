@@ -304,7 +304,6 @@ describe('ReaderViewComponent', () => {
       const element = mount(
         entryWithBody('<p>Just a post</p>', {
           titleDerived: true,
-          share: null,
           linkCards: [
             {
               url: 'https://news.test/story',
@@ -694,7 +693,6 @@ describe('ReaderViewComponent', () => {
       const fixture = mount(
         entry({
           titleDerived: true,
-          share: null,
           linkCards: [
             {
               url: 'https://news.test/story',

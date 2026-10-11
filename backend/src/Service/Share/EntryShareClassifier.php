@@ -6,6 +6,7 @@ namespace App\Service\Share;
 
 use App\Entity\Entry;
 use App\Entity\Share;
+use App\Enum\ShareKind;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Parser\Support\VisualMedium;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
@@ -32,7 +33,10 @@ final readonly class EntryShareClassifier
         }
 
         $entry->setSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX));
-        $this->putTargetFirst($entry, $share);
+        $medium = $share->kind === ShareKind::Media && $share->url !== null ? VisualMedium::at($share->url) : null;
+        if ($medium !== null) {
+            $entry->putMediumFirst($medium);
+        }
     }
 
     private function shareOf(Entry $entry, string $body, string $ownProse): Share
@@ -64,13 +68,5 @@ final readonly class EntryShareClassifier
         }
 
         return VisualMedium::at($target) === null ? Share::link($target) : Share::media($target);
-    }
-
-    private function putTargetFirst(Entry $entry, Share $share): void
-    {
-        $medium = $share->url === null ? null : VisualMedium::at($share->url);
-        if ($medium !== null) {
-            $entry->putMediumFirst($medium);
-        }
     }
 }

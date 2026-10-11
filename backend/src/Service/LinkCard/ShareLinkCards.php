@@ -68,7 +68,7 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * Only rows the claim still holds are written: no other worker cards their posts meanwhile.
+     * Only rows the claim still holds are written: no other worker cards their entries meanwhile.
      *
      * @param list<ShareEnrichment>                $claimed
      * @param array<int, list<PageCardModel>> $pageCardsByRowId the rows this call worked
@@ -145,7 +145,7 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * A later post starts only if all its links can still be fetched before the deadline, well inside the lease.
+     * A later entry starts only if all its links can still be fetched before the deadline, well inside the lease.
      *
      * @param list<string> $uncardedUrls
      */
@@ -178,7 +178,7 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * The oldest rows whose uncarded links fit the call's fetches, by row id. The first row always runs, so no post is
+     * The oldest rows whose uncarded links fit the call's fetches, by row id. The first row always runs, so no entry is
      * left half-carded.
      *
      * @param list<ShareEnrichment>     $queued

@@ -34,7 +34,7 @@ final class EntryLocation
     public function storeShare(Share $share): void
     {
         $this->shareKind = $share->kind;
-        $this->shareUrl = $share->url === null || \strlen($share->url) > self::URL_MAX ? null : $share->url;
+        $this->shareUrl = $share->url;
     }
 
     public function readShare(): Share

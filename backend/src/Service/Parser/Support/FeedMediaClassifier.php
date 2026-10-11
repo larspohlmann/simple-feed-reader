@@ -49,10 +49,14 @@ final class FeedMediaClassifier
 
     private static function fromType(\DOMElement $element): ?FeedMediaKind
     {
-        $type = strtolower($element->getAttribute('type'));
-        if ($type === '') {
-            return null;
-        }
+        $type = $element->getAttribute('type');
+
+        return $type === '' ? null : self::kindOfMimeType($type);
+    }
+
+    public static function kindOfMimeType(string $mimeType): FeedMediaKind
+    {
+        $type = strtolower($mimeType);
 
         return match (true) {
             str_starts_with($type, 'image/') => FeedMediaKind::Image,

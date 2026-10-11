@@ -11,12 +11,8 @@ use Doctrine\Migrations\AbstractMigration;
 
 final class Version20261011150000 extends AbstractMigration
 {
-    private const string COPY_TO_SHARE = 'INSERT INTO share_enrichment'
-        . ' (id, entry_id, kind, queued_at, claimed_at, done_at)'
-        . ' SELECT id, entry_id, kind, queued_at, claimed_at, done_at FROM post_enrichment';
-    private const string COPY_TO_POST = 'INSERT INTO post_enrichment'
-        . ' (id, entry_id, kind, queued_at, claimed_at, done_at)'
-        . ' SELECT id, entry_id, kind, queued_at, claimed_at, done_at FROM share_enrichment';
+    private const string COPY_QUEUE = 'INSERT INTO %s (id, entry_id, kind, queued_at, claimed_at, done_at)'
+        . ' SELECT id, entry_id, kind, queued_at, claimed_at, done_at FROM %s';
 
     public function getDescription(): string
     {
@@ -31,7 +27,7 @@ final class Version20261011150000 extends AbstractMigration
         $this->addSql('ALTER TABLE entry ADD share_kind VARCHAR(8) DEFAULT NULL');
         $this->addSql('ALTER TABLE entry ADD share_url VARCHAR(2048) DEFAULT NULL');
         $this->createQueueTable('share_enrichment', 'UNIQ_583FCE08BA364942', 'FK_583FCE08BA364942');
-        $this->addSql(self::COPY_TO_SHARE);
+        $this->addSql(sprintf(self::COPY_QUEUE, 'share_enrichment', 'post_enrichment'));
         $this->addSql('DROP TABLE post_enrichment');
     }
 
@@ -41,7 +37,7 @@ final class Version20261011150000 extends AbstractMigration
 
         $this->abortIfUnsupportedPlatform();
         $this->createQueueTable('post_enrichment', 'UNIQ_9FA2FF0FBA364942', 'FK_9FA2FF0FBA364942');
-        $this->addSql(self::COPY_TO_POST);
+        $this->addSql(sprintf(self::COPY_QUEUE, 'post_enrichment', 'share_enrichment'));
         $this->addSql('DROP TABLE share_enrichment');
         $this->addSql('ALTER TABLE entry DROP COLUMN share_url');
         $this->addSql('ALTER TABLE entry DROP COLUMN share_kind');

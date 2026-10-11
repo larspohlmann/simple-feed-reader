@@ -24,10 +24,7 @@
 }
 
 .title {
-  margin: 0;
-  font-size: var(--fs-lg);
-  font-weight: 500;
-  color: var(--text-primary);
+  @include magazine-card.headline;
 }
 
 .title.post {

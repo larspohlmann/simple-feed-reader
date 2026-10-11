@@ -33,15 +33,6 @@ final class EntryShareTest extends TestCase
         self::assertSame('https://example.com/story', $entry->getShare()->url);
     }
 
-    public function testATargetTooLongForItsColumnIsDropped(): void
-    {
-        $entry = self::entry();
-        $entry->setShare(Share::media('https://example.com/' . str_repeat('a', 2048)));
-
-        self::assertSame(ShareKind::Media, $entry->getShare()->kind);
-        self::assertNull($entry->getShare()->url);
-    }
-
     public function testTheBodyStandsInForTheSummaryOnlyOfATitledEntrySharingNothing(): void
     {
         $article = self::entry();

@@ -86,10 +86,23 @@ final readonly class HtmlPageFetcher
             new RedirectBudget(self::MAX_REDIRECTS, self::HEAD_MAX_DURATION_SECONDS),
         );
         $this->assertSuccess($landed);
+        $contentType = $landed->header('content-type');
+        if (self::isMediaFile($contentType)) {
+            $landed->response->cancel();
+
+            return new PageResponseModel($landed->url, '', $contentType);
+        }
         $head = $this->utf8($this->firstBytes($landed), $landed);
         $this->assertNotChallenge($head, $landed);
 
-        return new PageResponseModel($landed->url, $head, $landed->header('content-type'));
+        return new PageResponseModel($landed->url, $head, $contentType);
+    }
+
+    private static function isMediaFile(?string $contentType): bool
+    {
+        $type = strtolower((string) $contentType);
+
+        return str_starts_with($type, 'image/') || str_starts_with($type, 'video/') || str_starts_with($type, 'audio/');
     }
 
     /** @param array<string, mixed> $options */

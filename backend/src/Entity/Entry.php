@@ -266,7 +266,6 @@ final class Entry
         $this->location->storeShare($share);
     }
 
-    /** A share carries its own text and a post is its own body, so neither takes the body as its summary. */
     public function bodyStandsInForSummary(): bool
     {
         return !$this->isUntitledPost() && $this->getShare()->isNone();
