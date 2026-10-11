@@ -1,11 +1,7 @@
+import { articleHost } from '../../testing/article-host-testing';
 import { upgradeMediaEmbeds } from './media-embeds';
 
-function host(html: string): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  upgradeMediaEmbeds(element);
-  return element;
-}
+const host = (html: string): HTMLElement => articleHost(html, upgradeMediaEmbeds);
 
 describe('upgradeMediaEmbeds', () => {
   it('replaces a YouTube link with a nocookie iframe', () => {
@@ -59,8 +55,9 @@ describe('upgradeMediaEmbeds', () => {
   });
 
   it('is idempotent across repeated passes', () => {
-    const element = document.createElement('div');
-    element.innerHTML = '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">x</a>';
+    const element = articleHost(
+      '<a href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa">x</a>',
+    );
     upgradeMediaEmbeds(element);
     upgradeMediaEmbeds(element);
 

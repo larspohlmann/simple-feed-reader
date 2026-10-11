@@ -1,13 +1,10 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import { removeEnclosurePlayers } from './enclosure-players';
 
 const EPISODE = 'https://media.example.test/show/episode.mp3';
 
-function host(html: string, enclosureUrl: string | null = EPISODE): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  removeEnclosurePlayers(element, enclosureUrl);
-  return element;
-}
+const host = (html: string, enclosureUrl: string | null = EPISODE): HTMLElement =>
+  articleHost(html, (element) => removeEnclosurePlayers(element, enclosureUrl));
 
 describe('removeEnclosurePlayers', () => {
   it('removes a player whose source is the enclosure', () => {

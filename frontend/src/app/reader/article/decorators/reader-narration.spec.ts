@@ -1,13 +1,10 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import { markNarrationPlayers } from './reader-narration';
 
 const LABEL = 'Listen — machine-generated narration';
 
-function host(html: string): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  markNarrationPlayers(element, LABEL);
-  return element;
-}
+const host = (html: string): HTMLElement =>
+  articleHost(html, (element) => markNarrationPlayers(element, LABEL));
 
 describe('markNarrationPlayers', () => {
   it('wraps a marked player in a labelled details box', () => {
@@ -34,8 +31,9 @@ describe('markNarrationPlayers', () => {
   });
 
   it('sets the summary as text, never as markup', () => {
-    const element = document.createElement('div');
-    element.innerHTML = '<audio class="reader-narration" src="https://x.test/full.mp3"></audio>';
+    const element = articleHost(
+      '<audio class="reader-narration" src="https://x.test/full.mp3"></audio>',
+    );
     markNarrationPlayers(element, '<b>x</b>');
     const summary = element.querySelector('summary')!;
 

@@ -1,3 +1,4 @@
+import { attachedArticleHost } from '../../../../testing/article-host-testing';
 import { attachHlsStreams } from './hls-streams';
 
 const loadSource = jest.fn();
@@ -17,13 +18,6 @@ jest.mock('hls.js', () => ({
   default: FakeHls,
 }));
 
-function host(html: string): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  document.body.appendChild(element);
-  return element;
-}
-
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 function firstPlay(element: HTMLElement): Promise<void> {
@@ -42,7 +36,9 @@ describe('attachHlsStreams', () => {
   });
 
   it('attaches nothing on render, so the idle poster keeps its playlist src and paints no spinner', async () => {
-    const element = host('<video src="https://x.test/master.m3u8" poster="p.jpg"></video>');
+    const element = attachedArticleHost(
+      '<video src="https://x.test/master.m3u8" poster="p.jpg"></video>',
+    );
     attachHlsStreams(element);
     await flush();
 
@@ -51,7 +47,7 @@ describe('attachHlsStreams', () => {
   });
 
   it('attaches hls.js only on the first play, so preload="none" keeps its meaning', async () => {
-    const element = host('<video src="https://x.test/master.m3u8"></video>');
+    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(element);
     await flush();
     expect(attachMedia).not.toHaveBeenCalled();
@@ -64,7 +60,7 @@ describe('attachHlsStreams', () => {
 
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
     HTMLMediaElement.prototype.canPlayType = () => 'maybe';
-    const element = host('<video src="https://x.test/master.m3u8"></video>');
+    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(element);
     await firstPlay(element);
 
@@ -72,7 +68,7 @@ describe('attachHlsStreams', () => {
   });
 
   it('leaves a file video alone', async () => {
-    const element = host('<video src="https://x.test/a.mp4"></video>');
+    const element = attachedArticleHost('<video src="https://x.test/a.mp4"></video>');
     attachHlsStreams(element);
     await firstPlay(element);
 
@@ -82,7 +78,7 @@ describe('attachHlsStreams', () => {
 
   it('leaves the video alone when hls.js reports no support', async () => {
     supported = false;
-    const element = host('<video src="https://x.test/master.m3u8"></video>');
+    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(element);
     await firstPlay(element);
 
@@ -90,7 +86,7 @@ describe('attachHlsStreams', () => {
   });
 
   it('destroys the instance of a played video the re-render removed', async () => {
-    const element = host('<video src="https://x.test/master.m3u8"></video>');
+    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
     attachHlsStreams(element);
     await firstPlay(element);
     element.innerHTML = '<p>re-rendered</p>';
@@ -101,7 +97,9 @@ describe('attachHlsStreams', () => {
   });
 
   it('does not arm the same still-connected video twice', async () => {
-    const element = host('<video src="https://x.test/master.m3u8" poster="p.jpg"></video>');
+    const element = attachedArticleHost(
+      '<video src="https://x.test/master.m3u8" poster="p.jpg"></video>',
+    );
     attachHlsStreams(element);
     await flush();
     attachHlsStreams(element);

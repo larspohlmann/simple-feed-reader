@@ -1,11 +1,5 @@
+import { attachedArticleHost } from '../../../../testing/article-host-testing';
 import { highlightCodeBlocks } from './code-highlight';
-
-const host = (html: string): HTMLElement => {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  document.body.appendChild(element);
-  return element;
-};
 
 const block = (code: string): string => `<pre><code>${code}</code></pre>`;
 
@@ -22,7 +16,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('highlights a multi-line code block', async () => {
-    const element = host(block(MULTILINE));
+    const element = attachedArticleHost(block(MULTILINE));
 
     await highlightCodeBlocks(element);
 
@@ -32,7 +26,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('highlights a bare <pre> block that has no <code> child', async () => {
-    const element = host(
+    const element = attachedArticleHost(
       '<pre><span>final class</span> CreateBooksTable {\n    public function up(): void {\n        return;\n    }\n}</pre>',
     );
 
@@ -44,7 +38,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('highlights a short multi-line block', async () => {
-    const element = host(block('if (a < b) {\n  swap();\n}'));
+    const element = attachedArticleHost(block('if (a < b) {\n  swap();\n}'));
 
     await highlightCodeBlocks(element);
 
@@ -54,7 +48,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('highlights a substantial one-liner', async () => {
-    const element = host(block("const slug = str_replace(' ', '-', title);"));
+    const element = attachedArticleHost(block("const slug = str_replace(' ', '-', title);"));
 
     await highlightCodeBlocks(element);
 
@@ -63,7 +57,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('leaves a trivial one-line snippet unstyled', async () => {
-    const element = host(block('const _ = 1;'));
+    const element = attachedArticleHost(block('const _ = 1;'));
 
     await highlightCodeBlocks(element);
 
@@ -73,7 +67,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('does not re-process an already-highlighted block', async () => {
-    const element = host(block(MULTILINE));
+    const element = attachedArticleHost(block(MULTILINE));
     await highlightCodeBlocks(element);
     const code = element.querySelector('pre > code');
     const afterFirstPass = code?.innerHTML;
@@ -85,7 +79,7 @@ describe('highlightCodeBlocks', () => {
   });
 
   it('resolves without error when there is no code block', async () => {
-    const element = host('<p>No code here.</p>');
+    const element = attachedArticleHost('<p>No code here.</p>');
 
     await expect(highlightCodeBlocks(element)).resolves.toBeUndefined();
   });

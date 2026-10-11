@@ -1,12 +1,7 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import { addCinemaToggles, toggleCinemaByKey, type CinemaLabels } from './reader-cinema';
 
 const labels: CinemaLabels = { enter: 'Cinema mode', exit: 'Exit cinema mode' };
-
-function host(html: string): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  return element;
-}
 
 const LANDSCAPE =
   '<div class="reader-embed reader-embed--landscape"><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>';
@@ -17,7 +12,7 @@ beforeAll(() => {
 
 describe('addCinemaToggles', () => {
   it('wraps a landscape embed with a cinema toggle beneath it', () => {
-    const element = host(LANDSCAPE);
+    const element = articleHost(LANDSCAPE);
     addCinemaToggles(element, labels);
     const box = element.querySelector('.reader-cinema')!;
     expect(box.firstElementChild!.classList.contains('reader-embed')).toBe(true);
@@ -28,13 +23,13 @@ describe('addCinemaToggles', () => {
   });
 
   it('wraps a native video', () => {
-    const element = host('<p>Intro</p><video src="https://cdn/clip.mp4"></video>');
+    const element = articleHost('<p>Intro</p><video src="https://cdn/clip.mp4"></video>');
     addCinemaToggles(element, labels);
     expect(element.querySelector('.reader-cinema > video')).not.toBeNull();
   });
 
   it('leaves portrait, tall and audio embeds and native audio alone', () => {
-    const element = host(
+    const element = articleHost(
       '<div class="reader-embed reader-embed--portrait"><iframe></iframe></div>' +
         '<div class="reader-embed reader-embed--tall"><iframe></iframe></div>' +
         '<div class="reader-embed reader-embed--landscape reader-embed--audio"><iframe></iframe></div>' +
@@ -45,7 +40,7 @@ describe('addCinemaToggles', () => {
   });
 
   it('is idempotent', () => {
-    const element = host(LANDSCAPE);
+    const element = articleHost(LANDSCAPE);
     addCinemaToggles(element, labels);
     addCinemaToggles(element, labels);
     expect(element.querySelectorAll('.reader-cinema')).toHaveLength(1);
@@ -53,7 +48,7 @@ describe('addCinemaToggles', () => {
   });
 
   it('widens on click, flips the label and icon, and narrows again', () => {
-    const element = host(LANDSCAPE);
+    const element = articleHost(LANDSCAPE);
     addCinemaToggles(element, labels);
     const box = element.querySelector<HTMLElement>('.reader-cinema')!;
     const toggle = element.querySelector<HTMLButtonElement>('.reader-cinema__toggle')!;
@@ -76,7 +71,7 @@ function key(init: KeyboardEventInit = {}, target?: HTMLElement): KeyboardEvent 
 }
 
 function twoVideos(): HTMLElement {
-  const element = host(LANDSCAPE + LANDSCAPE);
+  const element = articleHost(LANDSCAPE + LANDSCAPE);
   addCinemaToggles(element, labels);
   return element;
 }
