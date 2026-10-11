@@ -95,3 +95,44 @@ A click anywhere else opens the reader, as every block does.
   - no caption for an untitled post
   - a click on a video does not open the reader
 - **Browser:** dev subscriptions 1739 and 1740 at desktop and phone width.
+
+## Addendum (2026-10-11): YouTube Shorts use the same card
+
+The user asked for YouTube Shorts entries to use the media card. The final review also found two rules
+that this addendum settles.
+
+### Measured
+
+- A Short (dev entry 578702) has a feed title, so `titleDerived` is false, and `isShort` is true.
+  - Its `imageUrl` is `hqdefault.jpg`, 480×360. That 4:3 file letterboxes a 9:16 picture, and
+    `imageAspectRatio` is 0.5625.
+  - Its `media` is that one image. It has no excerpt.
+  - Its body links `https://www.youtube-nocookie.com/embed/<id>#shorts`. That URL is the allow-listed
+    portrait frame (`embed-frame-allowlist.generated.json`, generated from `YouTubeEmbedProvider::frames()`).
+
+### Design
+
+- **Selection.** `isMediaPost` also takes a Short with at least one `postMedia` item. A post still needs
+  `titleDerived` and must not be a link post. The kind stays `media`.
+- **Caption.** A post shows its text (`excerpt`). Any other entry, a Short, shows its title.
+  - The backend now sends an untitled post's excerpt as `''`. Until now it was the embed chrome, such as
+    "Watch on Bluesky".
+  - That removes the frontend's `'(untitled)'` literal and the headline that read "Watch on Bluesky"
+    elsewhere.
+  - The placeholder moves to `App\Entity\EntryHeadline::UNTITLED`, with `isUntitledPost()`. `ParsedTitleModel`
+    uses that constant. `EntryJson` sends `''` for such an entry.
+- **Aspect.** The lead image's frame uses the entry's `imageAspectRatio` when the API sends one: the shape
+  of the picture the file shows. `object-fit: cover` then crops the letterbox bars. Any other item keeps
+  its declared width and height.
+- **Playback.** A Short's card shows the cover with a play button over it. A click (or Enter or Space on the
+  button) swaps the cover for the allow-listed player, starting at once.
+  - The URL is `https://www.youtube-nocookie.com/embed/<id>?autoplay=1#shorts`.
+  - `YouTubeEmbedProvider::frames()` accepts an optional `?autoplay=1` before `#shorts`, and the JSON is
+    regenerated.
+  - The frame uses the reader's sandbox (exported from `media-embeds.ts` as `EMBED_SANDBOX`) and
+    `allow="autoplay; fullscreen"`.
+  - The play button does not open the reader.
+  - The player goes back to the cover when an entry opens, when the card scrolls out of view, and when
+    the block is destroyed.
+  - The list's existing pause-on-open hook (`pauseVideos`) becomes `pauseMedia`. It pauses `<video>`s and
+    sends each media block a `media-pause` DOM event.

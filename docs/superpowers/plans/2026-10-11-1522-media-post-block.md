@@ -844,3 +844,489 @@ Then write the PR body. It covers:
 - the block layout
 - inline video through hls.js
 - the dev data note
+
+---
+
+## Addendum: YouTube Shorts in the media card (spec §Addendum)
+
+### Task 5: An untitled post sends no excerpt; a Short's player may start on load (backend)
+
+**Files:**
+- Modify: `backend/src/Entity/EntryHeadline.php`, `backend/src/Entity/Entry.php`, `backend/src/Service/Parser/Model/ParsedTitleModel.php`, `backend/src/Http/EntryJson.php:44`, `backend/src/Service/Reader/Media/EmbedProvider/YouTubeEmbedProvider.php` (`frames()`)
+- Regenerate: `frontend/src/app/reader/embed-frame-allowlist.generated.json`
+- Test: `backend/tests/Http/EntryJsonTest.php`, `backend/tests/Service/Reader/Media/EmbedProvider/YouTubeEmbedProviderTest.php`
+
+**Interfaces:**
+- Produces:
+  - `EntryHeadline::UNTITLED` (`'(untitled)'`), `EntryHeadline::isUntitledPost(): bool` and `Entry::isUntitledPost(): bool`.
+  - An untitled post's list JSON carries `excerpt: ''`.
+  - The allow-list accepts `https://www.youtube-nocookie.com/embed/<id>?autoplay=1#shorts`.
+
+- [ ] **Step 1: Write the failing tests.** Append to `EntryJsonTest`, before the private helpers. It already has `entryTitled(string $title): Entry` and `row(Entry $entry)`:
+
+```php
+    public function testAnUntitledPostHasNoExcerpt(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->markTitleDerived();
+        $entry->setContentHtml(
+            '<figure class="post-video"><video src="https://v.test/p.m3u8"></video></figure>'
+            . '<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>',
+        );
+
+        self::assertSame('', EntryJson::listRow($this->row($entry))['excerpt']);
+    }
+
+    public function testAnUntitledArticleKeepsItsExcerpt(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->setContentHtml('<p>Some body text.</p>');
+
+        self::assertSame('Some body text.', EntryJson::listRow($this->row($entry))['excerpt']);
+    }
+```
+
+In `YouTubeEmbedProviderTest::framesByShape()`, add:
+
+```php
+        yield 'short starting on load' => [
+            'https://www.youtube-nocookie.com/embed/GhUuOxrCato?autoplay=1#shorts',
+            EmbedShape::Portrait,
+        ];
+```
+
+Then add this test after `testNoFrameAcceptsAnotherFragment`:
+
+```php
+    public function testNoFrameAcceptsAnotherQuery(): void
+    {
+        self::assertSame(
+            [],
+            self::framesMatching($this->provider->frames(), 'https://www.youtube-nocookie.com/embed/GhUuOxrCato?mute=1#shorts'),
+        );
+    }
+```
+
+Run: `cd backend && php bin/phpunit tests/Http/EntryJsonTest.php tests/Service/Reader/Media/EmbedProvider/YouTubeEmbedProviderTest.php`
+Expected: two failures. `testAnUntitledPostHasNoExcerpt` gets the "Watch on Bluesky" text, and the `short starting on load` frame is not found.
+
+- [ ] **Step 2: Implement.** In `EntryHeadline`, add the constant above the properties:
+
+```php
+    public const string UNTITLED = '(untitled)';
+```
+
+Add the method after `markDerived()`:
+
+```php
+    public function isUntitledPost(): bool
+    {
+        return $this->derived && $this->title === self::UNTITLED;
+    }
+```
+
+In `Entry`, after `markTitleDerived()`:
+
+```php
+    public function isUntitledPost(): bool
+    {
+        return $this->headline->isUntitledPost();
+    }
+```
+
+In `ParsedTitleModel`:
+- Delete `private const string UNTITLED = '(untitled)';`.
+- Add `use App\Entity\EntryHeadline;`.
+- `untitledPost()` returns `new self(EntryHeadline::UNTITLED, true)`.
+
+In `EntryJson`, change the `excerpt` element to:
+
+```php
+            'excerpt' => $row->entry->isUntitledPost()
+                ? ''
+                : EntryExcerpt::of($row->entry->getSummary(), $row->entry->getContentHtml()),
+```
+
+In `YouTubeEmbedProvider::frames()`, change the portrait line to:
+
+```php
+            new EmbedFrameModel(
+                $video . '(?:\?autoplay=1)?' . YouTubeShortUrl::FRAGMENT . '$',
+                EmbedKind::Video,
+                EmbedShape::Portrait,
+            ),
+```
+
+- [ ] **Step 3: Regenerate the allow-list.** Run it natively, so the frontend path resolves:
+
+Run: `cd backend && php bin/console app:embed:dump-frame-allowlist`
+Expected: `Wrote the reader embed allow-list to …/frontend/src/app/reader/embed-frame-allowlist.generated.json`. The diff changes only the portrait pattern.
+
+- [ ] **Step 4: Run the gates.**
+
+Run:
+
+```bash
+cd backend && php bin/phpunit tests/Http tests/Service/Reader/Media && composer check && composer md && composer test:parallel && docker compose exec -T php composer test
+```
+
+Expected: all green. `EmbedFrameAllowlistTest` passes against the regenerated file.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/src backend/tests frontend/src/app/reader/embed-frame-allowlist.generated.json
+git commit -m "feat(#1522): an untitled post sends no excerpt, and a Short's player may start on load"
+```
+
+---
+
+### Task 6: A YouTube Short uses the media card and plays inline (frontend)
+
+**Files:**
+- Modify: `frontend/src/app/reader/media-embeds.ts`: export `EMBED_SANDBOX` and `isAllowedEmbed`.
+- Create: `frontend/src/app/reader/list/magazine/blocks/entry-media/short-embed.ts` and `short-embed.spec.ts`.
+- Rename: `blocks/entry-media/pause-videos.ts` becomes `pause-media.ts`, with `pauseMedia` and `MEDIA_PAUSE`. Update `reader/list/entry-list/entry-list.component.ts` (import and effect) and any spec that imports it.
+- Modify: `magazine-slot-fit.ts` (`isMediaPost`) and `magazine-slot-fit.spec.ts`.
+- Modify: `blocks/entry-media/entry-media.component.{ts,html,scss,spec.ts}`.
+- Modify: `public/i18n/en.json` and `public/i18n/de.json`: key `reader.playShort`, next to `reader.mediaVideo`.
+
+**Interfaces:**
+- Consumes, from Task 5:
+  - An untitled post's `excerpt` is `''`.
+  - The allow-list accepts `…/embed/<id>?autoplay=1#shorts`.
+- Produces:
+  - `shortPlayerUrl(entryUrl: string | null): string | null`
+  - `isAllowedEmbed(url: string): boolean`
+  - `EMBED_SANDBOX`
+  - `pauseMedia(root: ParentNode): void`
+  - `MEDIA_PAUSE = 'media-pause'`
+
+- [ ] **Step 1: Write the failing specs.**
+
+Create `short-embed.spec.ts`:
+
+```ts
+import { shortPlayerUrl } from './short-embed';
+
+const PLAYER = 'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts';
+
+describe('shortPlayerUrl', () => {
+  it('is the allow-listed nocookie player of a Short, starting on load', () => {
+    expect(shortPlayerUrl('https://www.youtube.com/shorts/87Ov3cS-xMs')).toBe(PLAYER);
+    expect(shortPlayerUrl('https://m.youtube.com/shorts/87Ov3cS-xMs?feature=share')).toBe(PLAYER);
+  });
+
+  it('is null for any other URL', () => {
+    expect(shortPlayerUrl('https://www.youtube.com/watch?v=87Ov3cS-xMs')).toBeNull();
+    expect(shortPlayerUrl('https://evil.test/shorts/87Ov3cS-xMs')).toBeNull();
+    expect(shortPlayerUrl(null)).toBeNull();
+  });
+});
+```
+
+In `magazine-slot-fit.spec.ts`, in `describe('isMediaPost')`, add:
+
+```ts
+  it('is a YouTube Short with a cover, though it is no post', () => {
+    expect(isMediaPost(entry({ isShort: true }))).toBe(true);
+    expect(isMediaPost(entry({ isShort: true, imageUrl: null }))).toBe(false);
+  });
+```
+
+In `entry-media.component.spec.ts`:
+- Make `mount` reuse a fixture-returning helper:
+
+```ts
+async function mountFixture(testEntry: EntryDto) {
+  TestBed.configureTestingModule({
+    imports: [EntryMediaComponent, provideTranslocoTesting()],
+    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+  });
+  const fixture = TestBed.createComponent(EntryMediaComponent);
+  fixture.componentRef.setInput('entry', testEntry);
+  fixture.detectChanges();
+  await fixture.whenStable();
+  return fixture;
+}
+
+async function mount(testEntry: EntryDto) {
+  return (await mountFixture(testEntry)).nativeElement as HTMLElement;
+}
+```
+
+  If the existing `mount` already differs, for example in the IntersectionObserver stubs the fix wave added, keep those additions in `mountFixture`.
+- Change the existing "no caption for a post without text" test's entry to `entry({ title: '(untitled)', excerpt: '' })`. The API now sends an empty excerpt.
+- Add a fixture and these tests:
+
+```ts
+const COVER = 'https://i1.ytimg.com/vi/87Ov3cS-xMs/hqdefault.jpg';
+const short = (over: Partial<EntryDto> = {}): EntryDto =>
+  entry({
+    title: 'Should Robert Pattinson join the DCU?',
+    titleDerived: false,
+    isShort: true,
+    excerpt: '',
+    url: 'https://www.youtube.com/shorts/87Ov3cS-xMs',
+    imageUrl: COVER,
+    imageWidth: 480,
+    imageHeight: 360,
+    imageAspectRatio: 0.5625,
+    media: [{ url: COVER, kind: 'image', width: 480, height: 360 }],
+    ...over,
+  });
+
+  it('captions a Short with its title and frames its cover at the picture’s own shape', async () => {
+    const element = await mount(short());
+
+    expect(element.querySelector('.caption')!.textContent).toContain('Should Robert Pattinson');
+    expect(element.querySelector<HTMLElement>('.media')!.style.getPropertyValue('--ratio')).toBe(
+      '0.5625',
+    );
+    expect(element.querySelector('iframe')).toBeNull();
+  });
+
+  it('plays a Short inline in the allow-listed player without opening the post', async () => {
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+
+    const frame = element.querySelector('iframe')!;
+    expect(frame.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
+    );
+    expect(frame.getAttribute('sandbox')).toBe(EMBED_SANDBOX);
+    expect(entryActions.open).not.toHaveBeenCalled();
+  });
+
+  it('puts a Short’s player away when the list pauses its media', async () => {
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+
+    element.dispatchEvent(new Event(MEDIA_PAUSE));
+    fixture.detectChanges();
+
+    expect(element.querySelector('iframe')).toBeNull();
+    expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
+  });
+```
+
+  Add to the imports:
+
+```ts
+import { EMBED_SANDBOX } from '../../../../media-embeds';
+import { MEDIA_PAUSE } from './pause-media';
+```
+
+Run: `docker compose exec -T frontend npx jest src/app/reader/list/magazine`
+Expected: FAIL. `short-embed` does not exist yet, `isMediaPost` refuses a Short, and the Short tests find no `.play`.
+
+- [ ] **Step 2: Export the sandbox and the allow-list test.** In `media-embeds.ts`:
+- Rename `const SANDBOX` to `export const EMBED_SANDBOX`, keeping its comment.
+- Use it in `embedFrame`.
+- Add:
+
+```ts
+export function isAllowedEmbed(url: string): boolean {
+  return ALLOWED.some(({ pattern }) => pattern.test(url));
+}
+```
+
+- [ ] **Step 3: Create `short-embed.ts`.**
+
+```ts
+import { isAllowedEmbed } from '../../../../media-embeds';
+
+const SHORT_URL = /^https?:\/\/(?:www\.|m\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]{11})\/?(?:[?#]|$)/i;
+
+/** The allow-listed player of a YouTube Short, starting on load; null for any other URL. */
+export function shortPlayerUrl(entryUrl: string | null): string | null {
+  const id = entryUrl?.match(SHORT_URL)?.[1];
+  const url = id ? `https://www.youtube-nocookie.com/embed/${id}?autoplay=1#shorts` : null;
+  return url && isAllowedEmbed(url) ? url : null;
+}
+```
+
+- [ ] **Step 4: Rename the pause helper.**
+- `git mv frontend/src/app/reader/list/magazine/blocks/entry-media/pause-videos.ts frontend/src/app/reader/list/magazine/blocks/entry-media/pause-media.ts`
+- Its content becomes:
+
+```ts
+export const MEDIA_PAUSE = 'media-pause';
+
+/** Pauses every video under the root and tells each media block to put its player away. */
+export function pauseMedia(root: ParentNode): void {
+  for (const video of Array.from(root.querySelectorAll('video'))) video.pause();
+  for (const block of Array.from(root.querySelectorAll('app-entry-media'))) {
+    block.dispatchEvent(new Event(MEDIA_PAUSE));
+  }
+}
+```
+
+- Update `entry-list.component.ts`, `entry-media.component.ts` and any spec importing `pauseVideos` to use `pauseMedia` from `pause-media`. Keep the list's effect name meaningful, e.g. `_pauseMediaOfOpenEntry`.
+
+- [ ] **Step 5: Let a Short claim the media block.** In `magazine-slot-fit.ts`, replace `isMediaPost`:
+
+```ts
+/** A post, or a YouTube Short, whose point is its picture or video. */
+export function isMediaPost(entry: EntryDto): boolean {
+  const claims = entry.isShort || (entry.titleDerived && !isLinkPost(entry));
+  return claims && postMedia(entry).length > 0;
+}
+```
+
+- [ ] **Step 6: Implement the card.**
+
+In `entry-media.component.ts`:
+- Remove the `UNTITLED` constant.
+- Add imports: `signal` from `@angular/core`, `DomSanitizer` from `@angular/platform-browser`, `shortPlayerUrl` from `./short-embed`, and `pauseMedia` from `./pause-media`.
+- Add `host: { '(media-pause)': 'stopShort()' }` to the `@Component` metadata. The spec dispatches `MEDIA_PAUSE`, which guards the literal against drift.
+- Members:
+
+```ts
+  private readonly sanitizer = inject(DomSanitizer);
+
+  readonly media = computed(() => postMedia(this.entry()));
+  readonly caption = computed(() =>
+    this.entry().titleDerived ? this.entry().excerpt : this.entry().title,
+  );
+  // shortPlayerUrl admits only the allow-listed player, so the URL can be trusted as a frame source.
+  readonly shortPlayer = computed(() => {
+    const url = shortPlayerUrl(this.entry().isShort ? this.entry().url : null);
+    return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
+  });
+  protected readonly playingShort = signal(false);
+
+  protected playShort(event: Event): void {
+    event.stopPropagation();
+    this.playingShort.set(true);
+  }
+
+  protected stopShort(): void {
+    this.playingShort.set(false);
+  }
+
+  protected ratio(medium: EntryMediumDto): number {
+    const entry = this.entry();
+    if (medium.url === entry.imageUrl && entry.imageAspectRatio) return entry.imageAspectRatio;
+    return medium.width && medium.height ? medium.width / medium.height : UNKNOWN_RATIO;
+  }
+```
+
+- In the scroll-away observer, observe `'video, .short'`. On a non-intersecting change, pause a `HTMLVideoElement` target, and call `this.stopShort()` for the short frame:
+
+```ts
+    this.scrollAway ??= new IntersectionObserver((changes) => {
+      for (const change of changes) {
+        if (change.isIntersecting) continue;
+        if (change.target instanceof HTMLVideoElement) change.target.pause();
+        else this.stopShort();
+      }
+    });
+    for (const target of Array.from(this.host.querySelectorAll('video, .short'))) {
+      this.scrollAway.observe(target);
+    }
+```
+
+  The render effect must also re-run when `playingShort` changes, so the new elements are observed. Read `this.playingShort()` in it, next to `this.media()`.
+- In the destroy hook, call `pauseMedia(this.host)` where `pauseVideos(this.host)` was.
+
+In `entry-media.component.html`, the `.media` div's content becomes:
+
+```html
+    @if (shortPlayer(); as player) {
+      <div class="item short">
+        @if (playingShort()) {
+          <iframe
+            class="item"
+            [src]="player"
+            [title]="caption()"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
+        } @else {
+          <img
+            class="item"
+            appProxiedImage
+            [src]="items[0].url"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
+          <button
+            type="button"
+            class="play"
+            [attr.aria-label]="'reader.playShort' | transloco"
+            (click)="playShort($event)"
+            (keydown)="$event.stopPropagation()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <!-- the existing @for over items, unchanged -->
+    }
+```
+
+The `sandbox` literal must stay static: Angular refuses a bound `sandbox` on an iframe. The spec compares it with `EMBED_SANDBOX`, so a drift fails.
+
+In `entry-media.component.scss`, add the following. All are existing tokens; `--fs-xl` comes from `theme/_type-scale.scss`.
+
+```scss
+.short {
+  position: relative;
+}
+
+.play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.play .material-symbols-outlined {
+  padding: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  font-size: var(--fs-xl);
+}
+
+iframe.item {
+  border: 0;
+}
+```
+
+In `public/i18n/en.json`, add `"playShort": "Play Short",` after `"mediaVideo": "Video",`. In `de.json`, add `"playShort": "Short abspielen",` in the same place.
+
+- [ ] **Step 7: Run the focused specs, then the gate.**
+
+Run: `docker compose exec -T frontend npx jest src/app/reader/list src/app/reader/media-embeds.spec.ts`
+Expected: PASS.
+
+Run:
+
+```bash
+docker compose exec -T frontend npx prettier --write src/app/reader public/i18n
+docker compose exec -T frontend npm run check
+```
+
+Expected: green.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add frontend/src/app/reader frontend/public/i18n
+git commit -m "feat(#1522): a YouTube Short uses the media card and plays inline"
+```
