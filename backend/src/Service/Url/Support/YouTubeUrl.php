@@ -47,7 +47,7 @@ final class YouTubeUrl
 
     public static function isShort(?string $url): bool
     {
-        return self::video($url)?->isShort === true;
+        return self::shortPlayerUrl($url) !== null;
     }
 
     public static function shortPlayerUrl(?string $url): ?string

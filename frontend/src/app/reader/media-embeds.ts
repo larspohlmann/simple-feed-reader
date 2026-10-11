@@ -30,14 +30,12 @@ const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
   pattern: new RegExp(frame.pattern),
 }));
 
-/* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
-   URL is cross-origin: the frame gets its own origin and cannot reach the
-   reader. Never add a same-origin URL to ALLOWED. */
-export const EMBED_SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
-
 /** Every embed frame's security attributes, in the article and in the list alike. */
 export const EMBED_FRAME_ATTRIBUTES = {
-  sandbox: EMBED_SANDBOX,
+  /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
+     URL is cross-origin: the frame gets its own origin and cannot reach the
+     reader. Never add a same-origin URL to ALLOWED. */
+  sandbox: 'allow-scripts allow-same-origin allow-presentation',
   referrerpolicy: 'strict-origin-when-cross-origin',
   allowfullscreen: '',
 };

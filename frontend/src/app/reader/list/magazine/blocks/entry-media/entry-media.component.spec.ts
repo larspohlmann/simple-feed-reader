@@ -5,7 +5,7 @@ import { EntryMediaComponent } from './entry-media.component';
 import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { isHlsManaged } from '../../../../article/decorators/hls-streams';
-import { EMBED_FRAME_ATTRIBUTES, EMBED_SANDBOX } from '../../../../media-embeds';
+import { EMBED_FRAME_ATTRIBUTES } from '../../../../media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
 
 let pause: jest.SpyInstance;
@@ -261,7 +261,7 @@ describe('EntryMediaComponent', () => {
     expect(frame.getAttribute('src')).toBe(
       'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
     );
-    expect(frame.getAttribute('sandbox')).toBe(EMBED_SANDBOX);
+    expect(frame.getAttribute('sandbox')).toBe(EMBED_FRAME_ATTRIBUTES.sandbox);
     expect(frame.getAttribute('referrerpolicy')).toBe(EMBED_FRAME_ATTRIBUTES.referrerpolicy);
     expect(frame.hasAttribute('allowfullscreen')).toBe(true);
     expect(entryActions.open).not.toHaveBeenCalled();

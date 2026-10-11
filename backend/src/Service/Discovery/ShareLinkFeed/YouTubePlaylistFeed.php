@@ -35,7 +35,9 @@ final readonly class YouTubePlaylistFeed implements ShareLinkFeedInterface
     private function isPlaylistPage(string $enteredUrl): bool
     {
         if (YouTubeUrl::isComHost((string) parse_url($enteredUrl, PHP_URL_HOST))) {
-            return \in_array(rtrim((string) parse_url($enteredUrl, PHP_URL_PATH), '/'), self::PLAYLIST_PATHS, true);
+            $path = rtrim((string) parse_url($enteredUrl, PHP_URL_PATH), '/');
+
+            return \in_array($path, self::PLAYLIST_PATHS, true);
         }
 
         return YouTubeUrl::isShareLink($enteredUrl);
