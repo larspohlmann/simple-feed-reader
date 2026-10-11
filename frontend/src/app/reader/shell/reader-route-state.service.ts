@@ -65,11 +65,12 @@ export class ReaderRouteState {
   }
 
   private fetchUnlistedEntry(id: number | null): void {
-    if (id == null) {
+    if (id == null || this.isListed(id)) {
       this.entries.releaseUnlisted();
       return;
     }
     if (this.entries.entry(id)) return;
+    this.entries.releaseUnlisted();
     this.api.entry(id).subscribe({
       // Id-guarded: a slow answer for an abandoned deep link must not replace the entry now open.
       next: (response) => {
@@ -77,9 +78,10 @@ export class ReaderRouteState {
         this.entries.holdUnlisted(response.entry);
         this.bodyService.seed(response.entry.id, response.entry.contentHtml);
       },
-      error: () => {
-        if (this.entryId() === id) this.entries.releaseUnlisted();
-      },
     });
+  }
+
+  private isListed(id: number): boolean {
+    return this.entries.entries().some((entry) => entry.id === id);
   }
 }

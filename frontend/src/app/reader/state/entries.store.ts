@@ -138,13 +138,15 @@ export class EntriesStore {
    *  it: a reload landing mid-PATCH carries the row's not-yet-updated copy. */
   private withInFlightPatches(entries: EntryDto[]): EntryDto[] {
     if (this.inFlightPatches.size === 0) return entries;
-    return entries.map((entry) => {
-      let patched = entry;
-      for (const inFlight of this.inFlightPatches) {
-        if (inFlight.entryId === entry.id) patched = { ...patched, ...inFlight.patch };
-      }
-      return patched;
-    });
+    return entries.map((entry) => this.withInFlightPatch(entry));
+  }
+
+  private withInFlightPatch(entry: EntryDto): EntryDto {
+    let patched = entry;
+    for (const inFlight of this.inFlightPatches) {
+      if (inFlight.entryId === entry.id) patched = { ...patched, ...inFlight.patch };
+    }
+    return patched;
   }
 
   /** The entry with `id`: its listed row, else the unlisted one held for it. */
@@ -156,7 +158,7 @@ export class EntriesStore {
   }
 
   holdUnlisted(entry: EntryDto): void {
-    this.unlisted.set(this.withInFlightPatches([entry])[0]);
+    this.unlisted.set(this.withInFlightPatch(entry));
   }
 
   releaseUnlisted(): void {

@@ -4,6 +4,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
+import { withCompleted } from '../state/completed-entry';
 import { EntriesStore } from '../state/entries.store';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -67,8 +68,10 @@ describe('PendingEntriesPoll', () => {
     forgetBody = jest.fn();
     openEntry.set(null);
     localStorage.clear();
-    const finishedOr = (rows: EntryDto[], entry: EntryDto) =>
-      rows.find((finished) => finished.id === entry.id) ?? entry;
+    const finishedOr = (rows: EntryDto[], entry: EntryDto) => {
+      const finished = rows.find((row) => row.id === entry.id);
+      return finished ? withCompleted(entry, finished) : entry;
+    };
     mergeCompleted = jest.fn((rows: EntryDto[]) => {
       entries.update((current) => current.map((listed) => finishedOr(rows, listed)));
       openEntry.update((open) => open && finishedOr(rows, open));

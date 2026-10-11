@@ -1200,6 +1200,22 @@ describe('ReaderShellComponent', () => {
     jest.useRealTimers();
   });
 
+  it('lets go of a deep-linked entry once a listed one is opened (#1553)', () => {
+    const fixture = boot();
+    qp.next(convertToParamMap({ entry: '514-deep-linked-story' }));
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/entries/514').flush({
+      entry: { ...entry, id: 514, isHidden: true, isViewed: true, contentHtml: '' },
+    });
+    const store = TestBed.inject(EntriesStore);
+    expect(store.entry(514)?.id).toBe(514);
+
+    qp.next(convertToParamMap({ entry: '1' }));
+    fixture.detectChanges();
+
+    expect(store.entry(514)).toBeNull();
+  });
+
   it('keeps a post settled when a poll answer computed while a worker held it lands late (#1517)', async () => {
     jest.useFakeTimers();
     reconfigureShell([{ provide: AuthService, useValue: auth }], EntryBodyService);

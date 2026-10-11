@@ -104,7 +104,6 @@ export class EntryStateActions implements EntryActionHandler {
     });
   }
 
-  /** The leaving row stays in the list data, so setState still finds it. */
   private patchInList(entry: EntryDto, patch: EntryStatePatch, onError: () => void): void {
     const revertLeave = this.leaveExcludedRow(entry, patch);
     this.entries.setState(entry.id, patch, () => {
