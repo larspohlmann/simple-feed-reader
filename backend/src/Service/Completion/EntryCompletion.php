@@ -13,10 +13,13 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 
 final readonly class EntryCompletion
 {
+    private const int LINK_CARD_FETCHES = 1;
+
     public function __construct(
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
@@ -41,7 +44,8 @@ final readonly class EntryCompletion
     }
 
     /**
-     * Bluesky posts go first, as one AppView call fills them all; link posts then share the call's page fetches.
+     * Bluesky posts go first, as one AppView call fills them all; then one page fetch for the oldest link post,
+     * so a call holds its worker briefly.
      *
      * @param list<Entry> $entries
      */
@@ -49,7 +53,10 @@ final readonly class EntryCompletion
     {
         $queued = $this->enrichments->findClaimableFor($entries, $this->clock->now());
         $this->postEnricher->complete(self::ofKind($queued, ShareEnrichmentKind::AppView));
-        $this->shareLinkCards->complete(self::ofKind($queued, ShareEnrichmentKind::LinkCards));
+        $this->shareLinkCards->complete(
+            self::ofKind($queued, ShareEnrichmentKind::LinkCards),
+            LinkCardBudgetModel::fetches(self::LINK_CARD_FETCHES),
+        );
     }
 
     /**

@@ -17,6 +17,7 @@ use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -473,7 +474,7 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->flush();
         $this->enricher()->complete($this->rowsOf([$post]));
 
-        $this->linkCardPass()->complete($this->rowsOf([$post]));
+        $this->linkCardPass()->complete($this->rowsOf([$post]), LinkCardBudgetModel::fetches(5));
 
         self::assertSame(['https://example.com/story'], $this->cardUrls($post));
     }
@@ -485,7 +486,7 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->flush();
         $this->enricher()->complete($this->rowsOf([$post]));
 
-        $this->linkCardPass()->complete($this->rowsOf([$post]));
+        $this->linkCardPass()->complete($this->rowsOf([$post]), LinkCardBudgetModel::fetches(5));
 
         self::assertSame([Bluesky::CARD, 'https://example.com/story'], $this->cardUrls($post));
     }

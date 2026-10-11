@@ -14,6 +14,7 @@ use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\ShareEnrichmentRepository;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Tests\DbTestCase;
@@ -55,8 +56,8 @@ final class ShareLinkCardsTest extends DbTestCase
         $post = $this->queuedPost(1, '<p><a href="https://example.com/a">https://example.com/a</a> '
             . '<a href="https://example.com/b">https://example.com/b</a></p>');
 
-        $this->shareLinkCards->complete($this->claimable());
-        $this->shareLinkCards->complete([$this->rowOf($post)]);
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+        $this->shareLinkCards->complete([$this->rowOf($post)], self::fiveFetches());
 
         self::assertSame(2, $this->client->getRequestsCount());
         self::assertSame(
@@ -72,12 +73,12 @@ final class ShareLinkCardsTest extends DbTestCase
         $middle = $this->queuedPost(2, self::sharing(2, 3));
         $newest = $this->queuedPost(3, self::sharing(3, 2));
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         self::assertSame(3, $this->client->getRequestsCount());
         self::assertCount(3, $this->cardTitles($oldest));
         self::assertSame([], $this->cardTitles($middle));
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         self::assertSame(8, $this->client->getRequestsCount());
         self::assertCount(3, $this->cardTitles($middle));
         self::assertCount(2, $this->cardTitles($newest));
@@ -88,12 +89,12 @@ final class ShareLinkCardsTest extends DbTestCase
         $fiveLinks = $this->queuedPost(1, self::sharing(1, 5));
         $twoLinks = $this->queuedPost(2, self::sharing(2, 2));
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         self::assertSame(5, $this->client->getRequestsCount());
         self::assertCount(5, $this->cardTitles($fiveLinks));
         self::assertSame([], $this->cardTitles($twoLinks));
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         self::assertSame(7, $this->client->getRequestsCount());
         self::assertCount(2, $this->cardTitles($twoLinks));
         self::assertSame([], $this->claimable());
@@ -104,7 +105,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post = $this->queuedPost(1, self::sharing(1, 1));
         $this->enrichments()->claim([$this->rowOf($post)], $this->clock->now());
 
-        $this->shareLinkCards->complete([$this->rowOf($post)]);
+        $this->shareLinkCards->complete([$this->rowOf($post)], self::fiveFetches());
 
         self::assertSame(0, $this->client->getRequestsCount());
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
@@ -123,7 +124,7 @@ final class ShareLinkCardsTest extends DbTestCase
         });
         $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
 
-        $shareLinkCards->complete($this->claimable());
+        $shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(3, $slowPages->getRequestsCount());
         self::assertCount(1, $this->cardTitles($posts[2]));
@@ -143,7 +144,8 @@ final class ShareLinkCardsTest extends DbTestCase
             return self::page($method, $url);
         });
 
-        ShareLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)->complete($this->claimable());
+        ShareLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)
+            ->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame([], $this->cardTitles($post));
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
@@ -154,7 +156,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post = $this->queuedPost(1, self::sharing(1, 1));
         $this->storedCard($post, 0, 'https://example.com/1/1');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(0, $this->client->getRequestsCount());
         self::assertSame(['Stored before'], $this->cardTitles($post));
@@ -167,7 +169,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post = $this->queuedPost(1, self::sharing(1, 3));
         $this->storedCard($post, 0, 'https://example.com/1/2');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(2, $this->client->getRequestsCount());
         self::assertSame(
@@ -184,7 +186,7 @@ final class ShareLinkCardsTest extends DbTestCase
         }
         $next = $this->queuedPost(2, self::sharing(2, 4));
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(5, $this->client->getRequestsCount());
         self::assertCount(5, $this->cardTitles($carded));
@@ -198,7 +200,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post->setSummary('RE: https://q.example/@a/1 Reposting for the morning crew');
         $this->entityManager->flush();
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($post);
 
         self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
@@ -212,7 +214,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post->setSummary('RE: https://q.example/@a/1');
         $this->entityManager->flush();
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($post);
 
         self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
@@ -225,7 +227,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $body = '<p>RE: <a href="https://q.example/missing">https://q.example/missing</a></p><p>Look.</p>';
         $post = $this->queuedPost(1, $body);
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($post);
 
         self::assertSame([], $this->cardTitles($post));
@@ -236,7 +238,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $post = $this->queuedPost(1, '<p>https://example.com/missing https://example.com/found</p>');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(['Card for https://example.com/found'], $this->cardTitles($post));
         self::assertSame([], $this->claimable());
@@ -251,7 +253,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $post = $this->queuedPost(1, '<p>https://example.com/untitled https://example.com/found</p>');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(['Card for https://example.com/found'], $this->cardTitles($post));
         self::assertSame(
@@ -267,7 +269,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $this->queuedPost(1, null);
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(0, $this->client->getRequestsCount());
         self::assertSame([], $this->claimable());
@@ -277,7 +279,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $story = $this->queuedTitledShare(1, 'https://example.com/story');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(['Card for https://example.com/story'], $this->cardTitles($story));
         self::assertSame([], $this->claimable());
@@ -287,7 +289,7 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         $chart = $this->queuedTitledShare(1, 'https://i.example.com/chart');
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($chart);
 
         self::assertEquals(Share::media('https://i.example.com/chart'), $chart->getShare());
@@ -303,7 +305,7 @@ final class ShareLinkCardsTest extends DbTestCase
         ], []);
         $this->entityManager->flush();
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($chart);
 
         self::assertEquals(
@@ -321,7 +323,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $post->setShare(Share::link(null));
         $this->entityManager->flush();
 
-        $this->shareLinkCards->complete($this->claimable());
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($post);
 
         self::assertSame(ShareKind::Link, $post->getShare()->kind);
@@ -340,7 +342,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         try {
             $failing = ShareLinkCardsWiring::build($closingEntityManager, $this->client, $this->clock);
-            $failing->complete($this->claimable());
+            $failing->complete($this->claimable(), self::fiveFetches());
             self::fail('A failed flush must be rethrown.');
         } catch (\RuntimeException $exception) {
             self::assertSame('Simulated flush failure.', $exception->getMessage());
@@ -368,6 +370,58 @@ final class ShareLinkCardsTest extends DbTestCase
             '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
             ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
         );
+    }
+
+    public function testACallSpendsNoMoreFetchesThanItsBudget(): void
+    {
+        $oldest = $this->queuedPost(1, self::sharing(1, 1));
+        $newer = $this->queuedPost(2, self::sharing(2, 1));
+
+        $completed = $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
+
+        self::assertSame(1, $completed);
+        self::assertSame(1, $this->client->getRequestsCount());
+        self::assertCount(1, $this->cardTitles($oldest));
+        self::assertSame([$newer->requireId()], $this->enrichments()->pendingEntryIdsAmong([$newer->requireId()]));
+    }
+
+    public function testAPostWithMoreLinksThanTheBudgetIsStillCardedWhole(): void
+    {
+        $threeLinks = $this->queuedPost(1, self::sharing(1, 3));
+
+        $completed = $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
+
+        self::assertSame(1, $completed);
+        self::assertSame(3, $this->client->getRequestsCount());
+        self::assertCount(3, $this->cardTitles($threeLinks));
+    }
+
+    public function testACallStopsAtItsBudgetsDeadline(): void
+    {
+        $posts = array_map(
+            fn (int $number): Entry => $this->queuedPost($number, self::sharing($number, 1)),
+            range(1, 3),
+        );
+        $slowPages = new MockHttpClient(function (string $method, string $url): MockResponse {
+            $this->clock->sleep(9);
+
+            return self::page($method, $url);
+        });
+        $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
+
+        $completed = $shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
+
+        self::assertSame(1, $completed);
+        self::assertSame(1, $slowPages->getRequestsCount());
+        self::assertSame(
+            [$posts[1]->requireId(), $posts[2]->requireId()],
+            array_map(static fn (ShareEnrichment $row): int => $row->getEntry()->requireId(), $this->claimable()),
+        );
+    }
+
+    private static function fiveFetches(): LinkCardBudgetModel
+    {
+        return LinkCardBudgetModel::fetches(5);
     }
 
     private static function sharing(int $post, int $links): string

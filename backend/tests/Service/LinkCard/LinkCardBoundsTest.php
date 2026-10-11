@@ -11,6 +11,7 @@ use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\HostThrottle;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
@@ -82,6 +83,7 @@ final class LinkCardBoundsTest extends DbTestCase
 
         ShareLinkCardsWiring::build($this->entityManager, $pages, $this->clock)->complete(
             PostEnrichers::enrichments($this->entityManager)->findBy(['entry' => $post]),
+            LinkCardBudgetModel::fetches(5),
         );
 
         self::assertSame(1, $pages->getRequestsCount());
