@@ -8,40 +8,7 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
-
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A title',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 7,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+import { anEntry } from '../../../../testing/entry-testing';
 
 /** Stand-in for the card: proves an action click never reaches it. The keydown
  *  bindings mirror the real magazine card's `<article>` wiring exactly
@@ -61,7 +28,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
 })
 class HostComponent implements EntryActionHandler {
-  entry: EntryDto = entry();
+  entry: EntryDto = anEntry();
   size: 'sm' | 'md' = 'sm';
   audio = true;
   cardOpened = false;
@@ -107,7 +74,7 @@ function pressSpace(target: HTMLElement): void {
   }
 }
 
-function mount(testEntry: EntryDto = entry()) {
+function mount(testEntry: EntryDto = anEntry()) {
   const fixture = TestBed.createComponent(HostComponent);
   fixture.componentInstance.entry = testEntry;
   fixture.detectChanges();
@@ -124,7 +91,7 @@ const iconSizes = (fixture: ReturnType<typeof mount>) =>
 
 const EPISODE = 'https://x.test/ep.mp3';
 const episode = (): EntryDto =>
-  entry({ title: 'Ep 1', attachments: [{ url: EPISODE, mimeType: 'audio/mpeg' }] });
+  anEntry({ title: 'Ep 1', attachments: [{ url: EPISODE, mimeType: 'audio/mpeg' }] });
 
 describe('EntryActionsComponent', () => {
   let player: StubAudioPlayer;
@@ -144,19 +111,19 @@ describe('EntryActionsComponent', () => {
 
   it('reports each action state through aria-pressed', () => {
     // The third toggle is the tick: it reflects "viewed", not "read" (#482).
-    const fixture = mount(entry({ isFavorite: true, isKept: false, isViewed: true }));
+    const fixture = mount(anEntry({ isFavorite: true, isKept: false, isViewed: true }));
     const pressed = buttons(fixture).map((button) => button.getAttribute('aria-pressed'));
     expect(pressed).toEqual(['true', 'false', 'true']);
   });
 
   it('marks every active toggle the same way, the tick one included', () => {
-    const fixture = mount(entry({ isFavorite: true, isKept: true, isViewed: true }));
+    const fixture = mount(anEntry({ isFavorite: true, isKept: true, isViewed: true }));
     const on = buttons(fixture).map((button) => button.classList.contains('on'));
     expect(on).toEqual([true, true, true]);
   });
 
   it('leaves an inactive toggle unmarked', () => {
-    const fixture = mount(entry({ isFavorite: false, isKept: false, isHidden: false }));
+    const fixture = mount(anEntry({ isFavorite: false, isKept: false, isHidden: false }));
     const on = buttons(fixture).map((button) => button.classList.contains('on'));
     expect(on).toEqual([false, false, false]);
   });
@@ -165,7 +132,7 @@ describe('EntryActionsComponent', () => {
     // The read button swapped to an envelope once read; the state is carried by
     // the accent now, exactly as favorite and keep carry theirs (#435).
     for (const isHidden of [false, true]) {
-      const text = mount(entry({ isHidden })).nativeElement.textContent;
+      const text = mount(anEntry({ isHidden })).nativeElement.textContent;
       expect(text).toContain('check');
       expect(text).not.toContain('mark_email_unread');
     }
@@ -233,8 +200,8 @@ describe('EntryActionsComponent', () => {
         .debugElement.queryAll(By.directive(IconComponent))
         .map((icon) => icon.componentInstance.fill());
 
-    expect(fills(entry({ isFavorite: false, isKept: false }))).toEqual([false, false, false]);
-    expect(fills(entry({ isFavorite: true, isKept: true, isViewed: true }))).toEqual([
+    expect(fills(anEntry({ isFavorite: false, isKept: false }))).toEqual([false, false, false]);
+    expect(fills(anEntry({ isFavorite: true, isKept: true, isViewed: true }))).toEqual([
       true,
       true,
       false,
@@ -262,7 +229,7 @@ describe('EntryActionsComponent', () => {
 
     it('shows the declared duration left of play (#1449)', () => {
       const fixture = mount(
-        entry({
+        anEntry({
           attachments: [{ url: EPISODE, mimeType: 'audio/mpeg', durationInSeconds: 3_725 }],
         }),
       );

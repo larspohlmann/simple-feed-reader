@@ -1,0 +1,51 @@
+import { EntryDto } from '../app/reader/models';
+import { LinkCardDto } from '../app/reader/link-card/link-card';
+
+/** A plain list entry: no image, no summary, nothing marked; `overrides` name what a test is about. */
+export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
+  return {
+    id: 1,
+    title: 'A headline',
+    url: null,
+    author: null,
+    summary: null,
+    excerpt: '',
+    imageUrl: null,
+    imageWidth: null,
+    imageHeight: null,
+    imageAspectRatio: null,
+    imageRenditions: [],
+    media: [],
+    attachments: [],
+    categories: [],
+    publishedAt: null,
+    createdAt: '2026-08-01T12:00:00Z',
+    subscriptionId: 1,
+    source: 'A feed',
+    faviconUrl: null,
+    isHidden: false,
+    isFavorite: false,
+    isKept: false,
+    isViewed: false,
+    shortPlayerUrl: null,
+    titleDerived: false,
+    share: null,
+    linkCards: [],
+    pending: false,
+    discussionUrl: null,
+    comments: null,
+    ...overrides,
+  };
+}
+
+/** A shared link's preview card with no description and no image. */
+export function aLinkCard(overrides: Partial<LinkCardDto> = {}): LinkCardDto {
+  return {
+    url: 'https://news.test/story',
+    title: 'A shared story',
+    description: null,
+    imageUrl: null,
+    siteName: 'news.test',
+    ...overrides,
+  };
+}

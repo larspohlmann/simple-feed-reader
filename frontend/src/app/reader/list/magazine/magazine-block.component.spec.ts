@@ -7,40 +7,17 @@ import { ENTRY_KINDS, EntryKind, MagazineBlock } from './magazine-block';
 import { EntryDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { anEntry } from '../../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A medium headline',
-  url: null,
-  author: null,
-  summary: '',
-  excerpt: '',
-  imageUrl: 'https://i/a.jpg',
-  imageWidth: 700,
-  imageHeight: 400,
-  imageRenditions: [],
-  media: [{ url: 'https://i/a.jpg', kind: 'image', width: 700, height: 400 }],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    summary: '',
+    imageUrl: 'https://i/a.jpg',
+    imageWidth: 700,
+    imageHeight: 400,
+    media: [{ url: 'https://i/a.jpg', kind: 'image', width: 700, height: 400 }],
+    ...over,
+  });
 
 function blockOf(kind: EntryKind, blockEntry: EntryDto): MagazineBlock {
   return kind === 'split'

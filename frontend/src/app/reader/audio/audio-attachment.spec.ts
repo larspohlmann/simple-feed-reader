@@ -1,39 +1,15 @@
 import { firstAudioAttachment, toAudioTrack } from './audio-attachment';
 import { EntryAttachmentDto, EntryDto } from '../models';
+import { anEntry } from '../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'The entry headline',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: 'https://x.test/cover.jpg',
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 7,
-  source: 'Src',
-  faviconUrl: 'https://x.test/favicon.ico',
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    title: 'The entry headline',
+    imageUrl: 'https://x.test/cover.jpg',
+    source: 'Src',
+    faviconUrl: 'https://x.test/favicon.ico',
+    ...over,
+  });
 
 describe('firstAudioAttachment', () => {
   it('trusts an audio mime type', () => {
@@ -88,7 +64,7 @@ describe('toAudioTrack', () => {
       durationInSeconds: 1830,
     };
 
-    const track = toAudioTrack(entry(), attachment);
+    const track = toAudioTrack(entry({ createdAt: '2026-07-01T08:00:00Z' }), attachment);
 
     expect(track).toEqual({
       url: 'https://x.test/ep.mp3',
@@ -100,7 +76,7 @@ describe('toAudioTrack', () => {
         id: 1,
         title: 'The entry headline',
         feedTitle: 'Src',
-        publishedAt: 'x',
+        publishedAt: '2026-07-01T08:00:00Z',
         excerpt: '',
       },
     });

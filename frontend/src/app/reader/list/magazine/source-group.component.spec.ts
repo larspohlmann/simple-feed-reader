@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { SourceGroupComponent } from './source-group.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -24,38 +25,10 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-const entryAt = (id: number): EntryDto => ({
-  id,
-  title: `t${id}`,
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 7,
-  source: 'heise',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-});
+const entryAt = (id: number): EntryDto =>
+  anEntry({
+    id,
+  });
 
 describe('SourceGroupComponent', () => {
   function mount(entries: EntryDto[], previewCount: number) {

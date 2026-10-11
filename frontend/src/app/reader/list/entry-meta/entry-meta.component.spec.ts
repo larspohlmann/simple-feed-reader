@@ -5,6 +5,7 @@ import { EntryMetaComponent } from './entry-meta.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
+import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -17,40 +18,6 @@ beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
 });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A title',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 7,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
-
 const tag = (id: number, name: string): SubscriptionTagDto => ({
   id,
   name,
@@ -59,7 +26,7 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = entry(), imageShown?: boolean) {
+function mount(tags: SubscriptionTagDto[], testEntry: EntryDto = anEntry(), imageShown?: boolean) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
@@ -109,19 +76,19 @@ describe('EntryMetaComponent', () => {
       (mount([], testEntry, imageShown).nativeElement as HTMLElement).querySelector('.pill.short');
 
     it('marks a Short whose card shows no image', () => {
-      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).not.toBeNull();
+      expect(shortPill(anEntry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).not.toBeNull();
     });
 
     it('takes a card to show no image unless told otherwise', () => {
-      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).not.toBeNull();
+      expect(shortPill(anEntry({ shortPlayerUrl: SHORT_PLAYER_URL }))).not.toBeNull();
     });
 
     it('leaves a Short whose image is shown to the image badge', () => {
-      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBeNull();
+      expect(shortPill(anEntry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBeNull();
     });
 
     it('marks no other entry', () => {
-      expect(shortPill(entry(), false)).toBeNull();
+      expect(shortPill(anEntry(), false)).toBeNull();
     });
   });
 });

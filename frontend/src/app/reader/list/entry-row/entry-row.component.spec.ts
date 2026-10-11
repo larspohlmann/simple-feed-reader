@@ -11,6 +11,7 @@ import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.ser
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { describeShortMarking } from '../../../../testing/short-marking-testing';
 import { describePortraitCover } from '../../../../testing/portrait-cover-testing';
+import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -23,39 +24,17 @@ beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
 });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'Hello',
-  url: 'https://x/1',
-  author: null,
-  summary: '<p>Summary text</p>',
-  excerpt: 'Summary text',
-  imageUrl: 'https://cdn.test/a.jpg',
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: '2026-07-22T11:00:00Z',
-  createdAt: 'x',
-  subscriptionId: 5,
-  source: 'heise',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    title: 'Hello',
+    url: 'https://x/1',
+    summary: '<p>Summary text</p>',
+    excerpt: 'Summary text',
+    imageUrl: 'https://cdn.test/a.jpg',
+    publishedAt: '2026-07-22T11:00:00Z',
+    source: 'heise',
+    ...over,
+  });
 
 function mount(testEntry: EntryDto) {
   const fixture = TestBed.createComponent(EntryRowComponent);

@@ -2,6 +2,7 @@
 import type { Page } from '@playwright/test';
 import type { EntryDto, SavedSearchWire, SubscriptionDto } from '../../src/app/reader/models';
 import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
+import { anEntry } from '../../src/testing/entry-testing';
 import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
@@ -78,38 +79,16 @@ export async function stubOneFeedReader(
 
 /** One list entry, contract-true, with the fields a spec cares about overridable. */
 export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): EntryDto {
-  return {
+  return anEntry({
     title: `Fixture entry ${overrides.id}`,
     url: `https://fixtures.invalid/${overrides.id}`,
-    author: null,
     summary: 'A fixture summary, long enough to give the row some height.',
     excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    imageRenditions: [],
-    media: [],
-    attachments: [],
-    categories: [],
     publishedAt: '2026-08-01T12:50:34+00:00',
     createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 1,
     source: 'Fixture feed',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-    isViewed: false,
-    shortPlayerUrl: null,
-    titleDerived: false,
-    share: null,
-    linkCards: [],
-    pending: false,
-    imageAspectRatio: null,
-    discussionUrl: null,
-    comments: null,
     ...overrides,
-  };
+  });
 }
 
 /** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100), and what completing it

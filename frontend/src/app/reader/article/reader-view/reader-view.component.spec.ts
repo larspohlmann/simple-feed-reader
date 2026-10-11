@@ -19,6 +19,7 @@ import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/i
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
+import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -109,39 +110,15 @@ const scrollerOf = (fixture: ComponentFixture<ReaderViewComponent>): HTMLElement
 
 const DEFAULT_BODY = '<p>Body</p><a href="https://ext.test/z">link</a>';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'Deep dive',
-  url: 'https://x/1',
-  author: 'Ada',
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: '2026-07-22T11:00:00Z',
-  createdAt: 'x',
-  subscriptionId: 5,
-  source: 'Ars',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    title: 'Deep dive',
+    url: 'https://x/1',
+    author: 'Ada',
+    publishedAt: '2026-07-22T11:00:00Z',
+    source: 'Ars',
+    ...over,
+  });
 
 /** An entry whose feed body is `html`, for tests that care what the original
  *  view renders — the feed-mode analogue of passing `contentHtml` directly. */
@@ -307,20 +284,11 @@ describe('ReaderViewComponent', () => {
         entryWithBody('<p>Just a post</p>', {
           titleDerived: true,
           linkCards: [
-            {
-              url: 'https://news.test/story',
-              title: 'A shared story',
+            aLinkCard({
               description: 'What it is about.',
               imageUrl: 'https://news.test/story.jpg',
-              siteName: 'news.test',
-            },
-            {
-              url: 'https://other.test/',
-              title: 'Another',
-              description: null,
-              imageUrl: null,
-              siteName: 'other.test',
-            },
+            }),
+            aLinkCard({ url: 'https://other.test/', title: 'Another', siteName: 'other.test' }),
           ],
         }),
       ).nativeElement as HTMLElement;
@@ -695,15 +663,7 @@ describe('ReaderViewComponent', () => {
       const fixture = mount(
         entry({
           titleDerived: true,
-          linkCards: [
-            {
-              url: 'https://news.test/story',
-              title: 'A shared story',
-              description: null,
-              imageUrl: null,
-              siteName: 'news.test',
-            },
-          ],
+          linkCards: [aLinkCard()],
         }),
       );
       const cards = (fixture.nativeElement as HTMLElement).querySelector(

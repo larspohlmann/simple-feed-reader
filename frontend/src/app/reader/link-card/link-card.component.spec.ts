@@ -1,14 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { LinkCardDto } from './link-card';
+import { aLinkCard } from '../../../testing/entry-testing';
 import { LinkCardComponent, LinkCardLayout } from './link-card.component';
 
-const card: LinkCardDto = {
-  url: 'https://news.test/story',
-  title: 'A shared story',
+const card = aLinkCard({
   description: 'What it is about.',
   imageUrl: 'https://news.test/story.jpg',
-  siteName: 'news.test',
-};
+});
 
 function mount(layout: LinkCardLayout): HTMLElement {
   const fixture = TestBed.createComponent(LinkCardComponent);

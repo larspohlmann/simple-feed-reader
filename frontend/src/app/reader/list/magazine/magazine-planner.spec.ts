@@ -3,8 +3,8 @@ import { BLOCK_HEIGHT, EntryKind, MagazineBlock } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
-import { LinkCardDto } from '../../link-card/link-card';
 import { entryImage } from '../preview-image';
+import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 
 const NOW = '2026-07-29T12:00:00.000Z';
 /** An ISO instant `hoursAgo` before NOW, for exercising the 24h activity window. */
@@ -13,41 +13,16 @@ const at = (hoursAgo: number): string =>
 
 const DEFAULT_SUMMARY = 'A snippet long enough to fill a quote slot when one is asked for.';
 
-const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
-  id,
-  title: 'A headline of reasonable length',
-  url: null,
-  author: null,
-  summary: DEFAULT_SUMMARY,
-  // Mirrors `summary` unless the caller names its own excerpt: entrySnippet()
-  // reads excerpt, and most fixtures here only ever set summary (#1100).
-  excerpt: over.summary !== undefined ? (over.summary ?? '') : DEFAULT_SUMMARY,
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: NOW,
-  subscriptionId: 1,
-  source: 'S',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    id,
+    summary: DEFAULT_SUMMARY,
+    // Mirrors `summary` unless the caller names its own excerpt: entrySnippet()
+    // reads excerpt, and most fixtures here only ever set summary (#1100).
+    excerpt: over.summary !== undefined ? (over.summary ?? '') : DEFAULT_SUMMARY,
+    createdAt: NOW,
+    ...over,
+  });
 const big = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   entryAt(id, { imageUrl: `https://i/${id}.jpg`, imageWidth: 900, imageHeight: 600, ...over });
 const portrait = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
@@ -66,13 +41,7 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
     ...over,
   });
 
-const CARD: LinkCardDto = {
-  url: 'https://news.test/story',
-  title: 'A shared story',
-  description: null,
-  imageUrl: null,
-  siteName: 'news.test',
-};
+const CARD = aLinkCard();
 const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
 const mediaPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
