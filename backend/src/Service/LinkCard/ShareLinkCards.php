@@ -179,7 +179,7 @@ final readonly class ShareLinkCards
         $cards = [];
         foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $cards[] = $this->pageCards->read($uncardedUrl);
+                $cards[] = $this->pageCards->read($uncardedUrl)->card;
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',

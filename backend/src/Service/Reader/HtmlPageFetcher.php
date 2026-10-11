@@ -89,7 +89,7 @@ final readonly class HtmlPageFetcher
         $head = $this->utf8($this->firstBytes($landed), $landed);
         $this->assertNotChallenge($head, $landed);
 
-        return new PageResponseModel($landed->url, $head);
+        return new PageResponseModel($landed->url, $head, $landed->header('content-type'));
     }
 
     /** @param array<string, mixed> $options */
