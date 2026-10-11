@@ -85,22 +85,38 @@ final class HtmlItemExtractorTest extends TestCase
      */
     public function testTeaserCapAppliesToJsonLdDescriptionsAtTheFunnel(): void
     {
+        $parsed = $this->extractor()->extract($this->jsonLdPage('é' . str_repeat('x', 4999)), 'https://long.test/');
+
+        self::assertCount(3, $parsed->entries);
+        self::assertSame('é' . str_repeat('x', 999), $parsed->entries[0]->summary);
+    }
+
+    public function testTheTeaserIsEscapedIntoOneParagraph(): void
+    {
+        $teaser = "Tom's <b>river</b> report covers the floods & the dams";
+
+        $parsed = $this->extractor()->extract($this->jsonLdPage($teaser), 'https://escape.test/');
+
+        self::assertSame(
+            '<p>Tom&apos;s &lt;b&gt;river&lt;/b&gt; report covers the floods &amp; the dams</p>',
+            $parsed->entries[0]->contentHtml,
+        );
+    }
+
+    private function jsonLdPage(string $description): string
+    {
         $articles = [];
         for ($index = 1; $index <= 3; $index++) {
             $articles[] = [
                 '@type' => 'NewsArticle',
                 'url' => "/story-{$index}",
                 'headline' => "Synthetic story number {$index}",
-                'description' => 'é' . str_repeat('x', 4999),
+                'description' => $description,
             ];
         }
         $json = json_encode(['@context' => 'https://schema.org', '@graph' => $articles], \JSON_THROW_ON_ERROR);
-        $html = '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>';
 
-        $parsed = $this->extractor()->extract($html, 'https://long.test/');
-
-        self::assertCount(3, $parsed->entries);
-        self::assertSame('é' . str_repeat('x', 999), $parsed->entries[0]->summary);
+        return '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>';
     }
 
     public function testHostilePagesThrow(): void
