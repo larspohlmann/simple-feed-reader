@@ -313,15 +313,37 @@ final class PostEmbedRendererTest extends TestCase
         self::assertSame('example.com', self::onlyCard($rendered)->siteName);
     }
 
-    public function testALinkCardWithoutATitleIsNoCardAndLinksThePost(): void
+    public function testALinkWithoutATitleIsLeftUncardedWithNoHtml(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://example.com/story', 'description' => 'No headline'],
+            'external' => ['uri' => 'https://example.com/story', 'title' => ' ', 'description' => 'No headline'],
         ]));
 
-        self::assertSame(self::FALLBACK, $rendered?->html);
+        self::assertSame('', $rendered?->html);
         self::assertSame([], $rendered->linkCards);
+        self::assertSame('https://example.com/story', $rendered->uncardedLink);
+    }
+
+    public function testAQuoteWithAnUntitledLinkGivesTheQuoteCardAndLeavesTheLinkUncarded(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.recordWithMedia#view',
+            'record' => ['record' => [
+                '$type' => 'app.bsky.embed.record#viewRecord',
+                'uri' => 'at://did:plc:q/app.bsky.feed.post/r',
+                'author' => ['handle' => 'quoted.test'],
+                'value' => ['$type' => 'app.bsky.feed.post', 'text' => 'Quoted.'],
+            ]],
+            'media' => ['$type' => 'app.bsky.embed.external#view', 'external' => ['uri' => 'https://example.com/a']],
+        ]));
+
+        self::assertSame('', $rendered?->html);
+        self::assertSame(['@quoted.test'], array_map(
+            static fn (LinkCardContent $card): string => $card->title,
+            $rendered->linkCards,
+        ));
+        self::assertSame('https://example.com/a', $rendered->uncardedLink);
     }
 
     public function testALinkCardTooLongToStoreIsNoCardAndLinksThePost(): void

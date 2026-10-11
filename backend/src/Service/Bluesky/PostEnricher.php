@@ -7,9 +7,11 @@ namespace App\Service\Bluesky;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Repository\PostEnrichmentRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
+use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
@@ -99,7 +101,8 @@ final readonly class PostEnricher
     }
 
     /**
-     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones.
+     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones. A row
+     * handed to the link-card pass is released only once its new kind is flushed, or an AppView pass would refill it.
      *
      * @param list<PostEnrichment> $queued
      *
@@ -123,14 +126,28 @@ final readonly class PostEnricher
             }
             array_push($filled, ...$settled);
         }
-        $this->enrichments->release($unsettled, $claimedAt);
         $this->entityManager->flush();
+        $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
 
         return $filled;
     }
 
     /**
-     * A post the AppView omits was deleted or hidden, so it is dequeued unfilled.
+     * @param list<PostEnrichment> $claimed
+     *
+     * @return list<PostEnrichment>
+     */
+    private static function awaitingLinkCards(array $claimed): array
+    {
+        return array_values(array_filter(
+            $claimed,
+            static fn (PostEnrichment $row): bool => $row->getKind() === PostEnrichmentKind::LinkCards,
+        ));
+    }
+
+    /**
+     * A post the AppView omits was deleted or hidden, so it is dequeued unfilled. One whose link still needs its card
+     * stays queued for the link-card pass.
      *
      * @param list<PostEnrichment> $chunk
      *
@@ -153,8 +170,13 @@ final readonly class PostEnricher
         foreach ($chunk as $pending) {
             $entry = $pending->getEntry();
             $post = $posts[$entry->getGuid()] ?? null;
-            if ($post !== null && $this->filled($entry, $post)) {
+            $outcome = $post === null ? FillOutcome::Unfilled : $this->filled($entry, $post);
+            if ($outcome !== FillOutcome::Unfilled) {
                 $filled[] = $entry;
+            }
+            if ($outcome === FillOutcome::AwaitingLinkCards) {
+                $pending->awaitLinkCards();
+                continue;
             }
             $this->entityManager->remove($pending);
         }
@@ -162,7 +184,7 @@ final readonly class PostEnricher
         return $filled;
     }
 
-    private function filled(Entry $entry, JsonNodeModel $post): bool
+    private function filled(Entry $entry, JsonNodeModel $post): FillOutcome
     {
         try {
             return $this->embedWriter->fill($entry, $post);
@@ -172,7 +194,7 @@ final readonly class PostEnricher
                 ['entry' => $entry->requireId(), 'exception' => $exception],
             );
 
-            return false;
+            return FillOutcome::Unfilled;
         }
     }
 }

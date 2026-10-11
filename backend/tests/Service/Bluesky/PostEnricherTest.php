@@ -7,6 +7,7 @@ namespace App\Tests\Service\Bluesky;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
 use App\Repository\LinkCardRepository;
@@ -15,6 +16,7 @@ use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\LinkCard\PostLinkCards;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -29,6 +31,7 @@ use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
@@ -37,6 +40,8 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class PostEnricherTest extends DbTestCase
 {
@@ -45,6 +50,7 @@ final class PostEnricherTest extends DbTestCase
     private const string TISCH = 'at://did:plc:qobvnkudcv3zlaklxxjduqoi/app.bsky.feed.post/3mxjuesq6v62t';
     private const string APPLES = 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mv3shqdfuc2e';
     private const string TEST_POST = 'at://did:plc:test/app.bsky.feed.post/';
+    private const string UNTITLED = self::TEST_POST . 'untitled';
 
     private MockClock $clock;
     private HostThrottle $throttle;
@@ -333,6 +339,25 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([], $this->logger->records);
     }
 
+    public function testAHandedOverRowStaysClaimedWhenItsNewKindFailsToFlush(): void
+    {
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
+        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.</p>');
+        $this->entityManager->flush();
+        $this->entityManager->persist(new PostEnrichment($post, PostEnrichmentKind::AppView, $this->clock->now()));
+
+        try {
+            $this->enricher()->enrich($this->feed, [$post]);
+            self::fail('A failed flush must be rethrown.');
+        } catch (UniqueConstraintViolationException) {
+        }
+
+        self::assertNotFalse($this->entityManager->getConnection()->fetchOne(
+            'SELECT claimed_at FROM post_enrichment WHERE entry_id = ? AND claimed_at IS NOT NULL',
+            [$post->requireId()],
+        ));
+    }
+
     public function testTheGiveUpCutoffIsUtcWhateverZoneTheClockIsIn(): void
     {
         $this->clock = new MockClock('2026-10-10 12:00:00', 'Europe/Berlin');
@@ -410,6 +435,49 @@ final class PostEnricherTest extends DbTestCase
         self::assertCount(1, $this->cardsOf($this->reload($tisch)));
     }
 
+    public function testPostsWhoseLinkCameWithoutAPreviewAreHandedToTheLinkCardPass(): void
+    {
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::TEST_POST . 'second'));
+        $first = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $second = $this->queuedEntry(self::TEST_POST . 'second', '<p>And this.</p>');
+        $this->entityManager->flush();
+
+        self::assertSame([$first, $second], $this->enricher()->complete($this->rowsOf([$first, $second])));
+
+        $rows = PostEnrichers::enrichments($this->entityManager)
+            ->findClaimableFor([$first, $second], $this->clock->now());
+        self::assertSame([PostEnrichmentKind::LinkCards, PostEnrichmentKind::LinkCards], array_map(
+            static fn (PostEnrichment $row): PostEnrichmentKind => $row->getKind(),
+            $rows,
+        ));
+        self::assertStringNotContainsString('View embedded content', (string) $this->reload($first)->getContentHtml());
+    }
+
+    public function testTheLinkCardPassCardsAPostTheAppViewHandedOver(): void
+    {
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
+        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $this->entityManager->flush();
+        $this->enricher()->complete($this->rowsOf([$post]));
+
+        $this->linkCardPass()->complete($this->rowsOf([$post]));
+
+        self::assertSame(['https://example.com/story'], $this->cardUrls($post));
+    }
+
+    public function testAnotherLinkBesideACardedEmbedGetsItsCardAfterTheEmbeds(): void
+    {
+        $this->appView->knowsFixture('external');
+        $post = $this->queuedEntry(self::TISCH, '<p>Also https://example.com/story<br />' . Bluesky::CARD . '</p>');
+        $this->entityManager->flush();
+        $this->enricher()->complete($this->rowsOf([$post]));
+
+        $this->linkCardPass()->complete($this->rowsOf([$post]));
+
+        self::assertSame([Bluesky::CARD, 'https://example.com/story'], $this->cardUrls($post));
+    }
+
     public function testCompletingNoRowsAsksNothing(): void
     {
         self::assertSame([], $this->enricher()->complete([]));
@@ -462,6 +530,24 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky enrichment failed', $this->logger->records[0]['message']);
         self::assertSame(1, $this->pendingCount());
+    }
+
+    private function linkCardPass(): PostLinkCards
+    {
+        $page = new MockResponse(
+            '<html><head><meta property="og:title" content="The story"></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
+        );
+
+        return PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
+    }
+
+    /** @return list<string> */
+    private function cardUrls(Entry $entry): array
+    {
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
+
+        return array_map(static fn (LinkCardContent $card): string => $card->url, $cards[$entry->requireId()] ?? []);
     }
 
     private function enricher(): PostEnricher

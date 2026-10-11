@@ -146,22 +146,46 @@ final class PostLinkCardsTest extends DbTestCase
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
-    public function testAPostThatAlreadyHoldsCardsGetsNoSecondSet(): void
+    public function testAPostWhoseLinksAreAllCardedIsDoneWithoutAFetch(): void
     {
         $post = $this->queuedPost(1, self::sharing(1, 1));
-        $this->entityManager->persist(new LinkCard($post, 0, new LinkCardContent(
-            'https://example.com/1/1',
-            'Stored before',
-            null,
-            null,
-            'example.com',
-        )));
-        $this->entityManager->flush();
+        $this->storedCard($post, 0, 'https://example.com/1/1');
 
         $this->postLinkCards->complete($this->claimable());
 
+        self::assertSame(0, $this->client->getRequestsCount());
         self::assertSame(['Stored before'], $this->cardTitles($post));
         self::assertSame([], $this->claimable());
+    }
+
+    public function testOnlyTheUncardedLinksAreFetchedAndTheirCardsFollowTheStoredOnes(): void
+    {
+        $this->offsetEntryIdsFromRowIds();
+        $post = $this->queuedPost(1, self::sharing(1, 3));
+        $this->storedCard($post, 0, 'https://example.com/1/2');
+
+        $this->postLinkCards->complete($this->claimable());
+
+        self::assertSame(2, $this->client->getRequestsCount());
+        self::assertSame(
+            ['Stored before', 'Card for https://example.com/1/1', 'Card for https://example.com/1/3'],
+            $this->cardTitles($post),
+        );
+    }
+
+    public function testTheBudgetCountsOnlyTheUncardedLinks(): void
+    {
+        $carded = $this->queuedPost(1, self::sharing(1, 5));
+        foreach (range(1, 4) as $link) {
+            $this->storedCard($carded, $link - 1, 'https://example.com/1/' . $link);
+        }
+        $next = $this->queuedPost(2, self::sharing(2, 4));
+
+        $this->postLinkCards->complete($this->claimable());
+
+        self::assertSame(5, $this->client->getRequestsCount());
+        self::assertCount(5, $this->cardTitles($carded));
+        self::assertCount(4, $this->cardTitles($next));
     }
 
     public function testACardedQuoteLeavesTheBodyAndTheSummaryIsDerivedAgain(): void
@@ -296,20 +320,40 @@ final class PostLinkCardsTest extends DbTestCase
     /** Queued a minute apart, in the order the test creates them. */
     private function queuedPost(int $number, ?string $contentHtml): Entry
     {
+        $entry = $this->entry($number, $contentHtml);
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new PostEnrichment(
+            $entry,
+            PostEnrichmentKind::LinkCards,
+            $this->clock->now()->modify(sprintf('-%d minutes', 10 - $number)),
+        ));
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function offsetEntryIdsFromRowIds(): void
+    {
+        $this->entityManager->persist($this->entry(0, null));
+    }
+
+    private function entry(int $number, ?string $contentHtml): Entry
+    {
         $now = $this->clock->now();
         $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, null, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
         $entry->markTitleDerived();
         $entry->getImage()->storePending(null, null, null);
-        $this->entityManager->persist($entry);
-        $this->entityManager->persist(new PostEnrichment(
-            $entry,
-            PostEnrichmentKind::LinkCards,
-            $now->modify(sprintf('-%d minutes', 10 - $number)),
-        ));
-        $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function storedCard(Entry $entry, int $position, string $url): void
+    {
+        $this->entityManager->persist(
+            new LinkCard($entry, $position, new LinkCardContent($url, 'Stored before', null, null, 'example.com')),
+        );
+        $this->entityManager->flush();
     }
 
     /** @return list<PostEnrichment> */

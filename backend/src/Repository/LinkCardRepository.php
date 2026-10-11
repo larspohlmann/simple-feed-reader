@@ -18,34 +18,12 @@ final class LinkCardRepository extends ServiceEntityRepository
         parent::__construct($registry, LinkCard::class);
     }
 
-    /** @param list<LinkCardContent> $cards the entry's first cards, in post order: it holds none yet */
-    public function add(Entry $entry, array $cards): void
+    /** @param list<LinkCardContent> $cards in post order, after the entry's $firstPosition cards */
+    public function add(Entry $entry, int $firstPosition, array $cards): void
     {
-        foreach ($cards as $position => $content) {
-            $this->getEntityManager()->persist(new LinkCard($entry, $position, $content));
+        foreach ($cards as $index => $content) {
+            $this->getEntityManager()->persist(new LinkCard($entry, $firstPosition + $index, $content));
         }
-    }
-
-    /**
-     * @param list<int> $entryIds
-     *
-     * @return list<int> those among them that hold cards
-     */
-    public function entryIdsWithCards(array $entryIds): array
-    {
-        if ($entryIds === []) {
-            return [];
-        }
-
-        /** @var list<int|string> $carded */
-        $carded = $this->createQueryBuilder('card')
-            ->select('DISTINCT IDENTITY(card.entry)')
-            ->andWhere('card.entry IN (:entryIds)')
-            ->setParameter('entryIds', $entryIds)
-            ->getQuery()
-            ->getSingleColumnResult();
-
-        return array_map(intval(...), $carded);
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
+use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Ingest\EntryImageWriter;
@@ -27,12 +28,14 @@ final class EntryEmbedWriterTest extends DbTestCase
         . 'bafkreibs4hca2whguuqvtnk4y5dahy5hvsxoygftczl4rgpxlwooqlycde/';
     private const string FULLSIZE = 'https://cdn.bsky.app/img/feed_fullsize/plain/did:plc:z72i7hdynmk6r22z27h6tvur/'
         . 'bafkreih3mb3cwnbc5kv5b2qyy24q6banms25i5ut3cbty4ej2x7vjvd6y4';
+    private const string STORY_LINK = '<a href="https://example.com/story" rel="noopener noreferrer" target="_blank">'
+        . 'https://example.com/story</a>';
 
     public function testALinkCardLeavesTheBodyAndIsStoredAsACard(): void
     {
         $entry = $this->entry('<p>Read this.<br />' . Bluesky::CARD . '</p>');
 
-        self::assertTrue($this->writer()->fill($entry, Bluesky::post('external')));
+        self::assertSame(FillOutcome::Filled, $this->writer()->fill($entry, Bluesky::post('external')));
         $this->entityManager->flush();
 
         self::assertSame('<p>Read this.</p>', $entry->getContentHtml());
@@ -49,14 +52,27 @@ final class EntryEmbedWriterTest extends DbTestCase
         )], $this->storedCards($entry));
     }
 
-    public function testAnotherUrlAtTheEndStaysInTheText(): void
+    public function testAnotherUrlInTheTextIsLinkedAndAwaitsItsCard(): void
     {
         $entry = $this->entry('<p>See https://example.com/other</p>');
 
-        $this->writer()->fill($entry, Bluesky::post('external'));
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, Bluesky::post('external')));
 
-        self::assertSame('<p>See https://example.com/other</p>', $entry->getContentHtml());
+        self::assertSame(
+            '<p>See <a href="https://example.com/other" rel="noopener noreferrer" target="_blank">'
+            . 'https://example.com/other</a></p>',
+            $entry->getContentHtml(),
+        );
         self::assertSame('See https://example.com/other', $entry->getSummary());
+    }
+
+    public function testTheCardedUrlLinkedInsideTheTextNeedsNoFurtherCard(): void
+    {
+        $entry = $this->entry('<p>' . Bluesky::CARD . ' is worth a read.</p>');
+
+        self::assertSame(FillOutcome::Filled, $this->writer()->fill($entry, Bluesky::post('external')));
+
+        self::assertStringContainsString('<a href="' . Bluesky::CARD . '"', (string) $entry->getContentHtml());
     }
 
     public function testAnHttpLinkCardReplacesTheTrailingUrlToo(): void
@@ -78,6 +94,34 @@ final class EntryEmbedWriterTest extends DbTestCase
             [new LinkCardContent('http://spr.ly/6018AbCdE', 'Scores', null, null, 'spr.ly')],
             $this->storedCards($entry),
         );
+    }
+
+    public function testAnUntitledLinkIsLinkedInTheTextAndAwaitsItsCard(): void
+    {
+        $entry = $this->entry('<p>Read this.<br />https://example.com/story</p>');
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::untitledLinkPost()));
+        $this->entityManager->flush();
+
+        self::assertSame(
+            '<p>Read this.<br />' . self::STORY_LINK . '</p>',
+            $entry->getContentHtml(),
+        );
+        self::assertSame('Read this. https://example.com/story', $entry->getSummary());
+        self::assertSame([], $this->storedCards($entry));
+    }
+
+    public function testAnUntitledLinkMissingFromTheTextIsAppendedAsALink(): void
+    {
+        $entry = $this->entry('<p>Read this: example.com/sto…</p>');
+
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, self::untitledLinkPost()));
+
+        self::assertSame(
+            '<p>Read this: example.com/sto…</p><p>' . self::STORY_LINK . '</p>',
+            $entry->getContentHtml(),
+        );
+        self::assertSame('Read this: example.com/sto… https://example.com/story', $entry->getSummary());
     }
 
     public function testAPostThatIsOnlyTheLinkLeavesNoBody(): void
@@ -198,7 +242,8 @@ final class EntryEmbedWriterTest extends DbTestCase
         $entry = $this->entry('<p>Plain.</p>');
         $entry->setSummary('Plain.');
 
-        self::assertFalse(
+        self::assertSame(
+            FillOutcome::Unfilled,
             $this->writer()->fill($entry, JsonNodeModel::of(['uri' => 'at://did:plc:a/app.bsky.feed.post/b'])),
         );
 
@@ -206,6 +251,11 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertSame('Plain.', $entry->getSummary());
         self::assertNull($entry->getImageUrl());
         self::assertSame([], $entry->getMedia());
+    }
+
+    private static function untitledLinkPost(): JsonNodeModel
+    {
+        return JsonNodeModel::of(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
     }
 
     private function entry(?string $contentHtml): Entry

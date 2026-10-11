@@ -22,6 +22,22 @@ final class RenderedEmbedModelTest extends TestCase
         self::assertSame($cards, $first->followedBy($second->followedBy($third))->linkCards);
     }
 
+    public function testFollowedByKeepsTheUncardedLinkOfEitherSide(): void
+    {
+        $uncarded = RenderedEmbedModel::uncarded('https://a.test/');
+        $card = RenderedEmbedModel::card(self::cardOf('https://b.test/'), null);
+
+        self::assertSame('https://a.test/', $uncarded->followedBy($card)->uncardedLink);
+        self::assertSame('https://a.test/', $card->followedBy($uncarded)->uncardedLink);
+        self::assertNull($card->followedBy($card)->uncardedLink);
+        self::assertSame(
+            'https://a.test/',
+            $uncarded->followedBy(RenderedEmbedModel::uncarded('https://b.test/'))->uncardedLink,
+        );
+        self::assertSame('', $uncarded->html);
+        self::assertNull($uncarded->leadImage);
+    }
+
     private static function cardOf(string $url): LinkCardContent
     {
         return new LinkCardContent($url, 'Title', null, null, 'Site');
