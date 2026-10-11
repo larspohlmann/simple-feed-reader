@@ -14,6 +14,7 @@ use App\Entity\LinkCardContent;
 use App\Enum\ShareKind;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use PHPUnit\Framework\TestCase;
@@ -239,6 +240,39 @@ final class EntryJsonTest extends TestCase
         self::assertSame('A short summary.', $json['summary']);
         self::assertSame('2026-09-06T10:00:00+00:00', $json['publishedAt']);
         self::assertSame('2026-09-07T00:00:00+00:00', $json['createdAt']);
+    }
+
+    public function testListRowKeepsItsShapeAndCarriesTheEnrichment(): void
+    {
+        $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
+        $savedSearch = ['id' => 3, 'slug' => '3-climate', 'term' => 'climate'];
+        $row = new EntryListRow(
+            $this->entryTitled('Enriched'),
+            new EntryListRowSubscription(1, 'Source'),
+            false,
+            false,
+            false,
+            new EntryListRowViewState(false, null),
+            null,
+            enrichment: new EntryListRowEnrichment(['Politics'], [$savedSearch], [$card], true),
+        );
+
+        $json = EntryJson::listRow($row);
+
+        self::assertSame(
+            [
+                'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
+                'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
+                'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
+                'subscriptionId', 'source', 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
+                'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
+            ],
+            array_keys($json),
+        );
+        self::assertSame(['Politics'], $json['categories']);
+        self::assertSame([$savedSearch], $json['savedSearches']);
+        self::assertSame(['https://i.example/chart'], array_column($json['linkCards'], 'url'));
+        self::assertTrue($json['pending']);
     }
 
     public function testDetailHasContentHtmlAndListShapedDuplicates(): void
