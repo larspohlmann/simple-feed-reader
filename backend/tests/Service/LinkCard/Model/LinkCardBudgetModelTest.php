@@ -28,6 +28,15 @@ final class LinkCardBudgetModelTest extends TestCase
         LinkCardBudgetModel::fetches(-1);
     }
 
+    public function testABudgetThatWouldOutlastTheClaimLeaseIsRefused(): void
+    {
+        self::assertSame(56.0, LinkCardBudgetModel::fetches(7)->seconds());
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        LinkCardBudgetModel::fetches(8);
+    }
+
     public function testFitsTheWholeFetchesLeftBeforeADeadlineUpToAMaximum(): void
     {
         $now = new \DateTimeImmutable('2026-10-11 12:00:00');

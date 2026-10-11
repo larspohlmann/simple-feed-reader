@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\LinkCard\Model;
 
+use App\Entity\ShareEnrichment;
 use App\Service\Reader\HtmlPageFetcher;
 
 /** How many page fetches one pass may spend on link cards, and so how long it may take. */
@@ -19,7 +20,12 @@ final readonly class LinkCardBudgetModel
             throw new \InvalidArgumentException('A link-card budget cannot be negative.');
         }
 
-        return new self($count);
+        $budget = new self($count);
+        if ($budget->seconds() >= self::claimLeaseSeconds()) {
+            throw new \InvalidArgumentException('A link-card budget cannot outlast the claim lease.');
+        }
+
+        return $budget;
     }
 
     /** The whole fetches that end before $deadline, at most $maxFetches: none once less than one fits. */
@@ -29,6 +35,13 @@ final readonly class LinkCardBudgetModel
         $fitting = (int) floor(max(0, $remaining) / HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS);
 
         return self::fetches(min($maxFetches, $fitting));
+    }
+
+    private static function claimLeaseSeconds(): int
+    {
+        $epoch = new \DateTimeImmutable('@0');
+
+        return $epoch->add(new \DateInterval(ShareEnrichment::CLAIM_LEASE))->getTimestamp();
     }
 
     public function seconds(): float
