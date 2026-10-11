@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Backup\Pass;
 
 use App\Entity\Entry;
-use App\Entity\EntryState;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
+use App\Repository\LinkCardRepository;
 use App\Service\Backup\BackupLines;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupPartModel;
@@ -32,6 +32,7 @@ final class BackupPartWalk
         private readonly EntityManagerInterface $entityManager,
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
+        private readonly LinkCardRepository $linkCards,
         private readonly BackupLines $lines,
         private readonly BackupProvenanceModel $provenance,
         private readonly int $userId,
@@ -87,24 +88,24 @@ final class BackupPartWalk
      */
     private function bufferBatch(array $batch, string $feedUrl): \Generator
     {
-        $statesByEntryId = $this->entryStates->forUserByEntryIds(
-            $this->userId,
-            array_map(static fn (Entry $entry): int => $entry->requireId(), $batch),
-        );
+        $entryIds = array_map(static fn (Entry $entry): int => $entry->requireId(), $batch);
+        $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, $entryIds);
+        $cardsByEntryId = $this->linkCards->contentsByEntryIds($entryIds);
 
         foreach ($batch as $entry) {
-            yield from $this->bufferEntry($entry, $feedUrl, $statesByEntryId[$entry->requireId()] ?? null);
+            $state = $statesByEntryId[$entry->requireId()] ?? null;
+            yield from $this->bufferLines(
+                $this->lines->entryLine($entry, $feedUrl, $cardsByEntryId[$entry->requireId()] ?? []),
+                null !== $state ? $this->lines->entryStateLine($state, $feedUrl) : null,
+            );
         }
     }
 
     /**
      * @return \Generator<int, BackupPartModel>
      */
-    private function bufferEntry(Entry $entry, string $feedUrl, ?EntryState $state): \Generator
+    private function bufferLines(string $entryLine, ?string $stateLine): \Generator
     {
-        $entryLine = $this->lines->entryLine($entry, $feedUrl);
-        $stateLine = null !== $state ? $this->lines->entryStateLine($state, $feedUrl) : null;
-
         $this->buffer->add($entryLine, $stateLine);
         ++$this->totalEntries;
         if (null !== $stateLine) {

@@ -151,12 +151,12 @@ final class RestoreEntryLoader
 
         try {
             $this->inserter->insert($target->feedId, $fresh);
+            $this->inserter->insertLinkCards($this->recordCreatedIds($target, $fresh), $fresh);
         } catch (DbalException $exception) {
             throw BackupLoadFailedException::duringEntries($exception);
         }
 
         $this->entriesCreated += \count($fresh);
-        $this->recordCreatedIds($target, $fresh);
     }
 
     /**
@@ -184,8 +184,10 @@ final class RestoreEntryLoader
      * back by the hashes just written — at most one batch of them.
      *
      * @param non-empty-list<EntryLine> $inserted
+     *
+     * @return array<string, int>
      */
-    private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): void
+    private function recordCreatedIds(RestoreFeedTarget $target, array $inserted): array
     {
         $idsByHash = $this->entries->entryIdsByGuidHash($target->feedId, array_column($inserted, 'guidHash'));
         if (\count($idsByHash) !== \count($inserted)) {
@@ -196,6 +198,8 @@ final class RestoreEntryLoader
         foreach ($idsByHash as $entryId) {
             $this->createdEntryIds[$entryId] = true;
         }
+
+        return $idsByHash;
     }
 
     /**

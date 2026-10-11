@@ -7,17 +7,15 @@ namespace App\Service\Backup;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryRepository;
-use App\Repository\EntryStateRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
+use App\Service\Backup\Factory\BackupPartWalkFactory;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Model\FoundationSnapshotModel;
 use App\Service\Backup\Pass\BackupPartWalk;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -27,14 +25,12 @@ use Psr\Clock\ClockInterface;
 final readonly class AccountBackupExporter
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
         private UserRepository $users,
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
         private SubscriptionRepository $subscriptions,
-        private EntryRepository $entries,
-        private EntryStateRepository $entryStates,
         private BackupLines $lines,
+        private BackupPartWalkFactory $walkFactory,
         private ClockInterface $clock,
     ) {
     }
@@ -47,14 +43,7 @@ final readonly class AccountBackupExporter
         $userId = $user->requireId();
         $provenance = $this->provenanceOf($user, $sourceUrl);
         $foundation = $this->foundationSnapshot($userId);
-        $walk = new BackupPartWalk(
-            $this->entityManager,
-            $this->entries,
-            $this->entryStates,
-            $this->lines,
-            $provenance,
-            $userId,
-        );
+        $walk = $this->walkFactory->create($provenance, $userId);
 
         yield from $walk->entryParts($foundation->feedUrlsByFeedId);
         yield $this->foundation($foundation, $provenance, $walk);

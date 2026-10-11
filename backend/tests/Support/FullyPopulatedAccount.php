@@ -11,6 +11,8 @@ use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -52,6 +54,13 @@ final readonly class FullyPopulatedAccount
         $entry = $this->entryFor($feed);
         $this->entityManager->persist($entry);
         $this->entityManager->persist($this->stateFor($user, $entry));
+        $this->entityManager->persist(new LinkCard($entry, 0, new LinkCardContent(
+            'https://shared.example/story',
+            'The shared story',
+            'What the shared page says about itself.',
+            'https://shared.example/story.jpg',
+            'Shared Example',
+        )));
 
         $this->entityManager->flush();
 

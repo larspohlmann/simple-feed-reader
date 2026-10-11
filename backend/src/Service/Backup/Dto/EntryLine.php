@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Entity\LinkCardContent;
 use App\Service\Backup\Support\LineField;
 use App\Service\Backup\Support\LineFieldWithDefault;
+use App\Service\LinkCard\Support\StorableLinkCard;
 
 /**
  * One entry belonging to a feed the account subscribes to.
@@ -40,6 +42,8 @@ final readonly class EntryLine
         /** @var list<array<string, mixed>> */
         public array $imageRenditions = [],
         public bool $titleDerived = false,
+        /** @var list<LinkCardContent> */
+        public array $linkCards = [],
     ) {
     }
 
@@ -70,6 +74,30 @@ final readonly class EntryLine
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
             imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
             titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
+            linkCards: self::linkCardsOf($line),
         );
+    }
+
+    /**
+     * The file is user-supplied, so each card passes the gate every made card passes.
+     *
+     * @param array<string, mixed> $line
+     *
+     * @return list<LinkCardContent>
+     */
+    private static function linkCardsOf(array $line): array
+    {
+        $cards = [];
+        foreach (LineField::objectListOrEmpty($line, 'linkCards') as $card) {
+            $cards[] = StorableLinkCard::of(new LinkCardContent(
+                LineField::string($card, 'url'),
+                LineField::string($card, 'title'),
+                LineField::stringOrNull($card, 'description'),
+                LineField::stringOrNull($card, 'imageUrl'),
+                LineField::string($card, 'siteName'),
+            ));
+        }
+
+        return array_values(array_filter($cards));
     }
 }

@@ -6,7 +6,9 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Repository\EntryBatchInserter;
+use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Tests\DbTestCase;
@@ -29,12 +31,14 @@ final class EntryBatchInserterTest extends DbTestCase
         return $feed->requireId();
     }
 
+    /** @param list<LinkCardContent> $linkCards */
     private function entryLine(
         string $guid,
         string $title = 'Entry',
         ?string $url = self::GENERATED_URL,
         ?string $imageUrl = null,
         bool $titleDerived = false,
+        array $linkCards = [],
     ): EntryLine {
         return new EntryLine(
             feedUrl: 'https://batch.example/feed.xml',
@@ -52,6 +56,7 @@ final class EntryBatchInserterTest extends DbTestCase
             createdAt: new \DateTimeImmutable('2026-08-02T00:00:00+00:00'),
             effectiveDate: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
             titleDerived: $titleDerived,
+            linkCards: $linkCards,
         );
     }
 
@@ -167,5 +172,36 @@ final class EntryBatchInserterTest extends DbTestCase
             'A decorated URL must hash to its normalised form, exactly as ingest hashes it.',
         );
         self::assertNull($rows[1]['url_hash'], 'A url-less entry dedupes on guid alone.');
+    }
+
+    public function testInsertsTheLinkCardsOfTheEntriesItWasGiven(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+        $withCards = $this->entryLine('with-cards', linkCards: [
+            new LinkCardContent('https://example.com/a', 'A', 'About A', 'https://example.com/a.jpg', 'Example'),
+            new LinkCardContent('https://example.com/b', 'B', null, null, 'example.com'),
+        ]);
+        $without = $this->entryLine('without-cards');
+        $this->inserter()->insert($feedId, [$withCards, $without]);
+        $entryIdsByGuidHash = $this->entryIdsByGuidHash($feedId);
+
+        $this->inserter()->insertLinkCards($entryIdsByGuidHash, [$withCards, $without]);
+
+        $linkCards = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $linkCards);
+        $stored = $linkCards->contentsByEntryIds(array_values($entryIdsByGuidHash));
+        self::assertEquals($withCards->linkCards, $stored[$entryIdsByGuidHash[$withCards->guidHash]]);
+        self::assertArrayNotHasKey($entryIdsByGuidHash[$without->guidHash], $stored);
+    }
+
+    /** @return array<string, int> */
+    private function entryIdsByGuidHash(int $feedId): array
+    {
+        $ids = [];
+        foreach ($this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feedId]) as $entry) {
+            $ids[$entry->getGuidHash()] = $entry->requireId();
+        }
+
+        return $ids;
     }
 }

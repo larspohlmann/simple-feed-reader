@@ -23,6 +23,18 @@ final class StorableLinkCardTest extends TestCase
         self::assertNotNull(StorableLinkCard::of($this->card(url: 'https://example.com/' . str_repeat('a', 2028))));
     }
 
+    public function testAUrlThatIsNoWebPageGivesNoCard(): void
+    {
+        self::assertNull(StorableLinkCard::of($this->card(url: 'javascript:alert(1)')));
+        self::assertNull(StorableLinkCard::of($this->card(url: '/relative/story')));
+    }
+
+    public function testAnImageUrlThatIsNotHttpsIsDropped(): void
+    {
+        self::assertNull(StorableLinkCard::of($this->card(imageUrl: 'http://example.com/a.jpg'))?->imageUrl);
+        self::assertNull(StorableLinkCard::of($this->card(imageUrl: 'javascript:alert(1)'))?->imageUrl);
+    }
+
     public function testABlankTitleGivesNoCard(): void
     {
         self::assertNull(StorableLinkCard::of($this->card(title: '  ')));
@@ -41,8 +53,9 @@ final class StorableLinkCardTest extends TestCase
     {
         $card = StorableLinkCard::of($this->card(title: str_repeat('é', 600), siteName: str_repeat('s', 300)));
 
-        self::assertSame(str_repeat('é', 500), $card?->title);
-        self::assertSame(str_repeat('s', 255), $card?->siteName);
+        self::assertNotNull($card);
+        self::assertSame(str_repeat('é', 500), $card->title);
+        self::assertSame(str_repeat('s', 255), $card->siteName);
     }
 
     public function testTheDescriptionIsCutOnAWordBoundary(): void

@@ -15,7 +15,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
-use App\Entity\LinkCard;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
 use App\Entity\PostEnrichment;
@@ -117,8 +116,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'cleared on the next successful send.',
         PostEnrichment::class => 'The instance\'s queue of posts whose embed or link cards are still to come '
             . '(#1499, #1502); instance data, not the reader\'s.',
-        LinkCard::class => 'The card of a page a post shares (#1502); names no account, and opening the post '
-            . 'rebuilds it.',
     ];
 
     /**
