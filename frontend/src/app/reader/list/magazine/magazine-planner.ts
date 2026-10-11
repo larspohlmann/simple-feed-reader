@@ -1,7 +1,7 @@
 import { EntryDto } from '../../models';
 import { entryDek, entryImage } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
-import { fits, ImageBar, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
+import { fits, ImageBar, isLinkPost, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -274,7 +274,10 @@ function leadWithImage(entries: EntryDto[]): EntryDto[] {
 /** Deterministic and page-indexed, so re-planning a longer list re-emits an
  *  identical prefix. The stride is coprime with each family's size, which walks
  *  every template before repeating one. */
-function templateFor(page: number, templates: readonly (readonly Slot[])[]): readonly Slot[] {
+export function templateFor(
+  page: number,
+  templates: readonly (readonly Slot[])[],
+): readonly Slot[] {
   return templates[(page * 5 + 1) % templates.length];
 }
 
@@ -294,7 +297,9 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
   const { page } = pass;
   const wanted = template
     .slice(0, slice.length)
-    .map((slot, position) => resolveSlot(slot, page, position));
+    .map((slot, position) =>
+      isLinkPost(slice[position]) ? 'link' : resolveSlot(slot, page, position),
+    );
   const budgeted = withinBudget(wanted);
   const assigned = assign(budgeted, slice, pass.family.imageBar);
 
@@ -325,18 +330,15 @@ function emitPages(pass: PlanPass, items: EntryDto[]): void {
   }
 }
 
-/** Demote the largest slot until the page fits the height cap. */
+/** Demote the largest demotable slot until the page fits the height cap. */
 function withinBudget(kinds: EntryKind[]): EntryKind[] {
   const result = [...kinds];
   let height = result.reduce((sum, kind) => sum + BLOCK_HEIGHT[kind], 0);
 
   while (height > PAGE_HEIGHT_CAP) {
-    let tallest = 0;
-    for (let index = 1; index < result.length; index++) {
-      if (BLOCK_HEIGHT[result[index]] > BLOCK_HEIGHT[result[tallest]]) tallest = index;
-    }
+    const tallest = tallestWhere(result, (kind) => DEMOTION[kind] !== kind);
+    if (tallest === null) break;
     const demoted = DEMOTION[result[tallest]];
-    if (demoted === result[tallest]) break;
     height -= BLOCK_HEIGHT[result[tallest]] - BLOCK_HEIGHT[demoted];
     result[tallest] = demoted;
   }
@@ -344,22 +346,33 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
   return result;
 }
 
+/** The first of the tallest slots `eligible` admits, or null when it admits none. */
+function tallestWhere(kinds: EntryKind[], eligible: (kind: EntryKind) => boolean): number | null {
+  let tallest: number | null = null;
+  for (let index = 0; index < kinds.length; index++) {
+    if (!eligible(kinds[index])) continue;
+    if (tallest === null || BLOCK_HEIGHT[kinds[index]] > BLOCK_HEIGHT[kinds[tallest]]) {
+      tallest = index;
+    }
+  }
+  return tallest;
+}
+
 /**
  * Entries fill slots IN ORDER — chronological by contract. The one exception is
  * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
  * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
- * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`).
+ * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`). The reach
+ * stops at a link post, so every pinned `link` slot keeps the post it was pinned for.
  */
 function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
   const order = [...slice];
-  let tallest = 0;
-  for (let index = 1; index < kinds.length; index++) {
-    if (BLOCK_HEIGHT[kinds[index]] > BLOCK_HEIGHT[kinds[tallest]]) tallest = index;
-  }
+  const tallest = tallestWhere(kinds, (kind) => kind !== 'link');
 
-  if (!fits(kinds[tallest], order[tallest])) {
+  if (tallest !== null && !fits(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
     for (let index = tallest + 1; index < limit; index++) {
+      if (isLinkPost(order[index])) break;
       if (fits(kinds[tallest], order[index])) {
         const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);

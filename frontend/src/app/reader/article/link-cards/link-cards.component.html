@@ -1,0 +1,7 @@
+@for (card of cards(); track card.url) {
+  <app-link-card [card]="card" layout="article" />
+} @empty {
+  @if (pending()) {
+    <app-link-card-placeholder />
+  }
+}

@@ -1,5 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
+import { EntryDto } from '../../models';
 import { ReaderApi } from '../../reader-api';
 
 /** How many article bodies stay cached at once — one browsing session's worth
@@ -21,6 +23,10 @@ export class EntryBodyService {
   /** Bumped on logout so a response already on the wire for the previous
    *  account can't write itself into the next one's cache. */
   private generation = 0;
+  private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
+  private readonly arrivedDetails = new Subject<EntryDto>();
+  /** Each entry a body fetch brings back: opening a post can queue it, so the row may now be pending (#1502). */
+  readonly details = this.arrivedDetails.asObservable();
 
   constructor() {
     onIdentityChange(() => this.clear());
@@ -58,6 +64,19 @@ export class EntryBodyService {
     this.fetch(id, state);
   }
 
+  /** Refetch a body the server has since changed, keeping a shown one on screen until
+   *  the new one lands, and for good if the refetch fails. A fetch still out is superseded. */
+  refresh(id: number): void {
+    const state = this.cache.get(id);
+    if (!state) return;
+    this.fetch(id, state);
+  }
+
+  /** Drop a cached body the server has since changed, so it is fetched afresh when next asked for. */
+  forget(id: number): void {
+    this.cache.delete(id);
+  }
+
   private stateFor(id: number): WritableSignal<EntryBodyState> {
     const existing = this.cache.get(id);
     if (existing) {
@@ -82,13 +101,18 @@ export class EntryBodyService {
 
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
     const generation = this.generation;
+    const ticket = {};
+    this.latestRequest.set(state, ticket);
+    const superseded = () =>
+      generation !== this.generation || this.latestRequest.get(state) !== ticket;
     this.api.entry(id).subscribe({
       next: (response) => {
-        if (generation !== this.generation) return;
+        if (superseded()) return;
         state.set({ status: 'ok', html: response.entry.contentHtml });
+        if (this.cache.get(id) === state) this.arrivedDetails.next(response.entry);
       },
       error: () => {
-        if (generation !== this.generation) return;
+        if (superseded() || state().status === 'ok') return;
         state.set({ status: 'error' });
       },
     });

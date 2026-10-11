@@ -173,7 +173,7 @@ file.
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
 | `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`) and in "For you" (`includeInForYou`), and the tags on the subscription with their order. |
-| `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`). |
+| `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `titleDerived` (the title was taken from the text, the feed gave none), `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`, and its renditions at other widths, `imageRenditions`), its embedded media and attachments (`media`, `attachments`), the preview cards of the links a post shares, in order (`linkCards`: each with `url`, `title`, `description`, `imageUrl` and `siteName`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`). |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
 
@@ -207,7 +207,7 @@ writes none of them.
 | `EntryCategory` | The link between an article and a category it was published under. It names no account. |
 | `WorkerHeartbeat` | The liveness record of the processes that drive "For you" runs: the worker, a drainer and the cron sweep. It is a machine record, not your data. |
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
-| `PendingPostEnrichment` | The transient retry queue for Bluesky post embeds. Refreshes rebuild it. It is a machine record, not your data. |
+| `PostEnrichment` | The queue of posts whose Bluesky embed or link cards are still to come. It is a machine record, not your data. |
 
 ### 6.2 Account data that the file drops in full
 

@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, NgZone, inject } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { onIdentityChange } from '../../core/auth/session-identity';
+import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { SavedSearchesStore } from '../state/saved-searches.store';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { SubscriptionsStore } from '../state/subscriptions.store';
@@ -72,19 +73,8 @@ export class SidebarCountsPoll {
     if (hadGivenUp) this.resume();
   };
 
-  private readonly onVisibilityChange = (): void => {
-    if (document.visibilityState === 'hidden') {
-      this.stopTicking();
-      return;
-    }
-    // Turning back to the tab is itself a sign of life, and it must reset the
-    // idle clock: a tab hidden for longer than the limit would otherwise be
-    // written off the instant it came back.
-    this.lastActivityAt = Date.now();
-    this.resume();
-  };
-
   constructor() {
+    onTabVisibilityChange((hidden) => (hidden ? this.stopTicking() : this.regainTab()));
     // Everything this service schedules stays OUT of the Angular zone: a
     // `wheel` listener inside it would run change detection on every scroll
     // notch, and an interval would never let the zone go stable. Store
@@ -93,7 +83,6 @@ export class SidebarCountsPoll {
       for (const event of ACTIVITY_EVENTS) {
         document.addEventListener(event, this.onActivity, { passive: true });
       }
-      document.addEventListener('visibilitychange', this.onVisibilityChange);
     });
     // No reload here: the reader's own boot load owns the first fetch, and a
     // tick racing it would stamp the freshness clock against it. Record the
@@ -106,12 +95,18 @@ export class SidebarCountsPoll {
     inject(DestroyRef).onDestroy(() => this.stop());
   }
 
+  /** Turning back to the tab is itself a sign of life, and it must reset the idle clock: a tab
+   *  hidden for longer than the limit would otherwise be written off the instant it came back. */
+  private regainTab(): void {
+    this.lastActivityAt = Date.now();
+    this.resume();
+  }
+
   private stop(): void {
     this.stopTicking();
     for (const event of ACTIVITY_EVENTS) {
       document.removeEventListener(event, this.onActivity);
     }
-    document.removeEventListener('visibilitychange', this.onVisibilityChange);
   }
 
   /** Bring the counts fully up to date now, then keep them there. A regain or a
@@ -186,7 +181,7 @@ export class SidebarCountsPoll {
   }
 
   private givenUp(): boolean {
-    return this.isIdle() || document.visibilityState === 'hidden';
+    return this.isIdle() || isTabHidden();
   }
 
   private isIdle(): boolean {

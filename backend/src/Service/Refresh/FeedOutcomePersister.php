@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\Completion\PostEnrichmentQueue;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -38,6 +39,7 @@ final readonly class FeedOutcomePersister
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
+        private PostEnrichmentQueue $enrichmentQueue,
         private PostEnricher $postEnricher,
         private LoggerInterface $logger,
     ) {
@@ -115,6 +117,7 @@ final readonly class FeedOutcomePersister
         $feed->recordCacheValidators($response->etag, $response->lastModified);
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
+        $this->enrichmentQueue->queue($createdEntries);
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
         $this->indexer->index([...$createdEntries, ...$this->postEnricher->enrich($feed, $createdEntries)]);

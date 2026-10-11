@@ -26,50 +26,15 @@ final readonly class SavedSearchMembershipLoader
             return [];
         }
 
-        $byEntryId = $this->memberships->savedSearchesByEntry($userId, $this->entryIdsOf($rows));
+        $byEntryId = $this->memberships->savedSearchesByEntry($userId, EntryListRow::entryIdsOf($rows));
+
+        $withMemberships = static fn (EntryListRow $row): EntryListRow => $row->withSavedSearches(
+            $byEntryId[$row->entry->getId()] ?? [],
+        );
 
         return array_map(
-            fn (EntryListRow $row): EntryListRow => $this->enrich($row, $byEntryId),
+            static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($withMemberships),
             $rows,
         );
-    }
-
-    /**
-     * @param array<int, list<array{id: int, slug: string, term: string}>> $byEntryId
-     */
-    private function enrich(EntryListRow $row, array $byEntryId): EntryListRow
-    {
-        $enrichedDuplicates = array_map(
-            fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $byEntryId),
-            $row->duplicates,
-        );
-
-        return $row
-            ->withDuplicates($enrichedDuplicates)
-            ->withSavedSearches($byEntryId[$row->entry->getId()] ?? []);
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int>
-     */
-    private function entryIdsOf(array $rows): array
-    {
-        $ids = [];
-        foreach ($rows as $row) {
-            $id = $row->entry->getId();
-            if ($id !== null) {
-                $ids[$id] = $id;
-            }
-            foreach ($row->duplicates as $duplicate) {
-                $duplicateId = $duplicate->entry->getId();
-                if ($duplicateId !== null) {
-                    $ids[$duplicateId] = $duplicateId;
-                }
-            }
-        }
-
-        return array_values($ids);
     }
 }

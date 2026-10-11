@@ -1151,6 +1151,7 @@
       "empty": "Die Seite enthält nicht mehr Text als der Feed – es wird die Fassung des Feeds angezeigt.",
       "mismatch": "Die Seite passte nicht zu diesem Eintrag – es wird die Zusammenfassung des Feeds angezeigt."
     },
+    "loadingPreview": "Vorschau wird geladen…",
     "bodyLoadFailed": "Der vollständige Artikel konnte nicht geladen werden – es wird die Zusammenfassung angezeigt.",
     "retry": "Erneut versuchen",
     "showError": "Fehler anzeigen",

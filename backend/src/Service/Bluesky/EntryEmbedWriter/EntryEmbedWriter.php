@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
+use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\Support\TrailingUrl;
@@ -20,6 +21,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         private PostEmbedRenderer $renderer,
         private EntrySanitizer $sanitizer,
         private EntryImageWriter $imageWriter,
+        private LinkCardRepository $linkCards,
     ) {
     }
 
@@ -31,8 +33,9 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
 
         $body = $entry->getContentHtml() ?? '';
-        if ($embed->linkCardUrl !== null) {
-            $body = TrailingUrl::removedFrom($body, $embed->linkCardUrl);
+        if ($embed->linkCard !== null) {
+            $body = TrailingUrl::removedFrom($body, $embed->linkCard->url);
+            $this->linkCards->add($entry, [$embed->linkCard]);
         }
         $entry->setContentHtml($this->sanitizer->sanitize($body . $embed->html));
         $entry->setSummary(EntrySnippet::from($body));

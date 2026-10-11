@@ -29,51 +29,13 @@ final readonly class EntryCategoryLoader
             return [];
         }
 
-        $labelsByEntryId = $this->labelsFor($this->entryIdsOf($rows));
+        $labelsByEntryId = $this->labelsFor(EntryListRow::entryIdsOf($rows));
 
-        return array_map(
-            fn (EntryListRow $row): EntryListRow => $this->enrich($row, $labelsByEntryId),
-            $rows,
-        );
-    }
-
-    /**
-     * @param array<int, list<string>> $labelsByEntryId
-     */
-    private function enrich(EntryListRow $row, array $labelsByEntryId): EntryListRow
-    {
-        $enrichedDuplicates = array_map(
-            fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $labelsByEntryId),
-            $row->duplicates,
+        $withLabels = static fn (EntryListRow $row): EntryListRow => $row->withCategories(
+            $labelsByEntryId[$row->entry->getId()] ?? [],
         );
 
-        return $row
-            ->withDuplicates($enrichedDuplicates)
-            ->withCategories($labelsByEntryId[$row->entry->getId()] ?? []);
-    }
-
-    /**
-     * @param list<EntryListRow> $rows
-     *
-     * @return list<int>
-     */
-    private function entryIdsOf(array $rows): array
-    {
-        $ids = [];
-        foreach ($rows as $row) {
-            $id = $row->entry->getId();
-            if ($id !== null) {
-                $ids[$id] = $id;
-            }
-            foreach ($row->duplicates as $duplicate) {
-                $duplicateId = $duplicate->entry->getId();
-                if ($duplicateId !== null) {
-                    $ids[$duplicateId] = $duplicateId;
-                }
-            }
-        }
-
-        return array_values($ids);
+        return array_map(static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($withLabels), $rows);
     }
 
     /**

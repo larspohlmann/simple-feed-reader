@@ -38,6 +38,11 @@
     </p>
   }
 </div>
+<p class="previews-status sr-only" role="status">
+  @if (pendingPoll.previewsLoading()) {
+    {{ 'reader.loadingPreview' | transloco }}
+  }
+</p>
 <!-- No top offset here: the scrolling panes reserve the header's height
      themselves (via --app-bar-h), so retracting the header uncovers content
      instead of leaving a dead strip (#87). Only the sidebar takes the offset. -->

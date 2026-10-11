@@ -22,6 +22,7 @@ use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
+use App\Service\Completion\PostEnrichmentQueue;
 use App\Service\Reading\EntryStateUpdater;
 use App\Service\Reading\ForYouMarkReadService;
 use App\Service\Reading\MarkEntriesReadService;
@@ -46,6 +47,7 @@ final readonly class EntryController
         private ForYouFeed $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
         private MarkEntriesReadService $markEntriesRead,
+        private PostEnrichmentQueue $postEnrichmentQueue,
     ) {
     }
 
@@ -91,6 +93,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
     ): JsonResponse {
         $row = $this->entryList->getRowForUser($user->requireId(), $id);
+        $this->postEnrichmentQueue->queueOpened($row->entry);
         $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);

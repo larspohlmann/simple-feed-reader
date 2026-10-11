@@ -41,6 +41,13 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
+        # Per user, apart from the reader's budget: a list load polls up to 20 times, and 120 allows a few switches.
+        entry_completion:
+            policy: 'sliding_window'
+            limit: 120
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
         # Per user: only images the browser could not load directly come here, but a magazine page of one
         # hotlink-protected feed can be dozens at once. Each call is at most three logical outbound
         # requests (the egress proxy and address-family failover may retry each).

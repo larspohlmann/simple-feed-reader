@@ -5,6 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { withCompleted } from './completed-entry';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -147,23 +148,20 @@ export class EntriesStore {
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const before = this.rawEntries().find((entry) => entry.id === entryId);
-    if (!before) return;
+    const listed = this.rawEntries().find((entry) => entry.id === entryId);
+    if (!listed) return;
     this.error.set(null);
     this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
+    const before = stateBefore(listed, inFlight.patch);
     this.inFlightPatches.add(inFlight);
-    this.rawEntries.update((current) =>
-      current.map((entry) => (entry.id === entryId ? { ...entry, ...inFlight.patch } : entry)),
-    );
+    this.patchEntries([entryId], (entry) => ({ ...entry, ...inFlight.patch }));
     this.api
       .updateState(entryId, patch)
       .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
       .subscribe({
         error: (error: HttpErrorResponse) => {
-          this.rawEntries.update((current) =>
-            current.map((entry) => (entry.id === entryId ? before : entry)),
-          );
+          this.patchEntries([entryId], (entry) => ({ ...entry, ...before }));
           this.error.set(parseProblem(error));
           this.failedOperation.set(() => this.setState(entryId, patch, onError));
           onError?.();
@@ -171,14 +169,33 @@ export class EntriesStore {
       });
   }
 
+  mergeCompleted(rows: EntryDto[]): void {
+    const finished = new Map(rows.map((row) => [row.id, row]));
+    this.patchEntries(finished.keys(), (entry) =>
+      withCompleted(entry, finished.get(entry.id) ?? entry),
+    );
+  }
+
   /** Restyle entries as read in place — no request. The caller marks them read
    *  on the server first (mark-read-batch); this only reflects it in an
    *  all-items list, where the rows stay visible. */
   markHiddenLocally(ids: number[]): void {
-    const marked = new Set(ids);
-    this.rawEntries.update((current) =>
-      current.map((entry) => (marked.has(entry.id) ? { ...entry, isHidden: true } : entry)),
-    );
+    this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
+  }
+
+  /** The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
+  private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
+    const targets = new Set(ids);
+    this.rawEntries.update((current) => {
+      let changed = false;
+      const patched = current.map((entry) => {
+        if (!targets.has(entry.id)) return entry;
+        const next = patch(entry);
+        changed ||= next !== entry;
+        return next;
+      });
+      return changed ? patched : current;
+    });
   }
 
   /** Surfaces a mutation a caller ran outside the store on the same error
@@ -203,6 +220,12 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
   }
+}
+
+/** What `entry` held under the keys `patch` changes, for a failed PATCH to put back. */
+function stateBefore(entry: EntryDto, patch: EntryStatePatch): EntryStatePatch {
+  const keys = Object.keys(patch) as (keyof EntryStatePatch)[];
+  return Object.fromEntries(keys.map((key) => [key, entry[key]]));
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides

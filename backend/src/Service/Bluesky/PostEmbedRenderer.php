@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Bluesky;
 
+use App\Entity\LinkCardContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\AtPostUri;
+use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Text\Support\HtmlEscape;
@@ -110,20 +112,18 @@ final readonly class PostEmbedRenderer
     private function linkCard(JsonNodeModel $external): ?RenderedEmbedModel
     {
         $url = AbsoluteHttpUrl::orNull($external->string('uri'));
-        if ($url === null) {
+        $title = $external->string('title');
+        if ($url === null || $title === null) {
             return null;
         }
         $thumbnail = HttpsImageUrl::orNull($external->string('thumb'));
-        $card = ($thumbnail === null ? '' : sprintf('<img src="%s" alt="">', HtmlEscape::text($thumbnail)))
-            . self::optionalTag('strong', $external->string('title'))
-            . self::optionalTag('span', $external->string('description'))
-            . self::optionalTag('small', HostKey::forUrl($url));
-
-        return new RenderedEmbedModel(
-            sprintf('<figure class="link-card"><a href="%s">%s</a></figure>', HtmlEscape::text($url), $card),
-            $thumbnail === null ? null : new DeclaredImageModel($thumbnail),
-            linkCardUrl: $url,
+        $card = StorableLinkCard::of(
+            new LinkCardContent($url, $title, $external->string('description'), $thumbnail, HostKey::forUrl($url)),
         );
+
+        return $card === null
+            ? null
+            : RenderedEmbedModel::card($card, $thumbnail === null ? null : new DeclaredImageModel($thumbnail));
     }
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel
@@ -166,11 +166,6 @@ final readonly class PostEmbedRenderer
         $height = $ratio->int('height');
 
         return $width === null || $height === null ? '' : sprintf(' width="%d" height="%d"', $width, $height);
-    }
-
-    private static function optionalTag(string $tag, ?string $text): string
-    {
-        return $text === null ? '' : sprintf('<%1$s>%2$s</%1$s>', $tag, HtmlEscape::text($text));
     }
 
     private static function linkParagraph(string $url, string $label): string

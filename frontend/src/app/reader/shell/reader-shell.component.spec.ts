@@ -17,7 +17,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
-import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth/auth.service';
@@ -30,6 +30,7 @@ import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
+import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
@@ -122,6 +123,8 @@ describe('ReaderShellComponent', () => {
     isViewed: false,
     isShort: false,
     titleDerived: false,
+    linkCards: [],
+    pending: false,
     imageAspectRatio: null,
     discussionUrl: null,
     comments: null,
@@ -130,7 +133,13 @@ describe('ReaderShellComponent', () => {
   // A jest.fn() double, not the real HTTP-backed service: this suite asserts
   // the shell CALLS prefetch/seed correctly, not the store's own caching —
   // that belongs to entry-body.service.spec.ts.
-  let bodyStore: { prefetch: jest.Mock; seed: jest.Mock; body: jest.Mock; retry: jest.Mock };
+  let bodyStore: {
+    prefetch: jest.Mock;
+    seed: jest.Mock;
+    body: jest.Mock;
+    retry: jest.Mock;
+    details: Observable<EntryDto>;
+  };
 
   beforeEach(() => {
     bodyStore = {
@@ -138,6 +147,7 @@ describe('ReaderShellComponent', () => {
       seed: jest.fn(),
       body: jest.fn(() => signal({ status: 'ok', html: null })),
       retry: jest.fn(),
+      details: NEVER,
     };
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     localStorage.clear(); // LanguageService caches the lang; a de test must not leak into the next
@@ -159,7 +169,10 @@ describe('ReaderShellComponent', () => {
     ctrl = TestBed.inject(HttpTestingController);
   });
 
-  function configureShell(authProviders: Provider[]) {
+  function configureShell(
+    authProviders: Provider[],
+    bodies: Provider = { provide: EntryBodyService, useValue: bodyStore },
+  ) {
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
@@ -173,7 +186,7 @@ describe('ReaderShellComponent', () => {
         },
         ...authProviders,
         { provide: LayoutService, useValue: screen },
-        { provide: EntryBodyService, useValue: bodyStore },
+        bodies,
         // Defaults to "available", matching every test in this file written before
         // #624 follow-up's instance-wide toggle existed. The "first-login passkey
         // offer" describe block below overrides this per test to cover false/null.
@@ -187,9 +200,9 @@ describe('ReaderShellComponent', () => {
 
   /** A fresh module: the outer `beforeEach` already injected `HttpTestingController`,
    *  which Angular refuses to override past. */
-  function reconfigureShell(authProviders: Provider[]): void {
+  function reconfigureShell(authProviders: Provider[], bodies?: Provider): void {
     TestBed.resetTestingModule();
-    configureShell(authProviders);
+    configureShell(authProviders, bodies);
     ctrl = TestBed.inject(HttpTestingController);
   }
 
@@ -227,6 +240,24 @@ describe('ReaderShellComponent', () => {
     fixture.detectChanges();
     return fixture;
   }
+
+  describe('previews still loading (#1502)', () => {
+    const status = (element: HTMLElement) => element.querySelector('.previews-status')!;
+
+    it('says so once, in one polite region, while a listed post is still being completed', () => {
+      const element = boot({ titleDerived: true, pending: true }).nativeElement as HTMLElement;
+
+      expect(status(element).getAttribute('role')).toBe('status');
+      expect(status(element).textContent!.trim()).toBe('Loading preview…');
+      expect(element.querySelectorAll('[role="status"] app-link-card-placeholder')).toHaveLength(0);
+    });
+
+    it('stays quiet while nothing is pending', () => {
+      const element = boot().nativeElement as HTMLElement;
+
+      expect(status(element).textContent!.trim()).toBe('');
+    });
+  });
 
   // One subscription row in the shape the shell reads. Overlay `id`/`lastFetchedAt`
   // per test to describe "fetched" vs "never fetched" feeds.
@@ -1132,6 +1163,78 @@ describe('ReaderShellComponent', () => {
     // rather than let the reader view issue a redundant fetch of its own.
     expect(bodyStore.seed).toHaveBeenCalledWith(514, '<p>Deep linked body</p>');
     ctrl.verify();
+  });
+
+  it('completes a deep-linked post still pending and shows its card (#1502)', () => {
+    jest.useFakeTimers();
+    const fixture = boot();
+    qp.next(convertToParamMap({ entry: '514-deep-linked-post' }));
+    fixture.detectChanges();
+    const post = { ...entry, id: 514, titleDerived: true, isHidden: true, isViewed: true };
+    ctrl
+      .expectOne('https://api.test/api/entries/514')
+      .flush({ entry: { ...post, pending: true, contentHtml: '<p>A post</p>' } });
+    fixture.detectChanges();
+
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    const completion = ctrl.expectOne('https://api.test/api/entries/complete');
+    expect(completion.request.body).toEqual({ ids: [514] });
+    const card = {
+      url: 'https://news.test/story',
+      title: 'A shared story',
+      description: null,
+      imageUrl: null,
+      siteName: 'news.test',
+    };
+    completion.flush({ entries: [{ ...post, pending: false, linkCards: [card] }] });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
+    expect(element.querySelector('app-reader-view .link-card strong')!.textContent).toBe(
+      'A shared story',
+    );
+    jest.useRealTimers();
+  });
+
+  it('shows a placeholder for a listed post the open queues, polls it and shows its card (#1502)', () => {
+    jest.useFakeTimers();
+    reconfigureShell([{ provide: AuthService, useValue: auth }], EntryBodyService);
+    const post = { titleDerived: true, isHidden: true, isViewed: true };
+    const fixture = boot(post);
+    const element = fixture.nativeElement as HTMLElement;
+    qp.next(convertToParamMap({ entry: '1' }));
+    fixture.detectChanges();
+    jest.advanceTimersByTime(0);
+
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { ...entry, ...post, pending: true, contentHtml: '<p>A post</p>' } });
+    fixture.detectChanges();
+    expect(element.querySelector('app-reader-view app-link-card-placeholder')).not.toBeNull();
+
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    const completion = ctrl.expectOne('https://api.test/api/entries/complete');
+    expect(completion.request.body).toEqual({ ids: [1] });
+    const card = {
+      url: 'https://news.test/story',
+      title: 'A shared story',
+      description: null,
+      imageUrl: null,
+      siteName: 'news.test',
+    };
+    const completed = { ...entry, ...post, pending: false, linkCards: [card] };
+    completion.flush({ entries: [completed] });
+    ctrl
+      .expectOne('https://api.test/api/entries/1')
+      .flush({ entry: { ...completed, contentHtml: '<p>A post</p>' } });
+    fixture.detectChanges();
+
+    expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
+    expect(element.querySelector('app-reader-view .link-card strong')!.textContent).toBe(
+      'A shared story',
+    );
+    jest.useRealTimers();
   });
 
   describe('neighbour prefetch on open (#1100)', () => {

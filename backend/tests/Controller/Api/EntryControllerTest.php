@@ -10,6 +10,8 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCard;
+use App\Entity\LinkCardContent;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\SavedSearch;
@@ -20,6 +22,8 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\LinkCard\PostLinkCards;
+use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,6 +31,9 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryControllerTest extends WebTestCase
@@ -191,6 +198,95 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
+    }
+
+    private function seedLinkCards(Entry $entry): void
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->persist(
+            new LinkCard($entry, 1, new LinkCardContent('https://b.test/2', 'Second', null, null, 'B')),
+        );
+        $entityManager->persist(new LinkCard(
+            $entry,
+            0,
+            new LinkCardContent('https://a.test/1', 'First', 'About it', 'https://a.test/i.jpg', 'A'),
+        ));
+        $entityManager->flush();
+    }
+
+    private function entryWithGuid(Subscription $subscription, string $guid): Entry
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => $guid]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        return $entry;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function expectedLinkCards(): array
+    {
+        return [
+            [
+                'url' => 'https://a.test/1',
+                'title' => 'First',
+                'description' => 'About it',
+                'imageUrl' => 'https://a.test/i.jpg',
+                'siteName' => 'A',
+            ],
+            [
+                'url' => 'https://b.test/2',
+                'title' => 'Second',
+                'description' => null,
+                'imageUrl' => null,
+                'siteName' => 'B',
+            ],
+        ];
+    }
+
+    public function testEntryListCarriesLinkCardsInPositionOrderAndEmptyOtherwise(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-list-link-cards@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 2);
+        $this->seedLinkCards($this->entryWithGuid($subscription, 'g2'));
+
+        $client->request('GET', '/api/entries', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        [$newest, $oldest] = $body['entries'];
+        self::assertIsArray($newest);
+        self::assertIsArray($oldest);
+        self::assertSame($this->expectedLinkCards(), $newest['linkCards']);
+        self::assertSame([], $oldest['linkCards']);
+    }
+
+    public function testGetCarriesLinkCardsAndEmptyWhenThereAreNone(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-link-cards@example.com');
+        $subscription = $this->seedFeedWithEntries($user, 2);
+        $withCards = $this->entryWithGuid($subscription, 'g2');
+        $this->seedLinkCards($withCards);
+        $without = $this->entryWithGuid($subscription, 'g1');
+
+        $client->request('GET', "/api/entries/{$withCards->getId()}", server: $headers);
+        $cards = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        $client->request('GET', "/api/entries/{$without->getId()}", server: $headers);
+        $none = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+
+        self::assertIsArray($cards);
+        self::assertIsArray($none);
+        self::assertIsArray($cards['entry']);
+        self::assertIsArray($none['entry']);
+        self::assertSame($this->expectedLinkCards(), $cards['entry']['linkCards']);
+        self::assertSame([], $none['entry']['linkCards']);
     }
 
     public function testEntryListCarriesSavedSearchMembership(): void
@@ -1294,6 +1390,84 @@ final class EntryControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
+    }
+
+    public function testOpeningAPostFromBeforeLinkCardsQueuesItWithoutAFetch(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-post@example.com');
+        $pages = $this->installPageClient();
+        $entryId = $this->seedPostSharing($user, 'https://example.com/story');
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(0, $pages->getRequestsCount());
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertTrue($body['entry']['pending']);
+        self::assertSame([], $body['entry']['linkCards']);
+        self::assertIsString($body['entry']['contentHtml']);
+        self::assertStringContainsString('<a href="https://example.com/story"', $body['entry']['contentHtml']);
+        self::assertSame(1, $this->queuedRowsFor($entryId));
+    }
+
+    public function testOpeningAStrangersPostIs404AndQueuesNothing(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-get-post-idor@example.com');
+        [, $stranger] = $this->auth('e-get-post-owner@example.com');
+        $entryId = $this->seedPostSharing($stranger, 'https://example.com/story');
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
+        self::assertSame(0, $this->queuedRowsFor($entryId));
+    }
+
+    private function installPageClient(): MockHttpClient
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $pages = new MockHttpClient(new MockResponse(
+            '<html lang="en"><head><meta property="og:title" content="Story"></head></html>',
+            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
+        ));
+        self::getContainer()->set(
+            PostLinkCards::class,
+            PostLinkCardsWiring::build($entityManager, $pages, new MockClock()),
+        );
+
+        return $pages;
+    }
+
+    private function queuedRowsFor(int $entryId): int
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+
+        return \count($entityManager->getConnection()->fetchFirstColumn(
+            'SELECT id FROM post_enrichment WHERE entry_id = ?',
+            [$entryId],
+        ));
+    }
+
+    private function seedPostSharing(User $user, string $sharedUrl): int
+    {
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $feed = new Feed('https://mastodon.example/@someone-' . uniqid('', true) . '.rss');
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $post = new Entry($feed, 'https://mastodon.example/@someone/1', null, 'Post', $july1, $july1);
+        $post->setContentHtml('<p>Worth a read: ' . $sharedUrl . '</p>');
+        $post->markTitleDerived();
+        $entityManager->persist($post);
+        $entityManager->flush();
+
+        return $post->requireId();
     }
 
     public function testGetMissingEntryIs404(): void

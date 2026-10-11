@@ -9,6 +9,7 @@ use App\Entity\EntryMedia;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCardContent;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
@@ -126,7 +127,8 @@ final readonly class BackupLines
         );
     }
 
-    public function entryLine(Entry $entry, string $feedUrl): string
+    /** @param list<LinkCardContent> $linkCards */
+    public function entryLine(Entry $entry, string $feedUrl, array $linkCards): string
     {
         $discussion = $entry->getDiscussion();
 
@@ -150,6 +152,7 @@ final readonly class BackupLines
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->getRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
+            'linkCards' => array_map(self::linkCardFields(...), $linkCards),
             'publishedAt' => $this->formatDateOrNull($entry->getPublishedAt()),
             'createdAt' => $this->formatDate($entry->getCreatedAt()),
             'effectiveDate' => $this->formatDate($entry->getEffectiveDate()),
@@ -169,6 +172,18 @@ final readonly class BackupLines
             'isViewed' => $state->isViewed(),
             'viewedAt' => $this->formatDateOrNull($state->getViewedAt()),
         ]);
+    }
+
+    /** @return array<string, string|null> */
+    private static function linkCardFields(LinkCardContent $card): array
+    {
+        return [
+            'url' => $card->url,
+            'title' => $card->title,
+            'description' => $card->description,
+            'imageUrl' => $card->imageUrl,
+            'siteName' => $card->siteName,
+        ];
     }
 
     private function formatDate(\DateTimeImmutable $date): string

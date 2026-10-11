@@ -1,0 +1,23 @@
+<a [href]="card().url" target="_blank" rel="noopener noreferrer">
+  @if (card().imageUrl && !imageFailed()) {
+    <img
+      appProxiedImage
+      [src]="card().imageUrl"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      referrerpolicy="no-referrer"
+      (imageFailed)="imageFailed.set(true)"
+    />
+  }
+  @if (layout() === 'block') {
+    <small>{{ card().siteName }}</small>
+  }
+  <strong>{{ card().title }}</strong>
+  @if (card().description) {
+    <span>{{ card().description }}</span>
+  }
+  @if (layout() === 'article') {
+    <small>{{ card().siteName }}</small>
+  }
+</a>

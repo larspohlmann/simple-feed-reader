@@ -48,7 +48,7 @@ final class PastedTextBreaks
             return false;
         }
 
-        $texts = self::proseTextsIn($paragraph);
+        $texts = TextNodes::in($paragraph, self::VERBATIM_ELEMENTS);
         if (!array_any($texts, self::hasBlankLine(...))) {
             return false;
         }
@@ -63,21 +63,6 @@ final class PastedTextBreaks
     private static function hasBlankLine(Text $text): bool
     {
         return preg_match(self::BLANK_LINE_PATTERN, $text->data) === 1;
-    }
-
-    /** @return list<Text> */
-    private static function proseTextsIn(Element $element): array
-    {
-        $texts = [];
-        foreach ($element->childNodes as $child) {
-            if ($child instanceof Text) {
-                $texts[] = $child;
-            } elseif ($child instanceof Element && !in_array($child->localName, self::VERBATIM_ELEMENTS, true)) {
-                array_push($texts, ...self::proseTextsIn($child));
-            }
-        }
-
-        return $texts;
     }
 
     private static function replaceWithBreaks(Text $text, Document $document): void

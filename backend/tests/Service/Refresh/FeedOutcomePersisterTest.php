@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
+use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -21,8 +25,8 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
 use App\Tests\Support\FeedSchedulers;
-use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use Doctrine\ORM\EntityManagerInterface;
@@ -60,6 +64,27 @@ final class FeedOutcomePersisterTest extends DbTestCase
         self::assertSame(2, $result->entriesCreated);
         self::assertSame('"e1"', $feed->getEtag());
         self::assertSame([], $this->logger->records);
+    }
+
+    public function testAFetchedPostIsQueuedForItsCardsAndNoPageIsFetched(): void
+    {
+        $feed = $this->feed('https://mastodon.example/@someone.rss');
+
+        $this->persister($this->entityManager)->persist(
+            $feed,
+            FetchOutcomeModel::succeeded(
+                FetchResponseModel::fetched($feed->getUrl(), false, $this->postRss(), null, null),
+            ),
+            $this->clock->now(),
+        );
+
+        $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'post-1']);
+        self::assertInstanceOf(Entry::class, $post);
+        $queued = $this->entityManager->getRepository(PostEnrichment::class)->findBy(['entry' => $post]);
+        self::assertCount(1, $queued);
+        self::assertSame(PostEnrichmentKind::LinkCards, $queued[0]->getKind());
+        self::assertStringContainsString('<a href="https://example.com/story"', (string) $post->getContentHtml());
+        self::assertSame([], $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]));
     }
 
     public function testAThrottledFetchIsLoggedAtInfo(): void
@@ -225,6 +250,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
             EntryIngestors::build($this->entityManager, $this->clock),
             FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
+            PostEnrichers::queue($this->entityManager, $this->clock),
             PostEnrichers::idle($this->entityManager, $this->clock),
             $this->logger,
         );
@@ -255,6 +281,14 @@ final class FeedOutcomePersisterTest extends DbTestCase
         return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>T</title>'
             . '<item><title>One</title><link>https://one.example.com/1</link><guid>one-1</guid></item>'
             . '<item><title>Two</title><link>https://one.example.com/2</link><guid>one-2</guid></item>'
+            . '</channel></rss>';
+    }
+
+    private function postRss(): string
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>T</title>'
+            . '<item><link>https://mastodon.example/@someone/1</link><guid>post-1</guid>'
+            . '<description>&lt;p&gt;Worth a read: https://example.com/story&lt;/p&gt;</description></item>'
             . '</channel></rss>';
     }
 }

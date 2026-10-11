@@ -10,8 +10,10 @@ export const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thum
 export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
 
 export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
-  const settled = demoteUntilFit(kind, entry);
-  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(kind, entry);
+  if (isLinkPost(entry)) return 'link';
+  const slot = kind === 'link' ? 'hero' : kind;
+  const settled = demoteUntilFit(slot, entry);
+  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
   // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
   // both families honour it. A bare entry (no image, no summary) stays `compact`.
@@ -50,9 +52,16 @@ function hasSummary(entry: EntryDto): boolean {
   return entryDek(entry).length > 0;
 }
 
+/** A post that shares a link, or is still being completed, takes the `link` block
+ *  whatever slot it was given (#1502). */
+export function isLinkPost(entry: EntryDto): boolean {
+  return entry.titleDerived && (entry.linkCards.length > 0 || entry.pending);
+}
+
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
   // A portrait cover is refused, demoting to `split`.
   hero: (entry) => landscapeImageAtLeast(entry, 500),
+  link: isLinkPost,
   // A portrait cover cannot fill a 3:1 band at all.
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),

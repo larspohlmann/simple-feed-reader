@@ -230,6 +230,9 @@
               />
             }
             <div #content class="content" [innerHTML]="source.displayHtml()"></div>
+            @if (e.linkCards.length || e.pending) {
+              <app-link-cards [cards]="e.linkCards" [pending]="e.pending" />
+            }
           }
           @if (e.categories.length) {
             <p class="categories">{{ e.categories.join(', ') }}</p>

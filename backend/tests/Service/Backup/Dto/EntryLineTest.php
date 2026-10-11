@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Entity\LinkCardContent;
 use App\Service\Backup\Dto\EntryLine;
 use PHPUnit\Framework\TestCase;
 
@@ -38,6 +39,31 @@ final class EntryLineTest extends TestCase
 
         self::assertSame([], $line->media);
         self::assertSame([], $line->attachments);
+    }
+
+    public function testReadsTheLinkCardsAndDropsOnesNoCardMayHold(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['linkCards' => [
+            [
+                'url' => 'https://example.com/a',
+                'title' => 'A',
+                'description' => 'About A',
+                'imageUrl' => 'https://example.com/a.jpg',
+                'siteName' => 'Example',
+            ],
+            ['url' => 'javascript:alert(1)', 'title' => 'X', 'siteName' => 'X'],
+            ['url' => 'https://example.com/b', 'title' => 'B', 'imageUrl' => 'http://e.com/b.jpg', 'siteName' => 'E'],
+        ]]);
+
+        self::assertEquals([
+            new LinkCardContent('https://example.com/a', 'A', 'About A', 'https://example.com/a.jpg', 'Example'),
+            new LinkCardContent('https://example.com/b', 'B', null, null, 'E'),
+        ], $line->linkCards);
+    }
+
+    public function testAnOlderFileWithoutLinkCardsReadsAsNone(): void
+    {
+        self::assertSame([], EntryLine::fromLine($this->baseLine())->linkCards);
     }
 
     public function testReadsWhetherTheTitleWasDerived(): void

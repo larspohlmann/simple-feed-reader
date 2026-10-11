@@ -7,7 +7,10 @@ namespace App\Service\Text\Support;
 /** Text known to carry no markup, as HTML: escaped, paragraphed, its bare URLs linked. */
 final class LinkedPlainText
 {
-    private const string TEXT_THEN_URL_PATTERN = '#(.*?)(?:(https?://[^\s<>"]+?)(?=[.,;:!?)\]]*(?:\s|$))|$)#is';
+    /** A bare URL, without the sentence punctuation that trails it. */
+    public const string URL = 'https?://[^\s<>"]+?(?=[.,;:!?)\]"\'”’»…]*(?:\s|$))';
+
+    private const string TEXT_THEN_URL_PATTERN = '#(.*?)(?:(' . self::URL . ')|$)#isu';
 
     public static function asHtml(string $text): ?string
     {

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCardContent;
 use App\Entity\Preferences;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
@@ -15,6 +16,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Repository\FeedRepository;
+use App\Repository\LinkCardRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Backup\AccountBackupExporter;
 use App\Service\Backup\AccountRestorer;
@@ -422,6 +424,7 @@ final class AccountRestorerTest extends DbTestCase
         $foundation = $this->backupOf($source);
         $entryParts = $this->entryPartsOf($source);
         $sourceRows = $this->fixtureRowsOf($source);
+        $sourceCards = $this->linkCardsOf($sourceRows['entry']);
 
         $target = $this->userFactory->create('drift-target@example.com');
         $this->deleteEveryFeed();
@@ -483,6 +486,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertTrue($sourceRows['entry']->isTitleDerived());
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
+        self::assertNotSame([], $sourceCards);
+        self::assertEquals($sourceCards, $this->linkCardsOf($targetRows['entry']));
 
         $this->assertFieldsRoundTripped(
             EntryState::class,
@@ -495,6 +500,15 @@ final class AccountRestorerTest extends DbTestCase
             [$sourceRows['feed']->getUrl(), $sourceRows['entry']->getGuidHash()],
             [$restoredEntry->getFeed()->getUrl(), $restoredEntry->getGuidHash()],
         );
+    }
+
+    /** @return list<LinkCardContent> */
+    private function linkCardsOf(Entry $entry): array
+    {
+        $linkCards = self::getContainer()->get(LinkCardRepository::class);
+        self::assertInstanceOf(LinkCardRepository::class, $linkCards);
+
+        return $linkCards->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
     }
 
     /**

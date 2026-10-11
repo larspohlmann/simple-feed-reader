@@ -16,6 +16,7 @@ use Doctrine\DBAL\Connection;
 final readonly class EntryBatchInserter
 {
     private const int ROWS_PER_STATEMENT = 500;
+    private const int CARDS_PER_STATEMENT = 100;
 
     private const array COLUMNS = [
         'feed_id', 'guid', 'guid_hash', 'url', 'url_hash', 'title', 'author',
@@ -37,6 +38,35 @@ final readonly class EntryBatchInserter
     {
         foreach (array_chunk($lines, self::ROWS_PER_STATEMENT) as $chunk) {
             $this->insertChunk($feedId, $chunk);
+        }
+    }
+
+    /**
+     * The cards of entries just inserted, which hold none yet.
+     *
+     * @param array<string, int> $entryIdsByGuidHash
+     * @param list<EntryLine>    $lines
+     */
+    public function insertLinkCards(array $entryIdsByGuidHash, array $lines): void
+    {
+        $rows = [];
+        foreach ($lines as $line) {
+            foreach ($line->linkCards as $position => $card) {
+                $rows[] = [
+                    $entryIdsByGuidHash[$line->guidHash], $position,
+                    $card->url, $card->title, $card->description, $card->imageUrl, $card->siteName,
+                ];
+            }
+        }
+        foreach (array_chunk($rows, self::CARDS_PER_STATEMENT) as $chunk) {
+            $this->connection->executeStatement(
+                sprintf(
+                    'INSERT INTO link_card (entry_id, position, url, title, description, image_url, site_name)'
+                    . ' VALUES %s',
+                    implode(', ', array_fill(0, \count($chunk), '(?, ?, ?, ?, ?, ?, ?)')),
+                ),
+                array_merge(...$chunk),
+            );
         }
     }
 

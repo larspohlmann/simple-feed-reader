@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
+use App\Service\Html\Support\MetaTags;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\RawPageModel;
@@ -30,29 +31,15 @@ final readonly class MetaMediaSource implements MediaCandidateSourceInterface
 
     public function find(RawPageModel $page): array
     {
+        $meta = MetaTags::contentByKey($page->document);
         $found = [];
         foreach (self::PROPERTIES as $property) {
-            $candidate = $this->candidateFor($page->document, $property);
-            if ($candidate !== null) {
-                $found[$candidate->url] = $candidate;
+            $resolved = isset($meta[$property]) ? $this->mediaUrlKind->resolve($meta[$property]) : null;
+            if ($resolved !== null) {
+                $found[$resolved->url] = new MediaCandidateModel($resolved->kind, $resolved->url);
             }
         }
 
         return array_values($found);
-    }
-
-    private function candidateFor(\Dom\HTMLDocument $document, string $property): ?MediaCandidateModel
-    {
-        $url = $this->content($document, $property);
-        $resolved = $url === null ? null : $this->mediaUrlKind->resolve($url);
-
-        return $resolved === null ? null : new MediaCandidateModel($resolved->kind, $resolved->url);
-    }
-
-    private function content(\Dom\HTMLDocument $document, string $property): ?string
-    {
-        $element = $document->querySelector(\sprintf('meta[property="%1$s"], meta[name="%1$s"]', $property));
-
-        return $element?->getAttribute('content');
     }
 }

@@ -1,5 +1,6 @@
 @use '../../../theme/breakpoints' as bp;
 @use '../../../theme/glass-rim';
+@use '../../link-card/link-card-layout';
 
 /* Article typography. The body is [innerHTML]-injected, so descendant rules
    need ::ng-deep (scoped under .content). The sanitizer strips default
@@ -649,52 +650,10 @@
 }
 
 .content ::ng-deep .link-card {
-  @include glass-rim.filled(var(--surface-1));
+  @include link-card-layout.frame;
+  @include link-card-layout.article-type;
 
   margin: var(--space-5) 0;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.content ::ng-deep .link-card a[href] {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-bottom: var(--space-3);
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
-/* The card clips its thumbnail to its corners, so the focus ring is drawn inside the link. */
-.content ::ng-deep .link-card a[href]:focus-visible {
-  border-radius: inherit;
-  outline-offset: -2px;
-}
-
-.content ::ng-deep .link-card img {
-  display: block;
-  width: 100%;
-  margin-bottom: var(--space-2);
-  border-radius: 0;
-}
-
-.content ::ng-deep .link-card :is(strong, span, small) {
-  padding-inline: var(--space-4);
-}
-
-.content ::ng-deep .link-card a > :first-child:not(img) {
-  padding-top: var(--space-3);
-}
-
-.content ::ng-deep .link-card span {
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-}
-
-.content ::ng-deep .link-card small {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
 }
 
 .content ::ng-deep .quote-post blockquote {

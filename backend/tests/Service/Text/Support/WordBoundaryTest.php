@@ -24,4 +24,19 @@ final class WordBoundaryTest extends TestCase
     {
         self::assertSame($expected, WordBoundary::cut($text, $maxLength));
     }
+
+    /** @return iterable<string, array{string, int, string}> */
+    public static function clippedTexts(): iterable
+    {
+        yield 'a text within the length stays whole' => ['one two', 7, 'one two'];
+        yield 'a longer text is cut before a space and ends in an ellipsis' => ['one two three', 10, 'one two…'];
+        yield 'punctuation before the cut goes' => ['one two, three', 10, 'one two…'];
+        yield 'the ellipsis counts towards the length' => ['one two', 6, 'one…'];
+    }
+
+    #[DataProvider('clippedTexts')]
+    public function testClipsAtAWordBoundaryWithAnEllipsis(string $text, int $maxLength, string $expected): void
+    {
+        self::assertSame($expected, WordBoundary::clipped($text, $maxLength));
+    }
 }

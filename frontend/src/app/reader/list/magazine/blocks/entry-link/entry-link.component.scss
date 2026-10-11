@@ -1,0 +1,39 @@
+@use '../../../post-text';
+@use '../../magazine-card';
+
+:host {
+  display: block;
+}
+
+.link {
+  @include magazine-card.chrome;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-pad);
+  cursor: pointer;
+}
+
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .link:hover {
+    --rim-base: var(--border-strong);
+  }
+}
+
+.title {
+  @include post-text.post-text;
+
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.link.read .title {
+  color: var(--text-secondary);
+}
+
+:is(app-link-card, app-link-card-placeholder) {
+  margin-top: var(--space-1);
+}

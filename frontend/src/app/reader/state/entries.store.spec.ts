@@ -37,6 +37,8 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  linkCards: [],
+  pending: false,
   imageAspectRatio: null,
   discussionUrl: null,
   comments: null,
@@ -433,6 +435,116 @@ describe('EntriesStore', () => {
     expect(byId.get(2)).toBe(false);
     expect(byId.get(3)).toBe(true);
     ctrl.expectNone(() => true);
+  });
+
+  describe('merging completed rows (#1502)', () => {
+    const card = {
+      url: 'https://news.test/',
+      title: 'Story',
+      description: null,
+      imageUrl: null,
+      siteName: 'news.test',
+    };
+
+    beforeEach(() => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne((request) => request.url === 'https://api.test/api/entries')
+        .flush({
+          entries: [
+            entry(1, { pending: true, duplicates: [entry(9)], recommendationReason: 'Because' }),
+            entry(2, { pending: true }),
+          ],
+          nextCursor: null,
+        });
+    });
+
+    it('takes what completion filled in, keeping what only the list knows', () => {
+      store.mergeCompleted([
+        entry(1, { linkCards: [card], pending: false, excerpt: 'Filled', duplicates: [] }),
+        entry(7),
+      ]);
+
+      const [first, second] = store.entries();
+      expect(first.pending).toBe(false);
+      expect(first.linkCards).toEqual([card]);
+      expect(first.excerpt).toBe('Filled');
+      expect(first.duplicates!.map((duplicate) => duplicate.id)).toEqual([9]);
+      expect(first.recommendationReason).toBe('Because');
+      expect(second.pending).toBe(true);
+      expect(store.entries().map((listed) => listed.id)).toEqual([1, 2]);
+    });
+
+    it('keeps the list and its rows as they are when a round fills nothing in', () => {
+      const before = store.entries();
+
+      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: true })]);
+
+      expect(store.entries()).toBe(before);
+    });
+
+    it('replaces only the rows a round filled in', () => {
+      const [first] = store.entries();
+
+      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: false })]);
+
+      expect(store.entries()[0]).toBe(first);
+      expect(store.entries()[1].pending).toBe(false);
+    });
+
+    it('keeps what a round filled in when a state change on the wire fails', () => {
+      store.setState(2, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
+      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+
+      patch.flush('nope', { status: 500, statusText: 'Server Error' });
+
+      expect(store.entries()[1]).toMatchObject({
+        isFavorite: false,
+        pending: false,
+        linkCards: [card],
+      });
+    });
+
+    it('keeps a completed card when a stale answer still says pending', () => {
+      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+
+      store.mergeCompleted([entry(2, { pending: true })]);
+
+      expect(store.entries()[1]).toMatchObject({ pending: false, linkCards: [card] });
+    });
+
+    it('lets a listed post the open queued turn pending', () => {
+      store.mergeCompleted([entry(2, { pending: false })]);
+
+      store.mergeCompleted([entry(2, { pending: true })]);
+
+      expect(store.entries()[1].pending).toBe(true);
+    });
+
+    it('keeps a state change still on the wire', () => {
+      store.setState(2, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
+
+      store.mergeCompleted([entry(2)]);
+
+      expect(store.entries()[1].isFavorite).toBe(true);
+      patch.flush({ state: {} });
+    });
+
+    it('keeps a state change that landed while the completion call was out', () => {
+      store.setState(2, { isFavorite: true });
+      ctrl.expectOne('https://api.test/api/entries/2/state').flush({ state: {} });
+      store.markHiddenLocally([2]);
+
+      store.mergeCompleted([entry(2, { isFavorite: false, isHidden: false, pending: false })]);
+
+      expect(store.entries()[1]).toMatchObject({
+        isFavorite: true,
+        isHidden: true,
+        pending: false,
+      });
+    });
   });
 
   it('invokes the onError callback on a failed state PATCH', () => {

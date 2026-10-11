@@ -1,0 +1,23 @@
+@use '../../theme/link-card';
+@use '../../theme/loading-pulse';
+
+:host {
+  @include link-card.surface;
+
+  display: block;
+}
+
+.image {
+  @include loading-pulse.block;
+
+  aspect-ratio: link-card.$image-ratio;
+}
+
+@include loading-pulse.keyframes;
+
+.label {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}

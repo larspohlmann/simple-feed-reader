@@ -1,0 +1,25 @@
+<article
+  class="link"
+  role="button"
+  tabindex="0"
+  [class.read]="entry().isHidden"
+  (click)="actions.open(entry())"
+  (keydown.enter)="actions.open(entry())"
+  (keydown.space)="$event.preventDefault(); actions.open(entry())"
+>
+  <app-entry-kicker-line [entry]="entry()" />
+  <p class="title">{{ headline() }}</p>
+  @if (entry().linkCards[0]; as shared) {
+    <app-link-card
+      [card]="shared"
+      layout="block"
+      (click)="$event.stopPropagation()"
+      (keydown.enter)="$event.stopPropagation()"
+      (keydown.space)="$event.stopPropagation()"
+    />
+  } @else if (entry().pending) {
+    <app-link-card-placeholder />
+  }
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
+</article>

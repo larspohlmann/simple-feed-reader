@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\ContentTypeCharset;
 use App\Service\Html\Support\HtmlTranscoder;
@@ -13,6 +14,7 @@ use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
 use App\Service\Text\Support\Whitespace;
+use Symfony\Component\HttpClient\Response\StreamWrapper;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -25,6 +27,11 @@ final readonly class HtmlPageFetcher
     private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
+    private const int HEAD_MAX_BYTES = 524_288;
+    // The transfer is aborted a little past the cap, so the bytes the read keeps have surely arrived.
+    private const int HEAD_ABORT_BYTES = self::HEAD_MAX_BYTES + 65_536;
+    private const float HEAD_TIMEOUT_SECONDS = 5.0;
+    public const float HEAD_MAX_DURATION_SECONDS = 8.0;
     private const int SNIPPET_LENGTH = 200;
     private const int SNIPPET_SCAN_LENGTH = 20_000;
     private const int LANDING_SCAN_LENGTH = 20_000;
@@ -43,7 +50,7 @@ final readonly class HtmlPageFetcher
         $remainingHops = self::MAX_REDIRECTS;
         $target = $url;
         while (true) {
-            $landed = $this->land($target, $remainingHops);
+            $landed = $this->land($target, $this->pageOptions(), new RedirectBudget($remainingHops));
             $remainingHops -= $landed->hops;
             $body = $this->readableBody($landed);
 
@@ -63,10 +70,29 @@ final readonly class HtmlPageFetcher
         }
     }
 
-    private function land(string $url, int $maxRedirects): LandedResponse
+    /**
+     * The start of a page, for the metadata its head declares: at most 512 KB is read, the timeouts are short and a
+     * meta refresh is not chased.
+     */
+    public function fetchHead(string $url): PageResponseModel
+    {
+        $landed = $this->land(
+            $url,
+            $this->headOptions(),
+            new RedirectBudget(self::MAX_REDIRECTS, self::HEAD_MAX_DURATION_SECONDS),
+        );
+        $this->assertSuccess($landed);
+        $head = $this->utf8($this->firstBytes($landed), $landed);
+        $this->assertNotChallenge(mb_substr($head, 0, self::LANDING_SCAN_LENGTH), $landed);
+
+        return new PageResponseModel($landed->url, $head);
+    }
+
+    /** @param array<string, mixed> $options */
+    private function land(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
         try {
-            return $this->redirects->follow($url, $this->options(), $maxRedirects);
+            return $this->redirects->followWithin($url, $options, $budget);
         } catch (RedirectChainException $exception) {
             throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
@@ -74,20 +100,42 @@ final readonly class HtmlPageFetcher
 
     private function readableBody(LandedResponse $landed): string
     {
-        if (!$landed->isSuccess()) {
-            $snippet = $this->errorBodySnippet($landed->response);
-            $landed->response->cancel();
-            $status = $this->describeStatus($landed->status);
-
-            throw new PageFetchException($snippet === null ? $status : $status . ' — ' . $snippet);
-        }
-
+        $this->assertSuccess($landed);
         $body = $this->content($landed);
         if (\strlen($body) > self::MAX_BYTES) {
             throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
         }
 
         return $this->utf8($body, $landed);
+    }
+
+    private function assertSuccess(LandedResponse $landed): void
+    {
+        if ($landed->isSuccess()) {
+            return;
+        }
+        $snippet = $this->errorBodySnippet($landed->response);
+        $landed->response->cancel();
+        $status = $this->describeStatus($landed->status);
+
+        throw new PageFetchException($snippet === null ? $status : $status . ' — ' . $snippet);
+    }
+
+    /** The response stream reports a transport failure as a warning, which is turned into the failure it is. */
+    private function firstBytes(LandedResponse $landed): string
+    {
+        $stream = StreamWrapper::createResource($landed->response);
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new PageFetchException($message);
+        });
+        try {
+            $head = stream_get_contents($stream, self::HEAD_MAX_BYTES);
+        } finally {
+            restore_error_handler();
+            $landed->response->cancel();
+        }
+
+        return $head === false ? throw new PageFetchException('the response could not be read') : $head;
     }
 
     private function utf8(string $body, LandedResponse $landed): string
@@ -107,16 +155,21 @@ final readonly class HtmlPageFetcher
     }
 
     /** @return array<string, mixed> */
-    private function options(): array
+    private function headOptions(): array
     {
         return [
-            'headers' => [
-                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                // No transparent compression: on_progress would cap the compressed bytes while curl buffers the
-                // inflated body whole, so a small gzip bomb could exhaust the worker's memory.
-                'Accept-Encoding' => 'identity',
-                'User-Agent' => $this->userAgent,
-            ],
+            'headers' => $this->headers(),
+            'timeout' => self::HEAD_TIMEOUT_SECONDS,
+            'buffer' => false,
+            'on_progress' => self::abortPastTheHead(),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function pageOptions(): array
+    {
+        return [
+            'headers' => $this->headers(),
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS * 2,
             'on_progress' => static function (int $downloaded): void {
@@ -124,6 +177,32 @@ final readonly class HtmlPageFetcher
                     throw new PageFetchException(sprintf('response exceeds %d bytes', self::MAX_BYTES));
                 }
             },
+        ];
+    }
+
+    private static function abortPastTheHead(): \Closure
+    {
+        $aborted = false;
+
+        return static function (int $downloaded) use (&$aborted): void {
+            if ($aborted || $downloaded <= self::HEAD_ABORT_BYTES) {
+                return;
+            }
+            $aborted = true;
+
+            throw new PageFetchException(sprintf('head read past %d bytes', self::HEAD_ABORT_BYTES));
+        };
+    }
+
+    /** @return array<string, string> */
+    private function headers(): array
+    {
+        return [
+            'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            // No transparent compression: on_progress would cap the compressed bytes while curl buffers the
+            // inflated body whole, so a small gzip bomb could exhaust the worker's memory.
+            'Accept-Encoding' => 'identity',
+            'User-Agent' => $this->userAgent,
         ];
     }
 

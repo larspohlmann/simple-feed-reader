@@ -109,6 +109,86 @@ describe('EntryBodyService', () => {
     expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
   });
 
+  describe('refresh (#1502)', () => {
+    async function shown(html: string) {
+      const state = store.body(1);
+      await settle();
+      ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: html } });
+      return state;
+    }
+
+    it('refetches a shown body in place, without a loading state between', async () => {
+      const state = await shown('<p>a</p>');
+
+      store.refresh(1);
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { contentHtml: '<p>b</p>' } });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+    });
+
+    it('keeps the shown body when the refetch fails', async () => {
+      const state = await shown('<p>a</p>');
+
+      store.refresh(1);
+      ctrl.expectOne('https://api.test/api/entries/1').flush('nope', {
+        status: 500,
+        statusText: 'Server Error',
+      });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
+    });
+
+    it('ends on the new body when the first fetch was still on the wire', async () => {
+      const state = store.body(1);
+      await settle();
+      const first = ctrl.expectOne('https://api.test/api/entries/1');
+
+      store.refresh(1);
+      const second = ctrl.expectOne('https://api.test/api/entries/1');
+      second.flush({ entry: { contentHtml: '<p>new</p>' } });
+      first.flush({ entry: { contentHtml: '<p>old</p>' } });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>new</p>' });
+    });
+
+    it('forgets a body so the next request fetches it afresh', async () => {
+      await shown('<p>a</p>');
+
+      store.forget(1);
+      const state = store.body(1);
+      await settle();
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { contentHtml: '<p>b</p>' } });
+
+      expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
+    });
+
+    it('publishes the entry a fetch brings back, but not one for a body forgotten meanwhile', async () => {
+      const published: number[] = [];
+      store.details.subscribe((detail) => published.push(detail.id));
+      store.body(1);
+      store.body(2);
+      await settle();
+
+      store.forget(2);
+      ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { id: 2, contentHtml: '' } });
+      ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { id: 1, contentHtml: '' } });
+
+      expect(published).toEqual([1]);
+    });
+
+    it('fetches nothing for a body nobody has loaded', async () => {
+      store.refresh(5);
+      await settle();
+
+      ctrl.expectNone('https://api.test/api/entries/5');
+    });
+  });
+
   it('evicts the least recently used body once the cache grows past its cap', async () => {
     for (let id = 1; id <= 50; id++) {
       store.body(id);

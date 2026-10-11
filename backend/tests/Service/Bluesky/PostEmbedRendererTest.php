@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Bluesky;
 
+use App\Entity\LinkCardContent;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Bluesky\PostEmbedRenderer;
@@ -32,18 +33,18 @@ final class PostEmbedRendererTest extends TestCase
     private const string FALLBACK = '<p><a href="https://bsky.app/profile/did:plc:a/post/b">'
         . 'View embedded content on Bluesky</a></p>';
 
-    public function testALinkCardLinksTheArticleWithItsTitleDescriptionAndHost(): void
+    public function testALinkCardIsAValueWithTitleDescriptionThumbnailAndHostAndNoHtml(): void
     {
         $embed = $this->rendered('external');
 
-        self::assertSame(
-            '<figure class="link-card"><a href="' . Bluesky::CARD . '"><img src="' . self::CARD_THUMB . '" alt="">'
-                . '<strong>After ICE Shooting, Progressives Want New York&apos;s Police Commissioner to Step Down'
-                . '</strong><span>28-year-old Oscar Belgal still has a bullet lodged in his body.</span>'
-                . '<small>motherjones.com</small></a></figure>',
-            $embed->html,
-        );
-        self::assertSame(Bluesky::CARD, $embed->linkCardUrl);
+        self::assertSame('', $embed->html);
+        self::assertEquals(new LinkCardContent(
+            Bluesky::CARD,
+            'After ICE Shooting, Progressives Want New York\'s Police Commissioner to Step Down',
+            '28-year-old Oscar Belgal still has a bullet lodged in his body.',
+            self::CARD_THUMB,
+            'motherjones.com',
+        ), $embed->linkCard);
         self::assertSame(self::CARD_THUMB, $embed->leadImage?->url);
         self::assertSame([], $embed->media);
     }
@@ -72,7 +73,7 @@ final class PostEmbedRendererTest extends TestCase
             )],
             $embed->media,
         );
-        self::assertNull($embed->linkCardUrl);
+        self::assertNull($embed->linkCard);
     }
 
     public function testImagesShowFullSizeWithAltTextAndDimensions(): void
@@ -107,7 +108,7 @@ final class PostEmbedRendererTest extends TestCase
         );
         self::assertStringNotContainsString('stress-test', $embed->html);
         self::assertNull($embed->leadImage);
-        self::assertNull($embed->linkCardUrl);
+        self::assertNull($embed->linkCard);
     }
 
     public function testAQuoteWithMediaRendersTheQuoteThenTheMedia(): void
@@ -115,18 +116,19 @@ final class PostEmbedRendererTest extends TestCase
         $embed = $this->rendered('record-with-media');
 
         self::assertStringStartsWith('<figure class="quote-post"><blockquote><p>I spent months', $embed->html);
-        self::assertStringContainsString(
-            '<footer><a href="https://bsky.app/profile/did:plc:rhgbyqyye2vpydw7c75j4wnr/post/3mxh76vhjfk2k">'
-                . 'Amy Littlefield (@amylittlefield.bsky.social)</a></footer></blockquote></figure>'
-                . '<figure class="link-card"><a href="' . self::REDDIT_CARD . '">',
-            $embed->html,
-        );
         self::assertStringEndsWith(
-            '<strong>From the IAmA community on Reddit</strong><span>Explore this post and more from the IAmA'
-                . ' community</span><small>sh.reddit.com</small></a></figure>',
+            '<footer><a href="https://bsky.app/profile/did:plc:rhgbyqyye2vpydw7c75j4wnr/post/3mxh76vhjfk2k">'
+                . 'Amy Littlefield (@amylittlefield.bsky.social)</a></footer></blockquote></figure>',
             $embed->html,
         );
-        self::assertSame(self::REDDIT_CARD, $embed->linkCardUrl);
+        self::assertStringNotContainsString('link-card', $embed->html);
+        self::assertEquals(new LinkCardContent(
+            self::REDDIT_CARD,
+            'From the IAmA community on Reddit',
+            'Explore this post and more from the IAmA community',
+            self::REDDIT_THUMB,
+            'sh.reddit.com',
+        ), $embed->linkCard);
         self::assertSame(self::REDDIT_THUMB, $embed->leadImage?->url);
     }
 
@@ -214,7 +216,7 @@ final class PostEmbedRendererTest extends TestCase
         ])));
     }
 
-    public function testHostileLinkCardTextIsEscapedAndAnHttpThumbnailDropped(): void
+    public function testHostileLinkCardTextStaysPlainTextAndAnHttpThumbnailIsDropped(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.external#view',
@@ -226,13 +228,14 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertSame(
-            '<figure class="link-card"><a href="https://example.com/a?x=1&amp;y=2"><strong>&lt;script&gt;alert(1)'
-                . '&lt;/script&gt;</strong><span>Fish &amp; &quot;chips&quot;</span><small>example.com</small></a>'
-                . '</figure>',
-            $rendered?->html,
-        );
-        self::assertNull($rendered->leadImage);
+        self::assertEquals(new LinkCardContent(
+            'https://example.com/a?x=1&y=2',
+            '<script>alert(1)</script>',
+            'Fish & "chips"',
+            null,
+            'example.com',
+        ), $rendered?->linkCard);
+        self::assertNull($rendered?->leadImage);
     }
 
     public function testALinkCardMayLinkAnHttpPageButItsThumbnailStaysHttpsOnly(): void
@@ -246,26 +249,58 @@ final class PostEmbedRendererTest extends TestCase
             ],
         ]));
 
-        self::assertSame(
-            '<figure class="link-card"><a href="http://spr.ly/6018AbCdE"><strong>Scores</strong>'
-                . '<small>spr.ly</small></a></figure>',
-            $rendered?->html,
+        self::assertEquals(
+            new LinkCardContent('http://spr.ly/6018AbCdE', 'Scores', null, null, 'spr.ly'),
+            $rendered?->linkCard,
         );
-        self::assertSame('http://spr.ly/6018AbCdE', $rendered->linkCardUrl);
-        self::assertNull($rendered->leadImage);
+        self::assertNull($rendered?->leadImage);
     }
 
     public function testALinkCardShowsItsHostLowerCasedWithoutWww(): void
     {
         $rendered = $this->renderer()->render(self::post([
             '$type' => 'app.bsky.embed.external#view',
-            'external' => ['uri' => 'https://WWW.Example.COM/Story'],
+            'external' => ['uri' => 'https://WWW.Example.COM/Story', 'title' => 'Story'],
         ]));
 
-        self::assertSame(
-            '<figure class="link-card"><a href="https://WWW.Example.COM/Story"><small>example.com</small></a></figure>',
-            $rendered?->html,
-        );
+        self::assertSame('example.com', $rendered?->linkCard?->siteName);
+    }
+
+    public function testALinkCardWithoutATitleIsNoCardAndLinksThePost(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://example.com/story', 'description' => 'No headline'],
+        ]));
+
+        self::assertSame(self::FALLBACK, $rendered?->html);
+        self::assertNull($rendered->linkCard);
+    }
+
+    public function testALinkCardTooLongToStoreIsNoCardAndLinksThePost(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://example.com/' . str_repeat('a', 2080), 'title' => 'Story'],
+        ]));
+
+        self::assertSame(self::FALLBACK, $rendered?->html);
+        self::assertNull($rendered->linkCard);
+    }
+
+    public function testALinkCardsLongTitleAndDescriptionAreCutToFit(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://example.com/story',
+                'title' => str_repeat('t', 600),
+                'description' => str_repeat('word ', 100),
+            ],
+        ]));
+
+        self::assertSame(str_repeat('t', 500), $rendered?->linkCard?->title);
+        self::assertSame(str_repeat('word ', 58) . 'word…', $rendered->linkCard->description);
     }
 
     public function testAnHttpImageIsDroppedAndAProtocolRelativeOneUpgraded(): void
@@ -365,11 +400,6 @@ final class PostEmbedRendererTest extends TestCase
         yield 'video' => ['video', [
             '<figure class="post-video"><video controls preload="none" poster="' . self::VIDEO
                 . 'thumbnail.jpg" src="' . self::VIDEO . 'playlist.m3u8"></video></figure>',
-        ]];
-        yield 'link card' => ['external', [
-            '<figure class="link-card"><a href="' . Bluesky::CARD . '" rel="noopener noreferrer" target="_blank">'
-                . '<img src="' . self::CARD_THUMB . '" alt /><strong>',
-            '<small>motherjones.com</small></a></figure>',
         ]];
         yield 'quote' => ['record', [
             '<figure class="quote-post"><blockquote><p>Big money',

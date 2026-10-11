@@ -7,6 +7,7 @@ namespace App\Tests\Support;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
 use App\Entity\Preferences;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
@@ -74,6 +75,12 @@ final class BackupFieldDeclarations
             'discussion.commentsFeedUrl' => 'commentsFeedUrl',
             'discussion.commentsLoad' => 'commentsLoad',
         ],
+        LinkCard::class => [
+            // A card rides in its entry's line, in post order, so neither the entry nor the position is a key.
+            'entry' => 'linkCards', 'position' => 'linkCards',
+            'url' => 'linkCards.url', 'title' => 'linkCards.title', 'description' => 'linkCards.description',
+            'imageUrl' => 'linkCards.imageUrl', 'siteName' => 'linkCards.siteName',
+        ],
         EntryState::class => [
             // Both halves: guidHash picks the entry within its feed, feedUrl the feed. Declaring only one would let
             // entryStateLine() drop the other unnoticed.
@@ -93,6 +100,7 @@ final class BackupFieldDeclarations
         Subscription::class => BackupSchema::KIND_SUBSCRIPTION,
         SubscriptionTag::class => BackupSchema::KIND_SUBSCRIPTION,
         Entry::class => BackupSchema::KIND_ENTRY,
+        LinkCard::class => BackupSchema::KIND_ENTRY,
         EntryState::class => BackupSchema::KIND_ENTRY_STATE,
     ];
 

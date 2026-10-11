@@ -6,7 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PendingPostEnrichment;
+use App\Entity\PostEnrichment;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
@@ -74,10 +74,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             'Billionaire heiress Jessica Tisch',
             (string) $tisch->getContentHtml(),
         );
-        self::assertStringContainsString(
-            'leave the city.<figure class="link-card"><a href="' . self::CARD . '"',
-            (string) $tisch->getContentHtml(),
-        );
+        self::assertStringEndsWith('leave the city.', (string) $tisch->getContentHtml());
         self::assertSame(self::TISCH_TEXT, $tisch->getSummary());
         $video = $this->entry(self::VIDEO_POST);
         self::assertStringNotContainsString('[contains quote post', (string) $video->getContentHtml());
@@ -110,10 +107,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
         self::assertSame(FeedOutcome::NotModified, $result->outcome);
         self::assertSame(0, $this->pendingCount());
-        self::assertStringContainsString(
-            '<figure class="link-card">',
-            (string) $this->entry(self::TISCH)->getContentHtml(),
-        );
+        self::assertStringNotContainsString(self::CARD, (string) $this->entry(self::TISCH)->getContentHtml());
         self::assertCount(2, array_slice($this->indexWriter->upserts, -1)[0]);
     }
 
@@ -187,6 +181,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             ),
             FeedSchedulers::build($this->clock),
             new EntryIndexer($this->indexWriter, new NullLogger()),
+            PostEnrichers::queue($this->entityManager, $this->clock),
             $postEnricher,
             new NullLogger(),
         );
@@ -212,6 +207,6 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
     private function pendingCount(): int
     {
-        return $this->entityManager->getRepository(PendingPostEnrichment::class)->count([]);
+        return $this->entityManager->getRepository(PostEnrichment::class)->count([]);
     }
 }

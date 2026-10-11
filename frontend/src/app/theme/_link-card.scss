@@ -1,0 +1,11 @@
+@use 'sass:list';
+@use 'glass-rim';
+
+$image-ratio: list.slash(1.91, 1);
+
+@mixin surface {
+  @include glass-rim.filled(var(--surface-1));
+
+  border-radius: var(--radius);
+  overflow: hidden;
+}
