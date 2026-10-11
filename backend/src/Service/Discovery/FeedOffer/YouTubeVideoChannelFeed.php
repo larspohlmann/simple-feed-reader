@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery\FeedOffer;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Reader\Media\Support\YouTubeVideoId;
+use App\Service\Url\Support\YouTubeUrl;
 
 /** Offers the channel feed of the video a YouTube watch page plays; the page names the channel but no feed. */
 final readonly class YouTubeVideoChannelFeed implements FeedOfferInterface
@@ -19,7 +19,7 @@ final readonly class YouTubeVideoChannelFeed implements FeedOfferInterface
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
         if (
-            !YouTubeVideoId::isYouTubeComHost((string) parse_url($pageUrl, PHP_URL_HOST))
+            !YouTubeUrl::isComHost((string) parse_url($pageUrl, PHP_URL_HOST))
             || 1 !== preg_match(self::CHANNEL_ID, $body, $match)
         ) {
             return null;

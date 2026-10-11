@@ -8,8 +8,8 @@ use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
 use App\Service\Reader\Media\Model\EmbedTargetModel;
-use App\Service\Reader\Media\Support\YouTubeShortUrl;
-use App\Service\Reader\Media\Support\YouTubeVideoId;
+use App\Service\Url\Model\YouTubeVideoModel;
+use App\Service\Url\Support\YouTubeUrl;
 
 /**
  * YouTube in every spelling a publisher uses, reduced to one nocookie embed.
@@ -18,90 +18,31 @@ use App\Service\Reader\Media\Support\YouTubeVideoId;
  */
 final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 {
-    private const array HOSTS = [
-        ...YouTubeVideoId::YOUTUBE_COM_HOSTS,
-        'youtube-nocookie.com', 'www.youtube-nocookie.com',
-        'youtu.be', 'www.youtu.be',
-    ];
-
-    private const string PATH_PATTERN = '#^/(?:embed/|v/)?(' . YouTubeVideoId::PATTERN . ')$#';
     private const string LABEL = 'Watch on YouTube';
 
     public function target(string $url): ?EmbedTargetModel
     {
-        $parts = $this->youTubeParts($url);
-        $id = $parts === null ? null : $this->idFrom($parts);
-        if ($parts === null || $id === null) {
+        $video = YouTubeUrl::video($url);
+        if ($video === null) {
             return null;
         }
 
-        return new EmbedTargetModel(
-            'https://www.youtube-nocookie.com/embed/' . $id . $this->shortsFragment($parts),
-            'https://i.ytimg.com/vi/' . $id . '/hqdefault.jpg',
-            self::LABEL,
-        );
+        return new EmbedTargetModel($video->playerUrl(), $video->posterUrl(), self::LABEL);
     }
 
     public function frames(): array
     {
-        $video = '^https://www\.youtube-nocookie\.com/embed/' . YouTubeVideoId::PATTERN;
+        $video = '^https://www\.youtube-nocookie\.com/embed/' . YouTubeUrl::VIDEO_ID_PATTERN;
+        $short = $video . YouTubeVideoModel::SHORTS_FRAGMENT;
 
         return [
             new EmbedFrameModel($video . '$', EmbedKind::Video, EmbedShape::Landscape),
-            new EmbedFrameModel(
-                $video . '(?:\?autoplay=1)?' . YouTubeShortUrl::FRAGMENT . '$',
-                EmbedKind::Video,
-                EmbedShape::Portrait,
-            ),
+            new EmbedFrameModel($short . '$', EmbedKind::Video, EmbedShape::Portrait),
         ];
     }
 
     public function sourceHosts(): array
     {
-        return self::HOSTS;
-    }
-
-    /**
-     * @return array{host: string, path: string, query: string}|null
-     */
-    private function youTubeParts(string $url): ?array
-    {
-        $parts = parse_url($url);
-        if (!isset($parts['host'], $parts['path']) || !\in_array(strtolower($parts['host']), self::HOSTS, true)) {
-            return null;
-        }
-
-        return ['host' => $parts['host'], 'path' => $parts['path'], 'query' => $parts['query'] ?? ''];
-    }
-
-    /**
-     * @param array{host: string, path: string, query: string} $parts
-     */
-    private function idFrom(array $parts): ?string
-    {
-        return YouTubeShortUrl::videoId($parts['host'], $parts['path'])
-            ?? $this->idFromPath($parts['path'])
-            ?? $this->idFromQuery($parts['query']);
-    }
-
-    /**
-     * @param array{host: string, path: string, query: string} $parts
-     */
-    private function shortsFragment(array $parts): string
-    {
-        return YouTubeShortUrl::videoId($parts['host'], $parts['path']) === null ? '' : YouTubeShortUrl::FRAGMENT;
-    }
-
-    private function idFromPath(string $path): ?string
-    {
-        return preg_match(self::PATH_PATTERN, $path, $matches) === 1 ? $matches[1] : null;
-    }
-
-    private function idFromQuery(string $query): ?string
-    {
-        parse_str($query, $queryParameters);
-        $id = $queryParameters['v'] ?? null;
-
-        return \is_string($id) && YouTubeVideoId::matches($id) ? $id : null;
+        return YouTubeUrl::HOSTS;
     }
 }

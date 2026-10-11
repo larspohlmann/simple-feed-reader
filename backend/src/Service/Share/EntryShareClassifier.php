@@ -9,9 +9,9 @@ use App\Entity\Share;
 use App\Enum\ShareKind;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Parser\Support\VisualMedium;
-use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Share\Support\OwnProse;
 use App\Service\Share\Support\TitledShareTarget;
+use App\Service\Url\Support\YouTubeUrl;
 
 /**
  * Whether an entry is a shared link or a shared picture or video, so it takes the matching card. Only a short entry
@@ -41,7 +41,7 @@ final readonly class EntryShareClassifier
 
     private function shareOf(Entry $entry, string $body, string $ownProse): Share
     {
-        if (YouTubeShortUrl::is($entry->getUrl())) {
+        if (YouTubeUrl::isShort($entry->getUrl())) {
             return Share::media(null);
         }
         if (mb_strlen($ownProse) > self::OWN_PROSE_MAX) {

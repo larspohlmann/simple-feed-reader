@@ -268,19 +268,22 @@ final class EntryJsonTest extends TestCase
         self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);
     }
 
-    public function testMarksAYouTubeShort(): void
+    public function testShipsTheNormalisedPlayerOfAYouTubeShort(): void
     {
-        $json = EntryJson::listRow($this->row($this->entryAt('https://www.youtube.com/shorts/GhUuOxrCato')));
+        $short = $this->entryAt('https://m.youtube.com/shorts/GhUuOxrCato?feature=share');
 
-        self::assertTrue($json['isShort']);
+        self::assertSame(
+            'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts',
+            EntryJson::listRow($this->row($short))['shortPlayerUrl'],
+        );
     }
 
-    public function testMarksNoOtherEntryAsAShort(): void
+    public function testShipsNoShortPlayerForAnyOtherEntry(): void
     {
         $watchPage = $this->entryAt('https://www.youtube.com/watch?v=GhUuOxrCato');
 
-        self::assertFalse(EntryJson::listRow($this->row($watchPage))['isShort']);
-        self::assertFalse(EntryJson::listRow($this->row($this->entryAt(null)))['isShort']);
+        self::assertNull(EntryJson::listRow($this->row($watchPage))['shortPlayerUrl']);
+        self::assertNull(EntryJson::listRow($this->row($this->entryAt(null)))['shortPlayerUrl']);
     }
 
     public function testStatesTheCoverAspectOfAShort(): void
@@ -295,6 +298,9 @@ final class EntryJsonTest extends TestCase
         $json = EntryJson::listRow($this->row($this->entryAt('https://www.youtube.com/watch?v=GhUuOxrCato')));
 
         self::assertNull($json['imageAspectRatio']);
+        $article = $this->entryAt('https://example.com/shorts/GhUuOxrCato');
+        self::assertNull(EntryJson::listRow($this->row($article))['imageAspectRatio']);
+        self::assertNull(EntryJson::listRow($this->row($this->entryAt(null)))['imageAspectRatio']);
     }
 
     public function testMarksAShortAmongTheDuplicates(): void
@@ -304,8 +310,11 @@ final class EntryJsonTest extends TestCase
 
         $json = EntryJson::listRow($row);
 
-        self::assertFalse($json['isShort']);
-        self::assertTrue($json['duplicates'][0]['isShort']);
+        self::assertNull($json['shortPlayerUrl']);
+        self::assertSame(
+            'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts',
+            $json['duplicates'][0]['shortPlayerUrl'],
+        );
     }
 
     public function testAnUntitledPostHasNoExcerpt(): void
