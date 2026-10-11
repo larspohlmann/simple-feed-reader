@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Repository\EntryCategoryRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -11,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
  * feed-declared order and label. Entry has no collection for it (field
  * ceiling); read via its own query.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: EntryCategoryRepository::class)]
 #[ORM\Table(name: 'entry_category')]
 final class EntryCategory
 {

@@ -66,7 +66,7 @@ final class EntryJson
             'author' => $entry->getAuthor(),
             'imageAspectRatio' => $shortPlayerUrl === null ? null : self::SHORT_COVER_ASPECT_RATIO,
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
-            'categories' => $row->categories,
+            'categories' => $row->enrichment->categories,
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
             'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
@@ -79,7 +79,7 @@ final class EntryJson
             'isViewed' => $row->isViewed,
             'shortPlayerUrl' => $shortPlayerUrl,
             'titleDerived' => $entry->isTitleDerived(),
-            'savedSearches' => $row->savedSearches,
+            'savedSearches' => $row->enrichment->savedSearches,
             'duplicates' => array_map(self::listRow(...), $row->duplicates),
         ];
     }
@@ -93,7 +93,7 @@ final class EntryJson
 
         return [
             'id' => $entry->getId(),
-            'pending' => $row->pending,
+            'pending' => $row->enrichment->pending,
             'summary' => $entry->getSummary(),
             'excerpt' => EntryExcerpt::of(
                 $entry->getSummary(),
@@ -104,7 +104,7 @@ final class EntryJson
             'imageHeight' => $entry->getImageHeight(),
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
-            'linkCards' => array_map(self::linkCard(...), $row->linkCards),
+            'linkCards' => array_map(self::linkCard(...), $row->enrichment->linkCards),
             'share' => $entry->getShareKind()?->value,
         ];
     }
