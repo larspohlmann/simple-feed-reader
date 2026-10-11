@@ -51,7 +51,7 @@ export function portraitCoverRatio(entry: EntryDto): number | null {
 
 /** A Short is marked by a pill only where no image carries its badge. */
 export function showsShortPill(entry: EntryDto, imageShown: boolean): boolean {
-  return entry.isShort && !imageShown;
+  return entry.shortPlayerUrl !== null && !imageShown;
 }
 
 /** The renditions as a `srcset`, or null when there are none. Stubbed e2e entries predate

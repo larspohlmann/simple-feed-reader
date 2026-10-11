@@ -100,7 +100,7 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
     isFavorite: false,
     isKept: false,
     isViewed: false,
-    isShort: false,
+    shortPlayerUrl: null,
     titleDerived: false,
     share: null,
     linkCards: [],

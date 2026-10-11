@@ -30,13 +30,13 @@
         "shape": "landscape"
     },
     {
+        "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}#shorts$",
+        "kind": "video",
+        "shape": "portrait"
+    },
+    {
         "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}$",
         "kind": "video",
         "shape": "landscape"
-    },
-    {
-        "pattern": "^https://www\\.youtube-nocookie\\.com/embed/[A-Za-z0-9_-]{11}(?:\\?autoplay=1)?#shorts$",
-        "kind": "video",
-        "shape": "portrait"
     }
 ]

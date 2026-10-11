@@ -8,6 +8,7 @@ import {
   widestRenditionWidth,
 } from './preview-image';
 import { EntryDto } from '../models';
+import { SHORT_PLAYER_URL } from '../../../testing/short-marking-testing';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -32,7 +33,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: false,
   share: null,
   linkCards: [],
@@ -161,11 +162,11 @@ describe('widestRenditionWidth', () => {
 
 describe('showsShortPill', () => {
   it('marks a Short whose image is not shown', () => {
-    expect(showsShortPill(entry({ isShort: true }), false)).toBe(true);
+    expect(showsShortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).toBe(true);
   });
 
   it('leaves a Short whose image is shown to the image badge', () => {
-    expect(showsShortPill(entry({ isShort: true }), true)).toBe(false);
+    expect(showsShortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBe(false);
   });
 
   it('marks no other entry', () => {

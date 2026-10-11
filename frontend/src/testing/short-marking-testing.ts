@@ -1,6 +1,8 @@
 import { ComponentFixture } from '@angular/core/testing';
 import { EntryDto } from '../app/reader/models';
 
+export const SHORT_PLAYER_URL = 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts';
+
 type RenderEntry = (over: Partial<EntryDto>) => ComponentFixture<unknown>;
 
 const shortMarks = (fixture: ComponentFixture<unknown>) => {
@@ -15,18 +17,21 @@ const shortMarks = (fixture: ComponentFixture<unknown>) => {
 export function describeShortMarking(render: RenderEntry): void {
   describe('YouTube Short marking', () => {
     it('badges the image of a Short and shows no pill', () => {
-      expect(shortMarks(render({ isShort: true }))).toEqual({ badge: true, pill: false });
+      expect(shortMarks(render({ shortPlayerUrl: SHORT_PLAYER_URL }))).toEqual({
+        badge: true,
+        pill: false,
+      });
     });
 
     it('marks a Short without an image with a pill', () => {
-      expect(shortMarks(render({ isShort: true, imageUrl: null }))).toEqual({
+      expect(shortMarks(render({ shortPlayerUrl: SHORT_PLAYER_URL, imageUrl: null }))).toEqual({
         badge: false,
         pill: true,
       });
     });
 
     it('falls back to the pill when the image of a Short fails to load', () => {
-      const fixture = render({ isShort: true });
+      const fixture = render({ shortPlayerUrl: SHORT_PLAYER_URL });
       (fixture.nativeElement as HTMLElement)
         .querySelector('img')!
         .dispatchEvent(new Event('error'));
@@ -49,7 +54,10 @@ export function describeShortMarking(render: RenderEntry): void {
 export function describeShortPill(render: RenderEntry): void {
   describe('YouTube Short pill', () => {
     it('marks a Short with a pill', () => {
-      expect(shortMarks(render({ isShort: true }))).toEqual({ badge: false, pill: true });
+      expect(shortMarks(render({ shortPlayerUrl: SHORT_PLAYER_URL }))).toEqual({
+        badge: false,
+        pill: true,
+      });
     });
 
     it('marks no other entry', () => {

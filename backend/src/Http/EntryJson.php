@@ -8,9 +8,8 @@ use App\Entity\EntryMedia;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Repository\EntryListRow;
-use App\Service\Reader\Media\Support\CoverAspectRatio;
-use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Text\Support\EntryExcerpt;
+use App\Service\Url\Support\YouTubeUrl;
 
 /**
  * Three shapes off one row: listRow() drops contentHtml for a plain-text
@@ -31,7 +30,7 @@ use App\Service\Text\Support\EntryExcerpt;
  *   linkCards: list<LinkCardRow>,
  *   publishedAt: string|null,
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
- *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
+ *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, shortPlayerUrl: string|null, titleDerived: bool,
  *   share: 'link'|'media'|null,
  *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
  *   duplicates: list<array<string, mixed>>,
@@ -48,6 +47,8 @@ use App\Service\Text\Support\EntryExcerpt;
  */
 final class EntryJson
 {
+    private const float SHORT_COVER_ASPECT_RATIO = 9 / 16;
+
     /**
      * @return EntryRow
      */
@@ -55,6 +56,7 @@ final class EntryJson
     {
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
+        $shortPlayerUrl = YouTubeUrl::shortPlayerUrl($entry->getUrl());
 
         return self::completed($row) + [
             'title' => $entry->getTitle(),
@@ -62,7 +64,7 @@ final class EntryJson
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
             'author' => $entry->getAuthor(),
-            'imageAspectRatio' => CoverAspectRatio::of($entry->getUrl()),
+            'imageAspectRatio' => $shortPlayerUrl === null ? null : self::SHORT_COVER_ASPECT_RATIO,
             'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'categories' => $row->categories,
             'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
@@ -75,7 +77,7 @@ final class EntryJson
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
-            'isShort' => YouTubeShortUrl::is($entry->getUrl()),
+            'shortPlayerUrl' => $shortPlayerUrl,
             'titleDerived' => $entry->isTitleDerived(),
             'savedSearches' => $row->savedSearches,
             'duplicates' => array_map(self::listRow(...), $row->duplicates),

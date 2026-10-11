@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Url\Model\YouTubeVideoModel;
+use App\Service\Url\Support\YouTubeUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,7 +17,7 @@ use Dom\HTMLDocument;
 final readonly class SubstackPosterLink implements BodyCleaningStepInterface
 {
     private const string POSTER_PATTERN =
-        '#^https://substackcdn\.com/image/youtube/[^/]+/([A-Za-z0-9_-]{11})$#';
+        '#^https://substackcdn\.com/image/youtube/[^/]+/(' . YouTubeUrl::VIDEO_ID_PATTERN . ')$#';
 
     public function cleanIn(BodyCleaningPass $pass): void
     {
@@ -37,7 +39,7 @@ final readonly class SubstackPosterLink implements BodyCleaningStepInterface
         }
 
         $link = $body->createElement('a');
-        $link->setAttribute('href', 'https://www.youtube-nocookie.com/embed/' . $videoId);
+        $link->setAttribute('href', YouTubeVideoModel::video($videoId)->playerUrl());
         $image->parentNode->replaceChild($link, $image);
         $link->appendChild($image);
         $image->setAttribute('alt', 'Watch on YouTube');

@@ -38,12 +38,23 @@ final class YouTubeEmbedProviderTest extends TestCase
         );
     }
 
-    public function testNormalizesAShortUrl(): void
+    #[DataProvider('shareLinks')]
+    public function testNormalizesAShareLink(string $url): void
     {
-        self::assertSame(
-            'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI',
-            $this->provider->target('https://youtu.be/M1j_uRqKMKI')?->url
-        );
+        self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $this->provider->target($url)?->url);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function shareLinks(): iterable
+    {
+        yield 'bare' => ['https://youtu.be/M1j_uRqKMKI'];
+        yield 'www' => ['https://www.youtu.be/M1j_uRqKMKI'];
+        yield 'a trailing slash and a share token' => ['https://youtu.be/M1j_uRqKMKI/?si=abc'];
+    }
+
+    public function testRejectsAPlayerPathOnTheShareLinkHost(): void
+    {
+        self::assertNull($this->provider->target('https://youtu.be/embed/M1j_uRqKMKI'));
     }
 
     public function testAlreadyNocookieIsIdempotent(): void
@@ -107,10 +118,6 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         yield 'video' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato', EmbedShape::Landscape];
         yield 'short' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', EmbedShape::Portrait];
-        yield 'short starting on load' => [
-            'https://www.youtube-nocookie.com/embed/GhUuOxrCato?autoplay=1#shorts',
-            EmbedShape::Portrait,
-        ];
     }
 
     #[DataProvider('framesByShape')]
@@ -130,14 +137,22 @@ final class YouTubeEmbedProviderTest extends TestCase
         );
     }
 
-    public function testNoFrameAcceptsAnotherQuery(): void
+    #[DataProvider('queriedPlayers')]
+    public function testNoFrameAcceptsAQuery(string $url): void
     {
-        self::assertSame(
-            [],
-            self::framesMatching(
-                $this->provider->frames(),
-                'https://www.youtube-nocookie.com/embed/GhUuOxrCato?mute=1#shorts',
-            ),
-        );
+        self::assertSame([], self::framesMatching($this->provider->frames(), $url));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function queriedPlayers(): iterable
+    {
+        yield 'a short starting on load' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato?autoplay=1#shorts'];
+        yield 'a muted short' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato?mute=1#shorts'];
+    }
+
+    public function testListsEveryYouTubeHostAsASource(): void
+    {
+        self::assertContains('www.youtu.be', $this->provider->sourceHosts());
+        self::assertContains('m.youtube.com', $this->provider->sourceHosts());
     }
 }

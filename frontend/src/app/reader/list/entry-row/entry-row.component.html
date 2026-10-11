@@ -56,7 +56,7 @@
         referrerpolicy="no-referrer"
         (error)="renditions.fallBackToSrc() || imgError.set(true)"
       />
-      @if (entry().isShort) {
+      @if (entry().shortPlayerUrl) {
         <app-short-badge />
       }
     </div>

@@ -10,7 +10,7 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\Support\YouTubeVideoId;
+use App\Service\Url\Support\YouTubeUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -55,7 +55,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
             return null;
         }
 
-        if (!YouTubeVideoId::matches($id) || !$this->namesYouTube($element)) {
+        if (!YouTubeUrl::isVideoId($id) || !$this->namesYouTube($element)) {
             return null;
         }
 

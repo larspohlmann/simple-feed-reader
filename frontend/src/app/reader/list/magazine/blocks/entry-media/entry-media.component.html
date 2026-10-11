@@ -25,12 +25,10 @@
         @if (playingShort()) {
           <iframe
             class="item"
+            appEmbedFrame
             [src]="player"
             [title]="headline() || ('reader.playShort' | transloco)"
-            sandbox="allow-scripts allow-same-origin allow-presentation"
             allow="autoplay; fullscreen"
-            allowfullscreen
-            referrerpolicy="strict-origin-when-cross-origin"
           ></iframe>
         } @else {
           <img

@@ -37,6 +37,7 @@ final class YouTubePlaylistFeedTest extends TestCase
         ];
         yield 'a short link with a trailing slash' => ['https://youtu.be/EeS-cBgIoxI/?list=' . self::LIST];
         yield 'a mixed-case short-link host' => ['https://YouTu.be/EeS-cBgIoxI?list=' . self::LIST];
+        yield 'a short link on www' => ['https://www.youtu.be/EeS-cBgIoxI?list=' . self::LIST];
     }
 
     #[DataProvider('otherLinks')]

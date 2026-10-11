@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery\ShareLinkFeed;
 
-use App\Service\Reader\Media\Support\YouTubeVideoId;
+use App\Service\Url\Support\YouTubeUrl;
 
 /**
  * A playlist page advertises no feed, although YouTube serves one under the playlist's id. A video watched inside a
@@ -14,19 +14,13 @@ final readonly class YouTubePlaylistFeed implements ShareLinkFeedInterface
 {
     private const array PLAYLIST_PATHS = ['/playlist', '/watch'];
 
-    private const string SHORT_LINK_HOST = 'youtu.be';
-
-    private const string SHORT_LINK_PATH = '#^/' . YouTubeVideoId::PATTERN . '\z#';
-
     private const string LIST_ID = '#^[A-Za-z0-9_-]+\z#';
 
     private const string PLAYLIST_FEED = 'https://www.youtube.com/feeds/videos.xml?playlist_id=%s';
 
     public function feedUrl(string $enteredUrl): ?string
     {
-        $host = strtolower((string) parse_url($enteredUrl, PHP_URL_HOST));
-        $path = rtrim((string) parse_url($enteredUrl, PHP_URL_PATH), '/');
-        if (!$this->isPlaylistPage($host, $path)) {
+        if (!$this->isPlaylistPage($enteredUrl)) {
             return null;
         }
 
@@ -38,12 +32,14 @@ final readonly class YouTubePlaylistFeed implements ShareLinkFeedInterface
             : null;
     }
 
-    private function isPlaylistPage(string $host, string $path): bool
+    private function isPlaylistPage(string $enteredUrl): bool
     {
-        if (YouTubeVideoId::isYouTubeComHost($host)) {
+        if (YouTubeUrl::isComHost((string) parse_url($enteredUrl, PHP_URL_HOST))) {
+            $path = rtrim((string) parse_url($enteredUrl, PHP_URL_PATH), '/');
+
             return \in_array($path, self::PLAYLIST_PATHS, true);
         }
 
-        return self::SHORT_LINK_HOST === $host && 1 === preg_match(self::SHORT_LINK_PATH, $path);
+        return YouTubeUrl::isShareLink($enteredUrl);
     }
 }
