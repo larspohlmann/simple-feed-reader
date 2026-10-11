@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\EmbedProvider;
 use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * Vimeo player embed. Public video is `vimeo.com/<id>`; unlisted carries a
@@ -17,13 +18,9 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
     private const string PLAYER_HOST = 'player.vimeo.com';
     private const array PAGE_HOSTS = ['vimeo.com', 'www.vimeo.com'];
     private const string HASH = '[A-Za-z0-9]+';
+    private const string LABEL = 'Watch on Vimeo';
 
-    public function matches(string $url): bool
-    {
-        return $this->normalize($url) !== null;
-    }
-
-    public function normalize(string $url): ?string
+    public function target(string $url): ?EmbedTargetModel
     {
         $reference = $this->reference($url);
         if ($reference === null) {
@@ -31,17 +28,9 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
         }
         [$id, $hash] = $reference;
 
-        return 'https://player.vimeo.com/video/' . $id . ($hash === null ? '' : '?h=' . $hash);
-    }
+        $embedUrl = 'https://player.vimeo.com/video/' . $id . ($hash === null ? '' : '?h=' . $hash);
 
-    public function poster(string $url): ?string
-    {
-        return null;
-    }
-
-    public function label(): string
-    {
-        return 'Watch on Vimeo';
+        return new EmbedTargetModel($embedUrl, null, self::LABEL);
     }
 
     public function frames(): array

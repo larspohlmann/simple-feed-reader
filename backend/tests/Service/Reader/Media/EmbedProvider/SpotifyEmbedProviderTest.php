@@ -26,9 +26,9 @@ final class SpotifyEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4',
-            $this->provider->normalize(
+            $this->provider->target(
                 'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4?utm_source=generator',
-            ),
+            )?->url,
         );
     }
 
@@ -36,7 +36,7 @@ final class SpotifyEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4',
-            $this->provider->normalize('https://open.spotify.com/playlist/27uRYdAHvcKADidfnR8BN4?si=abcdef'),
+            $this->provider->target('https://open.spotify.com/playlist/27uRYdAHvcKADidfnR8BN4?si=abcdef')?->url,
         );
     }
 
@@ -44,7 +44,7 @@ final class SpotifyEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT',
-            $this->provider->normalize('https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT'),
+            $this->provider->target('https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT')?->url,
         );
     }
 
@@ -53,7 +53,7 @@ final class SpotifyEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://open.spotify.com/embed/episode/512ojhOuo1ktJprKbVcKyQ',
-            $this->provider->normalize('https://open.spotify.com/embed-podcast/episode/512ojhOuo1ktJprKbVcKyQ'),
+            $this->provider->target('https://open.spotify.com/embed-podcast/episode/512ojhOuo1ktJprKbVcKyQ')?->url,
         );
     }
 
@@ -61,30 +61,34 @@ final class SpotifyEmbedProviderTest extends TestCase
     {
         $url = 'https://open.spotify.com/embed/album/1DFixLWuPkv3KT3TnV35m3';
 
-        self::assertSame($url, $this->provider->normalize($url));
+        self::assertSame($url, $this->provider->target($url)?->url);
     }
 
-    public function testHasNoPoster(): void
+    public function testOffersNoPosterAndNamesTheHost(): void
     {
-        self::assertNull($this->provider->poster('https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4'));
+        $target = $this->provider->target('https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4');
+
+        self::assertNotNull($target);
+        self::assertNull($target->posterUrl);
+        self::assertSame('Listen on Spotify', $target->label);
     }
 
     public function testRejectsAnUnknownContentType(): void
     {
-        self::assertFalse($this->provider->matches('https://open.spotify.com/embed/user/spotify'));
-        self::assertNull($this->provider->normalize('https://open.spotify.com/user/spotify'));
+        self::assertNull($this->provider->target('https://open.spotify.com/embed/user/spotify'));
+        self::assertNull($this->provider->target('https://open.spotify.com/user/spotify'));
     }
 
     public function testRejectsAnotherHost(): void
     {
-        self::assertFalse($this->provider->matches('https://www.googletagmanager.com/ns.html?id=GTM-1'));
+        self::assertNull($this->provider->target('https://www.googletagmanager.com/ns.html?id=GTM-1'));
     }
 
     /** A look-alike host must not pass: the check is the host, not a substring. */
     public function testRejectsALookalikeHost(): void
     {
-        self::assertFalse(
-            $this->provider->matches('https://open.spotify.com.evil.test/embed/playlist/27uRYdAHvcKADidfnR8BN4'),
+        self::assertNull(
+            $this->provider->target('https://open.spotify.com.evil.test/embed/playlist/27uRYdAHvcKADidfnR8BN4'),
         );
     }
 

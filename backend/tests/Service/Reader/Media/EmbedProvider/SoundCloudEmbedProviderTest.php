@@ -28,33 +28,36 @@ final class SoundCloudEmbedProviderTest extends TestCase
 
         self::assertSame(
             'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908',
-            $this->provider->normalize($source)
+            $this->provider->target($source)?->url
         );
     }
 
     public function testHasNoPosterSoItFallsBackToALabel(): void
     {
-        $url = 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2370150908';
+        $target = $this->provider->target(
+            'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/2370150908',
+        );
 
-        self::assertNull($this->provider->poster($url));
-        self::assertSame('Listen on SoundCloud', $this->provider->label());
+        self::assertNotNull($target);
+        self::assertNull($target->posterUrl);
+        self::assertSame('Listen on SoundCloud', $target->label);
     }
 
     public function testRejectsAPlayerWithoutATrackId(): void
     {
-        self::assertFalse($this->provider->matches('https://w.soundcloud.com/player/?url=https%3A//example.test/x'));
+        self::assertNull($this->provider->target('https://w.soundcloud.com/player/?url=https%3A//example.test/x'));
     }
 
     public function testRejectsANonNumericTrackId(): void
     {
-        self::assertFalse($this->provider->matches(
+        self::assertNull($this->provider->target(
             'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/abc'
         ));
     }
 
     public function testRejectsAnotherHost(): void
     {
-        self::assertFalse($this->provider->matches('https://player.example.test/?url=x'));
+        self::assertNull($this->provider->target('https://player.example.test/?url=x'));
     }
 
     /** The 5 Magazine widget stores the id as a double-encoded `soundcloud%3Atracks%3A` URN, not a bare id. */
@@ -66,10 +69,9 @@ final class SoundCloudEmbedProviderTest extends TestCase
         self::assertSame(1, $found);
         $src = html_entity_decode($matches[1]);
 
-        self::assertTrue($this->provider->matches($src));
         self::assertSame(
             'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908',
-            $this->provider->normalize($src)
+            $this->provider->target($src)?->url
         );
     }
 
@@ -78,10 +80,9 @@ final class SoundCloudEmbedProviderTest extends TestCase
         $src = 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/'
             . 'soundcloud%253Atracks%253A2370150908&color=%23ff5500&auto_play=true';
 
-        self::assertTrue($this->provider->matches($src));
         self::assertSame(
             'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F2370150908',
-            $this->provider->normalize($src)
+            $this->provider->target($src)?->url
         );
     }
 

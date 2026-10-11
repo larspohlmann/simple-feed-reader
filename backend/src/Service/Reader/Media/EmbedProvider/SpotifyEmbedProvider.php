@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\EmbedProvider;
 use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * The Spotify embed player. The content type and its base62 id are the whole payload, so the query (a `?si=` share
@@ -19,27 +20,17 @@ final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
     private const string COLLECTION_TYPE = 'playlist|album|show|artist';
     private const string TYPE = self::SINGLE_TYPE . '|' . self::COLLECTION_TYPE;
     private const string ID = '[A-Za-z0-9]+';
+    private const string LABEL = 'Listen on Spotify';
 
-    public function matches(string $url): bool
-    {
-        return $this->reference($url) !== null;
-    }
-
-    public function normalize(string $url): ?string
+    public function target(string $url): ?EmbedTargetModel
     {
         $reference = $this->reference($url);
+        if ($reference === null) {
+            return null;
+        }
+        $embedUrl = 'https://open.spotify.com/embed/' . $reference[0] . '/' . $reference[1];
 
-        return $reference === null ? null : 'https://open.spotify.com/embed/' . $reference[0] . '/' . $reference[1];
-    }
-
-    public function poster(string $url): ?string
-    {
-        return null;
-    }
-
-    public function label(): string
-    {
-        return 'Listen on Spotify';
+        return new EmbedTargetModel($embedUrl, null, self::LABEL);
     }
 
     public function frames(): array

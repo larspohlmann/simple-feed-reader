@@ -22,9 +22,9 @@ final readonly class EmbedProviders
     public function resolve(string $url): ?EmbedTargetModel
     {
         foreach ($this->providers as $provider) {
-            $normalized = $provider->matches($url) ? $provider->normalize($url) : null;
-            if ($normalized !== null) {
-                return new EmbedTargetModel($normalized, $provider->poster($url), $provider->label());
+            $target = $provider->target($url);
+            if ($target !== null) {
+                return $target;
             }
         }
 

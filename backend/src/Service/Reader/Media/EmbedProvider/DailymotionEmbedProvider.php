@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\EmbedProvider;
 use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * Dailymotion's player embed. The video id is the whole payload (a page URL adds a `_title-slug`, the query holds
@@ -17,27 +18,17 @@ final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
     private const array PAGE_HOSTS = ['dailymotion.com', 'www.dailymotion.com'];
     private const string SHORT_HOST = 'dai.ly';
     private const string ID = '[A-Za-z0-9]+';
+    private const string LABEL = 'Watch on Dailymotion';
 
-    public function matches(string $url): bool
-    {
-        return $this->videoId($url) !== null;
-    }
-
-    public function normalize(string $url): ?string
+    public function target(string $url): ?EmbedTargetModel
     {
         $id = $this->videoId($url);
 
-        return $id === null ? null : 'https://www.dailymotion.com/embed/video/' . $id;
-    }
+        if ($id === null) {
+            return null;
+        }
 
-    public function poster(string $url): ?string
-    {
-        return null;
-    }
-
-    public function label(): string
-    {
-        return 'Watch on Dailymotion';
+        return new EmbedTargetModel('https://www.dailymotion.com/embed/video/' . $id, null, self::LABEL);
     }
 
     public function frames(): array
