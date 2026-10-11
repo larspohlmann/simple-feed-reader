@@ -42,6 +42,14 @@ final class OwnProseTest extends TestCase
         self::assertSame('Visit today.', OwnProse::of($body));
     }
 
+    public function testDropsALinkWhoseUrlTextHasLeadingWhitespace(): void
+    {
+        self::assertSame(
+            'Read today.',
+            OwnProse::of("<p>Read <a href=\"https://example.com/a\">\n https://example.com/a</a> today.</p>"),
+        );
+    }
+
     public function testKeepsAWordedLinkWrappedInInlineMarkup(): void
     {
         self::assertSame(

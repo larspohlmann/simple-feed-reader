@@ -9,7 +9,7 @@ use App\Service\Text\Support\PlainText;
 /** An entry's own words: its text without the links that read as their URL and the `Label: number` metadata lines. */
 final class OwnProse
 {
-    private const string LINK = '#<a\b[^>]*>(.*?)</a>#isu';
+    private const string LINK = '#<a\b[^>]*>(?<text>.*?)</a>#isu';
     private const string URL_TEXT = '#^(?:https?://|www\.|[a-z0-9-]+(?:\.[a-z0-9-]+)+/)#iu';
     private const string METADATA_LINE = '/^[#\p{L}][\p{L}\p{N} #]{0,40}:\s*[\p{N}.,]*$/u';
 
@@ -27,7 +27,7 @@ final class OwnProse
     /** @param array<string> $link */
     private static function droppedWhenUrlText(array $link): string
     {
-        return preg_match(self::URL_TEXT, trim(strip_tags($link[1]))) === 1 ? ' ' : $link[0];
+        return preg_match(self::URL_TEXT, trim(strip_tags($link['text']))) === 1 ? ' ' : $link[0];
     }
 
     private function __construct()

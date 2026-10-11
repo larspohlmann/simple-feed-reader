@@ -124,6 +124,15 @@ final class EntryShareClassifierTest extends TestCase
         self::assertSame(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX), $entry->getSummary());
     }
 
+    public function testAShareWithABodyIsMeasuredByItsBodyNotItsSummary(): void
+    {
+        $entry = self::hackerNews('https://ghuntley.com/unikernels/');
+        $entry->setContentHtml('<p>Commentary.</p>');
+        $entry->setSummary('A feed snippet.');
+
+        self::assertSame('Commentary.', $this->classified($entry)->getSummary());
+    }
+
     public function testALinkBlogEssayIsAnArticle(): void
     {
         $entry = $this->classified(self::entry(
