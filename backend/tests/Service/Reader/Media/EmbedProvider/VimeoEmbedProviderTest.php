@@ -50,8 +50,7 @@ final class VimeoEmbedProviderTest extends TestCase
     #[DataProvider('embeddableUrls')]
     public function testNormalisesEverySpellingToOnePlayerEmbed(string $url, string $expected): void
     {
-        self::assertTrue($this->provider->matches($url));
-        self::assertSame($expected, $this->provider->normalize($url));
+        self::assertSame($expected, $this->provider->target($url)?->url);
     }
 
     /** @return iterable<string, array{0: string}> */
@@ -69,14 +68,16 @@ final class VimeoEmbedProviderTest extends TestCase
     #[DataProvider('unembeddableUrls')]
     public function testRefusesEverythingThatIsNotAVideoReference(string $url): void
     {
-        self::assertFalse($this->provider->matches($url));
-        self::assertNull($this->provider->normalize($url));
+        self::assertNull($this->provider->target($url));
     }
 
     public function testOffersNoPosterAndNamesTheHost(): void
     {
-        self::assertNull($this->provider->poster('https://vimeo.com/1226652197'));
-        self::assertSame('Watch on Vimeo', $this->provider->label());
+        $target = $this->provider->target('https://vimeo.com/1226652197');
+
+        self::assertNotNull($target);
+        self::assertNull($target->posterUrl);
+        self::assertSame('Watch on Vimeo', $target->label);
     }
 
     public function testIsAVideoPlayerInALandscapeBox(): void

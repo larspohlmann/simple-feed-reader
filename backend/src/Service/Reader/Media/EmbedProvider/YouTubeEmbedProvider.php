@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\EmbedProvider;
 use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 use App\Service\Reader\Media\Support\YouTubeShortUrl;
 use App\Service\Reader\Media\Support\YouTubeVideoId;
 
@@ -24,13 +25,9 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
     ];
 
     private const string PATH_PATTERN = '#^/(?:embed/|v/)?(' . YouTubeVideoId::PATTERN . ')$#';
+    private const string LABEL = 'Watch on YouTube';
 
-    public function matches(string $url): bool
-    {
-        return $this->videoId($url) !== null;
-    }
-
-    public function normalize(string $url): ?string
+    public function target(string $url): ?EmbedTargetModel
     {
         $parts = $this->youTubeParts($url);
         $id = $parts === null ? null : $this->idFrom($parts);
@@ -38,19 +35,11 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
             return null;
         }
 
-        return 'https://www.youtube-nocookie.com/embed/' . $id . $this->shortsFragment($parts);
-    }
-
-    public function poster(string $url): ?string
-    {
-        $id = $this->videoId($url);
-
-        return $id === null ? null : 'https://i.ytimg.com/vi/' . $id . '/hqdefault.jpg';
-    }
-
-    public function label(): string
-    {
-        return 'Watch on YouTube';
+        return new EmbedTargetModel(
+            'https://www.youtube-nocookie.com/embed/' . $id . $this->shortsFragment($parts),
+            'https://i.ytimg.com/vi/' . $id . '/hqdefault.jpg',
+            self::LABEL,
+        );
     }
 
     public function frames(): array
@@ -70,13 +59,6 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
     public function sourceHosts(): array
     {
         return self::HOSTS;
-    }
-
-    private function videoId(string $url): ?string
-    {
-        $parts = $this->youTubeParts($url);
-
-        return $parts === null ? null : $this->idFrom($parts);
     }
 
     /**

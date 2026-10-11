@@ -7,6 +7,7 @@ namespace App\Service\Reader\Media\EmbedProvider;
 use App\Service\Reader\Media\Model\EmbedFrameModel;
 use App\Service\Reader\Media\Model\EmbedKind;
 use App\Service\Reader\Media\Model\EmbedShape;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 
 /**
  * The SoundCloud widget. The track id is permanent and the src is unsigned, so
@@ -18,31 +19,17 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
     private const string HOST = 'w.soundcloud.com';
     /** Some widgets store the id as a double-encoded `soundcloud%3Atracks%3A` URN, not a bare id. */
     private const string TRACK_PATTERN = '#^https?://api\.soundcloud\.com/tracks/(?:soundcloud%3Atracks%3A)?(\d+)$#i';
+    private const string LABEL = 'Listen on SoundCloud';
 
-    public function matches(string $url): bool
-    {
-        return $this->trackId($url) !== null;
-    }
-
-    public function normalize(string $url): ?string
+    public function target(string $url): ?EmbedTargetModel
     {
         $id = $this->trackId($url);
         if ($id === null) {
             return null;
         }
+        $embedUrl = 'https://w.soundcloud.com/player/?url=' . rawurlencode('https://api.soundcloud.com/tracks/' . $id);
 
-        return 'https://w.soundcloud.com/player/?url='
-            . rawurlencode('https://api.soundcloud.com/tracks/' . $id);
-    }
-
-    public function poster(string $url): ?string
-    {
-        return null;
-    }
-
-    public function label(): string
-    {
-        return 'Listen on SoundCloud';
+        return new EmbedTargetModel($embedUrl, null, self::LABEL);
     }
 
     public function frames(): array

@@ -26,15 +26,14 @@ final class BrightcoveEmbedProviderTest extends TestCase
     /** Al Jazeera 469835: the VideoObject's embedUrl, exactly as declared. */
     public function testNormalizesADeclaredPlayerUrlToItself(): void
     {
-        self::assertTrue($this->provider->matches(self::AL_JAZEERA));
-        self::assertSame(self::AL_JAZEERA, $this->provider->normalize(self::AL_JAZEERA));
+        self::assertSame(self::AL_JAZEERA, $this->provider->target(self::AL_JAZEERA)?->url);
     }
 
     public function testKeepsOnlyTheVideoIdOfTheQuery(): void
     {
         self::assertSame(
             self::AL_JAZEERA,
-            $this->provider->normalize(self::AL_JAZEERA . '&autoplay=1&muted=true'),
+            $this->provider->target(self::AL_JAZEERA . '&autoplay=1&muted=true')?->url,
         );
     }
 
@@ -42,18 +41,18 @@ final class BrightcoveEmbedProviderTest extends TestCase
     {
         $url = 'https://players.brightcove.net/123/AbC_x-1/index.html?videoId=456';
 
-        self::assertSame($url, $this->provider->normalize($url));
+        self::assertSame($url, $this->provider->target($url)?->url);
     }
 
     public function testRejectsAPlayerUrlWithoutAVideoId(): void
     {
-        self::assertFalse($this->provider->matches('https://players.brightcove.net/123/abc_default/index.html'));
+        self::assertNull($this->provider->target('https://players.brightcove.net/123/abc_default/index.html'));
     }
 
     public function testRejectsANonNumericVideoId(): void
     {
         $url = 'https://players.brightcove.net/123/abc_default/index.html?videoId=x';
-        self::assertFalse($this->provider->matches($url));
+        self::assertNull($this->provider->target($url));
     }
 
     public function testRejectsALookAlikeHost(): void
@@ -61,14 +60,17 @@ final class BrightcoveEmbedProviderTest extends TestCase
         $lookAlikeHost = 'https://players.brightcove.net.evil.test/123/abc_default/index.html?videoId=1';
         $httpScheme = 'http://players.brightcove.net/123/abc_default/index.html?videoId=1';
 
-        self::assertFalse($this->provider->matches($lookAlikeHost));
-        self::assertFalse($this->provider->matches($httpScheme));
+        self::assertNull($this->provider->target($lookAlikeHost));
+        self::assertNull($this->provider->target($httpScheme));
     }
 
     public function testOffersNoPosterAndAGenericLabel(): void
     {
-        self::assertNull($this->provider->poster(self::AL_JAZEERA));
-        self::assertSame('Watch the video', $this->provider->label());
+        $target = $this->provider->target(self::AL_JAZEERA);
+
+        self::assertNotNull($target);
+        self::assertNull($target->posterUrl);
+        self::assertSame('Watch the video', $target->label);
     }
 
     public function testIsAVideoPlayerInALandscapeBox(): void

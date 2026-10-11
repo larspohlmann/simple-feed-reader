@@ -26,7 +26,7 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI',
-            $this->provider->normalize('https://www.youtube.com/embed/M1j_uRqKMKI?si=abcdefgh')
+            $this->provider->target('https://www.youtube.com/embed/M1j_uRqKMKI?si=abcdefgh')?->url
         );
     }
 
@@ -34,7 +34,7 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI',
-            $this->provider->normalize('https://www.youtube.com/watch?v=M1j_uRqKMKI&t=30')
+            $this->provider->target('https://www.youtube.com/watch?v=M1j_uRqKMKI&t=30')?->url
         );
     }
 
@@ -42,7 +42,7 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         self::assertSame(
             'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI',
-            $this->provider->normalize('https://youtu.be/M1j_uRqKMKI')
+            $this->provider->target('https://youtu.be/M1j_uRqKMKI')?->url
         );
     }
 
@@ -50,46 +50,40 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         $url = 'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI';
 
-        self::assertSame($url, $this->provider->normalize($url));
+        self::assertSame($url, $this->provider->target($url)?->url);
     }
 
-    public function testPosterIsTheThumbnail(): void
+    public function testPosterIsTheThumbnailAndTheLabelNamesTheHost(): void
     {
-        self::assertSame(
-            'https://i.ytimg.com/vi/M1j_uRqKMKI/hqdefault.jpg',
-            $this->provider->poster('https://www.youtube.com/embed/M1j_uRqKMKI')
-        );
+        $target = $this->provider->target('https://www.youtube.com/embed/M1j_uRqKMKI');
+
+        self::assertSame('https://i.ytimg.com/vi/M1j_uRqKMKI/hqdefault.jpg', $target?->posterUrl);
+        self::assertSame('Watch on YouTube', $target?->label);
     }
 
     public function testRejectsAnIdOfTheWrongLength(): void
     {
-        self::assertFalse($this->provider->matches('https://www.youtube.com/embed/tooshort'));
-        self::assertNull($this->provider->normalize('https://www.youtube.com/embed/tooshort'));
+        self::assertNull($this->provider->target('https://www.youtube.com/embed/tooshort'));
     }
 
     public function testRejectsAnotherHost(): void
     {
-        self::assertFalse($this->provider->matches('https://www.googletagmanager.com/ns.html?id=GTM-1'));
+        self::assertNull($this->provider->target('https://www.googletagmanager.com/ns.html?id=GTM-1'));
     }
 
     /** A look-alike host must not pass: the check is the host, not a substring. */
     public function testRejectsALookalikeHost(): void
     {
-        self::assertFalse($this->provider->matches('https://youtube.com.evil.test/embed/M1j_uRqKMKI'));
+        self::assertNull($this->provider->target('https://youtube.com.evil.test/embed/M1j_uRqKMKI'));
     }
 
     #[DataProvider('shortsUrls')]
     public function testReadsAShortAsAPortraitEmbed(string $url): void
     {
-        self::assertTrue($this->provider->matches($url));
-        self::assertSame(
-            'https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts',
-            $this->provider->normalize($url)
-        );
-        self::assertSame(
-            'https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg',
-            $this->provider->poster($url)
-        );
+        $target = $this->provider->target($url);
+
+        self::assertSame('https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', $target?->url);
+        self::assertSame('https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg', $target?->posterUrl);
     }
 
     /** @return iterable<string, array{string}> */
@@ -102,8 +96,8 @@ final class YouTubeEmbedProviderTest extends TestCase
 
     public function testRejectsAShortsPathWithoutAnId(): void
     {
-        self::assertFalse($this->provider->matches('https://www.youtube.com/shorts/'));
-        self::assertFalse($this->provider->matches('https://www.youtube.com/shorts/tooShort'));
+        self::assertNull($this->provider->target('https://www.youtube.com/shorts/'));
+        self::assertNull($this->provider->target('https://www.youtube.com/shorts/tooShort'));
     }
 
     /** @return iterable<string, array{0: string, 1: EmbedShape}> */
