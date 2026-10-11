@@ -49,7 +49,7 @@
 1. Tests first: `ShareTargetsTest`/`TitledShareTargetTest` (titled target derived, none for a post; titled AT post on a Bluesky feed takes its body links),
    restore tolerates `shareUrl`.
 2. `EntryGuid` embeddable; `Entry` gets `?ShareKind $shareKind`; `EntryLocation` back to url + urlHash; delete `Share`.
-3. Callers move to `ShareKind` and to `ShareTargets::titledOf()`.
+3. Callers move to `ShareKind` and to the derived `TitledShareTarget::of()`.
 4. Backup + batch inserter drop `shareUrl`/`share_url`.
 5. Migration; migrate-from-empty on SQLite and MySQL + `doctrine:schema:validate`; apply to the live Docker DB.
 6. Gates, simplify pass, PR.
