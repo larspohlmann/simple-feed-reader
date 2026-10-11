@@ -11,7 +11,6 @@ use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\Reader\Model\FeedMediaModel;
 
-/** Reads an entry's own page for the reader view, or says why there is none to read. */
 final readonly class EntryArticleReader
 {
     public function __construct(

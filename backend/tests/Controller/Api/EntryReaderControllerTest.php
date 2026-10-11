@@ -75,6 +75,13 @@ final class EntryReaderControllerTest extends WebTestCase
         return $entry;
     }
 
+    private function spendReaderBudget(User $user): void
+    {
+        $readerLimiter = self::getContainer()->get('limiter.reader');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
+        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+    }
+
     private function installFake(): FakeArticleExtractor
     {
         $fake = new FakeArticleExtractor();
@@ -362,9 +369,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $post = $this->seedEntry($user, 'https://example.social/@a/2');
         $post->markTitleDerived();
         $article = $this->seedEntry($user, 'https://example.com/article');
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+        $this->spendReaderBudget($user);
 
         $client->request('GET', '/api/entries/' . $post->getId() . '/reader', server: $headers);
         self::assertResponseIsSuccessful();
@@ -378,9 +383,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-nourl-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($user, null);
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+        $this->spendReaderBudget($user);
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
@@ -408,9 +411,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [, $stranger] = $this->auth('reader-owner-budget@example.com');
         $this->installFake();
         $entry = $this->seedEntry($stranger, 'https://example.com/article');
-        $readerLimiter = self::getContainer()->get('limiter.reader');
-        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
-        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+        $this->spendReaderBudget($user);
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
