@@ -23,6 +23,8 @@ final class HtmlPageFetcherTest extends TestCase
 {
     use NoEgressProxy;
 
+    private int $pulledBytes = 0;
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -77,8 +79,13 @@ final class HtmlPageFetcherTest extends TestCase
     /** @param list<string> $opening */
     private function headOf(array $opening): string
     {
-        $chunks = [...$opening, ...array_fill(0, 200, str_repeat('x', 16_384))];
-        $fetcher = $this->fetcher([new MockResponse($chunks, ['http_code' => 200])]);
+        $chunks = function () use ($opening): \Generator {
+            foreach ([...$opening, ...array_fill(0, 200, str_repeat('x', 16_384))] as $chunk) {
+                $this->pulledBytes += \strlen($chunk);
+                yield $chunk;
+            }
+        };
+        $fetcher = $this->fetcher([new MockResponse($chunks(), ['http_code' => 200])]);
 
         return $fetcher->fetchHead('https://example.com/huge')->html;
     }
@@ -92,22 +99,10 @@ final class HtmlPageFetcherTest extends TestCase
 
     public function testAHeadThatNeverEndsIsCutAt512KbAndTheDownloadStopsNearThere(): void
     {
-        $pulledBytes = 0;
-        $chunks = static function () use (&$pulledBytes): \Generator {
-            $opening = '<html lang="en"><head><title>Story</title>';
-            $pulledBytes += \strlen($opening);
-            yield $opening;
-            for ($index = 0; $index < 200; $index++) {
-                $pulledBytes += 16_384;
-                yield str_repeat('x', 16_384);
-            }
-        };
-        $fetcher = $this->fetcher([new MockResponse($chunks(), ['http_code' => 200])]);
+        $head = $this->headOf(['<html lang="en"><head><title>Story</title>']);
 
-        $head = $fetcher->fetchHead('https://example.com/huge');
-
-        self::assertSame(524_288, \strlen($head->html));
-        self::assertLessThan(700_000, $pulledBytes);
+        self::assertSame(524_288, \strlen($head));
+        self::assertLessThan(700_000, $this->pulledBytes);
     }
 
     public function testAHeadEndsAtABodyThatOpensWithoutAClosedHead(): void

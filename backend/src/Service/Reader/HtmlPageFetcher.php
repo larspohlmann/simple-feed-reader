@@ -29,6 +29,8 @@ final readonly class HtmlPageFetcher
     private const float TIMEOUT_SECONDS = 10.0;
     private const int HEAD_MAX_BYTES = 524_288;
     private const int HEAD_CHUNK_BYTES = 8_192;
+    // A body can carry a challenge marker, so the read runs at least as far as a whole page's challenge scan.
+    private const int HEAD_MIN_BYTES = self::LANDING_SCAN_LENGTH;
     private const string HEAD_END = '~</head|<body~i';
     // The transfer is aborted a little past the cap, so the bytes the read keeps have surely arrived.
     private const int HEAD_ABORT_BYTES = self::HEAD_MAX_BYTES + 65_536;
@@ -73,8 +75,8 @@ final readonly class HtmlPageFetcher
     }
 
     /**
-     * The start of a page, for the metadata its head declares: reading stops once the head has ended and the
-     * challenge scan's span has arrived, at 512 KB at most; the timeouts are short and a meta refresh is not chased.
+     * The start of a page, for the metadata its head declares: reading stops once the head has ended, at 512 KB at
+     * most; the timeouts are short and a meta refresh is not chased.
      */
     public function fetchHead(string $url): PageResponseModel
     {
@@ -85,7 +87,7 @@ final readonly class HtmlPageFetcher
         );
         $this->assertSuccess($landed);
         $head = $this->utf8($this->firstBytes($landed), $landed);
-        $this->assertNotChallenge(mb_substr($head, 0, self::LANDING_SCAN_LENGTH), $landed);
+        $this->assertNotChallenge($head, $landed);
 
         return new PageResponseModel($landed->url, $head);
     }
@@ -149,7 +151,7 @@ final readonly class HtmlPageFetcher
                 throw new PageFetchException('the response could not be read');
             }
             $head .= $chunk;
-            if (\strlen($head) < self::LANDING_SCAN_LENGTH) {
+            if (\strlen($head) < self::HEAD_MIN_BYTES) {
                 continue;
             }
             if (preg_match(self::HEAD_END, $head, offset: $searchFrom) === 1) {
