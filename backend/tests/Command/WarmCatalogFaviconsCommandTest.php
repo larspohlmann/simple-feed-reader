@@ -8,10 +8,10 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcher;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloader;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\Model\DownloadedImageModel;
 use App\Tests\DbTestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -30,14 +30,14 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         return $feed;
     }
 
-    private function tester(FaviconFetcherInterface $fetcher): CommandTester
+    private function tester(GuardedImageDownloaderInterface $downloader): CommandTester
     {
         // The warmer's interfaces auto-alias to the concrete ids, and the test container replaces those.
-        self::getContainer()->set(FaviconFetcher::class, $fetcher);
+        self::getContainer()->set(GuardedImageDownloader::class, $downloader);
 
         // Stub resolution too, so the warmer's up-front resolveAll() never
         // touches the network: hand every site the same canned icon URL, which
-        // the mocked fetcher above then "downloads".
+        // the mocked downloader above then "downloads".
         $resolver = $this->createStub(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
             static fn (array $bases): array => array_map(
@@ -56,12 +56,12 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
     {
         $feed = $this->persistFeed('The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->once())
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->once())
             ->method('download')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
-        $tester = $this->tester($fetcher);
+        $tester = $this->tester($downloader);
 
         $tester->execute([]);
         self::assertSame(0, $tester->getStatusCode());
@@ -72,7 +72,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         self::assertNotNull($reloaded);
         self::assertSame('PNGBYTES', $reloaded->getFaviconBytes());
 
-        // Second run: the row is fresh, so the fetcher must not be called again —
+        // Second run: the row is fresh, so the downloader must not be called again —
         // guaranteed by expects(once()) above.
         $tester->execute([]);
         self::assertSame(0, $tester->getStatusCode());
@@ -83,10 +83,10 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
     {
         $this->persistFeed('Dead Feed', 'https://dead.example.com/rss.xml');
 
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willThrowException(new FaviconUnavailableException('gone'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willThrowException(new GuardedImageUnavailableException('gone'));
 
-        $tester = $this->tester($fetcher);
+        $tester = $this->tester($downloader);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -102,12 +102,12 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $this->persistFeed('One', 'https://one.example.com/rss.xml');
         $this->persistFeed('Two', 'https://two.example.com/rss.xml');
 
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->once())
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->once())
             ->method('download')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
-        $tester = $this->tester($fetcher);
+        $tester = $this->tester($downloader);
         $tester->execute(['--limit' => '1']);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -121,12 +121,12 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         // Both runs download two icons: the plain run warms the two fresh rows,
         // then --force re-warms the same two. atLeast(4) proves force actually
         // re-downloaded rather than skipping the already-fresh rows.
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->atLeast(4))
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->atLeast(4))
             ->method('download')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
-        $tester = $this->tester($fetcher);
+        $tester = $this->tester($downloader);
 
         $tester->execute([]);
         self::assertSame(0, $tester->getStatusCode());

@@ -37,7 +37,7 @@ use App\Tests\Support\QueuedLinkPosts;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\ShareLinkCardsWiring;
-use App\Tests\Support\StubFaviconFetcher;
+use App\Tests\Support\StubGuardedImageDownloader;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
 use Psr\Log\NullLogger;
@@ -207,7 +207,7 @@ final class MaintenanceTickTest extends DbTestCase
             $sendDueDigests,
             new ImageVerificationSweep(
                 $pendingImageVerificationRepository,
-                new ImageVerifier(new StubFaviconFetcher(), new NaiveUtcClock($clock)),
+                new ImageVerifier(new StubGuardedImageDownloader(), new NaiveUtcClock($clock)),
                 $this->entityManager,
             ),
             $linkCardSweep,

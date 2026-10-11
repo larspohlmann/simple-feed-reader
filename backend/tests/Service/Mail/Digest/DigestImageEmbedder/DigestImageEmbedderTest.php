@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\Model\DownloadedImageModel;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedder;
 use App\Service\Mail\Digest\DigestImageResizer\DigestImageResizerInterface;
 use App\Service\Mail\Digest\Exception\ImageProcessingException;
@@ -49,15 +49,15 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testDedupesASharedFaviconToOneEmbed(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturnCallback(
-            static fn (string $url): FetchedFaviconModel => new FetchedFaviconModel($url, 'RAW', 'image/png'),
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturnCallback(
+            static fn (string $url): DownloadedImageModel => new DownloadedImageModel($url, 'RAW', 'image/png'),
         );
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))->embed($this->page(
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))->embed($this->page(
             $this->card('https://cdn/1.jpg', 'https://site/favicon.ico'),
             $this->card('https://cdn/2.jpg', 'https://site/favicon.ico'),
         ));
@@ -70,21 +70,21 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAFetchFailureDropsThatImageOnly(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturnCallback(
-            static function (string $url): FetchedFaviconModel {
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturnCallback(
+            static function (string $url): DownloadedImageModel {
                 if ($url === 'https://cdn/bad.jpg') {
-                    throw new FaviconUnavailableException('boom');
+                    throw new GuardedImageUnavailableException('boom');
                 }
 
-                return new FetchedFaviconModel($url, 'RAW', 'image/png');
+                return new DownloadedImageModel($url, 'RAW', 'image/png');
             },
         );
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))->embed($this->page(
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))->embed($this->page(
             $this->card('https://cdn/bad.jpg', 'https://site/favicon.ico'),
         ));
 
@@ -99,21 +99,21 @@ final class DigestImageEmbedderTest extends TestCase
      */
     public function testAFetchFailureDoesNotStopLaterImagesInTheLoop(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturnCallback(
-            static function (string $url): FetchedFaviconModel {
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturnCallback(
+            static function (string $url): DownloadedImageModel {
                 if ($url === 'https://site/bad.ico') {
-                    throw new FaviconUnavailableException('boom');
+                    throw new GuardedImageUnavailableException('boom');
                 }
 
-                return new FetchedFaviconModel($url, 'RAW', 'image/png');
+                return new DownloadedImageModel($url, 'RAW', 'image/png');
             },
         );
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
         $resizer->method('containPng')->willReturn('PNG');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))->embed($this->page(
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))->embed($this->page(
             $this->card('https://cdn/1.jpg', 'https://site/bad.ico'),
         ));
 
@@ -123,13 +123,13 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlSeenOnlyAsAFaviconIsResizedWithContainPngToPng(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel('u', 'RAW', 'image/png'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/png'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card(null, 'https://site/favicon.ico')));
 
         $image = $this->embeddedFor($set, 'https://site/favicon.ico');
@@ -139,13 +139,13 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlSeenOnlyAsAnImageIsResizedWithCoverJpegToJpeg(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel('u', 'RAW', 'image/jpeg'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card('https://cdn/1.jpg', null)));
 
         $image = $this->embeddedFor($set, 'https://cdn/1.jpg');
@@ -155,13 +155,13 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlFirstSeenAsAThumbnailStaysAThumbnailWhenLaterUsedAsAFavicon(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel('u', 'RAW', 'image/jpeg'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))->embed($this->page(
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))->embed($this->page(
             $this->card('https://shared/pic', null),
             $this->card(null, 'https://shared/pic'),
         ));
@@ -172,13 +172,13 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlFirstSeenAsAFaviconStaysAFaviconWhenLaterUsedAsAThumbnail(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel('u', 'RAW', 'image/png'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/png'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
         $resizer->method('containPng')->willReturn('PNGBYTES');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))->embed($this->page(
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))->embed($this->page(
             $this->card(null, 'https://shared/pic'),
             $this->card('https://shared/pic', null),
         ));
@@ -190,12 +190,12 @@ final class DigestImageEmbedderTest extends TestCase
     public function testCidIsDerivedFromASixteenCharacterHashOfTheSourceUrl(): void
     {
         $url = 'https://cdn/1.jpg';
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel($url, 'RAW', 'image/jpeg'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel($url, 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card($url, null)));
 
         self::assertSame('img' . substr(hash('xxh128', $url), 0, 16), $set->cidFor($url));
@@ -203,12 +203,12 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAnImageProcessingExceptionAlsoDropsOnlyThatImage(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willReturn(new FetchedFaviconModel('u', 'RAW', 'image/jpeg'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willReturn(new DownloadedImageModel('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willThrowException(new ImageProcessingException('broken image'));
 
-        $set = (new DigestImageEmbedder($fetcher, $resizer, new NullLogger()))
+        $set = (new DigestImageEmbedder($downloader, $resizer, new NullLogger()))
             ->embed($this->page($this->card('https://cdn/broken.jpg', null)));
 
         self::assertNull($set->cidFor('https://cdn/broken.jpg'));
@@ -217,8 +217,8 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAFailureIsLoggedWithTheOffendingUrl(): void
     {
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')->willThrowException(new FaviconUnavailableException('boom'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')->willThrowException(new GuardedImageUnavailableException('boom'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())->method('debug')->with(
@@ -226,7 +226,7 @@ final class DigestImageEmbedderTest extends TestCase
             self::callback(static fn (array $context): bool => ($context['url'] ?? null) === 'https://cdn/broken.jpg'),
         );
 
-        (new DigestImageEmbedder($fetcher, $resizer, $logger))
+        (new DigestImageEmbedder($downloader, $resizer, $logger))
             ->embed($this->page($this->card('https://cdn/broken.jpg', null)));
     }
 }

@@ -15,7 +15,7 @@ use App\Service\Worker\Message\VerifyPendingImages;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PngImageFactory;
 use App\Tests\Support\RecordingLogger;
-use App\Tests\Support\StubFaviconFetcher;
+use App\Tests\Support\StubGuardedImageDownloader;
 use Symfony\Component\Clock\MockClock;
 
 final class VerifyPendingImagesHandlerTest extends DbTestCase
@@ -35,11 +35,11 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
         $entry->getImage()->storePending('https://i/pending.png', 250, 250);
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
-        $fetcher = new StubFaviconFetcher();
-        $fetcher->willReturnBytes('https://i/pending.png', PngImageFactory::bytes(600, 400));
+        $downloader = new StubGuardedImageDownloader();
+        $downloader->willReturnBytes('https://i/pending.png', PngImageFactory::bytes(600, 400));
         $logger = new RecordingLogger();
 
-        $this->handler($fetcher, $logger)->__invoke(new VerifyPendingImages());
+        $this->handler($downloader, $logger)->__invoke(new VerifyPendingImages());
 
         self::assertCount(1, $logger->records);
         self::assertSame('info', $logger->records[0]['level']);
@@ -53,11 +53,13 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
         self::assertSame(600, $verified->getImageWidth());
     }
 
-    private function handler(StubFaviconFetcher $fetcher, RecordingLogger $logger): VerifyPendingImagesHandler
-    {
+    private function handler(
+        StubGuardedImageDownloader $downloader,
+        RecordingLogger $logger,
+    ): VerifyPendingImagesHandler {
         /** @var PendingImageVerificationRepository $pendingVerifications */
         $pendingVerifications = self::getContainer()->get(PendingImageVerificationRepository::class);
-        $verifier = new ImageVerifier($fetcher, new NaiveUtcClock(new MockClock('2026-10-01 07:00:00')));
+        $verifier = new ImageVerifier($downloader, new NaiveUtcClock(new MockClock('2026-10-01 07:00:00')));
 
         return new VerifyPendingImagesHandler(
             new ImageVerificationSweep($pendingVerifications, $verifier, $this->entityManager),

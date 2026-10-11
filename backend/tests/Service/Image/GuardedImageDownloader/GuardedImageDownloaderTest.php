@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Image\FaviconFetcher;
+namespace App\Tests\Service\Image\GuardedImageDownloader;
 
-use App\Service\Image\FaviconFetcher\FaviconFetcher;
-use App\Service\Image\Exception\FaviconRejectedException;
-use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloader;
+use App\Service\Image\Exception\GuardedImageRejectedException;
+use App\Service\Image\Exception\GuardedImageUnavailableException;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ResponseSizeLimit;
@@ -20,11 +20,11 @@ use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final class FaviconFetcherTest extends TestCase
+final class GuardedImageDownloaderTest extends TestCase
 {
     use NoEgressProxy;
 
-    private const string ICON_URL = 'https://www.theverge.com/favicon.ico';
+    private const string IMAGE_URL = 'https://www.theverge.com/favicon.ico';
 
     /**
      * UrlGuard is `final`, so it runs for real: a fake DnsResolverInterface stands in for the network and the real
@@ -32,10 +32,10 @@ final class FaviconFetcherTest extends TestCase
      *
      * @param array<string, list<string>> $dnsMap
      */
-    private function fetcher(
+    private function downloader(
         MockHttpClient $client,
         array $dnsMap = ['www.theverge.com' => ['93.184.216.34']],
-    ): FaviconFetcher {
+    ): GuardedImageDownloader {
         $resolver = new class ($dnsMap) implements DnsResolverInterface {
             /** @param array<string, list<string>> $map */
             public function __construct(private readonly array $map)
@@ -48,7 +48,7 @@ final class FaviconFetcherTest extends TestCase
             }
         };
 
-        return new FaviconFetcher(
+        return new GuardedImageDownloader(
             FetchWiring::redirectFollower($client, $this->noEgressProxy(), new UrlGuard($resolver, new IpValidator())),
             'TestAgent/1.0',
         );
@@ -60,11 +60,11 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['image/png']],
         ]));
 
-        $icon = $this->fetcher($client)->download(self::ICON_URL);
+        $image = $this->downloader($client)->download(self::IMAGE_URL);
 
-        self::assertSame('BINARY', $icon->bytes);
-        self::assertSame('image/png', $icon->contentType);
-        self::assertSame(self::ICON_URL, $icon->sourceUrl);
+        self::assertSame('BINARY', $image->bytes);
+        self::assertSame('image/png', $image->contentType);
+        self::assertSame(self::IMAGE_URL, $image->sourceUrl);
     }
 
     public function testSendsTheOutboundUserAgent(): void
@@ -76,7 +76,7 @@ final class FaviconFetcherTest extends TestCase
             return new MockResponse('BINARY', ['response_headers' => ['content-type' => ['image/png']]]);
         });
 
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->downloader($client)->download(self::IMAGE_URL);
 
         self::assertIsArray($headers);
         self::assertContains('User-Agent: TestAgent/1.0', $headers);
@@ -92,7 +92,7 @@ final class FaviconFetcherTest extends TestCase
             return new MockResponse('BINARY', ['response_headers' => ['content-type' => ['image/png']]]);
         });
 
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->downloader($client)->download(self::IMAGE_URL);
 
         self::assertSame(8.0, $sent['timeout'] ?? null);
         self::assertSame(8.0, $sent['max_duration'] ?? null);
@@ -104,19 +104,19 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['text/html']],
         ]));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageUnavailableException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testRejectsAnOversizedResponse(): void
     {
         $client = new MockHttpClient(new MockResponse(
-            str_repeat('x', FaviconFetcher::MAX_BYTES + 1),
+            str_repeat('x', GuardedImageDownloader::MAX_BYTES + 1),
             ['response_headers' => ['content-type' => ['image/png']]],
         ));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageUnavailableException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testAWireCapTripNestedTwoLevelsDeepIsRejectedNotMerelyUnavailable(): void
@@ -127,27 +127,27 @@ final class FaviconFetcherTest extends TestCase
             throw new TransportException('wrapped once', previous: $wrappedTwice);
         });
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testRejectsANonSuccessStatus(): void
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 404]));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageUnavailableException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
-    public function testPropagatesTheSsrfGuardAsAnUnavailableIconNotARejectedOne(): void
+    public function testPropagatesTheSsrfGuardAsAnUnavailableImageNotARejectedOne(): void
     {
         $client = new MockHttpClient(new MockResponse('BINARY'));
 
         try {
-            $this->fetcher($client, ['www.theverge.com' => ['127.0.0.1']])->download(self::ICON_URL);
-            self::fail('Expected a FaviconUnavailableException.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            $this->downloader($client, ['www.theverge.com' => ['127.0.0.1']])->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageUnavailableException.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
         }
     }
 
@@ -157,8 +157,8 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['image/png']],
         ]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testTheWireGuardStopsTheDownloadOnceTheBodyPassesTheCap(): void
@@ -175,9 +175,9 @@ final class FaviconFetcherTest extends TestCase
         ]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('expected the icon to be rejected');
-        } catch (FaviconRejectedException) {
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('expected the image to be rejected');
+        } catch (GuardedImageRejectedException) {
             self::assertLessThan(2 * ResponseSizeLimit::Download->value, $chunksSent);
         }
     }
@@ -188,8 +188,8 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['image/png']],
         ]));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageUnavailableException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testFollowsASafeRedirectToTheImage(): void
@@ -204,19 +204,19 @@ final class FaviconFetcherTest extends TestCase
             ]),
         ];
 
-        $icon = $this->fetcher(new MockHttpClient($responses))->download(self::ICON_URL);
+        $image = $this->downloader(new MockHttpClient($responses))->download(self::IMAGE_URL);
 
-        self::assertSame('BINARY', $icon->bytes);
+        self::assertSame('BINARY', $image->bytes);
         // sourceUrl stays the originally requested URL, not the redirect target.
-        self::assertSame(self::ICON_URL, $icon->sourceUrl);
+        self::assertSame(self::IMAGE_URL, $image->sourceUrl);
     }
 
     public function testA403IsRejectedNotMerelyUnavailable(): void
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 403]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testA400IsRejectedAtTheLowerBoundaryWithItsStatusInTheMessage(): void
@@ -224,10 +224,10 @@ final class FaviconFetcherTest extends TestCase
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 400]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconRejectedException.');
-        } catch (FaviconRejectedException $caught) {
-            self::assertSame('Icon responded 400.', $caught->getMessage());
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageRejectedException.');
+        } catch (GuardedImageRejectedException $caught) {
+            self::assertSame('Image responded 400.', $caught->getMessage());
         }
     }
 
@@ -235,16 +235,16 @@ final class FaviconFetcherTest extends TestCase
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 499]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testA429IsRejected(): void
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 429]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testA404IsUnavailableButNotRejected(): void
@@ -252,10 +252,10 @@ final class FaviconFetcherTest extends TestCase
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 404]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconUnavailableException.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageUnavailableException.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
         }
     }
 
@@ -264,11 +264,11 @@ final class FaviconFetcherTest extends TestCase
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 500]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconUnavailableException.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
-            self::assertSame('Icon responded 500.', $caught->getMessage());
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageUnavailableException.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
+            self::assertSame('Image responded 500.', $caught->getMessage());
         }
     }
 
@@ -278,8 +278,8 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['image/avif']],
         ]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     /** @return iterable<string, array{array<string, list<string>>, string, string}> */
@@ -309,10 +309,10 @@ final class FaviconFetcherTest extends TestCase
     {
         $client = new MockHttpClient(new MockResponse($bytes, ['response_headers' => $headers]));
 
-        $icon = $this->fetcher($client)->download(self::ICON_URL);
+        $image = $this->downloader($client)->download(self::IMAGE_URL);
 
-        self::assertSame($bytes, $icon->bytes);
-        self::assertSame($type, $icon->contentType);
+        self::assertSame($bytes, $image->bytes);
+        self::assertSame($type, $image->contentType);
     }
 
     public function testADeclaredTypeIsTrustedOverTheLeadingBytes(): void
@@ -321,7 +321,7 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['Image/PNG ; charset=binary']],
         ]));
 
-        self::assertSame('image/png', $this->fetcher($client)->download(self::ICON_URL)->contentType);
+        self::assertSame('image/png', $this->downloader($client)->download(self::IMAGE_URL)->contentType);
     }
 
     public function testAnUndeclaredAvifIsRejectedLikeADeclaredOne(): void
@@ -330,8 +330,8 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['application/octet-stream']],
         ]));
 
-        $this->expectException(FaviconRejectedException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageRejectedException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testAnUndeclaredBodyThatIsNoImageStaysUnavailable(): void
@@ -341,10 +341,10 @@ final class FaviconFetcherTest extends TestCase
         ]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconUnavailableException.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageUnavailableException.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
             self::assertSame(
                 'Content type "application/octet-stream" is not an allowed image type.',
                 $caught->getMessage(),
@@ -358,8 +358,8 @@ final class FaviconFetcherTest extends TestCase
             'response_headers' => ['content-type' => ['text/html']],
         ]));
 
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
+        $this->expectException(GuardedImageUnavailableException::class);
+        $this->downloader($client)->download(self::IMAGE_URL);
     }
 
     public function testANonImageTypeIsUnavailableButNotRejected(): void
@@ -369,53 +369,53 @@ final class FaviconFetcherTest extends TestCase
         ]));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconUnavailableException.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageUnavailableException.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
         }
     }
 
     public function testABodyOverTheSizeCapIsRejected(): void
     {
         $client = new MockHttpClient(new MockResponse(
-            str_repeat('x', FaviconFetcher::MAX_BYTES + 1),
+            str_repeat('x', GuardedImageDownloader::MAX_BYTES + 1),
             ['response_headers' => ['content-type' => ['image/png']]],
         ));
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail('Expected a FaviconRejectedException.');
-        } catch (FaviconRejectedException $caught) {
-            self::assertSame('Icon exceeded 3145728 bytes.', $caught->getMessage());
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail('Expected a GuardedImageRejectedException.');
+        } catch (GuardedImageRejectedException $caught) {
+            self::assertSame('Image exceeded 3145728 bytes.', $caught->getMessage());
         }
     }
 
-    public function testARejectedFetchCarriesNoErrorCode(): void
+    public function testARejectedDownloadCarriesNoErrorCode(): void
     {
         $client = new MockHttpClient(static function (): never {
             throw new TransportException('wrapped', previous: new ResponseTooLargeException('cap tripped'));
         });
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail(FaviconRejectedException::class . ' was not thrown.');
-        } catch (FaviconRejectedException $caught) {
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail(GuardedImageRejectedException::class . ' was not thrown.');
+        } catch (GuardedImageRejectedException $caught) {
             self::assertSame(0, $caught->getCode());
         }
     }
 
-    public function testAnUnavailableFetchCarriesNoErrorCode(): void
+    public function testAnUnavailableDownloadCarriesNoErrorCode(): void
     {
         $client = new MockHttpClient(static function (): never {
             throw new TransportException('Connection refused');
         });
 
         try {
-            $this->fetcher($client)->download(self::ICON_URL);
-            self::fail(FaviconUnavailableException::class . ' was not thrown.');
-        } catch (FaviconUnavailableException $caught) {
-            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            $this->downloader($client)->download(self::IMAGE_URL);
+            self::fail(GuardedImageUnavailableException::class . ' was not thrown.');
+        } catch (GuardedImageUnavailableException $caught) {
+            self::assertNotInstanceOf(GuardedImageRejectedException::class, $caught);
             self::assertSame(0, $caught->getCode());
         }
     }

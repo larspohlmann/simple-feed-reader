@@ -10,8 +10,8 @@ use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\CatalogFaviconWarmer;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Model\FetchedFaviconModel;
+use App\Service\Image\GuardedImageDownloader\GuardedImageDownloaderInterface;
+use App\Service\Image\Model\DownloadedImageModel;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Clock\ClockInterface;
@@ -36,9 +36,9 @@ final class CatalogFaviconWarmerTest extends DbTestCase
 
     private function warmer(
         FaviconResolverInterface $resolver,
-        FaviconFetcherInterface $fetcher,
+        GuardedImageDownloaderInterface $downloader,
     ): CatalogFaviconWarmer {
-        return new CatalogFaviconWarmer($this->feeds(), $resolver, $fetcher, $this->entityManager, $this->clock());
+        return new CatalogFaviconWarmer($this->feeds(), $resolver, $downloader, $this->entityManager, $this->clock());
     }
 
     private function persistFeed(string $title): CatalogFeed
@@ -80,13 +80,13 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Verge');
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
 
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->once())
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->once())
             ->method('download')
             ->with('https://example.com/favicon.ico')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
-        $report = $this->warmer($resolver, $fetcher)->warm(120);
+        $report = $this->warmer($resolver, $downloader)->warm(120);
 
         self::assertSame(1, $report->warmed);
         self::assertSame(0, $report->failed);
@@ -103,10 +103,10 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Dead');
         $resolver = $this->resolverReturning([0 => null]);
 
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->never())->method('download');
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->never())->method('download');
 
-        $report = $this->warmer($resolver, $fetcher)->warm(120);
+        $report = $this->warmer($resolver, $downloader)->warm(120);
 
         self::assertSame(0, $report->warmed);
         self::assertSame(1, $report->failed);
@@ -122,11 +122,11 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('One');
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
 
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'ICOBYTES', 'image/x-icon'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'ICOBYTES', 'image/x-icon'));
 
-        $this->warmer($resolver, $fetcher)->refresh($feed);
+        $this->warmer($resolver, $downloader)->refresh($feed);
 
         $this->entityManager->clear();
         $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
@@ -139,10 +139,10 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $feed = $this->persistFeed('Two');
         $resolver = $this->resolverReturning([0 => null]);
 
-        $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects($this->never())->method('download');
+        $downloader = $this->createMock(GuardedImageDownloaderInterface::class);
+        $downloader->expects($this->never())->method('download');
 
-        $this->warmer($resolver, $fetcher)->refresh($feed);
+        $this->warmer($resolver, $downloader)->refresh($feed);
 
         $this->entityManager->clear();
         $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
@@ -154,11 +154,11 @@ final class CatalogFaviconWarmerTest extends DbTestCase
     {
         $feed = $this->persistFeed('Fresh');
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
-        $fetcher = $this->createStub(FaviconFetcherInterface::class);
-        $fetcher->method('download')
-            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+        $downloader = $this->createStub(GuardedImageDownloaderInterface::class);
+        $downloader->method('download')
+            ->willReturn(new DownloadedImageModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
-        $warmer = $this->warmer($resolver, $fetcher);
+        $warmer = $this->warmer($resolver, $downloader);
         $warmer->warm(120);
 
         // Warmed rows drop out of the due set.
