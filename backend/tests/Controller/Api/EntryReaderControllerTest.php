@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\DependencyInjection\ReaderOutputVersionPass;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\EventListener\ReaderVersionHeaderListener;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
@@ -129,6 +131,36 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('https://example.com/article', $body['url']);
         self::assertArrayHasKey('extractedAt', $body);
         self::assertSame(['https://example.com/article'], $fake->calls);
+    }
+
+    public function testTheArticleResponseNamesTheReaderOutputVersion(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-version@example.com');
+        $this->installFake()->willReturn(ExtractionResultModel::ok(
+            url: 'https://example.com/article',
+            title: 'The Title',
+            byline: null,
+            siteName: null,
+            contentHtml: '<p>Body</p>',
+            excerpt: null,
+        ));
+        $entry = $this->seedEntry($user, 'https://example.com/article');
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        $version = self::getContainer()->getParameter(ReaderOutputVersionPass::PARAMETER);
+        self::assertResponseHeaderSame(ReaderVersionHeaderListener::HEADER, $version);
+    }
+
+    public function testAResponseOutsideTheReaderNamesTheReaderOutputVersionToo(): void
+    {
+        $client = self::createClient();
+
+        $client->request('GET', '/api/health');
+
+        $version = self::getContainer()->getParameter(ReaderOutputVersionPass::PARAMETER);
+        self::assertResponseHeaderSame(ReaderVersionHeaderListener::HEADER, $version);
     }
 
     public function testDeclaresAPaywalledPreviewSoTheClientCanSaySo(): void
