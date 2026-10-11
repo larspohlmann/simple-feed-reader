@@ -656,15 +656,6 @@
   margin: var(--space-5) 0;
 }
 
-.content ::ng-deep .quote-post blockquote {
-  margin: 0;
-}
-
-.content ::ng-deep .quote-post footer {
-  margin-top: var(--space-2);
-  font-size: var(--fs-sm);
-}
-
 .content ::ng-deep .post-images {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));

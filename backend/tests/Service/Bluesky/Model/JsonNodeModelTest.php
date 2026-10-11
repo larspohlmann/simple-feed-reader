@@ -47,4 +47,13 @@ final class JsonNodeModelTest extends TestCase
         self::assertSame([], $node->nodes('missing'));
         self::assertNull(JsonNodeModel::of('scalar')->type());
     }
+
+    public function testFirstReadsAListsFirstNodeOrAnEmptyOne(): void
+    {
+        $node = JsonNodeModel::of(['images' => [['alt' => 'one'], ['alt' => 'two']], 'none' => []]);
+
+        self::assertSame('one', $node->first('images')->string('alt'));
+        self::assertNull($node->first('none')->type());
+        self::assertNull($node->first('missing')->string('alt'));
+    }
 }

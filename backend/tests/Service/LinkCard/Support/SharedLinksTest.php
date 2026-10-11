@@ -35,7 +35,7 @@ final class SharedLinksTest extends TestCase
             . ' rel="noopener noreferrer" translate="no"><span>https://</span>'
             . '<span>social.souverain.ovh/&#64;souverai</span><span>n/116830136337222206</span></a></p>'
             . '<p>Nous formons un mouvement ✊🏾</p>',
-            [],
+            ['https://social.souverain.ovh/@souverain/116830136337222206'],
         ];
         yield 'host-only text with an ellipsis' => [
             '<p><a href="https://example.com/long/path">example.com/long/pa…</a></p>',
@@ -43,7 +43,12 @@ final class SharedLinksTest extends TestCase
         ];
         yield 'quote with a non-breaking space' => [
             '<p>RE:&nbsp;<a href="https://q.test/@a/1">https://q.test/@a/1</a></p>',
-            [],
+            ['https://q.test/@a/1'],
+        ];
+        yield 'a quote then a shared link' => [
+            '<p>RE: <a href="https://q.test/@a/1">https://q.test/@a/1</a></p>'
+            . '<p>Read <a href="https://example.com/a">https://example.com/a</a></p>',
+            ['https://q.test/@a/1', 'https://example.com/a'],
         ];
         yield 'text drops www' => [
             '<a href="https://www.example.com/a">example.com/a</a>',

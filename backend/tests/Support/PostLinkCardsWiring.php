@@ -16,6 +16,8 @@ use App\Service\LinkCard\PostLinkCards;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -41,6 +43,7 @@ final class PostLinkCardsWiring
             PostEnrichers::linkCards($entityManager),
             $entityManager,
             new NaiveUtcClock($clock),
+            new EntrySanitizer(new TrailingBlankRemover()),
             $logger,
         );
     }

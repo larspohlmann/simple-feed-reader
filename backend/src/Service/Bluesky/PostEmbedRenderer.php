@@ -14,7 +14,6 @@ use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Text\Support\HtmlEscape;
-use App\Service\Text\Support\ParagraphedText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
 
@@ -133,15 +132,26 @@ final readonly class PostEmbedRenderer
         if ($record->type() !== self::VIEW_RECORD || $value->type() !== self::POST_RECORD || $quotedUrl === null) {
             return null;
         }
-        $text = $value->string('text');
-        $paragraphs = $text === null ? '' : ParagraphedText::asHtml($text, HtmlEscape::text(...));
-
-        return new RenderedEmbedModel(sprintf(
-            '<figure class="quote-post"><blockquote>%s<footer><a href="%s">%s</a></footer></blockquote></figure>',
-            $paragraphs,
-            HtmlEscape::text($quotedUrl),
-            HtmlEscape::text(self::authorName($record->node('author'))),
+        $card = StorableLinkCard::of(new LinkCardContent(
+            $quotedUrl,
+            self::authorName($record->node('author')),
+            $value->string('text'),
+            self::quotedImage($record->first('embeds')),
+            HostKey::forUrl($quotedUrl),
         ));
+
+        return $card === null ? null : RenderedEmbedModel::card($card, null);
+    }
+
+    private static function quotedImage(JsonNodeModel $embed): ?string
+    {
+        return match ($embed->type()) {
+            self::IMAGES => $embed->first('images')->string('thumb'),
+            self::VIDEO => $embed->string('thumbnail'),
+            self::EXTERNAL => $embed->node('external')->string('thumb'),
+            self::RECORD_WITH_MEDIA => self::quotedImage($embed->node('media')),
+            default => null,
+        };
     }
 
     private function fallback(string $postUrl): RenderedEmbedModel

@@ -90,16 +90,33 @@ final class EntryEmbedWriterTest extends DbTestCase
         self::assertNull($entry->getSummary());
     }
 
-    public function testAQuoteWithALinkCardKeepsTheQuoteInTheBodyAndStoresTheCard(): void
+    public function testAQuoteLeavesNoFigureAndIsStoredAsACardBeforeTheMediasCard(): void
     {
         $entry = $this->entry('<p>Look.</p>');
 
         $this->writer()->fill($entry, Bluesky::post('record-with-media'));
         $this->entityManager->flush();
 
-        self::assertStringStartsWith('<p>Look.</p><figure class="quote-post">', (string) $entry->getContentHtml());
-        self::assertStringNotContainsString('link-card', (string) $entry->getContentHtml());
-        self::assertCount(1, $this->storedCards($entry));
+        self::assertSame('<p>Look.</p>', $entry->getContentHtml());
+        self::assertSame(
+            ['Amy Littlefield (@amylittlefield.bsky.social)', 'From the IAmA community on Reddit'],
+            $this->storedTitles($entry),
+        );
+    }
+
+    public function testAQuoteAloneIsStoredAsTheOnlyCardAndSetsNoImage(): void
+    {
+        $entry = $this->entry('<p>Watch this.</p>');
+
+        $this->writer()->fill($entry, Bluesky::post('record'));
+        $this->entityManager->flush();
+
+        self::assertSame('<p>Watch this.</p>', $entry->getContentHtml());
+        self::assertNull($entry->getImageUrl());
+        self::assertSame(
+            ['Mother Jones (@motherjones.com)'],
+            $this->storedTitles($entry),
+        );
     }
 
     public function testAPostWithoutALinkCardStoresNone(): void
@@ -217,6 +234,12 @@ final class EntryEmbedWriterTest extends DbTestCase
         $this->entityManager->clear();
 
         return $this->linkCards()->contentsByEntryIds([$entry->requireId()])[$entry->requireId()] ?? [];
+    }
+
+    /** @return list<string> */
+    private function storedTitles(Entry $entry): array
+    {
+        return array_map(static fn (LinkCardContent $card): string => $card->title, $this->storedCards($entry));
     }
 
     private function linkCards(): LinkCardRepository
