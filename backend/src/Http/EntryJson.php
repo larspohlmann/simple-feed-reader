@@ -16,6 +16,9 @@ use App\Service\Text\Support\EntryExcerpt;
  * Two shapes off one row: listRow() drops contentHtml for a plain-text
  * excerpt; detail() adds contentHtml back for the single body-rendering page.
  *
+ * @phpstan-type LinkCardRow array{
+ *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
+ * }
  * @phpstan-type EntryRow array{
  *   id: int|null, title: string, url: string|null, author: string|null,
  *   summary: string|null, excerpt: string, contentHtml?: string|null,
@@ -24,9 +27,7 @@ use App\Service\Text\Support\EntryExcerpt;
  *   media: list<array<string, string|int>>,
  *   attachments: list<array<string, string|int>>,
  *   categories: list<string>,
- *   linkCards: list<array{
- *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
- *   }>,
+ *   linkCards: list<LinkCardRow>,
  *   publishedAt: string|null,
  *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
  *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
@@ -95,7 +96,7 @@ final class EntryJson
     }
 
     /**
-     * @return array{url: string, title: string, description: string|null, imageUrl: string|null, siteName: string}
+     * @return LinkCardRow
      */
     private static function linkCard(LinkCardContent $card): array
     {
