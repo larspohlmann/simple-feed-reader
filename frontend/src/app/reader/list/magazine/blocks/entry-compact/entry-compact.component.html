@@ -1,12 +1,4 @@
-<article
-  class="compact"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="compact" [appOpensEntry]="entry()">
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [showSource]="showSource()">
       @if (!showSource()) {

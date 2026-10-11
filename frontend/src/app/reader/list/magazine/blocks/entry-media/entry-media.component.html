@@ -1,15 +1,7 @@
-<article
-  class="media-share"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="media-share" [appOpensEntry]="entry()">
   <app-entry-kicker-line [entry]="entry()" />
   @if (headline()) {
-    <p class="caption" [class.post]="isPost()">{{ headline() }}</p>
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
   }
   @if (snippet()) {
     <p class="dek">{{ snippet() }}</p>

@@ -1,12 +1,4 @@
-<article
-  class="hero"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="hero" [appOpensEntry]="entry()">
   @if (showImage()) {
     <img
       class="img"

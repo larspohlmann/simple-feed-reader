@@ -1,5 +1,4 @@
 import { Directive, computed, inject, input } from '@angular/core';
-import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { relativeTime } from '../../format';
 import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
@@ -15,8 +14,6 @@ import { LanguageService } from '../../../core/i18n/language.service';
 export abstract class EntryBlockBase {
   readonly entry = input.required<EntryDto>();
   readonly tags = input<SubscriptionTagDto[]>([]);
-  protected readonly actions = inject(EntryActionHandler);
-
   private readonly language = inject(LanguageService);
   readonly when = computed(() =>
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),

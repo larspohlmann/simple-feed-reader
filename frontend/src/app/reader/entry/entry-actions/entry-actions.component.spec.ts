@@ -9,20 +9,12 @@ import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
 import { anEntry } from '../../../../testing/entry-testing';
+import { OpensEntryDirective } from '../../list/opens-entry.directive';
 
-/** Stand-in for the card: proves an action click never reaches it. The keydown
- *  bindings mirror the real magazine card's `<article>` wiring exactly
- *  (`entry-compact.component.html`), Space's `preventDefault()` included. */
+/** Stand-in for the card, wired like the real ones: proves an action never reaches it. */
 @Component({
-  imports: [EntryActionsComponent],
-  template: `<article
-    class="card"
-    role="button"
-    tabindex="0"
-    (click)="cardOpened = true"
-    (keydown.enter)="cardOpened = true"
-    (keydown.space)="$event.preventDefault(); cardOpened = true"
-  >
+  imports: [EntryActionsComponent, OpensEntryDirective],
+  template: `<article class="card" [appOpensEntry]="entry">
     <app-entry-actions [entry]="entry" [size]="size" [audio]="audio" />
   </article>`,
   providers: [{ provide: EntryActionHandler, useExisting: forwardRef(() => HostComponent) }],
@@ -49,7 +41,7 @@ class HostComponent implements EntryActionHandler {
   }
 
   open(): void {
-    throw new Error('entry-actions never opens its entry');
+    this.cardOpened = true;
   }
 }
 

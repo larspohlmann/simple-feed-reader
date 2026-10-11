@@ -339,6 +339,11 @@ tag-picker's `.on`, discover's active category chip (their own `background` and
 cards' whole background, rim included — `transparent` would let the rim fill
 the card. With no card rim left, airy's hero, wide, split and thumb images
 carry the boxed card's rim themselves (`magazine-card.image-rim`).
+Every chrome block but quote takes its states from `magazine-card.card-states`: the
+hover rim, the title's hover underline, the read title (secondary, weight 400) and a
+post's `.title.post`. Quote keeps its own pull-quote underline, compact its hover
+background. Every block and the list row open their entry through `[appOpensEntry]`
+(`reader/list/opens-entry.directive.ts`).
 
 **Admin.** Stylesheets under `app/admin/` and `app/settings/admin/` keep their
 flat borders; shared components rendered there carry the rim.
@@ -1659,8 +1664,8 @@ relative units for the budget, not a layout guarantee.
 | Block | Height | Image | Fills when |
 |---|---|---|---|
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
-| **Link** (#1502) | 463px | the shared link's card | a link share (`sharesLink`: `share` is `link`) with its card, or one still being completed — pinned, whatever its slot |
-| **Media** (#1522) | 463px | the shared media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-share-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a media share (`sharesMedia`: `share` is `media`) with at least one image or video — pinned like Link, whatever its slot |
+| **Link** (#1502) | 463px | the shared link's card, under the title and dek; the card states every chrome block shares | a link share (`sharesLink`: `share` is `link`) with its card, or one still being completed — pinned, whatever its slot |
+| **Media** (#1522) | 463px | under the title and dek, with the card states every chrome block shares (a post's text clamps at 6 lines), the shared media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-share-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a media share (`sharesMedia`: `share` is `media`) with at least one image or video — pinned like Link, whatever its slot |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |

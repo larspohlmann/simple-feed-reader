@@ -1,4 +1,3 @@
-@use '../../../post-text';
 @use '../../magazine-card';
 
 :host {
@@ -14,34 +13,14 @@
   align-items: flex-start;
   padding: var(--card-pad);
   cursor: pointer;
-}
 
-/* Pointer-only: a touch tap fires :hover, which must not highlight a card
-   during a drag-scroll (#704). */
-@media (hover: hover) {
-  .kicker-card:hover {
-    --rim-base: var(--border-strong);
-  }
-
-  .kicker-card:hover .title {
-    text-decoration: var(--card-hover-decoration);
-    text-underline-offset: 3px;
-  }
+  @include magazine-card.card-states(null);
 }
 
 .title {
   @include magazine-card.headline;
 }
 
-.kicker-card.read .title {
-  color: var(--text-secondary);
-  font-weight: 400;
-}
-
 .dek {
   @include magazine-card.dek;
-}
-
-.title.post {
-  @include post-text.post-text;
 }

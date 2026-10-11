@@ -1,18 +1,8 @@
-<article
-  class="quote"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="quote" [appOpensEntry]="entry()">
   <app-entry-kicker-line [entry]="entry()" />
-  @if (!isPost()) {
-    <p class="pull">{{ lead() }}</p>
-  }
+  <p class="pull">{{ lead() }}</p>
   @if (headline()) {
-    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+    <p class="title">{{ headline() }}</p>
   }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />

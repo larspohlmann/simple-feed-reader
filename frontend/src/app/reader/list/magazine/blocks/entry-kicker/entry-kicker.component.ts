@@ -3,11 +3,17 @@ import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-kicker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [EntryKickerLineComponent, EntryMetaComponent, EntryDuplicatesComponent],
+  imports: [
+    OpensEntryDirective,
+    EntryKickerLineComponent,
+    EntryMetaComponent,
+    EntryDuplicatesComponent,
+  ],
   templateUrl: './entry-kicker.component.html',
   styleUrl: './entry-kicker.component.scss',
 })
