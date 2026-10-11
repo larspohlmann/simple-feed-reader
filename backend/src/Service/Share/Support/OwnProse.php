@@ -15,7 +15,7 @@ final class OwnProse
 
     public static function of(string $html): string
     {
-        $withoutUrlLinks = preg_replace_callback(self::LINK, self::droppedWhenUrlText(...), $html) ?? $html;
+        $withoutUrlLinks = preg_replace_callback(self::LINK, self::textUnlessUrl(...), $html) ?? $html;
         $lines = array_filter(
             PlainText::linesFromHtmlBlocks($withoutUrlLinks),
             static fn (string $line): bool => preg_match(self::METADATA_LINE, $line) !== 1,
@@ -25,9 +25,9 @@ final class OwnProse
     }
 
     /** @param array<string> $link */
-    private static function droppedWhenUrlText(array $link): string
+    private static function textUnlessUrl(array $link): string
     {
-        return preg_match(self::URL_TEXT, trim(strip_tags($link['text']))) === 1 ? ' ' : $link[0];
+        return preg_match(self::URL_TEXT, trim(strip_tags($link['text']))) === 1 ? ' ' : $link['text'];
     }
 
     private function __construct()
