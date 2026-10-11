@@ -2,7 +2,7 @@
 
 **Goal:** `EntryListRowEnricher::enrich()` collects a page's entry ids once, runs the four
 batch lookups as repository methods, and applies one `EntryListRowEnrichment` per row in a
-single `mapWithDuplicates()`. The list JSON shape does not change.
+single pass. The list JSON shape does not change.
 
 ## Rulings
 
@@ -10,10 +10,11 @@ single `mapWithDuplicates()`. The list JSON shape does not change.
   `EntryCategory` gets it as its `repositoryClass`. No schema change, no migration.
 - **Pending stays top-level only, explicitly:** the pending lookup asks about the page's
   top-level entry ids only, so a duplicate never reads as pending.
-- **Id handling is one rule:** every lookup takes ids from `EntryListRow::entryIdsOf()` /
-  the top-level rows with null ids skipped; `requireId()` is gone from the pass.
-- **One wither remains:** `EntryListRow::withEnrichment()`, since the enricher must swap the
-  enrichment on an existing row. The four `withX()` on both classes and `enrichment()` go.
+- **Id handling is one rule:** every enriched row is a stored entry, read with `requireId()`
+  (the hydrated rows always are); no lookup skips a null id any more.
+- **One wither remains:** `EntryListRow::enrichedFrom()` builds each row and its duplicates once
+  from the enrichments by entry id. The four `withX()` on both classes, `enrichment()`,
+  `mapWithDuplicates()` and `members()` go; `entryIdsOf()` moves into the enricher.
 - `EntryListRow` holds `public EntryListRowEnrichment $enrichment`; `EntryJson` reads it.
 - The four loader tests fold into `EntryListRowEnricherTest`: declared category order,
   grouping per entry, duplicates enriched, top-level-only pending, and one query per lookup

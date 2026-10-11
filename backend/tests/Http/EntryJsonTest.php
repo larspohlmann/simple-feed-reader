@@ -167,7 +167,7 @@ final class EntryJsonTest extends TestCase
         $shared->setShareKind(ShareKind::Media);
 
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
-        $row = $this->row($shared)->withEnrichment(new EntryListRowEnrichment(linkCards: [$card]));
+        $row = $this->row($shared, new EntryListRowEnrichment(linkCards: [$card]));
 
         $json = EntryJson::completed($row);
 
@@ -410,7 +410,7 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    private function row(Entry $entry): EntryListRow
+    private function row(Entry $entry, EntryListRowEnrichment $enrichment = new EntryListRowEnrichment()): EntryListRow
     {
         return new EntryListRow(
             $entry,
@@ -420,6 +420,7 @@ final class EntryJsonTest extends TestCase
             false,
             new EntryListRowViewState(false, null),
             null,
+            enrichment: $enrichment,
         );
     }
 }

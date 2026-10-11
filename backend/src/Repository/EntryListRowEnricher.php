@@ -23,11 +23,8 @@ final readonly class EntryListRowEnricher
     public function enrich(array $rows, int $userId): array
     {
         $enrichments = $this->enrichmentsByEntryId($rows, $userId);
-        $enrich = static fn (EntryListRow $member): EntryListRow => $member->withEnrichment(
-            $enrichments[$member->entry->requireId()],
-        );
 
-        return array_map(static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($enrich), $rows);
+        return array_map(static fn (EntryListRow $row): EntryListRow => $row->enrichedFrom($enrichments), $rows);
     }
 
     /**
@@ -37,7 +34,7 @@ final readonly class EntryListRowEnricher
      */
     private function enrichmentsByEntryId(array $rows, int $userId): array
     {
-        $entryIds = EntryListRow::entryIdsOf($rows);
+        $entryIds = self::entryIdsOf($rows);
         $categories = $this->categories->labelsByEntryIds($entryIds);
         $savedSearches = $this->memberships->savedSearchesByEntry($userId, $entryIds);
         $linkCards = $this->linkCards->contentsByEntryIds($entryIds);
@@ -54,6 +51,24 @@ final readonly class EntryListRowEnricher
         }
 
         return $enrichments;
+    }
+
+    /**
+     * @param list<EntryListRow> $rows
+     *
+     * @return list<int> the ids of these rows and of their duplicates, each once
+     */
+    private static function entryIdsOf(array $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            foreach ([$row, ...$row->duplicates] as $member) {
+                $id = $member->entry->requireId();
+                $ids[$id] = $id;
+            }
+        }
+
+        return array_values($ids);
     }
 
     /**

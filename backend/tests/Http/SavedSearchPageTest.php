@@ -40,7 +40,8 @@ final class SavedSearchPageTest extends TestCase
 
     public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
     {
-        $row = $this->row(7)->withEnrichment(
+        $row = $this->row(
+            7,
             new EntryListRowEnrichment(savedSearches: [['id' => 3, 'slug' => 'climate', 'term' => 'climate']]),
         );
         $result = new SavedSearchEntriesResultModel([$row]);
@@ -50,7 +51,7 @@ final class SavedSearchPageTest extends TestCase
         self::assertSame([['id' => 3, 'slug' => 'climate', 'term' => 'climate']], $page['entries'][0]['savedSearches']);
     }
 
-    private function row(int $id): EntryListRow
+    private function row(int $id, EntryListRowEnrichment $enrichment = new EntryListRowEnrichment()): EntryListRow
     {
         $entry = new Entry(
             new Feed('https://example.com/feed.xml'),
@@ -70,6 +71,7 @@ final class SavedSearchPageTest extends TestCase
             isKept: false,
             viewState: new EntryListRowViewState(isViewed: false, viewedAt: null),
             markedReadUntil: null,
+            enrichment: $enrichment,
         );
     }
 }

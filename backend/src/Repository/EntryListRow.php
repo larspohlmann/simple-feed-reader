@@ -41,43 +41,6 @@ final readonly class EntryListRow
     }
 
     /**
-     * @param list<self> $rows
-     *
-     * @return list<int> the ids of these rows and of their duplicates, each once
-     */
-    public static function entryIdsOf(array $rows): array
-    {
-        $ids = [];
-        foreach ($rows as $row) {
-            foreach ($row->members() as $member) {
-                $id = $member->entry->requireId();
-                $ids[$id] = $id;
-            }
-        }
-
-        return array_values($ids);
-    }
-
-    /** @return list<self> this row, then its duplicates */
-    public function members(): array
-    {
-        return [$this, ...$this->duplicates];
-    }
-
-    /**
-     * This row and each of its duplicates, put through the same change.
-     *
-     * @param callable(self): self $change
-     */
-    public function mapWithDuplicates(callable $change): self
-    {
-        return $change($this->withDuplicates(array_map(
-            static fn (self $duplicate): self => $duplicate->mapWithDuplicates($change),
-            $this->duplicates,
-        )));
-    }
-
-    /**
      * @param list<self> $duplicates the in-scope copies this row collapsed
      */
     public function withDuplicates(array $duplicates): self
@@ -85,9 +48,20 @@ final readonly class EntryListRow
         return $this->copyWith($duplicates, $this->enrichment);
     }
 
-    public function withEnrichment(EntryListRowEnrichment $enrichment): self
+    /**
+     * This row and each of its duplicates, given the enrichment of its own entry.
+     *
+     * @param array<int, EntryListRowEnrichment> $enrichmentsByEntryId
+     */
+    public function enrichedFrom(array $enrichmentsByEntryId): self
     {
-        return $this->copyWith($this->duplicates, $enrichment);
+        return $this->copyWith(
+            array_map(
+                static fn (self $duplicate): self => $duplicate->enrichedFrom($enrichmentsByEntryId),
+                $this->duplicates,
+            ),
+            $enrichmentsByEntryId[$this->entry->requireId()],
+        );
     }
 
     /**
