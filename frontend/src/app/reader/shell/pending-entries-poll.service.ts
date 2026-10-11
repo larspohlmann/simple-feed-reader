@@ -11,8 +11,8 @@ export const PENDING_POLL_INTERVAL_MS = 3000;
 export const PENDING_POLL_MAX_ROUNDS = 20;
 const PENDING_POLL_BATCH = 25;
 
-/** Completes the listed entries still pending (#1502) and merges the finished rows back.
- *  A failed call spends a round too; a new list load starts the count afresh. */
+/** Completes the listed entries still pending (#1502), and the open one, and merges the finished
+ *  rows back. A failed call spends a round too; a new list load starts the count afresh. */
 @Injectable()
 export class PendingEntriesPoll {
   private readonly store = inject(EntriesStore);
@@ -21,7 +21,14 @@ export class PendingEntriesPoll {
   private readonly zone = inject(NgZone);
   private readonly routeState = inject(ReaderRouteState);
 
-  readonly previewsLoading = computed(() => this.store.entries().some((entry) => entry.pending));
+  private readonly listedPending = computed(() =>
+    this.store
+      .entries()
+      .filter((entry) => entry.pending)
+      .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt)),
+  );
+  private readonly batch = computed(() => this.batchOf(this.listedPending()), { equal: sameIds });
+  readonly previewsLoading = computed(() => this.listedPending().length > 0);
 
   private timerId: ReturnType<typeof setTimeout> | null = null;
   private request: Subscription | null = null;
@@ -39,7 +46,7 @@ export class PendingEntriesPoll {
   constructor() {
     effect(() => {
       const listLoad = this.store.loadedAt();
-      this.store.entries();
+      this.batch();
       this.store.loading();
       untracked(() => this.follow(listLoad));
     });
@@ -80,7 +87,7 @@ export class PendingEntriesPoll {
       this.rounds < PENDING_POLL_MAX_ROUNDS &&
       document.visibilityState !== 'hidden' &&
       !this.store.loading() &&
-      this.pendingIds().length > 0
+      this.batch().length > 0
     );
   }
 
@@ -88,7 +95,7 @@ export class PendingEntriesPoll {
     this.timerId = null;
     if (!this.mayPoll()) return;
     this.rounds++;
-    const request = this.api.complete(this.pendingIds()).subscribe({
+    const request = this.api.complete(this.batch()).subscribe({
       next: (rows) => this.zone.run(() => this.merge(rows)),
       error: () => this.settle(),
       complete: () => this.settle(),
@@ -102,9 +109,10 @@ export class PendingEntriesPoll {
   }
 
   private merge(rows: EntryDto[]): void {
-    const pendingBefore = new Set(this.pendingIds());
+    const pendingBefore = new Set(this.batch());
     this.store.mergeCompleted(rows);
-    const openId = this.routeState.openEntryId();
+    this.routeState.mergeCompleted(rows);
+    const openId = this.routeState.openEntry()?.id;
     for (const row of rows) {
       if (row.pending || !pendingBefore.has(row.id)) continue;
       if (row.id === openId) this.bodies.refresh(row.id);
@@ -112,13 +120,11 @@ export class PendingEntriesPoll {
     }
   }
 
-  private pendingIds(): number[] {
-    return this.store
-      .entries()
-      .filter((entry) => entry.pending)
-      .sort((left, right) => Date.parse(left.createdAt) - Date.parse(right.createdAt))
-      .slice(0, PENDING_POLL_BATCH)
-      .map((entry) => entry.id);
+  private batchOf(listed: EntryDto[]): number[] {
+    const ids = listed.slice(0, PENDING_POLL_BATCH).map((entry) => entry.id);
+    const open = this.routeState.openEntry();
+    if (!open?.pending || ids.includes(open.id)) return ids;
+    return [...ids.slice(0, PENDING_POLL_BATCH - 1), open.id];
   }
 
   private cancelTimer(): void {
@@ -126,4 +132,8 @@ export class PendingEntriesPoll {
     clearTimeout(this.timerId);
     this.timerId = null;
   }
+}
+
+function sameIds(left: number[], right: number[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
 }

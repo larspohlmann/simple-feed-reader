@@ -30,6 +30,7 @@ import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
+import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
@@ -1152,6 +1153,38 @@ describe('ReaderShellComponent', () => {
     // rather than let the reader view issue a redundant fetch of its own.
     expect(bodyStore.seed).toHaveBeenCalledWith(514, '<p>Deep linked body</p>');
     ctrl.verify();
+  });
+
+  it('completes a deep-linked post still pending and shows its card (#1502)', () => {
+    jest.useFakeTimers();
+    const fixture = boot();
+    qp.next(convertToParamMap({ entry: '514-deep-linked-post' }));
+    fixture.detectChanges();
+    const post = { ...entry, id: 514, titleDerived: true, isHidden: true, isViewed: true };
+    ctrl
+      .expectOne('https://api.test/api/entries/514')
+      .flush({ entry: { ...post, pending: true, contentHtml: '<p>A post</p>' } });
+    fixture.detectChanges();
+
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    const completion = ctrl.expectOne('https://api.test/api/entries/complete');
+    expect(completion.request.body).toEqual({ ids: [514] });
+    const card = {
+      url: 'https://news.test/story',
+      title: 'A shared story',
+      description: null,
+      imageUrl: null,
+      siteName: 'news.test',
+    };
+    completion.flush({ entries: [{ ...post, pending: false, linkCards: [card] }] });
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
+    expect(element.querySelector('app-reader-view .link-card strong')!.textContent).toBe(
+      'A shared story',
+    );
+    jest.useRealTimers();
   });
 
   describe('neighbour prefetch on open (#1100)', () => {

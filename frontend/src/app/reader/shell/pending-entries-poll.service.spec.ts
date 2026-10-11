@@ -28,7 +28,8 @@ describe('PendingEntriesPoll', () => {
   let complete: jest.Mock<Observable<EntryDto[]>, [number[]]>;
   let refreshBody: jest.Mock;
   let forgetBody: jest.Mock;
-  const openEntryId = signal<number | null>(null);
+  const openEntry = signal<EntryDto | null>(null);
+  let mergeOpenEntry: jest.Mock;
 
   function setVisibility(state: DocumentVisibilityState): void {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -64,7 +65,10 @@ describe('PendingEntriesPoll', () => {
     answerStillPending();
     refreshBody = jest.fn();
     forgetBody = jest.fn();
-    openEntryId.set(null);
+    openEntry.set(null);
+    mergeOpenEntry = jest.fn((rows: EntryDto[]) =>
+      openEntry.update((open) => rows.find((finished) => finished.id === open?.id) ?? open),
+    );
     localStorage.clear();
     const mergeCompleted = (rows: EntryDto[]) =>
       entries.update((current) =>
@@ -76,7 +80,10 @@ describe('PendingEntriesPoll', () => {
         { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
-        { provide: ReaderRouteState, useValue: { openEntryId } },
+        {
+          provide: ReaderRouteState,
+          useValue: { openEntry, mergeCompleted: mergeOpenEntry },
+        },
       ],
     });
   });
@@ -102,7 +109,7 @@ describe('PendingEntriesPoll', () => {
 
   it('merges the finished rows, refreshes the open body and forgets the others', () => {
     start([row(1), row(2), row(3)]);
-    openEntryId.set(2);
+    openEntry.set(row(2));
     complete.mockReturnValueOnce(
       of([row(1, { pending: false }), row(2, { pending: false }), row(3)]),
     );
@@ -112,6 +119,38 @@ describe('PendingEntriesPoll', () => {
     expect(entries().map((listed) => listed.pending)).toEqual([false, false, true]);
     expect(refreshBody.mock.calls).toEqual([[2]]);
     expect(forgetBody.mock.calls).toEqual([[1]]);
+  });
+
+  it('polls an open entry still pending that the list does not hold, and fills it in', () => {
+    start([row(1, { pending: false })]);
+    openEntry.set(row(9));
+    complete.mockImplementation((ids) => of(ids.map((id) => row(id, { pending: false }))));
+
+    rounds(3);
+
+    expect(complete.mock.calls).toEqual([[[9]]]);
+    expect(mergeOpenEntry).toHaveBeenCalledWith([row(9, { pending: false })]);
+    expect(openEntry()!.pending).toBe(false);
+    expect(refreshBody.mock.calls).toEqual([[9]]);
+  });
+
+  it('keeps a full batch at 25 when it adds the open entry', () => {
+    start(Array.from({ length: 30 }, (_, index) => row(index + 1)));
+    openEntry.set(row(99));
+
+    rounds(1);
+
+    const expected = [...Array.from({ length: 24 }, (_, index) => 30 - index), 99];
+    expect(complete).toHaveBeenLastCalledWith(expected);
+  });
+
+  it('sends a listed open entry once', () => {
+    start([row(1), row(2)]);
+    openEntry.set(row(2));
+
+    rounds(1);
+
+    expect(complete).toHaveBeenLastCalledWith([2, 1]);
   });
 
   it('polls nothing for a list with nothing pending', () => {
