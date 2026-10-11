@@ -82,9 +82,9 @@ final class EntryShareClassifierTest extends TestCase
 
     public function testABlueskyPostOfOverlongProseIsStillAProvisionalLink(): void
     {
-        $prose = str_repeat('a ', EntryShareClassifier::OWN_PROSE_MAX);
+        $entry = self::blueskyPost('<p>' . str_repeat('a ', EntryShareClassifier::OWN_PROSE_MAX) . '</p>');
 
-        $entry = $this->classified(self::blueskyPost('<p>' . $prose . '</p>'));
+        $this->classified($entry);
 
         self::assertEquals(Share::link(null), $entry->getShare());
     }
