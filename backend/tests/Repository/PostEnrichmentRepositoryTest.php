@@ -6,8 +6,6 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\LinkCard;
-use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
 use App\Repository\PostEnrichmentRepository;
@@ -175,32 +173,6 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
             [$row->getEntry()->requireId()],
             $this->repository()->pendingEntryIdsAmong([$row->getEntry()->requireId()]),
         );
-    }
-
-    public function testAnOpenedPostIsQueuedOnce(): void
-    {
-        $entry = $this->entry($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
-        $this->entityManager->flush();
-
-        self::assertTrue($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
-        self::assertFalse($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
-        $rows = $this->repository()->findAll();
-        self::assertCount(1, $rows);
-        self::assertSame(PostEnrichmentKind::LinkCards, $rows[0]->getKind());
-    }
-
-    public function testAnOpenedPostWithCardsIsNotQueued(): void
-    {
-        $entry = $this->entry($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
-        $this->entityManager->persist(new LinkCard(
-            $entry,
-            0,
-            new LinkCardContent('https://example.com/a', 'A', null, null, 'example.com'),
-        ));
-        $this->entityManager->flush();
-
-        self::assertFalse($this->repository()->queueLinkCardsUnlessKnown($entry, $this->now()));
-        self::assertSame([], $this->repository()->findAll());
     }
 
     /**

@@ -22,8 +22,6 @@ use App\Enum\CommentsLoad;
 use App\Enum\RecommendationEngineKind;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\LinkCard\PostLinkCards;
-use App\Tests\Support\PostLinkCardsWiring;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,9 +29,6 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Clock\MockClock;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryControllerTest extends WebTestCase
@@ -1392,54 +1387,21 @@ final class EntryControllerTest extends WebTestCase
         self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
     }
 
-    public function testOpeningAPostFromBeforeLinkCardsQueuesItWithoutAFetch(): void
+    public function testOpeningAPostSharingALinkWritesNothing(): void
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-post@example.com');
-        $pages = $this->installPageClient();
         $entryId = $this->seedPostSharing($user, 'https://example.com/story');
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame(0, $pages->getRequestsCount());
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertIsArray($body['entry']);
-        self::assertTrue($body['entry']['pending']);
-        self::assertSame([], $body['entry']['linkCards']);
-        self::assertIsString($body['entry']['contentHtml']);
-        self::assertStringContainsString('<a href="https://example.com/story"', $body['entry']['contentHtml']);
-        self::assertSame(1, $this->queuedRowsFor($entryId));
-    }
-
-    public function testOpeningAStrangersPostIs404AndQueuesNothing(): void
-    {
-        $client = self::createClient();
-        [$headers] = $this->auth('e-get-post-idor@example.com');
-        [, $stranger] = $this->auth('e-get-post-owner@example.com');
-        $entryId = $this->seedPostSharing($stranger, 'https://example.com/story');
-
-        $client->request('GET', "/api/entries/$entryId", server: $headers);
-
-        self::assertResponseStatusCodeSame(404);
+        self::assertFalse($body['entry']['pending']);
+        self::assertSame('<p>Worth a read: https://example.com/story</p>', $body['entry']['contentHtml']);
         self::assertSame(0, $this->queuedRowsFor($entryId));
-    }
-
-    private function installPageClient(): MockHttpClient
-    {
-        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
-        $pages = new MockHttpClient(new MockResponse(
-            '<html lang="en"><head><meta property="og:title" content="Story"></head></html>',
-            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-        ));
-        self::getContainer()->set(
-            PostLinkCards::class,
-            PostLinkCardsWiring::build($entityManager, $pages, new MockClock()),
-        );
-
-        return $pages;
     }
 
     private function queuedRowsFor(int $entryId): int

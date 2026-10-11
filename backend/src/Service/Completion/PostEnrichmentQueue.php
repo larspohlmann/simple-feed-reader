@@ -7,7 +7,6 @@ namespace App\Service\Completion;
 use App\Entity\Entry;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
-use App\Repository\PostEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\Support\AtPostUri;
 use App\Service\LinkCard\Model\SharedLinksModel;
@@ -20,7 +19,6 @@ final readonly class PostEnrichmentQueue
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private PostEnrichmentRepository $enrichments,
         private EntrySanitizer $sanitizer,
         private NaiveUtcClock $clock,
     ) {
@@ -33,20 +31,6 @@ final readonly class PostEnrichmentQueue
         foreach ($createdEntries as $entry) {
             $this->queueCreated($entry, $queuedAt);
         }
-    }
-
-    /** For a post stored before link cards existed: it is queued, never fetched, so opening it stays quick. */
-    public function queueOpened(Entry $entry): void
-    {
-        if (!$entry->isTitleDerived() || $this->enrichments->isQueuedOrCarded($entry)) {
-            return;
-        }
-        $shared = self::sharedLinksOf($entry);
-        if ($shared === null || !$this->enrichments->queueLinkCardsUnlessKnown($entry, $this->clock->now())) {
-            return;
-        }
-        $this->storeLinked($entry, $shared);
-        $this->entityManager->flush();
     }
 
     private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void
