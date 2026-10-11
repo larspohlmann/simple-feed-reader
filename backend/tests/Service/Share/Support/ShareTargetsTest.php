@@ -22,7 +22,7 @@ final class ShareTargetsTest extends TestCase
         $feed->setSiteUrl($siteUrl);
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, $guid, $url, 'A real headline', $now, $now);
-        $entry->setContentHtml(sprintf('<p><a href="%1$s">%1$s</a></p>', self::BODY_LINK));
+        $entry->setContentHtml('<p>' . self::BODY_LINK . '</p>');
         $entry->setShareKind(ShareKind::Link);
 
         return $entry;
