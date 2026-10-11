@@ -32,10 +32,10 @@ final class QuoteLineTest extends TestCase
             '<p>RE<!-- -->: <a href="https://q.test/@a/1">https://q.test/@a/1</a></p><p>x</p>',
             '<p>x</p>',
         ];
-        yield 'the url first shared, then quoted' => [
-            '<p>See <a href="https://q.test/@a/1">https://q.test/@a/1</a></p>'
+        yield 'another link first, then the quote' => [
+            '<p>See <a href="https://o.test/">o</a></p>'
                 . '<p>RE: <a href="https://q.test/@a/1">https://q.test/@a/1</a></p>',
-            '<p>See <a href="https://q.test/@a/1">https://q.test/@a/1</a></p>',
+            '<p>See <a href="https://o.test/">o</a></p>',
         ];
         yield 'an emoji image left in the paragraph' => [
             '<p>RE: <a href="https://q.test/@a/1">https://q.test/@a/1</a>'
