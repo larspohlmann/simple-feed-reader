@@ -143,6 +143,8 @@ final readonly class BackupLines
             'commentsLoad' => $discussion->commentsLoad?->value,
             'title' => $entry->getTitle(),
             'titleDerived' => $entry->isTitleDerived(),
+            'shareKind' => $entry->getShare()->kind?->value,
+            'shareUrl' => $entry->getShare()->url,
             'author' => $entry->getAuthor(),
             'summary' => $entry->getSummary(),
             'contentHtml' => $entry->getContentHtml(),

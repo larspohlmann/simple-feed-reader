@@ -20,7 +20,7 @@ final class Version20261011150000 extends AbstractMigration
 
     public function getDescription(): string
     {
-        return 'Rename post_enrichment to share_enrichment, the queue of every shared link (#1524).';
+        return 'Rename post_enrichment to share_enrichment and give an entry its share (#1524).';
     }
 
     public function up(Schema $schema): void
@@ -28,6 +28,8 @@ final class Version20261011150000 extends AbstractMigration
         $this->skipIf($schema->hasTable('share_enrichment'), 'share_enrichment already exists.');
 
         $this->abortIfUnsupportedPlatform();
+        $this->addSql('ALTER TABLE entry ADD share_kind VARCHAR(8) DEFAULT NULL');
+        $this->addSql('ALTER TABLE entry ADD share_url VARCHAR(2048) DEFAULT NULL');
         $this->createQueueTable('share_enrichment', 'UNIQ_583FCE08BA364942', 'FK_583FCE08BA364942');
         $this->addSql(self::COPY_TO_SHARE);
         $this->addSql('DROP TABLE post_enrichment');
@@ -41,6 +43,8 @@ final class Version20261011150000 extends AbstractMigration
         $this->createQueueTable('post_enrichment', 'UNIQ_9FA2FF0FBA364942', 'FK_9FA2FF0FBA364942');
         $this->addSql(self::COPY_TO_POST);
         $this->addSql('DROP TABLE share_enrichment');
+        $this->addSql('ALTER TABLE entry DROP COLUMN share_url');
+        $this->addSql('ALTER TABLE entry DROP COLUMN share_kind');
     }
 
     public function isTransactional(): bool

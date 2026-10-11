@@ -251,6 +251,22 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
+    public function getShare(): Share
+    {
+        return $this->location->readShare();
+    }
+
+    public function setShare(Share $share): void
+    {
+        $this->location->storeShare($share);
+    }
+
+    /** A share carries its own text and a post is its own body, so neither takes the body as its summary. */
+    public function bodyStandsInForSummary(): bool
+    {
+        return !$this->isUntitledPost() && $this->getShare()->isNone();
+    }
+
     public function getEffectiveDate(): \DateTimeImmutable
     {
         return $this->effectiveDate;

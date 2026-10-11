@@ -9,6 +9,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\Share;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
@@ -146,6 +147,25 @@ final class EntryJsonTest extends TestCase
 
         self::assertTrue(EntryJson::listRow($this->row($derived))['titleDerived']);
         self::assertFalse(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['titleDerived']);
+    }
+
+    public function testSendsTheShareKind(): void
+    {
+        $shared = $this->entryTitled('Shared');
+        $shared->setShare(Share::link('https://example.com/story'));
+
+        self::assertSame('link', EntryJson::listRow($this->row($shared))['share']);
+        self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['share']);
+    }
+
+    public function testAShareWithoutOwnTextHasNoExcerptFromItsBody(): void
+    {
+        $shared = $this->entryTitled('Shared');
+        $shared->setSummary(null);
+        $shared->setContentHtml('<p>Article URL: https://example.com/story</p>');
+        $shared->setShare(Share::link('https://example.com/story'));
+
+        self::assertSame('', EntryJson::listRow($this->row($shared))['excerpt']);
     }
 
     public function testListRowHasNoContentHtmlAndCarriesAnExcerpt(): void

@@ -14,6 +14,7 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\SavedSearch;
+use App\Entity\Share;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
@@ -151,6 +152,7 @@ final readonly class FullyPopulatedAccount
             CommentsLoad::Auto,
         ));
         $entry->markTitleDerived();
+        $entry->setShare(Share::link('https://populated.example/shared'));
 
         return $entry;
     }
