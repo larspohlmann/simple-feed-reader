@@ -15,6 +15,7 @@ use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use App\Service\Scraper\Support\TextNormalizer;
+use App\Service\Text\Support\HtmlEscape;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -137,7 +138,7 @@ final readonly class HtmlItemExtractor
             summary: $teaser,
             contentHtml: $teaser === null
                 ? null
-                : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
+                : '<p>' . HtmlEscape::text($teaser) . '</p>',
             publishedAt: $item->publishedAt,
             media: new ParsedEntryMediaModel($item->imageUrl === null ? null : new DeclaredImageModel($item->imageUrl)),
         );

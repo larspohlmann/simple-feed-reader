@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Catalog;
 
 use App\Entity\CatalogFeed;
+use App\Service\Text\Support\HtmlEscape;
 
 /**
  * The offline stand-in for a favicon, the feed's initial on its category colour as SVG: served on a cache miss
@@ -16,8 +17,8 @@ final readonly class MonogramFavicon
 
     public function render(CatalogFeed $feed): string
     {
-        $letter = $this->escape($this->initialOf($feed->getTitle()));
-        $color = $this->escape($feed->getCategory()->getColor());
+        $letter = HtmlEscape::text($this->initialOf($feed->getTitle()));
+        $color = HtmlEscape::text($feed->getCategory()->getColor());
 
         return \sprintf(
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">'
@@ -35,10 +36,5 @@ final readonly class MonogramFavicon
         $initial = mb_strtoupper(mb_substr(trim($title), 0, 1));
 
         return '' === $initial ? '?' : $initial;
-    }
-
-    private function escape(string $value): string
-    {
-        return htmlspecialchars($value, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
     }
 }

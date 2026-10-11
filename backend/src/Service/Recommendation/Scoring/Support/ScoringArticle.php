@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Scoring\Support;
 
 use App\Service\Recommendation\Pool\Model\ArticleLineModel;
-use App\Service\Recommendation\Support\ClippedText;
+use App\Service\Text\Support\ClippedText;
 
 final class ScoringArticle
 {

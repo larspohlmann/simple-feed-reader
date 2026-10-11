@@ -12,6 +12,7 @@ use App\Service\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Mail\Digest\Model\DigestGroupModel;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
+use App\Service\Text\Support\ClippedText;
 use App\Service\Text\Support\PlainText;
 
 /**
@@ -83,8 +84,6 @@ final readonly class DigestComposer
         // would leak into the mail; then cap for one email line.
         $text = PlainText::from($row->entry->getSummary()) ?? '';
 
-        return mb_strlen($text) > self::SUMMARY_MAX
-            ? rtrim(mb_substr($text, 0, self::SUMMARY_MAX)) . '…'
-            : $text;
+        return ClippedText::trimmedOf($text, self::SUMMARY_MAX);
     }
 }
