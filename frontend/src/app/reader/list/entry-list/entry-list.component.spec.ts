@@ -16,6 +16,7 @@ import { ReadingFocusService } from '../../../core/preferences/reading-focus.ser
 import { MagazineStyleService } from '../../../core/preferences/magazine-style.service';
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
 import { LayoutService } from '../../layout.service';
+import { anEntry } from '../../../../testing/entry-testing';
 
 class MockResizeObserver {
   static instances: MockResizeObserver[] = [];
@@ -49,39 +50,13 @@ function subscribedTo(count: number): void {
   );
 }
 
-const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
-  id,
-  title: `e${id}`,
-  url: null,
-  author: null,
-  summary: 's',
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: '2026-07-22T11:00:00Z',
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    id,
+    summary: 's',
+    publishedAt: '2026-07-22T11:00:00Z',
+    ...over,
+  });
 
 /** A run mixed enough to collapse: a same-source run folds into a group widget
  *  only once the view has at least 3 distinct active sources. */

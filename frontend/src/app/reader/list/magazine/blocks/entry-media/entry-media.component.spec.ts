@@ -7,6 +7,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { isHlsManaged } from '../../../../article/decorators/hls-streams';
 import { EMBED_FRAME_ATTRIBUTES } from '../../../../media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
+import { anEntry } from '../../../../../../testing/entry-testing';
 
 let pause: jest.SpyInstance;
 
@@ -41,39 +42,15 @@ const clip: EntryMediumDto = {
   previewImageUrl: 'https://video.test/thumb.jpg',
 };
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A sunrise with Nutmeg the donkey',
-  url: 'https://bsky.app/profile/someone/post/1',
-  author: null,
-  summary: null,
-  excerpt: 'A sunrise with Nutmeg the donkey',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [image(1)],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: true,
-  share: 'media',
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    url: 'https://bsky.app/profile/someone/post/1',
+    excerpt: 'A sunrise with Nutmeg the donkey',
+    media: [image(1)],
+    titleDerived: true,
+    share: 'media',
+    ...over,
+  });
 
 async function mountFixture(testEntry: EntryDto) {
   TestBed.configureTestingModule({

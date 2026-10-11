@@ -5,6 +5,7 @@ import { EntryKickerComponent } from './entry-kicker.component';
 import { EntryDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { describeShortPill } from '../../../../../../testing/short-marking-testing';
+import { anEntry } from '../../../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -17,39 +18,16 @@ beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
 });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A medium headline',
-  url: null,
-  author: null,
-  summary: 'A meaningful summary.',
-  excerpt: 'A meaningful summary.',
-  imageUrl: 'https://i/a.jpg',
-  imageWidth: 700,
-  imageHeight: 400,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    title: 'A medium headline',
+    summary: 'A meaningful summary.',
+    excerpt: 'A meaningful summary.',
+    imageUrl: 'https://i/a.jpg',
+    imageWidth: 700,
+    imageHeight: 400,
+    ...over,
+  });
 
 function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({

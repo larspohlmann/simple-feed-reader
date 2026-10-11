@@ -5,6 +5,7 @@ import { EntryDto } from '../../models';
 import { EntryDuplicatesComponent } from './entry-duplicates.component';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -17,39 +18,12 @@ beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
 });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'Main',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: '2026-07-05T09:00:00Z',
-  createdAt: '2026-07-05T09:00:00Z',
-  subscriptionId: 1,
-  source: 'tagesschau',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    publishedAt: '2026-07-05T09:00:00Z',
+    createdAt: '2026-07-05T09:00:00Z',
+    ...over,
+  });
 
 function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({

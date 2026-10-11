@@ -53,6 +53,7 @@ import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../../testing/refresh-report';
 import { provideAccountIdentity } from '../../../testing/account-identity-testing';
+import { anEntry } from '../../../testing/entry-testing';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -99,38 +100,12 @@ describe('ReaderShellComponent', () => {
       },
     ],
   };
-  const entry: EntryDto = {
-    id: 1,
+  const entry = anEntry({
     title: 'e1',
-    url: null,
-    author: null,
     summary: 's',
     excerpt: 's',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    imageRenditions: [],
-    media: [],
-    attachments: [],
-    categories: [],
     publishedAt: '2026-07-22T11:00:00Z',
-    createdAt: 'x',
-    subscriptionId: 5,
-    source: 'heise',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-    isViewed: false,
-    shortPlayerUrl: null,
-    titleDerived: false,
-    share: null,
-    linkCards: [],
-    pending: false,
-    imageAspectRatio: null,
-    discussionUrl: null,
-    comments: null,
-  };
+  });
 
   // A jest.fn() double, not the real HTTP-backed service: this suite asserts
   // the shell CALLS prefetch/seed correctly, not the store's own caching —

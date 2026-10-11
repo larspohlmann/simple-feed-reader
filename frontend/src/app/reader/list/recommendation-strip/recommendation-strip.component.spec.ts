@@ -3,40 +3,14 @@ import { TestBed } from '@angular/core/testing';
 import { RecommendationStripComponent } from './recommendation-strip.component';
 import { EntryDto } from '../../models';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
+import { anEntry } from '../../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'Hello',
-  url: null,
-  author: null,
-  summary: 's',
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: '2026-07-22T11:00:00Z',
-  createdAt: 'x',
-  subscriptionId: 5,
-  source: 'heise',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    summary: 's',
+    publishedAt: '2026-07-22T11:00:00Z',
+    ...over,
+  });
 
 @Component({
   standalone: true,

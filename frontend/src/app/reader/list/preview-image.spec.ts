@@ -9,40 +9,12 @@ import {
 } from './preview-image';
 import { EntryDto } from '../models';
 import { SHORT_PLAYER_URL } from '../../../testing/short-marking-testing';
+import { anEntry } from '../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 't',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'S',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    ...over,
+  });
 
 describe('entrySnippet', () => {
   it('returns the server-supplied excerpt', () => {

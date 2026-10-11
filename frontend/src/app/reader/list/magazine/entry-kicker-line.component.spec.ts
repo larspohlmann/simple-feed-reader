@@ -3,40 +3,14 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryKickerLineComponent } from './entry-kicker-line.component';
 import { EntryDto } from '../../models';
+import { anEntry } from '../../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A headline',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    publishedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+    source: 'NDR.de - Das Beste am Norden - Radio - Fernsehen - Nachrichten',
+    ...over,
+  });
 
 function mount(testEntry: EntryDto, inputs: Record<string, unknown> = {}) {
   // Several cases mount twice to compare two states, and a configured TestBed

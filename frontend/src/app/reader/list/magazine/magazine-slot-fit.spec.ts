@@ -1,49 +1,17 @@
 import { isMediaPost, postMedia, settle } from './magazine-slot-fit';
 import { EntryDto, EntryMediumDto } from '../../models';
-import { LinkCardDto } from '../../link-card/link-card';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
+import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
 
-const card: LinkCardDto = {
-  url: 'https://n/1',
-  title: 'T',
-  description: null,
-  imageUrl: null,
-  siteName: 'n',
-};
+const card = aLinkCard();
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A headline',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: 'https://i/1.jpg',
-  imageWidth: 900,
-  imageHeight: 600,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'S',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    imageUrl: 'https://i/1.jpg',
+    imageWidth: 900,
+    imageHeight: 600,
+    ...over,
+  });
 
 describe('settle', () => {
   it('gives a link slot to an entry without cards as the hero it can fill, never a link block', () => {

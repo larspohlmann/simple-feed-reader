@@ -7,6 +7,7 @@ import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action
 import { ImageProxyService } from '../../../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../../../testing/image-proxy-testing';
 import { describePortraitCover } from '../../../../../../testing/portrait-cover-testing';
+import { anEntry } from '../../../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -22,39 +23,16 @@ beforeEach(() => {
   imageProxy = neverRecoveringImageProxy();
 });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A medium headline',
-  url: null,
-  author: null,
-  summary: 'A meaningful summary.',
-  excerpt: 'A meaningful summary.',
-  imageUrl: 'https://i/a.jpg',
-  imageWidth: 700,
-  imageHeight: 400,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    title: 'A medium headline',
+    summary: 'A meaningful summary.',
+    excerpt: 'A meaningful summary.',
+    imageUrl: 'https://i/a.jpg',
+    imageWidth: 700,
+    imageHeight: 400,
+    ...over,
+  });
 
 function mount(testEntry: EntryDto, side: 'left' | 'right' = 'right') {
   TestBed.configureTestingModule({

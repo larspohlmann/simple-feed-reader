@@ -12,40 +12,13 @@ import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
 import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
+import { anEntry } from '../../../testing/entry-testing';
 
-const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
-  id,
-  title: `e${id}`,
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 's',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    id,
+    ...over,
+  });
 
 describe('EntriesStore', () => {
   let store: EntriesStore;

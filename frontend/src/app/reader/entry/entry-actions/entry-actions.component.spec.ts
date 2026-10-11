@@ -8,40 +8,12 @@ import { EntryDto } from '../../models';
 import { EntryActionHandler } from './entry-action-handler';
 import { AudioPlayerService } from '../../audio-player.service';
 import { StubAudioPlayer } from '../../../../testing/stub-audio-player';
+import { anEntry } from '../../../../testing/entry-testing';
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'A title',
-  url: null,
-  author: null,
-  summary: null,
-  excerpt: '',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 7,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: false,
-  share: null,
-  linkCards: [],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    ...over,
+  });
 
 /** Stand-in for the card: proves an action click never reaches it. The keydown
  *  bindings mirror the real magazine card's `<article>` wiring exactly

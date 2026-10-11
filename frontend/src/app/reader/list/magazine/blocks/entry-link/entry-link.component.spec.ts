@@ -8,6 +8,7 @@ import { LinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
+import { aLinkCard, anEntry } from '../../../../../../testing/entry-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -20,48 +21,22 @@ beforeEach(() => {
   Object.values(entryActions).forEach((spy) => spy.mockReset());
 });
 
-const card = (over: Partial<LinkCardDto> = {}): LinkCardDto => ({
-  url: 'https://news.test/story',
-  title: 'A shared story',
-  description: 'What the story is about.',
-  imageUrl: 'https://news.test/story.jpg',
-  siteName: 'news.test',
-  ...over,
-});
+const card = (over: Partial<LinkCardDto> = {}): LinkCardDto =>
+  aLinkCard({
+    description: 'What the story is about.',
+    imageUrl: 'https://news.test/story.jpg',
+    ...over,
+  });
 
-const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
-  id: 1,
-  title: 'Worth a read',
-  url: 'https://social.test/@someone/1',
-  author: null,
-  summary: null,
-  excerpt: 'Worth a read, this one.',
-  imageUrl: null,
-  imageWidth: null,
-  imageHeight: null,
-  imageRenditions: [],
-  media: [],
-  attachments: [],
-  categories: [],
-  publishedAt: null,
-  createdAt: 'x',
-  subscriptionId: 1,
-  source: 'Src',
-  faviconUrl: null,
-  isHidden: false,
-  isFavorite: false,
-  isKept: false,
-  isViewed: false,
-  shortPlayerUrl: null,
-  titleDerived: true,
-  share: 'link',
-  linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
-  pending: false,
-  imageAspectRatio: null,
-  discussionUrl: null,
-  comments: null,
-  ...over,
-});
+const entry = (over: Partial<EntryDto> = {}): EntryDto =>
+  anEntry({
+    url: 'https://social.test/@someone/1',
+    excerpt: 'Worth a read, this one.',
+    titleDerived: true,
+    share: 'link',
+    linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
+    ...over,
+  });
 
 function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
