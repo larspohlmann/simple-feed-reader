@@ -19,7 +19,7 @@ final class ImportClosure
     /** @var array<string, string> */
     private array $modules = [];
 
-    /** @var list<string> */
+    /** @var array<string, string> */
     private array $importedFiles = [];
 
     public function __construct(private readonly string $sourceDirectory)
@@ -69,7 +69,7 @@ final class ImportClosure
     /** @return list<string> */
     public function importedFiles(): array
     {
-        return $this->importedFiles;
+        return array_values($this->importedFiles);
     }
 
     private function followClass(string $class): void
@@ -80,6 +80,7 @@ final class ImportClosure
             return;
         }
 
-        $this->importedFiles[] = $this->sourceDirectory . '/' . str_replace('\\', '/', $class) . '.php';
+        $file = $this->sourceDirectory . '/' . str_replace('\\', '/', $class) . '.php';
+        $this->importedFiles[$file] = $file;
     }
 }

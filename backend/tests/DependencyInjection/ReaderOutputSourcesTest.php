@@ -21,7 +21,8 @@ final class ReaderOutputSourcesTest extends TestCase
         'src/Service/Unrelated/Mailer.php' => "<?php\nuse App\\Service\\Reader\\Extractor;\n",
         'src/Entity/Entry.php' => "<?php\nuse App\\Entity\\Feed;\n",
         'src/Entity/Feed.php' => "<?php\n",
-        'src/Http/ReaderJson.php' => "<?php\nuse App\\Service\\Image\\DeclaredImage;\n",
+        'src/Http/ReaderJson.php' => "<?php\nuse App\\Service\\Image\\DeclaredImage;\nuse App\\Enum\\Kind;\n",
+        'src/Enum/Kind.php' => "<?php\n",
         'src/Service/Image/DeclaredImage.php' => "<?php\n",
         'config/services.yaml' => "services: ~\n",
         'vendor/composer/installed.php' => "<?php return [];\n",
@@ -61,6 +62,7 @@ final class ReaderOutputSourcesTest extends TestCase
                 'src/Http/ReaderJson.php',
                 'config/services.yaml',
                 'vendor/composer/installed.php',
+                'src/Enum/Kind.php',
                 'src/Entity/Entry.php',
             ],
             $this->relative($sources->files),
@@ -93,9 +95,37 @@ final class ReaderOutputSourcesTest extends TestCase
         yield 'a module reached through another' => ['src/Service/Text/Normalizer.php'];
         yield 'a module only the response mapper imports' => ['src/Service/Image/DeclaredImage.php'];
         yield 'a class the reader imports' => ['src/Entity/Entry.php'];
+        yield 'a class the response mapper imports' => ['src/Enum/Kind.php'];
         yield 'the response mapper' => ['src/Http/ReaderJson.php'];
         yield 'the wiring' => ['config/services.yaml'];
         yield 'the installed packages' => ['vendor/composer/installed.php'];
+    }
+
+    public function testTheSameTreeElsewhereHasTheSameFingerprint(): void
+    {
+        $copy = $this->projectDir . '-copy';
+        (new Filesystem())->mirror($this->projectDir, $copy);
+
+        try {
+            self::assertSame(
+                ReaderOutputSources::under($this->projectDir)->fingerprint(),
+                ReaderOutputSources::under($copy)->fingerprint(),
+            );
+        } finally {
+            (new Filesystem())->remove($copy);
+        }
+    }
+
+    public function testRenamingASourceMovesTheFingerprint(): void
+    {
+        $before = ReaderOutputSources::under($this->projectDir)->fingerprint();
+
+        (new Filesystem())->rename(
+            $this->projectDir . '/src/Service/Text/Normalizer.php',
+            $this->projectDir . '/src/Service/Text/Collapser.php',
+        );
+
+        self::assertNotSame($before, ReaderOutputSources::under($this->projectDir)->fingerprint());
     }
 
     public function testAddingAFileToAReachedModuleMovesTheFingerprint(): void

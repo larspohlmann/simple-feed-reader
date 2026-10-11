@@ -39,7 +39,7 @@ final readonly class ReaderOutputSources
         return new self(
             $projectDir,
             $closure->moduleDirectories(),
-            array_values(array_unique([...$fixedFiles, ...$closure->importedFiles()])),
+            [...$fixedFiles, ...$closure->importedFiles()],
         );
     }
 
