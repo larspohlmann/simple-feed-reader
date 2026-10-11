@@ -15,33 +15,31 @@ final class QuoteLine
 {
     private const string MARKER = 'RE:';
 
-    public static function isQuote(Element $anchor): bool
-    {
-        $paragraph = $anchor->closest('p');
-        if ($paragraph === null) {
-            return false;
-        }
-
-        $before = implode('', array_map(
-            static fn (Text $text): string => $text->data,
-            self::textNodesBefore($anchor, $paragraph),
-        ));
-
-        return Whitespace::collapse($before) === self::MARKER;
-    }
-
     public static function removedFrom(string $html, string $url): string
     {
         $document = HtmlDocumentParser::parseFragment($html);
         foreach ($document->querySelectorAll('a[href]') as $anchor) {
-            if ($anchor->getAttribute('href') === $url && self::isQuote($anchor)) {
-                self::remove($anchor);
+            $paragraph = $anchor->closest('p');
+            if ($paragraph === null || $anchor->getAttribute('href') !== $url) {
+                continue;
+            }
+            $before = self::textNodesBefore($anchor, $paragraph);
+            if (self::readsQuoteMarker($before)) {
+                self::remove($anchor, $paragraph, $before);
 
                 return $document->body->innerHTML ?? $html;
             }
         }
 
         return $html;
+    }
+
+    /** @param list<Text> $before */
+    private static function readsQuoteMarker(array $before): bool
+    {
+        $text = implode('', array_map(static fn (Text $node): string => $node->data, $before));
+
+        return Whitespace::collapse($text) === self::MARKER;
     }
 
     /** @return list<Text> */
@@ -58,14 +56,10 @@ final class QuoteLine
         return $before;
     }
 
-    private static function remove(Element $anchor): void
+    /** @param list<Text> $before */
+    private static function remove(Element $anchor, Element $paragraph, array $before): void
     {
-        $paragraph = $anchor->closest('p');
-        if ($paragraph === null) {
-            return;
-        }
-
-        foreach (self::textNodesBefore($anchor, $paragraph) as $text) {
+        foreach ($before as $text) {
             $text->remove();
         }
         $anchor->remove();

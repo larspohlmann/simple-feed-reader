@@ -28,6 +28,10 @@ final class QuoteLineTest extends TestCase
             '<p>RE: <a href="https://q.test/@a/1">https://q.test/@a/1</a><br>Agreed.</p>',
             '<p><br>Agreed.</p>',
         ];
+        yield 'the marker split across text nodes' => [
+            '<p>RE<!-- -->: <a href="https://q.test/@a/1">https://q.test/@a/1</a></p><p>x</p>',
+            '<p>x</p>',
+        ];
         yield 'an emoji image left in the paragraph' => [
             '<p>RE: <a href="https://q.test/@a/1">https://q.test/@a/1</a>'
                 . ' <img alt=":bear:" src="https://e.test/b.png"></p>',

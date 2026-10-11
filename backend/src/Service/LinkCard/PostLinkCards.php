@@ -15,10 +15,14 @@ use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Sanitize\EntrySanitizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/** Builds queued posts' link cards, oldest first: one attempt each, the row marked done even when a page fails. */
+/**
+ * Builds queued posts' link cards, oldest first: one attempt each, the row marked done even when a page fails.
+ * A carded quote's RE: line leaves the body.
+ */
 final readonly class PostLinkCards
 {
     private const int FETCHES_PER_CALL = SharedLinks::MAX;
@@ -30,6 +34,7 @@ final readonly class PostLinkCards
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
+        private EntrySanitizer $sanitizer,
         private LoggerInterface $logger,
     ) {
     }
@@ -82,7 +87,9 @@ final readonly class PostLinkCards
         )));
         foreach ($held as $row) {
             if (!isset($carded[$row->getEntry()->requireId()])) {
-                $this->storeCards($row->getEntry(), $cardsByRowId[$row->requireId()]);
+                $cards = $cardsByRowId[$row->requireId()];
+                $this->linkCards->add($row->getEntry(), $cards);
+                $this->dropCardedQuoteLines($row->getEntry(), $cards);
             }
         }
         $this->entityManager->flush();
@@ -90,19 +97,21 @@ final readonly class PostLinkCards
     }
 
     /** @param list<LinkCardContent> $cards */
-    private function storeCards(Entry $entry, array $cards): void
+    private function dropCardedQuoteLines(Entry $entry, array $cards): void
     {
-        $this->linkCards->add($entry, $cards);
         $html = (string) $entry->getContentHtml();
-        $withoutQuote = array_reduce(
+        $withoutQuotes = array_reduce(
             $cards,
             static fn (string $body, LinkCardContent $card): string => QuoteLine::removedFrom($body, $card->url),
             $html,
         );
-        if ($withoutQuote !== $html) {
-            $entry->setContentHtml($withoutQuote);
-            $entry->setSummary(EntrySnippet::from($withoutQuote));
+        if ($withoutQuotes === $html) {
+            return;
         }
+
+        $sanitized = $this->sanitizer->sanitize($withoutQuotes);
+        $entry->setContentHtml($sanitized);
+        $entry->setSummary(EntrySnippet::from($sanitized));
     }
 
     /**

@@ -179,6 +179,20 @@ final class PostLinkCardsTest extends DbTestCase
         self::assertSame('Reposting for the morning crew', $post->getSummary());
     }
 
+    public function testAQuoteOnlyPostEndsWithNoBodyAndNoSummary(): void
+    {
+        $post = $this->queuedPost(1, '<p>RE: <a href="https://q.example/@a/1">https://q.example/@a/1</a></p>');
+        $post->setSummary('RE: https://q.example/@a/1');
+        $this->entityManager->flush();
+
+        $this->postLinkCards->complete($this->claimable());
+        $this->entityManager->refresh($post);
+
+        self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
+        self::assertNull($post->getContentHtml());
+        self::assertNull($post->getSummary());
+    }
+
     public function testAQuoteWhosePageFailsKeepsItsLine(): void
     {
         $body = '<p>RE: <a href="https://q.example/missing">https://q.example/missing</a></p><p>Look.</p>';
