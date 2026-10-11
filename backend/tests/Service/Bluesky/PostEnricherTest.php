@@ -16,6 +16,7 @@ use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
+use App\Service\LinkCard\PostLinkCards;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -338,6 +339,25 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([], $this->logger->records);
     }
 
+    public function testAHandedOverRowStaysClaimedWhenItsNewKindFailsToFlush(): void
+    {
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
+        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.</p>');
+        $this->entityManager->flush();
+        $this->entityManager->persist(new PostEnrichment($post, PostEnrichmentKind::AppView, $this->clock->now()));
+
+        try {
+            $this->enricher()->enrich($this->feed, [$post]);
+            self::fail('A failed flush must be rethrown.');
+        } catch (UniqueConstraintViolationException) {
+        }
+
+        self::assertNotFalse($this->entityManager->getConnection()->fetchOne(
+            'SELECT claimed_at FROM post_enrichment WHERE entry_id = ? AND claimed_at IS NOT NULL',
+            [$post->requireId()],
+        ));
+    }
+
     public function testTheGiveUpCutoffIsUtcWhateverZoneTheClockIsIn(): void
     {
         $this->clock = new MockClock('2026-10-10 12:00:00', 'Europe/Berlin');
@@ -417,8 +437,8 @@ final class PostEnricherTest extends DbTestCase
 
     public function testPostsWhoseLinkCameWithoutAPreviewAreHandedToTheLinkCardPass(): void
     {
-        $this->appView->knowsPost(self::untitledLinkView());
-        $this->appView->knowsPost(self::untitledLinkView(self::TEST_POST . 'second'));
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::TEST_POST . 'second'));
         $first = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
         $second = $this->queuedEntry(self::TEST_POST . 'second', '<p>And this.</p>');
         $this->entityManager->flush();
@@ -436,23 +456,14 @@ final class PostEnricherTest extends DbTestCase
 
     public function testTheLinkCardPassCardsAPostTheAppViewHandedOver(): void
     {
-        $this->appView->knowsPost(self::untitledLinkView());
+        $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
         $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
         $this->entityManager->flush();
         $this->enricher()->complete($this->rowsOf([$post]));
-        $page = new MockResponse(
-            '<html><head><meta property="og:title" content="The story"></head></html>',
-            ['response_headers' => ['content-type' => 'text/html']],
-        );
-        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
 
-        $postLinkCards->complete($this->rowsOf([$post]));
+        $this->linkCardPass()->complete($this->rowsOf([$post]));
 
-        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$post->requireId()]);
-        self::assertSame(['The story'], array_map(
-            static fn (LinkCardContent $card): string => $card->title,
-            $cards[$post->requireId()] ?? [],
-        ));
+        self::assertSame(['https://example.com/story'], $this->cardUrls($post));
     }
 
     public function testAnotherLinkBesideACardedEmbedGetsItsCardAfterTheEmbeds(): void
@@ -461,19 +472,10 @@ final class PostEnricherTest extends DbTestCase
         $post = $this->queuedEntry(self::TISCH, '<p>Also https://example.com/story<br />' . Bluesky::CARD . '</p>');
         $this->entityManager->flush();
         $this->enricher()->complete($this->rowsOf([$post]));
-        $page = new MockResponse(
-            '<html><head><meta property="og:title" content="The story"></head></html>',
-            ['response_headers' => ['content-type' => 'text/html']],
-        );
-        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
 
-        $postLinkCards->complete($this->rowsOf([$post]));
+        $this->linkCardPass()->complete($this->rowsOf([$post]));
 
-        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$post->requireId()]);
-        self::assertSame([Bluesky::CARD, 'https://example.com/story'], array_map(
-            static fn (LinkCardContent $card): string => $card->url,
-            $cards[$post->requireId()] ?? [],
-        ));
+        self::assertSame([Bluesky::CARD, 'https://example.com/story'], $this->cardUrls($post));
     }
 
     public function testCompletingNoRowsAsksNothing(): void
@@ -530,16 +532,22 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(1, $this->pendingCount());
     }
 
-    /** @return array<mixed> */
-    private static function untitledLinkView(string $uri = self::UNTITLED): array
+    private function linkCardPass(): PostLinkCards
     {
-        return [
-            'uri' => $uri,
-            'embed' => [
-                '$type' => 'app.bsky.embed.external#view',
-                'external' => ['uri' => 'https://example.com/story', 'title' => '', 'description' => ''],
-            ],
-        ];
+        $page = new MockResponse(
+            '<html><head><meta property="og:title" content="The story"></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
+        );
+
+        return PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
+    }
+
+    /** @return list<string> */
+    private function cardUrls(Entry $entry): array
+    {
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$entry->requireId()]);
+
+        return array_map(static fn (LinkCardContent $card): string => $card->url, $cards[$entry->requireId()] ?? []);
     }
 
     private function enricher(): PostEnricher

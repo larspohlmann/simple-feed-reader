@@ -29,6 +29,22 @@ final class Bluesky
         return $posts[0];
     }
 
+    /**
+     * A post view whose link came without the preview its client should have fetched.
+     *
+     * @return array<string, mixed>
+     */
+    public static function untitledLinkView(string $uri): array
+    {
+        return [
+            'uri' => $uri,
+            'embed' => [
+                '$type' => 'app.bsky.embed.external#view',
+                'external' => ['uri' => 'https://example.com/story', 'title' => '', 'description' => ''],
+            ],
+        ];
+    }
+
     private function __construct()
     {
     }

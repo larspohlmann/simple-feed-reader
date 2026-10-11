@@ -255,13 +255,7 @@ final class EntryEmbedWriterTest extends DbTestCase
 
     private static function untitledLinkPost(): JsonNodeModel
     {
-        return JsonNodeModel::of([
-            'uri' => 'at://did:plc:a/app.bsky.feed.post/b',
-            'embed' => [
-                '$type' => 'app.bsky.embed.external#view',
-                'external' => ['uri' => 'https://example.com/story', 'title' => '', 'description' => ''],
-            ],
-        ]);
+        return JsonNodeModel::of(Bluesky::untitledLinkView('at://did:plc:a/app.bsky.feed.post/b'));
     }
 
     private function entry(?string $contentHtml): Entry

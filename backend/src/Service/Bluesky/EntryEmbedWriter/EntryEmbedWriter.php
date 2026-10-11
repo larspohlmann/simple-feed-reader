@@ -48,7 +48,9 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
-        return self::outcome($body->urls, $embed->linkCards);
+        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
+
+        return $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
     }
 
     /** The body without the URLs its cards replace, every other link it shares linked, the uncarded one included. */
@@ -64,18 +66,10 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
         $escaped = HtmlEscape::text($uncarded);
 
-        return SharedLinks::of($shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped));
-    }
-
-    /**
-     * @param list<string>          $sharedUrls
-     * @param list<LinkCardContent> $cards
-     */
-    private static function outcome(array $sharedUrls, array $cards): FillOutcome
-    {
-        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $cards);
-
-        return array_diff($sharedUrls, $cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
+        return new SharedLinksModel(
+            [...$shared->urls, $uncarded],
+            $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped),
+        );
     }
 
     private static function storedImage(Entry $entry): ?DeclaredImageModel

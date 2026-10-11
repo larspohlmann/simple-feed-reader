@@ -160,7 +160,7 @@ final class PostLinkCardsTest extends DbTestCase
 
     public function testOnlyTheUncardedLinksAreFetchedAndTheirCardsFollowTheStoredOnes(): void
     {
-        $this->entityManager->persist($this->entry(0, null));
+        $this->offsetEntryIdsFromRowIds();
         $post = $this->queuedPost(1, self::sharing(1, 3));
         $this->storedCard($post, 0, 'https://example.com/1/2');
 
@@ -330,6 +330,11 @@ final class PostLinkCardsTest extends DbTestCase
         $this->entityManager->flush();
 
         return $entry;
+    }
+
+    private function offsetEntryIdsFromRowIds(): void
+    {
+        $this->entityManager->persist($this->entry(0, null));
     }
 
     private function entry(int $number, ?string $contentHtml): Entry

@@ -29,34 +29,6 @@ final class LinkCardRepository extends ServiceEntityRepository
     /**
      * @param list<int> $entryIds
      *
-     * @return array<int, list<string>> the URLs their cards link, by entry id; an entry without cards is left out
-     */
-    public function urlsByEntryIds(array $entryIds): array
-    {
-        if ($entryIds === []) {
-            return [];
-        }
-
-        /** @var list<array{entryId: int|string, url: string}> $rows */
-        $rows = $this->createQueryBuilder('card')
-            ->select('IDENTITY(card.entry) AS entryId', 'card.url')
-            ->andWhere('card.entry IN (:entryIds)')
-            ->setParameter('entryIds', $entryIds)
-            ->orderBy('card.position', 'ASC')
-            ->getQuery()
-            ->getArrayResult();
-
-        $grouped = [];
-        foreach ($rows as $row) {
-            $grouped[(int) $row['entryId']][] = $row['url'];
-        }
-
-        return $grouped;
-    }
-
-    /**
-     * @param list<int> $entryIds
-     *
      * @return array<int, list<LinkCardContent>> in post order, by entry id
      */
     public function contentsByEntryIds(array $entryIds): array

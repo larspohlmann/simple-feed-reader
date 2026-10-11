@@ -71,7 +71,6 @@ final class LinkCardRepositoryTest extends DbTestCase
     public function testFindingForNoEntriesIsEmpty(): void
     {
         self::assertSame([], $this->repository()->contentsByEntryIds([]));
-        self::assertSame([], $this->repository()->urlsByEntryIds([]));
     }
 
     public function testLaterCardsFollowTheStoredOnes(): void
@@ -87,23 +86,6 @@ final class LinkCardRepositoryTest extends DbTestCase
 
         $stored = $cards->contentsByEntryIds([$entry->requireId()]);
         self::assertSame(['a', 'b', 'c'], self::titlesOf($stored[$entry->requireId()]));
-    }
-
-    public function testListsTheCardUrlsByEntryInPositionOrder(): void
-    {
-        $first = $this->entry('first');
-        $second = $this->entry('second');
-        $empty = $this->entry('empty');
-        $cards = $this->repository();
-        $cards->add($first, 0, [$this->content('f2'), $this->content('f1')]);
-        $cards->add($second, 0, [$this->content('s1')]);
-        $this->entityManager->flush();
-
-        $urls = $cards->urlsByEntryIds([$first->requireId(), $second->requireId(), $empty->requireId()]);
-
-        self::assertEqualsCanonicalizing([$first->requireId(), $second->requireId()], array_keys($urls));
-        self::assertSame(['https://example.com/f2', 'https://example.com/f1'], $urls[$first->requireId()]);
-        self::assertSame(['https://example.com/s1'], $urls[$second->requireId()]);
     }
 
     /**

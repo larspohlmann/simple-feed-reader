@@ -7,6 +7,7 @@ namespace App\Service\Bluesky;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\PostEnrichment;
+use App\Enum\PostEnrichmentKind;
 use App\Repository\PostEnrichmentRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
@@ -100,7 +101,8 @@ final readonly class PostEnricher
     }
 
     /**
-     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones.
+     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones. A row
+     * handed to the link-card pass is released only once its new kind is flushed, or an AppView pass would refill it.
      *
      * @param list<PostEnrichment> $queued
      *
@@ -117,17 +119,30 @@ final readonly class PostEnricher
         $unsettled = [];
         foreach (array_chunk($claimed, AppViewClient::URIS_PER_CALL) as $chunk) {
             $held = $this->enrichments->stillHeld($chunk, $claimedAt);
-            $settled = $held === [] || $this->appView->isThrottled() ? null : $this->settle($held, $claimedAt);
+            $settled = $held === [] || $this->appView->isThrottled() ? null : $this->settle($held);
             if ($settled === null) {
                 array_push($unsettled, ...$held);
                 continue;
             }
             array_push($filled, ...$settled);
         }
-        $this->enrichments->release($unsettled, $claimedAt);
         $this->entityManager->flush();
+        $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
 
         return $filled;
+    }
+
+    /**
+     * @param list<PostEnrichment> $claimed
+     *
+     * @return list<PostEnrichment>
+     */
+    private static function awaitingLinkCards(array $claimed): array
+    {
+        return array_values(array_filter(
+            $claimed,
+            static fn (PostEnrichment $row): bool => $row->getKind() === PostEnrichmentKind::LinkCards,
+        ));
     }
 
     /**
@@ -138,7 +153,7 @@ final readonly class PostEnricher
      *
      * @return list<Entry>|null the entries it filled; null when the AppView gave no usable answer
      */
-    private function settle(array $chunk, \DateTimeImmutable $claimedAt): ?array
+    private function settle(array $chunk): ?array
     {
         try {
             $posts = $this->appView->posts(array_map(
@@ -152,7 +167,6 @@ final readonly class PostEnricher
         }
 
         $filled = [];
-        $awaitingLinkCards = [];
         foreach ($chunk as $pending) {
             $entry = $pending->getEntry();
             $post = $posts[$entry->getGuid()] ?? null;
@@ -162,12 +176,10 @@ final readonly class PostEnricher
             }
             if ($outcome === FillOutcome::AwaitingLinkCards) {
                 $pending->awaitLinkCards();
-                $awaitingLinkCards[] = $pending;
                 continue;
             }
             $this->entityManager->remove($pending);
         }
-        $this->enrichments->release($awaitingLinkCards, $claimedAt);
 
         return $filled;
     }

@@ -42,24 +42,24 @@ final readonly class PostLinkCards
     /** @param list<PostEnrichment> $queued link-card rows, oldest first */
     public function complete(array $queued): void
     {
-        $sharedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued));
+        $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued));
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
                 $queued,
-                static fn (PostEnrichment $row): bool => isset($sharedUrlsByRowId[$row->requireId()]),
+                static fn (PostEnrichment $row): bool => isset($uncardedUrlsByRowId[$row->requireId()]),
             )),
             $claimedAt,
         );
 
         $cardsByRowId = [];
         foreach ($claimed as $index => $row) {
-            $sharedUrls = $sharedUrlsByRowId[$row->requireId()];
-            if ($index > 0 && !$this->hasTimeFor($sharedUrls, $claimedAt)) {
+            $uncardedUrls = $uncardedUrlsByRowId[$row->requireId()];
+            if ($index > 0 && !$this->hasTimeFor($uncardedUrls, $claimedAt)) {
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
-            $cardsByRowId[$row->requireId()] = $this->cardsFor($sharedUrls);
+            $cardsByRowId[$row->requireId()] = $this->cardsFor($uncardedUrls);
         }
         $this->store($claimed, $cardsByRowId, $claimedAt);
     }
@@ -112,13 +112,13 @@ final readonly class PostLinkCards
     /**
      * A later post starts only if all its links can still be fetched before the deadline, well inside the lease.
      *
-     * @param list<string> $sharedUrls
+     * @param list<string> $uncardedUrls
      */
-    private function hasTimeFor(array $sharedUrls, \DateTimeImmutable $claimedAt): bool
+    private function hasTimeFor(array $uncardedUrls, \DateTimeImmutable $claimedAt): bool
     {
         $elapsed = (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
 
-        return $elapsed + \count($sharedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= self::DEADLINE_SECONDS;
+        return $elapsed + \count($uncardedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= self::DEADLINE_SECONDS;
     }
 
     /**
@@ -128,10 +128,18 @@ final readonly class PostLinkCards
      */
     private function cardedUrls(array $rows): array
     {
-        return $this->linkCards->urlsByEntryIds(array_map(
+        $cards = $this->linkCards->contentsByEntryIds(array_map(
             static fn (PostEnrichment $row): int => $row->getEntry()->requireId(),
             $rows,
         ));
+
+        return array_map(
+            static fn (array $entryCards): array => array_map(
+                static fn (LinkCardContent $card): string => $card->url,
+                $entryCards,
+            ),
+            $cards,
+        );
     }
 
     /**
@@ -146,38 +154,36 @@ final readonly class PostLinkCards
     private static function withinBudget(array $queued, array $cardedUrls): array
     {
         $remaining = self::FETCHES_PER_CALL;
-        $sharedUrlsByRowId = [];
+        $uncardedUrlsByRowId = [];
         foreach ($queued as $row) {
             $entry = $row->getEntry();
-            $sharedUrls = array_values(array_diff(
-                SharedLinks::of((string) $entry->getContentHtml())->urls,
-                $cardedUrls[$entry->requireId()] ?? [],
-            ));
-            if ($sharedUrlsByRowId !== [] && \count($sharedUrls) > $remaining) {
+            $uncardedUrls = SharedLinks::of((string) $entry->getContentHtml())
+                ->uncardedBy($cardedUrls[$entry->requireId()] ?? []);
+            if ($uncardedUrlsByRowId !== [] && \count($uncardedUrls) > $remaining) {
                 break;
             }
-            $sharedUrlsByRowId[$row->requireId()] = $sharedUrls;
-            $remaining -= \count($sharedUrls);
+            $uncardedUrlsByRowId[$row->requireId()] = $uncardedUrls;
+            $remaining -= \count($uncardedUrls);
         }
 
-        return $sharedUrlsByRowId;
+        return $uncardedUrlsByRowId;
     }
 
     /**
-     * @param list<string> $sharedUrls
+     * @param list<string> $uncardedUrls
      *
      * @return list<LinkCardContent>
      */
-    private function cardsFor(array $sharedUrls): array
+    private function cardsFor(array $uncardedUrls): array
     {
         $cards = [];
-        foreach ($sharedUrls as $sharedUrl) {
+        foreach ($uncardedUrls as $uncardedUrl) {
             try {
-                $cards[] = $this->pageCards->read($sharedUrl);
+                $cards[] = $this->pageCards->read($uncardedUrl);
             } catch (PageFetchException $exception) {
                 $this->logger->warning(
                     'No link card for {url}',
-                    ['url' => $sharedUrl, 'exception' => $exception::class],
+                    ['url' => $uncardedUrl, 'exception' => $exception::class],
                 );
             }
         }
