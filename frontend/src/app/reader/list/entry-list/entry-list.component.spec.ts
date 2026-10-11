@@ -17,26 +17,10 @@ import { MagazineStyleService } from '../../../core/preferences/magazine-style.s
 import { MAGAZINE_STYLE_WRITER } from '../../../core/preferences/magazine-style-writer';
 import { LayoutService } from '../../layout.service';
 import { anEntry } from '../../../../testing/entry-testing';
-
-class MockResizeObserver {
-  static instances: MockResizeObserver[] = [];
-  readonly targets = new Set<Element>();
-  constructor(readonly callback: ResizeObserverCallback) {
-    MockResizeObserver.instances.push(this);
-  }
-  observe(target: Element): void {
-    this.targets.add(target);
-  }
-  unobserve(target: Element): void {
-    this.targets.delete(target);
-  }
-  disconnect(): void {
-    this.targets.clear();
-  }
-  fire(): void {
-    this.callback([], this as unknown as ResizeObserver);
-  }
-}
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 
 const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
@@ -168,8 +152,7 @@ describe('EntryListComponent', () => {
     localStorage.clear();
     subscriptionsStore.resolved.set(true);
     subscribedTo(1);
-    MockResizeObserver.instances = [];
-    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+    installMockResizeObserver();
   });
 
   // #321: the for-you block is now projected into the top of whichever
