@@ -38,8 +38,13 @@ final class EntryHeadline
         $this->derived = true;
     }
 
+    public function isUntitled(): bool
+    {
+        return $this->title === self::UNTITLED;
+    }
+
     public function isUntitledPost(): bool
     {
-        return $this->derived && $this->title === self::UNTITLED;
+        return $this->derived && $this->isUntitled();
     }
 }

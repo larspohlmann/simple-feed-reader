@@ -291,6 +291,36 @@ final class EntryJsonTest extends TestCase
         self::assertSame('Some body text.', EntryJson::listRow($this->row($entry))['excerpt']);
     }
 
+    public function testAnUntitledPostHasAnEmptyTitle(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->markTitleDerived();
+
+        self::assertSame('', EntryJson::listRow($this->row($entry))['title']);
+    }
+
+    public function testAnUntitledArticleHasAnEmptyTitle(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+
+        self::assertSame('', EntryJson::listRow($this->row($entry))['title']);
+    }
+
+    public function testATitleIsSentUnchanged(): void
+    {
+        $entry = $this->entryTitled('A real headline');
+
+        self::assertSame('A real headline', EntryJson::listRow($this->row($entry))['title']);
+    }
+
+    public function testAnUntitledDuplicateHasAnEmptyTitle(): void
+    {
+        $sibling = $this->entryTitled('(untitled)');
+        $row = $this->row($this->entryTitled('Main'))->withDuplicates([$this->row($sibling)]);
+
+        self::assertSame('', EntryJson::listRow($row)['duplicates'][0]['title']);
+    }
+
     private function entryAt(?string $url): Entry
     {
         return new Entry(

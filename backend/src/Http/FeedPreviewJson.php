@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\EntryHeadline;
 use App\Service\Preview\Model\FeedPreviewItemModel;
 use App\Service\Preview\Model\FeedPreviewModel;
 
@@ -36,7 +37,7 @@ final class FeedPreviewJson
             'hasImages' => $preview->hasImages,
             'items' => array_map(
                 static fn (FeedPreviewItemModel $item) => [
-                    'title' => $item->title,
+                    'title' => $item->title === EntryHeadline::UNTITLED ? '' : $item->title,
                     'url' => $item->url,
                     'author' => $item->author,
                     'summary' => $item->summary,

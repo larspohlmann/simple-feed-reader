@@ -15,7 +15,7 @@ export function firstAudioAttachment(attachments: EntryAttachmentDto[]): EntryAt
 export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto): AudioTrack {
   return {
     url: attachment.url,
-    title: attachment.title?.trim() || entry.title,
+    title: attachment.title?.trim() || entry.title || entry.source,
     faviconUrl: entry.faviconUrl,
     imageUrl: entry.imageUrl,
     durationInSeconds: attachment.durationInSeconds ?? null,

@@ -16,7 +16,7 @@ export class ReaderTabTitle {
     effect(() => {
       const entry = this.openEntry();
       if (entry !== null) {
-        this.pageTitle.useText(entry.title);
+        this.pageTitle.useText(entry.title || entry.source);
         return;
       }
       this.pageTitle.useText(this.heading.title(), this.heading.titleCount().value);

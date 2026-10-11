@@ -64,6 +64,7 @@ The block reuses the link block's card chrome.
 2. The caption: the post's text (`excerpt`), clamped to six lines in the `post-text` face.
    - It is omitted for an untitled post. Its title is the `(untitled)` placeholder, and the excerpt of a
      text-less video post would otherwise be the embed's "Watch on Bluesky" line.
+   - The API sends an untitled entry's `title` as `''`, so no surface shows the placeholder.
 3. The media grid, `postMedia` laid out by count.
    - **One item** keeps its own aspect ratio, from the declared dimensions, falling back to 16/9. It is
      height-capped by a new `--media-post-max-h` token and centred in the card (the user's call, 2026-10-11), so a portrait narrows rather than

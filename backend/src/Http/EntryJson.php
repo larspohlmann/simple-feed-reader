@@ -100,7 +100,7 @@ final class EntryJson
 
         return [
             'id' => $entry->getId(),
-            'title' => $entry->getTitle(),
+            'title' => $entry->isUntitled() ? '' : $entry->getTitle(),
             'url' => $entry->getUrl(),
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,

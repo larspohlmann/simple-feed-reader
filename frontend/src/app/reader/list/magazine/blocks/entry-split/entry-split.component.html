@@ -30,7 +30,9 @@
     }
     <div class="body">
       <app-entry-kicker-line [entry]="entry()" />
-      <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+      @if (headline()) {
+        <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+      }
       @if (snippet()) {
         <p class="dek">{{ snippet() }}</p>
       }

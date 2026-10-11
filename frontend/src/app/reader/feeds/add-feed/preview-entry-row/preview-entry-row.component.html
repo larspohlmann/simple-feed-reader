@@ -1,6 +1,8 @@
 <article class="prow">
   <div class="body">
-    <h3 class="title">{{ item().title }}</h3>
+    @if (item().title) {
+      <h3 class="title">{{ item().title }}</h3>
+    }
     <p class="meta">
       <app-favicon [url]="faviconUrl()" [size]="14" />{{ source() }}
       @if (when()) {

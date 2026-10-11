@@ -74,6 +74,12 @@ describe('firstAudioAttachment', () => {
 });
 
 describe('toAudioTrack', () => {
+  it('names the track after the source when neither the attachment nor the entry has a title', () => {
+    const track = toAudioTrack(entry({ title: '' }), { url: 'https://x.test/ep.mp3' });
+
+    expect(track.title).toBe('Src');
+  });
+
   it('carries the attachment url and duration and the entry artwork', () => {
     const attachment: EntryAttachmentDto = {
       url: 'https://x.test/ep.mp3',
