@@ -77,6 +77,12 @@ const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
 const mediaPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, ...over });
 
+const imageless = (id: number): EntryDto => entryAt(id, { summary: null });
+const cycle = (index: number, makers: ((id: number) => EntryDto)[]): EntryDto =>
+  makers[(index - 1) % makers.length](index);
+const planned = (blocks: MagazineBlock[]): string[] =>
+  blocks.map((block) => (block.kind === 'group' ? 'group' : `${block.kind}${block.entry.id}`));
+
 const many = (count: number, make: (index: number) => EntryDto): EntryDto[] =>
   Array.from({ length: count }, (_, index) => make(index + 1));
 const kinds = (bs: MagazineBlock[]) => bs.map((block) => block.kind);
@@ -788,23 +794,23 @@ describe('planMagazine', () => {
     expect(groups.every((block) => block.kind === 'group' && block.entries.length >= 1)).toBe(true);
   });
 
+  const PAGE_HEIGHT_CAP = 1100;
+
+  /** The image family's pages in order, each as long as the template it was given. */
+  const imagePages = (blocks: MagazineBlock[]): MagazineBlock[][] => {
+    const pages: MagazineBlock[][] = [];
+    let start = 0;
+    for (let page = 0; start < blocks.length; page++) {
+      const length = templateFor(page, IMAGE_TEMPLATES).length;
+      pages.push(blocks.slice(start, start + length));
+      start += length;
+    }
+    return pages;
+  };
+  const height = (page: MagazineBlock[]): number =>
+    page.reduce((sum, block) => sum + BLOCK_HEIGHT[block.kind as EntryKind], 0);
+
   describe('a post sharing a link', () => {
-    const PAGE_HEIGHT_CAP = 1100;
-
-    /** The image family's pages in order, each as long as the template it was given. */
-    const imagePages = (blocks: MagazineBlock[]): MagazineBlock[][] => {
-      const pages: MagazineBlock[][] = [];
-      let start = 0;
-      for (let page = 0; start < blocks.length; page++) {
-        const length = templateFor(page, IMAGE_TEMPLATES).length;
-        pages.push(blocks.slice(start, start + length));
-        start += length;
-      }
-      return pages;
-    };
-    const height = (page: MagazineBlock[]): number =>
-      page.reduce((sum, block) => sum + BLOCK_HEIGHT[block.kind as EntryKind], 0);
-
     it('is a link block in whatever slot it lands', () => {
       const entries = many(60, (index) =>
         index % 3 === 0 ? linkPost(index, { subscriptionId: 2 }) : big(index),
@@ -909,18 +915,47 @@ describe('planMagazine', () => {
       expect(postKinds.every((kind) => kind === 'media')).toBe(true);
     });
 
-    it('never reaches past a media post, which would hand its block to an article', () => {
-      const entries = many(
-        60,
-        (index) => [entryAt(index, { summary: null }), mediaPost(index), big(index)][index % 3],
+    it('counts a media block against the page height cap', () => {
+      const entries = many(120, (index) => (index % 6 === 0 ? mediaPost(index) : big(index)));
+      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(pages.some((page) => page.some((block) => block.kind === 'media'))).toBe(true);
+      expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
+
+    it('keeps the cap when the tallest slot reaches ahead past an image-less entry', () => {
+      const entries = many(120, (index) =>
+        index % 6 === 0
+          ? mediaPost(index)
+          : index % 6 === 1
+            ? entryAt(index, { summary: null })
+            : big(index),
       );
+      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
+
+    it('keeps the entries in order when a media post sits within reach of the tallest slot', () => {
+      const entries = many(40, (index) => cycle(index, [big, imageless, mediaPost, big]));
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
-      expect(
-        blocks
-          .filter((block) => block.kind === 'media')
-          .every((block) => block.kind === 'media' && block.entry.titleDerived),
-      ).toBe(true);
+      const order = blocks.flatMap((block) => (block.kind === 'group' ? [] : [block.entry.id]));
+      expect(order).toEqual(entries.map((entry) => entry.id));
+    });
+
+    it('budgets a page around the media block it will hold, demoting the slot before it', () => {
+      const entries = many(40, (index) => cycle(index, [big, big, mediaPost, imageless]));
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      expect(blocks.slice(0, 3).map((block) => block.kind)).toEqual(['thumb', 'split', 'media']);
+    });
+
+    it('lets a slot that can be filled reach ahead although a media slot is taller', () => {
+      const entries = many(40, (index) => cycle(index, [big, mediaPost, imageless, imageless]));
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      expect(planned(blocks.slice(6, 9))).toEqual(['split9', 'compact7', 'compact8']);
     });
   });
 });
