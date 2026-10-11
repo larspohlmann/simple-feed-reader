@@ -1,4 +1,4 @@
-import { attachedArticleHost } from '../../../../testing/article-host-testing';
+import { attachedArticleHost } from '../../../testing/article-host-testing';
 import { attachHlsStreams } from './hls-streams';
 
 const loadSource = jest.fn();

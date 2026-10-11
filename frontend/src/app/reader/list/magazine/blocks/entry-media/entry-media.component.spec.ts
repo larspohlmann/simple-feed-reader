@@ -4,8 +4,8 @@ import { provideTranslocoTesting } from '../../../../../../testing/transloco-tes
 import { EntryMediaComponent } from './entry-media.component';
 import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
-import { isHlsManaged } from '../../../../article/decorators/hls-streams';
-import { EMBED_FRAME_ATTRIBUTES } from '../../../../media-embeds';
+import { isHlsManaged } from '../../../../media/hls-streams';
+import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
 

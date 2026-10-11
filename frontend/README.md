@@ -185,8 +185,8 @@ The reader leans on **`@angular/cdk`** (`^20.2`): its `Dialog` backs the dialogs
 `Overlay` the toasts and action sheets, `DragDrop` the sidebar's drag-to-reorder
 and drag-to-tag, and `BreakpointObserver` (`LayoutService`) the wide-screen Pane
 layout and the narrow-screen drawer. It also loads **`hls.js`** for streaming
-video (`reader/hls-streams.ts`) and **`highlight.js`** for code blocks
-(`reader/code-highlight.ts`), both on first use.
+video (`reader/media/hls-streams.ts`) and **`highlight.js`** for code blocks
+(`reader/article/decorators/code-highlight.ts`), both on first use.
 
 ### Out of the reader's scope
 

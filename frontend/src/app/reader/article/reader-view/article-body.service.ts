@@ -12,7 +12,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
-import { replaceUnplayableVideo } from '../decorators/unplayable-videos';
+import { replaceUnplayableVideo } from '../../media/unplayable-videos';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;

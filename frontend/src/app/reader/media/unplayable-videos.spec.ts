@@ -1,4 +1,4 @@
-import { articleHost } from '../../../../testing/article-host-testing';
+import { articleHost } from '../../../testing/article-host-testing';
 import { attachHlsStreams } from './hls-streams';
 import { replaceUnplayableVideo } from './unplayable-videos';
 

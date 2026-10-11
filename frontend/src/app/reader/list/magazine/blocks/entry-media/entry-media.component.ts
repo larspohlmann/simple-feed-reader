@@ -18,7 +18,7 @@ import { sharedMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto } from '../../../../models';
 import { EmbedFrameDirective } from '../../../../embed-frame.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
-import { attachHlsStreams, destroyStreamsIn } from '../../../../article/decorators/hls-streams';
+import { attachHlsStreams, destroyStreamsIn } from '../../../../media/hls-streams';
 import { pauseMedia } from './pause-media';
 import { autoplayingShortPlayer } from './short-embed';
 import { OpensEntryDirective } from '../../../opens-entry.directive';

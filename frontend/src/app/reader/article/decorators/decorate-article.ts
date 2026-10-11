@@ -1,10 +1,10 @@
 import { TranslocoService } from '@jsverse/transloco';
-import { upgradeMediaEmbeds } from '../../media-embeds';
+import { upgradeMediaEmbeds } from '../../media/media-embeds';
 import { markLeadParagraph } from './lead-paragraph';
 import { markInsetCards } from './reader-cards';
 import { fitReaderImages } from './reader-image-fit';
 import { highlightCodeBlocks } from './code-highlight';
-import { attachHlsStreams } from './hls-streams';
+import { attachHlsStreams } from '../../media/hls-streams';
 import { playVideosInline } from './inline-videos';
 import { markNarrationPlayers } from './reader-narration';
 import { expandFaqDisclosures } from './reader-faq';
