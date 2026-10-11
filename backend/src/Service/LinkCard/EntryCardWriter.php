@@ -40,9 +40,8 @@ final readonly class EntryCardWriter
      */
     private static function settleMediaTarget(Entry $entry, array $pageCards): void
     {
-        $target = TitledShareTarget::of($entry);
         $medium = $pageCards[0]->medium ?? null;
-        if ($target === null || $medium === null) {
+        if ($medium === null || TitledShareTarget::of($entry) === null) {
             return;
         }
         $entry->setShareKind(ShareKind::Media);
