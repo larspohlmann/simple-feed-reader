@@ -97,12 +97,12 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame($opening, $this->headOf([$opening]));
     }
 
-    public function testAHeadThatNeverEndsIsCutAt512KbAndTheDownloadStopsNearThere(): void
+    public function testAHeadThatNeverEndsIsCutAt1MbAndTheDownloadStopsNearThere(): void
     {
         $head = $this->headOf(['<html lang="en"><head><title>Story</title>']);
 
-        self::assertSame(524_288, \strlen($head));
-        self::assertLessThan(700_000, $this->pulledBytes);
+        self::assertSame(1_048_576, \strlen($head));
+        self::assertLessThan(1_250_000, $this->pulledBytes);
     }
 
     public function testAHeadEndsAtABodyThatOpensWithoutAClosedHead(): void

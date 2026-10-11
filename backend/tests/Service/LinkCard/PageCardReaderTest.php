@@ -52,6 +52,16 @@ final class PageCardReaderTest extends TestCase
         return new MockResponse('<html><head>' . $head . '</head><body>x</body></html>', ['http_code' => 200]);
     }
 
+    public function testReadsTheCardOfAPageWhoseHeadRunsPastHalfAMegabyte(): void
+    {
+        $inlineScripts = '<script>' . str_repeat('x', 780_000) . '</script>';
+
+        $card = $this->reader($this->page($inlineScripts . '<meta property="og:title" content="Strawberry cake">'))
+            ->read(self::SHARED)->card;
+
+        self::assertSame('Strawberry cake', $card?->title);
+    }
+
     public function testReadsTheOpenGraphCard(): void
     {
         $card = $this->reader($this->page(
