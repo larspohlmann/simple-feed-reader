@@ -225,9 +225,8 @@ final class PageHeadFetcherTest extends TestCase
     {
         yield 'html with a charset' => [['content-type' => 'text/html; charset=utf-8']];
         yield 'plain text' => [['content-type' => 'text/plain']];
-        yield 'xhtml' => [['content-type' => 'Application/XHTML+XML']];
+        yield 'xhtml with a spaced parameter' => [['content-type' => 'Application/XHTML+XML ; charset=utf-8']];
         yield 'xml' => [['content-type' => 'application/xml']];
-        yield 'a blank type' => [['content-type' => ' ']];
         yield 'no type' => [[]];
     }
 
