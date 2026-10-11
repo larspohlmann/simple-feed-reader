@@ -128,13 +128,13 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     }
 
     /**
-     * The attempt is dated by its claim; doneAt is assigned first, as MySQL assigns left to right.
+     * The attempt is dated by its claim.
      *
      * @param list<PostEnrichment> $rows
      */
     public function markDone(array $rows, \DateTimeImmutable $claimedAt): void
     {
-        $this->updateHeld($rows, $claimedAt, 'pending.doneAt = pending.claimedAt, pending.claimedAt = NULL');
+        $this->updateHeld($rows, $claimedAt, 'pending.doneAt = :claimedAt, pending.claimedAt = NULL');
     }
 
     /**

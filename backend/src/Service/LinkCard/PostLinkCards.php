@@ -19,7 +19,7 @@ use Psr\Log\LoggerInterface;
 final readonly class PostLinkCards
 {
     private const int FETCHES_PER_CALL = SharedLinks::MAX;
-    private const float DEADLINE_SECONDS = 40.0;
+    private const float DEADLINE_SECONDS = self::FETCHES_PER_CALL * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS;
 
     public function __construct(
         private PageCardReader $pageCards,
