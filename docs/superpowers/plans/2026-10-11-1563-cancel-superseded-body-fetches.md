@@ -15,6 +15,9 @@ unsubscribe. A superseded request is cancelled, not run to completion and then i
   gone out yet (the old `cache.get(id) === state` check covered that window for the
   published entry). Every fetch is deferred, `refresh` and `retry` included, so the
   `computed()`-safety rule holds without a second code path.
+- **The in-flight map is keyed by the body signal, not the id.** Keyed by id, re-asking
+  for an evicted id would cancel the fetch still filling the evicted signal a view holds,
+  leaving it `loading` for good. `forget` looks the signal up by id before cancelling.
 - **LRU eviction cancels nothing** (acceptance): a view may still hold the evicted signal.
   The evicted fetch now publishes its completed entry when it lands; that entry is
   current server data, so the old suppression bought nothing.
@@ -29,7 +32,9 @@ unsubscribe. A superseded request is cancelled, not run to completion and then i
 - `frontend/src/app/reader/article/content/entry-body.service.ts`
 - `frontend/src/app/reader/article/content/entry-body.service.spec.ts`
 - `frontend/src/app/reader/shell/reader-route-state.service.ts` (rename)
-- `frontend/src/app/reader/shell/reader-shell.component.spec.ts` (rename)
+- `frontend/src/app/reader/shell/reader-shell.component.spec.ts` (rename; the #1517 spec awaits
+  the deferred fetch's microtask instead of advancing jest's fake timers, which `asapScheduler`'s
+  promise does not ride on)
 
 ## Tasks
 

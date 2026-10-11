@@ -115,7 +115,7 @@ describe('ReaderShellComponent', () => {
     seed: jest.Mock;
     body: jest.Mock;
     retry: jest.Mock;
-    details: Observable<EntryDto>;
+    completedEntries: Observable<EntryDto>;
   };
 
   beforeEach(() => {
@@ -124,7 +124,7 @@ describe('ReaderShellComponent', () => {
       seed: jest.fn(),
       body: jest.fn(() => signal({ status: 'ok', html: null })),
       retry: jest.fn(),
-      details: NEVER,
+      completedEntries: NEVER,
     };
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     localStorage.clear(); // LanguageService caches the lang; a de test must not leak into the next
@@ -1167,7 +1167,7 @@ describe('ReaderShellComponent', () => {
     jest.useRealTimers();
   });
 
-  it('keeps a post settled when a poll answer computed while a worker held it lands late (#1517)', () => {
+  it('keeps a post settled when a poll answer computed while a worker held it lands late (#1517)', async () => {
     jest.useFakeTimers();
     reconfigureShell([{ provide: AuthService, useValue: auth }], EntryBodyService);
     const post = { titleDerived: true, isHidden: true, isViewed: true };
@@ -1178,7 +1178,7 @@ describe('ReaderShellComponent', () => {
 
     qp.next(convertToParamMap({ entry: '1' }));
     fixture.detectChanges();
-    jest.advanceTimersByTime(0);
+    await Promise.resolve();
     ctrl.expectOne('https://api.test/api/entries/1').flush({
       entry: { ...entry, ...post, pending: false, contentHtml: '<p>A post</p>' },
       completed: { id: 1, pending: false },
