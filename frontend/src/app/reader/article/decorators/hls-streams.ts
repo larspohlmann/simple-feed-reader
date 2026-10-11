@@ -45,18 +45,18 @@ async function play(video: HTMLVideoElement, source: string): Promise<void> {
   void video.play();
 }
 
-function destroyDetached(): void {
+function destroyWhere(shouldDestroy: (video: HTMLVideoElement) => boolean): void {
   for (const [video, hls] of instances) {
-    if (video.isConnected) continue;
+    if (!shouldDestroy(video)) continue;
     hls.destroy();
     instances.delete(video);
   }
 }
 
+function destroyDetached(): void {
+  destroyWhere((video) => !video.isConnected);
+}
+
 export function destroyStreamsIn(host: HTMLElement): void {
-  for (const [video, hls] of instances) {
-    if (!host.contains(video)) continue;
-    hls.destroy();
-    instances.delete(video);
-  }
+  destroyWhere((video) => host.contains(video));
 }

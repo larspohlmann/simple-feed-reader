@@ -33,7 +33,11 @@ const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
 /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
    URL is cross-origin: the frame gets its own origin and cannot reach the
    reader. Never add a same-origin URL to ALLOWED. */
-const SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
+export const EMBED_SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
+
+export function isAllowedEmbed(url: string): boolean {
+  return ALLOWED.some(({ pattern }) => pattern.test(url));
+}
 
 export function upgradeMediaEmbeds(host: HTMLElement): void {
   for (const anchor of Array.from(host.querySelectorAll('a'))) {
@@ -61,7 +65,7 @@ function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElemen
   frame.setAttribute('title', title);
   frame.setAttribute('loading', 'lazy');
   frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-  frame.setAttribute('sandbox', SANDBOX);
+  frame.setAttribute('sandbox', EMBED_SANDBOX);
   frame.setAttribute('allowfullscreen', '');
   box.appendChild(frame);
 

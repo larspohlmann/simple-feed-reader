@@ -106,6 +106,11 @@ describe('isMediaPost', () => {
     expect(isMediaPost(entry({ titleDerived: true, pending: true }))).toBe(false);
     expect(isMediaPost(entry({ titleDerived: true, imageUrl: null }))).toBe(false);
   });
+
+  it('is a YouTube Short with a cover, though it is no post', () => {
+    expect(isMediaPost(entry({ isShort: true }))).toBe(true);
+    expect(isMediaPost(entry({ isShort: true, imageUrl: null }))).toBe(false);
+  });
 });
 
 describe('settle for a media post', () => {

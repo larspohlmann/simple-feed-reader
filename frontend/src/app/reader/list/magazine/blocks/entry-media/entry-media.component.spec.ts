@@ -5,6 +5,8 @@ import { EntryMediaComponent } from './entry-media.component';
 import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { isHlsManaged } from '../../../../article/decorators/hls-streams';
+import { EMBED_SANDBOX } from '../../../../media-embeds';
+import { MEDIA_PAUSE } from './pause-media';
 
 let pause: jest.SpyInstance;
 
@@ -88,6 +90,22 @@ async function mount(testEntry: EntryDto) {
   return (await mountFixture(testEntry)).nativeElement as HTMLElement;
 }
 
+const COVER = 'https://i1.ytimg.com/vi/87Ov3cS-xMs/hqdefault.jpg';
+const short = (over: Partial<EntryDto> = {}): EntryDto =>
+  entry({
+    title: 'Should Robert Pattinson join the DCU?',
+    titleDerived: false,
+    isShort: true,
+    excerpt: '',
+    url: 'https://www.youtube.com/shorts/87Ov3cS-xMs',
+    imageUrl: COVER,
+    imageWidth: 480,
+    imageHeight: 360,
+    imageAspectRatio: 0.5625,
+    media: [{ url: COVER, kind: 'image', width: 480, height: 360 }],
+    ...over,
+  });
+
 const sighting = (target: Element, isIntersecting: boolean) =>
   ({ target, isIntersecting }) as unknown as IntersectionObserverEntry;
 
@@ -102,7 +120,7 @@ describe('EntryMediaComponent', () => {
   });
 
   it('shows no caption for a post without text', async () => {
-    const element = await mount(entry({ title: '(untitled)', excerpt: 'Watch on Bluesky' }));
+    const element = await mount(entry({ title: '(untitled)', excerpt: '' }));
 
     expect(element.querySelector('.caption')).toBeNull();
   });
@@ -164,7 +182,7 @@ describe('EntryMediaComponent', () => {
     );
     TestBed.resetTestingModule();
 
-    const bare = await mount(entry({ media: [clip], title: '(untitled)' }));
+    const bare = await mount(entry({ media: [clip], title: '(untitled)', excerpt: '' }));
     expect(bare.querySelector('video')!.getAttribute('aria-label')).toBe('Video');
   });
 
@@ -197,5 +215,43 @@ describe('EntryMediaComponent', () => {
     } finally {
       globalThis.IntersectionObserver = real;
     }
+  });
+
+  it('captions a Short with its title and frames its cover at the picture’s own shape', async () => {
+    const element = await mount(short());
+
+    expect(element.querySelector('.caption')!.textContent).toContain('Should Robert Pattinson');
+    expect(element.querySelector<HTMLElement>('.media')!.style.getPropertyValue('--ratio')).toBe(
+      '0.5625',
+    );
+    expect(element.querySelector('iframe')).toBeNull();
+  });
+
+  it('plays a Short inline in the allow-listed player without opening the post', async () => {
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+
+    const frame = element.querySelector('iframe')!;
+    expect(frame.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
+    );
+    expect(frame.getAttribute('sandbox')).toBe(EMBED_SANDBOX);
+    expect(entryActions.open).not.toHaveBeenCalled();
+  });
+
+  it('puts a Short’s player away when the list pauses its media', async () => {
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+
+    element.dispatchEvent(new Event(MEDIA_PAUSE));
+    fixture.detectChanges();
+
+    expect(element.querySelector('iframe')).toBeNull();
+    expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
   });
 });

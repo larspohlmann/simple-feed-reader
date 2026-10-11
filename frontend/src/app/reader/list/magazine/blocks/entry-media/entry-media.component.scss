@@ -69,3 +69,29 @@
   min-height: 0;
   object-fit: cover;
 }
+
+.short {
+  position: relative;
+}
+
+.play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.play .material-symbols-outlined {
+  padding: var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--media-scrim);
+  color: var(--on-media-scrim);
+  font-size: var(--fs-xl);
+}
+
+iframe.item {
+  border: 0;
+}

@@ -85,8 +85,10 @@ function leadImage(entry: EntryDto): EntryMediumDto[] {
   ];
 }
 
+/** A post, or a YouTube Short, whose point is its picture or video. */
 export function isMediaPost(entry: EntryDto): boolean {
-  return entry.titleDerived && !isLinkPost(entry) && postMedia(entry).length > 0;
+  const claims = entry.isShort || (entry.titleDerived && !isLinkPost(entry));
+  return claims && postMedia(entry).length > 0;
 }
 
 export function postKind(entry: EntryDto): PostKind | null {

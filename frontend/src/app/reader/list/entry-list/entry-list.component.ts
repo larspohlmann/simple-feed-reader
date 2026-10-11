@@ -41,7 +41,7 @@ import {
   measureEntries,
   withHiddenDuplicates,
 } from './above-fold';
-import { pauseVideos } from '../magazine/blocks/entry-media/pause-videos';
+import { pauseMedia } from '../magazine/blocks/entry-media/pause-media';
 import { ListBlock } from './hidden-overlay';
 import { ListContent } from './list-content';
 import { PullToRefresh } from './pull-to-refresh';
@@ -281,8 +281,8 @@ export class EntryListComponent implements OnDestroy {
     onTrigger: () => this.refresh.emit(),
   });
 
-  private readonly _pauseVideosOfOpenEntry = effect(() => {
-    if (this.openEntryId() !== null) pauseVideos(this.host.nativeElement);
+  private readonly _pauseMediaOfOpenEntry = effect(() => {
+    if (this.openEntryId() !== null) pauseMedia(this.host.nativeElement);
   });
 
   private observer?: IntersectionObserver;

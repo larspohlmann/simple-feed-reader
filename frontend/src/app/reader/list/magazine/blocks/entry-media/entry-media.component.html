@@ -13,31 +13,66 @@
   }
   @let items = media();
   <div class="media" [attr.data-count]="items.length" [style.--ratio]="ratio(items[0])">
-    @for (medium of items; track medium.url) {
-      @if (medium.kind === 'video') {
-        <video
-          class="item"
-          controls
-          preload="none"
-          playsinline
-          [attr.aria-label]="caption() || ('reader.mediaVideo' | transloco)"
-          [src]="medium.url"
-          [attr.poster]="medium.previewImageUrl ?? null"
-          (click)="$event.stopPropagation()"
-          (keydown)="$event.stopPropagation()"
-        ></video>
-      } @else {
-        <img
-          class="item"
-          appProxiedImage
-          [src]="medium.url"
-          [attr.width]="medium.width ?? null"
-          [attr.height]="medium.height ?? null"
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerpolicy="no-referrer"
-        />
+    @if (shortPlayer(); as player) {
+      <div class="item short">
+        @if (playingShort()) {
+          <iframe
+            class="item"
+            [src]="player"
+            [title]="caption()"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allow="autoplay; fullscreen"
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"
+          ></iframe>
+        } @else {
+          <img
+            class="item"
+            appProxiedImage
+            [src]="items[0].url"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
+          <button
+            type="button"
+            class="play"
+            [attr.aria-label]="'reader.playShort' | transloco"
+            (click)="playShort($event)"
+            (keydown)="$event.stopPropagation()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+          </button>
+        }
+      </div>
+    } @else {
+      @for (medium of items; track medium.url) {
+        @if (medium.kind === 'video') {
+          <video
+            class="item"
+            controls
+            preload="none"
+            playsinline
+            [attr.aria-label]="caption() || ('reader.mediaVideo' | transloco)"
+            [src]="medium.url"
+            [attr.poster]="medium.previewImageUrl ?? null"
+            (click)="$event.stopPropagation()"
+            (keydown)="$event.stopPropagation()"
+          ></video>
+        } @else {
+          <img
+            class="item"
+            appProxiedImage
+            [src]="medium.url"
+            [attr.width]="medium.width ?? null"
+            [attr.height]="medium.height ?? null"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            referrerpolicy="no-referrer"
+          />
+        }
       }
     }
   </div>
