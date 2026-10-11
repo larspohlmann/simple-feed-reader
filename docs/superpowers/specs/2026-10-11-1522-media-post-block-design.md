@@ -66,7 +66,7 @@ The block reuses the link block's card chrome.
      text-less video post would otherwise be the embed's "Watch on Bluesky" line.
 3. The media grid, `postMedia` laid out by count.
    - **One item** keeps its own aspect ratio, from the declared dimensions, falling back to 16/9. It is
-     height-capped by a new `--media-post-max-h` token and left-aligned, so a portrait narrows rather than
+     height-capped by a new `--media-post-max-h` token and centred in the card (the user's call, 2026-10-11), so a portrait narrows rather than
      crops.
    - **Two, three or four** fill a fixed 16/9 grid, with each cell `object-fit: cover`, as on bsky.app.
    - An image is an `<img loading="lazy">`.
