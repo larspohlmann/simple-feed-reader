@@ -1,3 +1,4 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import { hydrateSlideshows, type SlideshowLabels } from './reader-slideshow';
 
 const labels: SlideshowLabels = {
@@ -6,15 +7,13 @@ const labels: SlideshowLabels = {
   position: (current, total) => `${current} / ${total}`,
 };
 
-function host(): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML =
+const host = (): HTMLElement =>
+  articleHost(
     '<figure class="reader-slideshow"><ol>' +
-    '<li><img src="https://img/1.jpg" alt="one"></li>' +
-    '<li><img src="https://img/2.jpg" alt="two"></li>' +
-    '<li><img src="https://img/3.jpg" alt="three"></li></ol></figure>';
-  return element;
-}
+      '<li><img src="https://img/1.jpg" alt="one"></li>' +
+      '<li><img src="https://img/2.jpg" alt="two"></li>' +
+      '<li><img src="https://img/3.jpg" alt="three"></li></ol></figure>',
+  );
 
 function touch(x: number, y: number, type: string): TouchEvent {
   return Object.assign(new Event(type, { bubbles: true, cancelable: true }), {
@@ -78,11 +77,11 @@ describe('hydrateSlideshows', () => {
   });
 
   it('preserves a caption link inside a slide', () => {
-    const element = document.createElement('div');
-    element.innerHTML =
+    const element = articleHost(
       '<figure class="reader-slideshow"><ol>' +
-      '<li><img src="https://img/1.jpg" alt="one"><a href="https://example.com/a">One</a></li>' +
-      '<li><img src="https://img/2.jpg" alt="two"><a href="https://example.com/b">Two</a></li></ol></figure>';
+        '<li><img src="https://img/1.jpg" alt="one"><a href="https://example.com/a">One</a></li>' +
+        '<li><img src="https://img/2.jpg" alt="two"><a href="https://example.com/b">Two</a></li></ol></figure>',
+    );
     hydrateSlideshows(element, labels);
     const link = element.querySelector<HTMLAnchorElement>('.reader-slideshow li a');
     expect(link!.getAttribute('href')).toBe('https://example.com/a');
@@ -162,10 +161,10 @@ describe('hydrateSlideshows', () => {
   });
 
   it('leaves a single-slide figure un-hydrated', () => {
-    const element = document.createElement('div');
-    element.innerHTML =
+    const element = articleHost(
       '<figure class="reader-slideshow"><ol>' +
-      '<li><img src="https://img/1.jpg" alt="one"></li></ol></figure>';
+        '<li><img src="https://img/1.jpg" alt="one"></li></ol></figure>',
+    );
     hydrateSlideshows(element, labels);
     const figure = element.querySelector<HTMLElement>('.reader-slideshow')!;
     expect(figure.classList.contains('reader-slideshow--ready')).toBe(false);

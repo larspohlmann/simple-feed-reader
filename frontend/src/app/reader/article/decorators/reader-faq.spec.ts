@@ -1,11 +1,7 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import { expandFaqDisclosures } from './reader-faq';
 
-function host(html: string): HTMLElement {
-  const element = document.createElement('div');
-  element.innerHTML = html;
-  expandFaqDisclosures(element);
-  return element;
-}
+const host = (html: string): HTMLElement => articleHost(html, expandFaqDisclosures);
 
 describe('expandFaqDisclosures', () => {
   it('marks a publisher disclosure and opens it', () => {
