@@ -322,7 +322,7 @@ final class PostEmbedRendererTest extends TestCase
 
         self::assertSame('', $rendered?->html);
         self::assertSame([], $rendered->linkCards);
-        self::assertSame(['https://example.com/story'], $rendered->uncardedLinks);
+        self::assertSame('https://example.com/story', $rendered->uncardedLink);
     }
 
     public function testAQuoteWithAnUntitledLinkGivesTheQuoteCardAndLeavesTheLinkUncarded(): void
@@ -343,7 +343,7 @@ final class PostEmbedRendererTest extends TestCase
             static fn (LinkCardContent $card): string => $card->title,
             $rendered->linkCards,
         ));
-        self::assertSame(['https://example.com/a'], $rendered->uncardedLinks);
+        self::assertSame('https://example.com/a', $rendered->uncardedLink);
     }
 
     public function testALinkCardTooLongToStoreIsNoCardAndLinksThePost(): void

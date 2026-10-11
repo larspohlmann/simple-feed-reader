@@ -39,7 +39,9 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         foreach ($embed->linkCards as $card) {
             $body = TrailingUrl::removedFrom($body, $card->url);
         }
-        $body = self::sharing($body, $embed->uncardedLinks);
+        if ($embed->uncardedLink !== null) {
+            $body = self::sharing($body, $embed->uncardedLink);
+        }
         $this->linkCards->add($entry, $embed->linkCards);
         $entry->setContentHtml($this->sanitizer->sanitize($body . $embed->html));
         $entry->setSummary(EntrySnippet::from($body));
@@ -49,27 +51,19 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
-        return $embed->uncardedLinks === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
+        return $embed->uncardedLink === null ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
     }
 
-    /**
-     * The body as the link-card pass reads it: every link it must card shared as a link.
-     *
-     * @param list<string> $urls
-     */
-    private static function sharing(string $body, array $urls): string
+    /** The body as the link-card pass reads it: the link it must card shared as a link. */
+    private static function sharing(string $body, string $url): string
     {
-        if ($urls === []) {
-            return $body;
-        }
         $shared = SharedLinks::of($body);
-        $appended = '';
-        foreach (array_diff($urls, $shared->urls) as $url) {
-            $escaped = HtmlEscape::text($url);
-            $appended .= sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped);
+        if (\in_array($url, $shared->urls, true)) {
+            return $shared->linkedHtml;
         }
+        $escaped = HtmlEscape::text($url);
 
-        return $shared->linkedHtml . $appended;
+        return $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped);
     }
 
     private static function storedImage(Entry $entry): ?DeclaredImageModel

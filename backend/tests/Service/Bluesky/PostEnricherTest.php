@@ -415,20 +415,23 @@ final class PostEnricherTest extends DbTestCase
         self::assertCount(1, $this->cardsOf($this->reload($tisch)));
     }
 
-    public function testAPostWhoseLinkCameWithoutAPreviewIsHandedToTheLinkCardPass(): void
+    public function testPostsWhoseLinkCameWithoutAPreviewAreHandedToTheLinkCardPass(): void
     {
         $this->appView->knowsPost(self::untitledLinkView());
-        $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $this->appView->knowsPost(self::untitledLinkView(self::TEST_POST . 'second'));
+        $first = $this->queuedEntry(self::UNTITLED, '<p>Read this.<br />https://example.com/story</p>');
+        $second = $this->queuedEntry(self::TEST_POST . 'second', '<p>And this.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([$post], $this->enricher()->complete($this->rowsOf([$post])));
+        self::assertSame([$first, $second], $this->enricher()->complete($this->rowsOf([$first, $second])));
 
-        $rows = PostEnrichers::enrichments($this->entityManager)->findClaimableFor([$post], $this->clock->now());
-        self::assertSame([PostEnrichmentKind::LinkCards], array_map(
+        $rows = PostEnrichers::enrichments($this->entityManager)
+            ->findClaimableFor([$first, $second], $this->clock->now());
+        self::assertSame([PostEnrichmentKind::LinkCards, PostEnrichmentKind::LinkCards], array_map(
             static fn (PostEnrichment $row): PostEnrichmentKind => $row->getKind(),
             $rows,
         ));
-        self::assertStringNotContainsString('View embedded content', (string) $this->reload($post)->getContentHtml());
+        self::assertStringNotContainsString('View embedded content', (string) $this->reload($first)->getContentHtml());
     }
 
     public function testTheLinkCardPassCardsAPostTheAppViewHandedOver(): void
@@ -507,10 +510,10 @@ final class PostEnricherTest extends DbTestCase
     }
 
     /** @return array<mixed> */
-    private static function untitledLinkView(): array
+    private static function untitledLinkView(string $uri = self::UNTITLED): array
     {
         return [
-            'uri' => self::UNTITLED,
+            'uri' => $uri,
             'embed' => [
                 '$type' => 'app.bsky.embed.external#view',
                 'external' => ['uri' => 'https://example.com/story', 'title' => '', 'description' => ''],
