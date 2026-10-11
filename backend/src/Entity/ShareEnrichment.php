@@ -16,6 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: ShareEnrichmentRepository::class)]
 #[ORM\Table(name: 'share_enrichment')]
+#[ORM\Index(name: 'idx_share_enrichment_claimable', columns: ['kind', 'done_at', 'queued_at'])]
 final class ShareEnrichment
 {
     public const string APPVIEW_GIVE_UP_AFTER = 'P3D';
