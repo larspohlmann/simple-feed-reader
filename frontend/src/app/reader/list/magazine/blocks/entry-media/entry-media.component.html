@@ -1,0 +1,45 @@
+<article
+  class="media-post"
+  role="button"
+  tabindex="0"
+  [class.read]="entry().isHidden"
+  (click)="actions.open(entry())"
+  (keydown.enter)="actions.open(entry())"
+  (keydown.space)="$event.preventDefault(); actions.open(entry())"
+>
+  <app-entry-kicker-line [entry]="entry()" />
+  @if (caption()) {
+    <p class="caption">{{ caption() }}</p>
+  }
+  @let items = media();
+  <div class="media" [attr.data-count]="items.length" [style.--ratio]="ratio(items[0])">
+    @for (medium of items; track medium.url) {
+      @if (medium.kind === 'video') {
+        <video
+          class="item"
+          controls
+          preload="none"
+          playsinline
+          [src]="medium.url"
+          [attr.poster]="medium.previewImageUrl ?? null"
+          (click)="$event.stopPropagation()"
+          (keydown)="$event.stopPropagation()"
+        ></video>
+      } @else {
+        <img
+          class="item"
+          appProxiedImage
+          [src]="medium.url"
+          [attr.width]="medium.width ?? null"
+          [attr.height]="medium.height ?? null"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+        />
+      }
+    }
+  </div>
+  <app-entry-meta [entry]="entry()" [tags]="tags()" />
+  <app-entry-duplicates [entry]="entry()" />
+</article>

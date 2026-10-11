@@ -1,0 +1,70 @@
+@use '../../../post-text';
+@use '../../magazine-card';
+
+:host {
+  display: block;
+}
+
+.media-post {
+  @include magazine-card.chrome;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--card-pad);
+  cursor: pointer;
+}
+
+/* Pointer-only: a touch tap fires :hover, which must not highlight a card
+   during a drag-scroll (#704). */
+@media (hover: hover) {
+  .media-post:hover {
+    --rim-base: var(--border-strong);
+  }
+}
+
+.caption {
+  @include post-text.post-text(6);
+
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.media-post.read .caption {
+  color: var(--text-secondary);
+}
+
+.media {
+  display: grid;
+  gap: var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+/* One item keeps its shape: a portrait narrows under the height cap rather than being cropped. */
+.media[data-count='1'] {
+  width: min(100%, calc(var(--media-post-max-h) * var(--ratio)));
+  aspect-ratio: var(--ratio);
+}
+
+.media:not([data-count='1']) {
+  aspect-ratio: 16 / 9;
+  grid-template-columns: 1fr 1fr;
+}
+
+.media[data-count='3'],
+.media[data-count='4'] {
+  grid-template-rows: 1fr 1fr;
+}
+
+.media[data-count='3'] > :first-child {
+  grid-row: span 2;
+}
+
+.item {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
