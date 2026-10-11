@@ -12,7 +12,6 @@ use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
 use App\Service\Parser\Support\MediaImageClassifier;
 use App\Service\Parser\Support\MediaRssSlot;
-use App\Service\Parser\Support\XmlHelper;
 use Dom\Element;
 
 /**
@@ -27,7 +26,7 @@ final readonly class ItemImageExtractor
     {
         $candidates = self::mediaCandidatesIn($item);
 
-        foreach (XmlHelper::childElements($item, 'group', FeedNamespace::MediaRss->value) as $group) {
+        foreach (CoreElement::extension($item, FeedNamespace::MediaRss)->children('group') as $group) {
             $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
         }
 

@@ -12,7 +12,7 @@ final class CoreElementTest extends TestCase
 {
     private const string CORE_NAMESPACE = 'urn:example:core';
     private const string OTHER_NAMESPACE_DECLARATION = ' xmlns:x="urn:example:other"';
-    private const string DUBLIN_CORE_DECLARATION = ' xmlns:dc="http://purl.org/dc/elements/1.1/"';
+    private const string DUBLIN_CORE_DECLARATION = ' xmlns:dc="' . FeedNamespace::DublinCore->value . '"';
 
     public function testReadsTheTrimmedTextOfACoreChild(): void
     {

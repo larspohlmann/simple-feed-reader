@@ -8,7 +8,7 @@ use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
-/** A feed element whose core children are read only in its dialect's namespace, so an extension never shadows them. */
+/** A feed element whose children are read in exactly one namespace, so an extension never shadows a core child. */
 final readonly class CoreElement
 {
     public function __construct(public \DOMElement $element, private ?string $namespaceUri)
@@ -26,7 +26,6 @@ final readonly class CoreElement
         return new self($element, $namespace->value);
     }
 
-    /** The same element, its children read in an extension namespace instead. */
     public function in(FeedNamespace $namespace): self
     {
         return self::extension($this->element, $namespace);
