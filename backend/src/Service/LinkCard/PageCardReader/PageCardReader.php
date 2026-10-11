@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard;
+namespace App\Service\LinkCard\PageCardReader;
 
 use App\Entity\LinkCardContent;
 use App\Service\Fetch\Pass\PageUrls;
@@ -19,7 +19,7 @@ use App\Service\Scraper\Support\TextNormalizer;
 use App\Service\Url\Support\HttpsImageUrl;
 
 /** Reads the card a page declares for itself, and the picture or video file it is or declares. */
-final readonly class PageCardReader
+final readonly class PageCardReader implements PageCardReaderInterface
 {
     public function __construct(private PageHeadFetcher $heads)
     {

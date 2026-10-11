@@ -41,6 +41,11 @@ final readonly class LinkCardBudgetModel
         return $this->fetches * PageHeadFetcher::MAX_DURATION_SECONDS;
     }
 
+    public function fitsAfter(float $elapsedSeconds, int $fetches): bool
+    {
+        return $elapsedSeconds + $fetches * PageHeadFetcher::MAX_DURATION_SECONDS <= $this->seconds();
+    }
+
     public function isEmpty(): bool
     {
         return $this->fetches === 0;

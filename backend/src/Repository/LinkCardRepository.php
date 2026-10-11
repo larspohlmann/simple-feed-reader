@@ -18,11 +18,14 @@ final class LinkCardRepository extends ServiceEntityRepository
         parent::__construct($registry, LinkCard::class);
     }
 
-    /** @param list<LinkCardContent> $cards in post order, after the entry's $firstPosition cards */
-    public function add(Entry $entry, int $firstPosition, array $cards): void
+    /**
+     * @param list<LinkCardContent> $stored the cards the entry already holds
+     * @param list<LinkCardContent> $cards  in post order
+     */
+    public function append(Entry $entry, array $stored, array $cards): void
     {
         foreach ($cards as $index => $content) {
-            $this->getEntityManager()->persist(new LinkCard($entry, $firstPosition + $index, $content));
+            $this->getEntityManager()->persist(new LinkCard($entry, \count($stored) + $index, $content));
         }
     }
 
