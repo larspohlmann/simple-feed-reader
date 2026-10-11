@@ -11,6 +11,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\Share;
 use App\Enum\CommentsLoad;
+use App\Service\Bluesky\BlueskyPendingEmbed;
 use App\Service\Share\EntryShareClassifier;
 use PHPUnit\Framework\TestCase;
 
@@ -26,7 +27,7 @@ final class EntryShareClassifierTest extends TestCase
 
     private function classified(Entry $entry): Entry
     {
-        (new EntryShareClassifier())->classify($entry);
+        (new EntryShareClassifier(new BlueskyPendingEmbed()))->classify($entry);
 
         return $entry;
     }
@@ -59,6 +60,43 @@ final class EntryShareClassifierTest extends TestCase
         $entry->setMedia($media, []);
 
         return $entry;
+    }
+
+    private static function blueskyPost(string $body): Entry
+    {
+        $guid = 'at://did:plc:test/app.bsky.feed.post/3abc';
+        $entry = self::entry('https://bsky.app/profile/someone', $guid, null, $body);
+        $entry->setHeadline(Headline::derived('Post'));
+
+        return $entry;
+    }
+
+    public function testABlueskyPostSharingNothingYetIsAProvisionalLinkUntilItsEmbedArrives(): void
+    {
+        $entry = self::blueskyPost('<p>Hello</p>');
+
+        $this->classified($entry);
+
+        self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
+    public function testABlueskyPostOfOverlongProseIsStillAProvisionalLink(): void
+    {
+        $entry = self::blueskyPost('<p>' . str_repeat('a ', EntryShareClassifier::OWN_PROSE_MAX) . '</p>');
+
+        $this->classified($entry);
+
+        self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
+    public function testABlueskyPostWithAPictureStaysMedia(): void
+    {
+        $entry = self::blueskyPost('<p>Sunrise.</p>');
+        $entry->setMedia([new EntryMedium('https://cdn.bsky.app/a.jpg', 'image')], []);
+
+        $this->classified($entry);
+
+        self::assertEquals(Share::media(null), $entry->getShare());
     }
 
     public function testAHackerNewsItemSharesItsArticleWithoutOwnText(): void

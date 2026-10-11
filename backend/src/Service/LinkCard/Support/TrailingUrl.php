@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Bluesky\Support;
+namespace App\Service\LinkCard\Support;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\Element;

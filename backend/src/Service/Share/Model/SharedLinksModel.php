@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Model;
+namespace App\Service\Share\Model;
 
 final readonly class SharedLinksModel
 {

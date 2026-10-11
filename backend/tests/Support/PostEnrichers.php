@@ -9,6 +9,7 @@ use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
+use App\Service\Bluesky\BlueskyPendingEmbed;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
@@ -68,7 +69,8 @@ final class PostEnrichers
             $entityManager,
             new EntrySanitizer(new TrailingBlankRemover()),
             new NaiveUtcClock($clock),
-            new EntryShareClassifier(),
+            new EntryShareClassifier(new BlueskyPendingEmbed()),
+            new BlueskyPendingEmbed(),
         );
     }
 

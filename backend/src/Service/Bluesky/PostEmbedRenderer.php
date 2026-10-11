@@ -9,7 +9,7 @@ use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\Support\AtPostUri;
+use App\Service\Bluesky\Support\AtPostUri;
 use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;

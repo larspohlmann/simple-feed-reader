@@ -13,13 +13,13 @@ use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Bluesky\PostEmbedRenderer;
-use App\Service\Bluesky\Support\TrailingUrl;
+use App\Service\LinkCard\Support\TrailingUrl;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingest\Support\EntrySnippet;
-use App\Service\LinkCard\Model\SharedLinksModel;
-use App\Service\LinkCard\Support\SharedLinks;
+use App\Service\Share\Model\SharedLinksModel;
+use App\Service\Share\Support\SharedLinks;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Text\Support\HtmlEscape;
 

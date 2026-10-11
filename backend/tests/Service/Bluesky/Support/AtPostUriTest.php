@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\Support;
+namespace App\Tests\Service\Bluesky\Support;
 
-use App\Service\Ingest\Support\AtPostUri;
+use App\Service\Bluesky\Support\AtPostUri;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Completion;
 
 use App\Entity\Entry;
-use App\Entity\Share;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Ingest\Support\AtPostUri;
-use App\Service\LinkCard\Model\SharedLinksModel;
-use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Share\EntryShareClassifier;
+use App\Service\Share\PendingEmbed\PendingEmbedInterface;
+use App\Service\Share\Support\SharedLinks;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** Classifies each new entry and queues the ones whose embed or link cards are still to come. */
@@ -25,6 +23,7 @@ final readonly class ShareEnrichmentQueue
         private EntrySanitizer $sanitizer,
         private NaiveUtcClock $clock,
         private EntryShareClassifier $classifier,
+        private PendingEmbedInterface $pendingEmbed,
     ) {
     }
 
@@ -40,8 +39,8 @@ final readonly class ShareEnrichmentQueue
 
     private function queueCreated(Entry $entry, \DateTimeImmutable $queuedAt): void
     {
-        if (AtPostUri::matches($entry->getGuid())) {
-            $this->awaitEmbed($entry, $queuedAt);
+        if ($this->pendingEmbed->awaitsEmbed($entry)) {
+            $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $queuedAt));
 
             return;
         }
@@ -49,23 +48,16 @@ final readonly class ShareEnrichmentQueue
             return;
         }
         if ($entry->isTitleDerived()) {
-            $this->storeLinked($entry, SharedLinks::of((string) $entry->getContentHtml()));
+            $this->linkBareUrls($entry);
         }
         $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $queuedAt));
     }
 
-    private function awaitEmbed(Entry $entry, \DateTimeImmutable $queuedAt): void
+    private function linkBareUrls(Entry $entry): void
     {
-        if ($entry->getShare()->isNone()) {
-            $entry->setShare(Share::link(null));
-        }
-        $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $queuedAt));
-    }
-
-    private function storeLinked(Entry $entry, SharedLinksModel $shared): void
-    {
-        if ($shared->linkedHtml !== $entry->getContentHtml()) {
-            $entry->setContentHtml($this->sanitizer->sanitize($shared->linkedHtml));
+        $linkedHtml = SharedLinks::of((string) $entry->getContentHtml())->linkedHtml;
+        if ($linkedHtml !== $entry->getContentHtml()) {
+            $entry->setContentHtml($this->sanitizer->sanitize($linkedHtml));
         }
     }
 }

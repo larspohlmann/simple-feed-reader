@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Ingest\PlatformEntryRule;
+namespace App\Service\Bluesky;
 
-use App\Service\Ingest\Support\AtPostUri;
+use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\EntryTitle;
 

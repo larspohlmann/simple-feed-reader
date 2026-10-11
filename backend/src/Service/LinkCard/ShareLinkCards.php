@@ -15,7 +15,7 @@ use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\LinkCard\Support\ShareTargets;
+use App\Service\Share\Support\ShareTargets;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;

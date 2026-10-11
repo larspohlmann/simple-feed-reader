@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Bluesky\Support;
+namespace App\Tests\Service\LinkCard\Support;
 
-use App\Service\Bluesky\Support\TrailingUrl;
+use App\Service\LinkCard\Support\TrailingUrl;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
