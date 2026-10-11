@@ -8,11 +8,13 @@ use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Image\Exception\ImageRefusedException;
 use App\Service\Image\Exception\ImageUnavailableException;
 use App\Service\Image\Model\ImageRequestModel;
 use App\Service\Image\Model\ProxiedImageModel;
+use App\Service\Image\Support\ImageType;
 use App\Service\Image\Support\MediaType;
 use App\Service\Image\Support\OriginRoot;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,9 +38,13 @@ final readonly class ImageDownloader
     {
         $landed = $this->land($request);
         $this->assertServed($landed);
-        $contentType = $this->servedType($landed);
+        $declaredType = MediaType::of($landed->header('content-type'));
+        $this->assertServedUnlessUndeclared($landed, $declaredType);
+        $bytes = $this->body($landed);
+        $contentType = ImageType::declaredOrSniffed($declaredType, $bytes);
+        $this->assertServedType($landed, $contentType);
 
-        return new ProxiedImageModel($this->body($landed), $contentType);
+        return new ProxiedImageModel($bytes, $contentType);
     }
 
     private function land(ImageRequestModel $request): LandedResponse
@@ -50,9 +56,9 @@ final readonly class ImageDownloader
         }
     }
 
-    private function redirectBudget(ImageRequestModel $request): int
+    private function redirectBudget(ImageRequestModel $request): RedirectBudget
     {
-        return $request->cookies === '' ? self::MAX_REDIRECTS : 0;
+        return new RedirectBudget($request->cookies === '' ? self::MAX_REDIRECTS : 0);
     }
 
     private function assertServed(LandedResponse $landed): void
@@ -69,11 +75,17 @@ final readonly class ImageDownloader
             : new ImageUnavailableException($message);
     }
 
-    private function servedType(LandedResponse $landed): string
+    private function assertServedUnlessUndeclared(LandedResponse $landed, string $declaredType): void
     {
-        $type = MediaType::of($landed->header('content-type'));
+        if (!ImageType::isUndeclared($declaredType)) {
+            $this->assertServedType($landed, $declaredType);
+        }
+    }
+
+    private function assertServedType(LandedResponse $landed, string $type): void
+    {
         if (\in_array($type, self::SERVED_TYPES, true)) {
-            return $type;
+            return;
         }
 
         $landed->response->cancel();

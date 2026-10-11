@@ -170,6 +170,45 @@ final class ImageDownloaderTest extends TestCase
         $downloader->download(new ImageRequestModel(self::IMAGE));
     }
 
+    public function testServesAnOctetStreamImageAsTheTypeItsBytesShow(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse("\xFF\xD8\xFF\xE0thumbnail", [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type: application/octet-stream'],
+            ]),
+        ]);
+
+        $image = $downloader->download(new ImageRequestModel(self::IMAGE));
+
+        self::assertSame('image/jpeg', $image->contentType);
+        self::assertSame("\xFF\xD8\xFF\xE0thumbnail", $image->bytes);
+    }
+
+    public function testRefusesAnOctetStreamWhoseBytesAreNoServedImage(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse('<svg xmlns="http://www.w3.org/2000/svg"/>', [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type: application/octet-stream'],
+            ]),
+        ]);
+
+        $this->expectException(ImageUnavailableException::class);
+        $this->expectExceptionMessage('"application/octet-stream" is not a served image type');
+        $downloader->download(new ImageRequestModel(self::IMAGE));
+    }
+
+    public function testADeclaredTypeIsTrustedOverTheLeadingBytes(): void
+    {
+        $downloader = $this->downloader([
+            new MockResponse("\xFF\xD8\xFF\xE0", ['http_code' => 200, 'response_headers' => ['Content-Type: text/html']]),
+        ]);
+
+        $this->expectExceptionMessage('"text/html" is not a served image type');
+        $downloader->download(new ImageRequestModel(self::IMAGE));
+    }
+
     public function testWrapsAnSsrfBlockedHop(): void
     {
         $downloader = $this->downloader([

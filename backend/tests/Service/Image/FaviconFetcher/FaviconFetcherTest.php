@@ -49,8 +49,8 @@ final class FaviconFetcherTest extends TestCase
         };
 
         return new FaviconFetcher(
-            FetchWiring::failoverSender($client, $this->noEgressProxy()),
-            new UrlGuard($resolver, new IpValidator()),
+            FetchWiring::redirectFollower($client, $this->noEgressProxy(), new UrlGuard($resolver, new IpValidator())),
+            'TestAgent/1.0',
         );
     }
 
@@ -67,26 +67,19 @@ final class FaviconFetcherTest extends TestCase
         self::assertSame(self::ICON_URL, $icon->sourceUrl);
     }
 
-    public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
+    public function testSendsTheOutboundUserAgent(): void
     {
-        // The both-families pin leads with IPv6; a route that resets at the TLS
-        // handshake (heise's IPv6 from Strato) is unrecoverable by the client, so
-        // the icon must still download over IPv4.
-        $client = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
-            /** @var array<string, string> $resolve */
-            $resolve = $options['resolve'];
-            $pinnedAddresses = $resolve['www.theverge.com'];
+        $headers = [];
+        $client = new MockHttpClient(static function (string $method, string $url, array $options) use (&$headers) {
+            $headers = $options['headers'];
 
-            return str_contains($pinnedAddresses, ':')
-                ? new MockResponse('', ['error' => 'Connection reset by peer'])
-                : new MockResponse('ICON', ['response_headers' => ['content-type' => ['image/png']]]);
+            return new MockResponse('BINARY', ['response_headers' => ['content-type' => ['image/png']]]);
         });
 
-        $icon = $this
-            ->fetcher($client, ['www.theverge.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']])
-            ->download(self::ICON_URL);
+        $this->fetcher($client)->download(self::ICON_URL);
 
-        self::assertSame('ICON', $icon->bytes);
+        self::assertContains('User-Agent: TestAgent/1.0', $headers);
+        self::assertContains('Accept-Encoding: identity', $headers);
     }
 
     public function testRejectsANonImageContentType(): void
@@ -183,19 +176,6 @@ final class FaviconFetcherTest extends TestCase
         $this->fetcher($client)->download(self::ICON_URL);
     }
 
-    public function testRejectsARedirectToAPrivateAddress(): void
-    {
-        // 169.254.169.254 is an IP literal, so the real UrlGuard + IpValidator
-        // reject it on the redirect hop without needing a DNS entry for it.
-        $client = new MockHttpClient(new MockResponse('', [
-            'http_code' => 302,
-            'response_headers' => ['location' => 'http://169.254.169.254/icon.png'],
-        ]));
-
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher($client)->download(self::ICON_URL);
-    }
-
     public function testFollowsASafeRedirectToTheImage(): void
     {
         $responses = [
@@ -213,18 +193,6 @@ final class FaviconFetcherTest extends TestCase
         self::assertSame('BINARY', $icon->bytes);
         // sourceUrl stays the originally requested URL, not the redirect target.
         self::assertSame(self::ICON_URL, $icon->sourceUrl);
-    }
-
-    public function testRejectsAChainOfTooManyRedirects(): void
-    {
-        $redirect = static fn (): MockResponse => new MockResponse('', [
-            'http_code' => 302,
-            'response_headers' => ['location' => 'https://www.theverge.com/loop'],
-        ]);
-        $responses = [$redirect(), $redirect(), $redirect(), $redirect()];
-
-        $this->expectException(FaviconUnavailableException::class);
-        $this->fetcher(new MockHttpClient($responses))->download(self::ICON_URL);
     }
 
     public function testA403IsRejectedNotMerelyUnavailable(): void
@@ -405,21 +373,6 @@ final class FaviconFetcherTest extends TestCase
         } catch (FaviconRejectedException $caught) {
             self::assertSame('Icon exceeded 3145728 bytes.', $caught->getMessage());
         }
-    }
-
-    public function testPinsTheConnectionToTheGuardValidatedIp(): void
-    {
-        $seenOptions = [];
-        $factory = static function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
-            $seenOptions = $options;
-
-            return new MockResponse('BINARY', ['response_headers' => ['content-type' => ['image/png']]]);
-        };
-
-        $this->fetcher(new MockHttpClient($factory))->download(self::ICON_URL);
-
-        self::assertSame(['www.theverge.com' => '93.184.216.34'], $seenOptions['resolve'] ?? null);
-        self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
 
     public function testARejectedFetchCarriesNoErrorCode(): void

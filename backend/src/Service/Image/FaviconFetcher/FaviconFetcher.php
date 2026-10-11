@@ -6,24 +6,21 @@ namespace App\Service\Image\FaviconFetcher;
 
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Support\ResponseHeader;
-use App\Service\Fetch\Support\UrlResolver;
-use App\Service\Fetch\UrlGuard;
+use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
+use App\Service\Fetch\RedirectFollower;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\Model\FetchedFaviconModel;
-use App\Service\Image\Support\ImageMagicBytes;
+use App\Service\Image\Support\ImageType;
 use App\Service\Image\Support\MediaType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Downloads one resolved icon URL under the feed fetch path's guards: UrlGuard on every redirect hop, a connection
- * pinned to the validated IP, a timeout, size caps, no compression and an image content-type allow-list. Resolving
- * a homepage to its icon URL is FaviconResolver's job.
+ * Downloads one resolved icon URL over RedirectFollower's guarded chain, with a timeout, size caps, no compression
+ * and an image content-type allow-list. Resolving a homepage to its icon URL is FaviconResolver's job.
  */
 final readonly class FaviconFetcher implements FaviconFetcherInterface
 {
@@ -32,13 +29,6 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
 
     private const int TIMEOUT_SECONDS = 8;
     private const int MAX_REDIRECTS = 3;
-    private const array REDIRECT_STATUSES = [
-        Response::HTTP_MOVED_PERMANENTLY,
-        Response::HTTP_FOUND,
-        Response::HTTP_SEE_OTHER,
-        Response::HTTP_TEMPORARY_REDIRECT,
-        Response::HTTP_PERMANENTLY_REDIRECT,
-    ];
 
     /** Gone for good: retried and then dropped, unlike a merely-refused status. */
     private const array GONE_STATUSES = [Response::HTTP_NOT_FOUND, Response::HTTP_GONE];
@@ -55,18 +45,17 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         'image/vnd.microsoft.icon',
     ];
 
-    private const array UNDECLARED_TYPES = ['', 'application/octet-stream'];
-
     public function __construct(
-        private FailoverRequestSender $requestSender,
-        private UrlGuard $urlGuard,
+        private RedirectFollower $redirects,
+        private string $userAgent,
     ) {
     }
 
     public function download(string $iconUrl): FetchedFaviconModel
     {
         try {
-            [$bytes, $contentType] = $this->fetchFollowingRedirects($iconUrl);
+            $landed = $this->redirects->follow($iconUrl, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
+            [$bytes, $contentType] = $this->readSuccessfulResponse($landed);
         } catch (FetchException | TransportExceptionInterface $exception) {
             throw $this->asFetchFailure($exception);
         }
@@ -98,83 +87,36 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         return false;
     }
 
-    /**
-     * Re-guards every hop with UrlGuard::assertSafe(). The client's own redirect following stays off: it resolves DNS
-     * itself, so a redirect to a private address would slip the SSRF boundary.
-     *
-     * @return array{0: string, 1: string} the body bytes and their content type
-     * @throws TransportExceptionInterface
-     */
-    private function fetchFollowingRedirects(string $url): array
+    /** @return array<string, mixed> */
+    private function options(): array
     {
-        for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
-            $response = $this->requestGuarded($url);
-            $status = $response->getStatusCode();
-
-            if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
-                return $this->readSuccessfulResponse($response, $status);
-            }
-
-            $url = UrlResolver::resolve($url, $this->redirectLocation($response));
-        }
-
-        throw new FaviconUnavailableException('Icon exceeded ' . self::MAX_REDIRECTS . ' redirects.');
-    }
-
-    /**
-     * @throws TransportExceptionInterface
-     */
-    private function requestGuarded(string $url): ResponseInterface
-    {
-        $guarded = $this->urlGuard->assertSafe($url);
-
-        // The sender pins the connection to the IPs the guard just validated (no DNS-rebinding window) and fails over
-        // across address families when one dies before the headers.
-        return $this->requestSender->send('GET', $url, $guarded, [
+        return [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
-            // Redirects are followed manually above, one re-guarded hop at a
-            // time — never by the client itself.
-            'max_redirects' => 0,
             // Refuse transparent compression so the wire cap below also bounds
             // the buffered body — a compressed response would otherwise
             // decompress unbounded before the size check runs.
-            'headers' => ['Accept-Encoding' => 'identity'],
+            'headers' => ['Accept-Encoding' => 'identity', 'User-Agent' => $this->userAgent],
             'on_progress' => static function (int $downloaded): void {
                 ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);
             },
-        ]);
-    }
-
-    private function redirectLocation(ResponseInterface $response): string
-    {
-        return ResponseHeader::first($response, 'location')
-            ?? throw new FaviconUnavailableException('Redirect response carried no Location header.');
+        ];
     }
 
     /**
      * @return array{0: string, 1: string}
      * @throws TransportExceptionInterface
      */
-    private function readSuccessfulResponse(ResponseInterface $response, int $status): array
+    private function readSuccessfulResponse(LandedResponse $landed): array
     {
-        $this->assertOk($status);
-        $declaredType = MediaType::of(ResponseHeader::first($response, 'content-type'));
+        $this->assertOk($landed->status);
+        $declaredType = MediaType::of($landed->header('content-type'));
         $this->assertAllowedUnlessUndeclared($declaredType);
-        $bytes = $response->getContent();
+        $bytes = $landed->response->getContent();
+        $contentType = ImageType::declaredOrSniffed($declaredType, $bytes);
+        $this->assertAllowedType($contentType);
 
-        return [$bytes, $this->servedType($declaredType, $bytes)];
-    }
-
-    private function servedType(string $declaredType, string $bytes): string
-    {
-        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
-            return $declaredType;
-        }
-        $sniffedType = ImageMagicBytes::typeOf($bytes) ?? $declaredType;
-        $this->assertAllowedType($sniffedType);
-
-        return $sniffedType;
+        return [$bytes, $contentType];
     }
 
     private function assertOk(int $status): void
@@ -209,7 +151,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
 
     private function assertAllowedUnlessUndeclared(string $declaredType): void
     {
-        if (!\in_array($declaredType, self::UNDECLARED_TYPES, true)) {
+        if (!ImageType::isUndeclared($declaredType)) {
             $this->assertAllowedType($declaredType);
         }
     }

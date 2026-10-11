@@ -54,11 +54,10 @@ final readonly class HtmlPageFetcher
 
     public function fetch(string $url): PageResponseModel
     {
-        $remainingHops = self::MAX_REDIRECTS;
+        $budget = new RedirectBudget(self::MAX_REDIRECTS);
         $target = $url;
         while (true) {
-            $landed = $this->land($target, $this->pageOptions(), new RedirectBudget($remainingHops));
-            $remainingHops -= $landed->hops;
+            $landed = $this->land($target, $this->pageOptions(), $budget);
             $body = $this->readableBody($landed);
 
             $head = mb_substr($body, 0, self::LANDING_SCAN_LENGTH);
@@ -69,10 +68,10 @@ final readonly class HtmlPageFetcher
             }
 
             $landed->response->cancel();
-            if ($remainingHops < 1) {
+            if (!$budget->hasRedirectsLeft()) {
                 throw new PageFetchException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
             }
-            $remainingHops--;
+            $budget->spendRedirect();
             $target = $next;
         }
     }
@@ -110,7 +109,7 @@ final readonly class HtmlPageFetcher
     private function land(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
         try {
-            return $this->redirects->followWithin($url, $options, $budget);
+            return $this->redirects->follow($url, $options, $budget);
         } catch (RedirectChainException $exception) {
             throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
