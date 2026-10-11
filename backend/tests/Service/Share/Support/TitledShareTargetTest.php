@@ -63,6 +63,15 @@ final class TitledShareTargetTest extends TestCase
             self::entry('https://www.bbc.co.uk/news', 'https://www.bbc.co.uk/news/a', 'https://www.bbc.co.uk/news/a'),
             null,
         ];
+        yield 'a comments service is one home, the site another' => [
+            self::entry(
+                'https://blog.example/',
+                'https://blog.example/posts/1',
+                'https://elsewhere.example/a',
+                'https://comments.example/thread/1'
+            ),
+            'https://elsewhere.example/a',
+        ];
         yield 'Ask HN: the target is the home' => [
             self::entry(
                 'https://news.ycombinator.com/',

@@ -14,7 +14,7 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
  */
 final class TitledShareTarget
 {
-    private const string TAG_AUTHORITY = '#^tag:(?:www\.)?([^,]+),#i';
+    private const string TAG_AUTHORITY = '#^tag:([^,]+),#i';
 
     public static function of(Entry $entry): ?string
     {
@@ -26,21 +26,28 @@ final class TitledShareTarget
 
         $siteHost = HostKey::forUrl($siteUrl);
 
-        return self::homeHost($entry) === $siteHost && HostKey::forUrl($target) !== $siteHost ? $target : null;
+        return in_array($siteHost, self::homeHosts($entry), true) && HostKey::forUrl($target) !== $siteHost
+            ? $target
+            : null;
     }
 
-    private static function homeHost(Entry $entry): ?string
+    /** @return list<string> */
+    private static function homeHosts(Entry $entry): array
     {
+        $hosts = [];
         $discussionUrl = $entry->getDiscussion()->url;
         if ($discussionUrl !== null) {
-            return HostKey::forUrl($discussionUrl);
-        }
-        $guid = $entry->getGuid();
-        if (AbsoluteHttpUrl::matches($guid)) {
-            return HostKey::forUrl($guid);
+            $hosts[] = HostKey::forUrl($discussionUrl);
         }
 
-        return preg_match(self::TAG_AUTHORITY, $guid, $matches) === 1 ? strtolower($matches[1]) : null;
+        $guid = $entry->getGuid();
+        if (AbsoluteHttpUrl::matches($guid)) {
+            $hosts[] = HostKey::forUrl($guid);
+        } elseif (preg_match(self::TAG_AUTHORITY, $guid, $matches) === 1) {
+            $hosts[] = HostKey::forUrl('//' . $matches[1]);
+        }
+
+        return $hosts;
     }
 
     private function __construct()
