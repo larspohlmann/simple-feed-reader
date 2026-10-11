@@ -182,8 +182,7 @@ export class EntriesStore {
     this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
   }
 
-  /** Rewrites the listed entries with these ids through `patch`. The list keeps its
-   *  identity when `patch` hands every one of them back unchanged. */
+  /** The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
     this.rawEntries.update((current) => {

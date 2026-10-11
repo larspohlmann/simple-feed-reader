@@ -94,7 +94,6 @@ export class EntryBodyService {
     if (oldest !== undefined) this.cache.delete(oldest);
   }
 
-  /** A failed fetch leaves a body already shown on screen. */
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
     const generation = this.generation;
     const ticket = {};

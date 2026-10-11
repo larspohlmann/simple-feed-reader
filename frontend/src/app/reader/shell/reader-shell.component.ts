@@ -125,7 +125,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
    *  list heading, tab title, all reading the same two stores (#709) — moving
    *  on its own while the reader is open (#708). Holding it starts it. */
   private readonly countsPoll = inject(SidebarCountsPoll);
-  /** Injected for its timer: holding it fills in the listed entries still pending (#1502). */
   protected readonly pendingPoll = inject(PendingEntriesPoll);
 
   protected readonly onboarding = inject(ReaderOnboarding);

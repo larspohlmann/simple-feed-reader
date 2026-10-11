@@ -295,7 +295,6 @@ function resolveSlot(slot: Slot, page: number, position: number): EntryKind {
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
   const { page } = pass;
-  // A link post's block is pinned before the budget, so the cap counts its full height.
   const wanted = template
     .slice(0, slice.length)
     .map((slot, position) =>
