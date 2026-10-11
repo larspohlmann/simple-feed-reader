@@ -23,6 +23,8 @@ final class HtmlPageFetcherTest extends TestCase
 {
     use NoEgressProxy;
 
+    private int $pulledBytes = 0;
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -74,25 +76,58 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame('https://example.com/post', $result->finalUrl);
     }
 
-    public function testAHeadIsThePagesFirst512KbAndTheDownloadStopsNearThere(): void
+    /** @param list<string> $opening */
+    private function headOf(array $opening): string
     {
-        $pulledBytes = 0;
-        $chunks = static function () use (&$pulledBytes): \Generator {
-            $opening = '<html lang="en"><head><title>Story</title></head><body>';
-            $pulledBytes += \strlen($opening);
-            yield $opening;
-            for ($index = 0; $index < 200; $index++) {
-                $pulledBytes += 16_384;
-                yield str_repeat('x', 16_384);
+        $chunks = function () use ($opening): \Generator {
+            foreach ([...$opening, ...array_fill(0, 200, str_repeat('x', 16_384))] as $chunk) {
+                $this->pulledBytes += \strlen($chunk);
+                yield $chunk;
             }
         };
         $fetcher = $this->fetcher([new MockResponse($chunks(), ['http_code' => 200])]);
 
-        $head = $fetcher->fetchHead('https://example.com/huge');
+        return $fetcher->fetchHead('https://example.com/huge')->html;
+    }
 
-        self::assertSame(524_288, \strlen($head->html));
-        self::assertStringStartsWith('<html lang="en"><head><title>Story</title></head><body>xxx', $head->html);
-        self::assertLessThan(700_000, $pulledBytes);
+    public function testAHeadStopsReadingOnceTheHeadHasEnded(): void
+    {
+        $opening = str_pad('<html lang="en"><head><title>Story</title></head><body>', 20_000);
+
+        self::assertSame($opening, $this->headOf([$opening]));
+    }
+
+    public function testAHeadThatNeverEndsIsCutAt512KbAndTheDownloadStopsNearThere(): void
+    {
+        $head = $this->headOf(['<html lang="en"><head><title>Story</title>']);
+
+        self::assertSame(524_288, \strlen($head));
+        self::assertLessThan(700_000, $this->pulledBytes);
+    }
+
+    public function testAHeadEndsAtABodyThatOpensWithoutAClosedHead(): void
+    {
+        $head = $this->headOf(['<HTML><TITLE>Story</TITLE><BODY>']);
+
+        self::assertLessThan(40_000, \strlen($head));
+    }
+
+    public function testAHeadEndCutByAChunkBoundaryIsFound(): void
+    {
+        $opening = '<html lang="en"><head><title>Story</title>';
+        $head = $this->headOf([str_pad($opening, 24_572) . '</he', 'ad>']);
+
+        self::assertLessThan(40_000, \strlen($head));
+    }
+
+    public function testAHeadIsReadFarEnoughToSeeAChallengeInTheBody(): void
+    {
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('challenge');
+        $this->headOf([
+            '<html lang="en"><head><title>Just a moment</title></head><body>',
+            str_repeat(' ', 12_000) . '<form id="challenge-form">',
+        ]);
     }
 
     public function testAHeadCutShortByTheConnectionThrows(): void
