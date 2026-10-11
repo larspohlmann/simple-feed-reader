@@ -455,6 +455,27 @@ final class PostEnricherTest extends DbTestCase
         ));
     }
 
+    public function testAnotherLinkBesideACardedEmbedGetsItsCardAfterTheEmbeds(): void
+    {
+        $this->appView->knowsFixture('external');
+        $post = $this->queuedEntry(self::TISCH, '<p>Also https://example.com/story<br />' . Bluesky::CARD . '</p>');
+        $this->entityManager->flush();
+        $this->enricher()->complete($this->rowsOf([$post]));
+        $page = new MockResponse(
+            '<html><head><meta property="og:title" content="The story"></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
+        );
+        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
+
+        $postLinkCards->complete($this->rowsOf([$post]));
+
+        $cards = PostEnrichers::linkCards($this->entityManager)->contentsByEntryIds([$post->requireId()]);
+        self::assertSame([Bluesky::CARD, 'https://example.com/story'], array_map(
+            static fn (LinkCardContent $card): string => $card->url,
+            $cards[$post->requireId()] ?? [],
+        ));
+    }
+
     public function testCompletingNoRowsAsksNothing(): void
     {
         self::assertSame([], $this->enricher()->complete([]));

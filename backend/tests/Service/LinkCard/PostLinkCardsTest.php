@@ -160,6 +160,7 @@ final class PostLinkCardsTest extends DbTestCase
 
     public function testOnlyTheUncardedLinksAreFetchedAndTheirCardsFollowTheStoredOnes(): void
     {
+        $this->entityManager->persist($this->entry(0, null));
         $post = $this->queuedPost(1, self::sharing(1, 3));
         $this->storedCard($post, 0, 'https://example.com/1/2');
 
@@ -319,18 +320,25 @@ final class PostLinkCardsTest extends DbTestCase
     /** Queued a minute apart, in the order the test creates them. */
     private function queuedPost(int $number, ?string $contentHtml): Entry
     {
+        $entry = $this->entry($number, $contentHtml);
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new PostEnrichment(
+            $entry,
+            PostEnrichmentKind::LinkCards,
+            $this->clock->now()->modify(sprintf('-%d minutes', 10 - $number)),
+        ));
+        $this->entityManager->flush();
+
+        return $entry;
+    }
+
+    private function entry(int $number, ?string $contentHtml): Entry
+    {
         $now = $this->clock->now();
         $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, null, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
         $entry->markTitleDerived();
         $entry->getImage()->storePending(null, null, null);
-        $this->entityManager->persist($entry);
-        $this->entityManager->persist(new PostEnrichment(
-            $entry,
-            PostEnrichmentKind::LinkCards,
-            $now->modify(sprintf('-%d minutes', 10 - $number)),
-        ));
-        $this->entityManager->flush();
 
         return $entry;
     }

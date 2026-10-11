@@ -30,6 +30,10 @@ final class RenderedEmbedModelTest extends TestCase
         self::assertSame('https://a.test/', $uncarded->followedBy($card)->uncardedLink);
         self::assertSame('https://a.test/', $card->followedBy($uncarded)->uncardedLink);
         self::assertNull($card->followedBy($card)->uncardedLink);
+        self::assertSame(
+            'https://a.test/',
+            $uncarded->followedBy(RenderedEmbedModel::uncarded('https://b.test/'))->uncardedLink,
+        );
         self::assertSame('', $uncarded->html);
         self::assertNull($uncarded->leadImage);
     }

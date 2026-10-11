@@ -65,7 +65,7 @@ final readonly class PostLinkCards
     }
 
     /**
-     * Only rows the claim still holds are written, and no link is carded twice.
+     * Only rows the claim still holds are written: no other worker cards their posts meanwhile.
      *
      * @param list<PostEnrichment>                $claimed
      * @param array<int, list<LinkCardContent>> $cardsByRowId the rows this call worked
@@ -83,12 +83,9 @@ final readonly class PostLinkCards
 
         $cardedUrls = $this->cardedUrls($held);
         foreach ($held as $row) {
-            $stored = $cardedUrls[$row->getEntry()->requireId()] ?? [];
-            $cards = array_values(array_filter(
-                $cardsByRowId[$row->requireId()],
-                static fn (LinkCardContent $card): bool => !\in_array($card->url, $stored, true),
-            ));
-            $this->linkCards->add($row->getEntry(), \count($stored), $cards);
+            $cards = $cardsByRowId[$row->requireId()];
+            $storedCount = \count($cardedUrls[$row->getEntry()->requireId()] ?? []);
+            $this->linkCards->add($row->getEntry(), $storedCount, $cards);
             $this->dropCardedQuoteLines($row->getEntry(), $cards);
         }
         $this->entityManager->flush();
