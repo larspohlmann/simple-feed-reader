@@ -15,88 +15,34 @@ use App\Service\Text\Support\EntryExcerpt;
 /**
  * Two shapes off one row: listRow() drops contentHtml for a plain-text
  * excerpt; detail() adds contentHtml back for the single body-rendering page.
+ *
+ * @phpstan-type LinkCardRow array{
+ *   url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
+ * }
+ * @phpstan-type EntryRow array{
+ *   id: int|null, title: string, url: string|null, author: string|null,
+ *   summary: string|null, excerpt: string, contentHtml?: string|null,
+ *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
+ *   imageRenditions: list<array{url: string, width: int}>,
+ *   media: list<array<string, string|int>>,
+ *   attachments: list<array<string, string|int>>,
+ *   categories: list<string>,
+ *   linkCards: list<LinkCardRow>,
+ *   publishedAt: string|null,
+ *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
+ *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
+ *   share: 'link'|'media'|null,
+ *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
+ *   duplicates: list<array<string, mixed>>,
+ *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
+ * }
  */
 final class EntryJson
 {
     /**
-     * @return array{
-     *   id: int|null, title: string, url: string|null, author: string|null,
-     *   summary: string|null, excerpt: string,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
-     *   imageRenditions: list<array{url: string, width: int}>,
-     *   media: list<array<string, string|int>>,
-     *   attachments: list<array<string, string|int>>,
-     *   categories: list<string>,
-     *   linkCards: list<array{
-     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
-     *   }>,
-     *   publishedAt: string|null,
-     *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   share: 'link'|'media'|null,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
-     *   duplicates: list<array<string, mixed>>,
-     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
-     * }
+     * @return EntryRow
      */
     public static function listRow(EntryListRow $row): array
-    {
-        return self::commonFields($row) + [
-            'excerpt' => EntryExcerpt::of(
-                $row->entry->getSummary(),
-                $row->entry->bodyStandsInForSummary() ? $row->entry->getContentHtml() : null,
-            ),
-            'duplicates' => array_map(self::listRow(...), $row->duplicates),
-        ];
-    }
-
-    /**
-     * @return array{
-     *   id: int|null, title: string, url: string|null, author: string|null,
-     *   summary: string|null, excerpt: string, contentHtml: string|null,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
-     *   imageRenditions: list<array{url: string, width: int}>,
-     *   media: list<array<string, string|int>>,
-     *   attachments: list<array<string, string|int>>,
-     *   categories: list<string>,
-     *   linkCards: list<array{
-     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
-     *   }>,
-     *   publishedAt: string|null,
-     *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   share: 'link'|'media'|null,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
-     *   duplicates: list<array<string, mixed>>,
-     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
-     * }
-     */
-    public static function detail(EntryListRow $row): array
-    {
-        return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
-    }
-
-    /**
-     * @return array{
-     *   id: int|null, title: string, url: string|null, author: string|null,
-     *   summary: string|null,
-     *   imageUrl: string|null, imageWidth: int|null, imageHeight: int|null, imageAspectRatio: float|null,
-     *   imageRenditions: list<array{url: string, width: int}>,
-     *   media: list<array<string, string|int>>,
-     *   attachments: list<array<string, string|int>>,
-     *   categories: list<string>,
-     *   linkCards: list<array{
-     *     url: string, title: string, description: string|null, imageUrl: string|null, siteName: string
-     *   }>,
-     *   publishedAt: string|null,
-     *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
-     *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
-     *   share: 'link'|'media'|null,
-     *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
-     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
-     * }
-     */
-    private static function commonFields(EntryListRow $row): array
     {
         $entry = $row->entry;
         $discussion = $entry->getDiscussion();
@@ -133,11 +79,24 @@ final class EntryJson
             'share' => $entry->getShare()->kind?->value,
             'savedSearches' => $row->savedSearches,
             'pending' => $row->pending,
+            'excerpt' => EntryExcerpt::of(
+                $entry->getSummary(),
+                $entry->bodyStandsInForSummary() ? $entry->getContentHtml() : null,
+            ),
+            'duplicates' => array_map(self::listRow(...), $row->duplicates),
         ];
     }
 
     /**
-     * @return array{url: string, title: string, description: string|null, imageUrl: string|null, siteName: string}
+     * @return EntryRow
+     */
+    public static function detail(EntryListRow $row): array
+    {
+        return self::listRow($row) + ['contentHtml' => $row->entry->getContentHtml()];
+    }
+
+    /**
+     * @return LinkCardRow
      */
     private static function linkCard(LinkCardContent $card): array
     {
