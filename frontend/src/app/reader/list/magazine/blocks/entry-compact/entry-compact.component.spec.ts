@@ -4,7 +4,10 @@ import { provideRouter } from '@angular/router';
 import { EntryCompactComponent } from './entry-compact.component';
 import { EntryDto, SubscriptionTagDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
-import { describeShortPill } from '../../../../../../testing/short-marking-testing';
+import {
+  describeShortPill,
+  SHORT_PLAYER_URL,
+} from '../../../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -48,7 +51,7 @@ const entry: EntryDto = {
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: false,
   share: null,
   linkCards: [],
@@ -80,7 +83,9 @@ describe('EntryCompactComponent', () => {
   describeShortPill((over) => mount({ ...entry, ...over }));
 
   it('marks a Short in a source digest with a pill on its kicker line', () => {
-    const pill = mountInDigest({ ...entry, isShort: true }).querySelector('.pill.short');
+    const pill = mountInDigest({ ...entry, shortPlayerUrl: SHORT_PLAYER_URL }).querySelector(
+      '.pill.short',
+    );
 
     expect(pill).not.toBeNull();
     expect(pill!.closest('p.kicker')).not.toBeNull();

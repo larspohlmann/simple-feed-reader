@@ -52,7 +52,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: true,
   share: 'link',
   linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],

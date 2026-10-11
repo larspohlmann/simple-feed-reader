@@ -16,10 +16,11 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { postMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto } from '../../../../models';
+import { EmbedFrameDirective } from '../../../../embed-frame.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 import { attachHlsStreams, destroyStreamsIn } from '../../../../article/decorators/hls-streams';
 import { pauseMedia } from './pause-media';
-import { shortPlayerUrl } from './short-embed';
+import { autoplayingShortPlayer } from './short-embed';
 
 const UNKNOWN_RATIO = 16 / 9;
 
@@ -30,6 +31,7 @@ const UNKNOWN_RATIO = 16 / 9;
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,
+    EmbedFrameDirective,
     ProxiedImageDirective,
     TranslocoPipe,
   ],
@@ -44,9 +46,9 @@ export class EntryMediaComponent extends EntryBlockBase {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly media = computed(() => postMedia(this.entry()));
-  // shortPlayerUrl admits only the allow-listed player, so the URL can be trusted as a frame source.
+  // autoplayingShortPlayer admits only an allow-listed player, so the URL can be trusted as a frame source.
   readonly shortPlayer = computed(() => {
-    const url = shortPlayerUrl(this.entry().isShort ? this.entry().url : null);
+    const url = autoplayingShortPlayer(this.entry().shortPlayerUrl);
     return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
   });
   protected readonly playingShort = signal(false);

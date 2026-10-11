@@ -223,8 +223,8 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
-  /** The entry links a YouTube Short (`youtube.com/shorts/<id>`). */
-  isShort: boolean;
+  /** The nocookie player of the YouTube Short the entry links (`…/embed/<id>#shorts`); null for any other entry. */
+  shortPlayerUrl: string | null;
   /** The feed gave no title (a Mastodon or Bluesky post); `title` was derived from the text (#1495). */
   titleDerived: boolean;
   /** What the entry shares, so it takes the link or the media card; null for an article (#1524). */

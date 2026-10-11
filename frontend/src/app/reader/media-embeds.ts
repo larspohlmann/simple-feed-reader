@@ -35,6 +35,13 @@ const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
    reader. Never add a same-origin URL to ALLOWED. */
 export const EMBED_SANDBOX = 'allow-scripts allow-same-origin allow-presentation';
 
+/** Every embed frame's security attributes, in the article and in the list alike. */
+export const EMBED_FRAME_ATTRIBUTES = {
+  sandbox: EMBED_SANDBOX,
+  referrerpolicy: 'strict-origin-when-cross-origin',
+  allowfullscreen: '',
+};
+
 export function isAllowedEmbed(url: string): boolean {
   return ALLOWED.some(({ pattern }) => pattern.test(url));
 }
@@ -64,9 +71,9 @@ function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElemen
   frame.setAttribute('src', url);
   frame.setAttribute('title', title);
   frame.setAttribute('loading', 'lazy');
-  frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-  frame.setAttribute('sandbox', EMBED_SANDBOX);
-  frame.setAttribute('allowfullscreen', '');
+  for (const [name, value] of Object.entries(EMBED_FRAME_ATTRIBUTES)) {
+    frame.setAttribute(name, value);
+  }
   box.appendChild(frame);
 
   return box;

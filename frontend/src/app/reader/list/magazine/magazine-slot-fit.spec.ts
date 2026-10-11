@@ -1,6 +1,7 @@
 import { isMediaPost, postMedia, settle } from './magazine-slot-fit';
 import { EntryDto, EntryMediumDto } from '../../models';
 import { LinkCardDto } from '../../link-card/link-card';
+import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 
 const card: LinkCardDto = {
   url: 'https://n/1',
@@ -33,7 +34,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: false,
   share: null,
   linkCards: [],
@@ -122,8 +123,8 @@ describe('isMediaPost', () => {
   });
 
   it('takes a Short only by its share, like every other entry', () => {
-    expect(isMediaPost(entry({ isShort: true }))).toBe(false);
-    expect(isMediaPost(entry({ isShort: true, share: 'media' }))).toBe(true);
+    expect(isMediaPost(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).toBe(false);
+    expect(isMediaPost(entry({ shortPlayerUrl: SHORT_PLAYER_URL, share: 'media' }))).toBe(true);
   });
 });
 

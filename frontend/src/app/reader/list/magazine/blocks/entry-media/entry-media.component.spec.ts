@@ -5,7 +5,7 @@ import { EntryMediaComponent } from './entry-media.component';
 import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { isHlsManaged } from '../../../../article/decorators/hls-streams';
-import { EMBED_SANDBOX } from '../../../../media-embeds';
+import { EMBED_FRAME_ATTRIBUTES, EMBED_SANDBOX } from '../../../../media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
 
 let pause: jest.SpyInstance;
@@ -64,7 +64,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: true,
   share: 'media',
   linkCards: [],
@@ -97,7 +97,7 @@ const short = (over: Partial<EntryDto> = {}): EntryDto =>
     title: 'Should Robert Pattinson join the DCU?',
     titleDerived: false,
     share: 'media',
-    isShort: true,
+    shortPlayerUrl: 'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs#shorts',
     excerpt: '',
     url: 'https://www.youtube.com/shorts/87Ov3cS-xMs',
     imageUrl: COVER,
@@ -262,6 +262,8 @@ describe('EntryMediaComponent', () => {
       'https://www.youtube-nocookie.com/embed/87Ov3cS-xMs?autoplay=1#shorts',
     );
     expect(frame.getAttribute('sandbox')).toBe(EMBED_SANDBOX);
+    expect(frame.getAttribute('referrerpolicy')).toBe(EMBED_FRAME_ATTRIBUTES.referrerpolicy);
+    expect(frame.hasAttribute('allowfullscreen')).toBe(true);
     expect(entryActions.open).not.toHaveBeenCalled();
   });
 
@@ -297,6 +299,15 @@ describe('EntryMediaComponent', () => {
     report(frame, false);
     fixture.detectChanges();
     expect(element.querySelector('iframe')).toBeNull();
+    expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
+  });
+
+  it('shows the cover of a Short whose player is not allow-listed, with no play button', async () => {
+    const element = await mount(
+      short({ shortPlayerUrl: 'https://evil.test/embed/87Ov3cS-xMs#shorts' }),
+    );
+
+    expect(element.querySelector('.play')).toBeNull();
     expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
   });
 

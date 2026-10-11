@@ -4,6 +4,7 @@ import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryMetaComponent } from './entry-meta.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -39,7 +40,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
-  isShort: false,
+  shortPlayerUrl: null,
   titleDerived: false,
   share: null,
   linkCards: [],
@@ -108,15 +109,15 @@ describe('EntryMetaComponent', () => {
       (mount([], testEntry, imageShown).nativeElement as HTMLElement).querySelector('.pill.short');
 
     it('marks a Short whose card shows no image', () => {
-      expect(shortPill(entry({ isShort: true }), false)).not.toBeNull();
+      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), false)).not.toBeNull();
     });
 
     it('takes a card to show no image unless told otherwise', () => {
-      expect(shortPill(entry({ isShort: true }))).not.toBeNull();
+      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).not.toBeNull();
     });
 
     it('leaves a Short whose image is shown to the image badge', () => {
-      expect(shortPill(entry({ isShort: true }), true)).toBeNull();
+      expect(shortPill(entry({ shortPlayerUrl: SHORT_PLAYER_URL }), true)).toBeNull();
     });
 
     it('marks no other entry', () => {
