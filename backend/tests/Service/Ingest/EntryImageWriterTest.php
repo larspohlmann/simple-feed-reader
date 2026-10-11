@@ -233,9 +233,9 @@ final class EntryImageWriterTest extends TestCase
             . $folder . 'photo-150x150.jpg 150w, ' . $folder . 'photo-100x100.jpg 100w, '
             . $folder . 'photo-50x50.jpg 50w">';
 
-        $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2(
+        $image = new FeedItemImageSelector(new ItemImageExtractor())->fromRss2OrAtom(
             CoreElement::inOwnNamespace($item),
-            $excerpt,
+            [$excerpt],
         );
         self::assertNotNull($image);
         $this->writer()->write($entry, $image);

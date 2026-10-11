@@ -100,7 +100,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         $contentHtml = self::elementMarkup($atomEntry, 'content');
-        $image = $this->imageSelector->fromAtom(
+        $image = $this->imageSelector->fromRss2OrAtom(
             $atomEntry,
             [$contentHtml, self::elementMarkup($atomEntry, 'summary')],
         );

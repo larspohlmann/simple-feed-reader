@@ -6,13 +6,14 @@ namespace App\Tests\Service\Parser;
 
 use App\Entity\ImageRendition;
 use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\Pass\CoreElement;
 use App\Tests\Support\FeedItemFixtures;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase
 {
     use FeedItemFixtures;
-
 
     private ItemImageExtractor $extractor;
 
@@ -21,14 +22,9 @@ final class ItemImageExtractorTest extends TestCase
         $this->extractor = new ItemImageExtractor();
     }
 
-    private function item(string $innerXml): \DOMElement
-    {
-        return $this->rssItem($innerXml)->element;
-    }
-
     public function testPicksTheWidestMediaContentVariant(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/small.jpg" medium="image" width="140"/>'
             . '<media:content url="https://i/mid.jpg" medium="image" width="460"/>'
             . '<media:content url="https://i/big.jpg" medium="image" width="700"/>',
@@ -42,7 +38,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testCapturesBothDeclaredDimensions(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:thumbnail url="https://i/t.jpg" width="948" height="474"/>',
         ));
 
@@ -53,7 +49,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAWiderContentBeatsAThumbnail(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:thumbnail url="https://i/t.jpg" width="240" height="135"/>'
             . '<media:content url="https://i/c.jpg" medium="image" width="2400"/>',
         ));
@@ -64,7 +60,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAnUndeclaredWidthLosesToADeclaredOne(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/unknown.jpg" medium="image"/>'
             . '<media:content url="https://i/known.jpg" medium="image" width="300"/>',
         ));
@@ -75,7 +71,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAcceptsAMediaContentDeclaredByTypeInsteadOfMedium(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/typed.png" type="image/png" width="300"/>',
         ));
 
@@ -85,14 +81,14 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresAMediaContentWithNeitherMediumNorTypeDeclared(): void
     {
-        self::assertNull($this->extractor->fromMedia($this->item(
+        self::assertNull($this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/episode.mp3" length="583910"/>',
         )));
     }
 
     public function testIgnoresAMediaContentWithAnExplicitNonImageKind(): void
     {
-        self::assertNull($this->extractor->fromMedia($this->item(
+        self::assertNull($this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/episode.mp3" medium="audio"/>'
             . '<media:content url="https://i/clip.mp4" type="video/mp4"/>',
         )));
@@ -104,7 +100,7 @@ final class ItemImageExtractorTest extends TestCase
      */
     public function testSelectsAWidestBareMediaContentByImageExtension(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content width="140" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=140&amp;s=a"/>'
             . '<media:content width="460" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=460&amp;s=b"/>'
             . '<media:content width="700" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=700&amp;s=c"/>',
@@ -117,7 +113,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testFallsBackToDocumentOrderWhenNothingDeclaresAWidth(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/first.jpg" medium="image"/>'
             . '<media:content url="https://i/second.jpg" medium="image"/>',
         ));
@@ -128,7 +124,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testSearchesInsideAMediaGroup(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:group><media:content url="https://i/g.jpg" medium="image" width="500"/></media:group>',
         ));
 
@@ -138,31 +134,13 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testADirectImageCompetesWithTheImagesInAMediaGroup(): void
     {
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="https://i/direct.jpg" medium="image" width="900"/>'
             . '<media:group><media:content url="https://i/g.jpg" medium="image" width="500"/></media:group>',
         ));
 
         self::assertNotNull($image);
         self::assertSame('https://i/direct.jpg', $image->url);
-    }
-
-    public function testReadsAnRssEnclosure(): void
-    {
-        $image = $this->extractor->fromRssEnclosure($this->rssItem(
-            '<enclosure url="https://i/e.jpg" type="image/jpeg" length="0"/>',
-        ));
-
-        self::assertNotNull($image);
-        self::assertSame('https://i/e.jpg', $image->url);
-        self::assertNull($image->width);
-    }
-
-    public function testIgnoresANonImageEnclosure(): void
-    {
-        self::assertNull($this->extractor->fromRssEnclosure($this->rssItem(
-            '<enclosure url="https://i/a.mp3" type="audio/mpeg" length="10"/>',
-        )));
     }
 
     public function testReadsAnInlineImgWithoutDimensions(): void
@@ -189,7 +167,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReadsACustomImageElementWithItsDeclaredDimensions(): void
     {
-        $image = $this->extractor->fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->rssItem(
             '<image url="https://images.utopia.de/x/w:194/h:126/pic.jpg" width="194" height="126"/>',
         ));
 
@@ -201,7 +179,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testPrefersTheLargerImageBigVariantOverImage(): void
     {
-        $image = $this->extractor->fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->rssItem(
             '<image url="https://images.utopia.de/x/w:194/h:126/small.jpg" width="194" height="126"/>'
             . '<image_big url="https://images.utopia.de/x/w:640/h:300/big.jpg" width="640" height="300"/>',
         ));
@@ -214,7 +192,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testFallsBackToImageWhenNoImageBigIsPresent(): void
     {
-        $image = $this->extractor->fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->rssItem(
             '<image url="https://images.utopia.de/x/w:194/h:126/only.jpg" width="194" height="126"/>',
         ));
 
@@ -224,28 +202,28 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresAStandardImageElementThatNestsAUrlChild(): void
     {
-        self::assertNull($this->extractor->fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->rssItem(
             '<image><url>https://example.com/logo.png</url><title>Logo</title></image>',
         )));
     }
 
     public function testYieldsNothingWhenNoCustomImageElementIsPresent(): void
     {
-        self::assertNull($this->extractor->fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->rssItem(
             '<description>No picture here.</description>',
         )));
     }
 
     public function testIgnoresAUrlBearingElementThatIsNotACustomImageElement(): void
     {
-        self::assertNull($this->extractor->fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->rssItem(
             '<enclosure url="https://i/e.jpg" type="image/jpeg"/>',
         )));
     }
 
     public function testTrimsSurroundingWhitespaceFromACustomImageUrl(): void
     {
-        $image = $this->extractor->fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->rssItem(
             '<image_big url="  https://i/padded.jpg  " width="640"/>',
         ));
 
@@ -255,7 +233,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testPicksTheWidestAmongSeveralImageBigVariants(): void
     {
-        $image = $this->extractor->fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->rssItem(
             '<image_big url="https://i/narrow.jpg" width="200"/>'
             . '<image_big url="https://i/wide.jpg" width="800"/>',
         ));
@@ -348,45 +326,6 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('http://www.techmeme.com/x/i1.jpg', $image->url);
     }
 
-    public function testAnAtomEnclosureLinkYieldsItsImage(): void
-    {
-        $image = $this->extractor->fromAtomEnclosure(
-            $this->atomEntry('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
-        );
-
-        self::assertSame('https://i/enc.png', $image?->url);
-    }
-
-    public function testAnAtomEnclosureLinkMatchesItsTypeCaseInsensitivelyAndTrimsItsHref(): void
-    {
-        $image = $this->extractor->fromAtomEnclosure(
-            $this->atomEntry('<link rel="enclosure" type="IMAGE/PNG" href="  https://i/enc.png  "/>'),
-        );
-
-        self::assertSame('https://i/enc.png', $image?->url);
-    }
-
-    public function testAnAtomLinkThatIsNotAnEnclosureYieldsNoImage(): void
-    {
-        self::assertNull($this->extractor->fromAtomEnclosure(
-            $this->atomEntry('<link rel="alternate" type="image/png" href="https://i/alt.png"/>'),
-        ));
-    }
-
-    public function testAnEnclosureLinkOutsideTheAtomNamespaceYieldsNoImage(): void
-    {
-        self::assertNull($this->extractor->fromAtomEnclosure(
-            $this->atomEntry('<x:link xmlns:x="urn:other" rel="enclosure" type="image/png" href="https://i/x.png"/>'),
-        ));
-    }
-
-    public function testAnEnclosureElementThatIsNotALinkYieldsNoImage(): void
-    {
-        self::assertNull($this->extractor->fromAtomEnclosure(
-            $this->atomEntry('<content rel="enclosure" type="image/png" href="https://i/c.png"/>'),
-        ));
-    }
-
     public function testReadsTheWidthDescribedSrcsetOfABodyImage(): void
     {
         $image = $this->extractor->fromHtml(
@@ -463,19 +402,9 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame([], $image->renditions);
     }
 
-    public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
-    {
-        $image = $this->extractor->fromRssEnclosure(
-            $this->rssItem('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
-        );
-
-        self::assertNotNull($image);
-        self::assertEquals([new ImageRendition('https://i/e.jpg', 1200)], $image->renditions);
-    }
-
     public function testAMediaVariantWithoutAWidthHasNoRendition(): void
     {
-        $image = $this->extractor->fromMedia($this->item('<media:content url="https://i/a.jpg" medium="image"/>'));
+        $image = $this->extractor->fromMedia($this->rssItem('<media:content url="https://i/a.jpg" medium="image"/>'));
 
         self::assertNotNull($image);
         self::assertSame([], $image->renditions);
@@ -485,7 +414,7 @@ final class ItemImageExtractorTest extends TestCase
     {
         $photo = 'https://i.guim.co.uk/img/media/f6d33de551f7fcdc046178cfccc4037e79b99f3e'
             . '/276_0_4639_3711/master/4639.jpg';
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content width="140" url="' . $photo . '?width=140&amp;s=406198660"/>'
             . '<media:content width="460" url="' . $photo . '?width=460&amp;s=fed507e2"/>'
             . '<media:content width="700" url="' . $photo . '?width=700&amp;s=6192bfa4"/>',
@@ -506,7 +435,7 @@ final class ItemImageExtractorTest extends TestCase
     public function testKeepsAnotherPictureOfAMediaGalleryOutOfTheLadder(): void
     {
         $uploads = 'https://kursfahrradstadt.de/wp-content/uploads/2026/05/';
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-21.jpg" medium="image"'
             . ' width="1200"/>'
             . '<media:content url="' . $uploads . 'superbuettel-eroeffnung-relli-festtag-33.jpg" medium="image"'
@@ -523,7 +452,7 @@ final class ItemImageExtractorTest extends TestCase
     public function testKeepsASquareThumbnailCropOutOfTheLadder(): void
     {
         $uploads = 'https://cdn.arstechnica.net/wp-content/uploads/2026/09/';
-        $image = $this->extractor->fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->rssItem(
             '<media:content height="648" medium="image" url="' . $uploads . 'GettyImages-1042124682-1152x648.jpg"'
             . ' width="1152"/>'
             . '<media:thumbnail height="500" url="' . $uploads . 'GettyImages-1042124682-500x500.jpg" width="500"/>',
@@ -536,19 +465,120 @@ final class ItemImageExtractorTest extends TestCase
         );
     }
 
-    public function testAPrefixedEnclosureIsNotTheRssEnclosure(): void
+    /** @return iterable<string, array{string}> */
+    public static function enclosureShapes(): iterable
     {
-        self::assertNull($this->extractor->fromRssEnclosure($this->rssItem(
-            '<x:enclosure xmlns:x="urn:example:other" url="https://i/x.jpg" type="image/jpeg"/>',
+        yield 'rss <enclosure>' => ['rss'];
+        yield 'atom <link rel="enclosure">' => ['atom'];
+    }
+
+    private function itemOf(string $dialect, string $innerXml): CoreElement
+    {
+        return $dialect === 'rss' ? $this->rssItem($innerXml) : $this->atomEntry($innerXml);
+    }
+
+    private static function enclosure(string $dialect, string $type, string $url): string
+    {
+        return $dialect === 'rss'
+            ? '<enclosure url="' . $url . '" type="' . $type . '" length="0"/>'
+            : '<link rel="enclosure" type="' . $type . '" href="' . $url . '"/>';
+    }
+
+    #[DataProvider('enclosureShapes')]
+    public function testAnImageEnclosureYieldsItsImage(string $dialect): void
+    {
+        $image = $this->extractor->fromEnclosure(
+            $this->itemOf($dialect, self::enclosure($dialect, 'image/jpeg', 'https://i/e.jpg')),
+        );
+
+        self::assertNotNull($image);
+        self::assertSame('https://i/e.jpg', $image->url);
+        self::assertNull($image->width);
+    }
+
+    #[DataProvider('enclosureShapes')]
+    public function testAnEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(string $dialect): void
+    {
+        $image = $this->extractor->fromEnclosure(
+            $this->itemOf($dialect, self::enclosure($dialect, 'IMAGE/JPEG', '  https://i/e.jpg  ')),
+        );
+
+        self::assertSame('https://i/e.jpg', $image?->url);
+    }
+
+    #[DataProvider('enclosureShapes')]
+    public function testANonImageEnclosureYieldsNoImage(string $dialect): void
+    {
+        self::assertNull($this->extractor->fromEnclosure(
+            $this->itemOf($dialect, self::enclosure($dialect, 'audio/mpeg', 'https://i/a.mp3')),
+        ));
+    }
+
+    #[DataProvider('enclosureShapes')]
+    public function testAnImageEnclosureWithoutAUrlIsSkippedForTheNext(string $dialect): void
+    {
+        $image = $this->extractor->fromEnclosure($this->itemOf(
+            $dialect,
+            self::enclosure($dialect, 'image/jpeg', ' ') . self::enclosure($dialect, 'image/png', 'https://i/2.png'),
+        ));
+
+        self::assertSame('https://i/2.png', $image?->url);
+    }
+
+    public function testRss2AcceptsAnEnclosureLink(): void
+    {
+        $image = $this->extractor->fromEnclosure(
+            $this->rssItem('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
+        );
+
+        self::assertSame('https://i/enc.png', $image?->url);
+    }
+
+    public function testAtomAcceptsAnEnclosureElement(): void
+    {
+        $image = $this->extractor->fromEnclosure(
+            $this->atomEntry('<enclosure url="https://i/enc.png" type="image/png"/>'),
+        );
+
+        self::assertSame('https://i/enc.png', $image?->url);
+    }
+
+    public function testAnUntypedEnclosureIsAnImageByItsExtension(): void
+    {
+        $image = $this->extractor->fromEnclosure($this->rssItem('<enclosure url="https://i/e.webp" length="0"/>'));
+
+        self::assertSame('https://i/e.webp', $image?->url);
+    }
+
+    public function testALinkThatIsNotAnEnclosureYieldsNoImage(): void
+    {
+        self::assertNull($this->extractor->fromEnclosure(
+            $this->atomEntry('<link rel="alternate" type="image/png" href="https://i/alt.png"/>'),
+        ));
+    }
+
+    public function testAnEnclosureOutsideTheItemsNamespaceYieldsNoImage(): void
+    {
+        self::assertNull($this->extractor->fromEnclosure($this->rssItem(
+            '<x:enclosure xmlns:x="urn:example:other" url="https://i/x.jpg" type="image/jpeg"/>'
+            . '<x:link xmlns:x="urn:example:other" rel="enclosure" type="image/png" href="https://i/x.png"/>',
         )));
     }
 
-    public function testAnRssEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(): void
+    public function testAnotherElementCarryingRelEnclosureYieldsNoImage(): void
     {
-        $image = $this->extractor->fromRssEnclosure($this->rssItem(
-            '<enclosure url="  https://i/e.jpg  " type="IMAGE/JPEG"/>',
+        self::assertNull($this->extractor->fromEnclosure(
+            $this->atomEntry('<content rel="enclosure" type="image/png" href="https://i/c.png"/>'),
         ));
+    }
 
-        self::assertSame('https://i/e.jpg', $image?->url);
+    public function testAnEnclosureWithADeclaredWidthIsItsOwnRendition(): void
+    {
+        $image = $this->extractor->fromEnclosure(
+            $this->rssItem('<enclosure url="https://i/e.jpg" type="image/jpeg" width="1200"/>'),
+        );
+
+        self::assertNotNull($image);
+        self::assertEquals([new ImageRendition('https://i/e.jpg', 1200)], $image->renditions);
     }
 }

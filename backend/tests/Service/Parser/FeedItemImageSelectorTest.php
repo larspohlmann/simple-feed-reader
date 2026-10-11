@@ -31,7 +31,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $item = $this->rssItem('<enclosure url="http://files.example/lead.jpg" type="image/jpeg" length="0"/>');
         $body = '<p>x</p><img src="https://files.example/diagram.jpg" width="900" height="600">';
 
-        $image = $this->selector->fromRss2($item, $body);
+        $image = $this->selector->fromRss2OrAtom($item, [$body]);
 
         self::assertNotNull($image);
         self::assertSame('http://files.example/lead.jpg', $image->url);
@@ -44,7 +44,7 @@ final class FeedItemImageSelectorTest extends TestCase
         );
         $body = '<p>Hi <img src="https://s.w.org/images/core/emoji/15/72x72/1f642.png" class="wp-smiley"></p>';
 
-        $image = $this->selector->fromRss2($item, $body);
+        $image = $this->selector->fromRss2OrAtom($item, [$body]);
 
         self::assertNotNull($image);
         self::assertSame('http://site.example/lead-1200.jpg', $image->url);
@@ -54,7 +54,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $item = $this->rssItem('<enclosure url="http://files.example/e.jpg" type="image/jpeg" length="0"/>');
 
-        $image = $this->selector->fromRss2($item, '<p>no image here</p>');
+        $image = $this->selector->fromRss2OrAtom($item, ['<p>no image here</p>']);
 
         self::assertNotNull($image);
         self::assertSame('http://files.example/e.jpg', $image->url);
@@ -62,9 +62,9 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testReturnsAnHttpBodyImageWhenThatIsAllThereIs(): void
     {
-        $image = $this->selector->fromRss2(
+        $image = $this->selector->fromRss2OrAtom(
             $this->rssItem('<description>no media</description>'),
-            '<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">',
+            ['<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">'],
         );
 
         self::assertNotNull($image);
@@ -73,9 +73,9 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testReturnsNullWhenNoSourceYieldsAnImage(): void
     {
-        self::assertNull($this->selector->fromRss2(
+        self::assertNull($this->selector->fromRss2OrAtom(
             $this->rssItem('<description>nothing</description>'),
-            '<p>words only</p>',
+            ['<p>words only</p>'],
         ));
     }
 
@@ -85,7 +85,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/art.jpg'),
         );
 
-        self::assertSame('https://i/art.jpg', $this->selector->fromRss2($item, '<p>show notes</p>')?->url);
+        self::assertSame('https://i/art.jpg', $this->selector->fromRss2OrAtom($item, ['<p>show notes</p>'])?->url);
     }
 
     public function testAMediaRssImageBeatsPodcastArtwork(): void
@@ -95,7 +95,7 @@ final class FeedItemImageSelectorTest extends TestCase
             . '<media:content url="https://i/media.jpg" medium="image"/>',
         );
 
-        self::assertSame('https://i/media.jpg', $this->selector->fromRss2($item, null)?->url);
+        self::assertSame('https://i/media.jpg', $this->selector->fromRss2OrAtom($item, [])?->url);
     }
 
     public function testACustomImageElementBeatsPodcastArtwork(): void
@@ -105,7 +105,7 @@ final class FeedItemImageSelectorTest extends TestCase
             . '<image url="https://i/custom.jpg"/>',
         );
 
-        self::assertSame('https://i/custom.jpg', $this->selector->fromRss2($item, null)?->url);
+        self::assertSame('https://i/custom.jpg', $this->selector->fromRss2OrAtom($item, [])?->url);
     }
 
     public function testAnImageEnclosureBeatsPodcastArtwork(): void
@@ -115,7 +115,7 @@ final class FeedItemImageSelectorTest extends TestCase
             . '<enclosure url="https://i/enclosure.jpg" type="image/jpeg" length="0"/>',
         );
 
-        self::assertSame('https://i/enclosure.jpg', $this->selector->fromRss2($item, null)?->url);
+        self::assertSame('https://i/enclosure.jpg', $this->selector->fromRss2OrAtom($item, [])?->url);
     }
 
     public function testThePostsOwnBodyImageBeatsPodcastArtwork(): void
@@ -124,7 +124,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/show.jpg'),
         );
 
-        $image = $this->selector->fromRss2($item, '<img src="https://i/photo.jpg">');
+        $image = $this->selector->fromRss2OrAtom($item, ['<img src="https://i/photo.jpg">']);
 
         self::assertSame('https://i/photo.jpg', $image?->url);
     }
@@ -135,7 +135,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/show.jpg'),
         );
 
-        $image = $this->selector->fromAtom($entry, ['<img src="https://i/photo.jpg">']);
+        $image = $this->selector->fromRss2OrAtom($entry, ['<img src="https://i/photo.jpg">']);
 
         self::assertSame('https://i/photo.jpg', $image?->url);
     }
@@ -146,7 +146,7 @@ final class FeedItemImageSelectorTest extends TestCase
             self::itunesImage('https://i/art.jpg'),
         );
 
-        $image = $this->selector->fromAtom($entry, []);
+        $image = $this->selector->fromRss2OrAtom($entry, []);
 
         self::assertSame('https://i/art.jpg', $image?->url);
     }
@@ -155,7 +155,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $item = $this->rssItem('<media:content url="https://i/big.jpg" medium="image" width="700"/>');
 
-        $image = $this->selector->fromRss2($item, '<img src="https://i/body.jpg">');
+        $image = $this->selector->fromRss2OrAtom($item, ['<img src="https://i/body.jpg">']);
 
         self::assertNotNull($image);
         self::assertSame('https://i/big.jpg', $image->url);
@@ -165,7 +165,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $entry = $this->atomEntry('<title>No media here</title>');
 
-        $image = $this->selector->fromAtom($entry, [
+        $image = $this->selector->fromRss2OrAtom($entry, [
             null,
             '<p>none</p>',
             '<img src="https://i/second.jpg">',
@@ -193,7 +193,7 @@ final class FeedItemImageSelectorTest extends TestCase
             . ' srcset="' . self::substack('w_424,c_limit,f_auto') . ' 424w, '
             . self::substack('w_1456,c_limit,f_auto') . ' 1456w">';
 
-        $image = $this->selector->fromRss2($item, $body);
+        $image = $this->selector->fromRss2OrAtom($item, [$body]);
 
         self::assertNotNull($image);
         self::assertSame(self::substack('f_auto,q_auto:good,fl_progressive:steep'), $image->url);
@@ -211,7 +211,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $item = $this->rssItem('<media:content url="https://i/harbor-lighthouse.jpg" medium="image" width="700"/>');
         $body = '<img src="https://i/mountain-summit.jpg" srcset="https://i/mountain-summit-300.jpg 300w">';
 
-        $image = $this->selector->fromRss2($item, $body);
+        $image = $this->selector->fromRss2OrAtom($item, [$body]);
 
         self::assertNotNull($image);
         self::assertEquals([new ImageRendition('https://i/harbor-lighthouse.jpg', 700)], $image->renditions);
@@ -219,10 +219,12 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testABodyImageAloneKeepsItsOwnLadder(): void
     {
-        $image = $this->selector->fromRss2(
+        $image = $this->selector->fromRss2OrAtom(
             $this->rssItem('<description>no media</description>'),
-            '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
-            . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
+            [
+                '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
+                . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',
+            ],
         );
 
         self::assertNotNull($image);
@@ -235,7 +237,7 @@ final class FeedItemImageSelectorTest extends TestCase
             '<link rel="enclosure" type="image/jpeg" href="https://i/harbor-lighthouse.jpg"/>',
         );
 
-        $image = $this->selector->fromAtom($entry, [
+        $image = $this->selector->fromRss2OrAtom($entry, [
             null,
             '<img src="https://i/harbor-lighthouse-1024x683.jpg"'
             . ' srcset="https://i/harbor-lighthouse-300x200.jpg 300w">',

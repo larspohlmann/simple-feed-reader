@@ -6,11 +6,13 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Pass\CoreElement;
+use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
-use App\Service\Parser\Support\MediaImageClassifier;
+use App\Service\Parser\Support\FeedMediaClassifier;
 use App\Service\Parser\Support\MediaRssSlot;
 use Dom\Element;
 
@@ -22,46 +24,27 @@ use Dom\Element;
 final readonly class ItemImageExtractor
 {
     /** Media RSS image, searching <media:group> when nothing is attached directly; its other widths join it. */
-    public function fromMedia(\DOMElement $item): ?DeclaredImageModel
+    public function fromMedia(CoreElement $item): ?DeclaredImageModel
     {
-        $candidates = self::mediaCandidatesIn($item);
+        $candidates = self::mediaCandidatesIn($item->element);
 
-        foreach (CoreElement::extension($item, FeedNamespace::MediaRss)->children('group') as $group) {
+        foreach ($item->in(FeedNamespace::MediaRss)->children('group') as $group) {
             $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
         }
 
         return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
     }
 
-    /** RSS 2.0 <enclosure type="image/*" url="…">. */
-    public function fromRssEnclosure(CoreElement $item): ?DeclaredImageModel
+    /** The first image enclosure, in either shape the media path accepts: <enclosure> or <link rel="enclosure">. */
+    public function fromEnclosure(CoreElement $item): ?DeclaredImageModel
     {
-        foreach ($item->children('enclosure') as $enclosure) {
-            if (!str_starts_with(strtolower($enclosure->getAttribute('type')), 'image/')) {
+        foreach ($item->element->childNodes as $child) {
+            if (!$item->isEnclosure($child)) {
                 continue;
             }
-            $url = trim($enclosure->getAttribute('url'));
-            if ($url !== '') {
-                return DeclaredImages::fromElement($enclosure, $url);
-            }
-        }
-
-        return null;
-    }
-
-    /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public function fromAtomEnclosure(CoreElement $entry): ?DeclaredImageModel
-    {
-        foreach ($entry->children('link') as $link) {
-            if ($link->getAttribute('rel') !== 'enclosure') {
-                continue;
-            }
-            if (!str_starts_with(strtolower($link->getAttribute('type')), 'image/')) {
-                continue;
-            }
-            $href = trim($link->getAttribute('href'));
-            if ($href !== '') {
-                return DeclaredImages::fromElement($link, $href);
+            $enclosure = new FeedMediaNode($child);
+            if ($enclosure->kind() === FeedMediaKind::Image && $enclosure->url() !== '') {
+                return $enclosure->toDeclaredImage();
             }
         }
 
@@ -72,10 +55,10 @@ final readonly class ItemImageExtractor
      * Non-standard item-level <image>/<image_big> carrying a `url` attribute: <image_big> wins, then the widest.
      * Requiring the attribute keeps the standard channel <image>, which nests a <url> child, from matching.
      */
-    public function fromCustomImageElement(\DOMElement $item): ?DeclaredImageModel
+    public function fromCustomImageElement(CoreElement $item): ?DeclaredImageModel
     {
-        return DeclaredImages::widest(self::customImageCandidates($item, 'image_big'))
-            ?? DeclaredImages::widest(self::customImageCandidates($item, 'image'));
+        return DeclaredImages::widest(self::customImageCandidates($item->element, 'image_big'))
+            ?? DeclaredImages::widest(self::customImageCandidates($item->element, 'image'));
     }
 
     /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions and renditions it declares. */
@@ -123,7 +106,7 @@ final readonly class ItemImageExtractor
                 continue;
             }
             $url = trim($child->getAttribute('url'));
-            if ($url === '' || !MediaImageClassifier::isImage($child)) {
+            if ($url === '' || FeedMediaClassifier::kind($child) !== FeedMediaKind::Image) {
                 continue;
             }
             $candidates[] = DeclaredImages::fromElement($child, $url);

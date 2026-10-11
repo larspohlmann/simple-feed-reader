@@ -78,7 +78,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $description = self::coreOrDublinCore($item, 'description', 'description');
         $contentEncoded = $item->in(FeedNamespace::Content)->text('encoded');
 
-        $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
+        $image = $this->imageSelector->fromRss2OrAtom($item, [$contentEncoded ?? $description]);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
         $contentHtml = FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry);

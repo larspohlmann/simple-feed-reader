@@ -6,6 +6,7 @@ namespace App\Service\Parser\Support;
 
 use App\Service\Html\Support\Srcset;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Url\Support\HttpsImageUrl;
@@ -42,8 +43,8 @@ final class PodcastArtwork
 
     private static function picturesTheShow(\DOMElement $element): bool
     {
-        $type = strtolower(trim($element->getAttribute('type')));
-        if ($type !== '' && !str_starts_with($type, 'image/')) {
+        $type = trim($element->getAttribute('type'));
+        if ($type !== '' && FeedMediaClassifier::kindOfMimeType($type) !== FeedMediaKind::Image) {
             return false;
         }
 
