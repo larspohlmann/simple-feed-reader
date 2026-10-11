@@ -52,14 +52,27 @@ final class EntryEmbedWriterTest extends DbTestCase
         )], $this->storedCards($entry));
     }
 
-    public function testAnotherUrlAtTheEndStaysInTheText(): void
+    public function testAnotherUrlInTheTextIsLinkedAndAwaitsItsCard(): void
     {
         $entry = $this->entry('<p>See https://example.com/other</p>');
 
-        $this->writer()->fill($entry, Bluesky::post('external'));
+        self::assertSame(FillOutcome::AwaitingLinkCards, $this->writer()->fill($entry, Bluesky::post('external')));
 
-        self::assertSame('<p>See https://example.com/other</p>', $entry->getContentHtml());
+        self::assertSame(
+            '<p>See <a href="https://example.com/other" rel="noopener noreferrer" target="_blank">'
+            . 'https://example.com/other</a></p>',
+            $entry->getContentHtml(),
+        );
         self::assertSame('See https://example.com/other', $entry->getSummary());
+    }
+
+    public function testTheCardedUrlLinkedInsideTheTextNeedsNoFurtherCard(): void
+    {
+        $entry = $this->entry('<p>' . Bluesky::CARD . ' is worth a read.</p>');
+
+        self::assertSame(FillOutcome::Filled, $this->writer()->fill($entry, Bluesky::post('external')));
+
+        self::assertStringContainsString('<a href="' . Bluesky::CARD . '"', (string) $entry->getContentHtml());
     }
 
     public function testAnHttpLinkCardReplacesTheTrailingUrlToo(): void

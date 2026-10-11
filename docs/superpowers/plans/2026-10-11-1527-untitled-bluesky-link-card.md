@@ -30,4 +30,16 @@ releases its claim, so `PostLinkCards` fetches the card on the next completion c
 6. Gates: `composer check`, `composer md`, `php bin/phpunit`, `composer infection:diff`; a real run against the
    dev stack on a klimareporter post.
 
+## Generalised (after review)
+
+The rule is not Bluesky's untitled embed but: **every link a post shares ends with a card** — cards its source
+supplied count, the rest are fetched.
+
+7. **`EntryEmbedWriter`** links every bare URL of the body (as `PostEnrichmentQueue` does for Mastodon), appends the
+   uncarded embed link when the body does not share it, and reports `AwaitingLinkCards` whenever the body shares a
+   link that got no card — the untitled embed's or any other in the text.
+8. **`PostLinkCards`** fetches only the shared links that hold no card yet (`LinkCardRepository::urlsByEntryIds`
+   replaces `entryIdsWithCards`), budgets by those, and appends their cards after the stored ones
+   (`LinkCardRepository::add()` takes the first position). A post whose links are all carded is done without a fetch.
+
 No backfill: the posts already stored keep their fallback (dev data only as far as known).

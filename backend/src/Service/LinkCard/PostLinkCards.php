@@ -20,8 +20,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Builds queued posts' link cards, oldest first: one attempt each, the row marked done even when a page fails.
- * A carded quote's RE: line leaves the body.
+ * Builds the cards a queued post's shared links still lack, oldest post first: one attempt each, the row marked done
+ * even when a page fails. A carded quote's RE: line leaves the body.
  */
 final readonly class PostLinkCards
 {
@@ -42,7 +42,7 @@ final readonly class PostLinkCards
     /** @param list<PostEnrichment> $queued link-card rows, oldest first */
     public function complete(array $queued): void
     {
-        $sharedUrlsByRowId = self::withinBudget($queued);
+        $sharedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued));
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
@@ -65,7 +65,7 @@ final readonly class PostLinkCards
     }
 
     /**
-     * Only rows the claim still holds are written, and never over cards another worker stored meanwhile.
+     * Only rows the claim still holds are written, and no link is carded twice.
      *
      * @param list<PostEnrichment>                $claimed
      * @param array<int, list<LinkCardContent>> $cardsByRowId the rows this call worked
@@ -81,16 +81,15 @@ final readonly class PostLinkCards
             return;
         }
 
-        $carded = array_flip($this->linkCards->entryIdsWithCards(array_map(
-            static fn (PostEnrichment $row): int => $row->getEntry()->requireId(),
-            $held,
-        )));
+        $cardedUrls = $this->cardedUrls($held);
         foreach ($held as $row) {
-            if (!isset($carded[$row->getEntry()->requireId()])) {
-                $cards = $cardsByRowId[$row->requireId()];
-                $this->linkCards->add($row->getEntry(), $cards);
-                $this->dropCardedQuoteLines($row->getEntry(), $cards);
-            }
+            $stored = $cardedUrls[$row->getEntry()->requireId()] ?? [];
+            $cards = array_values(array_filter(
+                $cardsByRowId[$row->requireId()],
+                static fn (LinkCardContent $card): bool => !\in_array($card->url, $stored, true),
+            ));
+            $this->linkCards->add($row->getEntry(), \count($stored), $cards);
+            $this->dropCardedQuoteLines($row->getEntry(), $cards);
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);
@@ -126,19 +125,37 @@ final readonly class PostLinkCards
     }
 
     /**
-     * The oldest rows whose links fit the call's fetches, by row id. The first row always runs, so no post is left
-     * half-carded.
+     * @param list<PostEnrichment> $rows
      *
-     * @param list<PostEnrichment> $queued
+     * @return array<int, list<string>> by entry id
+     */
+    private function cardedUrls(array $rows): array
+    {
+        return $this->linkCards->urlsByEntryIds(array_map(
+            static fn (PostEnrichment $row): int => $row->getEntry()->requireId(),
+            $rows,
+        ));
+    }
+
+    /**
+     * The oldest rows whose uncarded links fit the call's fetches, by row id. The first row always runs, so no post is
+     * left half-carded.
+     *
+     * @param list<PostEnrichment>     $queued
+     * @param array<int, list<string>> $cardedUrls by entry id
      *
      * @return array<int, list<string>>
      */
-    private static function withinBudget(array $queued): array
+    private static function withinBudget(array $queued, array $cardedUrls): array
     {
         $remaining = self::FETCHES_PER_CALL;
         $sharedUrlsByRowId = [];
         foreach ($queued as $row) {
-            $sharedUrls = SharedLinks::of((string) $row->getEntry()->getContentHtml())->urls;
+            $entry = $row->getEntry();
+            $sharedUrls = array_values(array_diff(
+                SharedLinks::of((string) $entry->getContentHtml())->urls,
+                $cardedUrls[$entry->requireId()] ?? [],
+            ));
             if ($sharedUrlsByRowId !== [] && \count($sharedUrls) > $remaining) {
                 break;
             }

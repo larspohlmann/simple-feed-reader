@@ -18,34 +18,40 @@ final class LinkCardRepository extends ServiceEntityRepository
         parent::__construct($registry, LinkCard::class);
     }
 
-    /** @param list<LinkCardContent> $cards the entry's first cards, in post order: it holds none yet */
-    public function add(Entry $entry, array $cards): void
+    /** @param list<LinkCardContent> $cards in post order, after the entry's $firstPosition cards */
+    public function add(Entry $entry, int $firstPosition, array $cards): void
     {
-        foreach ($cards as $position => $content) {
-            $this->getEntityManager()->persist(new LinkCard($entry, $position, $content));
+        foreach ($cards as $index => $content) {
+            $this->getEntityManager()->persist(new LinkCard($entry, $firstPosition + $index, $content));
         }
     }
 
     /**
      * @param list<int> $entryIds
      *
-     * @return list<int> those among them that hold cards
+     * @return array<int, list<string>> the URLs their cards link, by entry id; an entry without cards is left out
      */
-    public function entryIdsWithCards(array $entryIds): array
+    public function urlsByEntryIds(array $entryIds): array
     {
         if ($entryIds === []) {
             return [];
         }
 
-        /** @var list<int|string> $carded */
-        $carded = $this->createQueryBuilder('card')
-            ->select('DISTINCT IDENTITY(card.entry)')
+        /** @var list<array{entryId: int|string, url: string}> $rows */
+        $rows = $this->createQueryBuilder('card')
+            ->select('IDENTITY(card.entry) AS entryId', 'card.url')
             ->andWhere('card.entry IN (:entryIds)')
             ->setParameter('entryIds', $entryIds)
+            ->orderBy('card.position', 'ASC')
             ->getQuery()
-            ->getSingleColumnResult();
+            ->getArrayResult();
 
-        return array_map(intval(...), $carded);
+        $grouped = [];
+        foreach ($rows as $row) {
+            $grouped[(int) $row['entryId']][] = $row['url'];
+        }
+
+        return $grouped;
     }
 
     /**

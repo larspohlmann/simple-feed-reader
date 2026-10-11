@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace App\Service\Bluesky\EntryEmbedWriter;
 
 use App\Entity\Entry;
+use App\Entity\LinkCardContent;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\Support\TrailingUrl;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Support\EntryMediaAssembler;
 use App\Service\Ingest\Support\EntrySnippet;
+use App\Service\LinkCard\Model\SharedLinksModel;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Text\Support\HtmlEscape;
@@ -35,35 +38,44 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
             return FillOutcome::Unfilled;
         }
 
-        $body = $entry->getContentHtml() ?? '';
-        foreach ($embed->linkCards as $card) {
-            $body = TrailingUrl::removedFrom($body, $card->url);
-        }
-        if ($embed->uncardedLink !== null) {
-            $body = self::sharing($body, $embed->uncardedLink);
-        }
-        $this->linkCards->add($entry, $embed->linkCards);
-        $entry->setContentHtml($this->sanitizer->sanitize($body . $embed->html));
-        $entry->setSummary(EntrySnippet::from($body));
+        $body = self::sharedBody($entry->getContentHtml() ?? '', $embed);
+        $this->linkCards->add($entry, 0, $embed->linkCards);
+        $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml . $embed->html));
+        $entry->setSummary(EntrySnippet::from($body->linkedHtml));
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {
             $this->imageWriter->write($entry, $embed->leadImage);
         }
         $assembled = EntryMediaAssembler::assemble(self::storedImage($entry), $embed->media, []);
         $entry->setMedia($assembled->media, $entry->getAttachments());
 
-        return $embed->uncardedLink === null ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
+        return self::outcome($body->urls, $embed->linkCards);
     }
 
-    /** The body as the link-card pass reads it: the link it must card shared as a link. */
-    private static function sharing(string $body, string $url): string
+    /** The body without the URLs its cards replace, every other link it shares linked, the uncarded one included. */
+    private static function sharedBody(string $html, RenderedEmbedModel $embed): SharedLinksModel
     {
-        $shared = SharedLinks::of($body);
-        if (\in_array($url, $shared->urls, true)) {
-            return $shared->linkedHtml;
+        foreach ($embed->linkCards as $card) {
+            $html = TrailingUrl::removedFrom($html, $card->url);
         }
-        $escaped = HtmlEscape::text($url);
+        $shared = SharedLinks::of($html);
+        $uncarded = $embed->uncardedLink;
+        if ($uncarded === null || \in_array($uncarded, $shared->urls, true)) {
+            return $shared;
+        }
+        $escaped = HtmlEscape::text($uncarded);
 
-        return $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped);
+        return SharedLinks::of($shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped));
+    }
+
+    /**
+     * @param list<string>          $sharedUrls
+     * @param list<LinkCardContent> $cards
+     */
+    private static function outcome(array $sharedUrls, array $cards): FillOutcome
+    {
+        $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $cards);
+
+        return array_diff($sharedUrls, $cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
     }
 
     private static function storedImage(Entry $entry): ?DeclaredImageModel

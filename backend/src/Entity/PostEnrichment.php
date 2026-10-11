@@ -11,8 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * A post whose embed or link cards are still to come. An AppView row is deleted once settled, or turns into a link-card
- * row when the post's link came without a preview; a link-card row stays, marked done, as the fact that its one attempt
- * was made.
+ * row while the post shares a link the AppView gave no card; a link-card row stays, marked done, as the fact that its
+ * one attempt was made.
  */
 #[ORM\Entity(repositoryClass: PostEnrichmentRepository::class)]
 #[ORM\Table(name: 'post_enrichment')]
