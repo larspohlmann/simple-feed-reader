@@ -6,6 +6,8 @@ globalThis.structuredClone ??= <T>(value: T): T => v8.deserialize(v8.serialize(v
 
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
+import { TestBed } from '@angular/core/testing';
+import { ReaderOutputVersion } from '../../../core/http/reader-output-version';
 import { ReaderCacheService } from './reader-cache.service';
 import { ReaderArticle } from '../../models';
 
@@ -43,11 +45,15 @@ function within<T>(ms: number, promise: Promise<T>): Promise<T> {
 
 describe('ReaderCacheService', () => {
   let cache: ReaderCacheService;
+  let readerVersion: ReaderOutputVersion;
 
   beforeEach(async () => {
     // Fresh DB per test.
     (globalThis as unknown as { indexedDB: IDBFactory }).indexedDB = new IDBFactory();
-    cache = new ReaderCacheService();
+    TestBed.resetTestingModule();
+    cache = TestBed.inject(ReaderCacheService);
+    readerVersion = TestBed.inject(ReaderOutputVersion);
+    readerVersion.current.set('v1');
   });
 
   it('answers a miss when a stale tab blocks the schema upgrade, instead of waiting for it', async () => {
@@ -71,10 +77,22 @@ describe('ReaderCacheService', () => {
     await expect(within(500, newerTabUpgrade)).resolves.toBe(1_000);
   });
 
-  it('returns null on a miss and the article on a hit', async () => {
+  it('returns null on a miss and the article on a hit under the current reader-output version', async () => {
     expect(await cache.get(1)).toBeNull();
     await cache.put(1, article('https://x/1'));
     expect((await cache.get(1))?.url).toBe('https://x/1');
+  });
+
+  it('misses an article cached under another reader-output version', async () => {
+    await cache.put(1, article('https://x/1'));
+    readerVersion.current.set('v2');
+    expect(await cache.get(1)).toBeNull();
+  });
+
+  it('misses while the current reader-output version is still unknown', async () => {
+    await cache.put(1, article('https://x/1'));
+    readerVersion.current.set(null);
+    expect(await cache.get(1)).toBeNull();
   });
 
   it('evicts the oldest entry past the LRU cap', async () => {

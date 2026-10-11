@@ -1,16 +1,20 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
+import { ReaderOutputVersion } from '../../../core/http/reader-output-version';
 import { ReaderArticle } from '../../models';
 
 interface CacheRecord {
   entryId: number;
   article: ReaderArticle;
   cachedAt: number;
+  /** Read at put, right after the response that brought the article named the version. */
+  readerVersion: string | null;
 }
 
 /**
  * Persistent, size-capped cache of extracted articles, keyed by entry id. Only
- * successful extractions are stored (failures should be retryable). Content is
- * immutable per entry, so there's no staleness logic — VERSION is the only cache-buster.
+ * successful extractions are stored (failures should be retryable). An article
+ * extracted under another reader-output version than the backend's current one
+ * misses; VERSION is only the schema of the store itself.
  */
 @Injectable({ providedIn: 'root' })
 export class ReaderCacheService {
@@ -19,6 +23,7 @@ export class ReaderCacheService {
   private static readonly STORE = 'articles';
   private static readonly VERSION = 30;
 
+  private readonly readerVersion = inject(ReaderOutputVersion);
   private db: Promise<IDBDatabase | null> | null = null;
   /** Strictly monotonic clock so puts within the same millisecond keep insertion order. */
   private lastCachedAt = 0;
@@ -29,17 +34,22 @@ export class ReaderCacheService {
     return new Promise((resolve) => {
       const tx = database.transaction(ReaderCacheService.STORE, 'readonly');
       const request = tx.objectStore(ReaderCacheService.STORE).get(entryId);
-      request.onsuccess = () =>
-        resolve((request.result as CacheRecord | undefined)?.article ?? null);
+      request.onsuccess = () => resolve(this.current(request.result as CacheRecord | undefined));
       request.onerror = () => resolve(null);
     });
   }
 
   async put(entryId: number, article: ReaderArticle): Promise<void> {
+    const readerVersion = this.readerVersion.current();
     const database = await this.open();
     if (!database) return;
     this.lastCachedAt = Math.max(Date.now(), this.lastCachedAt + 1);
-    const record: CacheRecord = { entryId, article, cachedAt: this.lastCachedAt };
+    const record: CacheRecord = {
+      entryId,
+      article,
+      cachedAt: this.lastCachedAt,
+      readerVersion,
+    };
     await new Promise<void>((resolve) => {
       const tx = database.transaction(ReaderCacheService.STORE, 'readwrite');
       tx.objectStore(ReaderCacheService.STORE).put(record);
@@ -58,6 +68,11 @@ export class ReaderCacheService {
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });
+  }
+
+  private current(record: CacheRecord | undefined): ReaderArticle | null {
+    const version = this.readerVersion.current();
+    return record && version !== null && record.readerVersion === version ? record.article : null;
   }
 
   private async evict(database: IDBDatabase): Promise<void> {
