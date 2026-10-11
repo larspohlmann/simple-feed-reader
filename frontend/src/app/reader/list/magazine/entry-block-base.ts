@@ -24,7 +24,5 @@ export abstract class EntryBlockBase {
 
   readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
-  /** The clamped dek beneath the title; empty for a headline-only feed or a post,
-   *  so the block falls back to title-only via its own `@if (snippet())`. */
   readonly snippet = computed(() => entryDek(this.entry()));
 }

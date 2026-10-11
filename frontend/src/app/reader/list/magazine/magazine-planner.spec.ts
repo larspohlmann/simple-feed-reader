@@ -881,7 +881,7 @@ describe('planMagazine', () => {
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
       const shareKinds = blocks
-        .filter((block) => block.kind !== 'group' && block.entry.titleDerived)
+        .filter((block) => block.kind !== 'group' && block.entry.share === 'media')
         .map((block) => block.kind);
       expect(shareKinds).toHaveLength(20);
       expect(shareKinds.every((kind) => kind === 'media')).toBe(true);
