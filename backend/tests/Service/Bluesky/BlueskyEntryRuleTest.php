@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Ingest\PlatformEntryRule;
+namespace App\Tests\Service\Bluesky;
 
 use App\Entity\Headline;
-use App\Service\Ingest\PlatformEntryRule\BlueskyEntryRule;
+use App\Service\Bluesky\BlueskyEntryRule;
 use App\Service\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

@@ -7,9 +7,10 @@ namespace App\Service\Share;
 use App\Entity\Entry;
 use App\Entity\Share;
 use App\Enum\ShareKind;
-use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Parser\Support\VisualMedium;
+use App\Service\Share\PendingEmbed\PendingEmbedInterface;
 use App\Service\Share\Support\OwnProse;
+use App\Service\Share\Support\SharedLinks;
 use App\Service\Share\Support\TitledShareTarget;
 use App\Service\Url\Support\YouTubeUrl;
 
@@ -22,11 +23,16 @@ final readonly class EntryShareClassifier
 {
     public const int OWN_PROSE_MAX = 500;
 
+    public function __construct(
+        private PendingEmbedInterface $pendingEmbed,
+    ) {
+    }
+
     public function classify(Entry $entry): void
     {
         $body = $entry->getContentHtml() ?? $entry->getSummary() ?? '';
         $ownProse = OwnProse::of($body);
-        $share = $this->shareOf($entry, $body, $ownProse);
+        $share = $this->orProvisionalLink($entry, $this->shareOf($entry, $body, $ownProse));
         $entry->setShare($share);
         if ($share->isNone() || $entry->isTitleDerived()) {
             return;
@@ -49,6 +55,11 @@ final readonly class EntryShareClassifier
         }
 
         return $entry->isTitleDerived() ? $this->postShare($entry, $body) : $this->titledShare($entry);
+    }
+
+    private function orProvisionalLink(Entry $entry, Share $share): Share
+    {
+        return $share->isNone() && $this->pendingEmbed->awaitsEmbed($entry) ? Share::link(null) : $share;
     }
 
     private function postShare(Entry $entry, string $body): Share

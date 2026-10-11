@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\LinkCard\Support;
+namespace App\Service\Share\Support;
 
 use App\Entity\Entry;
 

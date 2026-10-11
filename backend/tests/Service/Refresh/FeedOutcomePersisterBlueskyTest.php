@@ -14,7 +14,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Ingest\PlatformEntryRule\BlueskyEntryRule;
+use App\Service\Bluesky\BlueskyEntryRule;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;

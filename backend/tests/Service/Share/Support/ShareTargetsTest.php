@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard\Support;
+namespace App\Tests\Service\Share\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Share;
-use App\Service\LinkCard\Support\ShareTargets;
+use App\Service\Share\Support\ShareTargets;
 use PHPUnit\Framework\TestCase;
 
 final class ShareTargetsTest extends TestCase
