@@ -10,6 +10,8 @@ use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\ContentTypeCharset;
 use App\Service\Html\Support\HtmlTranscoder;
+use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Parser\Support\FeedMediaClassifier;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
@@ -101,9 +103,7 @@ final readonly class HtmlPageFetcher
 
     private static function isMediaFile(?string $contentType): bool
     {
-        $type = strtolower((string) $contentType);
-
-        return str_starts_with($type, 'image/') || str_starts_with($type, 'video/') || str_starts_with($type, 'audio/');
+        return FeedMediaClassifier::kindOfMimeType((string) $contentType) !== FeedMediaKind::Other;
     }
 
     /** @param array<string, mixed> $options */

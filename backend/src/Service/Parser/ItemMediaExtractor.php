@@ -49,7 +49,7 @@ final readonly class ItemMediaExtractor
             return self::fromGroup($child, $fallbackDuration);
         }
 
-        return self::isItemMediaNode($item, $child)
+        return $item->isEnclosure($child) || MediaRssSlot::isContentOrThumbnail($child)
             ? self::fromNode(new FeedMediaNode($child), $fallbackDuration)
             : null;
     }
@@ -160,12 +160,5 @@ final readonly class ItemMediaExtractor
         $duration = $item->in(FeedNamespace::Itunes)->child('duration');
 
         return $duration === null ? null : MediaDuration::seconds($duration->textContent);
-    }
-
-    private static function isItemMediaNode(CoreElement $item, \DOMElement $node): bool
-    {
-        return $item->isCore($node, 'enclosure')
-            || ($item->isCore($node, 'link') && $node->getAttribute('rel') === 'enclosure')
-            || MediaRssSlot::isContentOrThumbnail($node);
     }
 }

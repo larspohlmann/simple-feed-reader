@@ -18,33 +18,23 @@ final readonly class FeedItemImageSelector
     {
     }
 
-    public function fromRss2(CoreElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    /** @param list<?string> $bodyHtmlCandidates */
+    public function fromRss2OrAtom(CoreElement $item, array $bodyHtmlCandidates): ?DeclaredImageModel
     {
-        $declared = $this->extractor->fromMedia($item->element)
-            ?? $this->extractor->fromRssEnclosure($item)
-            ?? $this->extractor->fromCustomImageElement($item->element);
+        $declared = $this->extractor->fromMedia($item)
+            ?? $this->extractor->fromEnclosure($item)
+            ?? $this->extractor->fromCustomImageElement($item);
 
-        return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml))
+        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates))
             ?? PodcastArtwork::of($item->element);
     }
 
     public function fromRss1(CoreElement $item, ?string $bodyHtml): ?DeclaredImageModel
     {
-        $declared = $this->extractor->fromMedia($item->element)
-            ?? $this->extractor->fromCustomImageElement($item->element);
+        $declared = $this->extractor->fromMedia($item)
+            ?? $this->extractor->fromCustomImageElement($item);
 
         return self::withBodyImage($declared, $this->extractor->fromHtml($bodyHtml));
-    }
-
-    /** @param list<?string> $bodyHtmlCandidates */
-    public function fromAtom(CoreElement $entry, array $bodyHtmlCandidates): ?DeclaredImageModel
-    {
-        $declared = $this->extractor->fromMedia($entry->element)
-            ?? $this->extractor->fromAtomEnclosure($entry)
-            ?? $this->extractor->fromCustomImageElement($entry->element);
-
-        return self::withBodyImage($declared, $this->firstBodyImage($bodyHtmlCandidates))
-            ?? PodcastArtwork::of($entry->element);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */

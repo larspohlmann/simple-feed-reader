@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Pass;
 
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedAttachmentModel;
@@ -49,6 +50,11 @@ final readonly class FeedMediaNode
             $this->width(),
             $this->intAttribute('height'),
         );
+    }
+
+    public function toDeclaredImage(): DeclaredImageModel
+    {
+        return DeclaredImages::fromElement($this->element, $this->url());
     }
 
     public function toVideo(?string $previewImageUrl): ParsedMediumModel

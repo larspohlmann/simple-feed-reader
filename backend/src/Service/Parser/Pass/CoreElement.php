@@ -42,6 +42,13 @@ final readonly class CoreElement
         return XmlHelper::isElement($node, $localName, $this->namespaceUri);
     }
 
+    /** @phpstan-assert-if-true =\DOMElement $node */
+    public function isEnclosure(\DOMNode $node): bool
+    {
+        return $this->isCore($node, 'enclosure')
+            || ($this->isCore($node, 'link') && $node->getAttribute('rel') === 'enclosure');
+    }
+
     public function text(string $localName): ?string
     {
         return self::firstText(XmlHelper::childElements($this->element, $localName, $this->namespaceUri));
