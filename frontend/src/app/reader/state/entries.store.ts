@@ -34,6 +34,8 @@ export class EntriesStore {
   private readonly api = inject(ReaderApi);
 
   private readonly rawEntries = accountSignal<EntryDto[]>([]);
+  /** The open entry when the loaded list does not hold it, e.g. a deep link; `entries()` never shows it. */
+  private readonly unlisted = accountSignal<EntryDto | null>(null);
   private readonly inFlightPatches = new Set<InFlightPatch>();
   readonly entries = this.rawEntries.asReadonly();
   readonly nextCursor = accountSignal<string | null>(null);
@@ -145,15 +147,31 @@ export class EntriesStore {
     });
   }
 
+  /** The entry with `id`: its listed row, else the unlisted one held for it. */
+  entry(id: number): EntryDto | null {
+    const listed = this.rawEntries().find((entry) => entry.id === id);
+    if (listed) return listed;
+    const held = this.unlisted();
+    return held?.id === id ? held : null;
+  }
+
+  holdUnlisted(entry: EntryDto): void {
+    this.unlisted.set(this.withInFlightPatches([entry])[0]);
+  }
+
+  releaseUnlisted(): void {
+    this.unlisted.set(null);
+  }
+
   /** Optimistic patch of one entry's flags; reverts only that entry if the PATCH
    *  fails (never clobbering pages appended in the meantime) and surfaces the error. */
   setState(entryId: number, patch: EntryStatePatch, onError?: () => void): void {
-    const listed = this.rawEntries().find((entry) => entry.id === entryId);
-    if (!listed) return;
+    const target = this.entry(entryId);
+    if (!target) return;
     this.error.set(null);
     this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
-    const before = stateBefore(listed, inFlight.patch);
+    const before = stateBefore(target, inFlight.patch);
     this.inFlightPatches.add(inFlight);
     this.patchEntries([entryId], (entry) => ({ ...entry, ...inFlight.patch }));
     this.api
@@ -186,6 +204,7 @@ export class EntriesStore {
   /** The list keeps its identity when `patch` hands every entry back, so nothing derived recomputes. */
   private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
     const targets = new Set(ids);
+    this.unlisted.update((held) => (held && targets.has(held.id) ? patch(held) : held));
     this.rawEntries.update((current) => {
       let changed = false;
       const patched = current.map((entry) => {

@@ -1,14 +1,12 @@
-import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, untracked } from '@angular/core';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ReaderApi } from '../reader-api';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntriesStore } from '../state/entries.store';
 import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
-import { EntryDto, EntryStatePatch } from '../models';
-import { CompletedEntryDto, withCompleted } from '../state/completed-entry';
 
 @Injectable()
 export class ReaderRouteState {
@@ -34,22 +32,15 @@ export class ReaderRouteState {
   });
   readonly entryId = computed(() => this.parsed().entryId);
 
-  private readonly fetchedEntry = signal<EntryDto | null>(null);
   readonly openEntry = computed(() => {
     const id = this.entryId();
-    if (id == null) return null;
-    const listed = this.entries.entries().find((entry) => entry.id === id);
-    if (listed) return listed;
-    const fetched = this.fetchedEntry();
-    return fetched && fetched.id === id ? fetched : null;
+    return id == null ? null : this.entries.entry(id);
   });
   /** Identity only: effects keyed on it fire once per opened entry, never on its flag changes. */
   readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
 
   constructor() {
-    this.bodyService.completedEntries
-      .pipe(takeUntilDestroyed())
-      .subscribe((completed) => this.takeCompleted([completed]));
+    inject(DestroyRef).onDestroy(() => this.entries.releaseUnlisted());
     effect(() => {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));
@@ -73,49 +64,21 @@ export class ReaderRouteState {
     if (next) this.bodyService.prefetch(next.id);
   }
 
-  patchFetchedEntry(id: number, patch: EntryStatePatch, onError?: () => void): void {
-    const before = this.fetchedEntry();
-    this.fetchedEntry.update((current) =>
-      current && current.id === id ? { ...current, ...patch } : current,
-    );
-    this.api.updateState(id, patch).subscribe({
-      error: () => {
-        // Revert only while the same cold entry is open; Back/Forward may have moved on.
-        this.fetchedEntry.update((current) => (current && current.id === id ? before : current));
-        onError?.();
-      },
-    });
-  }
-
-  /** Takes what completing the open entry filled in (#1502), when the list does not hold it. */
-  mergeCompleted(rows: CompletedEntryDto[]): void {
-    this.fetchedEntry.update((fetched) => {
-      const row = fetched && rows.find((finished) => finished.id === fetched.id);
-      return row ? withCompleted(fetched, row) : fetched;
-    });
-  }
-
-  private takeCompleted(rows: CompletedEntryDto[]): void {
-    this.entries.mergeCompleted(rows);
-    this.mergeCompleted(rows);
-  }
-
   private fetchUnlistedEntry(id: number | null): void {
     if (id == null) {
-      this.fetchedEntry.set(null);
+      this.entries.releaseUnlisted();
       return;
     }
-    if (this.entries.entries().some((entry) => entry.id === id)) return;
-    if (this.fetchedEntry()?.id === id) return;
+    if (this.entries.entry(id)) return;
     this.api.entry(id).subscribe({
       // Id-guarded: a slow answer for an abandoned deep link must not replace the entry now open.
       next: (response) => {
         if (this.entryId() !== id) return;
-        this.fetchedEntry.set(response.entry);
+        this.entries.holdUnlisted(response.entry);
         this.bodyService.seed(response.entry.id, response.entry.contentHtml);
       },
       error: () => {
-        if (this.entryId() === id) this.fetchedEntry.set(null);
+        if (this.entryId() === id) this.entries.releaseUnlisted();
       },
     });
   }

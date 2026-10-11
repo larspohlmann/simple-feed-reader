@@ -3,20 +3,24 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../../../core/api';
 import { TokenStore } from '../../../core/auth/token.store';
+import { EntriesStore } from '../../state/entries.store';
 import { EntryBodyService } from './entry-body.service';
 
 describe('EntryBodyService', () => {
   let store: EntryBodyService;
   let ctrl: HttpTestingController;
   let tokens: TokenStore;
+  let mergeCompleted: jest.Mock;
 
   beforeEach(() => {
     localStorage.clear();
+    mergeCompleted = jest.fn();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
+        { provide: EntriesStore, useValue: { mergeCompleted } },
       ],
     });
     tokens = TestBed.inject(TokenStore);
@@ -171,9 +175,7 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
     });
 
-    it('publishes what completing a fetched entry filled in, and cancels a body forgotten meanwhile', async () => {
-      const published: number[] = [];
-      store.completedEntries.subscribe((completed) => published.push(completed.id));
+    it('merges what completing a fetched entry filled in, and cancels a body forgotten meanwhile', async () => {
       store.body(1);
       store.body(2);
       await settle();
@@ -184,7 +186,7 @@ describe('EntryBodyService', () => {
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { id: 1, contentHtml: '' }, completed: { id: 1 } });
 
-      expect(published).toEqual([1]);
+      expect(mergeCompleted.mock.calls).toEqual([[[{ id: 1 }]]]);
     });
 
     it('fetches nothing for a body nobody has loaded', async () => {

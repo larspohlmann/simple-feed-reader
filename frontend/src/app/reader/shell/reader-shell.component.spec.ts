@@ -17,7 +17,7 @@ import {
   provideRouter,
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
-import { BehaviorSubject, NEVER, Observable, Subject, of, throwError } from 'rxjs';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../../core/api';
 import { AuthService } from '../../core/auth/auth.service';
@@ -29,7 +29,6 @@ import { ListHeaderComponent } from '../list/list-header/list-header.component';
 import { EntryListComponent } from '../list/entry-list/entry-list.component';
 import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
-import { CompletedEntryDto } from '../state/completed-entry';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
 import { ReaderRouteState } from './reader-route-state.service';
@@ -116,7 +115,6 @@ describe('ReaderShellComponent', () => {
     seed: jest.Mock;
     body: jest.Mock;
     retry: jest.Mock;
-    completedEntries: Observable<CompletedEntryDto>;
   };
 
   beforeEach(() => {
@@ -125,7 +123,6 @@ describe('ReaderShellComponent', () => {
       seed: jest.fn(),
       body: jest.fn(() => signal({ status: 'ok', html: null })),
       retry: jest.fn(),
-      completedEntries: NEVER,
     };
     sessionStorage.clear(); // OnboardingSkip persists here; don't leak across tests
     localStorage.clear(); // LanguageService caches the lang; a de test must not leak into the next
@@ -1165,6 +1162,41 @@ describe('ReaderShellComponent', () => {
     expect(element.querySelector('app-reader-view .link-card strong')!.textContent).toBe(
       'A shared story',
     );
+    jest.useRealTimers();
+  });
+
+  it('keeps the card of a deep-linked completed post when its favourite PATCH fails (#1553)', () => {
+    jest.useFakeTimers();
+    const fixture = boot();
+    qp.next(convertToParamMap({ entry: '514-deep-linked-post' }));
+    fixture.detectChanges();
+    const post = { ...entry, id: 514, titleDerived: true, isHidden: true, isViewed: true };
+    ctrl
+      .expectOne('https://api.test/api/entries/514')
+      .flush({ entry: { ...post, pending: true, contentHtml: '<p>A post</p>' } });
+    fixture.detectChanges();
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    ctrl
+      .expectOne('https://api.test/api/entries/complete')
+      .flush({ entries: [{ id: 514, pending: false, linkCards: [aLinkCard()] }] });
+
+    const routeState = fixture.debugElement.injector.get(ReaderRouteState);
+    fixture.componentInstance.entryActions.favorite(routeState.openEntry()!);
+    expect(routeState.openEntry()!.isFavorite).toBe(true);
+    ctrl
+      .expectOne('https://api.test/api/entries/514/state')
+      .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+    fixture.detectChanges();
+
+    expect(routeState.openEntry()).toMatchObject({ isFavorite: false, pending: false });
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
+    expect(element.querySelector('app-reader-view .link-card')).not.toBeNull();
+    expect(
+      TestBed.inject(EntriesStore)
+        .entries()
+        .map((listed) => listed.id),
+    ).toEqual([1]);
     jest.useRealTimers();
   });
 

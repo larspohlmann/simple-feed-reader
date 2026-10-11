@@ -29,7 +29,7 @@ describe('PendingEntriesPoll', () => {
   let refreshBody: jest.Mock;
   let forgetBody: jest.Mock;
   const openEntry = signal<EntryDto | null>(null);
-  let mergeOpenEntry: jest.Mock;
+  let mergeCompleted: jest.Mock;
 
   function setVisibility(state: DocumentVisibilityState): void {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -66,24 +66,20 @@ describe('PendingEntriesPoll', () => {
     refreshBody = jest.fn();
     forgetBody = jest.fn();
     openEntry.set(null);
-    mergeOpenEntry = jest.fn((rows: EntryDto[]) =>
-      openEntry.update((open) => rows.find((finished) => finished.id === open?.id) ?? open),
-    );
     localStorage.clear();
-    const mergeCompleted = (rows: EntryDto[]) =>
-      entries.update((current) =>
-        current.map((listed) => rows.find((finished) => finished.id === listed.id) ?? listed),
-      );
+    const finishedOr = (rows: EntryDto[], entry: EntryDto) =>
+      rows.find((finished) => finished.id === entry.id) ?? entry;
+    mergeCompleted = jest.fn((rows: EntryDto[]) => {
+      entries.update((current) => current.map((listed) => finishedOr(rows, listed)));
+      openEntry.update((open) => open && finishedOr(rows, open));
+    });
     TestBed.configureTestingModule({
       providers: [
         PendingEntriesPoll,
         { provide: EntriesStore, useValue: { entries, loading, loadedAt, mergeCompleted } },
         { provide: ReaderApi, useValue: { complete } },
         { provide: EntryBodyService, useValue: { refresh: refreshBody, forget: forgetBody } },
-        {
-          provide: ReaderRouteState,
-          useValue: { openEntry, mergeCompleted: mergeOpenEntry },
-        },
+        { provide: ReaderRouteState, useValue: { openEntry } },
       ],
     });
   });
@@ -129,7 +125,7 @@ describe('PendingEntriesPoll', () => {
     rounds(3);
 
     expect(complete.mock.calls).toEqual([[[9]]]);
-    expect(mergeOpenEntry).toHaveBeenCalledWith([row(9, { pending: false })]);
+    expect(mergeCompleted.mock.calls).toEqual([[[row(9, { pending: false })]]]);
     expect(openEntry()!.pending).toBe(false);
     expect(refreshBody.mock.calls).toEqual([[9]]);
   });
