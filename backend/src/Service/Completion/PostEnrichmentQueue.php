@@ -40,8 +40,11 @@ final readonly class PostEnrichmentQueue
 
             return;
         }
-        $shared = self::sharedLinksOf($entry);
-        if ($shared !== null) {
+        if (!$entry->isTitleDerived()) {
+            return;
+        }
+        $shared = SharedLinks::of((string) $entry->getContentHtml());
+        if ($shared->urls !== []) {
             $this->storeLinked($entry, $shared);
             $this->entityManager->persist(new PostEnrichment($entry, PostEnrichmentKind::LinkCards, $queuedAt));
         }
@@ -52,16 +55,5 @@ final readonly class PostEnrichmentQueue
         if ($shared->linkedHtml !== $entry->getContentHtml()) {
             $entry->setContentHtml($this->sanitizer->sanitize($shared->linkedHtml));
         }
-    }
-
-    /** Null unless the entry is a post, not a Bluesky one, that shares at least one link. */
-    private static function sharedLinksOf(Entry $entry): ?SharedLinksModel
-    {
-        if (!$entry->isTitleDerived() || AtPostUri::matches($entry->getGuid())) {
-            return null;
-        }
-        $shared = SharedLinks::of((string) $entry->getContentHtml());
-
-        return $shared->urls === [] ? null : $shared;
     }
 }

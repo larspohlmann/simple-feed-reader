@@ -1391,7 +1391,7 @@ final class EntryControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-post@example.com');
-        $entryId = $this->seedPostSharing($user, 'https://example.com/story');
+        $entryId = $this->seedPostSharingALink($user);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
@@ -1415,7 +1415,7 @@ final class EntryControllerTest extends WebTestCase
         ));
     }
 
-    private function seedPostSharing(User $user, string $sharedUrl): int
+    private function seedPostSharingALink(User $user): int
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
@@ -1424,7 +1424,7 @@ final class EntryControllerTest extends WebTestCase
         $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $post = new Entry($feed, 'https://mastodon.example/@someone/1', null, 'Post', $july1, $july1);
-        $post->setContentHtml('<p>Worth a read: ' . $sharedUrl . '</p>');
+        $post->setContentHtml('<p>Worth a read: https://example.com/story</p>');
         $post->markTitleDerived();
         $entityManager->persist($post);
         $entityManager->flush();
