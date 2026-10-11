@@ -10,6 +10,7 @@ import { transientGatewayRetryInterceptor } from '../../core/http/retry-transien
 import { TokenStore } from '../../core/auth/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from '../models';
+import { CompletedEntryDto } from './completed-entry';
 import { markTerms } from '../../shared/marked-text/search-marks';
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
@@ -446,6 +447,20 @@ describe('EntriesStore', () => {
       imageUrl: null,
       siteName: 'news.test',
     };
+    const completed = (id: number, over: Partial<CompletedEntryDto> = {}): CompletedEntryDto => ({
+      id,
+      pending: false,
+      summary: null,
+      excerpt: '',
+      imageUrl: null,
+      imageWidth: null,
+      imageHeight: null,
+      imageRenditions: [],
+      media: [],
+      linkCards: [],
+      share: null,
+      ...over,
+    });
 
     beforeEach(() => {
       store.load({ view: 'all' });
@@ -460,16 +475,17 @@ describe('EntriesStore', () => {
         });
     });
 
-    it('takes what completion filled in, keeping what only the list knows', () => {
+    it('takes everything completion filled in, keeping what only the list knows', () => {
       store.mergeCompleted([
-        entry(1, { linkCards: [card], pending: false, excerpt: 'Filled', duplicates: [] }),
-        entry(7),
+        completed(1, { linkCards: [card], pending: false, excerpt: 'Filled', share: 'media' }),
+        completed(7),
       ]);
 
       const [first, second] = store.entries();
       expect(first.pending).toBe(false);
       expect(first.linkCards).toEqual([card]);
       expect(first.excerpt).toBe('Filled');
+      expect(first.share).toBe('media');
       expect(first.duplicates!.map((duplicate) => duplicate.id)).toEqual([9]);
       expect(first.recommendationReason).toBe('Because');
       expect(second.pending).toBe(true);
@@ -479,7 +495,7 @@ describe('EntriesStore', () => {
     it('keeps the list and its rows as they are when a round fills nothing in', () => {
       const before = store.entries();
 
-      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: true })]);
+      store.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: true })]);
 
       expect(store.entries()).toBe(before);
     });
@@ -487,7 +503,7 @@ describe('EntriesStore', () => {
     it('replaces only the rows a round filled in', () => {
       const [first] = store.entries();
 
-      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: false })]);
+      store.mergeCompleted([completed(1, { pending: true }), completed(2, { pending: false })]);
 
       expect(store.entries()[0]).toBe(first);
       expect(store.entries()[1].pending).toBe(false);
@@ -496,7 +512,7 @@ describe('EntriesStore', () => {
     it('keeps what a round filled in when a state change on the wire fails', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
-      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+      store.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
 
       patch.flush('nope', { status: 500, statusText: 'Server Error' });
 
@@ -508,43 +524,19 @@ describe('EntriesStore', () => {
     });
 
     it('keeps a completed card when a stale answer still says pending', () => {
-      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+      store.mergeCompleted([completed(2, { linkCards: [card], pending: false })]);
 
-      store.mergeCompleted([entry(2, { pending: true })]);
+      store.mergeCompleted([completed(2, { pending: true })]);
 
       expect(store.entries()[1]).toMatchObject({ pending: false, linkCards: [card] });
     });
 
     it('keeps a post completed without cards when a stale answer still says pending', () => {
-      store.mergeCompleted([entry(2, { pending: false, excerpt: 'Filled' })]);
+      store.mergeCompleted([completed(2, { pending: false, excerpt: 'Filled' })]);
 
-      store.mergeCompleted([entry(2, { pending: true, excerpt: 'Stale' })]);
+      store.mergeCompleted([completed(2, { pending: true, excerpt: 'Stale' })]);
 
       expect(store.entries()[1]).toMatchObject({ pending: false, excerpt: 'Filled' });
-    });
-
-    it('keeps a state change still on the wire', () => {
-      store.setState(2, { isFavorite: true });
-      const patch = ctrl.expectOne('https://api.test/api/entries/2/state');
-
-      store.mergeCompleted([entry(2)]);
-
-      expect(store.entries()[1].isFavorite).toBe(true);
-      patch.flush({ state: {} });
-    });
-
-    it('keeps a state change that landed while the completion call was out', () => {
-      store.setState(2, { isFavorite: true });
-      ctrl.expectOne('https://api.test/api/entries/2/state').flush({ state: {} });
-      store.markHiddenLocally([2]);
-
-      store.mergeCompleted([entry(2, { isFavorite: false, isHidden: false, pending: false })]);
-
-      expect(store.entries()[1]).toMatchObject({
-        isFavorite: true,
-        isHidden: true,
-        pending: false,
-      });
     });
   });
 

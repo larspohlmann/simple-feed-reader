@@ -9,6 +9,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCardContent;
 use App\Entity\Share;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
@@ -156,6 +157,35 @@ final class EntryJsonTest extends TestCase
 
         self::assertSame('link', EntryJson::listRow($this->row($shared))['share']);
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['share']);
+    }
+
+    public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
+    {
+        $shared = $this->entryTitled('Shared');
+        $shared->setShare(Share::media('https://i.example/chart'));
+
+        $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
+
+        $json = EntryJson::completed($this->row($shared)->withLinkCards([$card]));
+
+        self::assertSame(
+            [
+                'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
+                'imageRenditions', 'media', 'linkCards', 'share',
+            ],
+            array_keys($json),
+        );
+        self::assertSame('media', $json['share']);
+        self::assertSame(
+            [[
+                'url' => 'https://i.example/chart',
+                'title' => 'Chart',
+                'description' => null,
+                'imageUrl' => null,
+                'siteName' => 'i.example',
+            ]],
+            $json['linkCards'],
+        );
     }
 
     public function testAShareWithoutOwnTextHasNoExcerptFromItsBody(): void

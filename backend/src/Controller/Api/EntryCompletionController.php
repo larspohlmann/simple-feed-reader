@@ -34,6 +34,6 @@ final readonly class EntryCompletionController
 
         $rows = $this->completion->complete($user->requireId(), $request->ids);
 
-        return new JsonResponse(['entries' => array_map(EntryJson::listRow(...), $rows)]);
+        return new JsonResponse(['entries' => array_map(EntryJson::completed(...), $rows)]);
     }
 }

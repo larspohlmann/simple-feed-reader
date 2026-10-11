@@ -1,11 +1,7 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
 import type { Page } from '@playwright/test';
-import type {
-  EntryDetailDto,
-  EntryDto,
-  SavedSearchWire,
-  SubscriptionDto,
-} from '../../src/app/reader/models';
+import type { EntryDto, SavedSearchWire, SubscriptionDto } from '../../src/app/reader/models';
+import type { EntryDetailResponse } from '../../src/app/reader/state/completed-entry';
 import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
@@ -116,9 +112,16 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
   };
 }
 
-/** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100). */
-export function entryDetailJson(entry: EntryDto, contentHtml: string): { entry: EntryDetailDto } {
-  return { entry: { ...entry, contentHtml } };
+/** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100), and what completing it
+ *  filled in (#1551). */
+export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDetailResponse {
+  const { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight } = entry;
+  const { imageRenditions, media, linkCards, share } = entry;
+  const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
+  return {
+    entry: { ...entry, contentHtml },
+    completed: { ...completed, imageRenditions, media, linkCards, share },
+  };
 }
 
 /** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */

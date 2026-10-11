@@ -1,7 +1,7 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
 import { Subject } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
-import { EntryDto } from '../../models';
+import { CompletedEntryDto } from '../../state/completed-entry';
 import { ReaderApi } from '../../reader-api';
 
 /** How many article bodies stay cached at once — one browsing session's worth
@@ -24,8 +24,8 @@ export class EntryBodyService {
    *  account can't write itself into the next one's cache. */
   private generation = 0;
   private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
-  private readonly arrivedDetails = new Subject<EntryDto>();
-  /** Each entry a body fetch brings back: it may hold what completing the entry filled in (#1502). */
+  private readonly arrivedDetails = new Subject<CompletedEntryDto>();
+  /** What completing each entry a body fetch brings back has filled in (#1502). */
   readonly details = this.arrivedDetails.asObservable();
 
   constructor() {
@@ -109,7 +109,7 @@ export class EntryBodyService {
       next: (response) => {
         if (superseded()) return;
         state.set({ status: 'ok', html: response.entry.contentHtml });
-        if (this.cache.get(id) === state) this.arrivedDetails.next(response.entry);
+        if (this.cache.get(id) === state) this.arrivedDetails.next(response.completed);
       },
       error: () => {
         if (superseded() || state().status === 'ok') return;

@@ -1,31 +1,41 @@
-import { EntryDto } from '../models';
+import { EntryDetailDto, EntryDto } from '../models';
 
-const COMPLETED_KEYS = [
-  'title',
-  'summary',
-  'excerpt',
-  'imageUrl',
-  'imageWidth',
-  'imageHeight',
-  'imageAspectRatio',
-  'imageRenditions',
-  'media',
-  'linkCards',
-  'pending',
-] as const satisfies readonly (keyof EntryDto)[];
+/** What `POST /api/entries/complete` answers per entry: the fields a completion can change (#1551). */
+export type CompletedEntryDto = Pick<
+  EntryDto,
+  | 'id'
+  | 'pending'
+  | 'summary'
+  | 'excerpt'
+  | 'imageUrl'
+  | 'imageWidth'
+  | 'imageHeight'
+  | 'imageRenditions'
+  | 'media'
+  | 'linkCards'
+  | 'share'
+>;
+
+/** `GET /api/entries/{id}`: the entry, and on its own what completing it has filled in (#1551). */
+export interface EntryDetailResponse {
+  entry: EntryDetailDto;
+  completed: CompletedEntryDto;
+}
 
 /** `entry` with what completing it filled in (#1502), or `entry` itself when the round filled in
- *  nothing. Its own state and list context stay: the user may have changed them meanwhile. */
-export function withCompleted(entry: EntryDto, row: EntryDto): EntryDto {
-  if (regresses(entry, row)) return entry;
-  const filled = COMPLETED_KEYS.filter((key) => !sameValue(entry[key], row[key]));
+ *  nothing. The server sends only the fields a completion can change (#1551). */
+export function withCompleted(entry: EntryDto, completed: CompletedEntryDto): EntryDto {
+  if (regresses(entry, completed)) return entry;
+  const filled = Object.entries(completed).filter(
+    ([key, value]) => !sameValue(entry[key as keyof CompletedEntryDto], value),
+  );
   if (filled.length === 0) return entry;
-  return { ...entry, ...Object.fromEntries(filled.map((key) => [key, row[key]])) };
+  return { ...entry, ...Object.fromEntries(filled) };
 }
 
 /** Nothing queues an entry once it exists (#1513), so a pending answer for a settled one is stale. */
-function regresses(entry: EntryDto, row: EntryDto): boolean {
-  return !entry.pending && row.pending;
+function regresses(entry: EntryDto, completed: CompletedEntryDto): boolean {
+  return !entry.pending && completed.pending;
 }
 
 function sameValue(left: unknown, right: unknown): boolean {

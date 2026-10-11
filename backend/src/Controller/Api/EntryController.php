@@ -93,7 +93,7 @@ final readonly class EntryController
         $row = $this->entryList->getRowForUser($user->requireId(), $id);
         $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
-        return new JsonResponse(['entry' => EntryJson::detail($row)]);
+        return new JsonResponse(['entry' => EntryJson::detail($row), 'completed' => EntryJson::completed($row)]);
     }
 
     #[Route('/mark-read', name: 'api_entries_mark_read', methods: ['POST'])]

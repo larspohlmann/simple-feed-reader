@@ -31,6 +31,7 @@ import { ListScrollMemory } from '../scroll/list-scroll-memory';
 import { EntryDto, SavedSearchDto, SavedSearchWire } from '../models';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from '../state/sidebar-freshness';
 import { PENDING_POLL_INTERVAL_MS } from './pending-entries-poll.service';
+import { ReaderRouteState } from './reader-route-state.service';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { EntriesStore } from '../state/entries.store';
 import { ReaderApi } from '../reader-api';
@@ -1210,15 +1211,37 @@ describe('ReaderShellComponent', () => {
     qp.next(convertToParamMap({ entry: '1' }));
     fixture.detectChanges();
     jest.advanceTimersByTime(0);
-    ctrl
-      .expectOne('https://api.test/api/entries/1')
-      .flush({ entry: { ...entry, ...post, pending: false, contentHtml: '<p>A post</p>' } });
-    completion.flush({ entries: [{ ...entry, ...post, pending: true }] });
+    ctrl.expectOne('https://api.test/api/entries/1').flush({
+      entry: { ...entry, ...post, pending: false, contentHtml: '<p>A post</p>' },
+      completed: { id: 1, pending: false },
+    });
+    completion.flush({ entries: [{ id: 1, pending: true }] });
     fixture.detectChanges();
 
     expect(element.querySelector('app-reader-view app-link-card-placeholder')).toBeNull();
     jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
     ctrl.expectNone('https://api.test/api/entries/complete');
+    jest.useRealTimers();
+  });
+
+  it('takes a share a completion settles into the listed row and the open entry (#1551)', () => {
+    jest.useFakeTimers();
+    const shared = { titleDerived: true, isHidden: true, isViewed: true, share: 'link' as const };
+    const fixture = boot({ ...shared, pending: true });
+    qp.next(convertToParamMap({ entry: '514-shared-picture' }));
+    fixture.detectChanges();
+    ctrl.expectOne('https://api.test/api/entries/514').flush({
+      entry: { ...entry, ...shared, id: 514, pending: true, contentHtml: '<p>A post</p>' },
+    });
+    fixture.detectChanges();
+
+    jest.advanceTimersByTime(PENDING_POLL_INTERVAL_MS);
+    ctrl.expectOne('https://api.test/api/entries/complete').flush({
+      entries: [1, 514].map((id) => ({ id, pending: false, share: 'media' })),
+    });
+
+    expect(TestBed.inject(EntriesStore).entries()[0].share).toBe('media');
+    expect(fixture.debugElement.injector.get(ReaderRouteState).openEntry()?.share).toBe('media');
     jest.useRealTimers();
   });
 

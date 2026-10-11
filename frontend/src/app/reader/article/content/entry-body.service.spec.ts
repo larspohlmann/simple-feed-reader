@@ -167,7 +167,7 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
     });
 
-    it('publishes the entry a fetch brings back, but not one for a body forgotten meanwhile', async () => {
+    it('publishes what completing a fetched entry filled in, but not for a body forgotten meanwhile', async () => {
       const published: number[] = [];
       store.details.subscribe((detail) => published.push(detail.id));
       store.body(1);
@@ -175,8 +175,12 @@ describe('EntryBodyService', () => {
       await settle();
 
       store.forget(2);
-      ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { id: 2, contentHtml: '' } });
-      ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { id: 1, contentHtml: '' } });
+      ctrl
+        .expectOne('https://api.test/api/entries/2')
+        .flush({ entry: { id: 2, contentHtml: '' }, completed: { id: 2 } });
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { id: 1, contentHtml: '' }, completed: { id: 1 } });
 
       expect(published).toEqual([1]);
     });

@@ -8,7 +8,7 @@ import { ListPreferences } from '../list/list-preferences.service';
 import { selectionFromRoute } from '../query/reader-matcher';
 import { sameSelection } from '../query/query';
 import { EntryDto, EntryStatePatch } from '../models';
-import { withCompleted } from '../state/completed-entry';
+import { CompletedEntryDto, withCompleted } from '../state/completed-entry';
 
 @Injectable()
 export class ReaderRouteState {
@@ -88,14 +88,14 @@ export class ReaderRouteState {
   }
 
   /** Takes what completing the open entry filled in (#1502), when the list does not hold it. */
-  mergeCompleted(rows: EntryDto[]): void {
+  mergeCompleted(rows: CompletedEntryDto[]): void {
     this.fetchedEntry.update((fetched) => {
       const row = fetched && rows.find((finished) => finished.id === fetched.id);
       return row ? withCompleted(fetched, row) : fetched;
     });
   }
 
-  private takeCompleted(rows: EntryDto[]): void {
+  private takeCompleted(rows: CompletedEntryDto[]): void {
     this.entries.mergeCompleted(rows);
     this.mergeCompleted(rows);
   }

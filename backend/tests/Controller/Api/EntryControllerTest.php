@@ -1276,6 +1276,9 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('Post 1', $body['entry']['title']);
         self::assertSame('Seeded', $body['entry']['source']);
         self::assertFalse($body['entry']['isHidden']);
+        self::assertIsArray($body['completed']);
+        self::assertSame($entryId, $body['completed']['id']);
+        self::assertArrayNotHasKey('isHidden', $body['completed']);
     }
 
     public function testGetReturnsSavedSearchMembership(): void

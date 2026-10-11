@@ -5,7 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
-import { withCompleted } from './completed-entry';
+import { CompletedEntryDto, withCompleted } from './completed-entry';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -169,7 +169,7 @@ export class EntriesStore {
       });
   }
 
-  mergeCompleted(rows: EntryDto[]): void {
+  mergeCompleted(rows: CompletedEntryDto[]): void {
     const finished = new Map(rows.map((row) => [row.id, row]));
     this.patchEntries(finished.keys(), (entry) =>
       withCompleted(entry, finished.get(entry.id) ?? entry),

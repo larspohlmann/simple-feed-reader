@@ -5,12 +5,11 @@ import { API_BASE_URL } from '../core/api';
 import { retryingTransientGatewayErrors } from '../core/http/retry-transient-gateway-errors';
 import { PAGE_SIZE } from './list/paging';
 import { RefreshScope } from './query/query';
+import { CompletedEntryDto, EntryDetailResponse } from './state/completed-entry';
 import {
   BulkSubscriptionUpdate,
   CommentsResponse,
   EntriesPage,
-  EntryDetailDto,
-  EntryDto,
   EntryQuery,
   EntryStatePatch,
   FeedPreview,
@@ -74,8 +73,8 @@ export class ReaderApi {
 
   /** A single entry by id, full body included — lets a deep link open an entry
    *  not in the loaded page, and backs the reader body store. */
-  entry(id: number): Observable<{ entry: EntryDetailDto }> {
-    return this.http.get<{ entry: EntryDetailDto }>(`${this.base}/api/entries/${id}`);
+  entry(id: number): Observable<EntryDetailResponse> {
+    return this.http.get<EntryDetailResponse>(`${this.base}/api/entries/${id}`);
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
@@ -151,10 +150,10 @@ export class ReaderApi {
     return this.http.post<void>(`${this.base}/api/entries/mark-read-batch`, { ids });
   }
 
-  /** Finishes the given pending entries (at most 25) and answers with their list rows (#1502). */
-  complete(ids: number[]): Observable<EntryDto[]> {
+  /** Finishes the given pending entries (at most 25) and answers with what that filled in (#1502, #1551). */
+  complete(ids: number[]): Observable<CompletedEntryDto[]> {
     return this.http
-      .post<{ entries: EntryDto[] }>(`${this.base}/api/entries/complete`, { ids })
+      .post<{ entries: CompletedEntryDto[] }>(`${this.base}/api/entries/complete`, { ids })
       .pipe(map((response) => response.entries));
   }
 
