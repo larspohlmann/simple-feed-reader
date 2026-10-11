@@ -1713,6 +1713,13 @@ off the CSS above, and live in `reader/list/rendition-sizes.ts`; a block whose w
 A failing rendition drops the `srcset` (`fallBackToSrc()`) so the browser retries the
 plain `src`; only a failing `src` hides the image.
 
+**A link card is one component** (#1502). `<app-link-card>` (`reader/link-card/`) renders a
+`LinkCardDto` in two layouts: `article`, under a post in the reader, and `block`, in the
+magazine's link block, with the site line first and the image at `link-card.$image-ratio`
+(1.91:1). `_link-card-layout.scss` holds the frame both share with the `.link-card` that #1499
+writes into stored bodies. The chrome is `theme/_link-card.scss`'s `surface`, which the
+placeholder of a post still being completed shares.
+
 ---
 
 ## 6. Deliberate exceptions

@@ -1,4 +1,3 @@
-@use '../../../../../theme/glass-rim';
 @use '../../../post-text';
 @use '../../magazine-card';
 
@@ -25,65 +24,16 @@
 }
 
 .title {
+  @include post-text.post-text;
+
   margin: 0;
   color: var(--text-primary);
-}
-
-.title.post {
-  @include post-text.post-text;
 }
 
 .link.read .title {
   color: var(--text-secondary);
 }
 
-.card {
-  @include glass-rim.filled(var(--surface-1));
-
-  display: flex;
-  flex-direction: column;
+:is(app-link-card, app-link-card-placeholder) {
   margin-top: var(--space-1);
-  border-radius: var(--radius);
-  overflow: hidden;
-  text-decoration: none;
-}
-
-app-link-card-placeholder {
-  margin-top: var(--space-1);
-}
-
-.card img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1.91 / 1;
-  object-fit: cover;
-}
-
-.text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
-  min-width: 0;
-}
-
-small {
-  color: var(--text-muted);
-  font-size: var(--fs-xs);
-}
-
-strong {
-  color: var(--text-primary);
-  font-size: var(--fs-base);
-  line-height: var(--lh-tight);
-}
-
-.text span {
-  color: var(--text-secondary);
-  font-size: var(--fs-sm);
-  line-height: var(--lh-normal);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }

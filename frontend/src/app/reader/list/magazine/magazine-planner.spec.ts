@@ -3,7 +3,7 @@ import { BLOCK_HEIGHT, EntryKind, MagazineBlock } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
-import { LinkCardDto } from '../../link-card';
+import { LinkCardDto } from '../../link-card/link-card';
 import { entryImage } from '../preview-image';
 
 const NOW = '2026-07-29T12:00:00.000Z';

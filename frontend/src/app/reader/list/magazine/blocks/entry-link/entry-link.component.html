@@ -8,36 +8,15 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <app-entry-kicker-line [entry]="entry()" />
-  <p class="title post">{{ headline() }}</p>
-  @if (card(); as shared) {
-    <a
-      class="card"
-      [href]="shared.url"
-      target="_blank"
-      rel="noopener noreferrer"
+  <p class="title">{{ headline() }}</p>
+  @if (entry().linkCards[0]; as shared) {
+    <app-link-card
+      [card]="shared"
+      layout="block"
       (click)="$event.stopPropagation()"
       (keydown.enter)="$event.stopPropagation()"
       (keydown.space)="$event.stopPropagation()"
-    >
-      @if (shared.imageUrl && !imageFailed()) {
-        <img
-          appProxiedImage
-          [src]="shared.imageUrl"
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerpolicy="no-referrer"
-          (imageFailed)="imageFailed.set(true)"
-        />
-      }
-      <div class="text">
-        <small>{{ shared.siteName }}</small>
-        <strong>{{ shared.title }}</strong>
-        @if (shared.description) {
-          <span>{{ shared.description }}</span>
-        }
-      </div>
-    </a>
+    />
   } @else if (entry().pending) {
     <app-link-card-placeholder />
   }

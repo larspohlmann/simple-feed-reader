@@ -1,18 +1,16 @@
-@use '../../theme/glass-rim';
+@use '../../theme/link-card';
 @use '../../theme/loading-pulse';
 
 :host {
-  @include glass-rim.filled(var(--surface-1));
+  @include link-card.surface;
 
   display: block;
-  border-radius: var(--radius);
-  overflow: hidden;
 }
 
 .image {
   @include loading-pulse.block;
 
-  aspect-ratio: 1.91 / 1;
+  aspect-ratio: link-card.$image-ratio;
 }
 
 @include loading-pulse.keyframes;

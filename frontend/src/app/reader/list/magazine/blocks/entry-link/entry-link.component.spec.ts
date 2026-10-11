@@ -4,7 +4,7 @@ import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../../../testing/transloco-testing';
 import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
-import { LinkCardDto } from '../../../../link-card';
+import { LinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 
@@ -76,8 +76,8 @@ describe('EntryLinkComponent', () => {
   it('shows the post text as its headline and stacks the first card under it', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 
-    expect(element.querySelector('.title.post')!.textContent).toContain('Worth a read, this one.');
-    const cards = element.querySelectorAll<HTMLAnchorElement>('a.card');
+    expect(element.querySelector('.title')!.textContent).toContain('Worth a read, this one.');
+    const cards = element.querySelectorAll<HTMLAnchorElement>('.link-card a');
     expect(cards).toHaveLength(1);
     expect(cards[0].href).toBe('https://news.test/story');
     expect(cards[0].target).toBe('_blank');
@@ -95,8 +95,8 @@ describe('EntryLinkComponent', () => {
     const element = mount(entry({ linkCards: [card({ imageUrl: null, description: null })] }))
       .nativeElement as HTMLElement;
 
-    expect(element.querySelector('a.card img')).toBeNull();
-    expect(element.querySelector('a.card span')).toBeNull();
+    expect(element.querySelector('.link-card img')).toBeNull();
+    expect(element.querySelector('.link-card span')).toBeNull();
   });
 
   it('drops a picture that fails for good, and shows the next card its own', () => {
@@ -106,19 +106,19 @@ describe('EntryLinkComponent', () => {
 
     image.injector.get(ProxiedImageDirective).imageFailed.emit();
     fixture.detectChanges();
-    expect(element.querySelector('a.card img')).toBeNull();
+    expect(element.querySelector('.link-card img')).toBeNull();
 
     fixture.componentRef.setInput(
       'entry',
       entry({ id: 2, linkCards: [card({ url: 'https://third.test/' })] }),
     );
     fixture.detectChanges();
-    expect(element.querySelector('a.card img')).not.toBeNull();
+    expect(element.querySelector('.link-card img')).not.toBeNull();
   });
 
   it('opens the shared page, not the post, when the card is clicked or keyed', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
-    const link = element.querySelector<HTMLAnchorElement>('a.card')!;
+    const link = element.querySelector<HTMLAnchorElement>('.link-card a')!;
     link.addEventListener('click', (event) => event.preventDefault());
 
     link.click();
@@ -145,7 +145,7 @@ describe('EntryLinkComponent', () => {
   it('holds the card place with a placeholder while the post is still being completed', () => {
     const element = mount(entry({ linkCards: [], pending: true })).nativeElement as HTMLElement;
 
-    expect(element.querySelector('a.card')).toBeNull();
+    expect(element.querySelector('.link-card a')).toBeNull();
     expect(element.querySelector('app-link-card-placeholder')!.textContent).toContain(
       'Loading preview…',
     );
@@ -154,7 +154,7 @@ describe('EntryLinkComponent', () => {
   it('shows the card, not the placeholder, once the post has one', () => {
     const element = mount(entry({ pending: true })).nativeElement as HTMLElement;
 
-    expect(element.querySelector('a.card')).not.toBeNull();
+    expect(element.querySelector('.link-card a')).not.toBeNull();
     expect(element.querySelector('app-link-card-placeholder')).toBeNull();
   });
 });

@@ -1,0 +1,13 @@
+@use 'sass:list';
+@use 'glass-rim';
+
+// The shape of a link card's image where the card fixes it (the magazine block, the placeholder).
+$image-ratio: list.slash(1.91, 1);
+
+// A link card's chrome: the reader's cards, the magazine's and the placeholder holding their place.
+@mixin surface {
+  @include glass-rim.filled(var(--surface-1));
+
+  border-radius: var(--radius);
+  overflow: hidden;
+}

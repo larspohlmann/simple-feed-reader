@@ -304,7 +304,7 @@ describe('ReaderViewComponent', () => {
       ).nativeElement as HTMLElement;
 
       expect(element.querySelectorAll('.content')).toHaveLength(1);
-      const cards = element.querySelectorAll('.link-cards figure.link-card');
+      const cards = element.querySelectorAll('app-link-cards .link-card');
       expect(cards).toHaveLength(2);
       const link = cards[0].querySelector<HTMLAnchorElement>('a[href]')!;
       expect(link.href).toBe('https://news.test/story');
@@ -330,7 +330,7 @@ describe('ReaderViewComponent', () => {
     it('renders no link card for an entry without shared links', () => {
       const element = mount(post()).nativeElement as HTMLElement;
 
-      expect(element.querySelector('figure.link-card')).toBeNull();
+      expect(element.querySelector('.link-card')).toBeNull();
       expect(element.querySelector('app-link-cards')).toBeNull();
     });
 
@@ -339,10 +339,10 @@ describe('ReaderViewComponent', () => {
         entryWithBody('<p>Just a post</p>', { titleDerived: true, pending: true }),
       ).nativeElement as HTMLElement;
 
-      expect(element.querySelector('figure.link-card')).toBeNull();
-      expect(element.querySelector('.link-cards app-link-card-placeholder')!.textContent).toContain(
-        'Loading preview…',
-      );
+      expect(element.querySelector('.link-card')).toBeNull();
+      expect(
+        element.querySelector('app-link-cards app-link-card-placeholder')!.textContent,
+      ).toContain('Loading preview…');
     });
 
     it('leaves an ordinary entry title visible', () => {

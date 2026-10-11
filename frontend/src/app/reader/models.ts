@@ -1,4 +1,4 @@
-import { LinkCardDto } from './link-card';
+import { LinkCardDto } from './link-card/link-card';
 
 /** One saved search an entry belongs to, as embedded on the entry itself
  *  (#1118). Carries its own `slug` and `term` so a pill needs no lookup

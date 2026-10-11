@@ -2,6 +2,6 @@
   display: block;
 }
 
-app-link-card-placeholder {
+:is(app-link-card, app-link-card-placeholder) {
   margin: var(--space-5) 0;
 }
