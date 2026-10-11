@@ -14,7 +14,8 @@ final class ReaderOutputSourcesTest extends TestCase
     private const array TREE = [
         'src/Service/Reader/Extractor.php' =>
             "<?php\nuse App\\Service\\Html\\Support\\Walker;\nuse App\\Entity\\Entry;\n",
-        'src/Service/Reader/Model/Article.php' => "<?php\n",
+        'src/Service/Reader/Model/Article.php' => "<?php\nuse App\\Entity\\Entry;\n",
+        'src/Service/Reader/README.md' => "Notes\n",
         'src/Service/Html/Support/Walker.php' => "<?php\nuse App\\Service\\Text\\Normalizer;\n",
         'src/Service/Text/Normalizer.php' => "<?php\n",
         'src/Service/Unrelated/Mailer.php' => "<?php\nuse App\\Service\\Reader\\Extractor;\n",
@@ -121,6 +122,7 @@ final class ReaderOutputSourcesTest extends TestCase
     {
         yield 'a module that imports the reader' => ['src/Service/Unrelated/Mailer.php'];
         yield 'a class only an imported class imports' => ['src/Entity/Feed.php'];
+        yield 'a file in a reached module that is not PHP' => ['src/Service/Reader/README.md'];
     }
 
     /**

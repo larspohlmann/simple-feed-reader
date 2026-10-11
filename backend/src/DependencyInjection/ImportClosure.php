@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\DependencyInjection;
 
+use Symfony\Component\Finder\Finder;
+
 /**
  * Walks `use App\…` imports: an imported service module is followed whole and in turn, any other imported class is
  * recorded without following it further, because the entities alone reach the whole tree.
@@ -12,10 +14,12 @@ final class ImportClosure
 {
     private const string IMPORT = '/^use App\\\\([\w\\\\]+)(?: as \w+)?;/m';
 
+    private const string SERVICE_MODULE = '/^Service\\\\(\w+)\\\\/';
+
     /** @var array<string, string> */
     private array $modules = [];
 
-    /** @var array<string, true> */
+    /** @var list<string> */
     private array $importedFiles = [];
 
     public function __construct(private readonly string $sourceDirectory)
@@ -26,15 +30,9 @@ final class ImportClosure
     public static function phpFilesIn(string $directory): array
     {
         $files = [];
-        $entries = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
-        );
-        foreach ($entries as $entry) {
-            if ($entry instanceof \SplFileInfo && $entry->getExtension() === 'php') {
-                $files[] = $entry->getPathname();
-            }
+        foreach ((new Finder())->files()->in($directory)->name('*.php') as $file) {
+            $files[] = $file->getPathname();
         }
-        sort($files);
 
         return $files;
     }
@@ -53,16 +51,16 @@ final class ImportClosure
 
     public function followFile(string $file): void
     {
-        preg_match_all(self::IMPORT, (string) file_get_contents($file), $matches);
-        foreach ($matches[1] as $class) {
-            $this->followClass(explode('\\', $class));
+        preg_match_all(self::IMPORT, (string) file_get_contents($file), $imports);
+        foreach ($imports[1] as $class) {
+            $this->followClass($class);
         }
     }
 
     /** @return list<string> */
     public function moduleDirectories(): array
     {
-        $directories = array_values($this->modules);
+        $directories = $this->modules;
         sort($directories);
 
         return $directories;
@@ -71,21 +69,17 @@ final class ImportClosure
     /** @return list<string> */
     public function importedFiles(): array
     {
-        $files = array_keys($this->importedFiles);
-        sort($files);
-
-        return $files;
+        return $this->importedFiles;
     }
 
-    /** @param list<string> $segments */
-    private function followClass(array $segments): void
+    private function followClass(string $class): void
     {
-        if ($segments[0] === 'Service' && \count($segments) > 2) {
-            $this->followModule($segments[1]);
+        if (preg_match(self::SERVICE_MODULE, $class, $module) === 1) {
+            $this->followModule($module[1]);
 
             return;
         }
 
-        $this->importedFiles[$this->sourceDirectory . '/' . implode('/', $segments) . '.php'] = true;
+        $this->importedFiles[] = $this->sourceDirectory . '/' . str_replace('\\', '/', $class) . '.php';
     }
 }
