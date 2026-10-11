@@ -74,6 +74,8 @@ const CARD: LinkCardDto = {
 };
 const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, linkCards: [CARD], ...over });
+const mediaPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+  big(id, { titleDerived: true, ...over });
 
 const many = (count: number, make: (index: number) => EntryDto): EntryDto[] =>
   Array.from({ length: count }, (_, index) => make(index + 1));
@@ -832,7 +834,9 @@ describe('planMagazine', () => {
 
     it('keeps the kinds of a post without cards and of an article with them', () => {
       const entries = many(60, (index) =>
-        index % 2 === 0 ? big(index, { titleDerived: true }) : big(index, { linkCards: [CARD] }),
+        index % 2 === 0
+          ? entryAt(index, { titleDerived: true })
+          : big(index, { linkCards: [CARD] }),
       );
       const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
 
@@ -888,6 +892,35 @@ describe('planMagazine', () => {
       const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
 
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
+  });
+
+  describe('a post showing media', () => {
+    it('is a media block in whatever slot it lands', () => {
+      const entries = many(60, (index) =>
+        index % 3 === 0 ? mediaPost(index, { subscriptionId: 2 }) : big(index),
+      );
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      const postKinds = blocks
+        .filter((block) => block.kind !== 'group' && block.entry.titleDerived)
+        .map((block) => block.kind);
+      expect(postKinds).toHaveLength(20);
+      expect(postKinds.every((kind) => kind === 'media')).toBe(true);
+    });
+
+    it('never reaches past a media post, which would hand its block to an article', () => {
+      const entries = many(
+        60,
+        (index) => [entryAt(index, { summary: null }), mediaPost(index), big(index)][index % 3],
+      );
+      const blocks = planMagazine({ entries, grouping: false, complete: true });
+
+      expect(
+        blocks
+          .filter((block) => block.kind === 'media')
+          .every((block) => block.kind === 'media' && block.entry.titleDerived),
+      ).toBe(true);
     });
   });
 });

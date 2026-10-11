@@ -1,7 +1,15 @@
 import { EntryDto } from '../../models';
 import { entryDek, entryImage } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
-import { fits, ImageBar, isLinkPost, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
+import {
+  fits,
+  ImageBar,
+  POST_KINDS,
+  postKind,
+  PostKind,
+  QUOTE_MIN_TEXT,
+  settle,
+} from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -297,9 +305,7 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
   const { page } = pass;
   const wanted = template
     .slice(0, slice.length)
-    .map((slot, position) =>
-      isLinkPost(slice[position]) ? 'link' : resolveSlot(slot, page, position),
-    );
+    .map((slot, position) => postKind(slice[position]) ?? resolveSlot(slot, page, position));
   const { imageBar } = pass.family;
   const budgeted = withinBudget(wanted, (kind) => DEMOTION[kind]);
   const assigned = withinBudget(assign(budgeted, slice, imageBar), (kind, position) =>
@@ -378,16 +384,16 @@ function tallestWhere(
  * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
  * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
  * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`). The reach
- * stops at a link post, so every pinned `link` slot keeps the post it was pinned for.
+ * stops at a post that claims its own block, so every pinned slot keeps the post it was pinned for.
  */
 function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
   const order = [...slice];
-  const tallest = tallestWhere(kinds, (kind) => kind !== 'link');
+  const tallest = tallestWhere(kinds, (kind) => !POST_KINDS.includes(kind as PostKind));
 
   if (tallest !== null && !fits(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
     for (let index = tallest + 1; index < limit; index++) {
-      if (isLinkPost(order[index])) break;
+      if (postKind(order[index]) !== null) break;
       if (fits(kinds[tallest], order[index])) {
         const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);

@@ -5,6 +5,7 @@ import { EntryDto } from '../../models';
 export const ENTRY_KINDS = [
   'hero',
   'link',
+  'media',
   'wide',
   'quote',
   'split',
@@ -18,6 +19,7 @@ export type EntryKind = (typeof ENTRY_KINDS)[number];
 export type MagazineBlock =
   | { kind: 'hero'; entry: EntryDto }
   | { kind: 'link'; entry: EntryDto }
+  | { kind: 'media'; entry: EntryDto }
   | { kind: 'wide'; entry: EntryDto }
   | { kind: 'quote'; entry: EntryDto }
   | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
@@ -39,6 +41,7 @@ export type MagazineBlock =
 export const BLOCK_HEIGHT: Record<EntryKind, number> = {
   hero: 463,
   link: 463,
+  media: 463,
   wide: 321,
   quote: 180,
   split: 150,
@@ -53,6 +56,7 @@ export const BLOCK_HEIGHT: Record<EntryKind, number> = {
 export const DEMOTION: Record<EntryKind, EntryKind> = {
   hero: 'wide',
   link: 'link',
+  media: 'media',
   wide: 'split',
   split: 'thumb',
   thumb: 'compact',
