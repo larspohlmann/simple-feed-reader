@@ -11,7 +11,7 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/** Proves discovery subscribes what the GitHub and YouTube links resolve to; their edge cases are their own tests'. */
+/** Proves discovery subscribes what the GitHub, YouTube and fediverse links resolve to; their edge cases are their own tests'. */
 final class PlatformLinkDiscoveryTest extends KernelTestCase
 {
     use BuildsFeedDiscovery;
@@ -29,6 +29,19 @@ final class PlatformLinkDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)
             ->discover('https://github.com/symfony/symfony/tree/7.4', ScrapeFallback::Enabled);
+
+        self::assertNotNull($result->feed);
+        self::assertSame($feed, $result->feed->url);
+        self::assertSame([$feed], $fetcher->fetchedUrls);
+    }
+
+    public function testARemoteProfileSubscribesTheHomeInstanceFeedWithoutFetchingTheViewingInstance(): void
+    {
+        $feed = 'https://23.social/@linuzifer.rss';
+        $fetcher = $this->fetcherReturning($feed, $feed, $this->rss2BasicXml());
+
+        $result = $this->discovery($fetcher)
+            ->discover('https://systemli.social/@linuzifer@23.social', ScrapeFallback::Enabled);
 
         self::assertNotNull($result->feed);
         self::assertSame($feed, $result->feed->url);

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Discovery\ShareLinkFeed;
 use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
 use App\Service\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
 use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
@@ -37,6 +38,7 @@ final class ShareLinkFeedsAreConsultedTest extends KernelTestCase
         self::assertContains(ApplePodcastShowFeed::class, $classes);
         self::assertContains(GitHubRepositoryFeed::class, $classes);
         self::assertContains(YouTubePlaylistFeed::class, $classes);
+        self::assertContains(FediverseRemoteProfileFeed::class, $classes);
     }
 
     public function testTheFirstResolverToAnswerWinsAndTheRestAreNotAsked(): void
