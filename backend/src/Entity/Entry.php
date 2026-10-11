@@ -87,7 +87,7 @@ final class Entry
         $this->location = new EntryLocation();
         $this->location->store($url, $urlHash);
         $this->headline = new EntryHeadline();
-        $this->headline->store($title);
+        $this->headline->store(Headline::fromFeed($title));
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
@@ -127,27 +127,17 @@ final class Entry
 
     public function getTitle(): string
     {
-        return $this->headline->getTitle();
-    }
-
-    public function setTitle(string $title): void
-    {
-        $this->headline->store($title);
+        return $this->headline->read()->text;
     }
 
     public function isTitleDerived(): bool
     {
-        return $this->headline->isDerived();
+        return $this->headline->read()->derived;
     }
 
-    public function markTitleDerived(): void
+    public function setHeadline(Headline $headline): void
     {
-        $this->headline->markDerived();
-    }
-
-    public function isUntitledPost(): bool
-    {
-        return $this->headline->isUntitledPost();
+        $this->headline->store($headline);
     }
 
     public function getAuthor(): ?string
@@ -268,7 +258,7 @@ final class Entry
 
     public function bodyStandsInForSummary(): bool
     {
-        return !$this->isUntitledPost() && $this->getShare()->isNone();
+        return !$this->headline->read()->isUntitledPost() && $this->getShare()->isNone();
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

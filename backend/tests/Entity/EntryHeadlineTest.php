@@ -5,48 +5,35 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\EntryHeadline;
+use App\Entity\Headline;
 use PHPUnit\Framework\TestCase;
 
 final class EntryHeadlineTest extends TestCase
 {
-    public function testKeepsTheStoredTitleAsGivenByTheFeed(): void
+    public function testKeepsAHeadlineGivenByTheFeed(): void
     {
         $headline = new EntryHeadline();
 
-        $headline->store('A title');
+        $headline->store(Headline::fromFeed('A title'));
 
-        self::assertSame('A title', $headline->getTitle());
-        self::assertFalse($headline->isDerived());
+        self::assertEquals(Headline::fromFeed('A title'), $headline->read());
     }
 
-    public function testRemembersItWasDerived(): void
+    public function testKeepsAHeadlineDerivedFromThePost(): void
     {
         $headline = new EntryHeadline();
 
-        $headline->markDerived();
+        $headline->store(Headline::derived('Derived from the post'));
 
-        self::assertTrue($headline->isDerived());
+        self::assertEquals(Headline::derived('Derived from the post'), $headline->read());
     }
 
-    public function testANewTitleIsNoLongerDerived(): void
-    {
-        $headline = new EntryHeadline();
-        $headline->store('Derived from the post');
-        $headline->markDerived();
-
-        $headline->store('Given by the feed');
-
-        self::assertFalse($headline->isDerived());
-    }
-
-    public function testATitleStoredAndThenMarkedIsDerived(): void
+    public function testCutsTheTitleToTheColumnLengthInCharacters(): void
     {
         $headline = new EntryHeadline();
 
-        $headline->store('Derived from the post');
-        $headline->markDerived();
+        $headline->store(Headline::derived(str_repeat('é', 1025)));
 
-        self::assertTrue($headline->isDerived());
-        self::assertSame('Derived from the post', $headline->getTitle());
+        self::assertEquals(Headline::derived(str_repeat('é', 1024)), $headline->read());
     }
 }

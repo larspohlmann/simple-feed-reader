@@ -107,12 +107,11 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         $mediaBundle = $this->mediaExtractor->extract($atomEntry);
         $summary = $atomEntry->text('summary');
         $body = FeedBodyHtml::of($contentHtml) ?? ($summary === null ? MediaDescription::html($entry) : null);
-        $entryTitle = EntryTitle::of($title, $body ?? $summary);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
-            title: $entryTitle->text,
+            headline: EntryTitle::of($title, $body ?? $summary),
             author: self::authorChildText($atomEntry, 'name'),
             summary: $summary,
             contentHtml: $body,
@@ -121,7 +120,6 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             categories: ItemCategoryExtractor::extract($atomEntry),
             discussion: AtomDiscussion::from($atomEntry),
             authorUrl: AbsoluteHttpUrl::orNull(self::authorChildText($atomEntry, 'uri')),
-            titleDerived: $entryTitle->derived,
         );
     }
 

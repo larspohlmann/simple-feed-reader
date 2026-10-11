@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
+use App\Entity\Headline;
 use App\Service\Html\Support\MetaName;
 use App\Service\Html\Support\MetaProperty;
 use App\Service\Image\Model\DeclaredImageModel;
@@ -133,7 +134,7 @@ final readonly class HtmlItemExtractor
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->url, $item->url, $item->title),
             url: $item->url,
-            title: $item->title,
+            headline: Headline::fromFeed($item->title),
             author: null,
             summary: $teaser,
             contentHtml: $teaser === null

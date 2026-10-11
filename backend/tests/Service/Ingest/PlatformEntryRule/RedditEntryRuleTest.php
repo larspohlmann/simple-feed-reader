@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest\PlatformEntryRule;
 
+use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -26,7 +27,9 @@ final class RedditEntryRuleTest extends TestCase
 
     private static function entry(string $url, string $contentHtml): ParsedEntryModel
     {
-        return new ParsedEntryModel('t3_1wobnjy', $url, 'Title', '/u/someone', null, $contentHtml, null);
+        $title = Headline::fromFeed('Title');
+
+        return new ParsedEntryModel('t3_1wobnjy', $url, $title, '/u/someone', null, $contentHtml, null);
     }
 
     public function testSupportsAThreadUrl(): void
@@ -83,7 +86,7 @@ final class RedditEntryRuleTest extends TestCase
         $result = (new RedditEntryRule())->apply($original);
 
         self::assertSame($original->guid, $result->guid);
-        self::assertSame($original->title, $result->title);
+        self::assertSame($original->headline->text, $result->headline->text);
         self::assertSame($original->author, $result->author);
         self::assertSame($original->media, $result->media);
     }

@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Repository\EntryListRow;
@@ -97,7 +98,7 @@ final class EntryPendingLoaderTest extends DbTestCase
         $created = new \DateTimeImmutable($createdAt);
         $entry = new Entry($this->feed, $guid, null, 'Post', $created, $created);
         $entry->setContentHtml($contentHtml);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
         $this->entityManager->persist($entry);
 
         return $entry;

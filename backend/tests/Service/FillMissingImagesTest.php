@@ -6,6 +6,7 @@ namespace App\Tests\Service;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
@@ -48,7 +49,7 @@ final class FillMissingImagesTest extends DbTestCase
         return new ParsedEntryModel(
             $guid,
             null,
-            $guid,
+            Headline::fromFeed($guid),
             null,
             null,
             null,

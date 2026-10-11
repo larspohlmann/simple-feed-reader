@@ -7,6 +7,7 @@ namespace App\Tests\Service\Ingest;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Enum\CommentsLoad;
 use App\Service\Image\Model\DeclaredImageModel;
@@ -46,7 +47,7 @@ final class EntryIngestorTest extends DbTestCase
         return new ParsedEntryModel(
             guid: $guid,
             url: $url,
-            title: 'Title',
+            headline: Headline::fromFeed('Title'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>',
@@ -60,7 +61,7 @@ final class EntryIngestorTest extends DbTestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-media',
             url: 'https://example.com/ep',
-            title: 'Episode',
+            headline: Headline::fromFeed('Episode'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>',
@@ -104,7 +105,7 @@ final class EntryIngestorTest extends DbTestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-http-lead',
             url: 'https://example.com/http-lead',
-            title: 'Title',
+            headline: Headline::fromFeed('Title'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>',
@@ -130,7 +131,7 @@ final class EntryIngestorTest extends DbTestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-http-medium',
             url: 'https://example.com/http-medium',
-            title: 'Title',
+            headline: Headline::fromFeed('Title'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>',
@@ -249,7 +250,7 @@ final class EntryIngestorTest extends DbTestCase
     public function testUrlLessEntriesStillDedupeByGuid(): void
     {
         $feed = $this->feed();
-        $item = new ParsedEntryModel('only-guid', null, 'Title', null, null, '<p>body</p>', null);
+        $item = new ParsedEntryModel('only-guid', null, Headline::fromFeed('Title'), null, null, '<p>body</p>', null);
 
         $this->ingestor->ingest($feed, new ParsedFeedModel(null, null, null, null, [$item]), self::context());
         $this->entityManager->flush();
@@ -267,7 +268,7 @@ final class EntryIngestorTest extends DbTestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-1',
             url: 'https://blog.example/post',
-            title: 'Post',
+            headline: Headline::fromFeed('Post'),
             author: null,
             summary: null,
             contentHtml: '<p>Body</p>',
@@ -294,7 +295,7 @@ final class EntryIngestorTest extends DbTestCase
         $parsed = new ParsedEntryModel(
             guid: 't3_1abc',
             url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
-            title: 'Title',
+            headline: Headline::fromFeed('Title'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>' . $footer,
@@ -382,7 +383,7 @@ final class EntryIngestorTest extends DbTestCase
         return new ParsedEntryModel(
             guid: $guid,
             url: null,
-            title: 'Title',
+            headline: Headline::fromFeed('Title'),
             author: null,
             summary: null,
             contentHtml: '<p>body</p>',
@@ -396,7 +397,7 @@ final class EntryIngestorTest extends DbTestCase
         return new ParsedEntryModel(
             guid: $guid,
             url: 'https://example.com/' . $guid,
-            title: $title,
+            headline: Headline::fromFeed($title),
             author: 'Author',
             summary: '<p>A &amp; B summary</p>',
             contentHtml: $contentHtml ?? '<p>Body</p><script>evil()</script>',
@@ -502,7 +503,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'long',
                 url: 'https://example.com/' . str_repeat('u', 3000),
-                title: str_repeat('t', 2000),
+                headline: Headline::fromFeed(str_repeat('t', 2000)),
                 author: str_repeat('a', 500),
                 summary: str_repeat('s', 2000),
                 contentHtml: '<p>ok</p>',
@@ -552,7 +553,8 @@ final class EntryIngestorTest extends DbTestCase
 
     public function testAnItemWithoutUrlOrAuthorIsStoredWithBothNull(): void
     {
-        $entry = $this->ingestOne(new ParsedEntryModel('no-url', null, 'Title', null, null, '<p>body</p>', null));
+        $title = Headline::fromFeed('Title');
+        $entry = $this->ingestOne(new ParsedEntryModel('no-url', null, $title, null, null, '<p>body</p>', null));
 
         self::assertNull($entry->getUrl());
         self::assertNull($entry->getUrlHash());
@@ -566,7 +568,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'g1',
                 url: 'https://x/1',
-                title: 'One',
+                headline: Headline::fromFeed('One'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>body</p>',
@@ -589,7 +591,7 @@ final class EntryIngestorTest extends DbTestCase
     {
         $feed = $this->feed();
         $parsed = new ParsedFeedModel('T', null, null, null, [
-            new ParsedEntryModel('no-image', 'https://x/1', 'One', null, null, '<p>body</p>', null),
+            new ParsedEntryModel('no-image', 'https://x/1', Headline::fromFeed('One'), null, null, '<p>body</p>', null),
         ]);
 
         $this->ingestor->ingest($feed, $parsed, self::context());
@@ -610,7 +612,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'overlong-image',
                 url: 'https://x/1',
-                title: 'One',
+                headline: Headline::fromFeed('One'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>body</p>',
@@ -764,7 +766,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'fallback-summary',
                 url: null,
-                title: 'One',
+                headline: Headline::fromFeed('One'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>Body text here.</p>',
@@ -787,7 +789,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'junk-summary',
                 url: null,
-                title: 'One',
+                headline: Headline::fromFeed('One'),
                 author: null,
                 summary: null,
                 contentHtml: /** @lang TEXT */ '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
@@ -858,7 +860,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'old',
                 url: 'https://example.com/old',
-                title: 'Old',
+                headline: Headline::fromFeed('Old'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>body</p>',
@@ -867,7 +869,7 @@ final class EntryIngestorTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'new',
                 url: 'https://example.com/new',
-                title: 'New',
+                headline: Headline::fromFeed('New'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>body</p>',

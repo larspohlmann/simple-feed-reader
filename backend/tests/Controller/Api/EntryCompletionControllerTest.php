@@ -8,6 +8,7 @@ use App\Dto\Entry\CompleteEntriesRequest;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -399,7 +400,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $createdAt = new \DateTimeImmutable('-1 hour', new \DateTimeZone('UTC'));
         $post = new Entry($feed, $guid, null, 'Post', $createdAt, $createdAt);
         $post->setContentHtml($contentHtml);
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('Post'));
         $post->getImage()->storePending(null, null, null);
         $this->entityManager()->persist($post);
         $this->entityManager()->flush();

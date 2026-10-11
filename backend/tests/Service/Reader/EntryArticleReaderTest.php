@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Service\Reader\EntryArticleReader;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\Model\ExtractionFailure;
@@ -29,7 +30,7 @@ final class EntryArticleReaderTest extends TestCase
     public function testAPostAnswersFeedBodyIsPostWithoutFetching(): void
     {
         $post = $this->entry('https://example.social/@a/1');
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('Post'));
 
         $result = $this->reader->read($post);
 
@@ -42,7 +43,7 @@ final class EntryArticleReaderTest extends TestCase
     public function testAUrlLessPostIsStillAPost(): void
     {
         $post = $this->entry(null);
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('Post'));
 
         self::assertSame(ExtractionFailure::FeedBodyIsPost, $this->reader->read($post)->reason);
     }

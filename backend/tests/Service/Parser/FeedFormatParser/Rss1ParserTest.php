@@ -176,10 +176,10 @@ final class Rss1ParserTest extends TestCase
         $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('The Weekly Review', $feed->title);
-        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->headline->text);
         self::assertSame(
             "\u{201C}Datatype\u{201D} is an OpenType variable font",
-            $feed->entries[1]->title,
+            $feed->entries[1]->headline->text,
         );
     }
 
@@ -338,7 +338,7 @@ final class Rss1ParserTest extends TestCase
             . '<description>&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</description></item>',
         );
 
-        self::assertSame('Hello from the fediverse.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Hello from the fediverse.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 }

@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
 use App\Entity\Share;
@@ -144,7 +145,7 @@ final class EntryJsonTest extends TestCase
     public function testFlagsAnEntryWhoseTitleWasDerivedFromItsText(): void
     {
         $derived = $this->entryTitled('Derived');
-        $derived->markTitleDerived();
+        $derived->setHeadline(Headline::derived('Derived'));
 
         self::assertTrue(EntryJson::listRow($this->row($derived))['titleDerived']);
         self::assertFalse(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['titleDerived']);
@@ -320,7 +321,7 @@ final class EntryJsonTest extends TestCase
     public function testAnUntitledPostHasNoExcerpt(): void
     {
         $entry = $this->entryTitled('');
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::untitledPost());
         $entry->setContentHtml(
             '<figure class="post-video"><video src="https://v.test/p.m3u8"></video></figure>'
             . '<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>',
@@ -332,7 +333,7 @@ final class EntryJsonTest extends TestCase
     public function testAnUntitledPostKeepsTheTextOfItsSummary(): void
     {
         $entry = $this->entryTitled('');
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::untitledPost());
         $entry->setSummary('Words that live only in the summary.');
         $entry->setContentHtml('<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>');
 

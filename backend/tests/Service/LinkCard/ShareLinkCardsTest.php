@@ -7,6 +7,7 @@ namespace App\Tests\Service\LinkCard;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\Share;
@@ -461,7 +462,7 @@ final class ShareLinkCardsTest extends DbTestCase
     private function queuedTitledShare(int $number, string $target): Entry
     {
         $entry = $this->queuedPost($number, null);
-        $entry->setTitle('A story');
+        $entry->setHeadline(Headline::fromFeed('A story'));
         $entry->setShare(Share::link($target));
         $this->entityManager->flush();
 
@@ -478,7 +479,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $now = $this->clock->now();
         $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, null, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
 
         return $entry;

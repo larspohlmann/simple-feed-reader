@@ -10,6 +10,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
@@ -151,7 +152,7 @@ final readonly class FullyPopulatedAccount
             'https://populated.example/article/comments.rss',
             CommentsLoad::Auto,
         ));
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('An article with every field set'));
         $entry->setShare(Share::link('https://populated.example/shared'));
 
         return $entry;

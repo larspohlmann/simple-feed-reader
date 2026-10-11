@@ -9,6 +9,7 @@ use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
@@ -1428,7 +1429,7 @@ final class EntryControllerTest extends WebTestCase
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $post = new Entry($feed, 'https://mastodon.example/@someone/1', null, 'Post', $july1, $july1);
         $post->setContentHtml('<p>Worth a read: https://example.com/story</p>');
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('Post'));
         $entityManager->persist($post);
         $entityManager->flush();
 

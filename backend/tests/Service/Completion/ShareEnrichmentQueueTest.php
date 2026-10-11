@@ -7,6 +7,7 @@ namespace App\Tests\Service\Completion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
@@ -140,7 +141,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
     private function post(string $guid, ?string $contentHtml): Entry
     {
         $entry = $this->entry($guid, $contentHtml);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
 
         return $entry;
     }

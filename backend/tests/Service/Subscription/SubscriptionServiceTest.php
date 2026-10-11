@@ -6,6 +6,7 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -68,7 +69,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $entry = new ParsedEntryModel(
             guid: $url . '#1',
-            title: 'First post',
+            headline: Headline::fromFeed('First post'),
             url: $url . '/1',
             author: null,
             publishedAt: new \DateTimeImmutable('2026-05-31T12:00:00Z'),

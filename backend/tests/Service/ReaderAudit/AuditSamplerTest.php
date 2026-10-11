@@ -6,6 +6,7 @@ namespace App\Tests\Service\ReaderAudit;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\ReaderAuditRepository;
@@ -80,7 +81,7 @@ final class AuditSamplerTest extends DbTestCase
         $feed = $this->feedWithEntries('posts', 0);
         $moment = new \DateTimeImmutable(self::MOMENT);
         $post = new Entry($feed, 'post', 'https://posts.example.com/1', 'A post', $moment, $moment);
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('A post'));
         $this->entityManager->persist($post);
         $this->entityManager->persist(
             new Entry($feed, 'article', 'https://posts.example.com/2', 'Art', $moment, $moment),

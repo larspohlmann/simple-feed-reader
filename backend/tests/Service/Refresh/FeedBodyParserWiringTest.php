@@ -79,6 +79,6 @@ final class FeedBodyParserWiringTest extends KernelTestCase
         $parsed = $this->parser()->parse($feed, $body);
 
         self::assertCount(1, $parsed->entries);
-        self::assertSame('Post', $parsed->entries[0]->title);
+        self::assertSame('Post', $parsed->entries[0]->headline->text);
     }
 }

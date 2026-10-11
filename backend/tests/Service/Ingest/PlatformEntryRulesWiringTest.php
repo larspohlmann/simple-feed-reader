@@ -6,6 +6,7 @@ namespace App\Tests\Service\Ingest;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
@@ -25,7 +26,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         $thread = new ParsedEntryModel(
             't3_1abc',
             'https://www.reddit.com/r/PHP/comments/1abc/t/',
-            'Title',
+            Headline::fromFeed('Title'),
             null,
             null,
             '<p>body</p>',
@@ -55,7 +56,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         $video = new ParsedEntryModel(
             'yt:video:Xic3faS00Qs',
             'https://www.youtube.com/watch?v=Xic3faS00Qs',
-            'Title',
+            Headline::fromFeed('Title'),
             null,
             null,
             '<p>Description</p>',
@@ -86,12 +87,11 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         $post = new ParsedEntryModel(
             'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3mxhdhodv222n',
             'https://bsky.app/profile/bsky.app/post/3mxhdhodv222n',
-            'a masterclass in alt text',
+            Headline::derived('a masterclass in alt text'),
             null,
             null,
             '<p>a masterclass in alt text</p><p>[contains quote post or other embedded content]</p>',
             null,
-            titleDerived: true,
         );
 
         $ingestor->ingest(

@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
@@ -346,7 +347,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-post@example.com');
         $fake = $this->installFake();
         $entry = $this->seedEntry($user, 'https://example.social/@a/1');
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entityManager->flush();
@@ -367,7 +368,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-post-budget@example.com');
         $this->installFake();
         $post = $this->seedEntry($user, 'https://example.social/@a/2');
-        $post->markTitleDerived();
+        $post->setHeadline(Headline::derived('Post'));
         $article = $this->seedEntry($user, 'https://example.com/article');
         $this->spendReaderBudget($user);
 

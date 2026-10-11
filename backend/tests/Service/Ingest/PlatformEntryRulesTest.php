@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
+use App\Entity\Headline;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -13,7 +14,7 @@ final class PlatformEntryRulesTest extends TestCase
 {
     private function entry(string $url): ParsedEntryModel
     {
-        return new ParsedEntryModel('g-1', $url, 'Title', null, null, '<p>body</p>', null);
+        return new ParsedEntryModel('g-1', $url, Headline::fromFeed('Title'), null, null, '<p>body</p>', null);
     }
 
     public function testANonMatchingEntryComesBackUnchanged(): void

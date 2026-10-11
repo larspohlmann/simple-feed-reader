@@ -7,6 +7,7 @@ namespace App\Tests\Entity;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use PHPUnit\Framework\TestCase;
 
 final class EntryTest extends TestCase
@@ -50,7 +51,7 @@ final class EntryTest extends TestCase
     {
         $entry = $this->entry();
 
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Title'));
 
         self::assertTrue($entry->isTitleDerived());
     }

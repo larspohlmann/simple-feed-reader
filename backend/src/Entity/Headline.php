@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Model;
+namespace App\Entity;
 
-final readonly class ParsedTitleModel
+final readonly class Headline
 {
     private function __construct(
         public string $text,
@@ -25,5 +25,10 @@ final readonly class ParsedTitleModel
     public static function untitledPost(): self
     {
         return new self('', true);
+    }
+
+    public function isUntitledPost(): bool
+    {
+        return $this->derived && $this->text === '';
     }
 }

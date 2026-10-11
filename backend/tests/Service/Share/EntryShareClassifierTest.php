@@ -8,6 +8,7 @@ use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Share;
 use App\Enum\CommentsLoad;
 use App\Service\Share\EntryShareClassifier;
@@ -54,7 +55,7 @@ final class EntryShareClassifierTest extends TestCase
     {
         $postUrl = 'https://mastodon.example/@someone/1';
         $entry = self::entry('https://mastodon.example/@someone', $postUrl, $postUrl, $body);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('A real headline'));
         $entry->setMedia($media, []);
 
         return $entry;
