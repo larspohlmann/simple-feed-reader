@@ -57,16 +57,18 @@ for the quote) and stores all the cards in order.
 ### 2. Mastodon: the `RE:` link is a shared link
 
 - `SharedLinks` no longer skips the quote link. The URL joins `urls` in post order; it comes first, since the
-  `RE:` line opens the post. `SharedLinksModel` also carries `quoteUrl` (or null).
+  `RE:` line opens the post.
   - A post whose only link is the quote is now queued for link cards too.
 - The quote test (the `<p>`'s text before the anchor is `RE:`) moves to a new `LinkCard/Support/QuoteLine`,
   next to `QuoteLine::removedFrom(html, url)`. That method:
   - removes the `RE:` text and the quote anchor,
-  - removes the paragraph if nothing but whitespace is left,
+  - removes the paragraph if no text and no element is left,
   - returns the HTML unchanged when it finds no quote of that URL.
-- `PostLinkCards` builds the card through the existing `PageCardReader`. When it stores a row's cards and one
-  card's URL is the row's `quoteUrl`, it also:
-  - sets the entry's `contentHtml` to `QuoteLine::removedFrom(...)`,
+- `PostLinkCards` builds the card through the existing `PageCardReader`, whose card URL is the shared URL.
+  When it stores a row's cards, it applies `QuoteLine::removedFrom` once per stored card's URL. This is a no-op
+  for every card but a quote's, the same way `TrailingUrl` is applied per Bluesky card. When the body changed,
+  it also:
+  - sets the entry's `contentHtml` to the result,
   - re-derives `summary` with `EntrySnippet::from`.
 - When the quote page fails, no card exists, and the line stays, so the link is never lost. This is the
   `TrailingUrl` rule of #1502.
@@ -110,7 +112,7 @@ A throwaway PHP script, run once in the php container and deleted afterwards:
   - The fallback still renders for an unrenderable quote.
 - **`EntryEmbedWriterTest`:** a quote leaves no figure in the body and is stored as a card. Quote plus external
   is stored as two cards in that order.
-- **`SharedLinksTest`:** the `RE:` link is shared and reported as `quoteUrl`.
+- **`SharedLinksTest`:** the `RE:` link is shared.
 - **`QuoteLineTest`:** removal with a plain space or `&nbsp;`; a paragraph that keeps other text keeps it; no
   quote of that URL gives the HTML byte for byte.
 - **`PostLinkCardsTest`:** a carded quote loses its line and its summary is re-derived. A failed quote page
