@@ -14,7 +14,7 @@ import { EntryKickerLineComponent } from '../../entry-kicker-line.component';
 import { EntryMetaComponent } from '../../../entry-meta/entry-meta.component';
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
-import { postMedia } from '../../magazine-slot-fit';
+import { sharedMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto } from '../../../../models';
 import { EmbedFrameDirective } from '../../../../embed-frame.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
@@ -45,7 +45,7 @@ export class EntryMediaComponent extends EntryBlockBase {
 
   private readonly sanitizer = inject(DomSanitizer);
 
-  readonly media = computed(() => postMedia(this.entry()));
+  readonly media = computed(() => sharedMedia(this.entry()));
   // autoplayingShortPlayer admits only an allow-listed player, so the URL can be trusted as a frame source.
   readonly shortPlayer = computed(() => {
     const url = autoplayingShortPlayer(this.entry().shortPlayerUrl);

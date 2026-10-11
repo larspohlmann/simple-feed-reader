@@ -1,4 +1,4 @@
-import { isMediaPost, postMedia, settle } from './magazine-slot-fit';
+import { sharesMedia, sharedMedia, settle } from './magazine-slot-fit';
 import { EntryDto, EntryMediumDto } from '../../models';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
@@ -44,22 +44,22 @@ const video = (url: string, poster: string): EntryMediumDto => ({
   previewImageUrl: poster,
 });
 
-describe('postMedia', () => {
+describe('sharedMedia', () => {
   it('drops the image that is only a video’s poster', () => {
     const clip = video('https://v/playlist.m3u8', 'https://v/thumb.jpg');
-    const post = entry({
+    const share = entry({
       titleDerived: true,
       share: 'media',
       media: [image('https://v/thumb.jpg'), clip],
     });
 
-    expect(postMedia(post)).toEqual([clip]);
+    expect(sharedMedia(share)).toEqual([clip]);
   });
 
   it('keeps at most four, in feed order', () => {
     const media = [1, 2, 3, 4, 5].map((index) => image(`https://i/${index}.jpg`));
 
-    expect(postMedia(entry({ media })).map((medium) => medium.url)).toEqual([
+    expect(sharedMedia(entry({ media })).map((medium) => medium.url)).toEqual([
       'https://i/1.jpg',
       'https://i/2.jpg',
       'https://i/3.jpg',
@@ -68,40 +68,40 @@ describe('postMedia', () => {
   });
 
   it('stands the lead image in when the feed declared no media', () => {
-    expect(postMedia(entry())).toEqual([
+    expect(sharedMedia(entry())).toEqual([
       { url: 'https://i/1.jpg', kind: 'image', width: 900, height: 600 },
     ]);
   });
 
   it('is empty without media or a lead image', () => {
-    expect(postMedia(entry({ imageUrl: null }))).toEqual([]);
+    expect(sharedMedia(entry({ imageUrl: null }))).toEqual([]);
   });
 });
 
-describe('isMediaPost', () => {
+describe('sharesMedia', () => {
   it('is a media share with a picture', () => {
-    expect(isMediaPost(entry({ share: 'media' }))).toBe(true);
+    expect(sharesMedia(entry({ share: 'media' }))).toBe(true);
   });
 
   it('is not an article, a link share or a media share without a picture', () => {
-    expect(isMediaPost(entry())).toBe(false);
-    expect(isMediaPost(entry({ titleDerived: true }))).toBe(false);
-    expect(isMediaPost(entry({ share: 'link', linkCards: [card] }))).toBe(false);
-    expect(isMediaPost(entry({ share: 'media', imageUrl: null }))).toBe(false);
+    expect(sharesMedia(entry())).toBe(false);
+    expect(sharesMedia(entry({ titleDerived: true }))).toBe(false);
+    expect(sharesMedia(entry({ share: 'link', linkCards: [card] }))).toBe(false);
+    expect(sharesMedia(entry({ share: 'media', imageUrl: null }))).toBe(false);
   });
 
   it('takes a Short only by its share, like every other entry', () => {
-    expect(isMediaPost(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).toBe(false);
-    expect(isMediaPost(entry({ shortPlayerUrl: SHORT_PLAYER_URL, share: 'media' }))).toBe(true);
+    expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).toBe(false);
+    expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL, share: 'media' }))).toBe(true);
   });
 });
 
-describe('settle for a media post', () => {
+describe('settle for a media share', () => {
   it('is a media block from any slot', () => {
-    const post = entry({ titleDerived: true, share: 'media' });
+    const share = entry({ titleDerived: true, share: 'media' });
 
-    expect(settle('thumb', post, 'thumb')).toBe('media');
-    expect(settle('compact', post, 'split')).toBe('media');
-    expect(settle('hero', post, 'thumb')).toBe('media');
+    expect(settle('thumb', share, 'thumb')).toBe('media');
+    expect(settle('compact', share, 'split')).toBe('media');
+    expect(settle('hero', share, 'thumb')).toBe('media');
   });
 });

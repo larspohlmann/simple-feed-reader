@@ -1,34 +1,6 @@
-import {
-  entryDek,
-  entryHeadline,
-  entryImage,
-  entrySnippet,
-  renditionSrcset,
-  showsShortPill,
-  widestRenditionWidth,
-} from './preview-image';
+import { entryImage, renditionSrcset, showsShortPill, widestRenditionWidth } from './preview-image';
 import { SHORT_PLAYER_URL } from '../../../testing/short-marking-testing';
 import { anEntry } from '../../../testing/entry-testing';
-
-describe('entrySnippet', () => {
-  it('returns the server-supplied excerpt', () => {
-    expect(entrySnippet(anEntry({ excerpt: 'Some copy' }))).toBe('Some copy');
-  });
-
-  it('returns an empty string when the entry has none', () => {
-    expect(entrySnippet(anEntry())).toBe('');
-  });
-});
-
-describe('entryDek', () => {
-  it('is the excerpt of an ordinary entry', () => {
-    expect(entryDek(anEntry({ excerpt: 'Some copy' }))).toBe('Some copy');
-  });
-
-  it('is empty for a post, whose text is already its headline', () => {
-    expect(entryDek(anEntry({ excerpt: 'Some copy', titleDerived: true }))).toBe('');
-  });
-});
 
 describe('entryImage', () => {
   it('reads the persisted image and carries its dimensions', () => {
@@ -137,28 +109,5 @@ describe('showsShortPill', () => {
 
   it('marks no other entry', () => {
     expect(showsShortPill(anEntry(), false)).toBe(false);
-  });
-});
-
-describe('entryHeadline', () => {
-  it('is empty for an untitled entry', () => {
-    expect(entryHeadline(anEntry({ title: '', excerpt: '', titleDerived: true }))).toBe('');
-    expect(entryHeadline(anEntry({ title: '', excerpt: '', titleDerived: false }))).toBe('');
-  });
-
-  it('is the title of an ordinary entry', () => {
-    expect(entryHeadline(anEntry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
-      'Real',
-    );
-  });
-
-  it('is the excerpt of a post, whose title only repeats it', () => {
-    expect(
-      entryHeadline(anEntry({ title: 'Body', excerpt: 'Body and more', titleDerived: true })),
-    ).toBe('Body and more');
-  });
-
-  it('falls back to the derived title when a post has no excerpt', () => {
-    expect(entryHeadline(anEntry({ title: 'null', excerpt: '', titleDerived: true }))).toBe('null');
   });
 });
