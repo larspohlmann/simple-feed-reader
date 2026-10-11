@@ -6,6 +6,7 @@ import { EntryLinkComponent } from './entry-link.component';
 import { EntryDto } from '../../../../models';
 import { LinkCardDto } from '../../../../link-card/link-card';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
+import { PreviewProgress } from '../../../../link-card/preview-progress';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
 
 const entryActions = {
@@ -65,7 +66,11 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
 function mount(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryLinkComponent, provideTranslocoTesting()],
-    providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
+    providers: [
+      { provide: EntryActionHandler, useValue: entryActions },
+      { provide: PreviewProgress, useValue: { isLoading: () => true } },
+      provideRouter([]),
+    ],
   });
   const fixture = TestBed.createComponent(EntryLinkComponent);
   fixture.componentRef.setInput('entry', testEntry);

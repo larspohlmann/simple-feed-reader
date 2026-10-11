@@ -208,12 +208,22 @@ describe('PendingEntriesPoll', () => {
 
       rounds(PENDING_POLL_MAX_ROUNDS);
       expect(poll.isLoading(1)).toBe(false);
+    });
+
+    it('loads again when the entry is closed and reopened', () => {
+      start([]);
+      const poll = TestBed.inject(PendingEntriesPoll);
+      openEntry.set(row(9));
+      TestBed.tick();
+      rounds(PENDING_POLL_MAX_ROUNDS);
+      expect(poll.isLoading(9)).toBe(false);
 
       openEntry.set(null);
       TestBed.tick();
-      openEntry.set(row(1));
+      openEntry.set(row(9));
       TestBed.tick();
-      expect(poll.isLoading(1)).toBe(true);
+
+      expect(poll.isLoading(9)).toBe(true);
     });
 
     it('loads again on the next list load', () => {

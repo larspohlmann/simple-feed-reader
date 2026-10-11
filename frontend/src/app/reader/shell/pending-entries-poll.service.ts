@@ -24,8 +24,7 @@ const PENDING_POLL_BATCH = 25;
 
 /** Completes the listed entries still pending (#1502), and the open one, and merges the finished
  *  rows back. The list and the open entry each spend their own rounds, a failed call too; a new
- *  list load starts both counts afresh, and a newly opened entry its own. Once a count is spent
- *  and its last answer is in, its entries no longer read as loading (#1516). */
+ *  list load starts both counts afresh, and a newly opened entry its own. */
 @Injectable()
 export class PendingEntriesPoll implements PreviewProgress {
   private readonly store = inject(EntriesStore);
@@ -51,20 +50,26 @@ export class PendingEntriesPoll implements PreviewProgress {
     const open = this.routeState.openEntry();
     return open?.pending ? open.id : null;
   });
-  private readonly listGivenUp = signal(false);
-  private readonly givenUpOpenId = signal<number | null>(null);
+  private readonly request = signal<Subscription | null>(null);
+  private readonly listRounds = signal(0);
+  private readonly openRounds = signal(0);
+  private readonly listSpent = computed(() => this.listRounds() >= PENDING_POLL_MAX_ROUNDS);
+  private readonly openSpent = computed(() => this.openRounds() >= PENDING_POLL_MAX_ROUNDS);
+  private readonly listLoading = computed(() =>
+    this.listSpent() && this.request() === null ? [] : this.listedPending(),
+  );
+  private readonly openLoadingId = computed(() =>
+    this.openSpent() && this.request() === null ? null : this.openPendingId(),
+  );
   private readonly loadingIds = computed(() => {
-    const ids = new Set(this.listGivenUp() ? [] : this.listedPending().map((entry) => entry.id));
-    const open = this.openPendingId();
-    if (open !== null && open !== this.givenUpOpenId()) ids.add(open);
+    const ids = new Set(this.listLoading().map((entry) => entry.id));
+    const open = this.openLoadingId();
+    if (open !== null) ids.add(open);
     return ids;
   });
-  readonly previewsLoading = computed(() => !this.listGivenUp() && this.listedPending().length > 0);
+  readonly previewsLoading = computed(() => this.listLoading().length > 0);
 
   private timerId: ReturnType<typeof setTimeout> | null = null;
-  private request: Subscription | null = null;
-  private listRounds = 0;
-  private openRounds = 0;
   private roundsOpenId: number | null = null;
   private listLoad: string | null = null;
 
@@ -88,20 +93,17 @@ export class PendingEntriesPoll implements PreviewProgress {
     }
     if (openId !== this.roundsOpenId) {
       this.roundsOpenId = openId;
-      this.openRounds = 0;
-      this.givenUpOpenId.set(null);
+      this.openRounds.set(0);
     }
     this.schedule();
   }
 
   private reset(): void {
     this.cancelTimer();
-    this.request?.unsubscribe();
-    this.request = null;
-    this.listRounds = 0;
-    this.openRounds = 0;
-    this.listGivenUp.set(false);
-    this.givenUpOpenId.set(null);
+    this.request()?.unsubscribe();
+    this.request.set(null);
+    this.listRounds.set(0);
+    this.openRounds.set(0);
   }
 
   isLoading(entryId: number): boolean {
@@ -109,7 +111,7 @@ export class PendingEntriesPoll implements PreviewProgress {
   }
 
   private schedule(): void {
-    if (this.timerId !== null || this.request !== null || !this.mayPoll()) return;
+    if (this.timerId !== null || this.request() !== null || !this.mayPoll()) return;
     this.zone.runOutsideAngular(() => {
       this.timerId = setTimeout(() => this.poll(), PENDING_POLL_INTERVAL_MS);
     });
@@ -129,13 +131,11 @@ export class PendingEntriesPoll implements PreviewProgress {
       error: () => this.settle(),
       complete: () => this.settle(),
     });
-    this.request = request.closed ? null : request;
+    this.request.set(request.closed ? null : request);
   }
 
   private settle(): void {
-    this.request = null;
-    if (this.listRounds >= PENDING_POLL_MAX_ROUNDS) this.listGivenUp.set(true);
-    if (this.openRounds >= PENDING_POLL_MAX_ROUNDS) this.givenUpOpenId.set(this.roundsOpenId);
+    this.request.set(null);
     this.schedule();
   }
 
@@ -152,20 +152,19 @@ export class PendingEntriesPoll implements PreviewProgress {
 
   /** The ids whose rounds are not yet spent: the listed batch, and the open entry put last. */
   private due(): number[] {
-    const listed = this.listRounds < PENDING_POLL_MAX_ROUNDS ? this.listedBatch() : [];
+    const listed = this.listSpent() ? [] : this.listedBatch();
     const open = this.openPendingId();
-    if (open === null || this.openRounds >= PENDING_POLL_MAX_ROUNDS || listed.includes(open)) {
+    if (open === null || this.openSpent() || listed.includes(open)) {
       return listed;
     }
     return [...listed.slice(0, PENDING_POLL_BATCH - 1), open];
   }
 
   private spendRound(ids: number[]): void {
-    if (this.listRounds < PENDING_POLL_MAX_ROUNDS && this.listedBatch().length > 0) {
-      this.listRounds++;
-    }
+    if (!this.listSpent() && this.listedBatch().length > 0)
+      this.listRounds.update((count) => count + 1);
     const open = this.openPendingId();
-    if (open !== null && ids.includes(open)) this.openRounds++;
+    if (open !== null && ids.includes(open)) this.openRounds.update((count) => count + 1);
   }
 
   private cancelTimer(): void {

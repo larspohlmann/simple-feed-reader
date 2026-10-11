@@ -4,7 +4,7 @@ import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkCardPlaceholderComponent } from './link-card-placeholder.component';
 import { PreviewProgress } from './preview-progress';
 
-function mount(loading = true, lang = 'en'): HTMLElement {
+function mount({ loading = true, lang = 'en' } = {}): HTMLElement {
   TestBed.configureTestingModule({
     imports: [LinkCardPlaceholderComponent, provideTranslocoTesting()],
     providers: [
@@ -30,16 +30,17 @@ describe('LinkCardPlaceholderComponent', () => {
   });
 
   it('stops claiming progress once nothing works on the preview any more (#1516)', () => {
-    const element = mount(false);
+    const element = mount({ loading: false });
 
     expect(element.hasAttribute('aria-busy')).toBe(false);
     expect(element.classList).not.toContain('loading');
     expect(element.querySelector('.label')!.textContent!.trim()).toBe('No preview yet');
   });
 
-  it('says it in German', () => {
-    expect(mount(true, 'de').textContent).toContain('Vorschau wird geladen…');
-    TestBed.resetTestingModule();
-    expect(mount(false, 'de').textContent).toContain('Noch keine Vorschau');
+  it.each([
+    [true, 'Vorschau wird geladen…'],
+    [false, 'Noch keine Vorschau'],
+  ])('says it in German (loading: %s)', (loading, text) => {
+    expect(mount({ loading, lang: 'de' }).textContent).toContain(text);
   });
 });
