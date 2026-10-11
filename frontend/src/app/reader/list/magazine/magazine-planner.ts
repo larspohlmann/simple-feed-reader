@@ -334,25 +334,25 @@ function emitPages(pass: PlanPass, items: EntryDto[]): void {
 }
 
 /** Demote the tallest slot `demote` can shorten, one step at a time, until the page fits the height
- *  cap. The wanted kinds step down the plain ladder; the settled ones re-settle for their entry, so
- *  `settle` cannot lift a page back over the cap. */
+ *  cap. Before `assign` the wanted kinds step down the plain ladder, which also picks the slot its
+ *  look-ahead fills; after it the settled kinds re-settle for their entry, so `settle` cannot lift a
+ *  page back over the cap. */
 function withinBudget(
   kinds: EntryKind[],
   demote: (kind: EntryKind, position: number) => EntryKind,
 ): EntryKind[] {
   const result = [...kinds];
-  const shorter = result.map(demote);
   let height = result.reduce((sum, kind) => sum + BLOCK_HEIGHT[kind], 0);
 
   while (height > PAGE_HEIGHT_CAP) {
     const tallest = tallestWhere(
       result,
-      (kind, position) => BLOCK_HEIGHT[shorter[position]] < BLOCK_HEIGHT[kind],
+      (kind, position) => BLOCK_HEIGHT[demote(kind, position)] < BLOCK_HEIGHT[kind],
     );
     if (tallest === null) break;
-    height -= BLOCK_HEIGHT[result[tallest]] - BLOCK_HEIGHT[shorter[tallest]];
-    result[tallest] = shorter[tallest];
-    shorter[tallest] = demote(result[tallest], tallest);
+    const demoted = demote(result[tallest], tallest);
+    height -= BLOCK_HEIGHT[result[tallest]] - BLOCK_HEIGHT[demoted];
+    result[tallest] = demoted;
   }
 
   return result;
