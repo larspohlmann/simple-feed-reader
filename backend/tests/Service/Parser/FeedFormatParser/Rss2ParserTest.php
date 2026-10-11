@@ -226,10 +226,10 @@ final class Rss2ParserTest extends TestCase
         $feed = FeedFormatParsers::feed($xml);
 
         self::assertSame('The Weekly Review', $feed->title);
-        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->headline->text);
         self::assertSame(
             "\u{201C}Datatype\u{201D} is an OpenType variable font",
-            $feed->entries[1]->title,
+            $feed->entries[1]->headline->text,
         );
     }
 
@@ -455,7 +455,7 @@ final class Rss2ParserTest extends TestCase
             . '<media:title>Media</media:title><itunes:title>Itunes</itunes:title><title>Core</title></item>',
         );
 
-        self::assertSame('Core', $entry->title);
+        self::assertSame('Core', $entry->headline->text);
     }
 
     public function testAnItunesAuthorBeforeTheAuthorDoesNotShadowIt(): void
@@ -609,8 +609,8 @@ final class Rss2ParserTest extends TestCase
             . '<description>&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</description></item>',
         );
 
-        self::assertSame('Hello from the fediverse.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Hello from the fediverse.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
         self::assertSame('https://example.social/@a/1', $entry->guid);
     }
 
@@ -621,16 +621,16 @@ final class Rss2ParserTest extends TestCase
             . '</item>',
         );
 
-        self::assertSame('', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testATitledItemIsNotDerived(): void
     {
         $entry = $this->parseSingleItem('<item><title>Real</title><link>https://example.com/1</link></item>');
 
-        self::assertSame('Real', $entry->title);
-        self::assertFalse($entry->titleDerived);
+        self::assertSame('Real', $entry->headline->text);
+        self::assertFalse($entry->headline->derived);
     }
 
     public function testAPlainTextBlueskyDescriptionGivesItsFirstLine(): void
@@ -641,7 +641,7 @@ final class Rss2ParserTest extends TestCase
             . '</description></item>',
         );
 
-        self::assertSame('a masterclass in alt text', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('a masterclass in alt text', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 }

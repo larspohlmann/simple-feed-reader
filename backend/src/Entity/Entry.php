@@ -87,7 +87,7 @@ final class Entry
         $this->location = new EntryLocation();
         $this->location->store($url, $urlHash);
         $this->headline = new EntryHeadline();
-        $this->headline->store($title);
+        $this->headline->store(Headline::fromFeed($title));
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
@@ -127,27 +127,22 @@ final class Entry
 
     public function getTitle(): string
     {
-        return $this->headline->getTitle();
-    }
-
-    public function setTitle(string $title): void
-    {
-        $this->headline->store($title);
+        return $this->headline->read()->text;
     }
 
     public function isTitleDerived(): bool
     {
-        return $this->headline->isDerived();
-    }
-
-    public function markTitleDerived(): void
-    {
-        $this->headline->markDerived();
+        return $this->headline->read()->derived;
     }
 
     public function isUntitledPost(): bool
     {
-        return $this->headline->isUntitledPost();
+        return $this->headline->read()->isUntitledPost();
+    }
+
+    public function setHeadline(Headline $headline): void
+    {
+        $this->headline->store($headline);
     }
 
     public function getAuthor(): ?string

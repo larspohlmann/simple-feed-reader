@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\EntryView;
@@ -101,9 +102,9 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         // Same urlHash, but only the higher-id copy's title matches the search.
         $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z')
-            ->setTitle('Lübecker Hauptbahnhof gesperrt');
+            ->setHeadline(Headline::fromFeed('Lübecker Hauptbahnhof gesperrt'));
         $match = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $match->setTitle('Lübeck Zugausfälle am Wochenende');
+        $match->setHeadline(Headline::fromFeed('Lübeck Zugausfälle am Wochenende'));
         $this->entityManager->flush();
 
         $rows = $this->repository()->searchForUser(new EntrySearchQuery(
@@ -134,9 +135,9 @@ final class DuplicateCollapseTest extends DbTestCase
         // Both copies' titles match the search term, so both are in the outer
         // selection: only the collapse call can reduce this to one row.
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
-        $lower->setTitle('Lübeck Zugausfälle heute Morgen');
+        $lower->setHeadline(Headline::fromFeed('Lübeck Zugausfälle heute Morgen'));
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $higher->setTitle('Lübeck Zugausfälle am Wochenende');
+        $higher->setHeadline(Headline::fromFeed('Lübeck Zugausfälle am Wochenende'));
         $this->entityManager->flush();
 
         $rows = $this->repository()->searchForUser(new EntrySearchQuery(

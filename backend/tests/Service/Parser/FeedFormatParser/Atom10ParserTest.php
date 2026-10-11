@@ -305,10 +305,10 @@ final class Atom10ParserTest extends TestCase
         $feed = $this->parse($xml);
 
         self::assertSame('The Weekly Review', $feed->title);
-        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
+        self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->headline->text);
         self::assertSame(
             "\u{201C}Datatype\u{201D} is an OpenType variable font",
-            $feed->entries[1]->title,
+            $feed->entries[1]->headline->text,
         );
     }
 
@@ -553,8 +553,8 @@ final class Atom10ParserTest extends TestCase
             . '<content type="html">&lt;p&gt;Hello from the fediverse. Second sentence.&lt;/p&gt;</content></entry>',
         );
 
-        self::assertSame('Hello from the fediverse.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Hello from the fediverse.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testTheContentOutranksTheSummaryAsTheSourceOfADerivedTitle(): void
@@ -565,7 +565,7 @@ final class Atom10ParserTest extends TestCase
             . '<content type="html">&lt;p&gt;From the content.&lt;/p&gt;</content></entry>',
         );
 
-        self::assertSame('From the content.', $entry->title);
+        self::assertSame('From the content.', $entry->headline->text);
     }
 
     public function testAnEntryWithoutATitleOrContentTakesItsTitleFromTheSummary(): void
@@ -575,15 +575,15 @@ final class Atom10ParserTest extends TestCase
             . '<summary>Only a summary here. More.</summary></entry>',
         );
 
-        self::assertSame('Only a summary here.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Only a summary here.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testATitledEntryIsNotDerived(): void
     {
         $entry = $this->parseSingleEntry('<entry><title>Real</title><id>tag:x,2026:3</id></entry>');
 
-        self::assertSame('Real', $entry->title);
-        self::assertFalse($entry->titleDerived);
+        self::assertSame('Real', $entry->headline->text);
+        self::assertFalse($entry->headline->derived);
     }
 }

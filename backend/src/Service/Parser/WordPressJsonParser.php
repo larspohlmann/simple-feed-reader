@@ -48,12 +48,11 @@ final readonly class WordPressJsonParser
         $image = $this->image($post);
         $contentHtml = $this->rendered($post, 'content');
         $summary = $this->rendered($post, 'excerpt');
-        $entryTitle = EntryTitle::of($this->rendered($post, 'title'), $contentHtml ?? $summary);
 
         return new ParsedEntryModel(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
-            title: $entryTitle->text,
+            headline: EntryTitle::of($this->rendered($post, 'title'), $contentHtml ?? $summary),
             // No author NAME without _embed (only an id), and _embed is too
             // heavy to request; bylines usually live in content.rendered anyway.
             author: null,
@@ -61,7 +60,6 @@ final readonly class WordPressJsonParser
             contentHtml: $contentHtml,
             publishedAt: $this->publishedAt($post),
             media: new ParsedEntryMediaModel($image),
-            titleDerived: $entryTitle->derived,
         );
     }
 

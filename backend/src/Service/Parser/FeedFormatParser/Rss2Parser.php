@@ -82,12 +82,11 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $mediaBundle = $this->mediaExtractor->extract($item);
 
         $contentHtml = FeedBodyHtml::of($contentEncoded ?? $description) ?? MediaDescription::html($entry);
-        $entryTitle = EntryTitle::of($title, $contentHtml);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($item->text('guid'), $link, $title),
             url: $link,
-            title: $entryTitle->text,
+            headline: EntryTitle::of($title, $contentHtml),
             author: self::coreOrDublinCore($item, 'author', 'creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentHtml,
@@ -95,7 +94,6 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
-            titleDerived: $entryTitle->derived,
         );
     }
 

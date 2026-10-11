@@ -37,7 +37,7 @@ final class WordPressJsonParserTest extends TestCase
 
         self::assertSame('https://site.example/?p=101', $entry->guid);
         self::assertSame('https://site.example/hello-world/', $entry->url);
-        self::assertSame('Hello & welcome', $entry->title);
+        self::assertSame('Hello & welcome', $entry->headline->text);
         self::assertSame('<p>Full body.</p>', $entry->contentHtml);
         self::assertSame('<p>Short.</p>', $entry->summary);
         self::assertNull($entry->author);
@@ -167,7 +167,7 @@ final class WordPressJsonParserTest extends TestCase
         $body = '[{"id":1,"link":"https://x.example/1",'
             . '"title":{"rendered":"<em>  Ben &#039;s pick  </em>"}}]';
 
-        self::assertSame("Ben 's pick", $this->parse($body)->entries[0]->title);
+        self::assertSame("Ben 's pick", $this->parse($body)->entries[0]->headline->text);
     }
 
     public function testAWhitespaceOnlyGuidFallsBackToId(): void
@@ -205,8 +205,8 @@ final class WordPressJsonParserTest extends TestCase
 
         $entry = $this->parse($body)->entries[0];
 
-        self::assertSame('Hello there.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Hello there.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testTheContentOutranksTheExcerptAsTheSourceOfADerivedTitle(): void
@@ -215,13 +215,13 @@ final class WordPressJsonParserTest extends TestCase
             . ' "content": {"rendered": "<p>From the content.</p>"},'
             . ' "excerpt": {"rendered": "<p>From the excerpt.</p>"}}]';
 
-        self::assertSame('From the content.', $this->parse($body)->entries[0]->title);
+        self::assertSame('From the content.', $this->parse($body)->entries[0]->headline->text);
     }
 
     public function testATitledPostIsNotDerived(): void
     {
         $entry = $this->parse(self::POST)->entries[0];
 
-        self::assertFalse($entry->titleDerived);
+        self::assertFalse($entry->headline->derived);
     }
 }

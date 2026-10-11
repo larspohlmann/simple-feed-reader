@@ -107,7 +107,7 @@ final readonly class FeedPreviewService
         $imageUrl = $this->httpsImageUrl($image);
 
         return new FeedPreviewItemModel(
-            title: $entry->title,
+            title: $entry->headline->text,
             url: $entry->url,
             author: $entry->author,
             // Prefers the feed's own summary/teaser field; tier()/plainText() deliberately

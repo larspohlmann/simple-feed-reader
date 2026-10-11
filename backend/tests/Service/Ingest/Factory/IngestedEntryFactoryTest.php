@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingest\Factory;
 
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\Model\IncomingEntryModel;
@@ -22,7 +23,7 @@ final class IngestedEntryFactoryTest extends TestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-1',
             url: 'https://example.com/' . str_repeat('u', 3000),
-            title: 'T' . str_repeat('t', 2000),
+            headline: Headline::fromFeed('T' . str_repeat('t', 2000)),
             author: 'A' . str_repeat('a', 500),
             summary: '<p>A &amp; B summary</p>',
             contentHtml: '<p>Body</p><script>evil()</script>',
@@ -51,7 +52,8 @@ final class IngestedEntryFactoryTest extends TestCase
 
     public function testAnItemWithoutUrlOrAuthorKeepsBothNullAndSummarisesItsBody(): void
     {
-        $parsed = new ParsedEntryModel('g-2', null, 'Title', null, null, '<p>Only a body</p>', null);
+        $title = Headline::fromFeed('Title');
+        $parsed = new ParsedEntryModel('g-2', null, $title, null, null, '<p>Only a body</p>', null);
 
         $entry = $this->factory()->create(
             new Feed('https://example.com/feed'),
@@ -71,12 +73,11 @@ final class IngestedEntryFactoryTest extends TestCase
         $parsed = new ParsedEntryModel(
             'g-3',
             null,
-            'Derived',
+            Headline::derived('Derived'),
             null,
             null,
             '<p>Derived. Rest</p>',
             null,
-            titleDerived: true,
         );
 
         $entry = $this->factory()->create(
@@ -90,7 +91,7 @@ final class IngestedEntryFactoryTest extends TestCase
 
     public function testAnItemWithAFeedTitleLeavesTheEntryUnmarked(): void
     {
-        $parsed = new ParsedEntryModel('g-4', null, 'Given', null, null, '<p>Body</p>', null);
+        $parsed = new ParsedEntryModel('g-4', null, Headline::fromFeed('Given'), null, null, '<p>Body</p>', null);
 
         $entry = $this->factory()->create(
             new Feed('https://example.com/feed'),
@@ -106,7 +107,7 @@ final class IngestedEntryFactoryTest extends TestCase
         $parsed = new ParsedEntryModel(
             guid: 'g-3',
             url: 'https://example.com/' . str_repeat('ä', 3000),
-            title: str_repeat('é', 2000),
+            headline: Headline::fromFeed(str_repeat('é', 2000)),
             author: str_repeat('ü', 500),
             summary: null,
             contentHtml: null,

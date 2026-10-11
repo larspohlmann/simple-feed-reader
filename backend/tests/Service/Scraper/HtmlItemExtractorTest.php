@@ -48,7 +48,7 @@ final class HtmlItemExtractorTest extends TestCase
             'https://www.treehugger.com/'
         );
         self::assertGreaterThanOrEqual(10, \count($parsed->entries));
-        $titles = array_map(static fn ($entry) => $entry->title, $parsed->entries);
+        $titles = array_map(static fn ($entry) => $entry->headline->text, $parsed->entries);
         self::assertContains('Your Yard’s Next Big Upgrade: A Rain Garden You Can Build Yourself', $titles);
         foreach ($titles as $title) {
             self::assertLessThan(301, mb_strlen($title));

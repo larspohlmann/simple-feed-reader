@@ -9,35 +9,22 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Embeddable]
 final class EntryHeadline
 {
-    #[ORM\Column(name: 'title', length: 1024)]
+    private const int TITLE_MAX = 1024;
+
+    #[ORM\Column(name: 'title', length: self::TITLE_MAX)]
     private string $title = '';
 
     #[ORM\Column(name: 'title_derived', options: ['default' => false])]
     private bool $derived = false;
 
-    public function store(string $title): void
+    public function store(Headline $headline): void
     {
-        $this->title = $title;
-        $this->derived = false;
+        $this->title = mb_substr($headline->text, 0, self::TITLE_MAX);
+        $this->derived = $headline->derived;
     }
 
-    public function getTitle(): string
+    public function read(): Headline
     {
-        return $this->title;
-    }
-
-    public function isDerived(): bool
-    {
-        return $this->derived;
-    }
-
-    public function markDerived(): void
-    {
-        $this->derived = true;
-    }
-
-    public function isUntitledPost(): bool
-    {
-        return $this->derived && $this->title === '';
+        return $this->derived ? Headline::derived($this->title) : Headline::fromFeed($this->title);
     }
 }

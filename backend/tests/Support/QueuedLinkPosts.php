@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,7 +27,7 @@ final class QueuedLinkPosts
     ): Entry {
         $entry = new Entry($feed, $guid, null, 'Post', $queuedAt, $queuedAt);
         $entry->setContentHtml($contentHtml);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
         $entityManager->persist($entry);
         $entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $queuedAt));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest\PlatformEntryRule;
 
+use App\Entity\Headline;
 use App\Service\Ingest\PlatformEntryRule\BlueskyEntryRule;
 use App\Service\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -43,7 +44,7 @@ final class BlueskyEntryRuleTest extends TestCase
     public function testThePlaceholderLeavesContentAndSummary(string $body, string $expected): void
     {
         $entry = (new BlueskyEntryRule())->apply(
-            new ParsedEntryModel(self::POST, null, 'Title', null, $body, $body, null, titleDerived: true),
+            new ParsedEntryModel(self::POST, null, Headline::derived('Title'), null, $body, $body, null),
         );
 
         self::assertSame($expected, $entry->contentHtml);
@@ -56,8 +57,8 @@ final class BlueskyEntryRuleTest extends TestCase
 
         self::assertNull($entry->contentHtml);
         self::assertNull($entry->summary);
-        self::assertSame('', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testADerivedTitleIsDerivedAgainFromTheRemainingText(): void
@@ -66,8 +67,8 @@ final class BlueskyEntryRuleTest extends TestCase
             self::post(self::POST, 'stale', '<p>Fresh words.</p><p>' . self::PLACEHOLDER . '</p>'),
         );
 
-        self::assertSame('Fresh words.', $entry->title);
-        self::assertTrue($entry->titleDerived);
+        self::assertSame('Fresh words.', $entry->headline->text);
+        self::assertTrue($entry->headline->derived);
     }
 
     public function testAFeedTitleIsKept(): void
@@ -75,20 +76,20 @@ final class BlueskyEntryRuleTest extends TestCase
         $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(
             self::POST,
             null,
-            'Feed headline',
+            Headline::fromFeed('Feed headline'),
             null,
             null,
             '<p>Body text.</p><p>' . self::PLACEHOLDER . '</p>',
             null,
         ));
 
-        self::assertSame('Feed headline', $entry->title);
-        self::assertFalse($entry->titleDerived);
+        self::assertSame('Feed headline', $entry->headline->text);
+        self::assertFalse($entry->headline->derived);
         self::assertSame('<p>Body text.</p>', $entry->contentHtml);
     }
 
     private static function post(string $guid, string $derivedTitle, string $contentHtml): ParsedEntryModel
     {
-        return new ParsedEntryModel($guid, null, $derivedTitle, null, null, $contentHtml, null, titleDerived: true);
+        return new ParsedEntryModel($guid, null, Headline::derived($derivedTitle), null, null, $contentHtml, null);
     }
 }

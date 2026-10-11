@@ -8,6 +8,7 @@ use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Repository\CategoryRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Ingest\EntryCategoryWriter;
@@ -47,7 +48,16 @@ final class EntryCategoryWriterTest extends DbTestCase
 
     private function parsed(string $guid, ParsedCategoryModel ...$categories): ParsedEntryModel
     {
-        return new ParsedEntryModel($guid, null, 'T', null, null, null, null, categories: array_values($categories));
+        return new ParsedEntryModel(
+            $guid,
+            null,
+            Headline::fromFeed('T'),
+            null,
+            null,
+            null,
+            null,
+            categories: array_values($categories),
+        );
     }
 
     public function testWritesLinksAndCreatesCategories(): void

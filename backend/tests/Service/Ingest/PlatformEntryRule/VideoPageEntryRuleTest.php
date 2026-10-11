@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest\PlatformEntryRule;
 
+use App\Entity\Headline;
 use App\Service\Ingest\PlatformEntryRule\VideoPageEntryRule;
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedAttachmentModel;
@@ -38,7 +39,7 @@ final class VideoPageEntryRuleTest extends TestCase
         return new ParsedEntryModel(
             'yt:video:1',
             $url,
-            'T',
+            Headline::fromFeed('T'),
             null,
             null,
             $contentHtml,

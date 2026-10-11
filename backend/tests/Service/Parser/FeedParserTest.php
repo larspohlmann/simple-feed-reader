@@ -25,7 +25,7 @@ final class FeedParserTest extends TestCase
         $first = $feed->entries[0];
         self::assertSame('tag:blog.example.com,2026:announcement', $first->guid);
         // "<Announcement>" goes with the "<em>" markup: escaped HTML and literal brackets look alike once decoded.
-        self::assertSame('Big & More', $first->title);
+        self::assertSame('Big & More', $first->headline->text);
         self::assertSame('https://blog.example.com/announcement', $first->url);
         self::assertSame('Jane Doe', $first->author);
         self::assertSame('Short teaser text.', $first->summary);
@@ -174,7 +174,7 @@ final class FeedParserTest extends TestCase
 
         self::assertSame('KonkretFeed', $feed->title);
         self::assertCount(1, $feed->entries);
-        self::assertSame('FirstItem', $feed->entries[0]->title);
+        self::assertSame('FirstItem', $feed->entries[0]->headline->text);
     }
 
     /**
@@ -272,7 +272,7 @@ final class FeedParserTest extends TestCase
 
         $entry = $feed->entries[0];
         self::assertSame('tag:atom03.example.com,2026:first', $entry->guid);
-        self::assertSame('First 0.3 Entry', $entry->title);
+        self::assertSame('First 0.3 Entry', $entry->headline->text);
         self::assertSame('https://atom03.example.com/first', $entry->url);
         self::assertSame('Old Timer', $entry->author);
         self::assertSame('A teaser from the 0.3 dialect.', $entry->summary);
@@ -455,6 +455,6 @@ final class FeedParserTest extends TestCase
         );
 
         self::assertSame('Grüße', $feed->title);
-        self::assertSame('Äpfel', $feed->entries[0]->title);
+        self::assertSame('Äpfel', $feed->entries[0]->headline->text);
     }
 }

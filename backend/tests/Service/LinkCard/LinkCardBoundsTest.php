@@ -6,6 +6,7 @@ namespace App\Tests\Service\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
@@ -95,7 +96,7 @@ final class LinkCardBoundsTest extends DbTestCase
         $now = $this->clock->now();
         $entry = new Entry($this->feed, $guid, null, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
-        $entry->markTitleDerived();
+        $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
         $this->entityManager->persist($entry);
 

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
@@ -64,12 +65,11 @@ final class FirstFetchRecorderTest extends DbTestCase
             new ParsedEntryModel(
                 guid: 'link-post',
                 url: 'https://mastodon.example/@a/1',
-                title: 'Worth a read',
+                headline: Headline::derived('Worth a read'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>Worth a read: https://example.com/story</p>',
                 publishedAt: new \DateTimeImmutable('2026-10-10 14:00:00'),
-                titleDerived: true,
             ),
         ]);
 
@@ -199,7 +199,7 @@ final class FirstFetchRecorderTest extends DbTestCase
         return new ParsedEntryModel(
             guid: $guid,
             url: 'https://example.com/' . $guid,
-            title: 'Title ' . $guid,
+            headline: Headline::fromFeed('Title ' . $guid),
             author: null,
             summary: null,
             contentHtml: '<p>Body.</p>',

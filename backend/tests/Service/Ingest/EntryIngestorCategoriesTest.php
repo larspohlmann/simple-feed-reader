@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ingest;
 
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedCategoryModel;
@@ -58,7 +59,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
             new ParsedEntryModel(
                 guid: $guid,
                 url: 'https://example.com/' . $guid,
-                title: 'Title',
+                headline: Headline::fromFeed('Title'),
                 author: null,
                 summary: null,
                 contentHtml: '<p>body</p>',

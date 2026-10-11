@@ -58,7 +58,7 @@ final class FeedFormatParsers
     /** @return list<string> */
     public static function entryTitles(ParsedFeedModel $feed): array
     {
-        return array_map(static fn (ParsedEntryModel $entry): string => $entry->title, $feed->entries);
+        return array_map(static fn (ParsedEntryModel $entry): string => $entry->headline->text, $feed->entries);
     }
 
     private static function imageSelector(): FeedItemImageSelector

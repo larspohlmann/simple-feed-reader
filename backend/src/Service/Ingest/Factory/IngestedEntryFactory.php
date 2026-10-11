@@ -19,7 +19,6 @@ use App\Service\Sanitize\EntrySanitizer;
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
 final readonly class IngestedEntryFactory
 {
-    private const int TITLE_MAX = 1024;
     private const int AUTHOR_MAX = 255;
     private const int URL_MAX = 2048;
 
@@ -36,7 +35,7 @@ final readonly class IngestedEntryFactory
             $feed,
             $parsed->guid,
             self::cut($parsed->url, self::URL_MAX),
-            mb_substr($parsed->title, 0, self::TITLE_MAX),
+            $parsed->headline->text,
             $context->fetchedAt,
             EntryEffectiveDate::for($parsed->publishedAt, $context),
             $incoming->urlHash,
@@ -45,10 +44,8 @@ final readonly class IngestedEntryFactory
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);
+        $entry->setHeadline($parsed->headline);
         $entry->setDiscussion($parsed->discussion);
-        if ($parsed->titleDerived) {
-            $entry->markTitleDerived();
-        }
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);
 

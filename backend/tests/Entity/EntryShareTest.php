@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Entity\Share;
 use App\Enum\ShareKind;
 use PHPUnit\Framework\TestCase;
@@ -40,7 +41,7 @@ final class EntryShareTest extends TestCase
         $share->setShare(Share::link('https://example.com/story'));
         $now = new \DateTimeImmutable();
         $untitled = new Entry(new Feed('https://example.org/feed'), 'g', null, '', $now, $now);
-        $untitled->markTitleDerived();
+        $untitled->setHeadline(Headline::untitledPost());
 
         self::assertTrue($article->bodyStandsInForSummary());
         self::assertFalse($share->bodyStandsInForSummary());

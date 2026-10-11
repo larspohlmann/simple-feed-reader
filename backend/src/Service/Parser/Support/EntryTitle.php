@@ -4,22 +4,22 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
-use App\Service\Parser\Model\ParsedTitleModel;
+use App\Entity\Headline;
 use App\Service\Text\Support\DerivedTitle;
 use App\Service\Text\Support\PlainText;
 
 final class EntryTitle
 {
-    public static function of(?string $feedTitle, ?string $bodyHtml): ParsedTitleModel
+    public static function of(?string $feedTitle, ?string $bodyHtml): Headline
     {
         $title = PlainText::from($feedTitle);
         if ($title !== null) {
-            return ParsedTitleModel::fromFeed($title);
+            return Headline::fromFeed($title);
         }
 
         $derived = DerivedTitle::from($bodyHtml);
 
-        return $derived === null ? ParsedTitleModel::untitledPost() : ParsedTitleModel::derived($derived);
+        return $derived === null ? Headline::untitledPost() : Headline::derived($derived);
     }
 
     private function __construct()

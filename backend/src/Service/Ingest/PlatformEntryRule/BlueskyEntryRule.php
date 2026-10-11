@@ -6,7 +6,6 @@ namespace App\Service\Ingest\PlatformEntryRule;
 
 use App\Service\Ingest\Support\AtPostUri;
 use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Parser\Model\ParsedTitleModel;
 use App\Service\Parser\Support\EntryTitle;
 
 /** Bluesky's RSS puts a placeholder line where a post embeds something; neither the body nor the title keeps it. */
@@ -25,14 +24,9 @@ final readonly class BlueskyEntryRule implements PlatformEntryRuleInterface
     {
         $summary = self::withoutPlaceholder($entry->summary);
         $contentHtml = self::withoutPlaceholder($entry->contentHtml);
-        $title = $entry->titleDerived ? self::postTitle($contentHtml ?? $summary) : $entry->parsedTitle();
+        $headline = $entry->headline->derived ? EntryTitle::of(null, $contentHtml ?? $summary) : $entry->headline;
 
-        return $entry->withPostText($title, $summary, $contentHtml);
-    }
-
-    private static function postTitle(?string $text): ParsedTitleModel
-    {
-        return EntryTitle::of(null, $text);
+        return $entry->withPostText($headline, $summary, $contentHtml);
     }
 
     private static function withoutPlaceholder(?string $text): ?string
