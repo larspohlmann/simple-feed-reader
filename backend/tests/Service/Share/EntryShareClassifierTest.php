@@ -289,6 +289,20 @@ final class EntryShareClassifierTest extends TestCase
         self::assertEquals(Share::link(null), $entry->getShare());
     }
 
+    public function testAPostHasItsBareUrlsLinked(): void
+    {
+        $entry = $this->classified(self::post('<p>See https://example.com/a</p>'));
+
+        self::assertStringContainsString('See <a href="https://example.com/a"', (string) $entry->getContentHtml());
+    }
+
+    public function testABlueskyPostAwaitingItsEmbedKeepsItsBareUrls(): void
+    {
+        $entry = $this->classified(self::blueskyPost('<p>See https://example.com/a</p>'));
+
+        self::assertSame('<p>See https://example.com/a</p>', $entry->getContentHtml());
+    }
+
     public function testAPostLeavesItsSummaryAlone(): void
     {
         $entry = self::post('<p>Look: <a href="https://example.com/a">https://example.com/a</a></p>');

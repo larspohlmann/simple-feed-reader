@@ -86,12 +86,7 @@ final readonly class EntryShareClassifier
     private function linkBareUrls(Entry $entry, SharedLinksModel $body): void
     {
         $contentHtml = $entry->getContentHtml();
-        if (
-            $entry->getShare()->kind !== ShareKind::Link
-            || $contentHtml === null
-            || $body->linkedHtml === $contentHtml
-            || $this->pendingEmbed->awaitsEmbed($entry)
-        ) {
+        if ($contentHtml === null || $body->linkedHtml === $contentHtml || $this->pendingEmbed->awaitsEmbed($entry)) {
             return;
         }
 
