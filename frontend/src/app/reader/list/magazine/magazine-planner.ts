@@ -1,15 +1,15 @@
 import { EntryDto } from '../../models';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage } from '../preview-image';
-import { BLOCK_HEIGHT, DEMOTION, EntryKind, MagazineBlock } from './magazine-block';
 import {
-  fits,
-  ImageBar,
-  isShareKind,
-  shareKind,
-  QUOTE_MIN_TEXT,
-  settle,
-} from './magazine-slot-fit';
+  BLOCK_HEIGHT,
+  DEMOTION,
+  EntryKind,
+  MagazineBlock,
+  ShareKind,
+  TemplateKind,
+} from './magazine-block';
+import { fits, ImageBar, shareKind, QUOTE_MIN_TEXT, settle } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES, Slot, TEXT_TEMPLATES } from './magazine-templates';
 
 export interface MagazinePlanInput {
@@ -39,7 +39,7 @@ const TEXT_RICH_SHARE = 0.4;
  *  images (~a quarter, a link/dev blog) still keeps the image family. */
 const IMAGE_POOR_SHARE = 0.15;
 /** A same-source run collapses once it reaches this many entries in a row.
- *  Single foreign posts embedded in the run are bridged — see `detectRun`. */
+ *  Single foreign entries embedded in the run are bridged — see `detectRun`. */
 const RUN_MIN = 8;
 /** The first entries of a collapsing run kept as full magazine blocks, so the
  *  source still gets a visual moment before the rest folds into the widget. */
@@ -70,7 +70,7 @@ interface MagazineFamily {
 const IMAGE_FAMILY: MagazineFamily = { templates: IMAGE_TEMPLATES, imageBar: 'thumb' };
 const TEXT_FAMILY: MagazineFamily = { templates: TEXT_TEMPLATES, imageBar: 'split' };
 
-/** A same-source run, with any single foreign posts it bridges pulled aside. */
+/** A same-source run, with any single foreign entries it bridges pulled aside. */
 interface DetectedRun {
   source: number;
   sourceEntries: EntryDto[];
@@ -88,6 +88,13 @@ interface PlanPass {
   readonly collapseEnabled: boolean;
   readonly blocks: MagazineBlock[];
   page: number;
+}
+
+/** The share block each entry of a page claims (null where the template decides), and the image
+ *  bar its family holds the page to. */
+interface PageLayout {
+  readonly pinned: readonly (ShareKind | null)[];
+  readonly imageBar: ImageBar;
 }
 
 interface SlotAt {
@@ -164,7 +171,7 @@ function emitOrdinaryPage(pass: PlanPass, index: number): number | null {
   return index + slice.length;
 }
 
-/** Walk a same-source run from `start`, bridging any single foreign post the
+/** Walk a same-source run from `start`, bridging any single foreign entry the
  *  source resumes right after (`Dom…X…Dom`); a gap of two or more ends the run.
  *  Every entry in `[start, end)` is same-source or a bridged interloper. */
 function detectRun(ordered: EntryDto[], start: number): DetectedRun {
@@ -296,23 +303,25 @@ function seed(page: number, salt: number): number {
   return x - Math.floor(x);
 }
 
-function resolveSlot(slot: Slot, page: number, position: number): EntryKind {
+function resolveSlot(slot: Slot, page: number, position: number): TemplateKind {
   if (typeof slot === 'string') return slot;
   return seed(page, position) < 0.5 ? slot.either[0] : slot.either[1];
 }
 
 function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]): MagazineBlock[] {
   const { page } = pass;
+  const layout: PageLayout = { pinned: slice.map(shareKind), imageBar: pass.family.imageBar };
   const wanted = template
     .slice(0, slice.length)
-    .map((slot, position) => shareKind(slice[position]) ?? resolveSlot(slot, page, position));
-  const { imageBar } = pass.family;
-  const budgeted = withinBudget(wanted, (kind) => DEMOTION[kind]);
-  const assigned = withinBudget(assign(budgeted, slice, imageBar), (kind, position) =>
-    settle(DEMOTION[kind], slice[position], imageBar),
+    .map((slot, position) => resolveSlot(slot, page, position));
+  const budgeted = withinBudget(wanted, layout, (kind) => DEMOTION[kind]);
+  const assigned = withinBudget(assign(budgeted, slice, layout), layout, (kind, position) =>
+    settle(DEMOTION[kind], slice[position], layout.imageBar),
   );
 
-  return assigned.map((kind, position) => toBlock(kind, slice[position], { page, position }));
+  return assigned.map((kind, position) =>
+    toBlock(layout.pinned[position] ?? kind, slice[position], { page, position }),
+  );
 }
 
 /** The run's first entries, laid out as ordinary magazine blocks. */
@@ -320,7 +329,7 @@ function emitFeaturedLead(pass: PlanPass, run: DetectedRun): void {
   emitPages(pass, run.sourceEntries.slice(0, FEATURED_LEAD));
 }
 
-/** The foreign posts a run bridged, surfaced after its widget as ordinary
+/** The foreign entries a run bridged, surfaced after its widget as ordinary
  *  blocks — collapsing the run reveals them rather than re-hiding them. */
 function emitInterlopers(pass: PlanPass, run: DetectedRun): void {
   emitPages(pass, run.interlopers);
@@ -339,21 +348,27 @@ function emitPages(pass: PlanPass, items: EntryDto[]): void {
   }
 }
 
-/** Demote the tallest slot `demote` can shorten, one step at a time, until the page fits the height
- *  cap. Before `assign` the wanted kinds step down the plain ladder, which also picks the slot its
- *  look-ahead fills; after it the settled kinds re-settle for their entry, so `settle` cannot lift a
- *  page back over the cap. */
+/** Demote the tallest unpinned slot `demote` can shorten, one step at a time, until the page,
+ *  pinned share blocks included, fits the height cap. Before `assign` the wanted kinds step down the
+ *  plain ladder, which also picks the slot its look-ahead fills; after it the settled kinds re-settle
+ *  for their entry, so `settle` cannot lift a page back over the cap. */
 function withinBudget(
-  kinds: EntryKind[],
-  demote: (kind: EntryKind, position: number) => EntryKind,
-): EntryKind[] {
+  kinds: TemplateKind[],
+  layout: PageLayout,
+  demote: (kind: TemplateKind, position: number) => TemplateKind,
+): TemplateKind[] {
   const result = [...kinds];
-  let height = result.reduce((sum, kind) => sum + BLOCK_HEIGHT[kind], 0);
+  let height = result.reduce(
+    (sum, kind, position) => sum + BLOCK_HEIGHT[layout.pinned[position] ?? kind],
+    0,
+  );
 
   while (height > PAGE_HEIGHT_CAP) {
     const tallest = tallestWhere(
       result,
-      (kind, position) => BLOCK_HEIGHT[demote(kind, position)] < BLOCK_HEIGHT[kind],
+      (kind, position) =>
+        layout.pinned[position] === null &&
+        BLOCK_HEIGHT[demote(kind, position)] < BLOCK_HEIGHT[kind],
     );
     if (tallest === null) break;
     const demoted = demote(result[tallest], tallest);
@@ -366,8 +381,8 @@ function withinBudget(
 
 /** The first of the tallest slots `eligible` admits, or null when it admits none. */
 function tallestWhere(
-  kinds: EntryKind[],
-  eligible: (kind: EntryKind, position: number) => boolean,
+  kinds: TemplateKind[],
+  eligible: (kind: TemplateKind, position: number) => boolean,
 ): number | null {
   let tallest: number | null = null;
   for (let index = 0; index < kinds.length; index++) {
@@ -381,19 +396,20 @@ function tallestWhere(
 
 /**
  * Entries fill slots IN ORDER — chronological by contract. The one exception is
- * the tallest slot, which may reach up to LOOK_AHEAD ahead for an entry that
+ * the tallest unpinned slot, which may reach up to LOOK_AHEAD ahead for an entry that
  * fits it (bounded, so nothing visibly jumps). Any slot that still can't fill
  * demotes TRANSITIVELY; a text slot given a picture promotes (`settle`). The reach
  * stops at a share that claims its own block, so every pinned slot keeps the entry it was pinned for.
  */
-function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): EntryKind[] {
+function assign(kinds: TemplateKind[], slice: EntryDto[], layout: PageLayout): TemplateKind[] {
+  const { pinned, imageBar } = layout;
   const order = [...slice];
-  const tallest = tallestWhere(kinds, (kind) => !isShareKind(kind));
+  const tallest = tallestWhere(kinds, (_kind, position) => pinned[position] === null);
 
   if (tallest !== null && !fits(kinds[tallest], order[tallest])) {
     const limit = Math.min(order.length, tallest + LOOK_AHEAD + 1);
     for (let index = tallest + 1; index < limit; index++) {
-      if (shareKind(order[index]) !== null) break;
+      if (pinned[index] !== null) break;
       if (fits(kinds[tallest], order[index])) {
         const [picked] = order.splice(index, 1);
         order.splice(tallest, 0, picked);
@@ -404,14 +420,16 @@ function assign(kinds: EntryKind[], slice: EntryDto[], imageBar: ImageBar): Entr
 
   slice.splice(0, slice.length, ...order);
 
-  return kinds.map((kind, position) => settle(kind, order[position], imageBar));
+  return kinds.map((kind, position) =>
+    pinned[position] === null ? settle(kind, order[position], imageBar) : kind,
+  );
 }
 
 function toBlock(kind: EntryKind, entry: EntryDto, at: SlotAt): MagazineBlock {
   if (kind === 'split') {
     return { kind, entry, imageSide: seed(at.page, at.position + 97) < 0.5 ? 'left' : 'right' };
   }
-  return { kind, entry } as MagazineBlock;
+  return { kind, entry };
 }
 
 /** A widget owning a run's whole tail; the component previews `previewCount`

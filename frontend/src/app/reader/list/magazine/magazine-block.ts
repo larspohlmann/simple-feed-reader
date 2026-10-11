@@ -1,31 +1,21 @@
 import { EntryDto } from '../../models';
 
-/** Every block kind that can carry a single entry. Ordered by height, largest
- *  first — `DEMOTION` walks this ladder and the planner's budget compares on it. */
-export const ENTRY_KINDS = [
-  'hero',
-  'link',
-  'media',
-  'wide',
-  'quote',
-  'split',
-  'kicker',
-  'thumb',
-  'compact',
-] as const;
+/** The kinds a template authors, and the only ones the demotion ladder walks. */
+const TEMPLATE_KINDS = ['hero', 'wide', 'quote', 'split', 'kicker', 'thumb', 'compact'] as const;
 
-export type EntryKind = (typeof ENTRY_KINDS)[number];
+/** The blocks a share claims whatever slot it was given (#1502, #1522). */
+export const SHARE_KINDS = ['link', 'media'] as const;
+
+/** Every block kind that can carry a single entry. */
+export const ENTRY_KINDS = [...TEMPLATE_KINDS, ...SHARE_KINDS] as const;
+
+export type TemplateKind = (typeof TEMPLATE_KINDS)[number];
+export type ShareKind = (typeof SHARE_KINDS)[number];
+export type EntryKind = TemplateKind | ShareKind;
 
 export type MagazineBlock =
-  | { kind: 'hero'; entry: EntryDto }
-  | { kind: 'link'; entry: EntryDto }
-  | { kind: 'media'; entry: EntryDto }
-  | { kind: 'wide'; entry: EntryDto }
-  | { kind: 'quote'; entry: EntryDto }
+  | { kind: Exclude<EntryKind, 'split'>; entry: EntryDto }
   | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
-  | { kind: 'kicker'; entry: EntryDto }
-  | { kind: 'thumb'; entry: EntryDto }
-  | { kind: 'compact'; entry: EntryDto }
   | {
       kind: 'group';
       subscriptionId: number;
@@ -53,10 +43,8 @@ export const BLOCK_HEIGHT: Record<EntryKind, number> = {
 /** Where a slot goes when its entry cannot fill it. Applied REPEATEDLY until
  *  the slot fits or reaches `compact` — one step is not enough: demoting a hero
  *  to `wide` in an image-less view still leaves an image block with no image. */
-export const DEMOTION: Record<EntryKind, EntryKind> = {
+export const DEMOTION: Record<TemplateKind, TemplateKind> = {
   hero: 'wide',
-  link: 'link',
-  media: 'media',
   wide: 'split',
   split: 'thumb',
   thumb: 'compact',
