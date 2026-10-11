@@ -41,9 +41,10 @@ final class EntryJson
     public static function listRow(EntryListRow $row): array
     {
         return self::commonFields($row) + [
-            'excerpt' => $row->entry->isUntitledPost()
-                ? ''
-                : EntryExcerpt::of($row->entry->getSummary(), $row->entry->getContentHtml()),
+            'excerpt' => EntryExcerpt::of(
+                $row->entry->getSummary(),
+                $row->entry->isUntitledPost() ? null : $row->entry->getContentHtml(),
+            ),
             'duplicates' => array_map(self::listRow(...), $row->duplicates),
         ];
     }

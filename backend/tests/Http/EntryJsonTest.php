@@ -270,6 +270,19 @@ final class EntryJsonTest extends TestCase
         self::assertSame('', EntryJson::listRow($this->row($entry))['excerpt']);
     }
 
+    public function testAnUntitledPostKeepsTheTextOfItsSummary(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->markTitleDerived();
+        $entry->setSummary('Words that live only in the summary.');
+        $entry->setContentHtml('<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>');
+
+        self::assertSame(
+            'Words that live only in the summary.',
+            EntryJson::listRow($this->row($entry))['excerpt'],
+        );
+    }
+
     public function testAnUntitledArticleKeepsItsExcerpt(): void
     {
         $entry = $this->entryTitled('(untitled)');
