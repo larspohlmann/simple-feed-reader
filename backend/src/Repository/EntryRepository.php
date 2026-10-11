@@ -34,9 +34,9 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
 
         /** @var list<string> $existing */
         $existing = $this->createQueryBuilder('e')
-            ->select('e.guidHash')
+            ->select('e.guid.hash')
             ->andWhere('e.feed = :feed')
-            ->andWhere('e.guidHash IN (:hashes)')
+            ->andWhere('e.guid.hash IN (:hashes)')
             ->setParameter('feed', $feedId)
             ->setParameter('hashes', $guidHashes)
             ->getQuery()
@@ -157,7 +157,7 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
         /** @var list<Entry> $rows */
         $rows = $this->createQueryBuilder('e')
             ->andWhere('e.feed = :feed')
-            ->andWhere('e.guidHash IN (:hashes)')
+            ->andWhere('e.guid.hash IN (:hashes)')
             ->setParameter('feed', $feed)
             ->setParameter('hashes', $guidHashes)
             ->getQuery()
@@ -207,11 +207,11 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     private function scalarGuidHashRows(int $feedId, ?array $guidHashes): array
     {
         $builder = $this->createQueryBuilder('e')
-            ->select('e.guidHash AS guidHash', 'e.id AS id')
+            ->select('e.guid.hash AS guidHash', 'e.id AS id')
             ->andWhere('e.feed = :feed')
             ->setParameter('feed', $feedId);
         if (null !== $guidHashes) {
-            $builder->andWhere('e.guidHash IN (:hashes)')->setParameter('hashes', $guidHashes);
+            $builder->andWhere('e.guid.hash IN (:hashes)')->setParameter('hashes', $guidHashes);
         }
 
         /** @var list<array{guidHash: string, id: int}> $rows */

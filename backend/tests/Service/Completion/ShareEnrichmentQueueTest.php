@@ -113,7 +113,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([$guid => ShareEnrichmentKind::LinkCards], $this->queuedKinds());
-        self::assertSame(ShareKind::Link, $this->reload($share)->getShare()->kind);
+        self::assertSame(ShareKind::Link, $this->reload($share)->getShareKind());
     }
 
     public function testABlueskyPostHoldsTheLinkPlaceholderUntilItsEmbedArrives(): void
@@ -123,7 +123,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->queue->queue([$post]);
         $this->entityManager->flush();
 
-        self::assertSame(ShareKind::Link, $this->reload($post)->getShare()->kind);
+        self::assertSame(ShareKind::Link, $this->reload($post)->getShareKind());
     }
 
     public function testAPostWithAPictureIsMediaAndNotQueued(): void
@@ -135,7 +135,7 @@ final class ShareEnrichmentQueueTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame([], $this->queuedKinds());
-        self::assertSame(ShareKind::Media, $this->reload($post)->getShare()->kind);
+        self::assertSame(ShareKind::Media, $this->reload($post)->getShareKind());
     }
 
     private function post(string $guid, ?string $contentHtml): Entry

@@ -11,7 +11,7 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\ImageRendition;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
+use App\Enum\ShareKind;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
@@ -154,7 +154,7 @@ final class EntryJsonTest extends TestCase
     public function testSendsTheShareKind(): void
     {
         $shared = $this->entryTitled('Shared');
-        $shared->setShare(Share::link('https://example.com/story'));
+        $shared->setShareKind(ShareKind::Link);
 
         self::assertSame('link', EntryJson::listRow($this->row($shared))['share']);
         self::assertNull(EntryJson::listRow($this->row($this->entryTitled('Ordinary')))['share']);
@@ -163,7 +163,7 @@ final class EntryJsonTest extends TestCase
     public function testACompletedRowCarriesOnlyWhatACompletionCanChange(): void
     {
         $shared = $this->entryTitled('Shared');
-        $shared->setShare(Share::media('https://i.example/chart'));
+        $shared->setShareKind(ShareKind::Media);
 
         $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
 
@@ -194,7 +194,7 @@ final class EntryJsonTest extends TestCase
         $shared = $this->entryTitled('Shared');
         $shared->setSummary(null);
         $shared->setContentHtml('<p>Article URL: https://example.com/story</p>');
-        $shared->setShare(Share::link('https://example.com/story'));
+        $shared->setShareKind(ShareKind::Link);
 
         self::assertSame('', EntryJson::listRow($this->row($shared))['excerpt']);
     }

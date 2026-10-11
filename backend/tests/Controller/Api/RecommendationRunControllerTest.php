@@ -362,7 +362,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $entry = self::getContainer()->get(EntityManagerInterface::class)
             ->getRepository(Entry::class)
-            ->findOneBy(['guid' => 'g1']);
+            ->findOneBy(['guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -835,7 +835,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $entry = self::getContainer()->get(EntityManagerInterface::class)
             ->getRepository(Entry::class)
-            ->findOneBy(['guid' => 'g1']);
+            ->findOneBy(['guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $this->stubChatClient()->queueContent(json_encode([

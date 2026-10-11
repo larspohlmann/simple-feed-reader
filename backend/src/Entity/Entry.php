@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\ShareKind;
 use App\Repository\EntryRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -29,11 +30,8 @@ final class Entry
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Feed $feed;
 
-    #[ORM\Column(type: Types::TEXT)]
-    private string $guid;
-
-    #[ORM\Column(length: 64)]
-    private string $guidHash;
+    #[ORM\Embedded(class: EntryGuid::class, columnPrefix: false)]
+    private EntryGuid $guid;
 
     #[ORM\Embedded(class: EntryLocation::class, columnPrefix: false)]
     private EntryLocation $location;
@@ -59,6 +57,9 @@ final class Entry
     #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
     private EntryDiscussion $discussion;
 
+    #[ORM\Column(length: 8, nullable: true, enumType: ShareKind::class)]
+    private ?ShareKind $shareKind = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
 
@@ -82,8 +83,7 @@ final class Entry
         ?string $urlHash = null,
     ) {
         $this->feed = $feed;
-        $this->guid = $guid;
-        $this->guidHash = hash('sha256', $guid);
+        $this->guid = new EntryGuid($guid);
         $this->location = new EntryLocation();
         $this->location->store($url, $urlHash);
         $this->headline = new EntryHeadline();
@@ -107,12 +107,12 @@ final class Entry
 
     public function getGuid(): string
     {
-        return $this->guid;
+        return $this->guid->getValue();
     }
 
     public function getGuidHash(): string
     {
-        return $this->guidHash;
+        return $this->guid->getHash();
     }
 
     public function getUrlHash(): ?string
@@ -246,19 +246,19 @@ final class Entry
         $this->discussion->store($discussion);
     }
 
-    public function getShare(): Share
+    public function getShareKind(): ?ShareKind
     {
-        return $this->location->readShare();
+        return $this->shareKind;
     }
 
-    public function setShare(Share $share): void
+    public function setShareKind(?ShareKind $shareKind): void
     {
-        $this->location->storeShare($share);
+        $this->shareKind = $shareKind;
     }
 
     public function bodyStandsInForSummary(): bool
     {
-        return !$this->headline->read()->isUntitledPost() && $this->getShare()->isNone();
+        return !$this->headline->read()->isUntitledPost() && $this->shareKind === null;
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

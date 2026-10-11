@@ -216,7 +216,7 @@ final class EntryControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager->getRepository(Entry::class)
-            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => $guid]);
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => $guid]);
         self::assertInstanceOf(Entry::class, $entry);
 
         return $entry;
@@ -586,7 +586,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager
             ->getRepository(Entry::class)
-            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => 'g1']);
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $id = $entry->getId();
 
@@ -628,7 +628,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager
             ->getRepository(Entry::class)
-            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => 'g1']);
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $entry->setContentHtml('<p>For-you body text.</p>');
 
@@ -669,7 +669,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entries = $entityManager
             ->getRepository(Entry::class)
-            ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
+            ->findBy(['feed' => $subscription->getFeed()], ['guid.value' => 'ASC']);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot(RecommendationEngineKind::Llm, [[1]]);
@@ -708,7 +708,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entries = $entityManager
             ->getRepository(Entry::class)
-            ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
+            ->findBy(['feed' => $subscription->getFeed()], ['guid.value' => 'ASC']);
 
         // Only the first entry is recommended: the second proves the action
         // stays inside the for-you list instead of clearing the whole feed.
@@ -762,7 +762,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager
             ->getRepository(Entry::class)
-            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => 'g1']);
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
@@ -794,7 +794,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager
             ->getRepository(Entry::class)
-            ->findOneBy(['feed' => $subscription->getFeed(), 'guid' => 'g1']);
+            ->findOneBy(['feed' => $subscription->getFeed(), 'guid.value' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
@@ -826,7 +826,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entries = $entityManager
             ->getRepository(Entry::class)
-            ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
+            ->findBy(['feed' => $subscription->getFeed()], ['guid.value' => 'ASC']);
         self::assertCount(3, $entries);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
@@ -1102,7 +1102,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entry = $entityManager->getRepository(Entry::class)->findOneBy([
             'feed' => $subscription->getFeed(),
-            'guid' => $guid,
+            'guid.value' => $guid,
         ]);
         self::assertInstanceOf(Entry::class, $entry);
 
@@ -1529,7 +1529,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $entries = $entityManager
             ->getRepository(Entry::class)
-            ->findBy(['feed' => $subscription->getFeed()], ['guid' => 'ASC']);
+            ->findBy(['feed' => $subscription->getFeed()], ['guid.value' => 'ASC']);
         $markIds = [$entries[0]->requireId(), $entries[1]->requireId()];
 
         $this->postMarkReadBatch($client, $headers, $markIds);

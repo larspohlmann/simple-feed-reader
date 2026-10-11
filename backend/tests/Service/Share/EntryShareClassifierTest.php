@@ -9,8 +9,8 @@ use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
-use App\Entity\Share;
 use App\Enum\CommentsLoad;
+use App\Enum\ShareKind;
 use App\Service\Bluesky\BlueskyPendingEmbed;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
@@ -81,7 +81,7 @@ final class EntryShareClassifierTest extends TestCase
 
         $this->classified($entry);
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testABlueskyPostOfOverlongProseIsStillAProvisionalLink(): void
@@ -90,7 +90,7 @@ final class EntryShareClassifierTest extends TestCase
 
         $this->classified($entry);
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testABlueskyPostWithAPictureStaysMedia(): void
@@ -100,14 +100,14 @@ final class EntryShareClassifierTest extends TestCase
 
         $this->classified($entry);
 
-        self::assertEquals(Share::media(null), $entry->getShare());
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
 
     public function testAHackerNewsItemSharesItsArticleWithoutOwnText(): void
     {
         $entry = $this->classified(self::hackerNews('https://ghuntley.com/unikernels/'));
 
-        self::assertEquals(Share::link('https://ghuntley.com/unikernels/'), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertNull($entry->getSummary());
     }
 
@@ -118,7 +118,7 @@ final class EntryShareClassifierTest extends TestCase
 
         $this->classified($entry);
 
-        self::assertEquals(Share::media('https://i.example/chart.png'), $entry->getShare());
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
         self::assertSame('https://i.example/chart.png', $entry->getMedia()[0]->url);
         self::assertCount(2, $entry->getMedia());
     }
@@ -151,7 +151,7 @@ final class EntryShareClassifierTest extends TestCase
             '<p>Benjamin Mayo, commenting:</p><blockquote><p>There needs to be a name for this.</p></blockquote>',
         ));
 
-        self::assertEquals(Share::link('https://x.com/bzamayo/status/1'), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertSame("Benjamin Mayo, commenting:\nThere needs to be a name for this.", $entry->getSummary());
     }
 
@@ -176,14 +176,14 @@ final class EntryShareClassifierTest extends TestCase
     {
         $entry = $this->classified(self::post('<p>' . str_repeat('a', 480) . ' https://example.com/bare</p>'));
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testABareDomainLinkingItsOwnPageIsASharedLink(): void
     {
         $entry = $this->classified(self::post('<p>Look: <a href="https://example.com">example.com</a></p>'));
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testUrlTextThatPointsElsewhereIsNoSharedLink(): void
@@ -192,7 +192,7 @@ final class EntryShareClassifierTest extends TestCase
             self::post('<p>Look: <a href="https://example.com/a">www.other.org/x</a></p>'),
         );
 
-        self::assertTrue($entry->getShare()->isNone());
+        self::assertNull($entry->getShareKind());
     }
 
     public function testASummaryOnlyShareIsMeasuredByItsSummaryWhichNeverExceedsTheLimit(): void
@@ -203,7 +203,7 @@ final class EntryShareClassifierTest extends TestCase
 
         $this->classified($entry);
 
-        self::assertEquals(Share::link('https://ghuntley.com/unikernels/'), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
         self::assertSame(str_repeat('a', EntryShareClassifier::OWN_PROSE_MAX), $entry->getSummary());
     }
 
@@ -225,7 +225,7 @@ final class EntryShareClassifierTest extends TestCase
             '<p>' . str_repeat('Long commentary. ', 40) . '</p>',
         ));
 
-        self::assertTrue($entry->getShare()->isNone());
+        self::assertNull($entry->getShareKind());
         self::assertNull($entry->getSummary());
     }
 
@@ -235,7 +235,7 @@ final class EntryShareClassifierTest extends TestCase
             self::entry('https://www.zdfheute.de/', 'SCMS_1', 'https://www.3sat.de/a', '<p>Teaser.</p>'),
         );
 
-        self::assertTrue($entry->getShare()->isNone());
+        self::assertNull($entry->getShareKind());
     }
 
     public function testANewsTeaserWithAnImageIsAnArticle(): void
@@ -244,7 +244,7 @@ final class EntryShareClassifierTest extends TestCase
         $entry = self::entry('https://www.zeit.de/', $article, $article, '<p>Teaser.</p>');
         $entry->setMedia([new EntryMedium('https://img.zeit.de/a.jpg', 'image')], []);
 
-        self::assertTrue($this->classified($entry)->getShare()->isNone());
+        self::assertNull($this->classified($entry)->getShareKind());
     }
 
     public function testAPostSharingALinkIsALinkShareWithoutATarget(): void
@@ -253,14 +253,14 @@ final class EntryShareClassifierTest extends TestCase
             self::post('<p>Look: <a href="https://example.com/a">https://example.com/a</a></p>'),
         );
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testAMastodonPostWhoseLinkTextIsSplitIntoSpansKeepsItsLinkCard(): void
     {
         $body = (string) file_get_contents(__DIR__ . '/../../Fixtures/Mastodon/discovery-week-post.html');
 
-        self::assertEquals(Share::link(null), $this->classified(self::post($body))->getShare());
+        self::assertSame(ShareKind::Link, $this->classified(self::post($body))->getShareKind());
     }
 
     public function testAPostWithAPictureAndNoLinkIsMedia(): void
@@ -268,7 +268,7 @@ final class EntryShareClassifierTest extends TestCase
         $picture = new EntryMedium('https://files.example/a.jpg', 'image');
         $entry = $this->classified(self::post('<p>Sunrise.</p>', [$picture]));
 
-        self::assertEquals(Share::media(null), $entry->getShare());
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
 
     public function testAPostUpToTheLimitKeepsItsCardAndALongerOneDoesNot(): void
@@ -277,8 +277,8 @@ final class EntryShareClassifierTest extends TestCase
         $atLimit = $this->classified(self::post('<p>' . str_repeat('a', 500) . $link . '</p>'));
         $overLimit = $this->classified(self::post('<p>' . str_repeat('a', 501) . $link . '</p>'));
 
-        self::assertEquals(Share::link(null), $atLimit->getShare());
-        self::assertTrue($overLimit->getShare()->isNone());
+        self::assertSame(ShareKind::Link, $atLimit->getShareKind());
+        self::assertNull($overLimit->getShareKind());
     }
 
     public function testAPostIsMeasuredInCharactersNotBytes(): void
@@ -286,7 +286,7 @@ final class EntryShareClassifierTest extends TestCase
         $link = ' <a href="https://example.com/a">https://example.com/a</a>';
         $entry = $this->classified(self::post('<p>' . str_repeat('ä', 300) . $link . '</p>'));
 
-        self::assertEquals(Share::link(null), $entry->getShare());
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testAPostHasItsBareUrlsLinked(): void
@@ -320,7 +320,7 @@ final class EntryShareClassifierTest extends TestCase
             '<p>' . str_repeat('Description. ', 60) . '</p>',
         ));
 
-        self::assertEquals(Share::media(null), $entry->getShare());
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
 
     public function testAShortsLongDescriptionIsCutToTheLimitInWholeCharacters(): void
@@ -346,6 +346,6 @@ final class EntryShareClassifierTest extends TestCase
             '<p>Description.</p>',
         ));
 
-        self::assertTrue($entry->getShare()->isNone());
+        self::assertNull($entry->getShareKind());
     }
 }

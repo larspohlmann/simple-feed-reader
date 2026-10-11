@@ -234,7 +234,7 @@ final class FirstFetchRecorderTest extends DbTestCase
         /** @var Entry|null $entry */
         $entry = $this->entityManager->getRepository(Entry::class)->findOneBy([
             'feed' => $feed,
-            'guidHash' => hash('sha256', $guid),
+            'guid.hash' => hash('sha256', $guid),
         ]);
 
         return $entry;

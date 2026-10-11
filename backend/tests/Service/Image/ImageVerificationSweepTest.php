@@ -64,14 +64,14 @@ final class ImageVerificationSweepTest extends DbTestCase
         self::assertSame(0, $report->retried);
 
         $this->entityManager->clear();
-        $good = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'good']);
+        $good = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'good']);
         self::assertNotNull($good);
         self::assertSame(600, $good->getImageWidth());
         self::assertNotNull($good->getImage()->getCheckedAt());
-        $beacon = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'beacon']);
+        $beacon = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'beacon']);
         self::assertNotNull($beacon);
         self::assertNull($beacon->getImageUrl());
-        $rejected = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'rejected']);
+        $rejected = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'rejected']);
         self::assertNotNull($rejected);
         self::assertSame('https://i/rejected.png', $rejected->getImageUrl());
         self::assertNotNull($rejected->getImage()->getCheckedAt());
@@ -94,7 +94,7 @@ final class ImageVerificationSweepTest extends DbTestCase
         self::assertSame(1, $report->retried);
 
         $this->entityManager->clear();
-        $gone = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'gone']);
+        $gone = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'gone']);
         self::assertNotNull($gone);
         self::assertSame('https://i/gone.png', $gone->getImageUrl());
         self::assertNull($gone->getImage()->getCheckedAt());

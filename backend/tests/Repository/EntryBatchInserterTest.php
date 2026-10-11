@@ -7,7 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
+use App\Enum\ShareKind;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
@@ -40,7 +40,6 @@ final class EntryBatchInserterTest extends DbTestCase
         ?string $imageUrl = null,
         bool $titleDerived = false,
         ?string $shareKind = null,
-        ?string $shareUrl = null,
         array $linkCards = [],
     ): EntryLine {
         return new EntryLine(
@@ -60,7 +59,6 @@ final class EntryBatchInserterTest extends DbTestCase
             effectiveDate: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
             titleDerived: $titleDerived,
             shareKind: $shareKind,
-            shareUrl: $shareUrl,
             linkCards: $linkCards,
         );
     }
@@ -105,7 +103,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->entityManager->clear();
         $entry = $this->entityManager
             ->getRepository(Entry::class)
-            ->findOneBy(['guidHash' => hash('sha256', 'one-guid')]);
+            ->findOneBy(['guid.hash' => hash('sha256', 'one-guid')]);
         self::assertInstanceOf(Entry::class, $entry);
         self::assertSame('one-guid', $entry->getGuid());
         self::assertSame('https://batch.example/one-guid', $entry->getUrl());
@@ -126,18 +124,18 @@ final class EntryBatchInserterTest extends DbTestCase
         $feedId = $this->createFeed('https://batch.example/feed.xml');
 
         $this->inserter()->insert($feedId, [
-            $this->entryLine('media-guid', shareKind: 'media', shareUrl: 'https://example.com/a.jpg'),
+            $this->entryLine('media-guid', shareKind: 'media'),
             $this->entryLine('plain-guid'),
         ]);
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
-        $media = $repository->findOneBy(['guidHash' => hash('sha256', 'media-guid')]);
-        $plain = $repository->findOneBy(['guidHash' => hash('sha256', 'plain-guid')]);
+        $media = $repository->findOneBy(['guid.hash' => hash('sha256', 'media-guid')]);
+        $plain = $repository->findOneBy(['guid.hash' => hash('sha256', 'plain-guid')]);
         self::assertInstanceOf(Entry::class, $media);
         self::assertInstanceOf(Entry::class, $plain);
-        self::assertEquals(Share::media('https://example.com/a.jpg'), $media->getShare());
-        self::assertTrue($plain->getShare()->isNone());
+        self::assertSame(ShareKind::Media, $media->getShareKind());
+        self::assertNull($plain->getShareKind());
     }
 
     public function testARestoredRowKeepsWhetherItsTitleWasDerived(): void
@@ -151,8 +149,8 @@ final class EntryBatchInserterTest extends DbTestCase
 
         $this->entityManager->clear();
         $repository = $this->entityManager->getRepository(Entry::class);
-        $derived = $repository->findOneBy(['guidHash' => hash('sha256', 'derived-guid')]);
-        $given = $repository->findOneBy(['guidHash' => hash('sha256', 'given-guid')]);
+        $derived = $repository->findOneBy(['guid.hash' => hash('sha256', 'derived-guid')]);
+        $given = $repository->findOneBy(['guid.hash' => hash('sha256', 'given-guid')]);
         self::assertInstanceOf(Entry::class, $derived);
         self::assertInstanceOf(Entry::class, $given);
         self::assertTrue($derived->isTitleDerived());

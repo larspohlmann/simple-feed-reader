@@ -48,7 +48,7 @@ final class VerifyPendingImagesHandlerTest extends DbTestCase
             $logger->records[0]['context']['report'],
         );
         $this->entityManager->clear();
-        $verified = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'pending']);
+        $verified = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'pending']);
         self::assertNotNull($verified);
         self::assertSame(600, $verified->getImageWidth());
     }

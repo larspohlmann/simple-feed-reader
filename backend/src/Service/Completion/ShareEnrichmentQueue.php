@@ -41,7 +41,7 @@ final readonly class ShareEnrichmentQueue
 
             return;
         }
-        if ($entry->getShare()->kind !== ShareKind::Link) {
+        if ($entry->getShareKind() !== ShareKind::Link) {
             return;
         }
         $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $queuedAt));

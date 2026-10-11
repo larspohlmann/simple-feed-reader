@@ -8,9 +8,9 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
+use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
@@ -143,12 +143,12 @@ final class PostEnricherTest extends DbTestCase
     public function testAnUnfilledPostSharesNothingOnceDequeued(): void
     {
         $post = $this->queuedEntry(self::TEST_POST . 'deleted', '<p>Deleted since.</p>');
-        $post->setShare(Share::link(null));
+        $post->setShareKind(ShareKind::Link);
         $this->entityManager->flush();
 
         $this->enricher()->enrich($this->feed, [$post]);
 
-        self::assertTrue($this->reload($post)->getShare()->isNone());
+        self::assertNull($this->reload($post)->getShareKind());
     }
 
     public function testThirtyQueuedPostsTakeTwoRequests(): void

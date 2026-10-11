@@ -103,7 +103,7 @@ final class RefreshRunnerTest extends DbTestCase
 
     private function effectiveDateOf(Feed $feed, string $guid): string
     {
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid.value' => $guid]);
         self::assertNotNull($entry);
 
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
@@ -228,7 +228,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->runner()->run(RefreshRequestModel::allDue(300));
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'a-1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'a-1']);
         self::assertNotNull($entry);
         self::assertNotNull($entry->getId());
 
