@@ -44,7 +44,7 @@ final readonly class EntryShareClassifier
 
             return;
         }
-        $this->describeTitledShare($entry, $body->ownProse);
+        $this->describeTitledShare($entry, $share, $body->ownProse);
     }
 
     private function shareOf(Entry $entry, SharedLinksModel $body): Share
@@ -93,10 +93,9 @@ final readonly class EntryShareClassifier
         $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml));
     }
 
-    private function describeTitledShare(Entry $entry, string $ownProse): void
+    private function describeTitledShare(Entry $entry, Share $share, string $ownProse): void
     {
         $entry->setSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX));
-        $share = $entry->getShare();
         $medium = $share->kind === ShareKind::Media && $share->url !== null ? VisualMedium::at($share->url) : null;
         if ($medium !== null) {
             $entry->putMediumFirst($medium);

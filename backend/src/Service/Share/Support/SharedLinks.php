@@ -14,10 +14,7 @@ use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 
-/**
- * The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link;
- * and its own prose, read from the same parse once its bare URLs are linked.
- */
+/** The links a post shares, a quoted post's included, as opposed to the hashtags, mentions and words that merely link. */
 final class SharedLinks
 {
     public const int MAX = 5;
