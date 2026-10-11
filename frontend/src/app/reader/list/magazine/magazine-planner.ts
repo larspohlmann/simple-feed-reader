@@ -300,8 +300,11 @@ function layOutPage(pass: PlanPass, template: readonly Slot[], slice: EntryDto[]
     .map((slot, position) =>
       isLinkPost(slice[position]) ? 'link' : resolveSlot(slot, page, position),
     );
-  const budgeted = withinBudget(wanted);
-  const assigned = assign(budgeted, slice, pass.family.imageBar);
+  const { imageBar } = pass.family;
+  const budgeted = withinBudget(wanted, (kind) => DEMOTION[kind]);
+  const assigned = withinBudget(assign(budgeted, slice, imageBar), (kind, position) =>
+    settle(DEMOTION[kind], slice[position], imageBar),
+  );
 
   return assigned.map((kind, position) => toBlock(kind, slice[position], { page, position }));
 }
@@ -330,15 +333,24 @@ function emitPages(pass: PlanPass, items: EntryDto[]): void {
   }
 }
 
-/** Demote the largest demotable slot until the page fits the height cap. */
-function withinBudget(kinds: EntryKind[]): EntryKind[] {
+/** Demote the tallest slot `demote` can shorten, one step at a time, until the page fits the height
+ *  cap. Before `assign` the wanted kinds step down the plain ladder, which also picks the slot its
+ *  look-ahead fills; after it the settled kinds re-settle for their entry, so `settle` cannot lift a
+ *  page back over the cap. */
+function withinBudget(
+  kinds: EntryKind[],
+  demote: (kind: EntryKind, position: number) => EntryKind,
+): EntryKind[] {
   const result = [...kinds];
   let height = result.reduce((sum, kind) => sum + BLOCK_HEIGHT[kind], 0);
 
   while (height > PAGE_HEIGHT_CAP) {
-    const tallest = tallestWhere(result, (kind) => DEMOTION[kind] !== kind);
+    const tallest = tallestWhere(
+      result,
+      (kind, position) => BLOCK_HEIGHT[demote(kind, position)] < BLOCK_HEIGHT[kind],
+    );
     if (tallest === null) break;
-    const demoted = DEMOTION[result[tallest]];
+    const demoted = demote(result[tallest], tallest);
     height -= BLOCK_HEIGHT[result[tallest]] - BLOCK_HEIGHT[demoted];
     result[tallest] = demoted;
   }
@@ -347,10 +359,13 @@ function withinBudget(kinds: EntryKind[]): EntryKind[] {
 }
 
 /** The first of the tallest slots `eligible` admits, or null when it admits none. */
-function tallestWhere(kinds: EntryKind[], eligible: (kind: EntryKind) => boolean): number | null {
+function tallestWhere(
+  kinds: EntryKind[],
+  eligible: (kind: EntryKind, position: number) => boolean,
+): number | null {
   let tallest: number | null = null;
   for (let index = 0; index < kinds.length; index++) {
-    if (!eligible(kinds[index])) continue;
+    if (!eligible(kinds[index], index)) continue;
     if (tallest === null || BLOCK_HEIGHT[kinds[index]] > BLOCK_HEIGHT[kinds[tallest]]) {
       tallest = index;
     }
