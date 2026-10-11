@@ -89,6 +89,33 @@ final class AuditReportHtmlTest extends TestCase
         );
     }
 
+    public function testEverySuspectFeedAndMarkerGetsItsOwnRow(): void
+    {
+        $other = new AuditFindingModel(
+            8,
+            12,
+            'Anderer Feed',
+            'Zweiter',
+            'https://example.test/b',
+            'http://l/?entry=8',
+            true,
+            [
+                new CleanupMarkerModel('leading_link_list', 4, 'NavigationChromeTrimmer', 'vier Punkte'),
+                new CleanupMarkerModel('body_short', 2, 'EdgeBoilerplateTrimmer', '12 characters'),
+            ],
+            ['chars' => 12],
+        );
+
+        $html = $this->render([$this->finding('Erster', 'http://localhost:4200/?entry=1'), $other]);
+
+        self::assertStringContainsString('<td>EdgeBoilerplateTrimmer</td>', $html);
+        self::assertStringContainsString('<td>NavigationChromeTrimmer</td>', $html);
+        self::assertStringContainsString('<td>Ein Feed</td>', $html);
+        self::assertStringContainsString('<td>Anderer Feed</td>', $html);
+        self::assertStringContainsString('<span class="detail">vier Punkte</span>', $html);
+        self::assertStringContainsString('<span class="detail">12 characters</span>', $html);
+    }
+
     public function testTheCandidateHeadingSaysHowManyOfTheFlaggedAreListed(): void
     {
         $findings = [];

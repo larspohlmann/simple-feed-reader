@@ -13,6 +13,7 @@ use App\Service\Html\Support\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
+use App\Service\Text\Support\ClippedText;
 use App\Service\Text\Support\Whitespace;
 use Symfony\Component\HttpClient\Response\StreamWrapper;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -277,9 +278,7 @@ final readonly class HtmlPageFetcher
             return null;
         }
 
-        return mb_strlen($text) > self::SNIPPET_LENGTH
-            ? rtrim(mb_substr($text, 0, self::SNIPPET_LENGTH)) . '…'
-            : $text;
+        return ClippedText::trimmedOf($text, self::SNIPPET_LENGTH);
     }
 
     private function content(LandedResponse $landed): string

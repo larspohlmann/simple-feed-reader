@@ -7,6 +7,7 @@ namespace App\Service\ReaderAudit\Pass;
 use App\Service\ReaderAudit\Model\AuditFindingModel;
 use App\Service\ReaderAudit\Model\AuditFindingsModel;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\Text\Support\HtmlEscape;
 
 /**
  * Renders the audit as one self-contained HTML page: the ranked candidates linked into the running SPA, the feeds
@@ -35,7 +36,7 @@ final readonly class AuditReportHtml
         return \sprintf(
             '<h1>Reader cleanup audit</h1><p class="meta">%s — %d articles over %d feeds;'
             . ' %d extracted, %d flagged (%d%%)</p>',
-            $this->escape($generatedAt),
+            HtmlEscape::text($generatedAt),
             $findings->audited(),
             $findings->feedCount(),
             $findings->extracted(),
@@ -49,7 +50,7 @@ final readonly class AuditReportHtml
         $rows = '';
         $bySuspect = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->suspect);
         foreach ($bySuspect as $suspect => $count) {
-            $rows .= \sprintf('<tr><td>%s</td><td class="n">%d</td></tr>', $this->escape($suspect), $count);
+            $rows .= \sprintf('<tr><td>%s</td><td class="n">%d</td></tr>', HtmlEscape::text($suspect), $count);
         }
 
         return '<h2>Where to look first</h2><table><thead><tr><th>Stage</th>'
@@ -63,7 +64,7 @@ final readonly class AuditReportHtml
             $rows .= \sprintf(
                 '<tr><td>%s</td><td class="n">%d</td><td class="n">%d</td>'
                 . '<td class="n">%d%%</td><td class="n">%d</td></tr>',
-                $this->escape($feed['feed']),
+                HtmlEscape::text($feed['feed']),
                 $feed['audited'],
                 $feed['flagged'],
                 (int) round($feed['share'] * 100),
@@ -100,12 +101,12 @@ final readonly class AuditReportHtml
             '<article><h3><span class="score">%d</span> <a href="%s">%s</a></h3>'
             . '<p class="meta">%s — %s</p><p class="src"><a href="%s">%s</a></p>%s</article>',
             $finding->score(),
-            $this->escape($finding->readerLink),
-            $this->escape($finding->title),
-            $this->escape($finding->feedTitle),
-            $this->escape($this->metricLine($finding)),
-            $this->escape($finding->sourceUrl),
-            $this->escape($finding->sourceUrl),
+            HtmlEscape::text($finding->readerLink),
+            HtmlEscape::text($finding->title),
+            HtmlEscape::text($finding->feedTitle),
+            HtmlEscape::text($this->metricLine($finding)),
+            HtmlEscape::text($finding->sourceUrl),
+            HtmlEscape::text($finding->sourceUrl),
             $this->markers($finding),
         );
     }
@@ -116,9 +117,9 @@ final readonly class AuditReportHtml
         foreach ($finding->markers as $marker) {
             $items .= \sprintf(
                 '<li><code>%s</code> <span class="suspect">%s</span><br><span class="detail">%s</span></li>',
-                $this->escape($marker->code),
-                $this->escape($marker->suspect),
-                $this->escape($marker->detail),
+                HtmlEscape::text($marker->code),
+                HtmlEscape::text($marker->suspect),
+                HtmlEscape::text($marker->detail),
             );
         }
 
@@ -133,11 +134,6 @@ final readonly class AuditReportHtml
         }
 
         return implode(', ', $parts);
-    }
-
-    private function escape(string $text): string
-    {
-        return htmlspecialchars($text, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
     }
 
     private const string PAGE_HEAD = <<<'HTML'

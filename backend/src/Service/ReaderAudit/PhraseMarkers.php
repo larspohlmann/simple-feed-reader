@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
+use App\Service\Text\Support\ClippedText;
 
 /**
  * Scans short blocks for SuspiciousPhrases' wording, each family over the region it may match, and reports each family
@@ -70,6 +71,6 @@ final readonly class PhraseMarkers
 
     private static function shortened(string $text): string
     {
-        return mb_strlen($text) <= 120 ? $text : mb_substr($text, 0, 120) . '…';
+        return ClippedText::of($text, 120);
     }
 }

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation\Support;
+namespace App\Tests\Service\Text\Support;
 
-use App\Service\Recommendation\Support\ClippedText;
+use App\Service\Text\Support\ClippedText;
 use PHPUnit\Framework\TestCase;
 
 final class ClippedTextTest extends TestCase
@@ -27,5 +27,15 @@ final class ClippedTextTest extends TestCase
     public function testScrubbingReplacesAnInvalidByteBeforeTheClip(): void
     {
         self::assertSame('Caf? a…', ClippedText::ofScrubbed("Caf\xE9 au lait", 6));
+    }
+
+    public function testTrimmingDropsTheWhitespaceTheClipEndsOn(): void
+    {
+        self::assertSame('Café…', ClippedText::trimmedOf("Café \t au lait", 6));
+    }
+
+    public function testTrimmingKeepsTextOfTheLimitWhole(): void
+    {
+        self::assertSame('Café ', ClippedText::trimmedOf('Café ', 5));
     }
 }

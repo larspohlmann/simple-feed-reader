@@ -13,8 +13,8 @@ use App\Service\Recommendation\Pool\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Pool\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Profile\Model\ProfileInputsModel;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
-use App\Service\Recommendation\Support\ClippedText;
 use App\Service\Recommendation\Support\TokenEstimate;
+use App\Service\Text\Support\ClippedText;
 
 /**
  * Renders the recommendation prompts and packs the candidate pool into batches that fit the context window.
