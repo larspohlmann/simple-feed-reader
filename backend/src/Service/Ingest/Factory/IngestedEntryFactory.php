@@ -40,11 +40,11 @@ final readonly class IngestedEntryFactory
             EntryEffectiveDate::for($parsed->publishedAt, $context),
             $incoming->urlHash,
         );
+        $entry->setHeadline($parsed->headline);
         $entry->setAuthor(self::cut($parsed->author, self::AUTHOR_MAX));
         $entry->setSummary(EntrySnippet::from($parsed->summary ?? $parsed->contentHtml));
         $entry->setContentHtml($this->sanitizer->sanitize($parsed->contentHtml));
         $entry->setPublishedAt($parsed->publishedAt);
-        $entry->setHeadline($parsed->headline);
         $entry->setDiscussion($parsed->discussion);
         $this->imageWriter->writeOrMarkNone($entry, $parsed->media->image);
         self::attachMedia($entry, $parsed);

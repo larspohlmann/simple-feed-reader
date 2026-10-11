@@ -258,7 +258,7 @@ final class Entry
 
     public function bodyStandsInForSummary(): bool
     {
-        return !$this->isUntitledPost() && $this->getShare()->isNone();
+        return !$this->headline->read()->isUntitledPost() && $this->getShare()->isNone();
     }
 
     public function getEffectiveDate(): \DateTimeImmutable
@@ -269,10 +269,5 @@ final class Entry
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
-    }
-
-    private function isUntitledPost(): bool
-    {
-        return $this->headline->read()->isUntitledPost();
     }
 }
