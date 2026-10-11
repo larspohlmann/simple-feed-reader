@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\LinkCard;
 
+use App\Entity\Entry;
 use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
@@ -14,6 +15,7 @@ use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Search\EntryIndexer;
 use App\Service\Share\Support\ShareTargets;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -30,6 +32,7 @@ final readonly class ShareLinkCards
         private ShareEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,
+        private EntryIndexer $indexer,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
@@ -85,6 +88,7 @@ final readonly class ShareLinkCards
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);
+        $this->indexer->index(array_map(static fn (ShareEnrichment $row): Entry => $row->getEntry(), $held));
 
         return \count($held);
     }

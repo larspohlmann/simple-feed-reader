@@ -15,13 +15,10 @@ use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
+use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * Fills queued Bluesky posts from the public AppView after a refresh, retrying on later refreshes for three days, and
- * on a client's request.
- */
 final readonly class PostEnricher
 {
     private const int POSTS_PER_PASS = 100;
@@ -31,62 +28,44 @@ final readonly class PostEnricher
         private ShareEnrichmentRepository $enrichments,
         private AppViewClient $appView,
         private EntryEmbedWriterInterface $embedWriter,
+        private EntryIndexer $indexer,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
     }
 
-    /**
-     * @param list<Entry> $createdEntries already flushed
-     *
-     * @return list<Entry> the entries it filled, $createdEntries left out
-     */
-    public function enrich(Feed $feed, array $createdEntries): array
+    public function enrich(Feed $feed): void
     {
-        $filled = $this->guarded(fn (): array => $this->enrichQueued($feed));
-
-        return array_values(array_filter(
-            $filled,
-            static fn (Entry $entry): bool => !\in_array($entry, $createdEntries, true),
-        ));
+        $this->guarded(fn () => $this->enrichQueued($feed));
     }
 
-    /**
-     * @param list<ShareEnrichment> $queued AppView rows, oldest first
-     *
-     * @return list<Entry> the entries it filled
-     */
-    public function complete(array $queued): array
+    /** @param list<ShareEnrichment> $queued AppView rows, oldest first */
+    public function complete(array $queued): void
     {
-        return $this->guarded(fn (): array => $this->claimAndSettle($queued, $this->clock->now()));
+        $this->guarded(fn () => $this->claimAndSettle($queued, $this->clock->now()));
     }
 
     /**
      * A failure is logged, unless it closed the EntityManager: rethrown, so a refresh aborts under this feed.
      *
-     * @param callable(): list<Entry> $enrichment
-     *
-     * @return list<Entry>
+     * @param callable(): void $enrichment
      */
-    private function guarded(callable $enrichment): array
+    private function guarded(callable $enrichment): void
     {
         try {
-            return $enrichment();
+            $enrichment();
         } catch (\Exception $exception) {
             if (!$this->entityManager->isOpen()) {
                 throw $exception;
             }
             $this->logger->error('Bluesky enrichment failed', ['exception' => $exception]);
-
-            return [];
         }
     }
 
-    /** @return list<Entry> */
-    private function enrichQueued(Feed $feed): array
+    private function enrichQueued(Feed $feed): void
     {
         if (!$this->enrichments->hasAppViewPendingForFeed($feed)) {
-            return [];
+            return;
         }
         $now = $this->clock->now();
         $this->enrichments->deleteAppViewQueuedBefore(
@@ -94,7 +73,7 @@ final readonly class PostEnricher
             $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER)),
         );
 
-        return $this->claimAndSettle(
+        $this->claimAndSettle(
             $this->enrichments->findClaimableAppViewForFeed($feed, $now, self::POSTS_PER_PASS),
             $now,
         );
@@ -105,31 +84,35 @@ final readonly class PostEnricher
      * handed to the link-card pass is released only once its new kind is flushed, or an AppView pass would refill it.
      *
      * @param list<ShareEnrichment> $queued
-     *
-     * @return list<Entry>
      */
-    private function claimAndSettle(array $queued, \DateTimeImmutable $claimedAt): array
+    private function claimAndSettle(array $queued, \DateTimeImmutable $claimedAt): void
     {
         $claimed = $this->enrichments->claim($queued, $claimedAt);
         if ($claimed === []) {
-            return [];
+            return;
         }
 
         $filled = [];
         $unsettled = [];
         foreach (array_chunk($claimed, AppViewClient::URIS_PER_CALL) as $chunk) {
             $held = $this->enrichments->stillHeld($chunk, $claimedAt);
-            $settled = $held === [] || $this->appView->isThrottled() ? null : $this->settle($held);
-            if ($settled === null) {
+            if ($held === []) {
+                continue;
+            }
+            if ($this->appView->isThrottled()) {
                 array_push($unsettled, ...$held);
                 continue;
             }
-            array_push($filled, ...$settled);
+            try {
+                array_push($filled, ...$this->settle($held));
+            } catch (FetchException | AppViewAnswerException $exception) {
+                $this->logger->warning('Bluesky AppView gave no usable answer', ['exception' => $exception]);
+                array_push($unsettled, ...$held);
+            }
         }
         $this->entityManager->flush();
         $this->enrichments->release([...$unsettled, ...self::awaitingLinkCards($claimed)], $claimedAt);
-
-        return $filled;
+        $this->indexer->index($filled);
     }
 
     /**
@@ -151,20 +134,16 @@ final readonly class PostEnricher
      *
      * @param list<ShareEnrichment> $chunk
      *
-     * @return list<Entry>|null the entries it filled; null when the AppView gave no usable answer
+     * @return list<Entry> the entries it filled
+     *
+     * @throws FetchException|AppViewAnswerException when the AppView gave no usable answer
      */
-    private function settle(array $chunk): ?array
+    private function settle(array $chunk): array
     {
-        try {
-            $posts = $this->appView->posts(array_map(
-                static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(),
-                $chunk,
-            ));
-        } catch (FetchException | AppViewAnswerException $exception) {
-            $this->logger->warning('Bluesky AppView gave no usable answer', ['exception' => $exception]);
-
-            return null;
-        }
+        $posts = $this->appView->posts(array_map(
+            static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(),
+            $chunk,
+        ));
 
         $filled = [];
         foreach ($chunk as $pending) {

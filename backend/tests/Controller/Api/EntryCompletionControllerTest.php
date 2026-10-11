@@ -19,6 +19,7 @@ use App\Service\Bluesky\PostEnricher;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\LinkCard\ShareLinkCards;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
@@ -44,6 +45,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private HostThrottle $throttle;
     private MockHttpClient $pages;
     private MockClock $clock;
+    private RecordingSearchIndexWriter $indexWriter;
 
     protected function setUp(): void
     {
@@ -54,6 +56,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->appView = new FakeAppView();
         $this->throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
         $this->pages = new MockHttpClient(self::page(...));
+        $this->indexWriter = new RecordingSearchIndexWriter();
         $this->installFakes();
     }
 
@@ -86,6 +89,21 @@ final class EntryCompletionControllerTest extends ApiTestCase
             array_column($this->cardsOf($entries, $linkPost), 'title'),
         );
         self::assertSame([Bluesky::CARD], array_column($this->cardsOf($entries, $blueskyPost), 'url'));
+    }
+
+    public function testAFilledPostIsIndexedWithItsNewText(): void
+    {
+        [$headers, $user] = $this->auth('complete-index@example.com');
+        $feed = $this->subscribedFeed($user);
+        $post = $this->queuedPost($feed, self::TISCH, '<p>Read this.<br />' . Bluesky::CARD . '</p>');
+        $this->appView->knowsFixture('external');
+
+        $this->complete($headers, [$post->requireId()]);
+
+        self::assertResponseIsSuccessful();
+        $indexed = $this->indexWriter->upserted();
+        self::assertSame([$post->requireId()], array_column($indexed, 'id'));
+        self::assertSame('Read this.', $indexed[0]->content);
     }
 
     public function testATitledShareOffTheFeedsSiteComesBackWithItsLinkCard(): void
@@ -308,6 +326,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
                 $this->clock,
                 new AppViewClient($this->appView, $this->throttle),
                 new NullLogger(),
+                $this->indexWriter,
             ),
         );
         $container->set(
@@ -353,9 +372,9 @@ final class EntryCompletionControllerTest extends ApiTestCase
         return $feed;
     }
 
-    private function queuedPost(Feed $feed, string $guid): Entry
+    private function queuedPost(Feed $feed, string $guid, string $contentHtml = '<p>Read this.</p>'): Entry
     {
-        $post = $this->post($feed, $guid, '<p>Read this.</p>');
+        $post = $this->post($feed, $guid, $contentHtml);
         $this->entityManager()->persist(
             new ShareEnrichment($post, ShareEnrichmentKind::AppView, new \DateTimeImmutable('2026-10-10 11:00')),
         );

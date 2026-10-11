@@ -17,6 +17,7 @@ use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
@@ -30,6 +31,7 @@ final class ShareLinkCardsTest extends DbTestCase
     private MockClock $clock;
     private StubPageCardReader $pages;
     private RecordingLogger $logger;
+    private RecordingSearchIndexWriter $indexWriter;
     private ShareLinkCards $shareLinkCards;
     private Feed $feed;
 
@@ -39,11 +41,13 @@ final class ShareLinkCardsTest extends DbTestCase
         $this->clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $this->pages = new StubPageCardReader();
         $this->logger = new RecordingLogger();
+        $this->indexWriter = new RecordingSearchIndexWriter();
         $this->shareLinkCards = ShareLinkCardsWiring::reading(
             $this->pages,
             $this->entityManager,
             $this->clock,
             $this->logger,
+            $this->indexWriter,
         );
         $this->feed = new Feed('https://mastodon.example/@someone.rss');
         $this->feed->setSiteUrl('https://mastodon.example/@someone');
@@ -65,6 +69,20 @@ final class ShareLinkCardsTest extends DbTestCase
             $this->cardTitles($post),
         );
         self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+    }
+
+    public function testIndexesTheCardedPostWithTheTextItWasLeft(): void
+    {
+        $post = $this->queuedPost(
+            1,
+            '<p>RE: <a href="https://q.example/@a/1">https://q.example/@a/1</a></p><p>Reposting for the crew</p>',
+        );
+
+        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
+
+        $indexed = $this->indexWriter->upserted();
+        self::assertSame([$post->requireId()], array_column($indexed, 'id'));
+        self::assertSame('Reposting for the crew', $indexed[0]->summary);
     }
 
     public function testACallSpendsFiveFetchesOnTheOldestPostsThatFit(): void
@@ -109,6 +127,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         self::assertSame(0, $this->pages->reads());
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+        self::assertSame([], $this->indexWriter->upserts);
     }
 
     public function testACallPastItsDeadlineReleasesThePostsItNeverStarted(): void
