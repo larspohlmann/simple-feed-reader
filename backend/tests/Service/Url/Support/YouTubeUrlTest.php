@@ -93,6 +93,11 @@ final class YouTubeUrlTest extends TestCase
         yield 'no url' => [null];
     }
 
+    public function testThePathOutranksAWatchQuery(): void
+    {
+        self::assertSame('M1j_uRqKMKI', YouTubeUrl::video('https://www.youtube.com/embed/M1j_uRqKMKI?v=GhUuOxrCato')?->id);
+    }
+
     public function testAWatchPageIsNoShort(): void
     {
         self::assertFalse(YouTubeUrl::isShort('https://www.youtube.com/watch?v=GhUuOxrCato'));

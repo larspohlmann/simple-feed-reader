@@ -27,7 +27,7 @@ final class YouTubeUrl
 
     public static function video(?string $url): ?YouTubeVideoModel
     {
-        $parts = $url === null ? false : parse_url($url);
+        $parts = parse_url($url ?? '');
         if (!isset($parts['host'], $parts['path'])) {
             return null;
         }
