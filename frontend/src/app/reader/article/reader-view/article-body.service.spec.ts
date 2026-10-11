@@ -4,9 +4,13 @@ import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
+import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { ArticleBody } from './article-body.service';
 
+jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
+
 const VIDEO = '<video controls src="https://x.test/clip.mp4"></video>';
+const STREAM = '<video controls src="https://x.test/master.m3u8"></video>';
 
 describe('ArticleBody', () => {
   let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
@@ -29,6 +33,13 @@ describe('ArticleBody', () => {
     TestBed.tick();
   }
 
+  async function playBodyStream(): Promise<void> {
+    connectBody(STREAM);
+    document.body.append(content);
+    await Promise.resolve();
+    await firstPlay(content.querySelector('video')!);
+  }
+
   const pressT = (): void => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 't', cancelable: true }));
   };
@@ -48,6 +59,7 @@ describe('ArticleBody', () => {
 
   afterEach(() => {
     if (!injector.destroyed) injector.destroy();
+    document.body.innerHTML = '';
   });
 
   it('decorates the body once it renders, then hands it on', async () => {
@@ -114,5 +126,26 @@ describe('ArticleBody', () => {
 
     expect(clicks).not.toHaveBeenCalled();
     expect(imageProxy.attempts).toEqual([]);
+  });
+
+  it('keeps a playing stream while the body stays, and releases it when the HTML changes', async () => {
+    resetFakeHls();
+    await playBodyStream();
+
+    TestBed.tick();
+    expect(fakeHls.destroy).not.toHaveBeenCalled();
+
+    html.set('<p>Reader.</p>');
+    TestBed.tick();
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases the body stream once destroyed', async () => {
+    resetFakeHls();
+    await playBodyStream();
+
+    injector.destroy();
+
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
   });
 });

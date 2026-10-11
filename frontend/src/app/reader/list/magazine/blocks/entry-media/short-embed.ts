@@ -1,4 +1,4 @@
-import { isAllowedEmbed } from '../../../../media-embeds';
+import { isAllowedEmbed } from '../../../../media/media-embeds';
 
 /** A Short's player, starting on load; null when there is none or it is not allow-listed. */
 export function autoplayingShortPlayer(shortPlayerUrl: string | null): string | null {

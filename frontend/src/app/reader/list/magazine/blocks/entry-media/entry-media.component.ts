@@ -18,7 +18,7 @@ import { sharedMedia } from '../../magazine-slot-fit';
 import { EntryMediumDto } from '../../../../models';
 import { EmbedFrameDirective } from '../../../../embed-frame.directive';
 import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxied-image.directive';
-import { attachHlsStreams, destroyStreamsIn } from '../../../../article/decorators/hls-streams';
+import { armHlsStreams, releaseHlsStreams } from '../../../../media/hls-streams';
 import { pauseMedia } from './pause-media';
 import { autoplayingShortPlayer } from './short-embed';
 import { OpensEntryDirective } from '../../../opens-entry.directive';
@@ -60,13 +60,13 @@ export class EntryMediaComponent extends EntryBlockBase {
     afterRenderEffect(() => {
       this.media();
       this.playingShort();
-      attachHlsStreams(this.host);
+      armHlsStreams(this.host);
       this.pauseWhenScrolledAway();
     });
     inject(DestroyRef).onDestroy(() => {
       this.scrollAway?.disconnect();
       pauseMedia(this.host);
-      destroyStreamsIn(this.host);
+      releaseHlsStreams(this.host);
     });
   }
 

@@ -4,14 +4,20 @@ import { provideTranslocoTesting } from '../../../../../../testing/transloco-tes
 import { EntryMediaComponent } from './entry-media.component';
 import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
-import { isHlsManaged } from '../../../../article/decorators/hls-streams';
-import { EMBED_FRAME_ATTRIBUTES } from '../../../../media-embeds';
+import { EMBED_FRAME_ATTRIBUTES } from '../../../../media/media-embeds';
 import { MEDIA_PAUSE } from './pause-media';
 import { anEntry } from '../../../../../../testing/entry-testing';
+import { fakeHls, firstPlay, resetFakeHls } from '../../../../../../testing/hls-testing';
+
+jest.mock(
+  'hls.js',
+  () => jest.requireActual('../../../../../../testing/hls-testing').fakeHlsModule,
+);
 
 let pause: jest.SpyInstance;
 
 beforeEach(() => {
+  resetFakeHls();
   pause = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
 });
 
@@ -163,7 +169,10 @@ describe('EntryMediaComponent', () => {
     expect(video.getAttribute('preload')).toBe('none');
     expect(video.hasAttribute('controls')).toBe(true);
     expect(video.hasAttribute('playsinline')).toBe(true);
-    expect(isHlsManaged(video)).toBe(true);
+
+    await firstPlay(video);
+
+    expect(fakeHls.attachMedia).toHaveBeenCalledWith(video);
   });
 
   it('keeps a click on the video for its controls, and opens the post from a picture', async () => {
@@ -204,6 +213,15 @@ describe('EntryMediaComponent', () => {
     fixture.destroy();
 
     expect(pause).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases its played stream when destroyed', async () => {
+    const fixture = await mountFixture(entry({ media: [clip] }));
+    await firstPlay(fixture.nativeElement.querySelector('video'));
+
+    fixture.destroy();
+
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
   });
 
   it('pauses a video that scrolls out of view', async () => {

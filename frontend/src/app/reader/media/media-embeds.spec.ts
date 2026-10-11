@@ -1,4 +1,4 @@
-import { articleHost } from '../../testing/article-host-testing';
+import { articleHost } from '../../../testing/article-host-testing';
 import { upgradeMediaEmbeds } from './media-embeds';
 
 const host = (html: string): HTMLElement => articleHost(html, upgradeMediaEmbeds);

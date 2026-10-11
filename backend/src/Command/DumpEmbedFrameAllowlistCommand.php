@@ -32,7 +32,7 @@ final class DumpEmbedFrameAllowlistCommand extends Command
 
     public static function allowlistPath(string $projectDir): string
     {
-        return \dirname($projectDir) . '/frontend/src/app/reader/embed-frame-allowlist.generated.json';
+        return \dirname($projectDir) . '/frontend/src/app/reader/media/embed-frame-allowlist.generated.json';
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
