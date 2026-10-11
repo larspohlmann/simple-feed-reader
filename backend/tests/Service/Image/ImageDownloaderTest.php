@@ -202,7 +202,10 @@ final class ImageDownloaderTest extends TestCase
     public function testADeclaredTypeIsTrustedOverTheLeadingBytes(): void
     {
         $downloader = $this->downloader([
-            new MockResponse("\xFF\xD8\xFF\xE0", ['http_code' => 200, 'response_headers' => ['Content-Type: text/html']]),
+            new MockResponse("\xFF\xD8\xFF\xE0", [
+                'http_code' => 200,
+                'response_headers' => ['Content-Type: text/html'],
+            ]),
         ]);
 
         $this->expectExceptionMessage('"text/html" is not a served image type');

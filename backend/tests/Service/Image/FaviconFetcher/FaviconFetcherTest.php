@@ -78,6 +78,7 @@ final class FaviconFetcherTest extends TestCase
 
         $this->fetcher($client)->download(self::ICON_URL);
 
+        self::assertIsArray($headers);
         self::assertContains('User-Agent: TestAgent/1.0', $headers);
         self::assertContains('Accept-Encoding: identity', $headers);
     }

@@ -29,6 +29,8 @@ final class ImageTypeTest extends TestCase
 
     public function testAnUndeclaredTypeStaysWhenTheBytesShowNoImage(): void
     {
-        self::assertSame('application/octet-stream', ImageType::declaredOrSniffed('application/octet-stream', '<svg/>'));
+        $type = ImageType::declaredOrSniffed('application/octet-stream', '<svg/>');
+
+        self::assertSame('application/octet-stream', $type);
     }
 }
