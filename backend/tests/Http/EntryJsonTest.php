@@ -9,6 +9,7 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\ImageRendition;
+use App\Entity\LinkCardContent;
 use App\Entity\Share;
 use App\Http\EntryJson;
 use App\Repository\EntryListRow;
@@ -163,7 +164,9 @@ final class EntryJsonTest extends TestCase
         $shared = $this->entryTitled('Shared');
         $shared->setShare(Share::media('https://i.example/chart'));
 
-        $json = EntryJson::completed($this->row($shared));
+        $card = new LinkCardContent('https://i.example/chart', 'Chart', null, null, 'i.example');
+
+        $json = EntryJson::completed($this->row($shared)->withLinkCards([$card]));
 
         self::assertSame(
             [
@@ -173,6 +176,16 @@ final class EntryJsonTest extends TestCase
             array_keys($json),
         );
         self::assertSame('media', $json['share']);
+        self::assertSame(
+            [[
+                'url' => 'https://i.example/chart',
+                'title' => 'Chart',
+                'description' => null,
+                'imageUrl' => null,
+                'siteName' => 'i.example',
+            ]],
+            $json['linkCards'],
+        );
     }
 
     public function testAListRowCarriesEveryCompletedField(): void
