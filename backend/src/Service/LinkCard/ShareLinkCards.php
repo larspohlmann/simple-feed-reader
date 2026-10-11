@@ -58,10 +58,8 @@ final readonly class ShareLinkCards
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
-            $entry = $row->getEntry();
             $cardsByRowId[$row->requireId()] = new EntryCardsModel(
-                $entry,
-                $storedCards[$entry->requireId()] ?? [],
+                $storedCards[$row->getEntry()->requireId()] ?? [],
                 $this->pageCardsFor($uncardedUrls),
             );
         }
@@ -83,7 +81,7 @@ final readonly class ShareLinkCards
         }
 
         foreach ($held as $row) {
-            $this->cardWriter->write($cardsByRowId[$row->requireId()]);
+            $this->cardWriter->write($row->getEntry(), $cardsByRowId[$row->requireId()]);
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);

@@ -24,12 +24,12 @@ final readonly class EntryCardWriter
     ) {
     }
 
-    public function write(EntryCardsModel $cards): void
+    public function write(Entry $entry, EntryCardsModel $cards): void
     {
         $newCards = $cards->newCards();
-        $this->linkCards->append($cards->entry, $cards->stored, $newCards);
-        $this->dropCardedQuoteLines($cards->entry, $newCards);
-        self::settleMediaTarget($cards->entry, $cards->pageCards);
+        $this->linkCards->append($entry, $cards->stored, $newCards);
+        $this->dropCardedQuoteLines($entry, $newCards);
+        self::settleMediaTarget($entry, $cards->pageCards);
     }
 
     /**

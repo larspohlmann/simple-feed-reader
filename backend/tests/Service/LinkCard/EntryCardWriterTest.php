@@ -24,6 +24,7 @@ final class EntryCardWriterTest extends DbTestCase
 
     private EntryCardWriter $writer;
     private Feed $feed;
+    private int $posts = 0;
 
     protected function setUp(): void
     {
@@ -39,10 +40,9 @@ final class EntryCardWriterTest extends DbTestCase
     {
         $post = $this->post('<p>https://example.com/1 https://example.com/2 https://example.com/3</p>');
         $stored = [self::card('https://example.com/2')];
-        $this->writeFlushed(new EntryCardsModel($post, [], [self::pageCard('https://example.com/2')]));
+        $this->writeFlushed($post, new EntryCardsModel([], [self::pageCard('https://example.com/2')]));
 
-        $this->writeFlushed(new EntryCardsModel(
-            $post,
+        $this->writeFlushed($post, new EntryCardsModel(
             $stored,
             [self::pageCard('https://example.com/1'), self::pageCard('https://example.com/3')],
         ));
@@ -58,8 +58,7 @@ final class EntryCardWriterTest extends DbTestCase
     {
         $post = $this->post('<p>https://example.com/untitled https://example.com/found</p>');
 
-        $this->writeFlushed(new EntryCardsModel(
-            $post,
+        $this->writeFlushed($post, new EntryCardsModel(
             [],
             [new PageCardModel(null, null), self::pageCard('https://example.com/found')],
         ));
@@ -73,7 +72,7 @@ final class EntryCardWriterTest extends DbTestCase
         $post = $this->post(self::QUOTE . '<p>Reposting for the morning crew</p>');
         $post->setSummary('RE: https://q.example/@a/1 Reposting for the morning crew');
 
-        $this->writeFlushed(new EntryCardsModel($post, [], [self::pageCard('https://q.example/@a/1')]));
+        $this->writeFlushed($post, new EntryCardsModel([], [self::pageCard('https://q.example/@a/1')]));
 
         self::assertSame('<p>Reposting for the morning crew</p>', $post->getContentHtml());
         self::assertSame('Reposting for the morning crew', $post->getSummary());
@@ -84,7 +83,7 @@ final class EntryCardWriterTest extends DbTestCase
         $post = $this->post(self::QUOTE);
         $post->setSummary('RE: https://q.example/@a/1');
 
-        $this->writeFlushed(new EntryCardsModel($post, [], [self::pageCard('https://q.example/@a/1')]));
+        $this->writeFlushed($post, new EntryCardsModel([], [self::pageCard('https://q.example/@a/1')]));
 
         self::assertNull($post->getContentHtml());
         self::assertNull($post->getSummary());
@@ -96,7 +95,7 @@ final class EntryCardWriterTest extends DbTestCase
         $post = $this->post($body);
         $post->setSummary('RE: https://q.example/@a/1 Look.');
 
-        $this->writeFlushed(new EntryCardsModel($post, [], []));
+        $this->writeFlushed($post, new EntryCardsModel([], []));
 
         self::assertSame($body, $post->getContentHtml());
         self::assertSame('RE: https://q.example/@a/1 Look.', $post->getSummary());
@@ -106,7 +105,7 @@ final class EntryCardWriterTest extends DbTestCase
     {
         $chart = $this->titledShare(self::CHART);
 
-        $this->writeFlushed(new EntryCardsModel($chart, [], [self::picture(self::CHART)]));
+        $this->writeFlushed($chart, new EntryCardsModel([], [self::picture(self::CHART)]));
 
         self::assertSame(ShareKind::Media, $chart->getShareKind());
         self::assertEquals([new EntryMedium(self::CHART, 'image')], $chart->getMedia());
@@ -121,7 +120,7 @@ final class EntryCardWriterTest extends DbTestCase
             new EntryMedium(self::CHART, 'image', 800, 600),
         ], []);
 
-        $this->writeFlushed(new EntryCardsModel($chart, [], [self::picture(self::CHART)]));
+        $this->writeFlushed($chart, new EntryCardsModel([], [self::picture(self::CHART)]));
 
         self::assertEquals(
             [
@@ -137,17 +136,17 @@ final class EntryCardWriterTest extends DbTestCase
         $post = $this->post('<p>' . self::CHART . '</p>');
         $post->setShareKind(ShareKind::Link);
 
-        $this->writeFlushed(new EntryCardsModel($post, [], [self::picture(self::CHART)]));
+        $this->writeFlushed($post, new EntryCardsModel([], [self::picture(self::CHART)]));
 
         self::assertSame(ShareKind::Link, $post->getShareKind());
         self::assertSame([], $post->getMedia());
     }
 
-    private function writeFlushed(EntryCardsModel $cards): void
+    private function writeFlushed(Entry $entry, EntryCardsModel $cards): void
     {
-        $this->writer->write($cards);
+        $this->writer->write($entry, $cards);
         $this->entityManager->flush();
-        $this->entityManager->refresh($cards->entry);
+        $this->entityManager->refresh($entry);
     }
 
     private static function card(string $url): LinkCardContent
@@ -168,7 +167,8 @@ final class EntryCardWriterTest extends DbTestCase
     private function post(?string $contentHtml, ?string $url = null): Entry
     {
         $now = new \DateTimeImmutable('2026-10-11 12:00:00');
-        $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . uniqid(), $url, 'Post', $now, $now);
+        $guid = 'https://mastodon.example/@someone/' . ++$this->posts;
+        $entry = new Entry($this->feed, $guid, $url, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);
