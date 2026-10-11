@@ -69,18 +69,15 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * Only rows the claim still holds are written: no other worker cards their entries meanwhile.
+     * Only rows the claim still holds are written: no other worker cards their entries meanwhile, and the released
+     * rows this call never worked are no longer held.
      *
      * @param list<ShareEnrichment>       $claimed
      * @param array<int, EntryCardsModel> $cardsByRowId the rows this call worked
      */
     private function store(array $claimed, array $cardsByRowId, \DateTimeImmutable $claimedAt): int
     {
-        $worked = array_values(array_filter(
-            $claimed,
-            static fn (ShareEnrichment $row): bool => isset($cardsByRowId[$row->requireId()]),
-        ));
-        $held = $this->enrichments->stillHeld($worked, $claimedAt);
+        $held = $this->enrichments->stillHeld($claimed, $claimedAt);
         if ($held === []) {
             return 0;
         }
