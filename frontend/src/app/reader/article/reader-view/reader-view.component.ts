@@ -55,6 +55,7 @@ import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
 import { EntryAudio } from '../../audio/entry-audio';
+import { entryDisplayTitle } from '../../entry/entry-display-title';
 
 @Component({
   selector: 'app-reader-view',
@@ -87,6 +88,7 @@ import { EntryAudio } from '../../audio/entry-audio';
 })
 export class ReaderViewComponent {
   protected readonly selectionQueryParams = selectionQueryParams;
+  protected readonly entryDisplayTitle = entryDisplayTitle;
 
   readonly entry = input.required<EntryDto | null>();
   readonly tags = input<SubscriptionTagDto[]>([]);

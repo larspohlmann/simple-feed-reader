@@ -36,13 +36,8 @@ final class EntryHeadline
         $this->derived = true;
     }
 
-    public function isUntitled(): bool
-    {
-        return $this->title === '';
-    }
-
     public function isUntitledPost(): bool
     {
-        return $this->derived && $this->isUntitled();
+        return $this->derived && $this->title === '';
     }
 }

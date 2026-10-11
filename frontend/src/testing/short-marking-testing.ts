@@ -11,7 +11,7 @@ const shortMarks = (fixture: ComponentFixture<unknown>) => {
   };
 };
 
-/** The rule every image-bearing list layout shares: a Short's image carries the badge, and a Short shown without one carries the pill. */
+/** The list row's rule: a Short's image carries the badge, and a Short shown without one carries the pill. */
 export function describeShortMarking(render: RenderEntry): void {
   describe('YouTube Short marking', () => {
     it('badges the image of a Short and shows no pill', () => {

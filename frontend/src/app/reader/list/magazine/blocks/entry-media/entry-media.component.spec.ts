@@ -112,6 +112,30 @@ const sighting = (target: Element, isIntersecting: boolean) =>
 const press = (target: Element, key: string) =>
   target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
+let restoreObserver: (() => void) | null = null;
+
+afterEach(() => {
+  restoreObserver?.();
+  restoreObserver = null;
+});
+
+function stubIntersectionObserver() {
+  const callbacks: IntersectionObserverCallback[] = [];
+  const observed: Element[] = [];
+  const real = globalThis.IntersectionObserver;
+  restoreObserver = () => (globalThis.IntersectionObserver = real);
+  globalThis.IntersectionObserver = class {
+    constructor(callback: IntersectionObserverCallback) {
+      callbacks.push(callback);
+    }
+    readonly observe = (target: Element) => observed.push(target);
+    readonly disconnect = jest.fn();
+  } as unknown as typeof IntersectionObserver;
+  const report = (target: Element, isIntersecting: boolean) =>
+    callbacks[0]([sighting(target, isIntersecting)], {} as IntersectionObserver);
+  return { observed, report };
+}
+
 describe('EntryMediaComponent', () => {
   it('shows the post text as a caption above the media', async () => {
     const element = await mount(entry());
@@ -195,26 +219,14 @@ describe('EntryMediaComponent', () => {
   });
 
   it('pauses a video that scrolls out of view', async () => {
-    const callbacks: IntersectionObserverCallback[] = [];
-    const real = globalThis.IntersectionObserver;
-    globalThis.IntersectionObserver = class {
-      constructor(callback: IntersectionObserverCallback) {
-        callbacks.push(callback);
-      }
-      readonly observe = jest.fn();
-      readonly disconnect = jest.fn();
-    } as unknown as typeof IntersectionObserver;
-    try {
-      const element = await mount(entry({ media: [clip] }));
-      const video = element.querySelector('video')!;
+    const { report } = stubIntersectionObserver();
+    const element = await mount(entry({ media: [clip] }));
+    const video = element.querySelector('video')!;
 
-      callbacks[0]([sighting(video, true)], {} as IntersectionObserver);
-      expect(pause).not.toHaveBeenCalled();
-      callbacks[0]([sighting(video, false)], {} as IntersectionObserver);
-      expect(pause).toHaveBeenCalledTimes(1);
-    } finally {
-      globalThis.IntersectionObserver = real;
-    }
+    report(video, true);
+    expect(pause).not.toHaveBeenCalled();
+    report(video, false);
+    expect(pause).toHaveBeenCalledTimes(1);
   });
 
   it('captions a Short with its title and frames its cover at the picture’s own shape', async () => {
@@ -256,38 +268,25 @@ describe('EntryMediaComponent', () => {
   });
 
   it('puts a Short’s player back to its cover when the card scrolls out of view', async () => {
-    const callbacks: IntersectionObserverCallback[] = [];
-    const observed: Element[] = [];
-    const real = globalThis.IntersectionObserver;
-    globalThis.IntersectionObserver = class {
-      constructor(callback: IntersectionObserverCallback) {
-        callbacks.push(callback);
-      }
-      readonly observe = (target: Element) => observed.push(target);
-      readonly disconnect = jest.fn();
-    } as unknown as typeof IntersectionObserver;
-    try {
-      const fixture = await mountFixture(short());
-      const element = fixture.nativeElement as HTMLElement;
-      element.querySelector<HTMLButtonElement>('.play')!.click();
-      fixture.detectChanges();
-      await fixture.whenStable();
-      const frame = element.querySelector('.short-player')!;
-      const pill = element.querySelector('.pill.short')!;
-      expect(observed).toContain(frame);
-      expect(observed).not.toContain(pill);
+    const { observed, report } = stubIntersectionObserver();
+    const fixture = await mountFixture(short());
+    const element = fixture.nativeElement as HTMLElement;
+    element.querySelector<HTMLButtonElement>('.play')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const frame = element.querySelector('.short-player')!;
+    const pill = element.querySelector('.pill.short')!;
+    expect(observed).toContain(frame);
+    expect(observed).not.toContain(pill);
 
-      callbacks[0]([sighting(frame, true)], {} as IntersectionObserver);
-      fixture.detectChanges();
-      expect(element.querySelector('iframe')).not.toBeNull();
+    report(frame, true);
+    fixture.detectChanges();
+    expect(element.querySelector('iframe')).not.toBeNull();
 
-      callbacks[0]([sighting(frame, false)], {} as IntersectionObserver);
-      fixture.detectChanges();
-      expect(element.querySelector('iframe')).toBeNull();
-      expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
-    } finally {
-      globalThis.IntersectionObserver = real;
-    }
+    report(frame, false);
+    fixture.detectChanges();
+    expect(element.querySelector('iframe')).toBeNull();
+    expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
   });
 
   it('counts a Short as one picture even when the post carries more media', async () => {

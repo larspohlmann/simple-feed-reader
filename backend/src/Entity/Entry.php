@@ -145,11 +145,6 @@ final class Entry
         $this->headline->markDerived();
     }
 
-    public function isUntitled(): bool
-    {
-        return $this->headline->isUntitled();
-    }
-
     public function isUntitledPost(): bool
     {
         return $this->headline->isUntitledPost();

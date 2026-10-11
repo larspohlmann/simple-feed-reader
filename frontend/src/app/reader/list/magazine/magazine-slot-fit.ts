@@ -63,10 +63,9 @@ const MAX_POST_MEDIA = 4;
 
 /** The blocks a post claims whatever slot it was given (#1502, #1522). */
 export type PostKind = Extract<EntryKind, 'link' | 'media'>;
-const POST_KINDS: readonly EntryKind[] = ['link', 'media'];
 
 export function isPostKind(kind: EntryKind): kind is PostKind {
-  return POST_KINDS.includes(kind);
+  return kind === 'link' || kind === 'media';
 }
 
 const postMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();

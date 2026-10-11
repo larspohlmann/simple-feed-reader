@@ -1,5 +1,6 @@
 import { AudioTrack } from '../audio-player.service';
 import { EntryAttachmentDto, EntryDto } from '../models';
+import { entryDisplayTitle } from '../entry/entry-display-title';
 
 const AUDIO_EXTENSIONS = ['mp3', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'wav', 'flac'];
 
@@ -15,7 +16,7 @@ export function firstAudioAttachment(attachments: EntryAttachmentDto[]): EntryAt
 export function toAudioTrack(entry: EntryDto, attachment: EntryAttachmentDto): AudioTrack {
   return {
     url: attachment.url,
-    title: attachment.title?.trim() || entry.title || entry.source,
+    title: attachment.title?.trim() || entryDisplayTitle(entry),
     faviconUrl: entry.faviconUrl,
     imageUrl: entry.imageUrl,
     durationInSeconds: attachment.durationInSeconds ?? null,
