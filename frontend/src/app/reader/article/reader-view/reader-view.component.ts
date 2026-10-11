@@ -110,8 +110,8 @@ export class ReaderViewComponent {
   });
   private readonly linkCards = viewChild(LinkCardsComponent, { read: ElementRef<HTMLElement> });
   private readonly trailingParts: readonly TrailingPart[] = [
-    { query: this.linkCards, carriesText: false },
-    { query: this.commentsSection, carriesText: true },
+    { query: this.linkCards, joinsFocus: false },
+    { query: this.commentsSection, joinsFocus: true },
   ];
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');

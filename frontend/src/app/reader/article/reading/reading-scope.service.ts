@@ -20,10 +20,10 @@ import { prefersReducedMotion } from './reduced-motion';
 
 type ElementQuery = Signal<ElementRef<HTMLElement> | undefined>;
 
-/** A section below the article body; one that carries text joins the reading focus. */
+/** A section below the article body; `joinsFocus` puts its blocks under the reading-focus dimming. */
 export interface TrailingPart {
   readonly query: ElementQuery;
-  readonly carriesText: boolean;
+  readonly joinsFocus: boolean;
 }
 
 export interface ReadingScopeParts {
@@ -89,7 +89,7 @@ export class ReadingScope {
     this.scroller = parts.scroller;
     this.content = parts.content;
     this.trailing = parts.trailing;
-    const textParts = parts.trailing.filter((part) => part.carriesText);
+    const focusParts = parts.trailing.filter((part) => part.joinsFocus);
     // The applier is rebuilt whenever `content` itself is (re)created — per
     // article and on the reader/original swap — destroying the old one first.
     effect(
@@ -102,7 +102,7 @@ export class ReadingScope {
         this.applier = new ReadingFocusApplier({
           scroller,
           blocks: () =>
-            [element, ...this.presentElements(textParts)].flatMap((root) => readingBlocks(root)),
+            [element, ...this.presentElements(focusParts)].flatMap((root) => readingBlocks(root)),
           curve: ARTICLE_FOCUS_CURVE,
           isActive: () =>
             this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,

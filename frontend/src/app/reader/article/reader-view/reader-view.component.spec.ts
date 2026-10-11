@@ -20,6 +20,10 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { PreviewProgress } from '../../link-card/preview-progress';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -77,26 +81,6 @@ class FakeEntryBodyService {
       this.states.set(id, state);
     }
     return state;
-  }
-}
-
-class MockResizeObserver {
-  static instances: MockResizeObserver[] = [];
-  readonly targets = new Set<Element>();
-  constructor(readonly callback: ResizeObserverCallback) {
-    MockResizeObserver.instances.push(this);
-  }
-  observe(target: Element): void {
-    this.targets.add(target);
-  }
-  unobserve(target: Element): void {
-    this.targets.delete(target);
-  }
-  disconnect(): void {
-    this.targets.clear();
-  }
-  fire(): void {
-    this.callback([], this as unknown as ResizeObserver);
   }
 }
 
@@ -175,8 +159,7 @@ describe('ReaderViewComponent', () => {
     imageProxy = { recover: jest.fn().mockResolvedValue('failed') };
     localStorage.clear();
     sessionStorage.clear();
-    MockResizeObserver.instances = [];
-    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+    installMockResizeObserver();
     // Default: extraction fails so the existing presentational tests keep
     // asserting against the feed's own content. Reader-specific tests override.
     loadMock = jest.fn(() => of<ReaderContent>(failedContent()));

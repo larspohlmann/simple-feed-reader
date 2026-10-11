@@ -6,6 +6,10 @@ import { articleHost } from '../../../../testing/article-host-testing';
 import { LayoutService } from '../../layout.service';
 import { ReadingFocusApplier, type ReadingFocusConfig } from './reading-focus-applier';
 import { ReadingScope } from './reading-scope.service';
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 
 jest.mock('./reading-focus-applier', () => ({
   ReadingFocusApplier: jest.fn().mockImplementation(() => ({
@@ -15,26 +19,8 @@ jest.mock('./reading-focus-applier', () => ({
   })),
 }));
 
-class MockResizeObserver {
-  static instances: MockResizeObserver[] = [];
-  readonly targets = new Set<Element>();
-  constructor(readonly callback: ResizeObserverCallback) {
-    MockResizeObserver.instances.push(this);
-  }
-  observe(target: Element): void {
-    this.targets.add(target);
-  }
-  unobserve(target: Element): void {
-    this.targets.delete(target);
-  }
-  disconnect(): void {
-    this.targets.clear();
-  }
-}
-
 const VIEWPORT = 800;
 
-/** A part of the scope whose box ends `bottom` pixels into the pane. */
 function partEndingAt(bottom: number, html = '<p>Text</p>'): HTMLElement {
   const part = articleHost(html);
   part.getBoundingClientRect = () => ({ top: 0, bottom }) as DOMRect;
@@ -61,8 +47,8 @@ function connectScope(parts: {
     scroller: signal(scrollerOfViewport()),
     content: query(parts.content),
     trailing: [
-      { query: query(parts.linkCards), carriesText: false },
-      { query: query(parts.comments), carriesText: true },
+      { query: query(parts.linkCards), joinsFocus: false },
+      { query: query(parts.comments), joinsFocus: true },
     ],
   });
   scope.observeResizes();
@@ -80,8 +66,7 @@ function focusBlocks(): HTMLElement[] {
 describe('ReadingScope', () => {
   beforeEach(() => {
     jest.mocked(ReadingFocusApplier).mockClear();
-    MockResizeObserver.instances = [];
-    (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+    installMockResizeObserver();
     TestBed.configureTestingModule({
       providers: [
         ReadingScope,

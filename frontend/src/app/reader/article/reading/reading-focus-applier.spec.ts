@@ -1,26 +1,10 @@
 import { ReadingFocusApplier } from './reading-focus-applier';
 import { LIST_FOCUS_CURVE } from './reading-focus';
 import { SENTENCE_CLASS, sectionedUnits } from './reading-sections';
-
-class MockResizeObserver {
-  static instances: MockResizeObserver[] = [];
-  readonly targets = new Set<Element>();
-  constructor(readonly callback: ResizeObserverCallback) {
-    MockResizeObserver.instances.push(this);
-  }
-  observe(target: Element): void {
-    this.targets.add(target);
-  }
-  unobserve(target: Element): void {
-    this.targets.delete(target);
-  }
-  disconnect(): void {
-    this.targets.clear();
-  }
-  fire(): void {
-    this.callback([], this as unknown as ResizeObserver);
-  }
-}
+import {
+  MockResizeObserver,
+  installMockResizeObserver,
+} from '../../../../testing/resize-observer-testing';
 
 const frames = (): Promise<void> =>
   new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -41,8 +25,7 @@ const blank = (blocks: () => HTMLElement[]): void =>
 let observer: () => MockResizeObserver;
 
 beforeEach(() => {
-  MockResizeObserver.instances = [];
-  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
+  installMockResizeObserver();
   observer = () => MockResizeObserver.instances[MockResizeObserver.instances.length - 1];
 });
 
