@@ -880,5 +880,14 @@ describe('planMagazine', () => {
 
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
     });
+
+    it('keeps the cap after settling lifts an image-less entry to its kicker', () => {
+      const entries = many(60, (index) =>
+        index % 5 === 0 || index % 5 === 2 ? big(index) : entryAt(index),
+      );
+      const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
+
+      expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
+    });
   });
 });
