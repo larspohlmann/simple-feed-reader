@@ -50,10 +50,8 @@ final readonly class EntryListRow
         $ids = [];
         foreach ($rows as $row) {
             foreach ($row->members() as $member) {
-                $id = $member->entry->getId();
-                if ($id !== null) {
-                    $ids[$id] = $id;
-                }
+                $id = $member->entry->requireId();
+                $ids[$id] = $id;
             }
         }
 

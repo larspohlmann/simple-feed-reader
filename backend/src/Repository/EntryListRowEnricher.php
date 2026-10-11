@@ -24,7 +24,7 @@ final readonly class EntryListRowEnricher
     {
         $enrichments = $this->enrichmentsByEntryId($rows, $userId);
         $enrich = static fn (EntryListRow $member): EntryListRow => $member->withEnrichment(
-            $enrichments[$member->entry->getId()] ?? new EntryListRowEnrichment(),
+            $enrichments[$member->entry->requireId()],
         );
 
         return array_map(static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($enrich), $rows);
@@ -65,9 +65,6 @@ final readonly class EntryListRowEnricher
      */
     private static function topLevelEntryIdsOf(array $rows): array
     {
-        return array_values(array_filter(
-            array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $rows),
-            is_int(...),
-        ));
+        return array_map(static fn (EntryListRow $row): int => $row->entry->requireId(), $rows);
     }
 }
