@@ -15,6 +15,7 @@ use App\Service\Reader\MetaRefreshTarget;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -71,6 +72,67 @@ final class HtmlPageFetcherTest extends TestCase
 
         self::assertStringContainsString('hi', $result->html);
         self::assertSame('https://example.com/post', $result->finalUrl);
+    }
+
+    public function testAHeadIsTheFirst512KbOfALargerPage(): void
+    {
+        $page = '<html lang="en"><head><title>Story</title></head><body>'
+            . str_repeat('x', 1_000_000) . '</body></html>';
+        $fetcher = $this->fetcher([new MockResponse($page, ['http_code' => 200])]);
+
+        $head = $fetcher->fetchHead('https://example.com/long');
+
+        self::assertSame(substr($page, 0, 524_288), $head->html);
+    }
+
+    public function testAHeadCutShortByTheConnectionThrows(): void
+    {
+        $chunks = static function (): \Generator {
+            yield '<html lang="en"><head>';
+            yield new TransportException('connection reset');
+        };
+        $fetcher = $this->fetcher([new MockResponse($chunks(), ['http_code' => 200])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('connection reset');
+        $fetcher->fetchHead('https://example.com/reset');
+    }
+
+    public function testAHeadIsFetchedWithShortTimeouts(): void
+    {
+        $options = [];
+        $fetcher = $this->fetcher(static function (string $method, string $url, array $given) use (&$options) {
+            $options = $given;
+
+            return new MockResponse('<html lang="en"><head><title>T</title></head></html>', ['http_code' => 200]);
+        });
+
+        $fetcher->fetchHead('https://example.com/post');
+
+        self::assertSame(5.0, $options['timeout']);
+        self::assertSame(8.0, $options['max_duration']);
+    }
+
+    public function testAHeadDoesNotChaseAMetaRefresh(): void
+    {
+        $fetcher = $this->fetcher([
+            new MockResponse(self::metaRefresh('https://example.com/elsewhere'), ['http_code' => 200]),
+            new MockResponse('<html lang="en"><body>elsewhere</body></html>', ['http_code' => 200]),
+        ]);
+
+        $head = $fetcher->fetchHead('https://example.com/post');
+
+        self::assertSame('https://example.com/post', $head->finalUrl);
+        self::assertStringContainsString('interstitial', $head->html);
+    }
+
+    public function testAHeadOfAFailedPageThrowsAsAWholePageDoes(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse('nope', ['http_code' => 404])]);
+
+        $this->expectException(PageFetchException::class);
+        $this->expectExceptionMessage('HTTP 404 Not Found');
+        $fetcher->fetchHead('https://example.com/missing');
     }
 
     public function testWrapsSsrfBlockInPageFetchException(): void

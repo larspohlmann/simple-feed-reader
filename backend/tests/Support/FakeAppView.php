@@ -35,6 +35,14 @@ final class FakeAppView implements FeedFetcherInterface
         }
     }
 
+    /** @param array<mixed> $view a post view as the AppView answers it, with its uri */
+    public function knowsPost(array $view): void
+    {
+        $uri = $view['uri'] ?? null;
+        Assert::assertIsString($uri);
+        $this->postViews[$uri] = $view;
+    }
+
     public function failsWith(FetchException $failure): void
     {
         $this->failure = $failure;

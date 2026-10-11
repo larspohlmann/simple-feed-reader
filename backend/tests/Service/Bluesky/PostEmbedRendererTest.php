@@ -277,6 +277,32 @@ final class PostEmbedRendererTest extends TestCase
         self::assertNull($rendered->linkCard);
     }
 
+    public function testALinkCardTooLongToStoreIsNoCardAndLinksThePost(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => ['uri' => 'https://example.com/' . str_repeat('a', 2080), 'title' => 'Story'],
+        ]));
+
+        self::assertSame(self::FALLBACK, $rendered?->html);
+        self::assertNull($rendered->linkCard);
+    }
+
+    public function testALinkCardsLongTitleAndDescriptionAreCutToFit(): void
+    {
+        $rendered = $this->renderer()->render(self::post([
+            '$type' => 'app.bsky.embed.external#view',
+            'external' => [
+                'uri' => 'https://example.com/story',
+                'title' => str_repeat('t', 600),
+                'description' => str_repeat('word ', 100),
+            ],
+        ]));
+
+        self::assertSame(str_repeat('t', 500), $rendered?->linkCard?->title);
+        self::assertSame(str_repeat('word ', 58) . 'word…', $rendered->linkCard->description);
+    }
+
     public function testAnHttpImageIsDroppedAndAProtocolRelativeOneUpgraded(): void
     {
         $rendered = $this->renderer()->render(self::post([

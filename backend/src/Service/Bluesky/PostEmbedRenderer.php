@@ -10,6 +10,7 @@ use App\Service\Bluesky\Model\RenderedEmbedModel;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\Support\AtPostUri;
+use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Text\Support\HtmlEscape;
@@ -116,17 +117,14 @@ final readonly class PostEmbedRenderer
             return null;
         }
         $thumbnail = HttpsImageUrl::orNull($external->string('thumb'));
+        $card = StorableLinkCard::of(
+            new LinkCardContent($url, $title, $external->string('description'), $thumbnail, HostKey::forUrl($url)),
+        );
 
-        return new RenderedEmbedModel(
+        return $card === null ? null : new RenderedEmbedModel(
             '',
             $thumbnail === null ? null : new DeclaredImageModel($thumbnail),
-            linkCard: new LinkCardContent(
-                $url,
-                $title,
-                $external->string('description'),
-                $thumbnail,
-                HostKey::forUrl($url),
-            ),
+            linkCard: $card,
         );
     }
 

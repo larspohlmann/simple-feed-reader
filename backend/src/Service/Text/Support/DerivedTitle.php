@@ -11,7 +11,6 @@ namespace App\Service\Text\Support;
 final class DerivedTitle
 {
     private const int MAX_LENGTH = 80;
-    private const string ELLIPSIS = '…';
     private const string LINK_PATTERN = '#\bhttps?://\S+#u';
     /** Punctuation, symbols and at most a short label such as Mastodon's quote-post "RE:". */
     private const string WORDLESS_PATTERN = '/^[\p{P}\p{S}\s]*+(?:\p{L}{1,3}:)?[\p{P}\p{S}\s]*+$/u';
@@ -22,7 +21,7 @@ final class DerivedTitle
     {
         foreach (PlainText::linesFromHtmlBlocks($bodyHtml) as $line) {
             if (self::holdsWords($line)) {
-                return self::cut(self::firstSentence($line));
+                return WordBoundary::clipped(self::firstSentence($line), self::MAX_LENGTH);
             }
         }
 
@@ -43,15 +42,6 @@ final class DerivedTitle
         }
 
         return preg_match(self::TWO_WORDS_PATTERN, $sentence[0]) === 1 ? $sentence[0] : $line;
-    }
-
-    private static function cut(string $text): string
-    {
-        if (mb_strlen($text) <= self::MAX_LENGTH) {
-            return $text;
-        }
-
-        return rtrim(WordBoundary::cut($text, self::MAX_LENGTH - 1), ' ,;:-–—') . self::ELLIPSIS;
     }
 
     private function __construct()
