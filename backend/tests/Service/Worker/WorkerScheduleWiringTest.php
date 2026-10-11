@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
+use App\Service\Worker\Message\CompleteQueuedLinkCards;
 use App\Service\Worker\Message\PurgeFailedMessages;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Service\Worker\Message\SendDueDigests;
@@ -31,7 +32,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
 
         $recurringMessages = $provider->getSchedule()->getRecurringMessages();
 
-        self::assertCount(8, $recurringMessages);
+        self::assertCount(9, $recurringMessages);
         $classes = array_map(
             static fn ($recurring) => self::firstMessageClass($recurring),
             $recurringMessages,
@@ -46,6 +47,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 SweepSavedSearchMemberships::class,
                 VerifyPendingImages::class,
                 StartDueProfileRuns::class,
+                CompleteQueuedLinkCards::class,
             ],
             $classes,
         );
@@ -65,6 +67,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
                 'every 1 minute',
                 'every 1 minute',
                 'every 5 minutes',
+                'every 1 minute',
             ],
             $frequencies,
         );

@@ -22,6 +22,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /** ShareLinkCards over a test HTTP client, wired as the container wires it. */
@@ -46,6 +48,15 @@ final class ShareLinkCardsWiring
             new EntrySanitizer(new TrailingBlankRemover()),
             $logger,
         );
+    }
+
+    /** Answers every URL with an HTML page titled "Card for <url>". */
+    public static function titledPages(): MockHttpClient
+    {
+        return new MockHttpClient(static fn (string $method, string $url): MockResponse => new MockResponse(
+            '<html><head><title>Card for ' . $url . '</title></head></html>',
+            ['response_headers' => ['content-type' => 'text/html']],
+        ));
     }
 
     public static function pageFetcher(HttpClientInterface $client): HtmlPageFetcher

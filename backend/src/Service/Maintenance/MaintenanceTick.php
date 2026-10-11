@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Maintenance;
 
 use App\Service\Image\ImageVerificationSweep;
+use App\Service\LinkCard\LinkCardSweep;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -33,11 +35,14 @@ final readonly class MaintenanceTick
     /** The membership sweep's own cap inside that window: enough for ~50 chunks on Strato. */
     private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
+    private const int LINK_CARD_MAX_FETCHES = 2;
+
     public function __construct(
         private RefreshRunner $refreshRunner,
         private ForYouSweep $forYouSweep,
         private SendDueDigests $sendDueDigests,
         private ImageVerificationSweep $imageVerificationSweep,
+        private LinkCardSweep $linkCardSweep,
         private SavedSearchMembershipSweep $membershipSweep,
         private LokiSpoolShipper $logSpoolShipper,
         private ClockInterface $clock,
@@ -60,12 +65,16 @@ final readonly class MaintenanceTick
         $recommendations = $this->forYouSweep->sweepOnce();
         $digests = $this->sendDueDigests->run();
         $imageVerification = $this->imageVerificationSweep->verifyDue();
+        $linkCards = $this->linkCardSweep->sweep(
+            LinkCardBudgetModel::fittingBefore($deadline, $this->clock->now(), self::LINK_CARD_MAX_FETCHES),
+        );
         $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
 
         return new MaintenanceSweepsModel(
             $recommendations,
             $digests,
             $imageVerification,
+            $linkCards,
             $this->membershipSweep->sweep($budget),
         );
     }

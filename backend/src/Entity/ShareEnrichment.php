@@ -16,10 +16,12 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: ShareEnrichmentRepository::class)]
 #[ORM\Table(name: 'share_enrichment')]
+#[ORM\Index(name: 'idx_share_enrichment_claimable', columns: ['kind', 'done_at', 'queued_at'])]
 final class ShareEnrichment
 {
     public const string APPVIEW_GIVE_UP_AFTER = 'P3D';
-    public const string CLAIM_LEASE = 'PT60S';
+    public const int CLAIM_LEASE_SECONDS = 60;
+    public const string CLAIM_LEASE = 'PT' . self::CLAIM_LEASE_SECONDS . 'S';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

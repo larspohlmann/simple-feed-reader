@@ -12,9 +12,9 @@ use App\Repository\LinkCardRepository;
 use App\Repository\ShareEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\Support\EntrySnippet;
+use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Support\QuoteLine;
-use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\LinkCard\Support\ShareTargets;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
@@ -28,9 +28,6 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class ShareLinkCards
 {
-    private const int FETCHES_PER_CALL = SharedLinks::MAX;
-    private const float DEADLINE_SECONDS = self::FETCHES_PER_CALL * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS;
-
     public function __construct(
         private PageCardReader $pageCards,
         private ShareEnrichmentRepository $enrichments,
@@ -42,10 +39,12 @@ final readonly class ShareLinkCards
     ) {
     }
 
-    /** @param list<ShareEnrichment> $queued link-card rows, oldest first */
-    public function complete(array $queued): void
+    /**
+     * @param list<ShareEnrichment> $queued link-card rows, oldest first
+     */
+    public function complete(array $queued, LinkCardBudgetModel $budget): int
     {
-        $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued));
+        $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued), $budget);
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
@@ -58,13 +57,13 @@ final readonly class ShareLinkCards
         $pageCardsByRowId = [];
         foreach ($claimed as $index => $row) {
             $uncardedUrls = $uncardedUrlsByRowId[$row->requireId()];
-            if ($index > 0 && !$this->hasTimeFor($uncardedUrls, $claimedAt)) {
+            if ($index > 0 && !$this->hasTimeFor($uncardedUrls, $claimedAt, $budget)) {
                 $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
                 break;
             }
             $pageCardsByRowId[$row->requireId()] = $this->pageCardsFor($uncardedUrls);
         }
-        $this->store($claimed, $pageCardsByRowId, $claimedAt);
+        return $this->store($claimed, $pageCardsByRowId, $claimedAt);
     }
 
     /**
@@ -73,7 +72,7 @@ final readonly class ShareLinkCards
      * @param list<ShareEnrichment>                $claimed
      * @param array<int, list<PageCardModel>> $pageCardsByRowId the rows this call worked
      */
-    private function store(array $claimed, array $pageCardsByRowId, \DateTimeImmutable $claimedAt): void
+    private function store(array $claimed, array $pageCardsByRowId, \DateTimeImmutable $claimedAt): int
     {
         $worked = array_values(array_filter(
             $claimed,
@@ -81,7 +80,7 @@ final readonly class ShareLinkCards
         ));
         $held = $this->enrichments->stillHeld($worked, $claimedAt);
         if ($held === []) {
-            return;
+            return 0;
         }
 
         $cardedUrls = $this->cardedUrls($held);
@@ -95,6 +94,8 @@ final readonly class ShareLinkCards
         }
         $this->entityManager->flush();
         $this->enrichments->markDone($held, $claimedAt);
+
+        return \count($held);
     }
 
     /**
@@ -145,15 +146,18 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * A later entry starts only if all its links can still be fetched before the deadline, well inside the lease.
+     * A later entry starts only if all its links can still be fetched within the budget, well inside the lease.
      *
      * @param list<string> $uncardedUrls
      */
-    private function hasTimeFor(array $uncardedUrls, \DateTimeImmutable $claimedAt): bool
-    {
+    private function hasTimeFor(
+        array $uncardedUrls,
+        \DateTimeImmutable $claimedAt,
+        LinkCardBudgetModel $budget,
+    ): bool {
         $elapsed = (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
 
-        return $elapsed + \count($uncardedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= self::DEADLINE_SECONDS;
+        return $elapsed + \count($uncardedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= $budget->seconds();
     }
 
     /**
@@ -178,17 +182,17 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * The oldest rows whose uncarded links fit the call's fetches, by row id. The first row always runs, so no entry is
-     * left half-carded.
+     * The oldest rows whose uncarded links fit the budget, by row id. The first row always runs, so no entry is left
+     * half-carded.
      *
      * @param list<ShareEnrichment>     $queued
      * @param array<int, list<string>> $cardedUrls by entry id
      *
      * @return array<int, list<string>>
      */
-    private static function withinBudget(array $queued, array $cardedUrls): array
+    private static function withinBudget(array $queued, array $cardedUrls, LinkCardBudgetModel $budget): array
     {
-        $remaining = self::FETCHES_PER_CALL;
+        $remaining = $budget->fetches;
         $uncardedUrlsByRowId = [];
         foreach ($queued as $row) {
             $entry = $row->getEntry();

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -32,6 +33,7 @@ final class MaintenanceTickJson
                 $sweeps,
                 self::imageVerification($sweeps->imageVerification),
             ),
+            'linkCards' => self::markedIfSkipped($sweeps, self::linkCards($sweeps->linkCards)),
             'savedSearchMemberships' => self::markedIfSkipped(
                 $sweeps,
                 self::memberships($sweeps->savedSearchMemberships),
@@ -58,6 +60,12 @@ final class MaintenanceTickJson
     private static function digests(DigestSweepReportModel $report): array
     {
         return ['considered' => $report->considered, 'sent' => $report->sent, 'skippedEmpty' => $report->skippedEmpty];
+    }
+
+    /** @return array{considered: int, completed: int} */
+    private static function linkCards(LinkCardSweepReportModel $report): array
+    {
+        return ['considered' => $report->considered, 'completed' => $report->completed];
     }
 
     /** @return array{measured: int, kept: int, dropped: int, retried: int} */

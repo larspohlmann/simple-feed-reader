@@ -6,6 +6,7 @@ namespace App\Tests\Http;
 
 use App\Http\MaintenanceTickJson;
 use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
@@ -25,6 +26,7 @@ final class MaintenanceTickJsonTest extends TestCase
                 new ForYouSweepReportModel(1, 2, 3),
                 new DigestSweepReportModel(4, 5, 6),
                 new ImageVerificationReportModel(7, 8, 9, 10),
+                new LinkCardSweepReportModel(16, 17),
                 new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
             ),
             new LokiSpoolReportModel(14, 15),
@@ -53,6 +55,7 @@ final class MaintenanceTickJsonTest extends TestCase
                 ],
                 'digests' => ['considered' => 4, 'sent' => 5, 'skippedEmpty' => 6],
                 'imageVerification' => ['measured' => 7, 'kept' => 8, 'dropped' => 9, 'retried' => 10],
+                'linkCards' => ['considered' => 16, 'completed' => 17],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 11,
                     'entriesScanned' => 12,
@@ -104,6 +107,7 @@ final class MaintenanceTickJsonTest extends TestCase
                     'retried' => 0,
                     'skipped' => $reason,
                 ],
+                'linkCards' => ['considered' => 0, 'completed' => 0, 'skipped' => $reason],
                 'savedSearchMemberships' => [
                     'searchesSwept' => 0,
                     'entriesScanned' => 0,

@@ -34,6 +34,23 @@ final class ShareEnrichmentRepositoryTest extends DbTestCase
         );
     }
 
+    public function testFindsClaimableLinkCardRowsOfEveryFeedOldestFirstUpToTheLimit(): void
+    {
+        $mastodon = $this->feed('https://mastodon.test/@a.rss');
+        $news = $this->feed('https://news.test/feed');
+        $this->queued($mastodon, 'https://mastodon.test/@a/new', '2026-10-10 11:00:00', ShareEnrichmentKind::LinkCards);
+        $this->queued($news, 'https://news.test/old', '2026-10-10 09:00:00', ShareEnrichmentKind::LinkCards);
+        $this->queued($mastodon, 'https://mastodon.test/@a/mid', '2026-10-10 10:00:00', ShareEnrichmentKind::LinkCards);
+        $this->queued($mastodon, 'at://did:plc:a/app.bsky.feed.post/oldest', '2026-10-10 08:00:00');
+        $held = $this->queued($news, 'https://news.test/held', '2026-10-10 07:00:00', ShareEnrichmentKind::LinkCards);
+        $this->entityManager->flush();
+        $this->repository()->claim([$held], $this->now());
+
+        $rows = $this->repository()->findClaimableLinkCards($this->now(), 2);
+
+        self::assertSame(['https://news.test/old', 'https://mastodon.test/@a/mid'], self::guidsOf($rows));
+    }
+
     public function testDeletesOnlyTheFeedsAppViewRowsQueuedBeforeTheCutoff(): void
     {
         $feed = $this->feed('https://bsky.app/profile/a/rss');

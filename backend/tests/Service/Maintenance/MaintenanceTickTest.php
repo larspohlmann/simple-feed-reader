@@ -12,6 +12,8 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
+use App\Service\LinkCard\LinkCardSweep;
+use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
@@ -24,13 +26,17 @@ use App\Service\Mail\MailCapability;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Recommendation\Run\ForYouSweep;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\MembershipSweepFactory;
+use App\Tests\Support\QueuedLinkPosts;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\RefreshRunners;
+use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
@@ -91,9 +97,6 @@ final class MaintenanceTickTest extends DbTestCase
             ->flushingThrough($failingEntityManager)
             ->build($fetcher, $fetcher);
 
-        $forYouSweep = self::getContainer()->get(ForYouSweep::class);
-        self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
-
         $throwingPreferences = $this->createStub(DigestRecipientsInterface::class);
         $throwingPreferences->method('findWithDigestEnabled')->willThrowException(
             new \LogicException('SendDueDigests::run() must not be called when refresh aborted'),
@@ -120,39 +123,105 @@ final class MaintenanceTickTest extends DbTestCase
             new InMemoryMailFailureRecorder(),
         );
 
-        $spoolDirectory = sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4));
-        $lokiClient = new LokiClient(new MockHttpClient(), new StubLokiEndpoint());
-        $logSpoolShipper = new LokiSpoolShipper($lokiClient, $spoolDirectory);
+        $linkCardSweep = self::getContainer()->get(LinkCardSweep::class);
+        self::assertInstanceOf(LinkCardSweep::class, $linkCardSweep);
 
-        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
-        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
-        $imageVerificationSweep = new ImageVerificationSweep(
-            $pendingImageVerificationRepository,
-            new ImageVerifier(new StubFaviconFetcher(), new NaiveUtcClock($clock)),
-            $this->entityManager,
-        );
-
-        $membershipSweep = MembershipSweepFactory::fromContainer(
-            self::getContainer(),
-            $this->entityManager,
-            new RecordingSavedSearchMatcher(),
-            $clock,
-        );
-
-        $tick = new MaintenanceTick(
-            $refreshRunner,
-            $forYouSweep,
-            $sendDueDigests,
-            $imageVerificationSweep,
-            $membershipSweep,
-            $logSpoolShipper,
-            $clock,
-        );
+        $tick = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock);
 
         $report = $tick->run();
 
         self::assertTrue($report->refresh->isAborted());
         self::assertEquals(MaintenanceSweepsModel::skippedAfterAbortedRefresh(), $report->sweeps);
         self::assertEquals(new LokiSpoolReportModel(0, 0), $report->logShipping);
+    }
+
+    public function testCardsTheQueuedLinkPostsInTheSpareWindowOfATickWhoseRefreshTakesNoTime(): void
+    {
+        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(0, new LinkCardSweepReportModel(1, 1), 1);
+    }
+
+    public function testLeavesTheLinkPostsQueuedWhenTheRefreshSpentTheWindow(): void
+    {
+        $this->assertLinkCardSweepOfATickWhoseRefreshTakes(18, new LinkCardSweepReportModel(0, 0), 0);
+    }
+
+    private function assertLinkCardSweepOfATickWhoseRefreshTakes(
+        int $refreshSeconds,
+        LinkCardSweepReportModel $expectedSweep,
+        int $expectedPageFetches,
+    ): void {
+        $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
+        $this->queueLinkPost($clock);
+        $pages = ShareLinkCardsWiring::titledPages();
+        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, $pages, $clock);
+        $fetcher = new StubFeedFetcher($clock);
+        $fetcher->secondsPerFetch = $refreshSeconds;
+        $fetcher->willReturnBody(
+            'https://one.example.com/feed',
+            /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title></channel></rss>',
+        );
+        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->build($fetcher, $fetcher);
+        $sendDueDigests = self::getContainer()->get(SendDueDigests::class);
+        self::assertInstanceOf(SendDueDigests::class, $sendDueDigests);
+
+        $report = $this->tickAround($refreshRunner, $sendDueDigests, $linkCardSweep, $clock)->run();
+
+        self::assertFalse($report->refresh->isAborted());
+        self::assertEquals($expectedSweep, $report->sweeps->linkCards);
+        self::assertSame($expectedPageFetches, $pages->getRequestsCount());
+    }
+
+    private function queueLinkPost(MockClock $clock): void
+    {
+        $now = $clock->now();
+        $subscriber = new User('tick-link-cards-fixture@example.com', $now);
+        $this->entityManager->persist($subscriber);
+        $feed = new Feed('https://one.example.com/feed');
+        $feed->scheduleNextFetchAt($now->modify('-1 hour'));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, $now));
+        QueuedLinkPosts::persist(
+            $this->entityManager,
+            $feed,
+            'link-post',
+            '<p>https://example.com/1</p>',
+            $now->modify('-1 minute'),
+        );
+    }
+
+    private function tickAround(
+        RefreshRunner $refreshRunner,
+        SendDueDigests $sendDueDigests,
+        LinkCardSweep $linkCardSweep,
+        MockClock $clock,
+    ): MaintenanceTick {
+        $forYouSweep = self::getContainer()->get(ForYouSweep::class);
+        self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
+        $pendingImageVerificationRepository = self::getContainer()->get(PendingImageVerificationRepository::class);
+        self::assertInstanceOf(PendingImageVerificationRepository::class, $pendingImageVerificationRepository);
+
+        return new MaintenanceTick(
+            $refreshRunner,
+            $forYouSweep,
+            $sendDueDigests,
+            new ImageVerificationSweep(
+                $pendingImageVerificationRepository,
+                new ImageVerifier(new StubFaviconFetcher(), new NaiveUtcClock($clock)),
+                $this->entityManager,
+            ),
+            $linkCardSweep,
+            MembershipSweepFactory::fromContainer(
+                self::getContainer(),
+                $this->entityManager,
+                new RecordingSavedSearchMatcher(),
+                $clock,
+            ),
+            new LokiSpoolShipper(
+                new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
+                sys_get_temp_dir() . '/loki-tick-' . bin2hex(random_bytes(4)),
+            ),
+            $clock,
+        );
     }
 }
