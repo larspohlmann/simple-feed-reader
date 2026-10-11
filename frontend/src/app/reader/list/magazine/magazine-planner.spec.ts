@@ -1,5 +1,5 @@
 import { planMagazine, templateFor } from './magazine-planner';
-import { BLOCK_HEIGHT, EntryKind, MagazineBlock } from './magazine-block';
+import { BLOCK_HEIGHT, EntryKind, MagazineBlock, TemplateKind } from './magazine-block';
 import { IMAGE_KINDS } from './magazine-slot-fit';
 import { IMAGE_TEMPLATES } from './magazine-templates';
 import { EntryDto } from '../../models';
@@ -621,7 +621,7 @@ describe('planMagazine', () => {
       }),
     );
     const ks = kinds(planMagazine({ entries, grouping: false, complete: true }));
-    expect(ks.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
+    expect(ks.every((kind) => IMAGE_KINDS.includes(kind as TemplateKind))).toBe(true);
   });
 
   it('promotes a text slot to the tallest image block no taller than the slot', () => {
@@ -644,7 +644,7 @@ describe('planMagazine', () => {
       .filter((block) => block.kind !== 'group' && block.entry.imageUrl !== null)
       .map((block) => block.kind);
     expect(pictureKinds).toHaveLength(10);
-    expect(pictureKinds.every((kind) => IMAGE_KINDS.includes(kind as EntryKind))).toBe(true);
+    expect(pictureKinds.every((kind) => IMAGE_KINDS.includes(kind as TemplateKind))).toBe(true);
     expect(kinds(blocks)).toContain('quote');
   });
 

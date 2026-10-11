@@ -1,4 +1,4 @@
-import { sharesMedia, sharedMedia, settle } from './magazine-slot-fit';
+import { sharesMedia, sharedMedia } from './magazine-slot-fit';
 import { EntryDto, EntryMediumDto } from '../../models';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
 import { aLinkCard, anEntry } from '../../../../testing/entry-testing';
@@ -12,28 +12,6 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto =>
     imageHeight: 600,
     ...over,
   });
-
-describe('settle', () => {
-  it('gives a link slot to an entry without cards as the hero it can fill, never a link block', () => {
-    expect(settle('link', entry(), 'thumb')).toBe('hero');
-  });
-
-  it('demotes a link slot down the hero ladder for an entry without a picture', () => {
-    expect(settle('link', entry({ imageUrl: null, excerpt: 'Some copy' }), 'thumb')).toBe('kicker');
-  });
-
-  it('settles a share still being completed as a link block whatever its slot', () => {
-    expect(settle('thumb', entry({ share: 'link', pending: true }), 'thumb')).toBe('link');
-  });
-
-  it('settles a titled link share with its card as a link block', () => {
-    expect(settle('hero', entry({ share: 'link', linkCards: [card] }), 'thumb')).toBe('link');
-  });
-
-  it('keeps a link share whose card never came in the slot it fits', () => {
-    expect(settle('hero', entry({ share: 'link' }), 'thumb')).toBe('hero');
-  });
-});
 
 const image = (url: string): EntryMediumDto => ({ url, kind: 'image', width: 800, height: 600 });
 const video = (url: string, poster: string): EntryMediumDto => ({
@@ -93,15 +71,5 @@ describe('sharesMedia', () => {
   it('takes a Short only by its share, like every other entry', () => {
     expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL }))).toBe(false);
     expect(sharesMedia(entry({ shortPlayerUrl: SHORT_PLAYER_URL, share: 'media' }))).toBe(true);
-  });
-});
-
-describe('settle for a media share', () => {
-  it('is a media block from any slot', () => {
-    const share = entry({ titleDerived: true, share: 'media' });
-
-    expect(settle('thumb', share, 'thumb')).toBe('media');
-    expect(settle('compact', share, 'split')).toBe('media');
-    expect(settle('hero', share, 'thumb')).toBe('media');
   });
 });

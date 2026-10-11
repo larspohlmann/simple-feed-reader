@@ -1,21 +1,18 @@
 import { EntryDto, EntryMediumDto } from '../../models';
 import { entryDek } from '../../entry/entry-text';
 import { entryImage, portraitCoverRatio } from '../preview-image';
-import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
+import { BLOCK_HEIGHT, DEMOTION, ShareKind, TemplateKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
 /** The blocks that show the entry's image, tallest first. */
-export const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thumb'];
+export const IMAGE_KINDS: readonly TemplateKind[] = ['hero', 'wide', 'split', 'thumb'];
 
 /** The smallest image block whose fit means the entry's image must show. */
-export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
+export type ImageBar = Extract<TemplateKind, 'thumb' | 'split'>;
 
-export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
-  const pinned = shareKind(entry);
-  if (pinned) return pinned;
-  const slot = isShareKind(kind) ? 'hero' : kind;
-  const settled = demoteUntilFit(slot, entry);
-  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
+export function settle(kind: TemplateKind, entry: EntryDto, imageBar: ImageBar): TemplateKind {
+  const settled = demoteUntilFit(kind, entry);
+  if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(kind, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
   // `compact` floor to `kicker` (#514/#516), applied wherever an entry lands so
   // both families honour it. A bare entry (no image, no summary) stays `compact`.
@@ -24,14 +21,14 @@ export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): En
 
 /** The tallest image block the entry fills without outgrowing its text slot;
  *  `thumb` when none is that short (a `compact` slot). */
-function promotedToImage(slot: EntryKind, entry: EntryDto): EntryKind {
+function promotedToImage(slot: TemplateKind, entry: EntryDto): TemplateKind {
   return (
     IMAGE_KINDS.find((kind) => BLOCK_HEIGHT[kind] <= BLOCK_HEIGHT[slot] && fits(kind, entry)) ??
     'thumb'
   );
 }
 
-function demoteUntilFit(kind: EntryKind, entry: EntryDto): EntryKind {
+function demoteUntilFit(kind: TemplateKind, entry: EntryDto): TemplateKind {
   let current = kind;
   while (!fits(current, entry)) {
     const next = DEMOTION[current];
@@ -56,18 +53,11 @@ function hasSummary(entry: EntryDto): boolean {
 
 /** A link share with its card, or one still being completed, takes the `link` block
  *  whatever slot it was given (#1502, #1524). */
-export function sharesLink(entry: EntryDto): boolean {
+function sharesLink(entry: EntryDto): boolean {
   return entry.share === 'link' && (entry.linkCards.length > 0 || entry.pending);
 }
 
 const MAX_SHARED_MEDIA = 4;
-
-/** The blocks a share claims whatever slot it was given (#1502, #1522). */
-export type ShareKind = Extract<EntryKind, 'link' | 'media'>;
-
-export function isShareKind(kind: EntryKind): kind is ShareKind {
-  return kind === 'link' || kind === 'media';
-}
 
 const sharedMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
 
@@ -110,11 +100,9 @@ export function shareKind(entry: EntryDto): ShareKind | null {
   return sharesMedia(entry) ? 'media' : null;
 }
 
-const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
+const FITS: Record<TemplateKind, (entry: EntryDto) => boolean> = {
   // A portrait cover is refused, demoting to `split`.
   hero: (entry) => landscapeImageAtLeast(entry, 500),
-  link: sharesLink,
-  media: sharesMedia,
   // A portrait cover cannot fill a 3:1 band at all.
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),
@@ -126,7 +114,7 @@ const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
   compact: () => true,
 };
 
-export function fits(kind: EntryKind, entry: EntryDto): boolean {
+export function fits(kind: TemplateKind, entry: EntryDto): boolean {
   return FITS[kind](entry);
 }
 

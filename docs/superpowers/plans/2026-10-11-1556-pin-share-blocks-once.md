@@ -10,7 +10,7 @@ unpinned positions, whose kinds are `TemplateKind`s.
   `TemplateKind = Exclude<EntryKind, ShareKind>`. `Slot`, `DEMOTION`, `FITS`, `fits`,
   `settle`, `IMAGE_KINDS` and `ImageBar` take `TemplateKind`; `BLOCK_HEIGHT` stays on
   `EntryKind`, since a pinned block counts against the page cap.
-- One per-page `PageLayout` (entries, `pinned[]`, image bar) carries the pins, so
+- One per-page `PageLayout` (`pinned[]`, image bar) carries the pins, so
   `withinBudget` and `assign` stay at three parameters. A pinned position keeps its
   resolved template kind as a placeholder the steps skip; `toBlock` takes
   `pinned ?? kind`.

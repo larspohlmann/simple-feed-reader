@@ -16,16 +16,15 @@ export const ENTRY_KINDS = [
 
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 
+/** The blocks a share claims whatever slot it was given (#1502, #1522). */
+export type ShareKind = Extract<EntryKind, 'link' | 'media'>;
+
+/** The kinds a template authors, and the only ones the demotion ladder walks. */
+export type TemplateKind = Exclude<EntryKind, ShareKind>;
+
 export type MagazineBlock =
-  | { kind: 'hero'; entry: EntryDto }
-  | { kind: 'link'; entry: EntryDto }
-  | { kind: 'media'; entry: EntryDto }
-  | { kind: 'wide'; entry: EntryDto }
-  | { kind: 'quote'; entry: EntryDto }
+  | { kind: Exclude<EntryKind, 'split'>; entry: EntryDto }
   | { kind: 'split'; entry: EntryDto; imageSide: 'left' | 'right' }
-  | { kind: 'kicker'; entry: EntryDto }
-  | { kind: 'thumb'; entry: EntryDto }
-  | { kind: 'compact'; entry: EntryDto }
   | {
       kind: 'group';
       subscriptionId: number;
@@ -53,10 +52,8 @@ export const BLOCK_HEIGHT: Record<EntryKind, number> = {
 /** Where a slot goes when its entry cannot fill it. Applied REPEATEDLY until
  *  the slot fits or reaches `compact` — one step is not enough: demoting a hero
  *  to `wide` in an image-less view still leaves an image block with no image. */
-export const DEMOTION: Record<EntryKind, EntryKind> = {
+export const DEMOTION: Record<TemplateKind, TemplateKind> = {
   hero: 'wide',
-  link: 'link',
-  media: 'media',
   wide: 'split',
   split: 'thumb',
   thumb: 'compact',

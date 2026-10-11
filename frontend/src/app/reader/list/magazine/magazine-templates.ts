@@ -1,9 +1,9 @@
-import { EntryKind } from './magazine-block';
+import { TemplateKind } from './magazine-block';
 
 /** A slot is either a fixed kind, or one of two kinds chosen by seeded jitter —
  *  jitter keeps a library this small from reading as a cycle: twelve templates
  *  alone repeat every ~66 blocks, findable in one sitting. */
-export type Slot = EntryKind | { either: [EntryKind, EntryKind] };
+export type Slot = TemplateKind | { either: [TemplateKind, TemplateKind] };
 
 /**
  * The rhythm, as data.
