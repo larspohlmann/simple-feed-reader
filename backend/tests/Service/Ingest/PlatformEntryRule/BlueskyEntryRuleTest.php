@@ -71,6 +71,21 @@ final class BlueskyEntryRuleTest extends TestCase
         self::assertTrue($entry->headline->derived);
     }
 
+    public function testADerivedTitleIsTakenFromTheBodyBeforeTheSummary(): void
+    {
+        $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(
+            self::POST,
+            null,
+            Headline::derived('stale'),
+            null,
+            '<p>Summary words.</p>',
+            '<p>Body words.</p>',
+            null,
+        ));
+
+        self::assertEquals(Headline::derived('Body words.'), $entry->headline);
+    }
+
     public function testAFeedTitleIsKept(): void
     {
         $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(

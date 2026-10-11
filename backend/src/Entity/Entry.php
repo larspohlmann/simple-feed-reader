@@ -135,11 +135,6 @@ final class Entry
         return $this->headline->read()->derived;
     }
 
-    public function isUntitledPost(): bool
-    {
-        return $this->headline->read()->isUntitledPost();
-    }
-
     public function setHeadline(Headline $headline): void
     {
         $this->headline->store($headline);
@@ -274,5 +269,10 @@ final class Entry
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    private function isUntitledPost(): bool
+    {
+        return $this->headline->read()->isUntitledPost();
     }
 }
