@@ -56,7 +56,7 @@ final class BlueskyEntryRuleTest extends TestCase
 
         self::assertNull($entry->contentHtml);
         self::assertNull($entry->summary);
-        self::assertSame('(untitled)', $entry->title);
+        self::assertSame('', $entry->title);
         self::assertTrue($entry->titleDerived);
     }
 

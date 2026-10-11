@@ -614,6 +614,17 @@ final class Rss2ParserTest extends TestCase
         self::assertSame('https://example.social/@a/1', $entry->guid);
     }
 
+    public function testAnItemWithNeitherTitleNorTextIsAnUntitledPost(): void
+    {
+        $entry = $this->parseSingleItem(
+            '<item><link>https://bsky.app/profile/a/post/1</link><guid>at://did:plc:a/app.bsky.feed.post/1</guid>'
+            . '</item>',
+        );
+
+        self::assertSame('', $entry->title);
+        self::assertTrue($entry->titleDerived);
+    }
+
     public function testATitledItemIsNotDerived(): void
     {
         $entry = $this->parseSingleItem('<item><title>Real</title><link>https://example.com/1</link></item>');

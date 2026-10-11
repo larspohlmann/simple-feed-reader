@@ -1,5 +1,5 @@
-import { settle } from './magazine-slot-fit';
-import { EntryDto } from '../../models';
+import { isMediaPost, postMedia, settle } from './magazine-slot-fit';
+import { EntryDto, EntryMediumDto } from '../../models';
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -45,5 +45,80 @@ describe('settle', () => {
 
   it('settles a post still being completed as a link block whatever its slot', () => {
     expect(settle('thumb', entry({ titleDerived: true, pending: true }), 'thumb')).toBe('link');
+  });
+});
+
+const image = (url: string): EntryMediumDto => ({ url, kind: 'image', width: 800, height: 600 });
+const video = (url: string, poster: string): EntryMediumDto => ({
+  url,
+  kind: 'video',
+  width: 1080,
+  height: 1920,
+  previewImageUrl: poster,
+});
+
+describe('postMedia', () => {
+  it('drops the image that is only a video’s poster', () => {
+    const clip = video('https://v/playlist.m3u8', 'https://v/thumb.jpg');
+    const post = entry({ titleDerived: true, media: [image('https://v/thumb.jpg'), clip] });
+
+    expect(postMedia(post)).toEqual([clip]);
+  });
+
+  it('keeps at most four, in feed order', () => {
+    const media = [1, 2, 3, 4, 5].map((index) => image(`https://i/${index}.jpg`));
+
+    expect(postMedia(entry({ media })).map((medium) => medium.url)).toEqual([
+      'https://i/1.jpg',
+      'https://i/2.jpg',
+      'https://i/3.jpg',
+      'https://i/4.jpg',
+    ]);
+  });
+
+  it('stands the lead image in when the feed declared no media', () => {
+    expect(postMedia(entry())).toEqual([
+      { url: 'https://i/1.jpg', kind: 'image', width: 900, height: 600 },
+    ]);
+  });
+
+  it('is empty without media or a lead image', () => {
+    expect(postMedia(entry({ imageUrl: null }))).toEqual([]);
+  });
+});
+
+describe('isMediaPost', () => {
+  it('is a post with a picture', () => {
+    expect(isMediaPost(entry({ titleDerived: true }))).toBe(true);
+  });
+
+  it('is not an article, a link post, a pending post or a post without media', () => {
+    const card = {
+      url: 'https://n/1',
+      title: 'T',
+      description: null,
+      imageUrl: null,
+      siteName: 'n',
+    };
+
+    expect(isMediaPost(entry())).toBe(false);
+    expect(isMediaPost(entry({ titleDerived: true, linkCards: [card] }))).toBe(false);
+    expect(isMediaPost(entry({ titleDerived: true, pending: true }))).toBe(false);
+    expect(isMediaPost(entry({ titleDerived: true, imageUrl: null }))).toBe(false);
+  });
+
+  it('is a YouTube Short with a cover, though it is no post', () => {
+    expect(isMediaPost(entry({ isShort: true }))).toBe(true);
+    expect(isMediaPost(entry({ isShort: true, imageUrl: null }))).toBe(false);
+  });
+});
+
+describe('settle for a media post', () => {
+  it('is a media block from any slot', () => {
+    const post = entry({ titleDerived: true });
+
+    expect(settle('thumb', post, 'thumb')).toBe('media');
+    expect(settle('compact', post, 'split')).toBe('media');
+    expect(settle('hero', post, 'thumb')).toBe('media');
   });
 });

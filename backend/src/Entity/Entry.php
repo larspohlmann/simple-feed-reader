@@ -145,6 +145,11 @@ final class Entry
         $this->headline->markDerived();
     }
 
+    public function isUntitledPost(): bool
+    {
+        return $this->headline->isUntitledPost();
+    }
+
     public function getAuthor(): ?string
     {
         return $this->author;

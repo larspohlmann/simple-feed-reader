@@ -32,9 +32,7 @@ final readonly class BlueskyEntryRule implements PlatformEntryRuleInterface
 
     private static function postTitle(?string $text): ParsedTitleModel
     {
-        $title = EntryTitle::of(null, $text);
-
-        return $title->derived ? $title : ParsedTitleModel::untitledPost();
+        return EntryTitle::of(null, $text);
     }
 
     private static function withoutPlaceholder(?string $text): ?string

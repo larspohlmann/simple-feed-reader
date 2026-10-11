@@ -173,6 +173,11 @@ describe('showsShortPill', () => {
 });
 
 describe('entryHeadline', () => {
+  it('is empty for an untitled entry', () => {
+    expect(entryHeadline(entry({ title: '', excerpt: '', titleDerived: true }))).toBe('');
+    expect(entryHeadline(entry({ title: '', excerpt: '', titleDerived: false }))).toBe('');
+  });
+
   it('is the title of an ordinary entry', () => {
     expect(entryHeadline(entry({ title: 'Real', excerpt: 'Body', titleDerived: false }))).toBe(
       'Real',

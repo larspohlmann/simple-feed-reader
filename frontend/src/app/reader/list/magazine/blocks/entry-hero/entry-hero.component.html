@@ -27,7 +27,9 @@
   }
   <div class="body">
     <app-entry-kicker-line [entry]="entry()" [faviconSize]="14" />
-    <h3 class="title" [class.post]="isPost()">{{ headline() }}</h3>
+    @if (headline()) {
+      <h3 class="title" [class.post]="isPost()">{{ headline() }}</h3>
+    }
     @if (snippet()) {
       <p class="dek">{{ snippet() }}</p>
     }

@@ -1649,7 +1649,7 @@ styles too" — it fails the whole run with a `CssSyntaxError` per file. The
 ## 5. Magazine blocks
 
 The reader's magazine list (`frontend/src/app/reader/list/magazine/`) plans entries
-onto eight block types, introduced by #148 to replace a layout that had
+onto nine single-entry block types and a source digest, introduced by #148 to replace a layout that had
 collapsed to two-thirds compact rows. `magazine-block.ts`'s `BLOCK_HEIGHT`
 holds the measured height each contributes to the planner's per-page budget;
 `magazine-slot-fit.ts`'s `fits()` decides whether a given entry may fill a
@@ -1659,6 +1659,8 @@ relative units for the budget, not a layout guarantee.
 | Block | Height | Image | Fills when |
 |---|---|---|---|
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
+| **Link** (#1502) | 463px | the post's link card | a post that shares a link, or is still being completed — pinned, whatever its slot |
+| **Media** (#1522) | 463px | the post's media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-post-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a post, or a YouTube Short, with an image or video and no link card — pinned like Link, whatever its slot |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |

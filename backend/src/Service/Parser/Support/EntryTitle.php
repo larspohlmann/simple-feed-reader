@@ -19,7 +19,7 @@ final class EntryTitle
 
         $derived = DerivedTitle::from($bodyHtml);
 
-        return $derived === null ? ParsedTitleModel::untitled() : ParsedTitleModel::derived($derived);
+        return $derived === null ? ParsedTitleModel::untitledPost() : ParsedTitleModel::derived($derived);
     }
 
     private function __construct()

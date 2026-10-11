@@ -16,4 +16,14 @@ final readonly class DigestEntryModel
         public ?string $faviconUrl,
     ) {
     }
+
+    public function isUntitled(): bool
+    {
+        return '' === $this->title;
+    }
+
+    public function headline(): string
+    {
+        return $this->isUntitled() ? $this->feedName : $this->title;
+    }
 }

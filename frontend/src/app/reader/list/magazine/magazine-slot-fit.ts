@@ -1,4 +1,4 @@
-import { EntryDto } from '../../models';
+import { EntryDto, EntryMediumDto } from '../../models';
 import { entryDek, entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
@@ -10,8 +10,9 @@ export const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thum
 export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
 
 export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
-  if (isLinkPost(entry)) return 'link';
-  const slot = kind === 'link' ? 'hero' : kind;
+  const pinned = postKind(entry);
+  if (pinned) return pinned;
+  const slot = isPostKind(kind) ? 'hero' : kind;
   const settled = demoteUntilFit(slot, entry);
   if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
@@ -58,10 +59,62 @@ export function isLinkPost(entry: EntryDto): boolean {
   return entry.titleDerived && (entry.linkCards.length > 0 || entry.pending);
 }
 
+const MAX_POST_MEDIA = 4;
+
+/** The blocks a post claims whatever slot it was given (#1502, #1522). */
+export type PostKind = Extract<EntryKind, 'link' | 'media'>;
+
+export function isPostKind(kind: EntryKind): kind is PostKind {
+  return kind === 'link' || kind === 'media';
+}
+
+const postMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
+
+/** The pictures and videos a post shows, at most four; a video's poster is not shown twice. */
+export function postMedia(entry: EntryDto): EntryMediumDto[] {
+  let media = postMediaOf.get(entry);
+  if (!media) {
+    media = collectPostMedia(entry);
+    postMediaOf.set(entry, media);
+  }
+  return media;
+}
+
+function collectPostMedia(entry: EntryDto): EntryMediumDto[] {
+  const posters = new Set(entry.media.map((medium) => medium.previewImageUrl));
+  const shown = entry.media.filter((medium) => medium.kind === 'video' || !posters.has(medium.url));
+  return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_POST_MEDIA);
+}
+
+function leadImage(entry: EntryDto): EntryMediumDto[] {
+  const image = entryImage(entry);
+  if (!image) return [];
+  return [
+    {
+      url: image.url,
+      kind: 'image',
+      width: image.width ?? undefined,
+      height: image.height ?? undefined,
+    },
+  ];
+}
+
+/** A post, or a YouTube Short, whose point is its picture or video. */
+export function isMediaPost(entry: EntryDto): boolean {
+  const claims = entry.isShort || (entry.titleDerived && !isLinkPost(entry));
+  return claims && postMedia(entry).length > 0;
+}
+
+export function postKind(entry: EntryDto): PostKind | null {
+  if (isLinkPost(entry)) return 'link';
+  return isMediaPost(entry) ? 'media' : null;
+}
+
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
   // A portrait cover is refused, demoting to `split`.
   hero: (entry) => landscapeImageAtLeast(entry, 500),
   link: isLinkPost,
+  media: isMediaPost,
   // A portrait cover cannot fill a 3:1 band at all.
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),

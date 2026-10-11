@@ -8,7 +8,9 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <app-entry-kicker-line [entry]="entry()" />
-  <p class="title">{{ headline() }}</p>
+  @if (headline()) {
+    <p class="title">{{ headline() }}</p>
+  }
   @if (entry().linkCards[0]; as shared) {
     <app-link-card
       [card]="shared"

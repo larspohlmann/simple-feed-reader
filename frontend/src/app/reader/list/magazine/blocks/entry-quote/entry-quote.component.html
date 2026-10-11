@@ -11,7 +11,9 @@
   @if (!isPost()) {
     <p class="pull">{{ lead() }}</p>
   }
-  <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+  @if (headline()) {
+    <p class="title" [class.post]="isPost()">{{ headline() }}</p>
+  }
   <app-entry-meta [entry]="entry()" [tags]="tags()" />
   <app-entry-duplicates [entry]="entry()" />
 </article>

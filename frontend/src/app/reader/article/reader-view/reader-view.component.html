@@ -11,7 +11,7 @@
            announcing this too would read the headline twice. -->
       <div class="mini" aria-hidden="true">
         <app-favicon [url]="e.faviconUrl" [size]="14" />
-        <span class="mini-title">{{ e.title }}</span>
+        <span class="mini-title">{{ entryDisplayTitle(e) }}</span>
       </div>
     }
     <div #bar class="bar" [class.hidden]="toolbarHidden()">
@@ -29,7 +29,7 @@
              same reason as .mini above. -->
         <span class="bar-name" aria-hidden="true">
           <app-favicon [url]="e.faviconUrl" [size]="18" />
-          <span class="bar-title">{{ e.title }}</span>
+          <span class="bar-title">{{ entryDisplayTitle(e) }}</span>
         </span>
       }
       <div class="nav">
@@ -100,8 +100,13 @@
       >
         <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
-            <h1 class="title" [class.sr-only]="e.titleDerived" #titleHeading tabindex="-1">
-              {{ e.title }}
+            <h1
+              class="title"
+              [class.sr-only]="e.titleDerived || !e.title"
+              #titleHeading
+              tabindex="-1"
+            >
+              {{ entryDisplayTitle(e) }}
             </h1>
           </div>
           <p class="meta">

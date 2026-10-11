@@ -6,8 +6,6 @@ namespace App\Service\Parser\Model;
 
 final readonly class ParsedTitleModel
 {
-    private const string UNTITLED = '(untitled)';
-
     private function __construct(
         public string $text,
         public bool $derived,
@@ -24,13 +22,8 @@ final readonly class ParsedTitleModel
         return new self($text, true);
     }
 
-    public static function untitled(): self
-    {
-        return new self(self::UNTITLED, false);
-    }
-
     public static function untitledPost(): self
     {
-        return new self(self::UNTITLED, true);
+        return new self('', true);
     }
 }

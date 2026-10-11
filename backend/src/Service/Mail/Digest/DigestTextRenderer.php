@@ -56,7 +56,7 @@ final readonly class DigestTextRenderer
 
     private function entry(DigestEntryModel $entry): string
     {
-        $lines = ["• {$entry->title} — {$entry->feedName}"];
+        $lines = [$this->headlineLine($entry)];
 
         if ('' !== $entry->shortDescription) {
             $lines[] = "  {$entry->shortDescription}";
@@ -65,5 +65,10 @@ final readonly class DigestTextRenderer
         $lines[] = "  {$entry->url}";
 
         return implode("\n", $lines);
+    }
+
+    private function headlineLine(DigestEntryModel $entry): string
+    {
+        return $entry->isUntitled() ? "• {$entry->feedName}" : "• {$entry->title} — {$entry->feedName}";
     }
 }

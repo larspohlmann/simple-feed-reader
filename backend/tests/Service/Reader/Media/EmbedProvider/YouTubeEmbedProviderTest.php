@@ -111,6 +111,10 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         yield 'video' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato', EmbedShape::Landscape];
         yield 'short' => ['https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', EmbedShape::Portrait];
+        yield 'short starting on load' => [
+            'https://www.youtube-nocookie.com/embed/GhUuOxrCato?autoplay=1#shorts',
+            EmbedShape::Portrait,
+        ];
     }
 
     #[DataProvider('framesByShape')]
@@ -127,6 +131,17 @@ final class YouTubeEmbedProviderTest extends TestCase
         self::assertSame(
             [],
             self::framesMatching($this->provider->frames(), 'https://www.youtube-nocookie.com/embed/GhUuOxrCato#other'),
+        );
+    }
+
+    public function testNoFrameAcceptsAnotherQuery(): void
+    {
+        self::assertSame(
+            [],
+            self::framesMatching(
+                $this->provider->frames(),
+                'https://www.youtube-nocookie.com/embed/GhUuOxrCato?mute=1#shorts',
+            ),
         );
     }
 }

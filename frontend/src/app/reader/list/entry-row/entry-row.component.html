@@ -9,13 +9,15 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <div class="body">
-    <h3 class="title" [class.post]="isPost()">
-      @if (marking()) {
-        <app-marked-text [text]="headline()" [terms]="terms()" />
-      } @else {
-        {{ headline() }}
-      }
-    </h3>
+    @if (headline()) {
+      <h3 class="title" [class.post]="isPost()">
+        @if (marking()) {
+          <app-marked-text [text]="headline()" [terms]="terms()" />
+        } @else {
+          {{ headline() }}
+        }
+      </h3>
+    }
     <p class="meta">
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>

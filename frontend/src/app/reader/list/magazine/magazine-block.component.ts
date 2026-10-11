@@ -9,6 +9,7 @@ import { EntryThumbComponent } from './blocks/entry-thumb/entry-thumb.component'
 import { EntryQuoteComponent } from './blocks/entry-quote/entry-quote.component';
 import { EntryKickerComponent } from './blocks/entry-kicker/entry-kicker.component';
 import { EntryLinkComponent } from './blocks/entry-link/entry-link.component';
+import { EntryMediaComponent } from './blocks/entry-media/entry-media.component';
 import { SourceGroupComponent } from './source-group.component';
 
 // One shared instance: a fresh `[]` per check would change every tag-less block's
@@ -27,6 +28,7 @@ export const NO_TAGS: SubscriptionTagDto[] = [];
     EntryQuoteComponent,
     EntryKickerComponent,
     EntryLinkComponent,
+    EntryMediaComponent,
     SourceGroupComponent,
   ],
   templateUrl: './magazine-block.component.html',
