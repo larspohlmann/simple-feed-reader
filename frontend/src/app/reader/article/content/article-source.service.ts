@@ -5,6 +5,7 @@ import { EntryBodyService } from './entry-body.service';
 import { ReaderContentService } from './reader-content.service';
 import { describeLoadError } from './reader-load-error';
 import { ReaderModeService } from './reader-mode.service';
+import { isPost } from '../../entry/entry-text';
 
 /** Give up on a hung extraction and fall back to feed content (backend caps a
  *  fetch at ~20s; this is the client-side backstop for a stalled connection). */
@@ -137,7 +138,7 @@ export class ArticleSource {
       this.state.set({ status: 'idle' });
       return;
     }
-    if (!entry.url || entry.titleDerived) {
+    if (!entry.url || isPost(entry)) {
       this.loadSub?.unsubscribe();
       this.state.set({ status: 'idle' });
       this.readerMode.setOriginalOnly();

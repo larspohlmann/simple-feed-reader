@@ -100,12 +100,7 @@
       >
         <article class="text-scaled" [attr.aria-busy]="source.loading() ? 'true' : null">
           <div class="title-row">
-            <h1
-              class="title"
-              [class.sr-only]="e.titleDerived || !e.title"
-              #titleHeading
-              tabindex="-1"
-            >
+            <h1 class="title" [class.sr-only]="isPost(e) || !e.title" #titleHeading tabindex="-1">
               {{ entryDisplayTitle(e) }}
             </h1>
           </div>

@@ -22,7 +22,7 @@
       <app-favicon [url]="entry().faviconUrl" [size]="14" />{{ entry().source }} · {{ when() }}
       <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
     </p>
-    @if (!isPost()) {
+    @if (snippet()) {
       <p class="snippet">
         @if (marking()) {
           <app-marked-text [text]="snippet()" [terms]="terms()" />

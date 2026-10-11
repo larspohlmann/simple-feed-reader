@@ -1169,7 +1169,7 @@ pulse animation is disabled under `prefers-reduced-motion`.
 
 The pulse is the app's one loading idiom. It lives in `theme/_loading-pulse.scss`, so
 anything else that is still loading pulses the same way. The link-card placeholder
-of a post still being completed (#1502) is the second user.
+of a link share still being completed (#1502) is the second user.
 
 **Not for:** a non-list fetch — use `<app-spinner>`, which does not pretend to
 know the shape of what is coming.
@@ -1659,8 +1659,8 @@ relative units for the budget, not a layout guarantee.
 | Block | Height | Image | Fills when |
 |---|---|---|---|
 | **Hero** | 463px | full-width, adaptive `aspect-ratio` from the persisted dimensions (fallback 16/9) | image ≥ 500px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
-| **Link** (#1502) | 463px | the post's link card | a post that shares a link, or is still being completed — pinned, whatever its slot |
-| **Media** (#1522) | 463px | the post's media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-post-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a post, or a YouTube Short, with an image or video and no link card — pinned like Link, whatever its slot |
+| **Link** (#1502) | 463px | the shared link's card | a link share (`sharesLink`: `share` is `link`) with its card, or one still being completed — pinned, whatever its slot |
+| **Media** (#1522) | 463px | the shared media uncropped and centred in its card: one item at its own aspect ratio, height-capped by `--media-share-max-h`; 2–4 in a 16:9 grid; a video plays inline through hls.js. A YouTube Short's cover is cropped to the picture's `imageAspectRatio`; its play button loads the allow-listed nocookie player in place, which goes back to the cover when an entry opens, the card scrolls away or the block is destroyed (`media-pause`) | a media share (`sharesMedia`: `share` is `media`) with at least one image or video — pinned like Link, whatever its slot |
 | **Wide** | 321px | full-width band at 3:1 | image ≥ 400px wide, or width unknown but `imageUrl` is persisted, and the cover is not portrait |
 | **Quote** | 180px | suppressed — first sentence set in `--font-voice` instead | snippet text ≥ 300 characters |
 | **Split** | 150px | side image at 38% of the column (148px mobile / 258px desktop) | image ≥ 300px wide, or width unknown but `imageUrl` is persisted; a portrait cover keeps its shape (never narrower than 9:16), as tall as the 3:2 side box |
@@ -1720,7 +1720,7 @@ plain `src`; only a failing `src` hides the image.
 magazine's link block, with the site line first and the image at `link-card.$image-ratio`
 (1.91:1). `_link-card-layout.scss` holds the frame both share with the `.link-card` that #1499
 writes into stored bodies. The chrome is `theme/_link-card.scss`'s `surface`, which the
-placeholder of a post still being completed shares.
+placeholder of a link share still being completed shares.
 
 ---
 

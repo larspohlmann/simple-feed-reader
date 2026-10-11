@@ -2,7 +2,7 @@ import { Injectable, effect, inject } from '@angular/core';
 import { PageTitleService } from '../../core/i18n/page-title.service';
 import { ReaderRouteState } from './reader-route-state.service';
 import { ListHeading } from './list-heading.service';
-import { entryDisplayTitle } from '../entry/entry-display-title';
+import { entryDisplayTitle } from '../entry/entry-text';
 
 /** Names the tab after the open article, or after the list when none is open.
  *  The reader route carries no title of its own, so this is the only writer

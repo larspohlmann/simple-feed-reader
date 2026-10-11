@@ -2,7 +2,7 @@ import { Directive, computed, inject, input } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { relativeTime } from '../../format';
-import { entryDek, entryHeadline } from '../preview-image';
+import { entryDek, entryHeadline, isPost } from '../../entry/entry-text';
 import { LanguageService } from '../../../core/i18n/language.service';
 
 /** The signal inputs/outputs every magazine block shares, whether or not it
@@ -22,9 +22,7 @@ export abstract class EntryBlockBase {
     relativeTime(this.entry().publishedAt ?? this.entry().createdAt, this.language.lang()),
   );
 
-  readonly isPost = computed(() => this.entry().titleDerived);
+  readonly isPost = computed(() => isPost(this.entry()));
   readonly headline = computed(() => entryHeadline(this.entry()));
-  /** The clamped dek beneath the title; empty for a headline-only feed or a post,
-   *  so the block falls back to title-only via its own `@if (snippet())`. */
   readonly snippet = computed(() => entryDek(this.entry()));
 }

@@ -1,5 +1,6 @@
 import { EntryDto, EntryMediumDto } from '../../models';
-import { entryDek, entryImage, portraitCoverRatio } from '../preview-image';
+import { entryDek } from '../../entry/entry-text';
+import { entryImage, portraitCoverRatio } from '../preview-image';
 import { BLOCK_HEIGHT, DEMOTION, EntryKind } from './magazine-block';
 
 export const QUOTE_MIN_TEXT = 300;
@@ -10,9 +11,9 @@ export const IMAGE_KINDS: readonly EntryKind[] = ['hero', 'wide', 'split', 'thum
 export type ImageBar = Extract<EntryKind, 'thumb' | 'split'>;
 
 export function settle(kind: EntryKind, entry: EntryDto, imageBar: ImageBar): EntryKind {
-  const pinned = postKind(entry);
+  const pinned = shareKind(entry);
   if (pinned) return pinned;
-  const slot = isPostKind(kind) ? 'hero' : kind;
+  const slot = isShareKind(kind) ? 'hero' : kind;
   const settled = demoteUntilFit(slot, entry);
   if (!IMAGE_KINDS.includes(settled) && fits(imageBar, entry)) return promotedToImage(slot, entry);
   // An image-less entry with a summary must keep its dek: lift the dek-less
@@ -55,35 +56,35 @@ function hasSummary(entry: EntryDto): boolean {
 
 /** A link share with its card, or one still being completed, takes the `link` block
  *  whatever slot it was given (#1502, #1524). */
-export function isLinkPost(entry: EntryDto): boolean {
+export function sharesLink(entry: EntryDto): boolean {
   return entry.share === 'link' && (entry.linkCards.length > 0 || entry.pending);
 }
 
-const MAX_POST_MEDIA = 4;
+const MAX_SHARED_MEDIA = 4;
 
-/** The blocks a post claims whatever slot it was given (#1502, #1522). */
-export type PostKind = Extract<EntryKind, 'link' | 'media'>;
+/** The blocks a share claims whatever slot it was given (#1502, #1522). */
+export type ShareKind = Extract<EntryKind, 'link' | 'media'>;
 
-export function isPostKind(kind: EntryKind): kind is PostKind {
+export function isShareKind(kind: EntryKind): kind is ShareKind {
   return kind === 'link' || kind === 'media';
 }
 
-const postMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
+const sharedMediaOf = new WeakMap<EntryDto, EntryMediumDto[]>();
 
-/** The pictures and videos a post shows, at most four; a video's poster is not shown twice. */
-export function postMedia(entry: EntryDto): EntryMediumDto[] {
-  let media = postMediaOf.get(entry);
+/** The pictures and videos a media share shows, at most four; a video's poster is not shown twice. */
+export function sharedMedia(entry: EntryDto): EntryMediumDto[] {
+  let media = sharedMediaOf.get(entry);
   if (!media) {
-    media = collectPostMedia(entry);
-    postMediaOf.set(entry, media);
+    media = collectSharedMedia(entry);
+    sharedMediaOf.set(entry, media);
   }
   return media;
 }
 
-function collectPostMedia(entry: EntryDto): EntryMediumDto[] {
+function collectSharedMedia(entry: EntryDto): EntryMediumDto[] {
   const posters = new Set(entry.media.map((medium) => medium.previewImageUrl));
   const shown = entry.media.filter((medium) => medium.kind === 'video' || !posters.has(medium.url));
-  return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_POST_MEDIA);
+  return (shown.length > 0 ? shown : leadImage(entry)).slice(0, MAX_SHARED_MEDIA);
 }
 
 function leadImage(entry: EntryDto): EntryMediumDto[] {
@@ -100,20 +101,20 @@ function leadImage(entry: EntryDto): EntryMediumDto[] {
 }
 
 /** A share whose point is its picture or video (#1522, #1524). */
-export function isMediaPost(entry: EntryDto): boolean {
-  return entry.share === 'media' && postMedia(entry).length > 0;
+export function sharesMedia(entry: EntryDto): boolean {
+  return entry.share === 'media' && sharedMedia(entry).length > 0;
 }
 
-export function postKind(entry: EntryDto): PostKind | null {
-  if (isLinkPost(entry)) return 'link';
-  return isMediaPost(entry) ? 'media' : null;
+export function shareKind(entry: EntryDto): ShareKind | null {
+  if (sharesLink(entry)) return 'link';
+  return sharesMedia(entry) ? 'media' : null;
 }
 
 const FITS: Record<EntryKind, (entry: EntryDto) => boolean> = {
   // A portrait cover is refused, demoting to `split`.
   hero: (entry) => landscapeImageAtLeast(entry, 500),
-  link: isLinkPost,
-  media: isMediaPost,
+  link: sharesLink,
+  media: sharesMedia,
   // A portrait cover cannot fill a 3:1 band at all.
   wide: (entry) => landscapeImageAtLeast(entry, 400),
   split: (entry) => imageAtLeast(entry, 300),

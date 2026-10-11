@@ -17,7 +17,7 @@ const entryAt = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   anEntry({
     id,
     summary: DEFAULT_SUMMARY,
-    // Mirrors `summary` unless the caller names its own excerpt: entrySnippet()
+    // Mirrors `summary` unless the caller names its own excerpt: entryDek()
     // reads excerpt, and most fixtures here only ever set summary (#1100).
     excerpt: over.summary !== undefined ? (over.summary ?? '') : DEFAULT_SUMMARY,
     createdAt: NOW,
@@ -42,9 +42,9 @@ const wire = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   });
 
 const CARD = aLinkCard();
-const linkPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+const linkShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'link', linkCards: [CARD], ...over });
-const mediaPost = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
+const mediaShare = (id: number, over: Partial<EntryDto> = {}): EntryDto =>
   big(id, { titleDerived: true, share: 'media', ...over });
 
 const imageless = (id: number): EntryDto => entryAt(id, { summary: null });
@@ -780,10 +780,10 @@ describe('planMagazine', () => {
   const height = (page: MagazineBlock[]): number =>
     page.reduce((sum, block) => sum + BLOCK_HEIGHT[block.kind as EntryKind], 0);
 
-  describe('a post sharing a link', () => {
+  describe('a link share', () => {
     it('is a link block in whatever slot it lands', () => {
       const entries = many(60, (index) =>
-        index % 3 === 0 ? linkPost(index, { subscriptionId: 2 }) : big(index),
+        index % 3 === 0 ? linkShare(index, { subscriptionId: 2 }) : big(index),
       );
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
@@ -794,10 +794,10 @@ describe('planMagazine', () => {
       expect(linkKinds.every((kind) => kind === 'link')).toBe(true);
     });
 
-    it('never reaches past a link post, which would hand its block to an entry without cards', () => {
+    it('never reaches past a link share, which would hand its block to an entry without cards', () => {
       const entries = many(
         60,
-        (index) => [entryAt(index, { summary: null }), linkPost(index), big(index)][index % 3],
+        (index) => [entryAt(index, { summary: null }), linkShare(index), big(index)][index % 3],
       );
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
@@ -808,7 +808,7 @@ describe('planMagazine', () => {
       ).toBe(true);
     });
 
-    it('keeps the kinds of a post without cards and of an article with them', () => {
+    it('keeps the kinds of a link share without cards and of an article with them', () => {
       const entries = many(60, (index) =>
         index % 2 === 0
           ? entryAt(index, { titleDerived: true, share: 'link' })
@@ -835,7 +835,7 @@ describe('planMagazine', () => {
       expect(pendingKinds.every((kind) => kind === 'link')).toBe(true);
     });
 
-    it('keeps the kind of a pending article, which is no post', () => {
+    it('keeps the kind of a pending article, which shares nothing', () => {
       const entries = many(60, (index) => big(index, { pending: true }));
       const blockKinds = kinds(planMagazine({ entries, grouping: false, complete: true }));
 
@@ -843,7 +843,7 @@ describe('planMagazine', () => {
     });
 
     it('counts a link block against the page height cap', () => {
-      const entries = many(120, (index) => (index % 6 === 0 ? linkPost(index) : big(index)));
+      const entries = many(120, (index) => (index % 6 === 0 ? linkShare(index) : big(index)));
       const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
 
       expect(pages.some((page) => page.some((block) => block.kind === 'link'))).toBe(true);
@@ -853,7 +853,7 @@ describe('planMagazine', () => {
     it('keeps the cap when the tallest slot reaches ahead past an image-less entry', () => {
       const entries = many(120, (index) =>
         index % 6 === 0
-          ? linkPost(index)
+          ? linkShare(index)
           : index % 6 === 1
             ? entryAt(index, { summary: null })
             : big(index),
@@ -873,22 +873,22 @@ describe('planMagazine', () => {
     });
   });
 
-  describe('a post showing media', () => {
+  describe('a media share', () => {
     it('is a media block in whatever slot it lands', () => {
       const entries = many(60, (index) =>
-        index % 3 === 0 ? mediaPost(index, { subscriptionId: 2 }) : big(index),
+        index % 3 === 0 ? mediaShare(index, { subscriptionId: 2 }) : big(index),
       );
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
-      const postKinds = blocks
-        .filter((block) => block.kind !== 'group' && block.entry.titleDerived)
+      const shareKinds = blocks
+        .filter((block) => block.kind !== 'group' && block.entry.share === 'media')
         .map((block) => block.kind);
-      expect(postKinds).toHaveLength(20);
-      expect(postKinds.every((kind) => kind === 'media')).toBe(true);
+      expect(shareKinds).toHaveLength(20);
+      expect(shareKinds.every((kind) => kind === 'media')).toBe(true);
     });
 
     it('counts a media block against the page height cap', () => {
-      const entries = many(120, (index) => (index % 6 === 0 ? mediaPost(index) : big(index)));
+      const entries = many(120, (index) => (index % 6 === 0 ? mediaShare(index) : big(index)));
       const pages = imagePages(planMagazine({ entries, grouping: false, complete: true }));
 
       expect(pages.some((page) => page.some((block) => block.kind === 'media'))).toBe(true);
@@ -898,7 +898,7 @@ describe('planMagazine', () => {
     it('keeps the cap when the tallest slot reaches ahead past an image-less entry', () => {
       const entries = many(120, (index) =>
         index % 6 === 0
-          ? mediaPost(index)
+          ? mediaShare(index)
           : index % 6 === 1
             ? entryAt(index, { summary: null })
             : big(index),
@@ -908,8 +908,8 @@ describe('planMagazine', () => {
       expect(pages.map(height).every((pageHeight) => pageHeight <= PAGE_HEIGHT_CAP)).toBe(true);
     });
 
-    it('keeps the entries in order when a media post sits within reach of the tallest slot', () => {
-      const entries = many(40, (index) => cycle(index, [big, imageless, mediaPost, big]));
+    it('keeps the entries in order when a media share sits within reach of the tallest slot', () => {
+      const entries = many(40, (index) => cycle(index, [big, imageless, mediaShare, big]));
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
       const order = blocks.flatMap((block) => (block.kind === 'group' ? [] : [block.entry.id]));
@@ -917,14 +917,14 @@ describe('planMagazine', () => {
     });
 
     it('budgets a page around the media block it will hold, demoting the slot before it', () => {
-      const entries = many(40, (index) => cycle(index, [big, big, mediaPost, imageless]));
+      const entries = many(40, (index) => cycle(index, [big, big, mediaShare, imageless]));
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
       expect(blocks.slice(0, 3).map((block) => block.kind)).toEqual(['thumb', 'split', 'media']);
     });
 
     it('lets a slot that can be filled reach ahead although a media slot is taller', () => {
-      const entries = many(40, (index) => cycle(index, [big, mediaPost, imageless, imageless]));
+      const entries = many(40, (index) => cycle(index, [big, mediaShare, imageless, imageless]));
       const blocks = planMagazine({ entries, grouping: false, complete: true });
 
       expect(planned(blocks.slice(6, 9))).toEqual(['split9', 'compact7', 'compact8']);
