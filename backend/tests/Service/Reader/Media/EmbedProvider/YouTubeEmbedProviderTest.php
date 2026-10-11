@@ -57,8 +57,9 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         $target = $this->provider->target('https://www.youtube.com/embed/M1j_uRqKMKI');
 
-        self::assertSame('https://i.ytimg.com/vi/M1j_uRqKMKI/hqdefault.jpg', $target?->posterUrl);
-        self::assertSame('Watch on YouTube', $target?->label);
+        self::assertNotNull($target);
+        self::assertSame('https://i.ytimg.com/vi/M1j_uRqKMKI/hqdefault.jpg', $target->posterUrl);
+        self::assertSame('Watch on YouTube', $target->label);
     }
 
     public function testRejectsAnIdOfTheWrongLength(): void
@@ -82,8 +83,9 @@ final class YouTubeEmbedProviderTest extends TestCase
     {
         $target = $this->provider->target($url);
 
-        self::assertSame('https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', $target?->url);
-        self::assertSame('https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg', $target?->posterUrl);
+        self::assertNotNull($target);
+        self::assertSame('https://www.youtube-nocookie.com/embed/GhUuOxrCato#shorts', $target->url);
+        self::assertSame('https://i.ytimg.com/vi/GhUuOxrCato/hqdefault.jpg', $target->posterUrl);
     }
 
     /** @return iterable<string, array{string}> */
