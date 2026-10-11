@@ -12,7 +12,11 @@
     <p class="caption">{{ caption() }}</p>
   }
   @let items = media();
-  <div class="media" [attr.data-count]="shortPlayer() ? 1 : items.length" [style.--ratio]="ratio(items[0])">
+  <div
+    class="media"
+    [attr.data-count]="shortPlayer() ? 1 : items.length"
+    [style.--ratio]="ratio(items[0])"
+  >
     @if (shortPlayer(); as player) {
       <div class="item short-player">
         @if (playingShort()) {
