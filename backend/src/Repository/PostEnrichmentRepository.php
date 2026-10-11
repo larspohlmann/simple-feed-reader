@@ -16,8 +16,6 @@ use Doctrine\Persistence\ManagerRegistry;
 /** @extends ServiceEntityRepository<PostEnrichment> */
 final class PostEnrichmentRepository extends ServiceEntityRepository
 {
-    private const string NAIVE_UTC = 'Y-m-d H:i:s';
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, PostEnrichment::class);
@@ -165,18 +163,6 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
         ));
     }
 
-    public function isQueuedOrCarded(Entry $entry): bool
-    {
-        $connection = $this->getEntityManager()->getConnection();
-
-        return $connection->fetchOne(
-            'SELECT 1 FROM entry WHERE entry.id = ?'
-            . ' AND (EXISTS (SELECT 1 FROM post_enrichment WHERE post_enrichment.entry_id = entry.id)'
-            . ' OR EXISTS (SELECT 1 FROM link_card WHERE link_card.entry_id = entry.id))',
-            [$entry->requireId()],
-        ) !== false;
-    }
-
     /**
      * @param list<int> $entryIds
      *
@@ -198,26 +184,6 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
             ->getSingleColumnResult();
 
         return array_map(intval(...), $pending);
-    }
-
-    /**
-     * Queues a link-card row unless the entry has one already or holds cards: the database skips a row already
-     * stored, so two opens of one post cannot collide on the key.
-     *
-     * @return bool whether this call queued it
-     */
-    public function queueLinkCardsUnlessKnown(Entry $entry, \DateTimeImmutable $queuedAt): bool
-    {
-        $connection = $this->getEntityManager()->getConnection();
-
-        return $connection->executeStatement(
-            sprintf(
-                'INSERT %s INTO post_enrichment (entry_id, kind, queued_at) SELECT entry.id, ?, ? FROM entry'
-                . ' WHERE entry.id = ? AND NOT EXISTS (SELECT 1 FROM link_card WHERE link_card.entry_id = entry.id)',
-                DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE',
-            ),
-            [PostEnrichmentKind::LinkCards->value, $queuedAt->format(self::NAIVE_UTC), $entry->requireId()],
-        ) === 1;
     }
 
     private function claimable(\DateTimeImmutable $now): QueryBuilder

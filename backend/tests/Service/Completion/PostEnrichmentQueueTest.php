@@ -6,14 +6,11 @@ namespace App\Tests\Service\Completion;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\LinkCard;
-use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
 use App\Service\Completion\PostEnrichmentQueue;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;
 use Symfony\Component\Clock\MockClock;
 
@@ -22,7 +19,6 @@ final class PostEnrichmentQueueTest extends DbTestCase
     use ReloadsEntities;
 
     private const string AT_POST = 'at://did:plc:test/app.bsky.feed.post/3abc';
-    private const string LINK_POST = 'https://mastodon.example/@someone/1';
 
     private MockClock $clock;
     private PostEnrichmentQueue $queue;
@@ -98,68 +94,6 @@ final class PostEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([], $this->queuedKinds());
         self::assertSame('<p>See https://example.com/a</p>', $this->reload($article)->getContentHtml());
-    }
-
-    public function testAnOpenedPostFromBeforeLinkCardsIsQueuedAndLinkedOnce(): void
-    {
-        $post = $this->post('https://mastodon.example/@someone/1', '<p>Read https://example.com/a</p>');
-        $this->entityManager->flush();
-
-        $this->queue->queueOpened($post);
-        $this->queue->queueOpened($post);
-
-        self::assertSame([self::LINK_POST => PostEnrichmentKind::LinkCards], $this->queuedKinds());
-        self::assertStringContainsString(
-            '<a href="https://example.com/a"',
-            (string) $this->reload($post)->getContentHtml(),
-        );
-    }
-
-    public function testAnOpenedPostThatIsQueuedOrHasCardsIsLeftAlone(): void
-    {
-        $queued = $this->post('https://mastodon.example/@someone/1', '<p>Read https://example.com/a</p>');
-        $this->entityManager->persist(new PostEnrichment($queued, PostEnrichmentKind::LinkCards, $this->clock->now()));
-        $carded = $this->post('https://mastodon.example/@someone/2', '<p>Read https://example.com/b</p>');
-        $this->entityManager->persist(new LinkCard(
-            $carded,
-            0,
-            new LinkCardContent('https://example.com/b', 'B', null, null, 'example.com'),
-        ));
-        $this->entityManager->flush();
-
-        $this->queue->queueOpened($queued);
-        $this->queue->queueOpened($carded);
-
-        self::assertSame([self::LINK_POST => PostEnrichmentKind::LinkCards], $this->queuedKinds());
-        self::assertSame('<p>Read https://example.com/b</p>', $this->reload($carded)->getContentHtml());
-    }
-
-    public function testOpeningAPostAlreadyQueuedCostsOneLookupAndNoWrite(): void
-    {
-        $queued = $this->post(self::LINK_POST, '<p>Read https://example.com/a</p>');
-        $this->entityManager->persist(new PostEnrichment($queued, PostEnrichmentKind::LinkCards, $this->clock->now()));
-        $this->entityManager->flush();
-        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
-        self::assertInstanceOf(QueryRecorder::class, $recorder);
-        $recorder->reset();
-
-        $this->queue->queueOpened($queued);
-
-        self::assertCount(1, $recorder->queries(), implode("\n", $recorder->queries()));
-        self::assertSame([], $recorder->queriesMatching('insert'));
-        self::assertSame('<p>Read https://example.com/a</p>', $queued->getContentHtml());
-    }
-
-    public function testAnOpenedArticleOrBlueskyPostIsNotQueued(): void
-    {
-        $article = $this->entry('https://example.org/article', '<p>See https://example.com/a</p>');
-        $blueskyPost = $this->post(self::AT_POST, '<p>See https://example.com/a</p>');
-        $this->entityManager->flush();
-
-        $this->queue->queueOpened($article);
-        $this->queue->queueOpened($blueskyPost);
-
-        self::assertSame([], $this->queuedKinds());
     }
 
     private function post(string $guid, ?string $contentHtml): Entry

@@ -65,7 +65,6 @@ final class PostEnrichers
     {
         return new PostEnrichmentQueue(
             $entityManager,
-            self::enrichments($entityManager),
             new EntrySanitizer(new TrailingBlankRemover()),
             new NaiveUtcClock($clock),
         );
