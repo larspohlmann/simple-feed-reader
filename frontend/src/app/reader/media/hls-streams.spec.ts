@@ -14,12 +14,12 @@ async function playedStream(): Promise<HTMLElement> {
   return host;
 }
 
-describe('armHlsStreams', () => {
-  beforeEach(() => {
-    resetFakeHls();
-    document.body.innerHTML = '';
-  });
+beforeEach(() => {
+  resetFakeHls();
+  document.body.innerHTML = '';
+});
 
+describe('armHlsStreams', () => {
   it('attaches nothing on render, so the idle poster keeps its playlist src and paints no spinner', async () => {
     const host = attachedArticleHost(
       '<video src="https://x.test/master.m3u8" poster="p.jpg"></video>',
@@ -93,11 +93,6 @@ describe('armHlsStreams', () => {
 });
 
 describe('releaseHlsStreams', () => {
-  beforeEach(() => {
-    resetFakeHls();
-    document.body.innerHTML = '';
-  });
-
   it('destroys the stream its host played, once, though the swap detached its video', async () => {
     const host = await playedStream();
     host.innerHTML = '<p>swapped</p>';

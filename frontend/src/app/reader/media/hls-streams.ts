@@ -33,7 +33,8 @@ export function armHlsStreams(host: HTMLElement): void {
 }
 
 export function releaseHlsStreams(host: HTMLElement): void {
-  releaseWhere(host, () => true);
+  for (const hls of streamsByHost.get(host)?.values() ?? []) hls.destroy();
+  streamsByHost.delete(host);
 }
 
 /** hls.js swaps such a video's source on first play, so the native attempt's error is not a failure. */
