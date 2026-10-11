@@ -112,9 +112,16 @@ export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): 
   };
 }
 
-/** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100). */
+/** A `GET /api/entries/{id}` body: the list entry plus its full article (#1100), and what completing it
+ *  filled in (#1551). */
 export function entryDetailJson(entry: EntryDto, contentHtml: string): EntryDetailResponse {
-  return { entry: { ...entry, contentHtml }, completed: entry };
+  const { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight } = entry;
+  const { imageRenditions, media, linkCards, share } = entry;
+  const completed = { id, pending, summary, excerpt, imageUrl, imageWidth, imageHeight };
+  return {
+    entry: { ...entry, contentHtml },
+    completed: { ...completed, imageRenditions, media, linkCards, share },
+  };
 }
 
 /** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */

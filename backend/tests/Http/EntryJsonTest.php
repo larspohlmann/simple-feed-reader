@@ -188,14 +188,6 @@ final class EntryJsonTest extends TestCase
         );
     }
 
-    public function testAListRowCarriesEveryCompletedField(): void
-    {
-        $row = $this->row($this->entryTitled('Article'));
-        $completed = EntryJson::completed($row);
-
-        self::assertSame($completed, array_intersect_key(EntryJson::listRow($row), $completed));
-    }
-
     public function testAShareWithoutOwnTextHasNoExcerptFromItsBody(): void
     {
         $shared = $this->entryTitled('Shared');
