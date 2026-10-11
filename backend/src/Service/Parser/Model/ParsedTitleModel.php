@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Model;
 
+use App\Entity\EntryHeadline;
+
 final readonly class ParsedTitleModel
 {
-    private const string UNTITLED = '(untitled)';
-
     private function __construct(
         public string $text,
         public bool $derived,
@@ -26,6 +26,6 @@ final readonly class ParsedTitleModel
 
     public static function untitledPost(): self
     {
-        return new self(self::UNTITLED, true);
+        return new self(EntryHeadline::UNTITLED, true);
     }
 }

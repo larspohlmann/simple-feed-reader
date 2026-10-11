@@ -258,6 +258,26 @@ final class EntryJsonTest extends TestCase
         self::assertTrue($json['duplicates'][0]['isShort']);
     }
 
+    public function testAnUntitledPostHasNoExcerpt(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->markTitleDerived();
+        $entry->setContentHtml(
+            '<figure class="post-video"><video src="https://v.test/p.m3u8"></video></figure>'
+            . '<p><a href="https://bsky.app/profile/a/post/1">Watch on Bluesky</a></p>',
+        );
+
+        self::assertSame('', EntryJson::listRow($this->row($entry))['excerpt']);
+    }
+
+    public function testAnUntitledArticleKeepsItsExcerpt(): void
+    {
+        $entry = $this->entryTitled('(untitled)');
+        $entry->setContentHtml('<p>Some body text.</p>');
+
+        self::assertSame('Some body text.', EntryJson::listRow($this->row($entry))['excerpt']);
+    }
+
     private function entryAt(?string $url): Entry
     {
         return new Entry(

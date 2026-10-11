@@ -59,7 +59,11 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
         return [
             new EmbedFrameModel($video . '$', EmbedKind::Video, EmbedShape::Landscape),
-            new EmbedFrameModel($video . YouTubeShortUrl::FRAGMENT . '$', EmbedKind::Video, EmbedShape::Portrait),
+            new EmbedFrameModel(
+                $video . '(?:\?autoplay=1)?' . YouTubeShortUrl::FRAGMENT . '$',
+                EmbedKind::Video,
+                EmbedShape::Portrait,
+            ),
         ];
     }
 

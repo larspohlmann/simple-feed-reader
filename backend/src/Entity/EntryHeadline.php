@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Embeddable]
 final class EntryHeadline
 {
+    public const string UNTITLED = '(untitled)';
+
     #[ORM\Column(name: 'title', length: 1024)]
     private string $title = '';
 
@@ -34,5 +36,10 @@ final class EntryHeadline
     public function markDerived(): void
     {
         $this->derived = true;
+    }
+
+    public function isUntitledPost(): bool
+    {
+        return $this->derived && $this->title === self::UNTITLED;
     }
 }
