@@ -12,6 +12,7 @@ link-heavy lists can keep them busy and ordinary API calls queue behind.
 |---|---|
 | Card latency on Strato | Within the minute of polling: the request keeps a small slice of work |
 | Request slice | **1 page fetch per call**, so at most ~8 s held instead of 40 s |
+| Multi-link posts | Kept whole: a post's links are fetched in one call even past the budget, so a rare multi-link post can hold one request or tick up to 8 s per link |
 | Background | A sweep drains the oldest queued link-card rows across all feeds |
 | Worker installs | New scheduler message every minute, 40 s budget (inside the 60 s claim lease) |
 | Strato | The sweep runs in the existing maintenance tick, only when one fetch (8 s) still fits its window |
@@ -28,6 +29,10 @@ Rejected:
 Production can't size this yet: it runs a release from before link-card completion (no `share_enrichment`
 table, no `kind` column). The risk is anticipatory, so the design keeps the request slice small rather than
 tuned to observed volume.
+
+Multi-link posts are rare. On the dev database, finished link posts break down as 1,259 with one card, 2 with
+two and 136 with none (failed pages). That is about 0.15 % with more than one link, which is why a post stays
+whole rather than being carded across calls (that would need a per-row cursor column).
 
 ## Design
 
