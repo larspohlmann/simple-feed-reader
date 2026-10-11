@@ -81,6 +81,22 @@ final class TitledShareTargetTest extends TestCase
             ),
             null,
         ];
+        yield 'a publisher\'s own subdomain is no share' => [
+            self::entry(
+                'https://www.carbonbrief.org/',
+                'https://www.carbonbrief.org/?p=83217',
+                'https://interactive.carbonbrief.org/china-plan-tracker/index.html'
+            ),
+            null,
+        ];
+        yield 'a home on a subdomain of the site counts' => [
+            self::entry(
+                'https://example.org/',
+                'https://blog.example.org/posts/1',
+                'https://elsewhere.example/a'
+            ),
+            'https://elsewhere.example/a',
+        ];
         yield 'no url' => [
             self::entry('https://news.ycombinator.com/', 'https://news.ycombinator.com/item?id=7', null),
             null,

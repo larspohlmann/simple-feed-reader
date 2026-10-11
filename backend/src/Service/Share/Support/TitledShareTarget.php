@@ -25,10 +25,21 @@ final class TitledShareTarget
         }
 
         $siteHost = HostKey::forUrl($siteUrl);
+        if (self::sameSite(HostKey::forUrl($target), $siteHost)) {
+            return null;
+        }
 
-        return in_array($siteHost, self::homeHosts($entry), true) && HostKey::forUrl($target) !== $siteHost
-            ? $target
-            : null;
+        return array_any(
+            self::homeHosts($entry),
+            static fn (string $homeHost): bool => self::sameSite($homeHost, $siteHost),
+        ) ? $target : null;
+    }
+
+    private static function sameSite(string $host, string $siteHost): bool
+    {
+        return $host === $siteHost
+            || str_ends_with($host, '.' . $siteHost)
+            || str_ends_with($siteHost, '.' . $host);
     }
 
     /** @return list<string> */
