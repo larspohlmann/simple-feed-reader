@@ -39,3 +39,13 @@ image, video or audio?" question goes through `FeedMediaClassifier::kindOfMimeTy
 2. Implement `isEnclosure`, `toDeclaredImage`, `fromEnclosure`, `fromRss2OrAtom`; switch callers.
 3. MIME checks through `kindOfMimeType()`; delete `MediaImageClassifier`.
 4. Gates, simplify pass, PR.
+
+## Simplify rulings
+
+- Applied: the enclosure tests run one 2x2 matrix (item dialect x enclosure shape), which also pins the widening;
+  the `fromEnclosure` docblock is gone.
+- Skipped: reading `<media:content>` through `FeedMediaNode` (it would add an `href` fallback to Media RSS, a
+  behaviour change outside the issue); moving `kindOfMimeType()` and `FeedMediaKind` below Parser so Reader and
+  `FaviconFetcher` (Image, which must not import Parser) share it — a follow-up if wanted, #1536 moves the Reader
+  side anyway; `isEnclosure()` stays on `CoreElement`, the one type that knows the item's own namespace;
+  `fromRss2OrAtom` keeps its name, since `fromRss1` also takes an item.
