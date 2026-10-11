@@ -7,6 +7,7 @@ namespace App\Tests\Service\Fetch;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\FetchWiring;
@@ -49,7 +50,7 @@ final class RedirectFollowerTest extends TestCase
             new MockResponse('#EXTM3U', ['http_code' => 200]),
         ]);
 
-        $landed = $follower->follow('https://example.com/start', [], 5);
+        $landed = $follower->follow('https://example.com/start', [], new RedirectBudget(5));
 
         self::assertSame('https://cdn.example.com/master.m3u8', $landed->url);
         self::assertSame(200, $landed->status);
@@ -60,7 +61,7 @@ final class RedirectFollowerTest extends TestCase
     public function testReturnsANonSuccessLandingInsteadOfThrowing(): void
     {
         $landed = $this->follower([new MockResponse('gone', ['http_code' => 404])])
-            ->follow('https://example.com/missing', [], 5);
+            ->follow('https://example.com/missing', [], new RedirectBudget(5));
 
         self::assertSame(404, $landed->status);
         self::assertFalse($landed->isSuccess());
@@ -69,7 +70,7 @@ final class RedirectFollowerTest extends TestCase
     public function testStatus300IsNotASuccessfulLanding(): void
     {
         $landed = $this->follower([new MockResponse('choices', ['http_code' => 300])])
-            ->follow('https://example.com/ambiguous', [], 5);
+            ->follow('https://example.com/ambiguous', [], new RedirectBudget(5));
 
         self::assertSame(300, $landed->status);
         self::assertFalse($landed->isSuccess());
@@ -85,7 +86,7 @@ final class RedirectFollowerTest extends TestCase
         });
 
         try {
-            $follower->follow('https://example.com/start', [], 5);
+            $follower->follow('https://example.com/start', [], new RedirectBudget(5));
             self::fail('a hop into link-local space must be refused');
         } catch (RedirectChainException $exception) {
             self::assertStringContainsString('169.254.169.254', $exception->getMessage());
@@ -99,7 +100,7 @@ final class RedirectFollowerTest extends TestCase
 
         $this->expectException(RedirectChainException::class);
         $this->expectExceptionMessage('more than 2 redirects');
-        $follower->follow('https://example.com/start', [], 2);
+        $follower->follow('https://example.com/start', [], new RedirectBudget(2));
     }
 
     public function testLandsWhenTheChainUsesExactlyTheAllowedHops(): void
@@ -108,7 +109,7 @@ final class RedirectFollowerTest extends TestCase
             [self::redirect('/a'), self::redirect('/b'), new MockResponse('ok', ['http_code' => 200])],
         );
 
-        $landed = $follower->follow('https://example.com/start', [], 2);
+        $landed = $follower->follow('https://example.com/start', [], new RedirectBudget(2));
 
         self::assertTrue($landed->isSuccess());
     }
@@ -124,7 +125,7 @@ final class RedirectFollowerTest extends TestCase
 
         $this->expectException(RedirectChainException::class);
         $this->expectExceptionMessage('more than 2 redirects');
-        $follower->follow('https://example.com/start', [], 2);
+        $follower->follow('https://example.com/start', [], new RedirectBudget(2));
     }
 
     public function testRefusesARedirectWithoutLocation(): void
@@ -133,7 +134,7 @@ final class RedirectFollowerTest extends TestCase
 
         $this->expectException(RedirectChainException::class);
         $this->expectExceptionMessage('redirect without Location');
-        $follower->follow('https://example.com/start', [], 5);
+        $follower->follow('https://example.com/start', [], new RedirectBudget(5));
     }
 
     public function testWrapsATransportFailure(): void
@@ -141,7 +142,7 @@ final class RedirectFollowerTest extends TestCase
         $follower = $this->follower([new MockResponse('', ['error' => 'Connection refused'])]);
 
         $this->expectException(RedirectChainException::class);
-        $follower->follow('https://example.com/start', [], 5);
+        $follower->follow('https://example.com/start', [], new RedirectBudget(5));
     }
 
     public function testTheClientNeverFollowsOnItsOwnWhateverTheCallerPasses(): void
@@ -153,29 +154,43 @@ final class RedirectFollowerTest extends TestCase
             return new MockResponse('ok', ['http_code' => 200]);
         });
 
-        $follower->follow('https://example.com/start', ['max_redirects' => 5, 'timeout' => 1.0], 5);
+        $follower->follow(
+            'https://example.com/start',
+            ['max_redirects' => 5, 'timeout' => 1.0],
+            new RedirectBudget(5),
+        );
 
         self::assertSame(0, $seen);
     }
 
-    public function testReportsZeroHopsWhenTheFirstResponseLands(): void
+    public function testSpendsOneRedirectPerHopFromTheBudget(): void
     {
-        $landed = $this->follower([new MockResponse('ok', ['http_code' => 200])])
-            ->follow('https://example.com/start', [], 5);
-
-        self::assertSame(0, $landed->hops);
-    }
-
-    public function testReportsTheNumberOfRedirectsFollowedBeforeLanding(): void
-    {
+        $budget = new RedirectBudget(5);
         $follower = $this->follower([
             self::redirect('/a'),
             self::redirect('/b'),
             new MockResponse('ok', ['http_code' => 200]),
         ]);
 
-        $landed = $follower->follow('https://example.com/start', [], 5);
+        $follower->follow('https://example.com/start', [], $budget);
 
-        self::assertSame(2, $landed->hops);
+        self::assertSame(2, $budget->redirectsTaken());
+    }
+
+    public function testASecondChainOnTheSameBudgetFollowsOnlyTheRedirectsTheFirstLeft(): void
+    {
+        $budget = new RedirectBudget(2);
+        $follower = $this->follower([
+            self::redirect('/a'),
+            new MockResponse('ok', ['http_code' => 200]),
+            self::redirect('/b'),
+            self::redirect('/c'),
+            new MockResponse('ok', ['http_code' => 200]),
+        ]);
+        $follower->follow('https://example.com/first', [], $budget);
+
+        $this->expectException(RedirectChainException::class);
+        $this->expectExceptionMessage('https://example.com/second: more than 2 redirects');
+        $follower->follow('https://example.com/second', [], $budget);
     }
 }

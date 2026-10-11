@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Where a followed request lands: the URL that answered without redirecting, its status, response, and hop count.
+ * Where a followed request lands: the URL that answered without redirecting, its status and response.
  */
 final readonly class LandedResponse
 {
@@ -17,7 +17,6 @@ final readonly class LandedResponse
         public string $url,
         public int $status,
         public ResponseInterface $response,
-        public int $hops = 0,
     ) {
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Fetch\Exception\RedirectChainException;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 
 /** Where a media URL comes to rest: the 2xx landing of its redirect chain, or null when the chain fails or lands on an error. */
@@ -22,7 +23,7 @@ final readonly class MediaLanding
     public function urlOf(string $url): ?string
     {
         try {
-            $landed = $this->redirects->follow($url, $this->options(), self::MAX_REDIRECTS);
+            $landed = $this->redirects->follow($url, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
         } catch (RedirectChainException) {
             return null;
         }

@@ -8,6 +8,7 @@ use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Fetch\Support\ResponseHeader;
@@ -52,7 +53,7 @@ final readonly class OriginCookies
     private function visit(string $root): string
     {
         try {
-            $landed = $this->redirects->follow($root, $this->options(), self::MAX_REDIRECTS);
+            $landed = $this->redirects->follow($root, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
         } catch (RedirectChainException) {
             return '';
         }

@@ -35,41 +35,42 @@ final readonly class RedirectFollower
     }
 
     /**
-     * @param array<string, mixed> $options
-     *
-     * @throws RedirectChainException on a blocked hop, a transport failure, a
-     *                                  redirect without Location, or too many hops
-     */
-    public function follow(string $url, array $options, int $maxRedirects): LandedResponse
-    {
-        return $this->followWithin($url, $options, new RedirectBudget($maxRedirects));
-    }
-
-    /**
-     * As follow(), with the budget's seconds shared by every hop: each hop's max_duration is what the hops before it
-     * left, so a chain of slow redirects cannot outlast the budget.
+     * Each hop spends the budget: one redirect per Location followed, and its seconds, so a hop's max_duration is what
+     * the hops before it left and a chain of slow redirects cannot outlast the budget.
      *
      * @param array<string, mixed> $options
      *
-     * @throws RedirectChainException as follow() does, and when the time runs out before a hop
+     * @throws RedirectChainException on a blocked hop, a transport failure, a redirect without Location, too many
+     *                                redirects, or when the time runs out before a hop
      */
-    public function followWithin(string $url, array $options, RedirectBudget $budget): LandedResponse
+    public function follow(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
         $currentUrl = $url;
-        for ($hop = 0; $hop <= $budget->maxRedirects; $hop++) {
-            if ($budget->isSpent()) {
-                throw new RedirectChainException(sprintf('%s: out of time after %d hops', $url, $hop));
-            }
+        while (true) {
+            self::assertTimeLeft($url, $budget);
             $response = $this->send($currentUrl, self::withinBudget($options, $budget));
             $status = $this->statusCode($response, $currentUrl);
-            $budget->spend(self::secondsTaken($response));
+            $budget->spendSeconds(self::secondsTaken($response));
             if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
-                return new LandedResponse($currentUrl, $status, $response, $hop);
+                return new LandedResponse($currentUrl, $status, $response);
             }
             $currentUrl = $this->redirectTarget($response, $currentUrl);
+            self::spendRedirect($url, $budget);
         }
+    }
 
-        throw new RedirectChainException(sprintf('%s: more than %d redirects', $url, $budget->maxRedirects));
+    private static function assertTimeLeft(string $url, RedirectBudget $budget): void
+    {
+        if ($budget->isOutOfTime()) {
+            throw new RedirectChainException(sprintf('%s: out of time after %d hops', $url, $budget->redirectsTaken()));
+        }
+    }
+
+    private static function spendRedirect(string $url, RedirectBudget $budget): void
+    {
+        if (!$budget->takeRedirect()) {
+            throw new RedirectChainException(sprintf('%s: more than %d redirects', $url, $budget->maxRedirects));
+        }
     }
 
     /**
