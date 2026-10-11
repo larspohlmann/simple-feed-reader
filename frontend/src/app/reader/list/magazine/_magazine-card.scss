@@ -10,3 +10,21 @@
 @mixin image-rim {
   @include glass-rim.filled(var(--airy-sheet-fill));
 }
+
+@mixin headline {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+@mixin dek {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

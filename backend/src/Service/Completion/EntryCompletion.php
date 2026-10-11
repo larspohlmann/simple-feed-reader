@@ -5,24 +5,24 @@ declare(strict_types=1);
 namespace App\Service\Completion;
 
 use App\Entity\Entry;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
-use App\Repository\PostEnrichmentRepository;
+use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\LinkCard\PostLinkCards;
+use App\Service\LinkCard\ShareLinkCards;
 
 final readonly class EntryCompletion
 {
     public function __construct(
         private EntryListRepository $entryList,
         private EntryListRowEnricher $enricher,
-        private PostEnrichmentRepository $enrichments,
+        private ShareEnrichmentRepository $enrichments,
         private PostEnricher $postEnricher,
-        private PostLinkCards $postLinkCards,
+        private ShareLinkCards $shareLinkCards,
         private NaiveUtcClock $clock,
     ) {
     }
@@ -48,17 +48,17 @@ final readonly class EntryCompletion
     private function completeQueued(array $entries): void
     {
         $queued = $this->enrichments->findClaimableFor($entries, $this->clock->now());
-        $this->postEnricher->complete(self::ofKind($queued, PostEnrichmentKind::AppView));
-        $this->postLinkCards->complete(self::ofKind($queued, PostEnrichmentKind::LinkCards));
+        $this->postEnricher->complete(self::ofKind($queued, ShareEnrichmentKind::AppView));
+        $this->shareLinkCards->complete(self::ofKind($queued, ShareEnrichmentKind::LinkCards));
     }
 
     /**
-     * @param list<PostEnrichment> $queued
+     * @param list<ShareEnrichment> $queued
      *
-     * @return list<PostEnrichment>
+     * @return list<ShareEnrichment>
      */
-    private static function ofKind(array $queued, PostEnrichmentKind $kind): array
+    private static function ofKind(array $queued, ShareEnrichmentKind $kind): array
     {
-        return array_values(array_filter($queued, static fn (PostEnrichment $row): bool => $row->getKind() === $kind));
+        return array_values(array_filter($queued, static fn (ShareEnrichment $row): bool => $row->getKind() === $kind));
     }
 }

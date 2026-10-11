@@ -66,6 +66,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: true,
+  share: 'media',
   linkCards: [],
   pending: false,
   imageAspectRatio: null,
@@ -95,6 +96,7 @@ const short = (over: Partial<EntryDto> = {}): EntryDto =>
   entry({
     title: 'Should Robert Pattinson join the DCU?',
     titleDerived: false,
+    share: 'media',
     isShort: true,
     excerpt: '',
     url: 'https://www.youtube.com/shorts/87Ov3cS-xMs',
@@ -137,6 +139,15 @@ function stubIntersectionObserver() {
 }
 
 describe('EntryMediaComponent', () => {
+  it('captions a titled share with its title and puts its own text beneath', async () => {
+    const element = await mount(
+      entry({ titleDerived: false, title: 'Chart of the day', excerpt: 'From the report.' }),
+    );
+
+    expect(element.querySelector('.caption')!.textContent).toContain('Chart of the day');
+    expect(element.querySelector('.dek')!.textContent).toContain('From the report.');
+  });
+
   it('shows the post text as a caption above the media', async () => {
     const element = await mount(entry());
 

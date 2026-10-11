@@ -33,7 +33,7 @@ final class FeedMediaClassifier
 
         return self::fromMedium($element)
             ?? self::fromType($element)
-            ?? self::fromExtension($element->getAttribute('url'));
+            ?? self::kindOfUrl($element->getAttribute('url'));
     }
 
     private static function fromMedium(\DOMElement $element): ?FeedMediaKind
@@ -49,10 +49,14 @@ final class FeedMediaClassifier
 
     private static function fromType(\DOMElement $element): ?FeedMediaKind
     {
-        $type = strtolower($element->getAttribute('type'));
-        if ($type === '') {
-            return null;
-        }
+        $type = $element->getAttribute('type');
+
+        return $type === '' ? null : self::kindOfMimeType($type);
+    }
+
+    public static function kindOfMimeType(string $mimeType): FeedMediaKind
+    {
+        $type = strtolower($mimeType);
 
         return match (true) {
             str_starts_with($type, 'image/') => FeedMediaKind::Image,
@@ -62,7 +66,7 @@ final class FeedMediaClassifier
         };
     }
 
-    private static function fromExtension(string $url): FeedMediaKind
+    public static function kindOfUrl(string $url): FeedMediaKind
     {
         $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
         $extension = pathinfo($path, \PATHINFO_EXTENSION);

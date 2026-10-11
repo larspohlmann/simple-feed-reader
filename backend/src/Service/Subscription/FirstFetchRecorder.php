@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Entity\Feed;
-use App\Service\Completion\PostEnrichmentQueue;
+use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Ingest\EntryIngestor;
@@ -35,7 +35,7 @@ final readonly class FirstFetchRecorder
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
-        private PostEnrichmentQueue $enrichmentQueue,
+        private ShareEnrichmentQueue $enrichmentQueue,
     ) {
     }
 

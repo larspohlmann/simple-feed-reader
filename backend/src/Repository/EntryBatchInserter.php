@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Enum\CommentsLoad;
+use App\Enum\ShareKind;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\DBAL\Connection;
@@ -24,7 +25,7 @@ final readonly class EntryBatchInserter
         'media', 'attachments',
         'published_at', 'created_at', 'effective_date',
         'discussion_url', 'comments_feed_url', 'comments_load',
-        'title_derived',
+        'title_derived', 'share_kind', 'share_url',
     ];
 
     public function __construct(
@@ -102,6 +103,7 @@ final readonly class EntryBatchInserter
             $line->discussionUrl, $line->commentsFeedUrl,
             CommentsLoad::tryFrom((string) $line->commentsLoad)?->value,
             (int) $line->titleDerived,
+            ShareKind::tryFrom((string) $line->shareKind)?->value, $line->shareUrl,
         ];
     }
 

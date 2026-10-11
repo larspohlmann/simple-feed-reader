@@ -1,5 +1,14 @@
 import { isMediaPost, postMedia, settle } from './magazine-slot-fit';
 import { EntryDto, EntryMediumDto } from '../../models';
+import { LinkCardDto } from '../../link-card/link-card';
+
+const card: LinkCardDto = {
+  url: 'https://n/1',
+  title: 'T',
+  description: null,
+  imageUrl: null,
+  siteName: 'n',
+};
 
 const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   id: 1,
@@ -26,6 +35,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  share: null,
   linkCards: [],
   pending: false,
   imageAspectRatio: null,
@@ -43,8 +53,16 @@ describe('settle', () => {
     expect(settle('link', entry({ imageUrl: null, excerpt: 'Some copy' }), 'thumb')).toBe('kicker');
   });
 
-  it('settles a post still being completed as a link block whatever its slot', () => {
-    expect(settle('thumb', entry({ titleDerived: true, pending: true }), 'thumb')).toBe('link');
+  it('settles a share still being completed as a link block whatever its slot', () => {
+    expect(settle('thumb', entry({ share: 'link', pending: true }), 'thumb')).toBe('link');
+  });
+
+  it('settles a titled link share with its card as a link block', () => {
+    expect(settle('hero', entry({ share: 'link', linkCards: [card] }), 'thumb')).toBe('link');
+  });
+
+  it('keeps a link share whose card never came in the slot it fits', () => {
+    expect(settle('hero', entry({ share: 'link' }), 'thumb')).toBe('hero');
   });
 });
 
@@ -60,7 +78,11 @@ const video = (url: string, poster: string): EntryMediumDto => ({
 describe('postMedia', () => {
   it('drops the image that is only a video’s poster', () => {
     const clip = video('https://v/playlist.m3u8', 'https://v/thumb.jpg');
-    const post = entry({ titleDerived: true, media: [image('https://v/thumb.jpg'), clip] });
+    const post = entry({
+      titleDerived: true,
+      share: 'media',
+      media: [image('https://v/thumb.jpg'), clip],
+    });
 
     expect(postMedia(post)).toEqual([clip]);
   });
@@ -88,34 +110,26 @@ describe('postMedia', () => {
 });
 
 describe('isMediaPost', () => {
-  it('is a post with a picture', () => {
-    expect(isMediaPost(entry({ titleDerived: true }))).toBe(true);
+  it('is a media share with a picture', () => {
+    expect(isMediaPost(entry({ share: 'media' }))).toBe(true);
   });
 
-  it('is not an article, a link post, a pending post or a post without media', () => {
-    const card = {
-      url: 'https://n/1',
-      title: 'T',
-      description: null,
-      imageUrl: null,
-      siteName: 'n',
-    };
-
+  it('is not an article, a link share or a media share without a picture', () => {
     expect(isMediaPost(entry())).toBe(false);
-    expect(isMediaPost(entry({ titleDerived: true, linkCards: [card] }))).toBe(false);
-    expect(isMediaPost(entry({ titleDerived: true, pending: true }))).toBe(false);
-    expect(isMediaPost(entry({ titleDerived: true, imageUrl: null }))).toBe(false);
+    expect(isMediaPost(entry({ titleDerived: true }))).toBe(false);
+    expect(isMediaPost(entry({ share: 'link', linkCards: [card] }))).toBe(false);
+    expect(isMediaPost(entry({ share: 'media', imageUrl: null }))).toBe(false);
   });
 
-  it('is a YouTube Short with a cover, though it is no post', () => {
-    expect(isMediaPost(entry({ isShort: true }))).toBe(true);
-    expect(isMediaPost(entry({ isShort: true, imageUrl: null }))).toBe(false);
+  it('takes a Short only by its share, like every other entry', () => {
+    expect(isMediaPost(entry({ isShort: true }))).toBe(false);
+    expect(isMediaPost(entry({ isShort: true, share: 'media' }))).toBe(true);
   });
 });
 
 describe('settle for a media post', () => {
   it('is a media block from any slot', () => {
-    const post = entry({ titleDerived: true });
+    const post = entry({ titleDerived: true, share: 'media' });
 
     expect(settle('thumb', post, 'thumb')).toBe('media');
     expect(settle('compact', post, 'split')).toBe('media');

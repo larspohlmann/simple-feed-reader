@@ -45,6 +45,45 @@ final class EntryMediaTest extends TestCase
         self::assertSame('Chapter two', $attachments[0]->title);
     }
 
+    public function testPuttingANewMediumFirstAddsItBeforeTheOthers(): void
+    {
+        $media = new EntryMedia();
+        $media->set([new EntryMedium('https://i/one.jpg', 'image')], []);
+
+        $media->putFirst(new EntryMedium('https://i/two.jpg', 'image'));
+
+        self::assertEquals(
+            [new EntryMedium('https://i/two.jpg', 'image'), new EntryMedium('https://i/one.jpg', 'image')],
+            $media->getMedia(),
+        );
+    }
+
+    public function testPuttingAHeldMediumFirstMovesItKeepingWhatItRecordsAndLeavesTheAttachments(): void
+    {
+        $media = new EntryMedia();
+        $attachment = new EntryAttachment('https://cdn/ep.mp3', 'audio/mpeg');
+        $media->set(
+            [
+                new EntryMedium('https://i/one.jpg', 'image'),
+                new EntryMedium('https://i/two.jpg', 'image', 800, 600),
+                new EntryMedium('https://i/three.jpg', 'image'),
+            ],
+            [$attachment],
+        );
+
+        $media->putFirst(new EntryMedium('https://i/two.jpg', 'image'));
+
+        self::assertEquals(
+            [
+                new EntryMedium('https://i/two.jpg', 'image', 800, 600),
+                new EntryMedium('https://i/one.jpg', 'image'),
+                new EntryMedium('https://i/three.jpg', 'image'),
+            ],
+            $media->getMedia(),
+        );
+        self::assertEquals([$attachment], $media->getAttachments());
+    }
+
     public function testRemovingAUrlDropsOnlyTheMatchingMediumAndReindexes(): void
     {
         $media = new EntryMedia();

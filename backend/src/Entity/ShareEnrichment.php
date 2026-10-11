@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Enum\PostEnrichmentKind;
-use App\Repository\PostEnrichmentRepository;
+use App\Enum\ShareEnrichmentKind;
+use App\Repository\ShareEnrichmentRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A post whose embed or link cards are still to come. An AppView row is deleted once settled, or turns into a link-card
- * row while the post shares a link the AppView gave no card; a link-card row stays, marked done, as the fact that its
- * one attempt was made.
+ * An entry whose embed or link cards are still to come. An AppView row is deleted once settled, or turns into a
+ * link-card row while the post shares a link the AppView gave no card; a link-card row stays, marked done, as the
+ * fact that its one attempt was made.
  */
-#[ORM\Entity(repositoryClass: PostEnrichmentRepository::class)]
-#[ORM\Table(name: 'post_enrichment')]
-final class PostEnrichment
+#[ORM\Entity(repositoryClass: ShareEnrichmentRepository::class)]
+#[ORM\Table(name: 'share_enrichment')]
+final class ShareEnrichment
 {
     public const string APPVIEW_GIVE_UP_AFTER = 'P3D';
     public const string CLAIM_LEASE = 'PT60S';
@@ -30,8 +30,8 @@ final class PostEnrichment
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Entry $entry;
 
-    #[ORM\Column(length: 16, enumType: PostEnrichmentKind::class)]
-    private PostEnrichmentKind $kind;
+    #[ORM\Column(length: 16, enumType: ShareEnrichmentKind::class)]
+    private ShareEnrichmentKind $kind;
 
     #[ORM\Column(name: 'queued_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $queuedAt;
@@ -42,7 +42,7 @@ final class PostEnrichment
     #[ORM\Column(name: 'done_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $doneAt = null;
 
-    public function __construct(Entry $entry, PostEnrichmentKind $kind, \DateTimeImmutable $queuedAt)
+    public function __construct(Entry $entry, ShareEnrichmentKind $kind, \DateTimeImmutable $queuedAt)
     {
         $this->entry = $entry;
         $this->kind = $kind;
@@ -51,7 +51,7 @@ final class PostEnrichment
 
     public function requireId(): int
     {
-        return $this->id ?? throw new \LogicException('A post enrichment has no id before it is flushed.');
+        return $this->id ?? throw new \LogicException('A share enrichment has no id before it is flushed.');
     }
 
     public function getEntry(): Entry
@@ -59,13 +59,13 @@ final class PostEnrichment
         return $this->entry;
     }
 
-    public function getKind(): PostEnrichmentKind
+    public function getKind(): ShareEnrichmentKind
     {
         return $this->kind;
     }
 
     public function awaitLinkCards(): void
     {
-        $this->kind = PostEnrichmentKind::LinkCards;
+        $this->kind = ShareEnrichmentKind::LinkCards;
     }
 }

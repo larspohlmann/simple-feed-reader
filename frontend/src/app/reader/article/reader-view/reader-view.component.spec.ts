@@ -133,6 +133,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: false,
+  share: null,
   linkCards: [],
   pending: false,
   imageAspectRatio: null,

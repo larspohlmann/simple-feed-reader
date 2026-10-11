@@ -33,6 +33,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
+     *   share: 'link'|'media'|null,
      *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -43,7 +44,7 @@ final class EntryJson
         return self::commonFields($row) + [
             'excerpt' => EntryExcerpt::of(
                 $row->entry->getSummary(),
-                $row->entry->isUntitledPost() ? null : $row->entry->getContentHtml(),
+                $row->entry->bodyStandsInForSummary() ? $row->entry->getContentHtml() : null,
             ),
             'duplicates' => array_map(self::listRow(...), $row->duplicates),
         ];
@@ -64,6 +65,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
+     *   share: 'link'|'media'|null,
      *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   duplicates: list<array<string, mixed>>,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
@@ -89,6 +91,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool, isShort: bool, titleDerived: bool,
+     *   share: 'link'|'media'|null,
      *   savedSearches: list<array{id: int, slug: string, term: string}>, pending: bool,
      *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
@@ -127,6 +130,7 @@ final class EntryJson
             'isViewed' => $row->isViewed,
             'isShort' => YouTubeShortUrl::is($entry->getUrl()),
             'titleDerived' => $entry->isTitleDerived(),
+            'share' => $entry->getShare()->kind?->value,
             'savedSearches' => $row->savedSearches,
             'pending' => $row->pending,
         ];

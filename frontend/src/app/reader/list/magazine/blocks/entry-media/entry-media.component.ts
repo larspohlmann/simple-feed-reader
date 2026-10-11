@@ -44,9 +44,6 @@ export class EntryMediaComponent extends EntryBlockBase {
   private readonly sanitizer = inject(DomSanitizer);
 
   readonly media = computed(() => postMedia(this.entry()));
-  readonly caption = computed(() =>
-    this.entry().titleDerived ? this.entry().excerpt : this.entry().title,
-  );
   // shortPlayerUrl admits only the allow-listed player, so the URL can be trusted as a frame source.
   readonly shortPlayer = computed(() => {
     const url = shortPlayerUrl(this.entry().isShort ? this.entry().url : null);

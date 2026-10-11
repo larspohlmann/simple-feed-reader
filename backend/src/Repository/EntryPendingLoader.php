@@ -7,7 +7,7 @@ namespace App\Repository;
 /** Flags the rows whose embed or link cards are still to come. Only a top-level row is flagged, never a duplicate. */
 final readonly class EntryPendingLoader
 {
-    public function __construct(private PostEnrichmentRepository $enrichments)
+    public function __construct(private ShareEnrichmentRepository $enrichments)
     {
     }
 

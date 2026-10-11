@@ -17,7 +17,7 @@ use App\Entity\GrafanaSettings;
 use App\Entity\InstanceSetting;
 use App\Entity\MailSendFailure;
 use App\Entity\MailServerSettings;
-use App\Entity\PostEnrichment;
+use App\Entity\ShareEnrichment;
 use App\Entity\Preferences;
 use App\Entity\ProfileRun;
 use App\Entity\ProxyServerSettings;
@@ -114,8 +114,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             . 'RecommendationDriverKind.',
         MailSendFailure::class => 'The instance\'s automated-mail failure log (#882); operational telemetry, '
             . 'cleared on the next successful send.',
-        PostEnrichment::class => 'The instance\'s queue of posts whose embed or link cards are still to come '
-            . '(#1499, #1502); instance data, not the reader\'s.',
+        ShareEnrichment::class => 'The instance\'s queue of entries whose embed or link cards are still to come '
+            . '(#1499, #1502, #1524); instance data, not the reader\'s.',
     ];
 
     /**

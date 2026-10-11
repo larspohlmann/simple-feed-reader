@@ -8,15 +8,16 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\Share;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
-use App\Service\LinkCard\PostLinkCards;
+use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -31,7 +32,7 @@ use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\PostLinkCardsWiring;
+use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
@@ -109,7 +110,7 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame([], $this->enricher()->enrich($this->feed, $created));
 
         self::assertCount(1, $recorder->queries());
-        self::assertCount(1, $recorder->queriesMatching('from post_enrichment'));
+        self::assertCount(1, $recorder->queriesMatching('from share_enrichment'));
         self::assertSame([], $this->appView->requests);
     }
 
@@ -136,6 +137,17 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame('<p>Deleted since.</p>', $this->reload($post)->getContentHtml());
         self::assertSame(0, $this->pendingCount());
+    }
+
+    public function testAnUnfilledPostSharesNothingOnceDequeued(): void
+    {
+        $post = $this->queuedEntry(self::TEST_POST . 'deleted', '<p>Deleted since.</p>');
+        $post->setShare(Share::link(null));
+        $this->entityManager->flush();
+
+        $this->enricher()->enrich($this->feed, [$post]);
+
+        self::assertTrue($this->reload($post)->getShare()->isNone());
     }
 
     public function testThirtyQueuedPostsTakeTwoRequests(): void
@@ -327,7 +339,7 @@ final class PostEnricherTest extends DbTestCase
     {
         $post = $this->queuedEntry(self::TISCH, '<p>Text.</p>');
         $this->entityManager->flush();
-        $this->entityManager->persist(new PostEnrichment($post, PostEnrichmentKind::AppView, $this->clock->now()));
+        $this->entityManager->persist(new ShareEnrichment($post, ShareEnrichmentKind::AppView, $this->clock->now()));
 
         try {
             $this->enricher()->enrich($this->feed, [$post]);
@@ -344,7 +356,7 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->knowsPost(Bluesky::untitledLinkView(self::UNTITLED));
         $post = $this->queuedEntry(self::UNTITLED, '<p>Read this.</p>');
         $this->entityManager->flush();
-        $this->entityManager->persist(new PostEnrichment($post, PostEnrichmentKind::AppView, $this->clock->now()));
+        $this->entityManager->persist(new ShareEnrichment($post, ShareEnrichmentKind::AppView, $this->clock->now()));
 
         try {
             $this->enricher()->enrich($this->feed, [$post]);
@@ -353,7 +365,7 @@ final class PostEnricherTest extends DbTestCase
         }
 
         self::assertNotFalse($this->entityManager->getConnection()->fetchOne(
-            'SELECT claimed_at FROM post_enrichment WHERE entry_id = ? AND claimed_at IS NOT NULL',
+            'SELECT claimed_at FROM share_enrichment WHERE entry_id = ? AND claimed_at IS NOT NULL',
             [$post->requireId()],
         ));
     }
@@ -378,7 +390,7 @@ final class PostEnricherTest extends DbTestCase
         $apples = $this->queuedEntry(self::APPLES, '<p>Apples.</p>');
         $linkPost = $this->entry($this->feed, 'https://mastodon.test/@a/1', '<p>https://example.com/a</p>');
         $this->entityManager->persist(
-            new PostEnrichment($linkPost, PostEnrichmentKind::LinkCards, $this->clock->now()),
+            new ShareEnrichment($linkPost, ShareEnrichmentKind::LinkCards, $this->clock->now()),
         );
         $this->entityManager->flush();
 
@@ -422,7 +434,7 @@ final class PostEnricherTest extends DbTestCase
         $tisch = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
         $otherFeed = $this->feed('https://bsky.app/profile/bsky.app/rss');
         $apples = $this->entry($otherFeed, self::APPLES, '<p>Apples.</p>');
-        $this->entityManager->persist(new PostEnrichment($apples, PostEnrichmentKind::AppView, $this->clock->now()));
+        $this->entityManager->persist(new ShareEnrichment($apples, ShareEnrichmentKind::AppView, $this->clock->now()));
         $leftOut = $this->queuedEntry(self::TEST_POST . 'left-out', '<p>Not asked.</p>');
         $this->entityManager->flush();
 
@@ -447,8 +459,8 @@ final class PostEnricherTest extends DbTestCase
 
         $rows = PostEnrichers::enrichments($this->entityManager)
             ->findClaimableFor([$first, $second], $this->clock->now());
-        self::assertSame([PostEnrichmentKind::LinkCards, PostEnrichmentKind::LinkCards], array_map(
-            static fn (PostEnrichment $row): PostEnrichmentKind => $row->getKind(),
+        self::assertSame([ShareEnrichmentKind::LinkCards, ShareEnrichmentKind::LinkCards], array_map(
+            static fn (ShareEnrichment $row): ShareEnrichmentKind => $row->getKind(),
             $rows,
         ));
         self::assertStringNotContainsString('View embedded content', (string) $this->reload($first)->getContentHtml());
@@ -532,14 +544,14 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame(1, $this->pendingCount());
     }
 
-    private function linkCardPass(): PostLinkCards
+    private function linkCardPass(): ShareLinkCards
     {
         $page = new MockResponse(
             '<html><head><meta property="og:title" content="The story"></head></html>',
             ['response_headers' => ['content-type' => 'text/html']],
         );
 
-        return PostLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
+        return ShareLinkCardsWiring::build($this->entityManager, new MockHttpClient($page), $this->clock);
     }
 
     /** @return list<string> */
@@ -593,7 +605,7 @@ final class PostEnricherTest extends DbTestCase
     /**
      * @param list<Entry> $entries
      *
-     * @return list<PostEnrichment>
+     * @return list<ShareEnrichment>
      */
     private function rowsOf(array $entries): array
     {
@@ -622,7 +634,7 @@ final class PostEnricherTest extends DbTestCase
     private function queuedEntry(string $guid, string $contentHtml): Entry
     {
         $entry = $this->entry($this->feed, $guid, $contentHtml);
-        $this->entityManager->persist(new PostEnrichment($entry, PostEnrichmentKind::AppView, $this->clock->now()));
+        $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $this->clock->now()));
 
         return $entry;
     }
@@ -635,7 +647,7 @@ final class PostEnricherTest extends DbTestCase
     private function storedPost(string $guid, \DateTimeImmutable $queuedAt, ?Feed $feed = null): void
     {
         $entry = $this->entry($feed ?? $this->feed, $guid, '<p>Text.</p>');
-        $this->entityManager->persist(new PostEnrichment($entry, PostEnrichmentKind::AppView, $queuedAt));
+        $this->entityManager->persist(new ShareEnrichment($entry, ShareEnrichmentKind::AppView, $queuedAt));
     }
 
     /** @return list<string> the guids, oldest queued first, one minute apart and all within the last two hours */
@@ -654,15 +666,15 @@ final class PostEnricherTest extends DbTestCase
 
     private function pendingCount(): int
     {
-        return $this->entityManager->getRepository(PostEnrichment::class)->count([]);
+        return $this->entityManager->getRepository(ShareEnrichment::class)->count([]);
     }
 
     /** @return list<string> */
     private function pendingGuids(): array
     {
         return array_map(
-            static fn (PostEnrichment $pending): string => $pending->getEntry()->getGuid(),
-            $this->entityManager->getRepository(PostEnrichment::class)->findAll(),
+            static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(),
+            $this->entityManager->getRepository(ShareEnrichment::class)->findAll(),
         );
     }
 }

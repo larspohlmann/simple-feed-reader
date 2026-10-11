@@ -231,6 +231,11 @@ final class Entry
         $this->mediaSet->set($media, $attachments);
     }
 
+    public function putMediumFirst(EntryMedium $medium): void
+    {
+        $this->mediaSet->putFirst($medium);
+    }
+
     public function getPublishedAt(): ?\DateTimeImmutable
     {
         return $this->publishedAt;
@@ -249,6 +254,21 @@ final class Entry
     public function setDiscussion(Discussion $discussion): void
     {
         $this->discussion->store($discussion);
+    }
+
+    public function getShare(): Share
+    {
+        return $this->location->readShare();
+    }
+
+    public function setShare(Share $share): void
+    {
+        $this->location->storeShare($share);
+    }
+
+    public function bodyStandsInForSummary(): bool
+    {
+        return !$this->isUntitledPost() && $this->getShare()->isNone();
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

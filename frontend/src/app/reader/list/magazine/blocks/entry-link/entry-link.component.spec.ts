@@ -53,6 +53,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isViewed: false,
   isShort: false,
   titleDerived: true,
+  share: 'link',
   linkCards: [card(), card({ url: 'https://other.test/', title: 'A second story' })],
   pending: false,
   imageAspectRatio: null,
@@ -73,6 +74,33 @@ function mount(testEntry: EntryDto) {
 }
 
 describe('EntryLinkComponent', () => {
+  it('shows a titled share’s headline as a headline, its own text beneath, then the card', () => {
+    const element = mount(
+      entry({
+        titleDerived: false,
+        title: 'C for Rust programmers',
+        excerpt: 'Worth a read.',
+        linkCards: [card()],
+      }),
+    ).nativeElement as HTMLElement;
+
+    const title = element.querySelector('.title')!;
+    expect(title.textContent).toContain('C for Rust programmers');
+    expect(title.classList.contains('post')).toBe(false);
+    expect(element.querySelector('.dek')!.textContent).toContain('Worth a read.');
+    expect(element.querySelector('app-link-card')).not.toBeNull();
+  });
+
+  it('shows no dek for a post: its text is already its headline', () => {
+    const element = mount(entry({ excerpt: 'Post text', linkCards: [card()] }))
+      .nativeElement as HTMLElement;
+
+    const title = element.querySelector('.title')!;
+    expect(title.classList.contains('post')).toBe(true);
+    expect(title.textContent).toContain('Post text');
+    expect(element.querySelector('.dek')).toBeNull();
+  });
+
   it('shows the post text as its headline and stacks the first card under it', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
 

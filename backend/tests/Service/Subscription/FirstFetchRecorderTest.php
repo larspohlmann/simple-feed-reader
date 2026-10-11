@@ -6,8 +6,8 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -76,11 +76,11 @@ final class FirstFetchRecorderTest extends DbTestCase
         $this->recorder->record($feed, $discovered);
 
         $kinds = [];
-        foreach ($this->entityManager->getRepository(PostEnrichment::class)->findAll() as $pending) {
+        foreach ($this->entityManager->getRepository(ShareEnrichment::class)->findAll() as $pending) {
             $kinds[$pending->getEntry()->getGuid()] = $pending->getKind();
         }
         self::assertEqualsCanonicalizing(
-            [$post => PostEnrichmentKind::AppView, 'link-post' => PostEnrichmentKind::LinkCards],
+            [$post => ShareEnrichmentKind::AppView, 'link-post' => ShareEnrichmentKind::LinkCards],
             $kinds,
         );
     }

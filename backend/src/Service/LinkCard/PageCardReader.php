@@ -9,13 +9,16 @@ use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Html\Support\MetaTags;
+use App\Service\LinkCard\Model\PageCardModel;
+use App\Service\LinkCard\Support\DeclaredPageMedium;
 use App\Service\LinkCard\Support\StorableLinkCard;
+use App\Service\Parser\Support\VisualMedium;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Scraper\Support\TextNormalizer;
 use App\Service\Url\Support\HttpsImageUrl;
 
-/** Reads the card a page declares for itself: its Open Graph or Twitter title, description, image and site. */
+/** Reads the card a page declares for itself, and the picture or video file it is or declares. */
 final readonly class PageCardReader
 {
     public function __construct(private HtmlPageFetcher $pages)
@@ -23,19 +26,26 @@ final readonly class PageCardReader
     }
 
     /** @throws PageFetchException */
-    public function read(string $sharedUrl): ?LinkCardContent
+    public function read(string $sharedUrl): PageCardModel
     {
         $page = $this->pages->fetchHead($sharedUrl);
+        $file = $page->contentType === null ? null : VisualMedium::servedAs($sharedUrl, $page->contentType);
+        if ($file !== null) {
+            return new PageCardModel(null, $file);
+        }
         $document = HtmlDocumentParser::parseOrEmpty($page->html);
         $meta = MetaTags::contentByKey($document);
 
-        return StorableLinkCard::of(new LinkCardContent(
-            $sharedUrl,
-            self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
-            self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
-            self::image($meta, $page->finalUrl),
-            self::declared($meta, 'og:site_name') ?: HostKey::forUrl($sharedUrl),
-        ));
+        return new PageCardModel(
+            StorableLinkCard::of(new LinkCardContent(
+                $sharedUrl,
+                self::declared($meta, 'og:title', 'twitter:title') ?: TextNormalizer::normalize($document->title),
+                self::declared($meta, 'og:description', 'twitter:description', 'description') ?: null,
+                self::image($meta, $page->finalUrl),
+                self::declared($meta, 'og:site_name') ?: HostKey::forUrl($sharedUrl),
+            )),
+            DeclaredPageMedium::of($meta),
+        );
     }
 
     /** @param array<string, string> $meta */

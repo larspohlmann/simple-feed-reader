@@ -12,7 +12,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\UrlGuard;
 use App\Service\LinkCard\PageCardReader;
-use App\Service\LinkCard\PostLinkCards;
+use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
@@ -24,8 +24,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/** PostLinkCards over a test HTTP client, wired as the container wires it. */
-final class PostLinkCardsWiring
+/** ShareLinkCards over a test HTTP client, wired as the container wires it. */
+final class ShareLinkCardsWiring
 {
     private function __construct()
     {
@@ -36,8 +36,8 @@ final class PostLinkCardsWiring
         HttpClientInterface $client,
         ClockInterface $clock,
         LoggerInterface $logger = new NullLogger(),
-    ): PostLinkCards {
-        return new PostLinkCards(
+    ): ShareLinkCards {
+        return new ShareLinkCards(
             new PageCardReader(self::pageFetcher($client)),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),

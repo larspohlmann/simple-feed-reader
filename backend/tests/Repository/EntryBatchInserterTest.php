@@ -7,6 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
+use App\Entity\Share;
 use App\Repository\EntryBatchInserter;
 use App\Repository\LinkCardRepository;
 use App\Repository\PendingImageVerificationRepository;
@@ -38,6 +39,8 @@ final class EntryBatchInserterTest extends DbTestCase
         ?string $url = self::GENERATED_URL,
         ?string $imageUrl = null,
         bool $titleDerived = false,
+        ?string $shareKind = null,
+        ?string $shareUrl = null,
         array $linkCards = [],
     ): EntryLine {
         return new EntryLine(
@@ -56,6 +59,8 @@ final class EntryBatchInserterTest extends DbTestCase
             createdAt: new \DateTimeImmutable('2026-08-02T00:00:00+00:00'),
             effectiveDate: new \DateTimeImmutable('2026-08-01T10:00:00+00:00'),
             titleDerived: $titleDerived,
+            shareKind: $shareKind,
+            shareUrl: $shareUrl,
             linkCards: $linkCards,
         );
     }
@@ -114,6 +119,25 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertSame('2026-08-01 10:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-02 00:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-01 10:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
+    }
+
+    public function testARestoredRowKeepsWhatItShares(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+
+        $this->inserter()->insert($feedId, [
+            $this->entryLine('media-guid', shareKind: 'media', shareUrl: 'https://example.com/a.jpg'),
+            $this->entryLine('plain-guid'),
+        ]);
+
+        $this->entityManager->clear();
+        $repository = $this->entityManager->getRepository(Entry::class);
+        $media = $repository->findOneBy(['guidHash' => hash('sha256', 'media-guid')]);
+        $plain = $repository->findOneBy(['guidHash' => hash('sha256', 'plain-guid')]);
+        self::assertInstanceOf(Entry::class, $media);
+        self::assertInstanceOf(Entry::class, $plain);
+        self::assertEquals(Share::media('https://example.com/a.jpg'), $media->getShare());
+        self::assertTrue($plain->getShare()->isNone());
     }
 
     public function testARestoredRowKeepsWhetherItsTitleWasDerived(): void

@@ -8,8 +8,11 @@
   (keydown.space)="$event.preventDefault(); actions.open(entry())"
 >
   <app-entry-kicker-line [entry]="entry()" />
-  @if (caption()) {
-    <p class="caption">{{ caption() }}</p>
+  @if (headline()) {
+    <p class="caption" [class.post]="isPost()">{{ headline() }}</p>
+  }
+  @if (snippet()) {
+    <p class="dek">{{ snippet() }}</p>
   }
   @let items = media();
   <div
@@ -23,7 +26,7 @@
           <iframe
             class="item"
             [src]="player"
-            [title]="caption() || ('reader.playShort' | transloco)"
+            [title]="headline() || ('reader.playShort' | transloco)"
             sandbox="allow-scripts allow-same-origin allow-presentation"
             allow="autoplay; fullscreen"
             allowfullscreen
@@ -58,7 +61,7 @@
             controls
             preload="none"
             playsinline
-            [attr.aria-label]="caption() || ('reader.mediaVideo' | transloco)"
+            [attr.aria-label]="headline() || ('reader.mediaVideo' | transloco)"
             [src]="medium.url"
             [attr.poster]="medium.previewImageUrl ?? null"
             (click)="$event.stopPropagation()"

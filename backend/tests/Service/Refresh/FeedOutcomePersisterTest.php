@@ -7,8 +7,8 @@ namespace App\Tests\Service\Refresh;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
@@ -80,9 +80,9 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'post-1']);
         self::assertInstanceOf(Entry::class, $post);
-        $queued = $this->entityManager->getRepository(PostEnrichment::class)->findBy(['entry' => $post]);
+        $queued = $this->entityManager->getRepository(ShareEnrichment::class)->findBy(['entry' => $post]);
         self::assertCount(1, $queued);
-        self::assertSame(PostEnrichmentKind::LinkCards, $queued[0]->getKind());
+        self::assertSame(ShareEnrichmentKind::LinkCards, $queued[0]->getKind());
         self::assertStringContainsString('<a href="https://example.com/story"', (string) $post->getContentHtml());
         self::assertSame([], $this->entityManager->getRepository(LinkCard::class)->findBy(['entry' => $post]));
     }

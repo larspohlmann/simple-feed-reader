@@ -5,19 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\LinkCard;
-use App\Entity\PostEnrichment;
+use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
-use App\Repository\PostEnrichmentRepository;
+use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\PostEmbedRenderer;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Completion\PostEnrichmentQueue;
+use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Share\EntryShareClassifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -61,19 +62,20 @@ final class PostEnrichers
         return self::build($entityManager, $clock, $appView, new NullLogger());
     }
 
-    public static function queue(EntityManagerInterface $entityManager, ClockInterface $clock): PostEnrichmentQueue
+    public static function queue(EntityManagerInterface $entityManager, ClockInterface $clock): ShareEnrichmentQueue
     {
-        return new PostEnrichmentQueue(
+        return new ShareEnrichmentQueue(
             $entityManager,
             new EntrySanitizer(new TrailingBlankRemover()),
             new NaiveUtcClock($clock),
+            new EntryShareClassifier(),
         );
     }
 
-    public static function enrichments(EntityManagerInterface $entityManager): PostEnrichmentRepository
+    public static function enrichments(EntityManagerInterface $entityManager): ShareEnrichmentRepository
     {
-        /** @var PostEnrichmentRepository $enrichments */
-        $enrichments = $entityManager->getRepository(PostEnrichment::class);
+        /** @var ShareEnrichmentRepository $enrichments */
+        $enrichments = $entityManager->getRepository(ShareEnrichment::class);
 
         return $enrichments;
     }

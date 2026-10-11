@@ -24,10 +24,15 @@
 }
 
 .caption {
-  @include post-text.post-text(6);
+  @include magazine-card.headline;
+}
 
-  margin: 0;
-  color: var(--text-primary);
+.caption.post {
+  @include post-text.post-text(6);
+}
+
+.dek {
+  @include magazine-card.dek;
 }
 
 .media-post.read .caption {

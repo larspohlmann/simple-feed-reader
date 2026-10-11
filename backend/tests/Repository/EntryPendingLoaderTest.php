@@ -6,8 +6,8 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
@@ -42,9 +42,9 @@ final class EntryPendingLoaderTest extends DbTestCase
 
     public function testAPostIsPendingWhileItsRowIsNotDone(): void
     {
-        $blueskyPost = $this->queued(self::AT_POST . 'queued', PostEnrichmentKind::AppView);
-        $linkPost = $this->queued('https://mastodon.example/@a/1', PostEnrichmentKind::LinkCards);
-        $done = $this->queued('https://mastodon.example/@a/2', PostEnrichmentKind::LinkCards);
+        $blueskyPost = $this->queued(self::AT_POST . 'queued', ShareEnrichmentKind::AppView);
+        $linkPost = $this->queued('https://mastodon.example/@a/1', ShareEnrichmentKind::LinkCards);
+        $done = $this->queued('https://mastodon.example/@a/2', ShareEnrichmentKind::LinkCards);
         $unqueued = $this->post('https://mastodon.example/@a/3', '<p>See https://example.com/a</p>');
         $this->entityManager->flush();
         $this->markDone($done);
@@ -56,10 +56,10 @@ final class EntryPendingLoaderTest extends DbTestCase
 
     public function testOnlyTopLevelRowsAreFlaggedFromOneQuery(): void
     {
-        $survivor = $this->queued('https://mastodon.example/@a/1', PostEnrichmentKind::LinkCards);
-        $duplicate = $this->queued(self::AT_POST . 'duplicate', PostEnrichmentKind::AppView);
+        $survivor = $this->queued('https://mastodon.example/@a/1', ShareEnrichmentKind::LinkCards);
+        $duplicate = $this->queued(self::AT_POST . 'duplicate', ShareEnrichmentKind::AppView);
         $settled = $this->post('https://mastodon.example/@a/2', '<p>Just words.</p>');
-        $pendingDuplicate = $this->queued(self::AT_POST . 'other', PostEnrichmentKind::AppView);
+        $pendingDuplicate = $this->queued(self::AT_POST . 'other', ShareEnrichmentKind::AppView);
         $this->entityManager->flush();
         $recorder = $this->recorder();
 
@@ -73,13 +73,13 @@ final class EntryPendingLoaderTest extends DbTestCase
         self::assertFalse($rows[1]->pending);
         self::assertFalse($rows[1]->duplicates[0]->pending);
         self::assertCount(1, $recorder->queries(), implode("\n", $recorder->queries()));
-        self::assertCount(1, $recorder->queriesMatching('post_enrichment'));
+        self::assertCount(1, $recorder->queriesMatching('share_enrichment'));
     }
 
-    private function queued(string $guid, PostEnrichmentKind $kind): Entry
+    private function queued(string $guid, ShareEnrichmentKind $kind): Entry
     {
         $entry = $this->post($guid, '<p>Text.</p>');
-        $this->entityManager->persist(new PostEnrichment($entry, $kind, new \DateTimeImmutable('2026-10-10')));
+        $this->entityManager->persist(new ShareEnrichment($entry, $kind, new \DateTimeImmutable('2026-10-10')));
 
         return $entry;
     }

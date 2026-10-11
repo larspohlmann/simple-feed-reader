@@ -7,14 +7,14 @@ namespace App\Tests\Service\LinkCard;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\LinkCardContent;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Fetch\HostThrottle;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\PostLinkCardsWiring;
+use App\Tests\Support\ShareLinkCardsWiring;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -41,7 +41,7 @@ final class LinkCardBoundsTest extends DbTestCase
     public function testAnAppViewCardWithASixHundredCharacterTitleIsStoredClamped(): void
     {
         $post = $this->post(self::AT_POST, '<p>Read this.</p>');
-        $this->entityManager->persist(new PostEnrichment($post, PostEnrichmentKind::AppView, $this->clock->now()));
+        $this->entityManager->persist(new ShareEnrichment($post, ShareEnrichmentKind::AppView, $this->clock->now()));
         $this->entityManager->flush();
         $appView = new FakeAppView();
         $appView->knowsPost(['uri' => self::AT_POST, 'embed' => [
@@ -80,7 +80,7 @@ final class LinkCardBoundsTest extends DbTestCase
             ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
         ));
 
-        PostLinkCardsWiring::build($this->entityManager, $pages, $this->clock)->complete(
+        ShareLinkCardsWiring::build($this->entityManager, $pages, $this->clock)->complete(
             PostEnrichers::enrichments($this->entityManager)->findBy(['entry' => $post]),
         );
 

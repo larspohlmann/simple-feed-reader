@@ -1410,7 +1410,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         return \count($entityManager->getConnection()->fetchFirstColumn(
-            'SELECT id FROM post_enrichment WHERE entry_id = ?',
+            'SELECT id FROM share_enrichment WHERE entry_id = ?',
             [$entryId],
         ));
     }
