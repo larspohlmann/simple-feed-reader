@@ -28,6 +28,8 @@ final readonly class HtmlPageFetcher
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
     private const int HEAD_MAX_BYTES = 524_288;
+    private const int HEAD_CHUNK_BYTES = 8_192;
+    private const string HEAD_END = '~</head|<body~i';
     // The transfer is aborted a little past the cap, so the bytes the read keeps have surely arrived.
     private const int HEAD_ABORT_BYTES = self::HEAD_MAX_BYTES + 65_536;
     private const float HEAD_TIMEOUT_SECONDS = 5.0;
@@ -71,8 +73,8 @@ final readonly class HtmlPageFetcher
     }
 
     /**
-     * The start of a page, for the metadata its head declares: at most 512 KB is read, the timeouts are short and a
-     * meta refresh is not chased.
+     * The start of a page, for the metadata its head declares: reading stops once the head has ended and the
+     * challenge scan's span has arrived, at 512 KB at most; the timeouts are short and a meta refresh is not chased.
      */
     public function fetchHead(string $url): PageResponseModel
     {
@@ -129,13 +131,34 @@ final readonly class HtmlPageFetcher
             throw new PageFetchException($message);
         });
         try {
-            $head = stream_get_contents($stream, self::HEAD_MAX_BYTES);
+            return self::readUntilTheHeadEnds($stream);
         } finally {
             restore_error_handler();
             $landed->response->cancel();
         }
+    }
 
-        return $head === false ? throw new PageFetchException('the response could not be read') : $head;
+    /** @param resource $stream */
+    private static function readUntilTheHeadEnds($stream): string
+    {
+        $head = '';
+        $searchFrom = 0;
+        while (!feof($stream) && \strlen($head) < self::HEAD_MAX_BYTES) {
+            $chunk = fread($stream, min(self::HEAD_CHUNK_BYTES, self::HEAD_MAX_BYTES - \strlen($head)));
+            if ($chunk === false) {
+                throw new PageFetchException('the response could not be read');
+            }
+            $head .= $chunk;
+            if (\strlen($head) < self::LANDING_SCAN_LENGTH) {
+                continue;
+            }
+            if (preg_match(self::HEAD_END, $head, offset: $searchFrom) === 1) {
+                break;
+            }
+            $searchFrom = max(0, \strlen($head) - \strlen('</head'));
+        }
+
+        return $head;
     }
 
     private function utf8(string $body, LandedResponse $landed): string
