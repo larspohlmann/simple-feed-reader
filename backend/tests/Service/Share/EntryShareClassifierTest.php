@@ -170,6 +170,14 @@ final class EntryShareClassifierTest extends TestCase
         self::assertTrue($overLimit->getShare()->isNone());
     }
 
+    public function testAPostIsMeasuredInCharactersNotBytes(): void
+    {
+        $link = ' <a href="https://example.com/a">https://example.com/a</a>';
+        $entry = $this->classified(self::post('<p>' . str_repeat('ä', 300) . $link . '</p>'));
+
+        self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
     public function testAPostLeavesItsSummaryAlone(): void
     {
         $entry = self::post('<p>Look: <a href="https://example.com/a">https://example.com/a</a></p>');
@@ -188,6 +196,20 @@ final class EntryShareClassifierTest extends TestCase
         ));
 
         self::assertEquals(Share::media(null), $entry->getShare());
+    }
+
+    public function testAShortsLongDescriptionIsCutToTheLimitInWholeCharacters(): void
+    {
+        $entry = $this->classified(self::entry(
+            'https://www.youtube.com/channel/UC1',
+            'yt:video:abc',
+            'https://www.youtube.com/shorts/abcdefghijk',
+            '<p>a' . str_repeat('ü', 600) . '</p>',
+        ));
+
+        $summary = (string) $entry->getSummary();
+        self::assertTrue(mb_check_encoding($summary, 'UTF-8'));
+        self::assertSame(EntryShareClassifier::OWN_PROSE_MAX, mb_strlen($summary));
     }
 
     public function testARegularYouTubeVideoIsAnArticle(): void
