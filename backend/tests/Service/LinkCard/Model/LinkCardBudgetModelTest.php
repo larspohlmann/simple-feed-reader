@@ -6,14 +6,14 @@ namespace App\Tests\Service\LinkCard\Model;
 
 use App\Entity\ShareEnrichment;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
-use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\PageHeadFetcher;
 use PHPUnit\Framework\TestCase;
 
 final class LinkCardBudgetModelTest extends TestCase
 {
     public function testItsLengthIsTheMostAFetchMayTakePerFetch(): void
     {
-        self::assertSame(5 * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS, LinkCardBudgetModel::fetches(5)->seconds());
+        self::assertSame(5 * PageHeadFetcher::MAX_DURATION_SECONDS, LinkCardBudgetModel::fetches(5)->seconds());
         self::assertSame(5, LinkCardBudgetModel::fetches(5)->fetches);
     }
 
@@ -32,7 +32,7 @@ final class LinkCardBudgetModelTest extends TestCase
 
     public function testABudgetThatWouldOutlastTheClaimLeaseIsRefused(): void
     {
-        $largestFit = (int) ceil(ShareEnrichment::CLAIM_LEASE_SECONDS / HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS) - 1;
+        $largestFit = (int) ceil(ShareEnrichment::CLAIM_LEASE_SECONDS / PageHeadFetcher::MAX_DURATION_SECONDS) - 1;
 
         $longestAccepted = LinkCardBudgetModel::fetches($largestFit)->seconds();
         self::assertLessThan(ShareEnrichment::CLAIM_LEASE_SECONDS, $longestAccepted);

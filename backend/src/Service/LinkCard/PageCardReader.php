@@ -14,26 +14,25 @@ use App\Service\LinkCard\Support\DeclaredPageMedium;
 use App\Service\LinkCard\Support\StorableLinkCard;
 use App\Service\Parser\Support\VisualMedium;
 use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\PageHeadFetcher;
 use App\Service\Scraper\Support\TextNormalizer;
 use App\Service\Url\Support\HttpsImageUrl;
 
 /** Reads the card a page declares for itself, and the picture or video file it is or declares. */
 final readonly class PageCardReader
 {
-    public function __construct(private HtmlPageFetcher $pages)
+    public function __construct(private PageHeadFetcher $heads)
     {
     }
 
     /** @throws PageFetchException */
     public function read(string $sharedUrl): PageCardModel
     {
-        $page = $this->pages->fetchHead($sharedUrl);
-        $file = $page->contentType === null ? null : VisualMedium::servedAs($sharedUrl, $page->contentType);
-        if ($file !== null) {
-            return new PageCardModel(null, $file);
+        $page = $this->heads->fetch($sharedUrl);
+        if ($page->fileType !== null) {
+            return new PageCardModel(null, VisualMedium::servedAs($sharedUrl, $page->fileType));
         }
-        $document = HtmlDocumentParser::parseOrEmpty($page->html);
+        $document = HtmlDocumentParser::parseOrEmpty($page->head);
         $meta = MetaTags::contentByKey($document);
 
         return new PageCardModel(

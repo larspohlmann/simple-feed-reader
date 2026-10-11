@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\LinkCard;
 
-use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\LinkCard\PageCardReader;
 use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\LandingChallenge;
-use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Reader\PageHeadFetcher;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
@@ -34,17 +31,11 @@ final class PageCardReaderTest extends TestCase
             }
         };
 
-        return new PageCardReader(new HtmlPageFetcher(
-            FetchWiring::redirectFollower(
-                new MockHttpClient($responses),
-                $this->noEgressProxy(),
-                new UrlGuard($resolver, new IpValidator()),
-            ),
-            new MetaRefreshTarget(),
-            new LandingChallenge(),
-            'TestAgent/1.0',
-            new SymfonyStatusReasonPhrases(),
-        ));
+        return new PageCardReader(new PageHeadFetcher(FetchWiring::pageLanding(FetchWiring::redirectFollower(
+            new MockHttpClient($responses),
+            $this->noEgressProxy(),
+            new UrlGuard($resolver, new IpValidator()),
+        ))));
     }
 
     private function page(string $head): MockResponse
