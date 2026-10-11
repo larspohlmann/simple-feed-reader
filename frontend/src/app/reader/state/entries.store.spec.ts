@@ -475,6 +475,23 @@ describe('EntriesStore', () => {
       expect(store.entries().map((listed) => listed.id)).toEqual([1, 2]);
     });
 
+    it('keeps the list and its rows as they are when a round fills nothing in', () => {
+      const before = store.entries();
+
+      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: true })]);
+
+      expect(store.entries()).toBe(before);
+    });
+
+    it('replaces only the rows a round filled in', () => {
+      const [first] = store.entries();
+
+      store.mergeCompleted([entry(1, { pending: true }), entry(2, { pending: false })]);
+
+      expect(store.entries()[0]).toBe(first);
+      expect(store.entries()[1].pending).toBe(false);
+    });
+
     it('keeps a state change still on the wire', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');

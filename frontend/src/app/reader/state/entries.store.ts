@@ -5,6 +5,7 @@ import { Problem, parseProblem } from '../../core/problem';
 import { accountSignal, onIdentityChange } from '../../core/auth/session-identity';
 import { ReaderApi } from '../reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from '../models';
+import { withCompleted } from './completed-entry';
 
 /** Adds `incoming` to `existing`, deduped case-insensitively, keeping first-seen
  *  casing — mirrors `MeilisearchIndex::matchedWordsOf`. A case-only duplicate
@@ -153,17 +154,13 @@ export class EntriesStore {
     this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
     this.inFlightPatches.add(inFlight);
-    this.rawEntries.update((current) =>
-      current.map((entry) => (entry.id === entryId ? { ...entry, ...inFlight.patch } : entry)),
-    );
+    this.patchEntries([entryId], (entry) => ({ ...entry, ...inFlight.patch }));
     this.api
       .updateState(entryId, patch)
       .pipe(finalize(() => this.inFlightPatches.delete(inFlight)))
       .subscribe({
         error: (error: HttpErrorResponse) => {
-          this.rawEntries.update((current) =>
-            current.map((entry) => (entry.id === entryId ? before : entry)),
-          );
+          this.patchEntries([entryId], () => before);
           this.error.set(parseProblem(error));
           this.failedOperation.set(() => this.setState(entryId, patch, onError));
           onError?.();
@@ -171,15 +168,10 @@ export class EntriesStore {
       });
   }
 
-  /** Takes what completing a listed row filled in (#1502); the row's own state and
-   *  list context stay, since the user may have changed them while the call was out. */
   mergeCompleted(rows: EntryDto[]): void {
     const finished = new Map(rows.map((row) => [row.id, row]));
-    this.rawEntries.update((current) =>
-      current.map((entry) => {
-        const row = finished.get(entry.id);
-        return row ? { ...entry, ...completedFields(row) } : entry;
-      }),
+    this.patchEntries(finished.keys(), (entry) =>
+      withCompleted(entry, finished.get(entry.id) ?? entry),
     );
   }
 
@@ -187,10 +179,23 @@ export class EntriesStore {
    *  on the server first (mark-read-batch); this only reflects it in an
    *  all-items list, where the rows stay visible. */
   markHiddenLocally(ids: number[]): void {
-    const marked = new Set(ids);
-    this.rawEntries.update((current) =>
-      current.map((entry) => (marked.has(entry.id) ? { ...entry, isHidden: true } : entry)),
-    );
+    this.patchEntries(ids, (entry) => ({ ...entry, isHidden: true }));
+  }
+
+  /** Rewrites the listed entries with these ids through `patch`. The list keeps its
+   *  identity when `patch` hands every one of them back unchanged. */
+  private patchEntries(ids: Iterable<number>, patch: (entry: EntryDto) => EntryDto): void {
+    const targets = new Set(ids);
+    this.rawEntries.update((current) => {
+      let changed = false;
+      const patched = current.map((entry) => {
+        if (!targets.has(entry.id)) return entry;
+        const next = patch(entry);
+        changed ||= next !== entry;
+        return next;
+      });
+      return changed ? patched : current;
+    });
   }
 
   /** Surfaces a mutation a caller ran outside the store on the same error
@@ -215,37 +220,6 @@ export class EntriesStore {
     this.error.set(null);
     this.failedOperation.set(null);
   }
-}
-
-type CompletedFields = Pick<
-  EntryDto,
-  | 'title'
-  | 'summary'
-  | 'excerpt'
-  | 'imageUrl'
-  | 'imageWidth'
-  | 'imageHeight'
-  | 'imageAspectRatio'
-  | 'imageRenditions'
-  | 'media'
-  | 'linkCards'
-  | 'pending'
->;
-
-function completedFields(row: EntryDto): CompletedFields {
-  return {
-    title: row.title,
-    summary: row.summary,
-    excerpt: row.excerpt,
-    imageUrl: row.imageUrl,
-    imageWidth: row.imageWidth,
-    imageHeight: row.imageHeight,
-    imageAspectRatio: row.imageAspectRatio,
-    imageRenditions: row.imageRenditions,
-    media: row.media,
-    linkCards: row.linkCards,
-    pending: row.pending,
-  };
 }
 
 /** Mirrors the backend's flag coupling (#482): viewing also hides
