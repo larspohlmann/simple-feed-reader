@@ -372,6 +372,21 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(429);
     }
 
+    public function testAUrlLessEntryIsAnsweredWhenTheReaderBudgetIsSpent(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-nourl-budget@example.com');
+        $this->installFake();
+        $entry = $this->seedEntry($user, null);
+        $readerLimiter = self::getContainer()->get('limiter.reader');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
+        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseIsSuccessful();
+    }
+
     public function testEntryOfAnotherUserIs404AndDoesNotCallExtractor(): void
     {
         $client = self::createClient();
@@ -384,6 +399,22 @@ final class EntryReaderControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(404);
         self::assertSame([], $fake->calls);
+    }
+
+    public function testOwnershipIsCheckedBeforeTheReaderBudget(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('reader-idor-budget@example.com');
+        [, $stranger] = $this->auth('reader-owner-budget@example.com');
+        $this->installFake();
+        $entry = $this->seedEntry($stranger, 'https://example.com/article');
+        $readerLimiter = self::getContainer()->get('limiter.reader');
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $readerLimiter);
+        $readerLimiter->create('user-' . $user->requireId())->consume(60);
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
+
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testAnonymousIsRejected(): void
