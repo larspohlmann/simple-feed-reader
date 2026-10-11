@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
-/**
- * Atom 1.0 (RFC 4287): the current dialect, namespaced
- * "http://www.w3.org/2005/Atom".
- */
+use App\Service\Parser\Model\FeedNamespace;
+
 final readonly class Atom10Parser extends AbstractAtomParser
 {
-    public const string NAMESPACE = 'http://www.w3.org/2005/Atom';
-
     protected function namespaceUri(): string
     {
-        return self::NAMESPACE;
+        return FeedNamespace::Atom10->value;
     }
 
     protected function dateElements(): array

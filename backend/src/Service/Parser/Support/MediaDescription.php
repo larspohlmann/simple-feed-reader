@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
+use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Text\Support\LinkedPlainText;
 
 /** A Media RSS item's description as a body: the item's own, else its group's. */
@@ -26,14 +28,14 @@ final class MediaDescription
 
     private static function groupDescription(\DOMElement $item): ?\DOMElement
     {
-        $group = XmlHelper::childElement($item, 'group', XmlHelper::MEDIA_RSS_NAMESPACE);
+        $group = CoreElement::extension($item, FeedNamespace::MediaRss)->child('group');
 
         return $group === null ? null : self::descriptionOf($group);
     }
 
     private static function descriptionOf(\DOMElement $parent): ?\DOMElement
     {
-        return XmlHelper::childElement($parent, 'description', XmlHelper::MEDIA_RSS_NAMESPACE);
+        return CoreElement::extension($parent, FeedNamespace::MediaRss)->child('description');
     }
 
     private function __construct()

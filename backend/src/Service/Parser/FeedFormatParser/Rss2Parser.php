@@ -9,6 +9,7 @@ use App\Enum\CommentsLoad;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -26,10 +27,6 @@ use App\Service\Text\Support\PlainText;
 
 final readonly class Rss2Parser implements FeedFormatParserInterface
 {
-    private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
-    private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
-    private const string WFW_NS = 'http://wellformedweb.org/CommentAPI/';
-
     public function __construct(
         private FeedItemImageSelector $imageSelector,
         private ItemMediaExtractor $mediaExtractor,
@@ -43,24 +40,22 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
-        $root = $element->ownerDocument?->documentElement;
-        if ($root === null) {
-            return false;
-        }
-        $core = CoreElement::inOwnNamespace($root);
-        $channel = $core->isCore($element, 'item') ? $core->child('channel') : null;
+        $root = $parent->parentNode;
 
-        return $channel !== null && $parent->isSameNode($channel);
+        return $root instanceof \DOMElement
+            && XmlHelper::isRoot($root)
+            && self::core($root)->isCore($element, 'item')
+            && self::channelOf($root)?->isSameNode($parent) === true;
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
     {
         $root = $skeleton->documentElement;
-        $channelElement = $root === null ? null : CoreElement::inOwnNamespace($root)->child('channel');
+        $channelElement = $root === null ? null : self::channelOf($root);
         if ($channelElement === null) {
             throw new FeedParseException('RSS document without <channel>');
         }
-        $channel = CoreElement::inOwnNamespace($channelElement);
+        $channel = self::core($channelElement);
 
         return (new ParsedFeedModel(
             PlainText::from($channel->text('title')),
@@ -73,7 +68,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
 
     public function parseEntry(\DOMElement $entry): ?ParsedEntryModel
     {
-        $item = CoreElement::inOwnNamespace($entry);
+        $item = self::core($entry);
         $title = $item->text('title');
         $link = $item->text('link');
         if ($title === null && $link === null) {
@@ -81,7 +76,7 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         }
 
         $description = self::coreOrDublinCore($item, 'description', 'description');
-        $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
+        $contentEncoded = $item->in(FeedNamespace::Content)->text('encoded');
 
         $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($item);
@@ -104,16 +99,26 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         );
     }
 
+    private static function core(\DOMElement $element): CoreElement
+    {
+        return CoreElement::inOwnNamespace($element);
+    }
+
+    private static function channelOf(\DOMElement $root): ?\DOMElement
+    {
+        return self::core($root)->child('channel');
+    }
+
     private static function coreOrDublinCore(CoreElement $item, string $coreName, string $dublinCoreName): ?string
     {
-        return $item->text($coreName) ?? XmlHelper::childText($item->element, $dublinCoreName, self::DC_NS);
+        return $item->text($coreName) ?? $item->in(FeedNamespace::DublinCore)->text($dublinCoreName);
     }
 
     private static function discussion(CoreElement $item): Discussion
     {
         return Discussion::of(
             $item->httpUrl('comments'),
-            XmlHelper::childHttpUrl($item->element, 'commentRss', self::WFW_NS),
+            $item->in(FeedNamespace::WellFormedWeb)->httpUrl('commentRss'),
             CommentsLoad::Manual,
         );
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Support;
 
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedCategoryModel;
 use App\Service\Parser\Pass\CoreElement;
 
@@ -35,7 +36,7 @@ final class ItemCategoryExtractor
         if ($item->isCore($child, 'category')) {
             return self::fromCategoryElement($child);
         }
-        if (XmlHelper::isElement($child, 'subject', XmlHelper::DUBLIN_CORE_NAMESPACE)) {
+        if (XmlHelper::isElement($child, 'subject', FeedNamespace::DublinCore->value)) {
             $label = trim($child->textContent);
 
             return $label === '' ? null : new ParsedCategoryModel($label);

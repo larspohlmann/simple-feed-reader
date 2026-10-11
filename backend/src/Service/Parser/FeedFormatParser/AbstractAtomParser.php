@@ -7,6 +7,7 @@ namespace App\Service\Parser\FeedFormatParser;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -147,7 +148,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         // Some Atom feeds date entries only with Dublin Core <dc:date>; dropping it would show every entry as "now".
-        return XmlHelper::childText($entry->element, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
+        return $entry->in(FeedNamespace::DublinCore)->text('date');
     }
 
     private static function alternateLink(CoreElement $parent): ?string

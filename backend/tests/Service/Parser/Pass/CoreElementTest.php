@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Pass;
 
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Pass\CoreElement;
 use PHPUnit\Framework\TestCase;
 
@@ -11,6 +12,7 @@ final class CoreElementTest extends TestCase
 {
     private const string CORE_NAMESPACE = 'urn:example:core';
     private const string OTHER_NAMESPACE_DECLARATION = ' xmlns:x="urn:example:other"';
+    private const string DUBLIN_CORE_DECLARATION = ' xmlns:dc="' . FeedNamespace::DublinCore->value . '"';
 
     public function testReadsTheTrimmedTextOfACoreChild(): void
     {
@@ -99,6 +101,32 @@ final class CoreElementTest extends TestCase
         self::assertFalse($item->isCore($core, 'link'));
         self::assertFalse($item->isCore($foreign, 'category'));
         self::assertFalse($item->isCore($text, 'category'));
+    }
+
+    public function testInReadsTheSameElementInAnExtensionNamespace(): void
+    {
+        $item = $this->core(
+            '<date>core</date><dc:date' . self::DUBLIN_CORE_DECLARATION . '>2024-01-02</dc:date>',
+        );
+
+        self::assertSame('2024-01-02', $item->in(FeedNamespace::DublinCore)->text('date'));
+        self::assertSame('core', $item->text('date'));
+    }
+
+    public function testAnExtensionViewIgnoresCoreChildren(): void
+    {
+        $item = $this->core('<date>core</date>');
+
+        self::assertNull($item->in(FeedNamespace::DublinCore)->text('date'));
+    }
+
+    public function testExtensionReadsARawElementInThatNamespace(): void
+    {
+        $element = self::element(
+            '<item' . self::DUBLIN_CORE_DECLARATION . '><creator>core</creator><dc:creator>Ada</dc:creator></item>',
+        );
+
+        self::assertSame('Ada', CoreElement::extension($element, FeedNamespace::DublinCore)->text('creator'));
     }
 
     private function core(string $children): CoreElement
