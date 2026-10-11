@@ -18,6 +18,7 @@ import { CommentsService, CommentsState } from '../entry-comments/comments.servi
 import { ImageProxyService, ProxyOutcome } from '../../../shared/proxied-image/image-proxy.service';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
+import { PreviewProgress } from '../../link-card/preview-progress';
 
 const entryActions = {
   favorite: jest.fn(),
@@ -213,6 +214,7 @@ describe('ReaderViewComponent', () => {
         { provide: ReaderContentService, useValue: { load: loadMock, reload: reloadMock } },
         { provide: EntryBodyService, useValue: fakeBody },
         { provide: ImageProxyService, useValue: imageProxy },
+        { provide: PreviewProgress, useValue: { isLoading: () => true } },
       ],
     });
   });

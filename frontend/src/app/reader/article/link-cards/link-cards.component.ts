@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { LinkCardDto } from '../../link-card/link-card';
+import { EntryDto } from '../../models';
 import { LinkCardComponent } from '../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../link-card/link-card-placeholder.component';
 
@@ -11,6 +11,5 @@ import { LinkCardPlaceholderComponent } from '../../link-card/link-card-placehol
   styleUrl: './link-cards.component.scss',
 })
 export class LinkCardsComponent {
-  readonly cards = input.required<LinkCardDto[]>();
-  readonly pending = input(false);
+  readonly entry = input.required<EntryDto>();
 }

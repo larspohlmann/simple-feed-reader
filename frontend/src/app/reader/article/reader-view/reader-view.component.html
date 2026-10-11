@@ -236,7 +236,7 @@
             }
             <div #content class="content" [innerHTML]="source.displayHtml()"></div>
             @if (e.linkCards.length || e.pending) {
-              <app-link-cards [cards]="e.linkCards" [pending]="e.pending" />
+              <app-link-cards [entry]="e" />
             }
           }
           @if (e.categories.length) {

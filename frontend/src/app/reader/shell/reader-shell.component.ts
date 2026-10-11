@@ -54,6 +54,7 @@ import { DrawerSwipeDirective } from './drawer-swipe.directive';
 import { PaneResizeDirective } from './pane-resize.directive';
 import { SidebarCountsPoll } from './sidebar-counts-poll.service';
 import { PendingEntriesPoll } from './pending-entries-poll.service';
+import { PreviewProgress } from '../link-card/preview-progress';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
@@ -84,6 +85,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
   providers: [
     SidebarCountsPoll,
     PendingEntriesPoll,
+    { provide: PreviewProgress, useExisting: PendingEntriesPoll },
     ReaderRouteState,
     ListHeading,
     EntryStateActions,

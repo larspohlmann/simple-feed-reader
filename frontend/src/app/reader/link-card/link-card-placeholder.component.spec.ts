@@ -2,12 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { LinkCardPlaceholderComponent } from './link-card-placeholder.component';
+import { PreviewProgress } from './preview-progress';
 
-function mount(): HTMLElement {
+function mount({ loading = true, lang = 'en' } = {}): HTMLElement {
   TestBed.configureTestingModule({
     imports: [LinkCardPlaceholderComponent, provideTranslocoTesting()],
+    providers: [
+      { provide: PreviewProgress, useValue: { isLoading: (id: number) => loading && id === 7 } },
+    ],
   });
+  TestBed.inject(TranslocoService).setActiveLang(lang);
   const fixture = TestBed.createComponent(LinkCardPlaceholderComponent);
+  fixture.componentRef.setInput('entryId', 7);
   fixture.detectChanges();
   return fixture.nativeElement as HTMLElement;
 }
@@ -17,19 +23,24 @@ describe('LinkCardPlaceholderComponent', () => {
     const element = mount();
 
     expect(element.getAttribute('aria-busy')).toBe('true');
+    expect(element.classList).toContain('loading');
     expect(element.querySelector('.image')!.getAttribute('aria-hidden')).toBe('true');
     expect(element.querySelector('[role="status"], [aria-live]')).toBeNull();
     expect(element.querySelector('.label')!.textContent!.trim()).toBe('Loading preview…');
   });
 
-  it('says it in German', () => {
-    TestBed.configureTestingModule({
-      imports: [LinkCardPlaceholderComponent, provideTranslocoTesting()],
-    });
-    TestBed.inject(TranslocoService).setActiveLang('de');
-    const fixture = TestBed.createComponent(LinkCardPlaceholderComponent);
-    fixture.detectChanges();
+  it('stops claiming progress once nothing works on the preview any more (#1516)', () => {
+    const element = mount({ loading: false });
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Vorschau wird geladen…');
+    expect(element.hasAttribute('aria-busy')).toBe(false);
+    expect(element.classList).not.toContain('loading');
+    expect(element.querySelector('.label')!.textContent!.trim()).toBe('No preview yet');
+  });
+
+  it.each([
+    [true, 'Vorschau wird geladen…'],
+    [false, 'Noch keine Vorschau'],
+  ])('says it in German (loading: %s)', (loading, text) => {
+    expect(mount({ loading, lang: 'de' }).textContent).toContain(text);
   });
 });
