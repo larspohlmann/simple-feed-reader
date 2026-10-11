@@ -62,7 +62,7 @@ final readonly class EntryListRow
     {
         $ids = [];
         foreach ($rows as $row) {
-            foreach ([$row, ...$row->duplicates] as $member) {
+            foreach ($row->members() as $member) {
                 $id = $member->entry->getId();
                 if ($id !== null) {
                     $ids[$id] = $id;
@@ -71,6 +71,25 @@ final readonly class EntryListRow
         }
 
         return array_values($ids);
+    }
+
+    /** @return list<self> this row, then its duplicates */
+    public function members(): array
+    {
+        return [$this, ...$this->duplicates];
+    }
+
+    /**
+     * This row and each of its duplicates, put through the same change.
+     *
+     * @param callable(self): self $change
+     */
+    public function mapWithDuplicates(callable $change): self
+    {
+        return $change($this->withDuplicates(array_map(
+            static fn (self $duplicate): self => $duplicate->mapWithDuplicates($change),
+            $this->duplicates,
+        )));
     }
 
     /**
@@ -84,44 +103,24 @@ final readonly class EntryListRow
     /** @param list<string> $categories */
     public function withCategories(array $categories): self
     {
-        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
-            $categories,
-            $this->savedSearches,
-            $this->linkCards,
-            $this->pending,
-        ));
+        return $this->copyWith($this->duplicates, $this->enrichment()->withCategories($categories));
     }
 
     /** @param list<array{id: int, slug: string, term: string}> $savedSearches */
     public function withSavedSearches(array $savedSearches): self
     {
-        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
-            $this->categories,
-            $savedSearches,
-            $this->linkCards,
-            $this->pending,
-        ));
+        return $this->copyWith($this->duplicates, $this->enrichment()->withSavedSearches($savedSearches));
     }
 
     /** @param list<LinkCardContent> $linkCards */
     public function withLinkCards(array $linkCards): self
     {
-        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
-            $this->categories,
-            $this->savedSearches,
-            $linkCards,
-            $this->pending,
-        ));
+        return $this->copyWith($this->duplicates, $this->enrichment()->withLinkCards($linkCards));
     }
 
     public function withPending(bool $pending): self
     {
-        return $this->copyWith($this->duplicates, new EntryListRowEnrichment(
-            $this->categories,
-            $this->savedSearches,
-            $this->linkCards,
-            $pending,
-        ));
+        return $this->copyWith($this->duplicates, $this->enrichment()->withPending($pending));
     }
 
     private function enrichment(): EntryListRowEnrichment

@@ -28,24 +28,13 @@ final readonly class SavedSearchMembershipLoader
 
         $byEntryId = $this->memberships->savedSearchesByEntry($userId, EntryListRow::entryIdsOf($rows));
 
+        $withMemberships = static fn (EntryListRow $row): EntryListRow => $row->withSavedSearches(
+            $byEntryId[$row->entry->getId()] ?? [],
+        );
+
         return array_map(
-            fn (EntryListRow $row): EntryListRow => $this->enrich($row, $byEntryId),
+            static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($withMemberships),
             $rows,
         );
-    }
-
-    /**
-     * @param array<int, list<array{id: int, slug: string, term: string}>> $byEntryId
-     */
-    private function enrich(EntryListRow $row, array $byEntryId): EntryListRow
-    {
-        $enrichedDuplicates = array_map(
-            fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $byEntryId),
-            $row->duplicates,
-        );
-
-        return $row
-            ->withDuplicates($enrichedDuplicates)
-            ->withSavedSearches($byEntryId[$row->entry->getId()] ?? []);
     }
 }

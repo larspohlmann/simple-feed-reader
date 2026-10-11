@@ -41,8 +41,7 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per user: a list load polls its pending entries up to 20 times; its own budget, so polling never spends the
-        # reader view's. 120 covers one load's 20 polls plus a few list switches.
+        # Per user, apart from the reader's budget: a list load polls up to 20 times, and 120 allows a few switches.
         entry_completion:
             policy: 'sliding_window'
             limit: 120

@@ -121,11 +121,9 @@ final readonly class PostEmbedRenderer
             new LinkCardContent($url, $title, $external->string('description'), $thumbnail, HostKey::forUrl($url)),
         );
 
-        return $card === null ? null : new RenderedEmbedModel(
-            '',
-            $thumbnail === null ? null : new DeclaredImageModel($thumbnail),
-            linkCard: $card,
-        );
+        return $card === null
+            ? null
+            : RenderedEmbedModel::card($card, $thumbnail === null ? null : new DeclaredImageModel($thumbnail));
     }
 
     private function quote(JsonNodeModel $record): ?RenderedEmbedModel

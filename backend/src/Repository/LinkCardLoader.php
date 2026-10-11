@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Entity\LinkCardContent;
-
 final readonly class LinkCardLoader
 {
     public function __construct(private LinkCardRepository $linkCards)
@@ -25,20 +23,10 @@ final readonly class LinkCardLoader
 
         $cardsByEntryId = $this->linkCards->contentsByEntryIds(EntryListRow::entryIdsOf($rows));
 
-        return array_map(
-            fn (EntryListRow $row): EntryListRow => $this->enrich($row, $cardsByEntryId),
-            $rows,
-        );
-    }
-
-    /** @param array<int, list<LinkCardContent>> $cardsByEntryId */
-    private function enrich(EntryListRow $row, array $cardsByEntryId): EntryListRow
-    {
-        $enrichedDuplicates = array_map(
-            fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $cardsByEntryId),
-            $row->duplicates,
+        $withCards = static fn (EntryListRow $row): EntryListRow => $row->withLinkCards(
+            $cardsByEntryId[$row->entry->getId()] ?? [],
         );
 
-        return $row->withDuplicates($enrichedDuplicates)->withLinkCards($cardsByEntryId[$row->entry->getId()] ?? []);
+        return array_map(static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($withCards), $rows);
     }
 }

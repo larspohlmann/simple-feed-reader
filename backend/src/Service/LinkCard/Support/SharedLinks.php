@@ -7,13 +7,13 @@ namespace App\Service\LinkCard\Support;
 use App\Entity\LinkCardContent;
 use App\Service\Fetch\Support\HostKey;
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Html\Support\TextNodes;
 use App\Service\LinkCard\Model\SharedLinksModel;
 use App\Service\Text\Support\LinkedPlainText;
 use App\Service\Text\Support\Whitespace;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
-use Dom\Node;
 use Dom\Text;
 
 /** The links a post shares, as opposed to the hashtags, mentions, quotes and words that merely link. */
@@ -52,7 +52,7 @@ final class SharedLinks
     private static function linkBareUrls(HTMLDocument $document): int
     {
         $linked = 0;
-        foreach (self::allTexts($document->body) as $text) {
+        foreach (TextNodes::in($document->body) as $text) {
             if ($text->parentElement?->closest('a, code, pre') === null) {
                 $linked += self::linkUrlsIn($text, $document);
             }
@@ -115,7 +115,7 @@ final class SharedLinks
         }
 
         $before = '';
-        foreach (self::allTexts($paragraph) as $text) {
+        foreach (TextNodes::in($paragraph) as $text) {
             if ($anchor->contains($text)) {
                 break;
             }
@@ -123,21 +123,6 @@ final class SharedLinks
         }
 
         return Whitespace::collapse($before) === 'RE:';
-    }
-
-    /** @return list<Text> */
-    private static function allTexts(?Node $node): array
-    {
-        $texts = [];
-        for ($child = $node?->firstChild; $child !== null; $child = $child->nextSibling) {
-            if ($child instanceof Text) {
-                $texts[] = $child;
-            } else {
-                array_push($texts, ...self::allTexts($child));
-            }
-        }
-
-        return $texts;
     }
 
     private function __construct()

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
+use App\Service\Html\Support\MetaName;
+use App\Service\Html\Support\MetaProperty;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -100,7 +102,7 @@ final readonly class HtmlItemExtractor
     private function feedTitle(HTMLDocument $document): ?string
     {
         $candidates = [
-            $document->querySelector('meta[property="og:site_name"]')?->getAttribute('content'),
+            MetaProperty::content($document, 'og:site_name'),
             $document->querySelector('title')?->textContent,
         ];
         foreach ($candidates as $candidate) {
@@ -115,8 +117,7 @@ final readonly class HtmlItemExtractor
 
     private function metaDescription(HTMLDocument $document): ?string
     {
-        $description = $document->querySelector('meta[name="description"]')?->getAttribute('content');
-        $description = TextNormalizer::normalize($description ?? '');
+        $description = TextNormalizer::normalize(MetaName::content($document, 'description'));
 
         return $description === '' ? null : $description;
     }

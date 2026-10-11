@@ -6,10 +6,6 @@ namespace App\Repository;
 
 use App\Entity\LinkCardContent;
 
-/**
- * What the loaders batch-attach to a row after hydration: feed categories, saved searches, shared-link cards, and
- * whether the post is still being completed.
- */
 final readonly class EntryListRowEnrichment
 {
     public function __construct(
@@ -21,5 +17,28 @@ final readonly class EntryListRowEnrichment
         public array $linkCards = [],
         public bool $pending = false,
     ) {
+    }
+
+    /** @param list<string> $categories */
+    public function withCategories(array $categories): self
+    {
+        return new self($categories, $this->savedSearches, $this->linkCards, $this->pending);
+    }
+
+    /** @param list<array{id: int, slug: string, term: string}> $savedSearches */
+    public function withSavedSearches(array $savedSearches): self
+    {
+        return new self($this->categories, $savedSearches, $this->linkCards, $this->pending);
+    }
+
+    /** @param list<LinkCardContent> $linkCards */
+    public function withLinkCards(array $linkCards): self
+    {
+        return new self($this->categories, $this->savedSearches, $linkCards, $this->pending);
+    }
+
+    public function withPending(bool $pending): self
+    {
+        return new self($this->categories, $this->savedSearches, $this->linkCards, $pending);
     }
 }

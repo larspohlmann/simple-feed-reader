@@ -14,10 +14,7 @@ use App\Service\Reader\Exception\PageFetchException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
-/**
- * Builds the link cards of queued posts, oldest first, within one call's page fetches. Each post gets one attempt:
- * a page that fails is logged and skipped, and the row is marked done either way.
- */
+/** Builds queued posts' link cards, oldest first: one attempt each, the row marked done even when a page fails. */
 final readonly class PostLinkCards
 {
     private const int FETCHES_PER_CALL = 3;

@@ -19,6 +19,11 @@ final readonly class RenderedEmbedModel
     ) {
     }
 
+    public static function card(LinkCardContent $card, ?DeclaredImageModel $leadImage): self
+    {
+        return new self('', $leadImage, linkCard: $card);
+    }
+
     public function followedBy(self $next): self
     {
         return new self(

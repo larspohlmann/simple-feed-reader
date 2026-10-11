@@ -31,25 +31,11 @@ final readonly class EntryCategoryLoader
 
         $labelsByEntryId = $this->labelsFor(EntryListRow::entryIdsOf($rows));
 
-        return array_map(
-            fn (EntryListRow $row): EntryListRow => $this->enrich($row, $labelsByEntryId),
-            $rows,
-        );
-    }
-
-    /**
-     * @param array<int, list<string>> $labelsByEntryId
-     */
-    private function enrich(EntryListRow $row, array $labelsByEntryId): EntryListRow
-    {
-        $enrichedDuplicates = array_map(
-            fn (EntryListRow $duplicate): EntryListRow => $this->enrich($duplicate, $labelsByEntryId),
-            $row->duplicates,
+        $withLabels = static fn (EntryListRow $row): EntryListRow => $row->withCategories(
+            $labelsByEntryId[$row->entry->getId()] ?? [],
         );
 
-        return $row
-            ->withDuplicates($enrichedDuplicates)
-            ->withCategories($labelsByEntryId[$row->entry->getId()] ?? []);
+        return array_map(static fn (EntryListRow $row): EntryListRow => $row->mapWithDuplicates($withLabels), $rows);
     }
 
     /**
