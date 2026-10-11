@@ -88,6 +88,10 @@ final readonly class PostEnricher
     private function claimAndSettle(array $queued, \DateTimeImmutable $claimedAt): void
     {
         $claimed = $this->enrichments->claim($queued, $claimedAt);
+        if ($claimed === []) {
+            return;
+        }
+
         $filled = [];
         $unsettled = [];
         foreach (array_chunk($claimed, AppViewClient::URIS_PER_CALL) as $chunk) {

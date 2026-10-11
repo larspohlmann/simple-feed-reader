@@ -19,7 +19,6 @@ use App\Service\Bluesky\PostEnricher;
 use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Fetch\HostThrottle;
 use App\Service\LinkCard\ShareLinkCards;
-use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\Bluesky;
@@ -102,11 +101,8 @@ final class EntryCompletionControllerTest extends ApiTestCase
         $this->complete($headers, [$post->requireId()]);
 
         self::assertResponseIsSuccessful();
-        $indexed = array_merge([], ...$this->indexWriter->upserts);
-        self::assertSame([$post->requireId()], array_map(
-            static fn (IndexedEntryModel $entry): int => $entry->id,
-            $indexed,
-        ));
+        $indexed = $this->indexWriter->upserted();
+        self::assertSame([$post->requireId()], array_column($indexed, 'id'));
         self::assertSame('Read this.', $indexed[0]->content);
     }
 

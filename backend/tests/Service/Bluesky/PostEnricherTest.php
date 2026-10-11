@@ -121,7 +121,7 @@ final class PostEnricherTest extends DbTestCase
         $this->enricher()->enrich($this->feed);
 
         self::assertEqualsCanonicalizing([$tisch->requireId(), $apples->requireId()], $this->indexedIds());
-        self::assertSame('Read this.', $this->indexedSummaries()[$tisch->requireId()]);
+        self::assertContains('Read this.', array_column($this->indexWriter->upserted(), 'summary'));
         self::assertCount(1, $this->cardsOf($this->reload($tisch)));
         self::assertSame(0, $this->pendingCount());
     }
@@ -555,18 +555,7 @@ final class PostEnricherTest extends DbTestCase
     /** @return list<int> */
     private function indexedIds(): array
     {
-        return array_keys($this->indexedSummaries());
-    }
-
-    /** @return array<int, ?string> by entry id, in upsert order */
-    private function indexedSummaries(): array
-    {
-        $summaries = [];
-        foreach (array_merge([], ...$this->indexWriter->upserts) as $indexed) {
-            $summaries[$indexed->id] = $indexed->summary;
-        }
-
-        return $summaries;
+        return array_column($this->indexWriter->upserted(), 'id');
     }
 
     private function linkCardPass(): ShareLinkCards

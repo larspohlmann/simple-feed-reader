@@ -46,6 +46,12 @@ final class RecordingSearchIndexWriter implements SearchIndexWriterInterface
         $this->throwIfConfiguredToFail();
     }
 
+    /** @return list<IndexedEntryModel> every upserted entry, in upsert order */
+    public function upserted(): array
+    {
+        return array_merge([], ...$this->upserts);
+    }
+
     public function clear(): void
     {
         $this->calls[] = 'clear';

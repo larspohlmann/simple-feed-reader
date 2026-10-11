@@ -80,7 +80,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        $indexed = array_merge([], ...$this->indexWriter->upserts);
+        $indexed = $this->indexWriter->upserted();
         self::assertSame([$post->requireId()], array_column($indexed, 'id'));
         self::assertSame('Reposting for the crew', $indexed[0]->summary);
     }
