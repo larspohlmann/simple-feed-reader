@@ -62,38 +62,36 @@ final class PostLinkCardsTest extends DbTestCase
         self::assertSame([], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
-    public function testACallSpendsThreeFetchesOnTheOldestPostsThatFit(): void
+    public function testACallSpendsFiveFetchesOnTheOldestPostsThatFit(): void
     {
-        $oldest = $this->queuedPost(1, self::sharing(1, 2));
-        $middle = $this->queuedPost(2, self::sharing(2, 2));
-        $newest = $this->queuedPost(3, self::sharing(3, 1));
+        $oldest = $this->queuedPost(1, self::sharing(1, 3));
+        $middle = $this->queuedPost(2, self::sharing(2, 3));
+        $newest = $this->queuedPost(3, self::sharing(3, 2));
 
         $this->postLinkCards->complete($this->claimable());
-        self::assertSame(2, $this->client->getRequestsCount());
-        self::assertCount(2, $this->cardTitles($oldest));
+        self::assertSame(3, $this->client->getRequestsCount());
+        self::assertCount(3, $this->cardTitles($oldest));
         self::assertSame([], $this->cardTitles($middle));
 
         $this->postLinkCards->complete($this->claimable());
-        self::assertSame(5, $this->client->getRequestsCount());
-        self::assertCount(2, $this->cardTitles($middle));
-        self::assertCount(1, $this->cardTitles($newest));
+        self::assertSame(8, $this->client->getRequestsCount());
+        self::assertCount(3, $this->cardTitles($middle));
+        self::assertCount(2, $this->cardTitles($newest));
     }
 
-    public function testAPostSharingMoreLinksThanACallFetchesGetsCardsForTheFirstThree(): void
+    public function testAFiveLinkPostGetsEveryCardAndTheNextPostWaitsForTheNextCall(): void
     {
-        $post = $this->queuedPost(1, self::sharing(1, 5));
+        $fiveLinks = $this->queuedPost(1, self::sharing(1, 5));
+        $twoLinks = $this->queuedPost(2, self::sharing(2, 2));
 
         $this->postLinkCards->complete($this->claimable());
+        self::assertSame(5, $this->client->getRequestsCount());
+        self::assertCount(5, $this->cardTitles($fiveLinks));
+        self::assertSame([], $this->cardTitles($twoLinks));
 
-        self::assertSame(3, $this->client->getRequestsCount());
-        self::assertSame(
-            [
-                'Card for https://example.com/1/1',
-                'Card for https://example.com/1/2',
-                'Card for https://example.com/1/3',
-            ],
-            $this->cardTitles($post),
-        );
+        $this->postLinkCards->complete($this->claimable());
+        self::assertSame(7, $this->client->getRequestsCount());
+        self::assertCount(2, $this->cardTitles($twoLinks));
         self::assertSame([], $this->claimable());
     }
 

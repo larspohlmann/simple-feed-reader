@@ -17,7 +17,7 @@ use Psr\Log\LoggerInterface;
 /** Builds queued posts' link cards, oldest first: one attempt each, the row marked done even when a page fails. */
 final readonly class PostLinkCards
 {
-    private const int FETCHES_PER_CALL = 3;
+    private const int FETCHES_PER_CALL = SharedLinks::MAX;
 
     public function __construct(
         private PageCardReader $pageCards,
@@ -53,8 +53,8 @@ final readonly class PostLinkCards
     }
 
     /**
-     * The oldest rows whose links fit the call's fetches, by row id. The first row is always taken, so a post sharing
-     * more links than one call fetches gets cards for as many as it does.
+     * The oldest rows whose links fit the call's fetches, by row id. The first row always runs, so no post is left
+     * half-carded.
      *
      * @param list<PostEnrichment> $queued
      *
@@ -65,15 +65,12 @@ final readonly class PostLinkCards
         $remaining = self::FETCHES_PER_CALL;
         $sharedUrlsByRowId = [];
         foreach ($queued as $row) {
-            if ($remaining === 0) {
-                break;
-            }
             $sharedUrls = SharedLinks::of((string) $row->getEntry()->getContentHtml())->urls;
             if ($sharedUrlsByRowId !== [] && \count($sharedUrls) > $remaining) {
                 break;
             }
-            $sharedUrlsByRowId[$row->requireId()] = \array_slice($sharedUrls, 0, $remaining);
-            $remaining -= \count($sharedUrlsByRowId[$row->requireId()]);
+            $sharedUrlsByRowId[$row->requireId()] = $sharedUrls;
+            $remaining -= \count($sharedUrls);
         }
 
         return $sharedUrlsByRowId;

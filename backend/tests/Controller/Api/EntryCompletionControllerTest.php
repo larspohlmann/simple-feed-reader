@@ -104,26 +104,24 @@ final class EntryCompletionControllerTest extends ApiTestCase
         self::assertSame(0, $this->pages->getRequestsCount());
     }
 
-    public function testACallSpendsAtMostThreePageFetchesOnTheOldestPosts(): void
+    public function testACallSpendsAtMostFivePageFetchesOnTheOldestPosts(): void
     {
         [$headers, $user] = $this->auth('complete-budget@example.com');
         $feed = $this->subscribedFeed($user);
         $posts = array_map(
             fn (int $number): Entry => $this->queuedLinkPost($feed, $number, self::sharing($number)),
-            [4, 1, 3, 2],
+            [6, 1, 5, 2, 4, 3],
         );
 
         $this->complete($headers, array_map(static fn (Entry $post): int => $post->requireId(), $posts));
 
         self::assertResponseIsSuccessful();
-        self::assertSame(3, $this->pages->getRequestsCount());
-        [$newest, $oldest, $third, $second] = $posts;
-        $expected = [
-            $oldest->requireId() => false,
-            $second->requireId() => false,
-            $third->requireId() => false,
-            $newest->requireId() => true,
-        ];
+        self::assertSame(5, $this->pages->getRequestsCount());
+        $newest = $posts[0];
+        $expected = [];
+        foreach ($posts as $post) {
+            $expected[$post->requireId()] = $post === $newest;
+        }
         ksort($expected);
         self::assertSame($expected, $this->pendingById($this->payload($this->client)['entries']));
     }

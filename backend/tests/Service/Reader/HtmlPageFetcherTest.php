@@ -74,15 +74,25 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame('https://example.com/post', $result->finalUrl);
     }
 
-    public function testAHeadIsTheFirst512KbOfALargerPage(): void
+    public function testAHeadIsThePagesFirst512KbAndTheDownloadStopsNearThere(): void
     {
-        $page = '<html lang="en"><head><title>Story</title></head><body>'
-            . str_repeat('x', 1_000_000) . '</body></html>';
-        $fetcher = $this->fetcher([new MockResponse($page, ['http_code' => 200])]);
+        $pulledBytes = 0;
+        $chunks = static function () use (&$pulledBytes): \Generator {
+            $opening = '<html lang="en"><head><title>Story</title></head><body>';
+            $pulledBytes += \strlen($opening);
+            yield $opening;
+            for ($index = 0; $index < 200; $index++) {
+                $pulledBytes += 16_384;
+                yield str_repeat('x', 16_384);
+            }
+        };
+        $fetcher = $this->fetcher([new MockResponse($chunks(), ['http_code' => 200])]);
 
-        $head = $fetcher->fetchHead('https://example.com/long');
+        $head = $fetcher->fetchHead('https://example.com/huge');
 
-        self::assertSame(substr($page, 0, 524_288), $head->html);
+        self::assertSame(524_288, \strlen($head->html));
+        self::assertStringStartsWith('<html lang="en"><head><title>Story</title></head><body>xxx', $head->html);
+        self::assertLessThan(700_000, $pulledBytes);
     }
 
     public function testAHeadCutShortByTheConnectionThrows(): void

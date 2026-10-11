@@ -27,6 +27,8 @@ final readonly class HtmlPageFetcher
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
     private const int HEAD_MAX_BYTES = 524_288;
+    // The transfer is aborted a little past the cap, so the bytes the read keeps have surely arrived.
+    private const int HEAD_ABORT_BYTES = self::HEAD_MAX_BYTES + 65_536;
     private const float HEAD_TIMEOUT_SECONDS = 5.0;
     private const float HEAD_MAX_DURATION_SECONDS = 8.0;
     private const int SNIPPET_LENGTH = 200;
@@ -154,8 +156,8 @@ final readonly class HtmlPageFetcher
             'headers' => $this->headers(),
             'timeout' => self::HEAD_TIMEOUT_SECONDS,
             'max_duration' => self::HEAD_MAX_DURATION_SECONDS,
-            // Unbuffered, the stream pulls the body chunk by chunk, so reading stops the download near the cap.
             'buffer' => false,
+            'on_progress' => self::abortPastTheHead(),
         ];
     }
 
@@ -172,6 +174,21 @@ final readonly class HtmlPageFetcher
                 }
             },
         ];
+    }
+
+    /** The transfer is aborted once; the bytes before the abort are still read, up to the cap. */
+    private static function abortPastTheHead(): \Closure
+    {
+        $aborted = false;
+
+        return static function (int $downloaded) use (&$aborted): void {
+            if ($aborted || $downloaded <= self::HEAD_ABORT_BYTES) {
+                return;
+            }
+            $aborted = true;
+
+            throw new PageFetchException(sprintf('head read past %d bytes', self::HEAD_ABORT_BYTES));
+        };
     }
 
     /** @return array<string, string> */
