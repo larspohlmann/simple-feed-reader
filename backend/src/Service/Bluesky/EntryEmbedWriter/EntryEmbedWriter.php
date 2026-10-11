@@ -7,7 +7,7 @@ namespace App\Service\Bluesky\EntryEmbedWriter;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
+use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\Model\FillOutcome;
 use App\Service\Bluesky\Model\JsonNodeModel;
@@ -53,19 +53,19 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         $cardedUrls = array_map(static fn (LinkCardContent $card): string => $card->url, $embed->linkCards);
 
         $outcome = $body->uncardedBy($cardedUrls) === [] ? FillOutcome::Filled : FillOutcome::AwaitingLinkCards;
-        $entry->setShare(self::shareOf($embed, $outcome, $assembled->media));
+        $entry->setShareKind(self::shareKindOf($embed, $outcome, $assembled->media));
 
         return $outcome;
     }
 
     /** @param list<EntryMedium> $media */
-    private static function shareOf(RenderedEmbedModel $embed, FillOutcome $outcome, array $media): Share
+    private static function shareKindOf(RenderedEmbedModel $embed, FillOutcome $outcome, array $media): ?ShareKind
     {
         if ($embed->linkCards !== [] || $outcome === FillOutcome::AwaitingLinkCards) {
-            return Share::link(null);
+            return ShareKind::Link;
         }
 
-        return $media === [] ? Share::none() : Share::media(null);
+        return $media === [] ? null : ShareKind::Media;
     }
 
     /** The body without the URLs its cards replace, every other link it shares linked, the uncarded one included. */

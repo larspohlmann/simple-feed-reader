@@ -78,7 +78,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
             $this->clock->now(),
         );
 
-        $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'post-1']);
+        $post = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'post-1']);
         self::assertInstanceOf(Entry::class, $post);
         $queued = $this->entityManager->getRepository(ShareEnrichment::class)->findBy(['entry' => $post]);
         self::assertCount(1, $queued);

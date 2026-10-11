@@ -105,7 +105,7 @@ final class EntryJson
             'imageRenditions' => ImageRendition::toJsonList($entry->getImage()->servedRenditions()),
             'media' => EntryMedia::toJsonList($entry->getMedia()),
             'linkCards' => array_map(self::linkCard(...), $row->linkCards),
-            'share' => $entry->getShare()->kind?->value,
+            'share' => $entry->getShareKind()?->value,
         ];
     }
 

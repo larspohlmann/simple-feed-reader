@@ -352,7 +352,7 @@ final class EntryIngestorTest extends DbTestCase
 
     private function effectiveDateOf(Feed $feed, string $guid): string
     {
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid.value' => $guid]);
         self::assertNotNull($entry);
 
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
@@ -370,7 +370,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'with-ladder']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'with-ladder']);
         self::assertNotNull($entry);
         self::assertEquals(
             [new ImageRendition('https://i/x-300.jpg', 300), new ImageRendition('https://i/x-1024.jpg', 1024)],
@@ -580,7 +580,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, $parsed, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g1']);
         self::assertNotNull($entry);
         self::assertSame('https://i/1.jpg', $entry->getImageUrl());
         self::assertSame(948, $entry->getImageWidth());
@@ -597,7 +597,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, $parsed, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'no-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'no-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
         self::assertNull($entry->getImageWidth());
@@ -624,7 +624,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, $parsed, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'overlong-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'overlong-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
         self::assertNull($entry->getImageWidth());
@@ -642,7 +642,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'protocol-relative']);
         self::assertNotNull($entry);
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
@@ -655,7 +655,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'http-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'http-image']);
         self::assertNotNull($entry);
         self::assertSame('https://i.example.com/img.jpg', $entry->getImageUrl());
     }
@@ -668,7 +668,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'http-pending']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'http-pending']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -681,7 +681,8 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'protocol-relative-pending']);
+        $entry = $this->entityManager->getRepository(Entry::class)
+            ->findOneBy(['guid.value' => 'protocol-relative-pending']);
         self::assertNotNull($entry);
         self::assertSame('https://i/x.jpg', $entry->getImageUrl());
         self::assertNull($entry->getImage()->getCheckedAt());
@@ -695,7 +696,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-declared']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'https-declared']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
         self::assertSame(0, $entry->getImage()->getVerifyAttempts());
@@ -712,7 +713,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-halfdims']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'https-halfdims']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -725,7 +726,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'https-nodims']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'https-nodims']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImage()->getCheckedAt());
     }
@@ -741,7 +742,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'data-uri-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'data-uri-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -754,7 +755,7 @@ final class EntryIngestorTest extends DbTestCase
         ]), self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'site-relative-image']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'site-relative-image']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -777,7 +778,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, $parsed, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'fallback-summary']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'fallback-summary']);
         self::assertNotNull($entry);
         self::assertSame('Body text here.', $entry->getSummary());
     }
@@ -800,7 +801,7 @@ final class EntryIngestorTest extends DbTestCase
         $this->ingestor->ingest($feed, $parsed, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'junk-summary']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'junk-summary']);
         self::assertNotNull($entry);
         self::assertNull($entry->getSummary());
     }

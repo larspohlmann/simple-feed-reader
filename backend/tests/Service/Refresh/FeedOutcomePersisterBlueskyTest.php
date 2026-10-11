@@ -190,7 +190,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
     private function entry(string $guid): Entry
     {
         $this->entityManager->clear();
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => $guid]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => $guid]);
         self::assertInstanceOf(Entry::class, $entry);
 
         return $entry;

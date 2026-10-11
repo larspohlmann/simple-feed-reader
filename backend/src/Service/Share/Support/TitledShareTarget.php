@@ -9,8 +9,8 @@ use App\Service\Fetch\Support\HostKey;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
- * The page a titled entry shares: its url, when that leaves the feed's site while the entry itself lives there. An
- * opaque GUID proves no home, so a news site linking a sister brand is no share.
+ * The page a titled entry shares, none for a post: its url, when that leaves the feed's site while the entry itself
+ * lives there. An opaque GUID proves no home, so a news site linking a sister brand is no share.
  */
 final class TitledShareTarget
 {
@@ -18,6 +18,9 @@ final class TitledShareTarget
 
     public static function of(Entry $entry): ?string
     {
+        if ($entry->isTitleDerived()) {
+            return null;
+        }
         $target = $entry->getUrl();
         $siteUrl = $entry->getFeed()->getSiteUrl();
         if ($target === null || $siteUrl === null) {

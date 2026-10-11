@@ -10,7 +10,6 @@ use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
 use App\Enum\ShareKind;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
@@ -49,6 +48,7 @@ final class ShareLinkCardsTest extends DbTestCase
             $this->logger,
         );
         $this->feed = new Feed('https://mastodon.example/@someone.rss');
+        $this->feed->setSiteUrl('https://mastodon.example/@someone');
         $this->entityManager->persist($this->feed);
         $this->entityManager->flush();
     }
@@ -291,7 +291,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($chart);
 
-        self::assertEquals(Share::media('https://i.example.com/chart'), $chart->getShare());
+        self::assertSame(ShareKind::Media, $chart->getShareKind());
         self::assertSame('https://i.example.com/chart', $chart->getMedia()[0]->url);
     }
 
@@ -319,13 +319,13 @@ final class ShareLinkCardsTest extends DbTestCase
     public function testAPostSharingAPictureStaysALinkShare(): void
     {
         $post = $this->queuedPost(1, '<p>https://i.example.com/chart</p>');
-        $post->setShare(Share::link(null));
+        $post->setShareKind(ShareKind::Link);
         $this->entityManager->flush();
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->entityManager->refresh($post);
 
-        self::assertSame(ShareKind::Link, $post->getShare()->kind);
+        self::assertSame(ShareKind::Link, $post->getShareKind());
         self::assertSame([], $post->getMedia());
     }
 
@@ -445,9 +445,9 @@ final class ShareLinkCardsTest extends DbTestCase
     }
 
     /** Queued a minute apart, in the order the test creates them. */
-    private function queuedPost(int $number, ?string $contentHtml): Entry
+    private function queuedPost(int $number, ?string $contentHtml, ?string $url = null): Entry
     {
-        $entry = $this->entry($number, $contentHtml);
+        $entry = $this->entry($number, $contentHtml, $url);
         $this->entityManager->persist($entry);
         $this->entityManager->persist(new ShareEnrichment(
             $entry,
@@ -461,9 +461,9 @@ final class ShareLinkCardsTest extends DbTestCase
 
     private function queuedTitledShare(int $number, string $target): Entry
     {
-        $entry = $this->queuedPost($number, null);
+        $entry = $this->queuedPost($number, null, $target);
         $entry->setHeadline(Headline::fromFeed('A story'));
-        $entry->setShare(Share::link($target));
+        $entry->setShareKind(ShareKind::Link);
         $this->entityManager->flush();
 
         return $entry;
@@ -474,10 +474,10 @@ final class ShareLinkCardsTest extends DbTestCase
         $this->entityManager->persist($this->entry(0, null));
     }
 
-    private function entry(int $number, ?string $contentHtml): Entry
+    private function entry(int $number, ?string $contentHtml, ?string $url = null): Entry
     {
         $now = $this->clock->now();
-        $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, null, 'Post', $now, $now);
+        $entry = new Entry($this->feed, 'https://mastodon.example/@someone/' . $number, $url, 'Post', $now, $now);
         $entry->setContentHtml($contentHtml);
         $entry->setHeadline(Headline::derived('Post'));
         $entry->getImage()->storePending(null, null, null);

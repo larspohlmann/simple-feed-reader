@@ -15,13 +15,13 @@ use App\Entity\ImageRendition;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\SavedSearch;
-use App\Entity\Share;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Enum\MagazineStyle;
 use App\Enum\SourceFormat;
+use App\Enum\ShareKind;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -153,7 +153,7 @@ final readonly class FullyPopulatedAccount
             CommentsLoad::Auto,
         ));
         $entry->setHeadline(Headline::derived('An article with every field set'));
-        $entry->setShare(Share::link('https://populated.example/shared'));
+        $entry->setShareKind(ShareKind::Link);
 
         return $entry;
     }

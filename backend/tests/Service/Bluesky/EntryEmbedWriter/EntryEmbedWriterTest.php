@@ -9,7 +9,6 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
-use App\Entity\Share;
 use App\Enum\ShareKind;
 use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
@@ -261,17 +260,17 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('external'));
 
-        self::assertSame(ShareKind::Link, $entry->getShare()->kind);
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testAPostAwaitingItsLinkCardSharesALink(): void
     {
         $entry = $this->entry('<p>Read this.<br />https://example.com/story</p>');
-        $entry->setShare(Share::none());
+        $entry->setShareKind(null);
 
         $this->writer()->fill($entry, self::untitledLinkPost());
 
-        self::assertSame(ShareKind::Link, $entry->getShare()->kind);
+        self::assertSame(ShareKind::Link, $entry->getShareKind());
     }
 
     public function testAPostWithOnlyImagesSharesMedia(): void
@@ -280,19 +279,18 @@ final class EntryEmbedWriterTest extends DbTestCase
 
         $this->writer()->fill($entry, Bluesky::post('images'));
 
-        self::assertSame(ShareKind::Media, $entry->getShare()->kind);
-        self::assertNull($entry->getShare()->url);
+        self::assertSame(ShareKind::Media, $entry->getShareKind());
     }
 
     public function testAPostWithOnlyTextSharesNothing(): void
     {
         $entry = $this->entry('<p>Plain.</p>');
 
-        $entry->setShare(Share::link(null));
+        $entry->setShareKind(ShareKind::Link);
 
         $this->writer()->fill($entry, Bluesky::post('starter-pack'));
 
-        self::assertTrue($entry->getShare()->isNone());
+        self::assertNull($entry->getShareKind());
     }
 
     private static function untitledLinkPost(): JsonNodeModel

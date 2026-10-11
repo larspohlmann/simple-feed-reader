@@ -529,7 +529,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $entry = $this->entityManager->createQueryBuilder()
             ->select('e')
             ->from(Entry::class, 'e')
-            ->andWhere('e.guidHash = :guidHash')
+            ->andWhere('e.guid.hash = :guidHash')
             ->setParameter('guidHash', $this->guidHash($token))
             ->getQuery()
             ->getOneOrNullResult();

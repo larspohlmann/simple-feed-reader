@@ -469,9 +469,8 @@ final class AccountRestorerTest extends DbTestCase
             $sourceRows['entry'],
             $targetRows['entry'],
             [
-                'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
+                'feed', 'guid.value', 'mediaSet.media', 'mediaSet.attachments', 'location.url', 'image.renditions',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
-                'location.shareKind', 'location.shareUrl',
                 'headline.title', 'headline.derived',
             ],
         );
@@ -482,12 +481,13 @@ final class AccountRestorerTest extends DbTestCase
             $sourceRows['entry']->getImage()->getRenditions(),
             $targetRows['entry']->getImage()->getRenditions(),
         );
+        self::assertSame($sourceRows['entry']->getGuid(), $targetRows['entry']->getGuid());
         self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
         self::assertSame($sourceRows['entry']->getTitle(), $targetRows['entry']->getTitle());
         self::assertTrue($sourceRows['entry']->isTitleDerived());
         self::assertTrue($targetRows['entry']->isTitleDerived());
         self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
-        self::assertEquals($sourceRows['entry']->getShare(), $targetRows['entry']->getShare());
+        self::assertEquals($sourceRows['entry']->getShareKind(), $targetRows['entry']->getShareKind());
         self::assertNotSame([], $sourceCards);
         self::assertEquals($sourceCards, $this->linkCardsOf($targetRows['entry']));
 

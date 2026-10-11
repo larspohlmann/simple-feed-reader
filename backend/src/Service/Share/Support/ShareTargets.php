@@ -16,7 +16,7 @@ final class ShareTargets
      */
     public static function uncardedOf(Entry $entry, array $cardedUrls): array
     {
-        $target = $entry->getShare()->url;
+        $target = TitledShareTarget::of($entry);
         if ($target !== null) {
             return \in_array($target, $cardedUrls, true) ? [] : [$target];
         }

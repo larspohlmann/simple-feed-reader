@@ -41,6 +41,13 @@ final class EntryLineTest extends TestCase
         self::assertSame([], $line->attachments);
     }
 
+    public function testAnOlderFilesShareUrlIsIgnored(): void
+    {
+        $line = EntryLine::fromLine($this->baseLine() + ['shareKind' => 'link', 'shareUrl' => 'https://f/one']);
+
+        self::assertSame('link', $line->shareKind);
+    }
+
     public function testReadsTheLinkCardsAndDropsOnesNoCardMayHold(): void
     {
         $line = EntryLine::fromLine($this->baseLine() + ['linkCards' => [

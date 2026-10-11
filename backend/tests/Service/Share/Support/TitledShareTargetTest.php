@@ -7,6 +7,7 @@ namespace App\Tests\Service\Share\Support;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\Headline;
 use App\Enum\CommentsLoad;
 use App\Service\Share\Support\TitledShareTarget;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -120,6 +121,14 @@ final class TitledShareTargetTest extends TestCase
             $now,
             $now,
         );
+
+        self::assertNull(TitledShareTarget::of($entry));
+    }
+
+    public function testAPostHasNoTitledTarget(): void
+    {
+        $entry = self::entry('https://daringfireball.net/', 'tag:daringfireball.net,2026:/linked//1', 'https://x.com/');
+        $entry->setHeadline(Headline::derived('Title'));
 
         self::assertNull(TitledShareTarget::of($entry));
     }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Share;
 
 use App\Entity\Entry;
-use App\Entity\Share;
 use App\Enum\ShareKind;
 use App\Service\Parser\Support\VisualMedium;
 use App\Service\Sanitize\EntrySanitizer;
@@ -33,9 +32,9 @@ final readonly class EntryShareClassifier
     public function classify(Entry $entry): void
     {
         $body = SharedLinks::of($entry->getContentHtml() ?? $entry->getSummary() ?? '');
-        $share = $this->orProvisionalLink($entry, $this->shareOf($entry, $body));
-        $entry->setShare($share);
-        if ($share->isNone()) {
+        $shareKind = $this->orProvisionalLink($entry, $this->shareKindOf($entry, $body));
+        $entry->setShareKind($shareKind);
+        if ($shareKind === null) {
             return;
         }
 
@@ -44,43 +43,43 @@ final readonly class EntryShareClassifier
 
             return;
         }
-        $this->describeTitledShare($entry, $share, $body->ownProse);
+        $this->describeTitledShare($entry, $shareKind, $body->ownProse);
     }
 
-    private function shareOf(Entry $entry, SharedLinksModel $body): Share
+    private function shareKindOf(Entry $entry, SharedLinksModel $body): ?ShareKind
     {
         if (YouTubeUrl::isShort($entry->getUrl())) {
-            return Share::media(null);
+            return ShareKind::Media;
         }
         if (mb_strlen($body->ownProse) > self::OWN_PROSE_MAX) {
-            return Share::none();
+            return null;
         }
 
-        return $entry->isTitleDerived() ? $this->postShare($entry, $body) : $this->titledShare($entry);
+        return $entry->isTitleDerived() ? $this->postShareKind($entry, $body) : $this->titledShareKind($entry);
     }
 
-    private function orProvisionalLink(Entry $entry, Share $share): Share
+    private function orProvisionalLink(Entry $entry, ?ShareKind $shareKind): ?ShareKind
     {
-        return $share->isNone() && $this->pendingEmbed->awaitsEmbed($entry) ? Share::link(null) : $share;
+        return $shareKind === null && $this->pendingEmbed->awaitsEmbed($entry) ? ShareKind::Link : $shareKind;
     }
 
-    private function postShare(Entry $entry, SharedLinksModel $body): Share
+    private function postShareKind(Entry $entry, SharedLinksModel $body): ?ShareKind
     {
         if ($body->urls !== []) {
-            return Share::link(null);
+            return ShareKind::Link;
         }
 
-        return $entry->getMedia() === [] ? Share::none() : Share::media(null);
+        return $entry->getMedia() === [] ? null : ShareKind::Media;
     }
 
-    private function titledShare(Entry $entry): Share
+    private function titledShareKind(Entry $entry): ?ShareKind
     {
         $target = TitledShareTarget::of($entry);
         if ($target === null) {
-            return Share::none();
+            return null;
         }
 
-        return VisualMedium::at($target) === null ? Share::link($target) : Share::media($target);
+        return VisualMedium::at($target) === null ? ShareKind::Link : ShareKind::Media;
     }
 
     private function linkBareUrls(Entry $entry, SharedLinksModel $body): void
@@ -93,10 +92,11 @@ final readonly class EntryShareClassifier
         $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml));
     }
 
-    private function describeTitledShare(Entry $entry, Share $share, string $ownProse): void
+    private function describeTitledShare(Entry $entry, ShareKind $shareKind, string $ownProse): void
     {
         $entry->setSummary($ownProse === '' ? null : mb_substr($ownProse, 0, self::OWN_PROSE_MAX));
-        $medium = $share->kind === ShareKind::Media && $share->url !== null ? VisualMedium::at($share->url) : null;
+        $target = $shareKind === ShareKind::Media ? TitledShareTarget::of($entry) : null;
+        $medium = $target === null ? null : VisualMedium::at($target);
         if ($medium !== null) {
             $entry->putMediumFirst($medium);
         }

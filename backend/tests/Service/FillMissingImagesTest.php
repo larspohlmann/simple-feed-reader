@@ -72,7 +72,7 @@ final class FillMissingImagesTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(1, $filled);
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g2']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g2']);
         self::assertNotNull($entry);
         self::assertSame('https://i/2.jpg', $entry->getImageUrl());
         self::assertSame(700, $entry->getImageWidth());
@@ -93,7 +93,7 @@ final class FillMissingImagesTest extends DbTestCase
         $this->entityManager->flush();
 
         self::assertSame(0, $filled);
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g3']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g3']);
         self::assertNotNull($entry);
         self::assertSame('https://i/original.jpg', $entry->getImageUrl());
     }
@@ -121,7 +121,7 @@ final class FillMissingImagesTest extends DbTestCase
         ]));
 
         self::assertSame(0, $filled);
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g5']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g5']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -139,7 +139,7 @@ final class FillMissingImagesTest extends DbTestCase
         ]));
 
         self::assertSame(0, $filled);
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g6']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g6']);
         self::assertNotNull($entry);
         self::assertNull($entry->getImageUrl());
     }
@@ -153,7 +153,7 @@ final class FillMissingImagesTest extends DbTestCase
         $this->ingestor()->ingest($feed, $withImage, self::context());
         $this->entityManager->flush();
 
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g-dropped']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g-dropped']);
         self::assertNotNull($entry);
         $entry->getImage()->drop(new \DateTimeImmutable('2026-09-21 12:00:00'));
         $this->entityManager->flush();
@@ -177,7 +177,7 @@ final class FillMissingImagesTest extends DbTestCase
         ]));
 
         self::assertSame(1, $filled);
-        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'g7']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid.value' => 'g7']);
         self::assertNotNull($entry);
         self::assertSame('https://i/7.jpg', $entry->getImageUrl());
     }

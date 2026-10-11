@@ -107,7 +107,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function findByGuid(Feed $feed, string $guid): ?Entry
     {
-        return $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        return $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid.value' => $guid]);
     }
 
     /** @return list<Entry> */

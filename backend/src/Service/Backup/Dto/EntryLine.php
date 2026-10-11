@@ -43,7 +43,6 @@ final readonly class EntryLine
         public array $imageRenditions = [],
         public bool $titleDerived = false,
         public ?string $shareKind = null,
-        public ?string $shareUrl = null,
         /** @var list<LinkCardContent> */
         public array $linkCards = [],
     ) {
@@ -77,7 +76,6 @@ final readonly class EntryLine
             imageRenditions: LineField::objectListOrEmpty($line, 'imageRenditions'),
             titleDerived: LineFieldWithDefault::bool($line, 'titleDerived', false),
             shareKind: LineField::stringOrNull($line, 'shareKind'),
-            shareUrl: LineField::stringOrNull($line, 'shareUrl'),
             linkCards: self::linkCardsOf($line),
         );
     }
