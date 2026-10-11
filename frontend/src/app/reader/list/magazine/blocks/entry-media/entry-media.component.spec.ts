@@ -125,7 +125,7 @@ describe('EntryMediaComponent', () => {
     expect(element.querySelector('.dek')!.textContent).toContain('From the report.');
   });
 
-  it('shows the post text as a caption above the media', async () => {
+  it('shows the post text as the headline above the media', async () => {
     const element = await mount(entry());
 
     expect(element.querySelector('.title')!.textContent).toContain('A sunrise with Nutmeg');

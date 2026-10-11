@@ -18,11 +18,7 @@ import { OpensEntryDirective } from '../../../opens-entry.directive';
   styleUrl: './entry-quote.component.scss',
 })
 export class EntryQuoteComponent extends EntryBlockBase {
-  /** The pull-quote is the first sentence, not a clamped paragraph: a clamp
-   *  ends mid-word, which reads as a rendering bug at this type size. */
-  // Accepted imprecision: an abbreviation like "e.g. " ends the quote early
-  // because the regex stops at the first period-plus-space — not worth the
-  // complexity of an abbreviation-aware sentence splitter.
+  /** The first sentence, never a mid-word clamp; an abbreviation such as "e.g. " ends it early. */
   readonly lead = computed(() => {
     const text = this.snippet();
     const stop = text.search(/[.!?](\s|$)/);
