@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\PostEnricher;
-use App\Service\Completion\PostEnrichmentQueue;
+use App\Service\Completion\ShareEnrichmentQueue;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -39,7 +39,7 @@ final readonly class FeedOutcomePersister
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
         private EntryIndexer $indexer,
-        private PostEnrichmentQueue $enrichmentQueue,
+        private ShareEnrichmentQueue $enrichmentQueue,
         private PostEnricher $postEnricher,
         private LoggerInterface $logger,
     ) {

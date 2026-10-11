@@ -6,9 +6,9 @@ namespace App\Service\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\LinkCardContent;
-use App\Entity\PostEnrichment;
+use App\Entity\ShareEnrichment;
 use App\Repository\LinkCardRepository;
-use App\Repository\PostEnrichmentRepository;
+use App\Repository\ShareEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\LinkCard\Support\QuoteLine;
@@ -23,14 +23,14 @@ use Psr\Log\LoggerInterface;
  * Builds the cards a queued post's shared links still lack, oldest post first: one attempt each, the row marked done
  * even when a page fails. A carded quote's RE: line leaves the body.
  */
-final readonly class PostLinkCards
+final readonly class ShareLinkCards
 {
     private const int FETCHES_PER_CALL = SharedLinks::MAX;
     private const float DEADLINE_SECONDS = self::FETCHES_PER_CALL * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS;
 
     public function __construct(
         private PageCardReader $pageCards,
-        private PostEnrichmentRepository $enrichments,
+        private ShareEnrichmentRepository $enrichments,
         private LinkCardRepository $linkCards,
         private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
@@ -39,7 +39,7 @@ final readonly class PostLinkCards
     ) {
     }
 
-    /** @param list<PostEnrichment> $queued link-card rows, oldest first */
+    /** @param list<ShareEnrichment> $queued link-card rows, oldest first */
     public function complete(array $queued): void
     {
         $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued));
@@ -47,7 +47,7 @@ final readonly class PostLinkCards
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
                 $queued,
-                static fn (PostEnrichment $row): bool => isset($uncardedUrlsByRowId[$row->requireId()]),
+                static fn (ShareEnrichment $row): bool => isset($uncardedUrlsByRowId[$row->requireId()]),
             )),
             $claimedAt,
         );
@@ -67,14 +67,14 @@ final readonly class PostLinkCards
     /**
      * Only rows the claim still holds are written: no other worker cards their posts meanwhile.
      *
-     * @param list<PostEnrichment>                $claimed
+     * @param list<ShareEnrichment>                $claimed
      * @param array<int, list<LinkCardContent>> $cardsByRowId the rows this call worked
      */
     private function store(array $claimed, array $cardsByRowId, \DateTimeImmutable $claimedAt): void
     {
         $worked = array_values(array_filter(
             $claimed,
-            static fn (PostEnrichment $row): bool => isset($cardsByRowId[$row->requireId()]),
+            static fn (ShareEnrichment $row): bool => isset($cardsByRowId[$row->requireId()]),
         ));
         $held = $this->enrichments->stillHeld($worked, $claimedAt);
         if ($held === []) {
@@ -122,14 +122,14 @@ final readonly class PostLinkCards
     }
 
     /**
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      *
      * @return array<int, list<string>> by entry id
      */
     private function cardedUrls(array $rows): array
     {
         $cards = $this->linkCards->contentsByEntryIds(array_map(
-            static fn (PostEnrichment $row): int => $row->getEntry()->requireId(),
+            static fn (ShareEnrichment $row): int => $row->getEntry()->requireId(),
             $rows,
         ));
 
@@ -146,7 +146,7 @@ final readonly class PostLinkCards
      * The oldest rows whose uncarded links fit the call's fetches, by row id. The first row always runs, so no post is
      * left half-carded.
      *
-     * @param list<PostEnrichment>     $queued
+     * @param list<ShareEnrichment>     $queued
      * @param array<int, list<string>> $cardedUrls by entry id
      *
      * @return array<int, list<string>>

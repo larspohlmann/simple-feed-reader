@@ -6,12 +6,12 @@ namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
-use App\Repository\PostEnrichmentRepository;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
+use App\Repository\ShareEnrichmentRepository;
 use App\Tests\DbTestCase;
 
-final class PostEnrichmentRepositoryTest extends DbTestCase
+final class ShareEnrichmentRepositoryTest extends DbTestCase
 {
     private const string NOW = '2026-10-11 12:00:00';
 
@@ -22,7 +22,7 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/new', '2026-10-10 11:00:00');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/old', '2026-10-10 09:00:00');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/mid', '2026-10-10 10:00:00');
-        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-10 08:00:00', PostEnrichmentKind::LinkCards);
+        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-10 08:00:00', ShareEnrichmentKind::LinkCards);
         $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
         $this->entityManager->flush();
 
@@ -40,7 +40,7 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         $other = $this->feed('https://bsky.app/profile/b/rss');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/old', '2026-10-10 09:59:59');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/at-cutoff', '2026-10-10 10:00:00');
-        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-01 08:00:00', PostEnrichmentKind::LinkCards);
+        $this->queued($feed, 'https://mastodon.test/@a/1', '2026-10-01 08:00:00', ShareEnrichmentKind::LinkCards);
         $this->queued($other, 'at://did:plc:b/app.bsky.feed.post/elsewhere', '2026-10-10 08:00:00');
         $this->entityManager->flush();
 
@@ -60,7 +60,7 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         $empty = $this->feed('https://bsky.app/profile/c/rss');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/one', '2026-10-10 09:00:00');
         $this->queued($feed, 'at://did:plc:a/app.bsky.feed.post/two', '2026-10-10 09:00:00');
-        $this->queued($linkPosts, 'https://mastodon.test/@a/1', '2026-10-10 09:00:00', PostEnrichmentKind::LinkCards);
+        $this->queued($linkPosts, 'https://mastodon.test/@a/1', '2026-10-10 09:00:00', ShareEnrichmentKind::LinkCards);
         $this->entityManager->flush();
 
         self::assertTrue($this->repository()->hasAppViewPendingForFeed($feed));
@@ -176,13 +176,13 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
     }
 
     /**
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      *
      * @return list<string>
      */
     private static function guidsOf(array $rows): array
     {
-        return array_map(static fn (PostEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
+        return array_map(static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(), $rows);
     }
 
     /** @return list<Entry> */
@@ -208,17 +208,17 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         Feed $feed,
         string $guid,
         string $queuedAt,
-        PostEnrichmentKind $kind = PostEnrichmentKind::AppView,
-    ): PostEnrichment {
-        $pending = new PostEnrichment($this->entry($feed, $guid), $kind, new \DateTimeImmutable($queuedAt));
+        ShareEnrichmentKind $kind = ShareEnrichmentKind::AppView,
+    ): ShareEnrichment {
+        $pending = new ShareEnrichment($this->entry($feed, $guid), $kind, new \DateTimeImmutable($queuedAt));
         $this->entityManager->persist($pending);
 
         return $pending;
     }
 
-    private function queuedLinkPost(Feed $feed, string $guid, string $queuedAt = '2026-10-11 11:00:00'): PostEnrichment
+    private function queuedLinkPost(Feed $feed, string $guid, string $queuedAt = '2026-10-11 11:00:00'): ShareEnrichment
     {
-        return $this->queued($feed, $guid, $queuedAt, PostEnrichmentKind::LinkCards);
+        return $this->queued($feed, $guid, $queuedAt, ShareEnrichmentKind::LinkCards);
     }
 
     private function entry(Feed $feed, string $guid): Entry
@@ -236,10 +236,10 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         return $entry;
     }
 
-    private function repository(): PostEnrichmentRepository
+    private function repository(): ShareEnrichmentRepository
     {
-        $repository = self::getContainer()->get(PostEnrichmentRepository::class);
-        self::assertInstanceOf(PostEnrichmentRepository::class, $repository);
+        $repository = self::getContainer()->get(ShareEnrichmentRepository::class);
+        self::assertInstanceOf(ShareEnrichmentRepository::class, $repository);
 
         return $repository;
     }

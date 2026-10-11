@@ -7,19 +7,19 @@ namespace App\Tests\Controller\Api;
 use App\Dto\Entry\CompleteEntriesRequest;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
+use App\Entity\ShareEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\PostEnrichmentKind;
+use App\Enum\ShareEnrichmentKind;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
 use App\Service\Fetch\HostThrottle;
-use App\Service\LinkCard\PostLinkCards;
+use App\Service\LinkCard\ShareLinkCards;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FakeAppView;
 use App\Tests\Support\PostEnrichers;
-use App\Tests\Support\PostLinkCardsWiring;
+use App\Tests\Support\ShareLinkCardsWiring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -154,7 +154,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
             $this->pendingById($this->payload($this->client)['entries']),
         );
         self::assertSame([], $this->appView->requests);
-        self::assertSame(1, $this->entityManager()->getRepository(PostEnrichment::class)->count([]));
+        self::assertSame(1, $this->entityManager()->getRepository(ShareEnrichment::class)->count([]));
     }
 
     public function testMoreThanTwentyFiveIdsAreRejected(): void
@@ -275,8 +275,8 @@ final class EntryCompletionControllerTest extends ApiTestCase
             ),
         );
         $container->set(
-            PostLinkCards::class,
-            PostLinkCardsWiring::build($this->entityManager(), $this->pages, $this->clock),
+            ShareLinkCards::class,
+            ShareLinkCardsWiring::build($this->entityManager(), $this->pages, $this->clock),
         );
     }
 
@@ -317,7 +317,7 @@ final class EntryCompletionControllerTest extends ApiTestCase
     {
         $post = $this->post($feed, $guid, '<p>Read this.</p>');
         $this->entityManager()->persist(
-            new PostEnrichment($post, PostEnrichmentKind::AppView, new \DateTimeImmutable('2026-10-10 11:00')),
+            new ShareEnrichment($post, ShareEnrichmentKind::AppView, new \DateTimeImmutable('2026-10-10 11:00')),
         );
         $this->entityManager()->flush();
 
@@ -328,9 +328,9 @@ final class EntryCompletionControllerTest extends ApiTestCase
     private function queuedLinkPost(Feed $feed, int $number, string $contentHtml): Entry
     {
         $post = $this->post($feed, 'https://mastodon.example/@a/' . $number, $contentHtml);
-        $this->entityManager()->persist(new PostEnrichment(
+        $this->entityManager()->persist(new ShareEnrichment(
             $post,
-            PostEnrichmentKind::LinkCards,
+            ShareEnrichmentKind::LinkCards,
             new \DateTimeImmutable(sprintf('2026-10-10 11:%02d', $number)),
         ));
         $this->entityManager()->flush();

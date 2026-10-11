@@ -6,7 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
+use App\Entity\ShareEnrichment;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\PostEnricher;
@@ -207,6 +207,6 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
 
     private function pendingCount(): int
     {
-        return $this->entityManager->getRepository(PostEnrichment::class)->count([]);
+        return $this->entityManager->getRepository(ShareEnrichment::class)->count([]);
     }
 }

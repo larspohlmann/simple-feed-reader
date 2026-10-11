@@ -6,9 +6,9 @@ namespace App\Service\Bluesky;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
-use App\Repository\PostEnrichmentRepository;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
+use App\Repository\ShareEnrichmentRepository;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\FillOutcome;
@@ -28,7 +28,7 @@ final readonly class PostEnricher
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private PostEnrichmentRepository $enrichments,
+        private ShareEnrichmentRepository $enrichments,
         private AppViewClient $appView,
         private EntryEmbedWriterInterface $embedWriter,
         private NaiveUtcClock $clock,
@@ -52,7 +52,7 @@ final readonly class PostEnricher
     }
 
     /**
-     * @param list<PostEnrichment> $queued AppView rows, oldest first
+     * @param list<ShareEnrichment> $queued AppView rows, oldest first
      *
      * @return list<Entry> the entries it filled
      */
@@ -91,7 +91,7 @@ final readonly class PostEnricher
         $now = $this->clock->now();
         $this->enrichments->deleteAppViewQueuedBefore(
             $feed,
-            $now->sub(new \DateInterval(PostEnrichment::APPVIEW_GIVE_UP_AFTER)),
+            $now->sub(new \DateInterval(ShareEnrichment::APPVIEW_GIVE_UP_AFTER)),
         );
 
         return $this->claimAndSettle(
@@ -104,7 +104,7 @@ final readonly class PostEnricher
      * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones. A row
      * handed to the link-card pass is released only once its new kind is flushed, or an AppView pass would refill it.
      *
-     * @param list<PostEnrichment> $queued
+     * @param list<ShareEnrichment> $queued
      *
      * @return list<Entry>
      */
@@ -133,15 +133,15 @@ final readonly class PostEnricher
     }
 
     /**
-     * @param list<PostEnrichment> $claimed
+     * @param list<ShareEnrichment> $claimed
      *
-     * @return list<PostEnrichment>
+     * @return list<ShareEnrichment>
      */
     private static function awaitingLinkCards(array $claimed): array
     {
         return array_values(array_filter(
             $claimed,
-            static fn (PostEnrichment $row): bool => $row->getKind() === PostEnrichmentKind::LinkCards,
+            static fn (ShareEnrichment $row): bool => $row->getKind() === ShareEnrichmentKind::LinkCards,
         ));
     }
 
@@ -149,7 +149,7 @@ final readonly class PostEnricher
      * A post the AppView omits was deleted or hidden, so it is dequeued unfilled. One whose link still needs its card
      * stays queued for the link-card pass.
      *
-     * @param list<PostEnrichment> $chunk
+     * @param list<ShareEnrichment> $chunk
      *
      * @return list<Entry>|null the entries it filled; null when the AppView gave no usable answer
      */
@@ -157,7 +157,7 @@ final readonly class PostEnricher
     {
         try {
             $posts = $this->appView->posts(array_map(
-                static fn (PostEnrichment $pending): string => $pending->getEntry()->getGuid(),
+                static fn (ShareEnrichment $pending): string => $pending->getEntry()->getGuid(),
                 $chunk,
             ));
         } catch (FetchException | AppViewAnswerException $exception) {

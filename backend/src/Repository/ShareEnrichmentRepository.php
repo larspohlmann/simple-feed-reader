@@ -6,19 +6,19 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\PostEnrichment;
-use App\Enum\PostEnrichmentKind;
+use App\Entity\ShareEnrichment;
+use App\Enum\ShareEnrichmentKind;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
-/** @extends ServiceEntityRepository<PostEnrichment> */
-final class PostEnrichmentRepository extends ServiceEntityRepository
+/** @extends ServiceEntityRepository<ShareEnrichment> */
+final class ShareEnrichmentRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, PostEnrichment::class);
+        parent::__construct($registry, ShareEnrichment::class);
     }
 
     public function deleteAppViewQueuedBefore(Feed $feed, \DateTimeImmutable $cutoff): void
@@ -27,10 +27,10 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
             'DELETE FROM %s pending WHERE pending.kind = :kind AND pending.queuedAt < :cutoff'
             . ' AND IDENTITY(pending.entry) IN'
             . ' (SELECT queuedEntry.id FROM %s queuedEntry WHERE queuedEntry.feed = :feed)',
-            PostEnrichment::class,
+            ShareEnrichment::class,
             Entry::class,
         ))
-            ->setParameter('kind', PostEnrichmentKind::AppView)
+            ->setParameter('kind', ShareEnrichmentKind::AppView)
             ->setParameter('cutoff', $cutoff, Types::DATETIME_IMMUTABLE)
             ->setParameter('feed', $feed)
             ->execute();
@@ -44,21 +44,21 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
             ->andWhere('queuedEntry.feed = :feed')
             ->andWhere('pending.kind = :kind')
             ->setParameter('feed', $feed)
-            ->setParameter('kind', PostEnrichmentKind::AppView)
+            ->setParameter('kind', ShareEnrichmentKind::AppView)
             ->setMaxResults(1)
             ->getQuery()
             ->getScalarResult() !== [];
     }
 
-    /** @return list<PostEnrichment> the feed's AppView rows no worker holds, oldest first */
+    /** @return list<ShareEnrichment> the feed's AppView rows no worker holds, oldest first */
     public function findClaimableAppViewForFeed(Feed $feed, \DateTimeImmutable $now, int $limit): array
     {
-        /** @var list<PostEnrichment> $rows */
+        /** @var list<ShareEnrichment> $rows */
         $rows = $this->claimable($now)
             ->andWhere('queuedEntry.feed = :feed')
             ->andWhere('pending.kind = :kind')
             ->setParameter('feed', $feed)
-            ->setParameter('kind', PostEnrichmentKind::AppView)
+            ->setParameter('kind', ShareEnrichmentKind::AppView)
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();
@@ -69,7 +69,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     /**
      * @param list<Entry> $entries
      *
-     * @return list<PostEnrichment> the rows of those still pending that no worker holds, oldest first
+     * @return list<ShareEnrichment> the rows of those still pending that no worker holds, oldest first
      */
     public function findClaimableFor(array $entries, \DateTimeImmutable $now): array
     {
@@ -77,7 +77,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<PostEnrichment> $rows */
+        /** @var list<ShareEnrichment> $rows */
         $rows = $this->claimable($now)
             ->andWhere('pending.entry IN (:entries)')
             ->setParameter('entries', $entries)
@@ -91,16 +91,16 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
      * Each row is claimed by its own conditional UPDATE, so of two callers racing for one row exactly one sees it
      * change.
      *
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      *
-     * @return list<PostEnrichment> the rows this call now holds
+     * @return list<ShareEnrichment> the rows this call now holds
      */
     public function claim(array $rows, \DateTimeImmutable $now): array
     {
         $query = $this->getEntityManager()->createQuery(sprintf(
             'UPDATE %s pending SET pending.claimedAt = :now WHERE pending.id = :id AND pending.doneAt IS NULL'
             . ' AND (pending.claimedAt IS NULL OR pending.claimedAt < :leaseStart)',
-            PostEnrichment::class,
+            ShareEnrichment::class,
         ))
             ->setParameter('now', $now, Types::DATETIME_IMMUTABLE)
             ->setParameter('leaseStart', self::leaseStart($now), Types::DATETIME_IMMUTABLE);
@@ -118,7 +118,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     /**
      * Writes after a claim name the claim's time, so a holder whose lease another worker took over changes nothing.
      *
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      */
     public function release(array $rows, \DateTimeImmutable $claimedAt): void
     {
@@ -128,7 +128,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     /**
      * The attempt is dated by its claim.
      *
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      */
     public function markDone(array $rows, \DateTimeImmutable $claimedAt): void
     {
@@ -136,9 +136,9 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      *
-     * @return list<PostEnrichment> those still held by the claim made at $claimedAt
+     * @return list<ShareEnrichment> those still held by the claim made at $claimedAt
      */
     public function stillHeld(array $rows, \DateTimeImmutable $claimedAt): array
     {
@@ -159,7 +159,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
 
         return array_values(array_filter(
             $rows,
-            static fn (PostEnrichment $row): bool => isset($held[$row->requireId()]),
+            static fn (ShareEnrichment $row): bool => isset($held[$row->requireId()]),
         ));
     }
 
@@ -199,16 +199,16 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<PostEnrichment> $rows
+     * @param list<ShareEnrichment> $rows
      *
      * @return list<int>
      */
     private static function idsOf(array $rows): array
     {
-        return array_map(static fn (PostEnrichment $row): int => $row->requireId(), $rows);
+        return array_map(static fn (ShareEnrichment $row): int => $row->requireId(), $rows);
     }
 
-    /** @param list<PostEnrichment> $rows */
+    /** @param list<ShareEnrichment> $rows */
     private function updateHeld(array $rows, \DateTimeImmutable $claimedAt, string $assignments): void
     {
         if ($rows === []) {
@@ -217,7 +217,7 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
 
         $this->getEntityManager()->createQuery(sprintf(
             'UPDATE %s pending SET %s WHERE pending.id IN (:ids) AND pending.claimedAt = :claimedAt',
-            PostEnrichment::class,
+            ShareEnrichment::class,
             $assignments,
         ))
             ->setParameter('ids', self::idsOf($rows))
@@ -227,6 +227,6 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
 
     private static function leaseStart(\DateTimeImmutable $now): \DateTimeImmutable
     {
-        return $now->sub(new \DateInterval(PostEnrichment::CLAIM_LEASE));
+        return $now->sub(new \DateInterval(ShareEnrichment::CLAIM_LEASE));
     }
 }
