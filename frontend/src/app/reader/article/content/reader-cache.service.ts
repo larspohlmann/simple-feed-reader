@@ -6,8 +6,7 @@ interface CacheRecord {
   entryId: number;
   article: ReaderArticle;
   cachedAt: number;
-  /** Read at put, right after the response that brought the article named the version. */
-  readerVersion: string | null;
+  readerVersion: string;
 }
 
 /**
@@ -42,7 +41,7 @@ export class ReaderCacheService {
   async put(entryId: number, article: ReaderArticle): Promise<void> {
     const readerVersion = this.readerVersion.current();
     const database = await this.open();
-    if (!database) return;
+    if (!database || readerVersion === null) return;
     this.lastCachedAt = Math.max(Date.now(), this.lastCachedAt + 1);
     const record: CacheRecord = {
       entryId,
@@ -72,7 +71,7 @@ export class ReaderCacheService {
 
   private current(record: CacheRecord | undefined): ReaderArticle | null {
     const version = this.readerVersion.current();
-    return record && version !== null && record.readerVersion === version ? record.article : null;
+    return record?.readerVersion === version ? record.article : null;
   }
 
   private async evict(database: IDBDatabase): Promise<void> {

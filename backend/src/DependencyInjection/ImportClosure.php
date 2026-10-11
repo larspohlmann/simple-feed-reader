@@ -19,22 +19,14 @@ final class ImportClosure
     /** @var array<string, string> */
     private array $modules = [];
 
+    /** @var list<string> */
+    private array $moduleFiles = [];
+
     /** @var array<string, string> */
     private array $importedFiles = [];
 
     public function __construct(private readonly string $sourceDirectory)
     {
-    }
-
-    /** @return list<string> */
-    public static function phpFilesIn(string $directory): array
-    {
-        $files = [];
-        foreach ((new Finder())->files()->in($directory)->name('*.php') as $file) {
-            $files[] = $file->getPathname();
-        }
-
-        return $files;
     }
 
     public function followModule(string $module): void
@@ -44,8 +36,9 @@ final class ImportClosure
         }
 
         $this->modules[$module] = $this->sourceDirectory . '/Service/' . $module;
-        foreach (self::phpFilesIn($this->modules[$module]) as $file) {
-            $this->followFile($file);
+        foreach ((new Finder())->files()->in($this->modules[$module])->name('*.php') as $file) {
+            $this->moduleFiles[] = $file->getPathname();
+            $this->followFile($file->getPathname());
         }
     }
 
@@ -64,6 +57,12 @@ final class ImportClosure
         sort($directories);
 
         return $directories;
+    }
+
+    /** @return list<string> */
+    public function moduleFiles(): array
+    {
+        return $this->moduleFiles;
     }
 
     /** @return list<string> */

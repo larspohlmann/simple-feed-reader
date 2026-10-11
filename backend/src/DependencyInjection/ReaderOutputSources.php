@@ -20,11 +20,13 @@ final readonly class ReaderOutputSources
     /**
      * @param list<string> $moduleDirectories
      * @param list<string> $files
+     * @param list<string> $moduleFiles
      */
     private function __construct(
         private string $projectDir,
         public array $moduleDirectories,
         public array $files,
+        private array $moduleFiles,
     ) {
     }
 
@@ -40,6 +42,7 @@ final readonly class ReaderOutputSources
             $projectDir,
             $closure->moduleDirectories(),
             [...$fixedFiles, ...$closure->importedFiles()],
+            $closure->moduleFiles(),
         );
     }
 
@@ -57,10 +60,7 @@ final readonly class ReaderOutputSources
     /** @return list<string> */
     private function everyFile(): array
     {
-        $files = $this->files;
-        foreach ($this->moduleDirectories as $directory) {
-            array_push($files, ...ImportClosure::phpFilesIn($directory));
-        }
+        $files = [...$this->files, ...$this->moduleFiles];
         sort($files);
 
         return $files;
