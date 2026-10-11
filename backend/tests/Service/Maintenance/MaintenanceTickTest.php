@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Maintenance;
 
-use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\ShareEnrichment;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\ShareEnrichmentKind;
 use App\Repository\PendingImageVerificationRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
@@ -34,8 +31,9 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\MembershipSweepFactory;
-use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\QueuedLinkPosts;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\ShareLinkCardsWiring;
@@ -45,7 +43,6 @@ use App\Tests\Support\StubLokiEndpoint;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class MaintenanceTickTest extends DbTestCase
 {
@@ -155,15 +152,8 @@ final class MaintenanceTickTest extends DbTestCase
     ): void {
         $clock = new MockClock('2026-10-11 12:00:00', 'UTC');
         $this->queueLinkPost($clock);
-        $pages = new MockHttpClient(static fn (string $method, string $url): MockResponse => new MockResponse(
-            '<html><head><title>Card for ' . $url . '</title></head></html>',
-            ['response_headers' => ['content-type' => 'text/html']],
-        ));
-        $linkCardSweep = new LinkCardSweep(
-            PostEnrichers::enrichments($this->entityManager),
-            ShareLinkCardsWiring::build($this->entityManager, $pages, $clock),
-            new NaiveUtcClock($clock),
-        );
+        $pages = ShareLinkCardsWiring::titledPages();
+        $linkCardSweep = LinkCardSweepWiring::build($this->entityManager, $pages, $clock);
         $fetcher = new StubFeedFetcher($clock);
         $fetcher->secondsPerFetch = $refreshSeconds;
         $fetcher->willReturnBody(
@@ -191,15 +181,13 @@ final class MaintenanceTickTest extends DbTestCase
         $feed->scheduleNextFetchAt($now->modify('-1 hour'));
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($subscriber, $feed, $now));
-        $entry = new Entry($feed, 'link-post', null, 'Post', $now, $now);
-        $entry->setContentHtml('<p>https://example.com/1</p>');
-        $entry->markTitleDerived();
-        $entry->getImage()->storePending(null, null, null);
-        $this->entityManager->persist($entry);
-        $this->entityManager->persist(
-            new ShareEnrichment($entry, ShareEnrichmentKind::LinkCards, $now->modify('-1 minute')),
+        QueuedLinkPosts::persist(
+            $this->entityManager,
+            $feed,
+            'link-post',
+            '<p>https://example.com/1</p>',
+            $now->modify('-1 minute'),
         );
-        $this->entityManager->flush();
     }
 
     private function tickAround(

@@ -19,9 +19,8 @@ use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use Psr\Clock\ClockInterface;
 
 /**
- * Refresh first, then the sweeps (link cards before saved-search memberships, which take what is left),
- * then the log spool. An aborted refresh closed the shared EntityManager, so the sweeps must not run
- * that tick; the spool touches no EntityManager and ships anyway.
+ * Refresh first, then the sweeps, then the log spool. An aborted refresh closed the shared
+ * EntityManager, so the sweeps must not run that tick; the spool touches no EntityManager and ships anyway.
  */
 final readonly class MaintenanceTick
 {

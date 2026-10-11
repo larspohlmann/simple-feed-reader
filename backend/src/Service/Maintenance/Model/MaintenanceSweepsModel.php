@@ -29,7 +29,7 @@ final readonly class MaintenanceSweepsModel
             new ForYouSweepReportModel(0, 0, 0),
             new DigestSweepReportModel(0, 0, 0),
             new ImageVerificationReportModel(0, 0, 0, 0),
-            new LinkCardSweepReportModel(0, 0),
+            LinkCardSweepReportModel::none(),
             new SavedSearchMembershipSweepReportModel(0, 0, 0, false),
             skipped: true,
         );

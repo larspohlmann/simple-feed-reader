@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\LinkCard\Model;
 
+use App\Entity\ShareEnrichment;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
+use App\Service\Reader\HtmlPageFetcher;
 use PHPUnit\Framework\TestCase;
 
 final class LinkCardBudgetModelTest extends TestCase
 {
-    public function testItsLengthIsEightSecondsPerFetch(): void
+    public function testItsLengthIsTheMostAFetchMayTakePerFetch(): void
     {
-        self::assertSame(40.0, LinkCardBudgetModel::fetches(5)->seconds());
+        self::assertSame(5 * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS, LinkCardBudgetModel::fetches(5)->seconds());
         self::assertSame(5, LinkCardBudgetModel::fetches(5)->fetches);
     }
 
@@ -30,11 +32,14 @@ final class LinkCardBudgetModelTest extends TestCase
 
     public function testABudgetThatWouldOutlastTheClaimLeaseIsRefused(): void
     {
-        self::assertSame(56.0, LinkCardBudgetModel::fetches(7)->seconds());
+        $largestFit = (int) ceil(ShareEnrichment::CLAIM_LEASE_SECONDS / HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS) - 1;
+
+        $longestAccepted = LinkCardBudgetModel::fetches($largestFit)->seconds();
+        self::assertLessThan(ShareEnrichment::CLAIM_LEASE_SECONDS, $longestAccepted);
 
         $this->expectException(\InvalidArgumentException::class);
 
-        LinkCardBudgetModel::fetches(8);
+        LinkCardBudgetModel::fetches($largestFit + 1);
     }
 
     public function testFitsTheWholeFetchesLeftBeforeADeadlineUpToAMaximum(): void

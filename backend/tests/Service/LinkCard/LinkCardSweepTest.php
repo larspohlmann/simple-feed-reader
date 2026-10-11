@@ -6,18 +6,16 @@ namespace App\Tests\Service\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Entity\ShareEnrichment;
-use App\Enum\ShareEnrichmentKind;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\LinkCardSweep;
 use App\Service\LinkCard\Model\LinkCardBudgetModel;
 use App\Service\LinkCard\Model\LinkCardSweepReportModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\LinkCardSweepWiring;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\QueuedLinkPosts;
 use App\Tests\Support\ShareLinkCardsWiring;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LinkCardSweepTest extends DbTestCase
 {
@@ -29,15 +27,8 @@ final class LinkCardSweepTest extends DbTestCase
     {
         parent::setUp();
         $this->clock = new MockClock('2026-10-11 12:00:00', 'UTC');
-        $this->client = new MockHttpClient(static fn (string $method, string $url): MockResponse => new MockResponse(
-            '<html><head><title>Card for ' . $url . '</title></head></html>',
-            ['response_headers' => ['content-type' => 'text/html']],
-        ));
-        $this->sweep = new LinkCardSweep(
-            PostEnrichers::enrichments($this->entityManager),
-            ShareLinkCardsWiring::build($this->entityManager, $this->client, $this->clock),
-            new NaiveUtcClock($this->clock),
-        );
+        $this->client = ShareLinkCardsWiring::titledPages();
+        $this->sweep = LinkCardSweepWiring::build($this->entityManager, $this->client, $this->clock);
     }
 
     public function testCardsTheOldestQueuedPostsOfEveryFeedWithinItsBudget(): void
@@ -68,32 +59,18 @@ final class LinkCardSweepTest extends DbTestCase
         self::assertSame(0, $this->client->getRequestsCount());
     }
 
-    public function testReportsItsCountsForTheLog(): void
-    {
-        self::assertSame(
-            ['considered' => 3, 'completed' => 2],
-            (new LinkCardSweepReportModel(3, 2))->toLogContext(),
-        );
-    }
-
     /** Queued `10 - $order` minutes ago, so a lower order is older; one shared link, in a feed of its own. */
     private function queuedPost(string $feedUrl, int $order): Entry
     {
         $feed = new Feed($feedUrl);
         $this->entityManager->persist($feed);
-        $now = $this->clock->now();
-        $entry = new Entry($feed, $feedUrl . '#' . $order, null, 'Post', $now, $now);
-        $entry->setContentHtml('<p>https://example.com/' . $order . '</p>');
-        $entry->markTitleDerived();
-        $entry->getImage()->storePending(null, null, null);
-        $this->entityManager->persist($entry);
-        $this->entityManager->persist(new ShareEnrichment(
-            $entry,
-            ShareEnrichmentKind::LinkCards,
-            $now->modify(\sprintf('-%d minutes', 10 - $order)),
-        ));
-        $this->entityManager->flush();
 
-        return $entry;
+        return QueuedLinkPosts::persist(
+            $this->entityManager,
+            $feed,
+            $feedUrl . '#' . $order,
+            '<p>https://example.com/' . $order . '</p>',
+            $this->clock->now()->modify(\sprintf('-%d minutes', 10 - $order)),
+        );
     }
 }

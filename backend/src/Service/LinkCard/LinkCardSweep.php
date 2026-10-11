@@ -21,7 +21,7 @@ final readonly class LinkCardSweep
     public function sweep(LinkCardBudgetModel $budget): LinkCardSweepReportModel
     {
         if ($budget->isEmpty()) {
-            return new LinkCardSweepReportModel(0, 0);
+            return LinkCardSweepReportModel::none();
         }
 
         $queued = $this->enrichments->findClaimableLinkCards($this->clock->now(), $budget->fetches);

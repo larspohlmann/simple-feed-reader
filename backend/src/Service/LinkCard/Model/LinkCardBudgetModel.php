@@ -20,12 +20,11 @@ final readonly class LinkCardBudgetModel
             throw new \InvalidArgumentException('A link-card budget cannot be negative.');
         }
 
-        $budget = new self($count);
-        if ($budget->seconds() >= self::claimLeaseSeconds()) {
+        if ($count * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS >= ShareEnrichment::CLAIM_LEASE_SECONDS) {
             throw new \InvalidArgumentException('A link-card budget cannot outlast the claim lease.');
         }
 
-        return $budget;
+        return new self($count);
     }
 
     /** The whole fetches that end before $deadline, at most $maxFetches: none once less than one fits. */
@@ -35,13 +34,6 @@ final readonly class LinkCardBudgetModel
         $fitting = (int) floor(max(0, $remaining) / HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS);
 
         return self::fetches(min($maxFetches, $fitting));
-    }
-
-    private static function claimLeaseSeconds(): int
-    {
-        $epoch = new \DateTimeImmutable('@0');
-
-        return $epoch->add(new \DateInterval(ShareEnrichment::CLAIM_LEASE))->getTimestamp();
     }
 
     public function seconds(): float

@@ -20,7 +20,8 @@ use Doctrine\ORM\Mapping as ORM;
 final class ShareEnrichment
 {
     public const string APPVIEW_GIVE_UP_AFTER = 'P3D';
-    public const string CLAIM_LEASE = 'PT60S';
+    public const int CLAIM_LEASE_SECONDS = 60;
+    public const string CLAIM_LEASE = 'PT' . self::CLAIM_LEASE_SECONDS . 'S';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

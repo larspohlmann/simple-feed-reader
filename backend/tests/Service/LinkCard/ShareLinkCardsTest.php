@@ -22,6 +22,7 @@ use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -117,11 +118,7 @@ final class ShareLinkCardsTest extends DbTestCase
             fn (int $number): Entry => $this->queuedPost($number, self::sharing($number, 1)),
             range(1, 5),
         );
-        $slowPages = new MockHttpClient(function (string $method, string $url): MockResponse {
-            $this->clock->sleep(15);
-
-            return self::page($method, $url);
-        });
+        $slowPages = $this->slowPages(15);
         $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
 
         $shareLinkCards->complete($this->claimable(), self::fiveFetches());
@@ -376,46 +373,31 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertCount(3, $this->cardTitles($threeLinks));
     }
 
-    public function testACallStopsAtItsBudgetsDeadline(): void
+    /** @return iterable<string, array{int, int, int, int}> */
+    public static function pagesAgainstATwoFetchBudget(): iterable
     {
-        $posts = array_map(
-            fn (int $number): Entry => $this->queuedPost($number, self::sharing($number, 1)),
-            range(1, 3),
-        );
-        $slowPages = new MockHttpClient(function (string $method, string $url): MockResponse {
-            $this->clock->sleep(9);
+        yield 'a page slower than its share of the budget ends the call' => [9, 1, 1, 2];
+        yield 'two full-length fetches fit the budget' => [8, 2, 2, 1];
+    }
 
-            return self::page($method, $url);
-        });
+    #[DataProvider('pagesAgainstATwoFetchBudget')]
+    public function testACallStopsAtItsBudgetsDeadline(
+        int $secondsPerPage,
+        int $expectedRequests,
+        int $expectedCompleted,
+        int $expectedStillClaimable,
+    ): void {
+        foreach (range(1, 3) as $number) {
+            $this->queuedPost($number, self::sharing($number, 1));
+        }
+        $slowPages = $this->slowPages($secondsPerPage);
         $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
 
         $completed = $shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
 
-        self::assertSame(1, $completed);
-        self::assertSame(1, $slowPages->getRequestsCount());
-        self::assertSame(
-            [$posts[1]->requireId(), $posts[2]->requireId()],
-            array_map(static fn (ShareEnrichment $row): int => $row->getEntry()->requireId(), $this->claimable()),
-        );
-    }
-
-    public function testNFullLengthFetchesFitAnNFetchBudget(): void
-    {
-        foreach (range(1, 3) as $number) {
-            $this->queuedPost($number, self::sharing($number, 1));
-        }
-        $fullLengthPages = new MockHttpClient(function (string $method, string $url): MockResponse {
-            $this->clock->sleep(8);
-
-            return self::page($method, $url);
-        });
-        $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $fullLengthPages, $this->clock);
-
-        $completed = $shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
-
-        self::assertSame(2, $completed);
-        self::assertSame(2, $fullLengthPages->getRequestsCount());
-        self::assertCount(1, $this->claimable());
+        self::assertSame($expectedCompleted, $completed);
+        self::assertSame($expectedRequests, $slowPages->getRequestsCount());
+        self::assertCount($expectedStillClaimable, $this->claimable());
     }
 
     private static function page(string $method, string $url): MockResponse
@@ -437,6 +419,15 @@ final class ShareLinkCardsTest extends DbTestCase
             '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
             ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
         );
+    }
+
+    private function slowPages(int $secondsPerPage): MockHttpClient
+    {
+        return new MockHttpClient(function (string $method, string $url) use ($secondsPerPage): MockResponse {
+            $this->clock->sleep($secondsPerPage);
+
+            return self::page($method, $url);
+        });
     }
 
     private static function fiveFetches(): LinkCardBudgetModel

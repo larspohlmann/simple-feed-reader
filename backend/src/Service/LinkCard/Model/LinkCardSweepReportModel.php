@@ -12,6 +12,11 @@ final readonly class LinkCardSweepReportModel
     ) {
     }
 
+    public static function none(): self
+    {
+        return new self(0, 0);
+    }
+
     /** @return array{considered: int, completed: int} */
     public function toLogContext(): array
     {

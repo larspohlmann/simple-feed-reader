@@ -44,8 +44,7 @@ final readonly class EntryCompletion
     }
 
     /**
-     * Bluesky posts go first, as one AppView call fills them all; then one page fetch for the oldest link post,
-     * so a call holds its worker briefly.
+     * Bluesky posts go first, as one AppView call fills them all; link posts then share the call's page fetches.
      *
      * @param list<Entry> $entries
      */

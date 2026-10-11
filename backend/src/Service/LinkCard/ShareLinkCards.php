@@ -41,12 +41,10 @@ final readonly class ShareLinkCards
 
     /**
      * @param list<ShareEnrichment> $queued link-card rows, oldest first
-     *
-     * @return int the rows this call finished
      */
     public function complete(array $queued, LinkCardBudgetModel $budget): int
     {
-        $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued), $budget->fetches);
+        $uncardedUrlsByRowId = self::withinBudget($queued, $this->cardedUrls($queued), $budget);
         $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
@@ -73,8 +71,6 @@ final readonly class ShareLinkCards
      *
      * @param list<ShareEnrichment>                $claimed
      * @param array<int, list<PageCardModel>> $pageCardsByRowId the rows this call worked
-     *
-     * @return int the rows marked done
      */
     private function store(array $claimed, array $pageCardsByRowId, \DateTimeImmutable $claimedAt): int
     {
@@ -186,17 +182,17 @@ final readonly class ShareLinkCards
     }
 
     /**
-     * The oldest rows whose uncarded links fit `$fetches`, by row id. The first row always runs, so no entry is
-     * left half-carded.
+     * The oldest rows whose uncarded links fit the budget, by row id. The first row always runs, so no entry is left
+     * half-carded.
      *
      * @param list<ShareEnrichment>     $queued
      * @param array<int, list<string>> $cardedUrls by entry id
      *
      * @return array<int, list<string>>
      */
-    private static function withinBudget(array $queued, array $cardedUrls, int $fetches): array
+    private static function withinBudget(array $queued, array $cardedUrls, LinkCardBudgetModel $budget): array
     {
-        $remaining = $fetches;
+        $remaining = $budget->fetches;
         $uncardedUrlsByRowId = [];
         foreach ($queued as $row) {
             $entry = $row->getEntry();
