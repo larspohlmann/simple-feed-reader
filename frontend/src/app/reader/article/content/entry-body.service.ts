@@ -25,7 +25,7 @@ export class EntryBodyService {
   private generation = 0;
   private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
   private readonly arrivedDetails = new Subject<EntryDto>();
-  /** Each entry a body fetch brings back: opening a post can queue it, so the row may now be pending (#1502). */
+  /** Each entry a body fetch brings back: it may hold what completing the entry filled in (#1502). */
   readonly details = this.arrivedDetails.asObservable();
 
   constructor() {

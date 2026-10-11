@@ -23,9 +23,9 @@ export function withCompleted(entry: EntryDto, row: EntryDto): EntryDto {
   return { ...entry, ...Object.fromEntries(filled.map((key) => [key, row[key]])) };
 }
 
-/** A stale answer, sent before the entry was completed, must not bring its placeholder back. */
+/** Nothing queues an entry once it exists (#1513), so a pending answer for a settled one is stale. */
 function regresses(entry: EntryDto, row: EntryDto): boolean {
-  return entry.linkCards.length > 0 && row.pending && row.linkCards.length === 0;
+  return !entry.pending && row.pending;
 }
 
 function sameValue(left: unknown, right: unknown): boolean {

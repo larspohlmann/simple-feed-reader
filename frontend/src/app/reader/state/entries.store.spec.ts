@@ -515,12 +515,12 @@ describe('EntriesStore', () => {
       expect(store.entries()[1]).toMatchObject({ pending: false, linkCards: [card] });
     });
 
-    it('lets a listed post the open queued turn pending', () => {
-      store.mergeCompleted([entry(2, { pending: false })]);
+    it('keeps a post completed without cards when a stale answer still says pending', () => {
+      store.mergeCompleted([entry(2, { pending: false, excerpt: 'Filled' })]);
 
-      store.mergeCompleted([entry(2, { pending: true })]);
+      store.mergeCompleted([entry(2, { pending: true, excerpt: 'Stale' })]);
 
-      expect(store.entries()[1].pending).toBe(true);
+      expect(store.entries()[1]).toMatchObject({ pending: false, excerpt: 'Filled' });
     });
 
     it('keeps a state change still on the wire', () => {
