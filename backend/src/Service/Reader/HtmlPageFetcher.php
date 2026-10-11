@@ -27,7 +27,7 @@ final readonly class HtmlPageFetcher
     private const int MAX_REDIRECTS = 5;
     private const int MAX_BYTES = 3_000_000;
     private const float TIMEOUT_SECONDS = 10.0;
-    private const int HEAD_MAX_BYTES = 524_288;
+    private const int HEAD_MAX_BYTES = 1_048_576;
     private const int HEAD_CHUNK_BYTES = 8_192;
     // A body can carry a challenge marker, so the read runs at least as far as a whole page's challenge scan.
     private const int HEAD_MIN_BYTES = self::LANDING_SCAN_LENGTH;
@@ -75,8 +75,8 @@ final readonly class HtmlPageFetcher
     }
 
     /**
-     * The start of a page, for the metadata its head declares: reading stops once the head has ended, at 512 KB at
-     * most; the timeouts are short and a meta refresh is not chased.
+     * The start of a page, for the metadata its head declares: reading stops once the head has ended, at 1 MB at
+     * most (a YouTube page declares its card past 760 KB); the timeouts are short and a meta refresh is not chased.
      */
     public function fetchHead(string $url): PageResponseModel
     {
