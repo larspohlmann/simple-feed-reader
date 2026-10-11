@@ -19,7 +19,6 @@ export interface ArticleBodyParts {
   readonly html: Signal<string>;
   readonly pageUrl: () => string | null;
   readonly enclosureUrl: () => string | null;
-  /** Runs after every decoration, with the decorated body. */
   readonly decorated: (host: HTMLElement) => void;
 }
 
@@ -41,16 +40,16 @@ export class ArticleBody {
 
   connect(parts: ArticleBodyParts): void {
     this.content = parts.content;
-    this.recoverFailedMedia(parts.pageUrl);
+    this.recoverFailedMedia(parts);
     this.decorateEachRender(parts);
   }
 
   /** Body media arrive through [innerHTML], so one capturing listener gives images the proxy
    *  fallback and failed videos a link out (error events do not bubble). */
-  private recoverFailedMedia(pageUrl: () => string | null): void {
+  private recoverFailedMedia(parts: ArticleBodyParts): void {
     effect(
       (onCleanup) => {
-        const content = this.content()?.nativeElement;
+        const content = parts.content()?.nativeElement;
         if (!content) return;
         const recover = (event: Event) => {
           if (event.target instanceof HTMLImageElement) {
@@ -58,7 +57,7 @@ export class ArticleBody {
             return;
           }
           replaceUnplayableVideo(event.target, () => ({
-            pageUrl: pageUrl(),
+            pageUrl: parts.pageUrl(),
             title: this.i18n.translate('reader.unplayableVideo.title'),
             action: this.i18n.translate('reader.unplayableVideo.action'),
           }));
@@ -78,9 +77,9 @@ export class ArticleBody {
         // Depend on the container too, not just the HTML: when extraction fails,
         // the HTML recomputes to the same string and never notifies, so the
         // container replacing the placeholder is the only render signal (#101).
-        if (!this.content()) return;
+        if (!parts.content()) return;
         queueMicrotask(() => {
-          const host = this.content()?.nativeElement;
+          const host = parts.content()?.nativeElement;
           if (!host) return;
           decorateArticle(host, this.i18n, parts.enclosureUrl());
           parts.decorated(host);

@@ -3,12 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { articleHost } from '../../../../testing/article-host-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
+import { neverRecoveringImageProxy } from '../../../../testing/image-proxy-testing';
 import { ArticleBody } from './article-body.service';
 
 const VIDEO = '<video controls src="https://x.test/clip.mp4"></video>';
 
 describe('ArticleBody', () => {
-  let recover: jest.Mock;
+  let imageProxy: ReturnType<typeof neverRecoveringImageProxy>;
   let injector: EnvironmentInjector;
   let decorated: jest.Mock<void, [HTMLElement]>;
   let content: HTMLElement;
@@ -37,10 +38,10 @@ describe('ArticleBody', () => {
       .mockImplementation(() => undefined);
 
   beforeEach(() => {
-    recover = jest.fn().mockResolvedValue('failed');
+    imageProxy = neverRecoveringImageProxy();
     TestBed.configureTestingModule({
       imports: [provideTranslocoTesting()],
-      providers: [{ provide: ImageProxyService, useValue: { recover } }],
+      providers: [{ provide: ImageProxyService, useValue: imageProxy }],
     });
     injector = createEnvironmentInjector([ArticleBody], TestBed.inject(EnvironmentInjector));
   });
@@ -76,7 +77,7 @@ describe('ArticleBody', () => {
 
     image.dispatchEvent(new Event('error'));
 
-    expect(recover).toHaveBeenCalledWith(image);
+    expect(imageProxy.attempts).toEqual([image]);
   });
 
   it('replaces a body video the browser cannot play with a link to the original page', () => {
@@ -112,6 +113,6 @@ describe('ArticleBody', () => {
     image.dispatchEvent(new Event('error'));
 
     expect(clicks).not.toHaveBeenCalled();
-    expect(recover).not.toHaveBeenCalled();
+    expect(imageProxy.attempts).toEqual([]);
   });
 });
