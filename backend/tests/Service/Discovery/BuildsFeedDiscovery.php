@@ -11,6 +11,7 @@ use App\Service\Discovery\FeedOffer\SoundCloudProfileFeed;
 use App\Service\Discovery\FeedOffer\WordPressRestProbe;
 use App\Service\Discovery\FeedOffer\YouTubeVideoChannelFeed;
 use App\Service\Discovery\ShareLinkFeed\ApplePodcastShowFeed;
+use App\Service\Discovery\ShareLinkFeed\FediverseRemoteProfileFeed;
 use App\Service\Discovery\ShareLinkFeed\GitHubRepositoryFeed;
 use App\Service\Discovery\ShareLinkFeed\ShareLinkFeedInterface;
 use App\Service\Discovery\ShareLinkFeed\SubstackProfileFeed;
@@ -34,6 +35,7 @@ trait BuildsFeedDiscovery
                 new ApplePodcastShowFeed($fetcher),
                 new GitHubRepositoryFeed(),
                 new YouTubePlaylistFeed(),
+                new FediverseRemoteProfileFeed(),
             ],
         );
     }

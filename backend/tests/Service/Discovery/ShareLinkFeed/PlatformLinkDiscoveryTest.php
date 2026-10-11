@@ -9,9 +9,10 @@ use App\Service\Discovery\Model\FeedDiscoveryResultModel;
 use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/** Proves discovery subscribes what the GitHub and YouTube links resolve to; their edge cases are their own tests'. */
+/** Proves discovery subscribes what a share link resolves to; each resolver's edge cases are its own test's. */
 final class PlatformLinkDiscoveryTest extends KernelTestCase
 {
     use BuildsFeedDiscovery;
@@ -22,32 +23,33 @@ final class PlatformLinkDiscoveryTest extends KernelTestCase
 
     private const string WATCH_BODY = '<script>{"externalChannelId":"UCZpc-xP3njReG_r4Ur5a7mA"}</script>';
 
-    public function testARepositoryLinkSubscribesTheReleasesFeedWithoutFetchingThePage(): void
+    #[DataProvider('shareLinks')]
+    public function testAShareLinkSubscribesItsFeedWithoutFetchingThePage(string $enteredUrl, string $feed): void
     {
-        $feed = 'https://github.com/symfony/symfony/releases.atom';
         $fetcher = $this->fetcherReturning($feed, $feed, $this->rss2BasicXml());
 
-        $result = $this->discovery($fetcher)
-            ->discover('https://github.com/symfony/symfony/tree/7.4', ScrapeFallback::Enabled);
+        $result = $this->discovery($fetcher)->discover($enteredUrl, ScrapeFallback::Enabled);
 
         self::assertNotNull($result->feed);
         self::assertSame($feed, $result->feed->url);
         self::assertSame([$feed], $fetcher->fetchedUrls);
     }
 
-    public function testAVideoInsideAPlaylistSubscribesThePlaylist(): void
+    /** @return iterable<string, array{string, string}> */
+    public static function shareLinks(): iterable
     {
-        $feed = 'https://www.youtube.com/feeds/videos.xml?playlist_id=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF';
-        $fetcher = $this->fetcherReturning($feed, $feed, $this->rss2BasicXml());
-
-        $result = $this->discovery($fetcher)->discover(
+        yield 'a repository page' => [
+            'https://github.com/symfony/symfony/tree/7.4',
+            'https://github.com/symfony/symfony/releases.atom',
+        ];
+        yield 'a remote fediverse profile' => [
+            'https://systemli.social/@linuzifer@23.social',
+            'https://23.social/@linuzifer.rss',
+        ];
+        yield 'a video inside a playlist' => [
             self::WATCH_PAGE . '&list=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF',
-            ScrapeFallback::Enabled,
-        );
-
-        self::assertNotNull($result->feed);
-        self::assertSame($feed, $result->feed->url);
-        self::assertSame([$feed], $fetcher->fetchedUrls);
+            'https://www.youtube.com/feeds/videos.xml?playlist_id=PLFs4vir_WsTwEd-nJgVJCZPNL3HALHHpF',
+        ];
     }
 
     public function testAVideoLinkOffersItsChannel(): void
