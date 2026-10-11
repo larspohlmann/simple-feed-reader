@@ -67,9 +67,8 @@ final class PostEnrichers
     {
         return new ShareEnrichmentQueue(
             $entityManager,
-            new EntrySanitizer(new TrailingBlankRemover()),
             new NaiveUtcClock($clock),
-            new EntryShareClassifier(new BlueskyPendingEmbed()),
+            new EntryShareClassifier(new BlueskyPendingEmbed(), new EntrySanitizer(new TrailingBlankRemover())),
             new BlueskyPendingEmbed(),
         );
     }
