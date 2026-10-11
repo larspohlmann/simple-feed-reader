@@ -155,7 +155,7 @@ final readonly class HtmlPageFetcher
             if (preg_match(self::HEAD_END, $head, offset: $searchFrom) === 1) {
                 break;
             }
-            $searchFrom = max(0, \strlen($head) - \strlen('</head'));
+            $searchFrom = \strlen($head) - \strlen('</head');
         }
 
         return $head;

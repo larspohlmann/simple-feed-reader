@@ -85,11 +85,9 @@ final class HtmlPageFetcherTest extends TestCase
 
     public function testAHeadStopsReadingOnceTheHeadHasEnded(): void
     {
-        $head = $this->headOf(['<html lang="en"><head><title>Story</title></head><body>']);
+        $opening = str_pad('<html lang="en"><head><title>Story</title></head><body>', 20_000);
 
-        self::assertStringStartsWith('<html lang="en"><head><title>Story</title></head><body>xxx', $head);
-        self::assertGreaterThanOrEqual(20_000, \strlen($head));
-        self::assertLessThan(40_000, \strlen($head));
+        self::assertSame($opening, $this->headOf([$opening]));
     }
 
     public function testAHeadThatNeverEndsIsCutAt512KbAndTheDownloadStopsNearThere(): void
