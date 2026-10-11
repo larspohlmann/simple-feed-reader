@@ -41,7 +41,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         }
 
         $body = self::sharedBody($entry->getContentHtml() ?? '', $embed);
-        $this->linkCards->add($entry, 0, $embed->linkCards);
+        $this->linkCards->append($entry, [], $embed->linkCards);
         $entry->setContentHtml($this->sanitizer->sanitize($body->linkedHtml . $embed->html));
         $entry->setSummary(EntrySnippet::from($body->linkedHtml));
         if ($embed->leadImage !== null && $entry->getImageUrl() === null) {

@@ -17,6 +17,18 @@ final class LinkCardBudgetModelTest extends TestCase
         self::assertSame(5, LinkCardBudgetModel::fetches(5)->fetches);
     }
 
+    public function testFurtherFetchesFitOnlyWhileTheyEndWithinTheBudget(): void
+    {
+        $budget = LinkCardBudgetModel::fetches(3);
+        $oneFetch = PageHeadFetcher::MAX_DURATION_SECONDS;
+
+        self::assertTrue($budget->fitsAfter(0.0, 3));
+        self::assertFalse($budget->fitsAfter(0.0, 4));
+        self::assertTrue($budget->fitsAfter($oneFetch, 2));
+        self::assertFalse($budget->fitsAfter($oneFetch + 0.001, 2));
+        self::assertTrue($budget->fitsAfter(2.5 * $oneFetch, 0));
+    }
+
     public function testNoFetchIsAnEmptyBudget(): void
     {
         self::assertTrue(LinkCardBudgetModel::fetches(0)->isEmpty());

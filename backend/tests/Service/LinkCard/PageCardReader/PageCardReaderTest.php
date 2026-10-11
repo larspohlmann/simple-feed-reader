@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\LinkCard;
+namespace App\Tests\Service\LinkCard\PageCardReader;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
-use App\Service\LinkCard\PageCardReader;
+use App\Service\LinkCard\PageCardReader\PageCardReader;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\PageHeadFetcher;
 use App\Tests\Support\FetchWiring;

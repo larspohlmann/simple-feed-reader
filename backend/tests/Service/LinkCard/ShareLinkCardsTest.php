@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\LinkCard;
 
 use App\Entity\Entry;
-use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Headline;
 use App\Entity\LinkCard;
@@ -21,16 +20,15 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\ShareLinkCardsWiring;
 use App\Tests\Support\RecordingLogger;
+use App\Tests\Support\StubPageCardReader;
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\HttpClient\MockHttpClient;
-use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class ShareLinkCardsTest extends DbTestCase
 {
     private MockClock $clock;
-    private MockHttpClient $client;
+    private StubPageCardReader $pages;
     private RecordingLogger $logger;
     private ShareLinkCards $shareLinkCards;
     private Feed $feed;
@@ -39,11 +37,11 @@ final class ShareLinkCardsTest extends DbTestCase
     {
         parent::setUp();
         $this->clock = new MockClock('2026-10-11 12:00:00', 'UTC');
-        $this->client = new MockHttpClient(self::page(...));
+        $this->pages = new StubPageCardReader();
         $this->logger = new RecordingLogger();
-        $this->shareLinkCards = ShareLinkCardsWiring::build(
+        $this->shareLinkCards = ShareLinkCardsWiring::reading(
+            $this->pages,
             $this->entityManager,
-            $this->client,
             $this->clock,
             $this->logger,
         );
@@ -61,7 +59,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
         $this->shareLinkCards->complete([$this->rowOf($post)], self::fiveFetches());
 
-        self::assertSame(2, $this->client->getRequestsCount());
+        self::assertSame(2, $this->pages->reads());
         self::assertSame(
             ['Card for https://example.com/a', 'Card for https://example.com/b'],
             $this->cardTitles($post),
@@ -76,12 +74,12 @@ final class ShareLinkCardsTest extends DbTestCase
         $newest = $this->queuedPost(3, self::sharing(3, 2));
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        self::assertSame(3, $this->client->getRequestsCount());
+        self::assertSame(3, $this->pages->reads());
         self::assertCount(3, $this->cardTitles($oldest));
         self::assertSame([], $this->cardTitles($middle));
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        self::assertSame(8, $this->client->getRequestsCount());
+        self::assertSame(8, $this->pages->reads());
         self::assertCount(3, $this->cardTitles($middle));
         self::assertCount(2, $this->cardTitles($newest));
     }
@@ -92,12 +90,12 @@ final class ShareLinkCardsTest extends DbTestCase
         $twoLinks = $this->queuedPost(2, self::sharing(2, 2));
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        self::assertSame(5, $this->client->getRequestsCount());
+        self::assertSame(5, $this->pages->reads());
         self::assertCount(5, $this->cardTitles($fiveLinks));
         self::assertSame([], $this->cardTitles($twoLinks));
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        self::assertSame(7, $this->client->getRequestsCount());
+        self::assertSame(7, $this->pages->reads());
         self::assertCount(2, $this->cardTitles($twoLinks));
         self::assertSame([], $this->claimable());
     }
@@ -109,7 +107,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         $this->shareLinkCards->complete([$this->rowOf($post)], self::fiveFetches());
 
-        self::assertSame(0, $this->client->getRequestsCount());
+        self::assertSame(0, $this->pages->reads());
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
@@ -120,11 +118,11 @@ final class ShareLinkCardsTest extends DbTestCase
             range(1, 5),
         );
         $slowPages = $this->slowPages(15);
-        $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
+        $shareLinkCards = ShareLinkCardsWiring::reading($slowPages, $this->entityManager, $this->clock);
 
         $shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(3, $slowPages->getRequestsCount());
+        self::assertSame(3, $slowPages->reads());
         self::assertCount(1, $this->cardTitles($posts[2]));
         self::assertSame(
             [$posts[3]->requireId(), $posts[4]->requireId()],
@@ -135,14 +133,12 @@ final class ShareLinkCardsTest extends DbTestCase
     public function testAHolderWhoseLeaseWasTakenOverNeitherCardsNorFinishesThePost(): void
     {
         $post = $this->queuedPost(1, self::sharing(1, 1));
-        $takeOver = new MockHttpClient(function (string $method, string $url) use ($post): MockResponse {
+        $takeOver = new StubPageCardReader(function () use ($post): void {
             $this->clock->sleep(61);
             $this->enrichments()->claim([$this->rowOf($post)], $this->clock->now());
-
-            return self::page($method, $url);
         });
 
-        $completed = ShareLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)
+        $completed = ShareLinkCardsWiring::reading($takeOver, $this->entityManager, $this->clock)
             ->complete($this->claimable(), self::fiveFetches());
 
         self::assertSame(0, $completed);
@@ -157,7 +153,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(0, $this->client->getRequestsCount());
+        self::assertSame(0, $this->pages->reads());
         self::assertSame(['Stored before'], $this->cardTitles($post));
         self::assertSame([], $this->claimable());
     }
@@ -170,7 +166,7 @@ final class ShareLinkCardsTest extends DbTestCase
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(2, $this->client->getRequestsCount());
+        self::assertSame(2, $this->pages->reads());
         self::assertSame(
             ['Stored before', 'Card for https://example.com/1/1', 'Card for https://example.com/1/3'],
             $this->cardTitles($post),
@@ -187,50 +183,9 @@ final class ShareLinkCardsTest extends DbTestCase
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(5, $this->client->getRequestsCount());
+        self::assertSame(5, $this->pages->reads());
         self::assertCount(5, $this->cardTitles($carded));
         self::assertCount(4, $this->cardTitles($next));
-    }
-
-    public function testACardedQuoteLeavesTheBodyAndTheSummaryIsDerivedAgain(): void
-    {
-        $post = $this->queuedPost(1, '<p>RE: <a href="https://q.example/@a/1">https://q.example/@a/1</a></p>'
-            . '<p>Reposting for the morning crew</p>');
-        $post->setSummary('RE: https://q.example/@a/1 Reposting for the morning crew');
-        $this->entityManager->flush();
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($post);
-
-        self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
-        self::assertSame('<p>Reposting for the morning crew</p>', $post->getContentHtml());
-        self::assertSame('Reposting for the morning crew', $post->getSummary());
-    }
-
-    public function testAQuoteOnlyPostEndsWithNoBodyAndNoSummary(): void
-    {
-        $post = $this->queuedPost(1, '<p>RE: <a href="https://q.example/@a/1">https://q.example/@a/1</a></p>');
-        $post->setSummary('RE: https://q.example/@a/1');
-        $this->entityManager->flush();
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($post);
-
-        self::assertSame(['Card for https://q.example/@a/1'], $this->cardTitles($post));
-        self::assertNull($post->getContentHtml());
-        self::assertNull($post->getSummary());
-    }
-
-    public function testAQuoteWhosePageFailsKeepsItsLine(): void
-    {
-        $body = '<p>RE: <a href="https://q.example/missing">https://q.example/missing</a></p><p>Look.</p>';
-        $post = $this->queuedPost(1, $body);
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($post);
-
-        self::assertSame([], $this->cardTitles($post));
-        self::assertSame($body, $post->getContentHtml());
     }
 
     public function testAMissingPageGivesNoCardAndTheRowIsStillDone(): void
@@ -248,29 +203,13 @@ final class ShareLinkCardsTest extends DbTestCase
         ]], $this->logger->records);
     }
 
-    public function testAPageWithoutATitleGivesNoCardAndLeavesNoGapInTheOrder(): void
-    {
-        $post = $this->queuedPost(1, '<p>https://example.com/untitled https://example.com/found</p>');
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-
-        self::assertSame(['Card for https://example.com/found'], $this->cardTitles($post));
-        self::assertSame(
-            [0],
-            $this->entityManager->getConnection()->fetchFirstColumn(
-                'SELECT position FROM link_card WHERE entry_id = ?',
-                [$post->requireId()],
-            ),
-        );
-    }
-
     public function testAPostThatNoLongerSharesALinkIsDoneWithoutAFetch(): void
     {
         $this->queuedPost(1, null);
 
         $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
 
-        self::assertSame(0, $this->client->getRequestsCount());
+        self::assertSame(0, $this->pages->reads());
         self::assertSame([], $this->claimable());
     }
 
@@ -284,51 +223,6 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame([], $this->claimable());
     }
 
-    public function testATitledShareWhoseTargetIsAPictureBecomesAMediaShare(): void
-    {
-        $chart = $this->queuedTitledShare(1, 'https://i.example.com/chart');
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($chart);
-
-        self::assertSame(ShareKind::Media, $chart->getShareKind());
-        self::assertSame('https://i.example.com/chart', $chart->getMedia()[0]->url);
-    }
-
-    public function testATitledShareWhosePictureIsAlreadyAMediumMovesItFirstInsteadOfAddingItAgain(): void
-    {
-        $chart = $this->queuedTitledShare(1, 'https://i.example.com/chart');
-        $chart->setMedia([
-            new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
-            new EntryMedium('https://i.example.com/chart', 'image', 800, 600),
-        ], []);
-        $this->entityManager->flush();
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($chart);
-
-        self::assertEquals(
-            [
-                new EntryMedium('https://i.example.com/chart', 'image', 800, 600),
-                new EntryMedium('https://cdn.example/thumb.jpg', 'image'),
-            ],
-            $chart->getMedia(),
-        );
-    }
-
-    public function testAPostSharingAPictureStaysALinkShare(): void
-    {
-        $post = $this->queuedPost(1, '<p>https://i.example.com/chart</p>');
-        $post->setShareKind(ShareKind::Link);
-        $this->entityManager->flush();
-
-        $this->shareLinkCards->complete($this->claimable(), self::fiveFetches());
-        $this->entityManager->refresh($post);
-
-        self::assertSame(ShareKind::Link, $post->getShareKind());
-        self::assertSame([], $post->getMedia());
-    }
-
     public function testAFailedFlushIsRethrownAndLeavesThePostPending(): void
     {
         $post = $this->queuedPost(1, self::sharing(1, 1));
@@ -340,7 +234,7 @@ final class ShareLinkCardsTest extends DbTestCase
         };
 
         try {
-            $failing = ShareLinkCardsWiring::build($closingEntityManager, $this->client, $this->clock);
+            $failing = ShareLinkCardsWiring::reading($this->pages, $closingEntityManager, $this->clock);
             $failing->complete($this->claimable(), self::fiveFetches());
             self::fail('A failed flush must be rethrown.');
         } catch (\RuntimeException $exception) {
@@ -358,7 +252,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $completed = $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
 
         self::assertSame(1, $completed);
-        self::assertSame(1, $this->client->getRequestsCount());
+        self::assertSame(1, $this->pages->reads());
         self::assertCount(1, $this->cardTitles($oldest));
         self::assertSame([$newer->requireId()], $this->enrichments()->pendingEntryIdsAmong([$newer->requireId()]));
     }
@@ -370,7 +264,7 @@ final class ShareLinkCardsTest extends DbTestCase
         $completed = $this->shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(1));
 
         self::assertSame(1, $completed);
-        self::assertSame(3, $this->client->getRequestsCount());
+        self::assertSame(3, $this->pages->reads());
         self::assertCount(3, $this->cardTitles($threeLinks));
     }
 
@@ -392,43 +286,18 @@ final class ShareLinkCardsTest extends DbTestCase
             $this->queuedPost($number, self::sharing($number, 1));
         }
         $slowPages = $this->slowPages($secondsPerPage);
-        $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
+        $shareLinkCards = ShareLinkCardsWiring::reading($slowPages, $this->entityManager, $this->clock);
 
         $completed = $shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
 
         self::assertSame($expectedCompleted, $completed);
-        self::assertSame($expectedRequests, $slowPages->getRequestsCount());
+        self::assertSame($expectedRequests, $slowPages->reads());
         self::assertCount($expectedStillClaimable, $this->claimable());
     }
 
-    private static function page(string $method, string $url): MockResponse
+    private function slowPages(int $secondsPerPage): StubPageCardReader
     {
-        if (str_contains($url, '/missing')) {
-            return new MockResponse('Not found', ['http_code' => 404]);
-        }
-        if (str_contains($url, '/chart')) {
-            return new MockResponse('PNG', ['http_code' => 200, 'response_headers' => ['content-type' => 'image/png']]);
-        }
-        if (str_contains($url, '/untitled')) {
-            return new MockResponse(
-                '<html lang="en"><head></head><body>No title.</body></html>',
-                ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-            );
-        }
-
-        return new MockResponse(
-            '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
-            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-        );
-    }
-
-    private function slowPages(int $secondsPerPage): MockHttpClient
-    {
-        return new MockHttpClient(function (string $method, string $url) use ($secondsPerPage): MockResponse {
-            $this->clock->sleep($secondsPerPage);
-
-            return self::page($method, $url);
-        });
+        return new StubPageCardReader(fn () => $this->clock->sleep($secondsPerPage));
     }
 
     private static function fiveFetches(): LinkCardBudgetModel

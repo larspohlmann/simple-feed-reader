@@ -12,12 +12,12 @@ use App\Tests\DbTestCase;
 
 final class LinkCardRepositoryTest extends DbTestCase
 {
-    public function testAddingKeepsTheGivenOrder(): void
+    public function testAppendingKeepsTheGivenOrder(): void
     {
         $entry = $this->entry('one');
         $cards = $this->repository();
 
-        $cards->add($entry, 0, [$this->content('b'), $this->content('a'), $this->content('c')]);
+        $cards->append($entry, [], [$this->content('b'), $this->content('a'), $this->content('c')]);
         $this->entityManager->flush();
 
         $stored = $cards->contentsByEntryIds([$entry->requireId()]);
@@ -31,7 +31,7 @@ final class LinkCardRepositoryTest extends DbTestCase
         $full = new LinkCardContent('https://example.com/a', 'Title', 'About', 'https://example.com/a.jpg', 'Example');
         $bare = new LinkCardContent('https://example.com/b', 'Bare', null, null, 'example.com');
 
-        $cards->add($entry, 0, [$full, $bare]);
+        $cards->append($entry, [], [$full, $bare]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -41,7 +41,7 @@ final class LinkCardRepositoryTest extends DbTestCase
     public function testCardsGoWithTheirEntry(): void
     {
         $entry = $this->entry('gone');
-        $this->repository()->add($entry, 0, [$this->content('a')]);
+        $this->repository()->append($entry, [], [$this->content('a')]);
         $this->entityManager->flush();
 
         $connection = $this->entityManager->getConnection();
@@ -56,8 +56,8 @@ final class LinkCardRepositoryTest extends DbTestCase
         $second = $this->entry('second');
         $empty = $this->entry('empty');
         $cards = $this->repository();
-        $cards->add($second, 0, [$this->content('s1')]);
-        $cards->add($first, 0, [$this->content('f1'), $this->content('f2')]);
+        $cards->append($second, [], [$this->content('s1')]);
+        $cards->append($first, [], [$this->content('f1'), $this->content('f2')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 
@@ -77,10 +77,10 @@ final class LinkCardRepositoryTest extends DbTestCase
     {
         $entry = $this->entry('one');
         $cards = $this->repository();
-        $cards->add($entry, 0, [$this->content('a')]);
+        $cards->append($entry, [], [$this->content('a')]);
         $this->entityManager->flush();
 
-        $cards->add($entry, 1, [$this->content('b'), $this->content('c')]);
+        $cards->append($entry, [$this->content('a')], [$this->content('b'), $this->content('c')]);
         $this->entityManager->flush();
         $this->entityManager->clear();
 

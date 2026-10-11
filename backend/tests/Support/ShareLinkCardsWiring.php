@@ -10,7 +10,9 @@ use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\UrlGuard;
-use App\Service\LinkCard\PageCardReader;
+use App\Service\LinkCard\EntryCardWriter;
+use App\Service\LinkCard\PageCardReader\PageCardReader;
+use App\Service\LinkCard\PageCardReader\PageCardReaderInterface;
 use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
@@ -23,7 +25,7 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/** ShareLinkCards over a test HTTP client, wired as the container wires it. */
+/** ShareLinkCards over a test HTTP client or a stubbed page-card reader, wired as the container wires it. */
 final class ShareLinkCardsWiring
 {
     private function __construct()
@@ -36,14 +38,31 @@ final class ShareLinkCardsWiring
         ClockInterface $clock,
         LoggerInterface $logger = new NullLogger(),
     ): ShareLinkCards {
+        return self::reading(new PageCardReader(self::headFetcher($client)), $entityManager, $clock, $logger);
+    }
+
+    public static function reading(
+        PageCardReaderInterface $reader,
+        EntityManagerInterface $entityManager,
+        ClockInterface $clock,
+        LoggerInterface $logger = new NullLogger(),
+    ): ShareLinkCards {
         return new ShareLinkCards(
-            new PageCardReader(self::headFetcher($client)),
+            $reader,
+            self::cardWriter($entityManager),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
             new NaiveUtcClock($clock),
-            new EntrySanitizer(new TrailingBlankRemover()),
             $logger,
+        );
+    }
+
+    public static function cardWriter(EntityManagerInterface $entityManager): EntryCardWriter
+    {
+        return new EntryCardWriter(
+            PostEnrichers::linkCards($entityManager),
+            new EntrySanitizer(new TrailingBlankRemover()),
         );
     }
 
