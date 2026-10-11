@@ -144,9 +144,10 @@ final class ShareLinkCardsTest extends DbTestCase
             return self::page($method, $url);
         });
 
-        ShareLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)
+        $completed = ShareLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)
             ->complete($this->claimable(), self::fiveFetches());
 
+        self::assertSame(0, $completed);
         self::assertSame([], $this->cardTitles($post));
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
@@ -351,27 +352,6 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
     }
 
-    private static function page(string $method, string $url): MockResponse
-    {
-        if (str_contains($url, '/missing')) {
-            return new MockResponse('Not found', ['http_code' => 404]);
-        }
-        if (str_contains($url, '/chart')) {
-            return new MockResponse('PNG', ['http_code' => 200, 'response_headers' => ['content-type' => 'image/png']]);
-        }
-        if (str_contains($url, '/untitled')) {
-            return new MockResponse(
-                '<html lang="en"><head></head><body>No title.</body></html>',
-                ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-            );
-        }
-
-        return new MockResponse(
-            '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
-            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
-        );
-    }
-
     public function testACallSpendsNoMoreFetchesThanItsBudget(): void
     {
         $oldest = $this->queuedPost(1, self::sharing(1, 1));
@@ -416,6 +396,46 @@ final class ShareLinkCardsTest extends DbTestCase
         self::assertSame(
             [$posts[1]->requireId(), $posts[2]->requireId()],
             array_map(static fn (ShareEnrichment $row): int => $row->getEntry()->requireId(), $this->claimable()),
+        );
+    }
+
+    public function testNFullLengthFetchesFitAnNFetchBudget(): void
+    {
+        foreach (range(1, 3) as $number) {
+            $this->queuedPost($number, self::sharing($number, 1));
+        }
+        $fullLengthPages = new MockHttpClient(function (string $method, string $url): MockResponse {
+            $this->clock->sleep(8);
+
+            return self::page($method, $url);
+        });
+        $shareLinkCards = ShareLinkCardsWiring::build($this->entityManager, $fullLengthPages, $this->clock);
+
+        $completed = $shareLinkCards->complete($this->claimable(), LinkCardBudgetModel::fetches(2));
+
+        self::assertSame(2, $completed);
+        self::assertSame(2, $fullLengthPages->getRequestsCount());
+        self::assertCount(1, $this->claimable());
+    }
+
+    private static function page(string $method, string $url): MockResponse
+    {
+        if (str_contains($url, '/missing')) {
+            return new MockResponse('Not found', ['http_code' => 404]);
+        }
+        if (str_contains($url, '/chart')) {
+            return new MockResponse('PNG', ['http_code' => 200, 'response_headers' => ['content-type' => 'image/png']]);
+        }
+        if (str_contains($url, '/untitled')) {
+            return new MockResponse(
+                '<html lang="en"><head></head><body>No title.</body></html>',
+                ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
+            );
+        }
+
+        return new MockResponse(
+            '<html lang="en"><head><meta property="og:title" content="Card for ' . $url . '"></head></html>',
+            ['http_code' => 200, 'response_headers' => ['content-type' => 'text/html']],
         );
     }
 
