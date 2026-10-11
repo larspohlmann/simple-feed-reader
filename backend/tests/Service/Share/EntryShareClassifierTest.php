@@ -12,7 +12,10 @@ use App\Entity\Headline;
 use App\Entity\Share;
 use App\Enum\CommentsLoad;
 use App\Service\Bluesky\BlueskyPendingEmbed;
+use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Share\EntryShareClassifier;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryShareClassifierTest extends TestCase
@@ -27,7 +30,8 @@ final class EntryShareClassifierTest extends TestCase
 
     private function classified(Entry $entry): Entry
     {
-        (new EntryShareClassifier(new BlueskyPendingEmbed()))->classify($entry);
+        (new EntryShareClassifier(new BlueskyPendingEmbed(), new EntrySanitizer(new TrailingBlankRemover())))
+            ->classify($entry);
 
         return $entry;
     }
@@ -151,6 +155,46 @@ final class EntryShareClassifierTest extends TestCase
         self::assertSame("Benjamin Mayo, commenting:\nThere needs to be a name for this.", $entry->getSummary());
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function urlTexts(): iterable
+    {
+        yield 'a bare domain as its own link text' => ['<a href="https://example.com">example.com</a>'];
+        yield 'a bare url in the text' => ['https://example.com/bare'];
+        yield 'url text that points elsewhere' => ['<a href="https://example.com/a">www.other.org/x</a>'];
+    }
+
+    #[DataProvider('urlTexts')]
+    public function testLinkTextThatReadsAsAUrlIsNoOwnProse(string $urlText): void
+    {
+        $entry = self::hackerNews('https://ghuntley.com/unikernels/');
+        $entry->setContentHtml('<p>Worth reading ' . $urlText . ' today.</p>');
+
+        self::assertSame('Worth reading today.', $this->classified($entry)->getSummary());
+    }
+
+    public function testABareUrlDoesNotCountTowardsAPostsOwnProse(): void
+    {
+        $entry = $this->classified(self::post('<p>' . str_repeat('a', 480) . ' https://example.com/bare</p>'));
+
+        self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
+    public function testABareDomainLinkingItsOwnPageIsASharedLink(): void
+    {
+        $entry = $this->classified(self::post('<p>Look: <a href="https://example.com">example.com</a></p>'));
+
+        self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
+    public function testUrlTextThatPointsElsewhereIsNoSharedLink(): void
+    {
+        $entry = $this->classified(
+            self::post('<p>Look: <a href="https://example.com/a">www.other.org/x</a></p>'),
+        );
+
+        self::assertTrue($entry->getShare()->isNone());
+    }
+
     public function testASummaryOnlyShareIsMeasuredByItsSummaryWhichNeverExceedsTheLimit(): void
     {
         $entry = self::hackerNews('https://ghuntley.com/unikernels/');
@@ -243,6 +287,20 @@ final class EntryShareClassifierTest extends TestCase
         $entry = $this->classified(self::post('<p>' . str_repeat('ä', 300) . $link . '</p>'));
 
         self::assertEquals(Share::link(null), $entry->getShare());
+    }
+
+    public function testAPostHasItsBareUrlsLinked(): void
+    {
+        $entry = $this->classified(self::post('<p>See https://example.com/a</p>'));
+
+        self::assertStringContainsString('See <a href="https://example.com/a"', (string) $entry->getContentHtml());
+    }
+
+    public function testABlueskyPostAwaitingItsEmbedKeepsItsBareUrls(): void
+    {
+        $entry = $this->classified(self::blueskyPost('<p>See https://example.com/a</p>'));
+
+        self::assertSame('<p>See https://example.com/a</p>', $entry->getContentHtml());
     }
 
     public function testAPostLeavesItsSummaryAlone(): void

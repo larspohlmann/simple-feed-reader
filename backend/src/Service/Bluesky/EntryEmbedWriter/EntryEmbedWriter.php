@@ -84,6 +84,7 @@ final readonly class EntryEmbedWriter implements EntryEmbedWriterInterface
         return new SharedLinksModel(
             [...$shared->urls, $uncarded],
             $shared->linkedHtml . sprintf('<p><a href="%s">%s</a></p>', $escaped, $escaped),
+            $shared->ownProse,
         );
     }
 

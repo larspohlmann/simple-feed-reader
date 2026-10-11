@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Share\Support;
 
 use App\Entity\LinkCardContent;
-use App\Service\Fetch\Support\HostKey;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Html\Support\TextNodes;
 use App\Service\Share\Model\SharedLinksModel;
@@ -21,18 +20,13 @@ final class SharedLinks
     public const int MAX = 5;
 
     private const string BARE_URL_SPLIT = '#(' . LinkedPlainText::URL . ')#iu';
-    private const string TRUNCATION = '…';
 
     public static function of(string $bodyHtml): SharedLinksModel
     {
-        if (stripos($bodyHtml, 'http') === false) {
-            return new SharedLinksModel([], $bodyHtml);
-        }
-
         $document = HtmlDocumentParser::parseFragment($bodyHtml);
         $linkedHtml = self::linkBareUrls($document) === 0 ? $bodyHtml : ($document->body->innerHTML ?? $bodyHtml);
 
-        return new SharedLinksModel(self::sharedUrlsIn($document), $linkedHtml);
+        return new SharedLinksModel(self::sharedUrlsIn($document), $linkedHtml, OwnProse::of($document->body));
     }
 
     /** @return list<string> */
@@ -91,18 +85,7 @@ final class SharedLinks
 
         return mb_strlen($href) <= LinkCardContent::URL_MAX
             && AbsoluteHttpUrl::matches($href)
-            && self::readsAsItsUrl($anchor, $href);
-    }
-
-    private static function readsAsItsUrl(Element $anchor, string $href): bool
-    {
-        $visible = strtolower((string) preg_replace('/\s+/u', '', $anchor->textContent ?? ''));
-        $visible = (string) preg_replace('/' . self::TRUNCATION . '$/u', '', $visible);
-        $withoutWww = (string) preg_replace('/^www\./', '', $visible);
-
-        return str_starts_with($visible, 'http://')
-            || str_starts_with($visible, 'https://')
-            || preg_match('#^' . preg_quote(HostKey::forUrl($href), '#') . '(?:[/:?\#]|$)#', $withoutWww) === 1;
+            && UrlLinkText::readsAsItsUrl($anchor, $href);
     }
 
     private function __construct()

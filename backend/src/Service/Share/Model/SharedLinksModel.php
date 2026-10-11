@@ -10,6 +10,7 @@ final readonly class SharedLinksModel
     public function __construct(
         public array $urls,
         public string $linkedHtml,
+        public string $ownProse,
     ) {
     }
 

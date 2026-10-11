@@ -60,6 +60,11 @@ final class SharedLinksTest extends TestCase
         ];
         yield 'text adds www' => ['<a href="https://example.com/a">www.example.com/a</a>', ['https://example.com/a']];
         yield 'host that only starts like the link host' => ['<a href="https://ex.com/a">ex.com.evil/a</a>', []];
+        yield 'a host whose dot is another character' => ['<a href="https://example.com/a">examplexcom/a</a>', []];
+        yield 'host text in capitals' => [
+            '<a href="https://example.com/a">Example.com/a</a>',
+            ['https://example.com/a'],
+        ];
         yield 'uppercase scheme' => ['<p>HTTPS://EXAMPLE.COM/A</p>', ['HTTPS://EXAMPLE.COM/A']];
         yield 'url inside code' => ['<p><code>curl https://example.com/api</code></p>', []];
         yield 'url in curly quotes' => ['<p>“https://example.com/a”</p>', ['https://example.com/a']];
