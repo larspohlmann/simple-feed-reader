@@ -7,6 +7,7 @@ namespace App\Service\Fetch;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\Support\ResponseHeader;
 use App\Service\Fetch\Support\UrlResolver;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,17 +42,53 @@ final readonly class RedirectFollower
      */
     public function follow(string $url, array $options, int $maxRedirects): LandedResponse
     {
+        return $this->followWithin($url, $options, new RedirectBudget($maxRedirects));
+    }
+
+    /**
+     * As follow(), with the budget's seconds shared by every hop: each hop's max_duration is what the hops before it
+     * left, so a chain of slow redirects cannot outlast the budget.
+     *
+     * @param array<string, mixed> $options
+     *
+     * @throws RedirectChainException as follow() does, and when the time runs out before a hop
+     */
+    public function followWithin(string $url, array $options, RedirectBudget $budget): LandedResponse
+    {
         $currentUrl = $url;
-        for ($hop = 0; $hop <= $maxRedirects; $hop++) {
-            $response = $this->send($currentUrl, $options);
+        for ($hop = 0; $hop <= $budget->maxRedirects; $hop++) {
+            if ($budget->isSpent()) {
+                throw new RedirectChainException(sprintf('%s: out of time after %d hops', $url, $hop));
+            }
+            $response = $this->send($currentUrl, self::withinBudget($options, $budget));
             $status = $this->statusCode($response, $currentUrl);
+            $budget->spend(self::secondsTaken($response));
             if (!\in_array($status, self::REDIRECT_STATUSES, true)) {
                 return new LandedResponse($currentUrl, $status, $response, $hop);
             }
             $currentUrl = $this->redirectTarget($response, $currentUrl);
         }
 
-        throw new RedirectChainException(sprintf('%s: more than %d redirects', $url, $maxRedirects));
+        throw new RedirectChainException(sprintf('%s: more than %d redirects', $url, $budget->maxRedirects));
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     *
+     * @return array<string, mixed>
+     */
+    private static function withinBudget(array $options, RedirectBudget $budget): array
+    {
+        $remaining = $budget->remainingSeconds();
+
+        return is_infinite($remaining) ? $options : ['max_duration' => $remaining] + $options;
+    }
+
+    private static function secondsTaken(ResponseInterface $response): float
+    {
+        $totalTime = $response->getInfo('total_time');
+
+        return is_numeric($totalTime) ? (float) $totalTime : 0.0;
     }
 
     /** @param array<string, mixed> $options */

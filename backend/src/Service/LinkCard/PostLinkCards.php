@@ -11,6 +11,7 @@ use App\Repository\PostEnrichmentRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\LinkCard\Support\SharedLinks;
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Reader\HtmlPageFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -18,6 +19,7 @@ use Psr\Log\LoggerInterface;
 final readonly class PostLinkCards
 {
     private const int FETCHES_PER_CALL = SharedLinks::MAX;
+    private const float DEADLINE_SECONDS = 40.0;
 
     public function __construct(
         private PageCardReader $pageCards,
@@ -33,23 +35,67 @@ final readonly class PostLinkCards
     public function complete(array $queued): void
     {
         $sharedUrlsByRowId = self::withinBudget($queued);
-        $now = $this->clock->now();
+        $claimedAt = $this->clock->now();
         $claimed = $this->enrichments->claim(
             array_values(array_filter(
                 $queued,
                 static fn (PostEnrichment $row): bool => isset($sharedUrlsByRowId[$row->requireId()]),
             )),
-            $now,
+            $claimedAt,
         );
-        if ($claimed === []) {
+
+        $cardsByRowId = [];
+        foreach ($claimed as $index => $row) {
+            $sharedUrls = $sharedUrlsByRowId[$row->requireId()];
+            if ($index > 0 && !$this->hasTimeFor($sharedUrls, $claimedAt)) {
+                $this->enrichments->release(\array_slice($claimed, $index), $claimedAt);
+                break;
+            }
+            $cardsByRowId[$row->requireId()] = $this->cardsFor($sharedUrls);
+        }
+        $this->store($claimed, $cardsByRowId, $claimedAt);
+    }
+
+    /**
+     * Only rows the claim still holds are written, and never over cards another worker stored meanwhile.
+     *
+     * @param list<PostEnrichment>                $claimed
+     * @param array<int, list<LinkCardContent>> $cardsByRowId the rows this call worked
+     */
+    private function store(array $claimed, array $cardsByRowId, \DateTimeImmutable $claimedAt): void
+    {
+        $worked = array_values(array_filter(
+            $claimed,
+            static fn (PostEnrichment $row): bool => isset($cardsByRowId[$row->requireId()]),
+        ));
+        $held = $this->enrichments->stillHeld($worked, $claimedAt);
+        if ($held === []) {
             return;
         }
 
-        foreach ($claimed as $row) {
-            $this->linkCards->add($row->getEntry(), $this->cardsFor($sharedUrlsByRowId[$row->requireId()]));
+        $carded = array_flip($this->linkCards->entryIdsWithCards(array_map(
+            static fn (PostEnrichment $row): int => $row->getEntry()->requireId(),
+            $held,
+        )));
+        foreach ($held as $row) {
+            if (!isset($carded[$row->getEntry()->requireId()])) {
+                $this->linkCards->add($row->getEntry(), $cardsByRowId[$row->requireId()]);
+            }
         }
         $this->entityManager->flush();
-        $this->enrichments->markDone($claimed, $now);
+        $this->enrichments->markDone($held, $claimedAt);
+    }
+
+    /**
+     * A later post starts only if all its links can still be fetched before the deadline, well inside the lease.
+     *
+     * @param list<string> $sharedUrls
+     */
+    private function hasTimeFor(array $sharedUrls, \DateTimeImmutable $claimedAt): bool
+    {
+        $elapsed = (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
+
+        return $elapsed + \count($sharedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= self::DEADLINE_SECONDS;
     }
 
     /**

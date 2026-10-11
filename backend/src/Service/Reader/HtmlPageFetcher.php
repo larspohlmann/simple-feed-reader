@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\Pass\LandedResponse;
+use App\Service\Fetch\Pass\RedirectBudget;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\Support\ContentTypeCharset;
 use App\Service\Html\Support\HtmlTranscoder;
@@ -30,7 +31,7 @@ final readonly class HtmlPageFetcher
     // The transfer is aborted a little past the cap, so the bytes the read keeps have surely arrived.
     private const int HEAD_ABORT_BYTES = self::HEAD_MAX_BYTES + 65_536;
     private const float HEAD_TIMEOUT_SECONDS = 5.0;
-    private const float HEAD_MAX_DURATION_SECONDS = 8.0;
+    public const float HEAD_MAX_DURATION_SECONDS = 8.0;
     private const int SNIPPET_LENGTH = 200;
     private const int SNIPPET_SCAN_LENGTH = 20_000;
     private const int LANDING_SCAN_LENGTH = 20_000;
@@ -49,7 +50,7 @@ final readonly class HtmlPageFetcher
         $remainingHops = self::MAX_REDIRECTS;
         $target = $url;
         while (true) {
-            $landed = $this->land($target, $remainingHops, $this->pageOptions());
+            $landed = $this->land($target, $this->pageOptions(), new RedirectBudget($remainingHops));
             $remainingHops -= $landed->hops;
             $body = $this->readableBody($landed);
 
@@ -75,7 +76,11 @@ final readonly class HtmlPageFetcher
      */
     public function fetchHead(string $url): PageResponseModel
     {
-        $landed = $this->land($url, self::MAX_REDIRECTS, $this->headOptions());
+        $landed = $this->land(
+            $url,
+            $this->headOptions(),
+            new RedirectBudget(self::MAX_REDIRECTS, self::HEAD_MAX_DURATION_SECONDS),
+        );
         $this->assertSuccess($landed);
         $head = $this->utf8($this->firstBytes($landed), $landed);
         $this->assertNotChallenge(mb_substr($head, 0, self::LANDING_SCAN_LENGTH), $landed);
@@ -84,10 +89,10 @@ final readonly class HtmlPageFetcher
     }
 
     /** @param array<string, mixed> $options */
-    private function land(string $url, int $maxRedirects, array $options): LandedResponse
+    private function land(string $url, array $options, RedirectBudget $budget): LandedResponse
     {
         try {
-            return $this->redirects->follow($url, $options, $maxRedirects);
+            return $this->redirects->followWithin($url, $options, $budget);
         } catch (RedirectChainException $exception) {
             throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
@@ -155,7 +160,6 @@ final readonly class HtmlPageFetcher
         return [
             'headers' => $this->headers(),
             'timeout' => self::HEAD_TIMEOUT_SECONDS,
-            'max_duration' => self::HEAD_MAX_DURATION_SECONDS,
             'buffer' => false,
             'on_progress' => self::abortPastTheHead(),
         ];
@@ -176,7 +180,6 @@ final readonly class HtmlPageFetcher
         ];
     }
 
-    /** The transfer is aborted once; the bytes before the abort are still read, up to the cap. */
     private static function abortPastTheHead(): \Closure
     {
         $aborted = false;

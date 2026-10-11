@@ -29,6 +29,28 @@ final class LinkCardRepository extends ServiceEntityRepository
     /**
      * @param list<int> $entryIds
      *
+     * @return list<int> those among them that hold cards
+     */
+    public function entryIdsWithCards(array $entryIds): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<int|string> $carded */
+        $carded = $this->createQueryBuilder('card')
+            ->select('DISTINCT IDENTITY(card.entry)')
+            ->andWhere('card.entry IN (:entryIds)')
+            ->setParameter('entryIds', $entryIds)
+            ->getQuery()
+            ->getSingleColumnResult();
+
+        return array_map(intval(...), $carded);
+    }
+
+    /**
+     * @param list<int> $entryIds
+     *
      * @return array<int, list<LinkCardContent>> in post order, by entry id
      */
     public function contentsByEntryIds(array $entryIds): array

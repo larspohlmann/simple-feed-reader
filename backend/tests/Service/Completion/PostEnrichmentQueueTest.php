@@ -13,6 +13,7 @@ use App\Enum\PostEnrichmentKind;
 use App\Service\Completion\PostEnrichmentQueue;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PostEnrichers;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\ReloadsEntities;
 use Symfony\Component\Clock\MockClock;
 
@@ -131,6 +132,22 @@ final class PostEnrichmentQueueTest extends DbTestCase
 
         self::assertSame([self::LINK_POST => PostEnrichmentKind::LinkCards], $this->queuedKinds());
         self::assertSame('<p>Read https://example.com/b</p>', $this->reload($carded)->getContentHtml());
+    }
+
+    public function testOpeningAPostAlreadyQueuedCostsOneLookupAndNoWrite(): void
+    {
+        $queued = $this->post(self::LINK_POST, '<p>Read https://example.com/a</p>');
+        $this->entityManager->persist(new PostEnrichment($queued, PostEnrichmentKind::LinkCards, $this->clock->now()));
+        $this->entityManager->flush();
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $this->queue->queueOpened($queued);
+
+        self::assertCount(1, $recorder->queries(), implode("\n", $recorder->queries()));
+        self::assertSame([], $recorder->queriesMatching('insert'));
+        self::assertSame('<p>Read https://example.com/a</p>', $queued->getContentHtml());
     }
 
     public function testAnOpenedArticleOrBlueskyPostIsNotQueued(): void

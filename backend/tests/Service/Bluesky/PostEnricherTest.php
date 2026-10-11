@@ -427,6 +427,10 @@ final class PostEnricherTest extends DbTestCase
 
         self::assertSame([], $this->appView->requests);
         self::assertSame(1, $this->pendingCount());
+        self::assertCount(
+            1,
+            PostEnrichers::enrichments($this->entityManager)->findClaimableFor([$queued], $this->clock->now()),
+        );
     }
 
     public function testEnrichingEntriesThatTheAppViewFailsLeavesThemQueuedAndWarns(): void

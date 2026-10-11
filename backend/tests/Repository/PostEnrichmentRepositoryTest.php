@@ -109,6 +109,26 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         self::assertSame([$row], $this->repository()->claim([$row], $this->now()->modify('+61 seconds')));
     }
 
+    public function testAHolderWhoseLeaseWasTakenOverChangesNothing(): void
+    {
+        $row = $this->queuedLinkPost($this->feed('https://mastodon.test/@a.rss'), 'https://mastodon.test/@a/1');
+        $this->entityManager->flush();
+        $stale = $this->now();
+        $current = $this->now()->modify('+61 seconds');
+        $this->repository()->claim([$row], $stale);
+        $this->repository()->claim([$row], $current);
+
+        $this->repository()->markDone([$row], $stale);
+        $this->repository()->release([$row], $stale);
+
+        self::assertSame([], $this->repository()->stillHeld([$row], $stale));
+        self::assertSame([$row], $this->repository()->stillHeld([$row], $current));
+        self::assertSame(
+            [$row->getEntry()->requireId()],
+            $this->repository()->pendingEntryIdsAmong([$row->getEntry()->requireId()]),
+        );
+    }
+
     public function testAReleasedRowCanBeClaimedAgainAtOnce(): void
     {
         $feed = $this->feed('https://bsky.app/profile/a/rss');
@@ -116,7 +136,7 @@ final class PostEnrichmentRepositoryTest extends DbTestCase
         $this->entityManager->flush();
         $this->repository()->claim([$row], $this->now());
 
-        $this->repository()->release([$row]);
+        $this->repository()->release([$row], $this->now());
 
         self::assertSame([$row], $this->repository()->claim([$row], $this->now()));
     }

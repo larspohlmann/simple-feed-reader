@@ -123,6 +123,58 @@ final class HtmlPageFetcherTest extends TestCase
         self::assertSame(8.0, $options['max_duration']);
     }
 
+    public function testAHeadsRedirectsShareItsEightSeconds(): void
+    {
+        $maxDurations = [];
+        $fetcher = $this->fetcher(static function (string $method, string $url, array $options) use (&$maxDurations) {
+            $maxDurations[] = $options['max_duration'];
+
+            return new MockResponse('', [
+                'http_code' => 302,
+                'response_headers' => ['location' => 'https://example.com/hop' . \count($maxDurations)],
+                'total_time' => 3.0,
+            ]);
+        });
+
+        try {
+            $fetcher->fetchHead('https://example.com/slow');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertStringContainsString('out of time', $failure->getMessage());
+        }
+
+        self::assertSame([8.0, 5.0, 2.0], $maxDurations);
+    }
+
+    public function testAHeadOfAPrivateAddressIsRefused(): void
+    {
+        $fetcher = $this->fetcher([]);
+
+        $this->expectException(PageFetchException::class);
+        $fetcher->fetchHead('http://169.254.169.254/latest/meta-data/');
+    }
+
+    public function testAHeadWhoseRedirectLeadsToAPrivateAddressIsRefused(): void
+    {
+        $requested = [];
+        $fetcher = $this->fetcher(static function (string $method, string $url) use (&$requested): MockResponse {
+            $requested[] = $url;
+
+            return new MockResponse('', [
+                'http_code' => 302,
+                'response_headers' => ['location' => 'http://169.254.169.254/latest/meta-data/'],
+            ]);
+        });
+
+        try {
+            $fetcher->fetchHead('https://example.com/bounce');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException) {
+        }
+
+        self::assertSame(['https://example.com/bounce'], $requested);
+    }
+
     public function testAHeadDoesNotChaseAMetaRefresh(): void
     {
         $fetcher = $this->fetcher([

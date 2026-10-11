@@ -117,35 +117,64 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
         return $claimed;
     }
 
-    /** @param list<PostEnrichment> $rows */
-    public function release(array $rows): void
+    /**
+     * Writes after a claim name the claim's time, so a holder whose lease another worker took over changes nothing.
+     *
+     * @param list<PostEnrichment> $rows
+     */
+    public function release(array $rows, \DateTimeImmutable $claimedAt): void
     {
-        if ($rows === []) {
-            return;
-        }
-
-        $this->getEntityManager()->createQuery(sprintf(
-            'UPDATE %s pending SET pending.claimedAt = NULL WHERE pending.id IN (:ids)',
-            PostEnrichment::class,
-        ))
-            ->setParameter('ids', self::idsOf($rows))
-            ->execute();
+        $this->updateHeld($rows, $claimedAt, 'pending.claimedAt = NULL');
     }
 
-    /** @param list<PostEnrichment> $rows */
-    public function markDone(array $rows, \DateTimeImmutable $doneAt): void
+    /**
+     * The attempt is dated by its claim; doneAt is assigned first, as MySQL assigns left to right.
+     *
+     * @param list<PostEnrichment> $rows
+     */
+    public function markDone(array $rows, \DateTimeImmutable $claimedAt): void
+    {
+        $this->updateHeld($rows, $claimedAt, 'pending.doneAt = pending.claimedAt, pending.claimedAt = NULL');
+    }
+
+    /**
+     * @param list<PostEnrichment> $rows
+     *
+     * @return list<PostEnrichment> those still held by the claim made at $claimedAt
+     */
+    public function stillHeld(array $rows, \DateTimeImmutable $claimedAt): array
     {
         if ($rows === []) {
-            return;
+            return [];
         }
 
-        $this->getEntityManager()->createQuery(sprintf(
-            'UPDATE %s pending SET pending.claimedAt = NULL, pending.doneAt = :doneAt WHERE pending.id IN (:ids)',
-            PostEnrichment::class,
-        ))
-            ->setParameter('doneAt', $doneAt, Types::DATETIME_IMMUTABLE)
+        /** @var list<int|string> $heldIds */
+        $heldIds = $this->createQueryBuilder('pending')
+            ->select('pending.id')
+            ->andWhere('pending.id IN (:ids)')
+            ->andWhere('pending.claimedAt = :claimedAt')
             ->setParameter('ids', self::idsOf($rows))
-            ->execute();
+            ->setParameter('claimedAt', $claimedAt, Types::DATETIME_IMMUTABLE)
+            ->getQuery()
+            ->getSingleColumnResult();
+        $held = array_flip(array_map(intval(...), $heldIds));
+
+        return array_values(array_filter(
+            $rows,
+            static fn (PostEnrichment $row): bool => isset($held[$row->requireId()]),
+        ));
+    }
+
+    public function isQueuedOrCarded(Entry $entry): bool
+    {
+        $connection = $this->getEntityManager()->getConnection();
+
+        return $connection->fetchOne(
+            'SELECT 1 FROM entry WHERE entry.id = ?'
+            . ' AND (EXISTS (SELECT 1 FROM post_enrichment WHERE post_enrichment.entry_id = entry.id)'
+            . ' OR EXISTS (SELECT 1 FROM link_card WHERE link_card.entry_id = entry.id))',
+            [$entry->requireId()],
+        ) !== false;
     }
 
     /**
@@ -211,6 +240,23 @@ final class PostEnrichmentRepository extends ServiceEntityRepository
     private static function idsOf(array $rows): array
     {
         return array_map(static fn (PostEnrichment $row): int => $row->requireId(), $rows);
+    }
+
+    /** @param list<PostEnrichment> $rows */
+    private function updateHeld(array $rows, \DateTimeImmutable $claimedAt, string $assignments): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $this->getEntityManager()->createQuery(sprintf(
+            'UPDATE %s pending SET %s WHERE pending.id IN (:ids) AND pending.claimedAt = :claimedAt',
+            PostEnrichment::class,
+            $assignments,
+        ))
+            ->setParameter('ids', self::idsOf($rows))
+            ->setParameter('claimedAt', $claimedAt, Types::DATETIME_IMMUTABLE)
+            ->execute();
     }
 
     private static function leaseStart(\DateTimeImmutable $now): \DateTimeImmutable

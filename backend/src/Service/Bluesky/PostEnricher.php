@@ -56,9 +56,7 @@ final readonly class PostEnricher
      */
     public function complete(array $queued): array
     {
-        return $this->guarded(
-            fn (): array => $this->settleAll($this->enrichments->claim($queued, $this->clock->now())),
-        );
+        return $this->guarded(fn (): array => $this->claimAndSettle($queued, $this->clock->now()));
     }
 
     /**
@@ -93,18 +91,23 @@ final readonly class PostEnricher
             $feed,
             $now->sub(new \DateInterval(PostEnrichment::APPVIEW_GIVE_UP_AFTER)),
         );
-        $queued = $this->enrichments->findClaimableAppViewForFeed($feed, $now, self::POSTS_PER_PASS);
 
-        return $this->settleAll($this->enrichments->claim($queued, $now));
+        return $this->claimAndSettle(
+            $this->enrichments->findClaimableAppViewForFeed($feed, $now, self::POSTS_PER_PASS),
+            $now,
+        );
     }
 
     /**
-     * @param list<PostEnrichment> $claimed
+     * A chunk settles only the rows the claim still holds: a slow pass may have outlived the lease on later ones.
+     *
+     * @param list<PostEnrichment> $queued
      *
      * @return list<Entry>
      */
-    private function settleAll(array $claimed): array
+    private function claimAndSettle(array $queued, \DateTimeImmutable $claimedAt): array
     {
+        $claimed = $this->enrichments->claim($queued, $claimedAt);
         if ($claimed === []) {
             return [];
         }
@@ -112,14 +115,15 @@ final readonly class PostEnricher
         $filled = [];
         $unsettled = [];
         foreach (array_chunk($claimed, AppViewClient::URIS_PER_CALL) as $chunk) {
-            $settled = $this->appView->isThrottled() ? null : $this->settle($chunk);
+            $held = $this->enrichments->stillHeld($chunk, $claimedAt);
+            $settled = $held === [] || $this->appView->isThrottled() ? null : $this->settle($held);
             if ($settled === null) {
-                array_push($unsettled, ...$chunk);
+                array_push($unsettled, ...$held);
                 continue;
             }
             array_push($filled, ...$settled);
         }
-        $this->enrichments->release($unsettled);
+        $this->enrichments->release($unsettled, $claimedAt);
         $this->entityManager->flush();
 
         return $filled;

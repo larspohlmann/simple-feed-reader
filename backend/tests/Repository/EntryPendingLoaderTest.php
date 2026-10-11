@@ -87,7 +87,9 @@ final class EntryPendingLoaderTest extends DbTestCase
     private function markDone(Entry $entry): void
     {
         $enrichments = PostEnrichers::enrichments($this->entityManager);
-        $enrichments->markDone($enrichments->findBy(['entry' => $entry]), new \DateTimeImmutable('2026-10-10'));
+        $rows = $enrichments->findBy(['entry' => $entry]);
+        $claimedAt = new \DateTimeImmutable('2026-10-10');
+        $enrichments->markDone($enrichments->claim($rows, $claimedAt), $claimedAt);
     }
 
     private function post(string $guid, ?string $contentHtml, string $createdAt = '2026-10-10 12:00:00'): Entry

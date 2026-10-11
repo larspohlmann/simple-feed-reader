@@ -38,6 +38,9 @@ final readonly class PostEnrichmentQueue
     /** For a post stored before link cards existed: it is queued, never fetched, so opening it stays quick. */
     public function queueOpened(Entry $entry): void
     {
+        if (!$entry->isTitleDerived() || $this->enrichments->isQueuedOrCarded($entry)) {
+            return;
+        }
         $shared = self::sharedLinksOf($entry);
         if ($shared === null || !$this->enrichments->queueLinkCardsUnlessKnown($entry, $this->clock->now())) {
             return;

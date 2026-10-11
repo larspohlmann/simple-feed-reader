@@ -6,6 +6,7 @@ namespace App\Tests\Service\LinkCard;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\LinkCard;
 use App\Entity\LinkCardContent;
 use App\Entity\PostEnrichment;
 use App\Enum\PostEnrichmentKind;
@@ -104,6 +105,63 @@ final class PostLinkCardsTest extends DbTestCase
 
         self::assertSame(0, $this->client->getRequestsCount());
         self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+    }
+
+    public function testACallPastItsDeadlineReleasesThePostsItNeverStarted(): void
+    {
+        $posts = array_map(
+            fn (int $number): Entry => $this->queuedPost($number, self::sharing($number, 1)),
+            range(1, 5),
+        );
+        $slowPages = new MockHttpClient(function (string $method, string $url): MockResponse {
+            $this->clock->sleep(15);
+
+            return self::page($method, $url);
+        });
+        $postLinkCards = PostLinkCardsWiring::build($this->entityManager, $slowPages, $this->clock);
+
+        $postLinkCards->complete($this->claimable());
+
+        self::assertSame(3, $slowPages->getRequestsCount());
+        self::assertCount(1, $this->cardTitles($posts[2]));
+        self::assertSame(
+            [$posts[3]->requireId(), $posts[4]->requireId()],
+            array_map(static fn (PostEnrichment $row): int => $row->getEntry()->requireId(), $this->claimable()),
+        );
+    }
+
+    public function testAHolderWhoseLeaseWasTakenOverNeitherCardsNorFinishesThePost(): void
+    {
+        $post = $this->queuedPost(1, self::sharing(1, 1));
+        $takeOver = new MockHttpClient(function (string $method, string $url) use ($post): MockResponse {
+            $this->clock->sleep(61);
+            $this->enrichments()->claim([$this->rowOf($post)], $this->clock->now());
+
+            return self::page($method, $url);
+        });
+
+        PostLinkCardsWiring::build($this->entityManager, $takeOver, $this->clock)->complete($this->claimable());
+
+        self::assertSame([], $this->cardTitles($post));
+        self::assertSame([$post->requireId()], $this->enrichments()->pendingEntryIdsAmong([$post->requireId()]));
+    }
+
+    public function testAPostThatAlreadyHoldsCardsGetsNoSecondSet(): void
+    {
+        $post = $this->queuedPost(1, self::sharing(1, 1));
+        $this->entityManager->persist(new LinkCard($post, 0, new LinkCardContent(
+            'https://example.com/1/1',
+            'Stored before',
+            null,
+            null,
+            'example.com',
+        )));
+        $this->entityManager->flush();
+
+        $this->postLinkCards->complete($this->claimable());
+
+        self::assertSame(['Stored before'], $this->cardTitles($post));
+        self::assertSame([], $this->claimable());
     }
 
     public function testAMissingPageGivesNoCardAndTheRowIsStillDone(): void
