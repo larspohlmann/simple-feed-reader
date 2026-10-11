@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\DeclaredRenditions;
@@ -26,7 +27,7 @@ final readonly class ItemImageExtractor
     {
         $candidates = self::mediaCandidatesIn($item);
 
-        foreach (XmlHelper::childElements($item, 'group', XmlHelper::MEDIA_RSS_NAMESPACE) as $group) {
+        foreach (XmlHelper::childElements($item, 'group', FeedNamespace::MediaRss->value) as $group) {
             $candidates = [...$candidates, ...self::mediaCandidatesIn($group)];
         }
 

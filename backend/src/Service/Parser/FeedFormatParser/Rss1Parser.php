@@ -7,6 +7,7 @@ namespace App\Service\Parser\FeedFormatParser;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\ItemMediaExtractor;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -22,11 +23,6 @@ use App\Service\Text\Support\PlainText;
 
 final readonly class Rss1Parser implements FeedFormatParserInterface
 {
-    private const string RSS1_NS = 'http://purl.org/rss/1.0/';
-    private const string RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
-    private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
-    private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
-
     public function __construct(
         private FeedItemImageSelector $imageSelector,
         private ItemMediaExtractor $mediaExtractor,
@@ -35,12 +31,12 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     public function supports(\DOMElement $root): bool
     {
-        return XmlHelper::isElement($root, 'RDF', self::RDF_NS);
+        return XmlHelper::isElement($root, 'RDF', FeedNamespace::Rdf->value);
     }
 
     public function isEntry(\DOMElement $element, \DOMNode $parent): bool
     {
-        return XmlHelper::isRoot($parent) && XmlHelper::isElement($element, 'item', self::RSS1_NS);
+        return XmlHelper::isRoot($parent) && XmlHelper::isElement($element, 'item', FeedNamespace::Rss1->value);
     }
 
     public function parseFeed(\DOMDocument $skeleton, array $entries): ParsedFeedModel
@@ -70,9 +66,10 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
             return null;
         }
 
-        $about = trim($entry->getAttributeNS(self::RDF_NS, 'about'));
+        $about = self::about($entry);
         $description = $item->text('description');
-        $contentEncoded = XmlHelper::childText($entry, 'encoded', self::CONTENT_NS);
+        $dublinCore = $item->in(FeedNamespace::DublinCore);
+        $contentEncoded = $item->in(FeedNamespace::Content)->text('encoded');
         $image = $this->imageSelector->fromRss1($item, $contentEncoded ?? $description);
         $mediaBundle = $this->mediaExtractor->extract($item);
 
@@ -80,13 +77,13 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         $entryTitle = EntryTitle::of($title, $contentHtml);
 
         return new ParsedEntryModel(
-            guid: GuidFallback::for($about === '' ? null : $about, $link, $title),
-            url: $link ?? ($about === '' ? null : $about),
+            guid: GuidFallback::for($about, $link, $title),
+            url: $link ?? $about,
             title: $entryTitle->text,
-            author: XmlHelper::childText($entry, 'creator', self::DC_NS),
+            author: $dublinCore->text('creator'),
             summary: $contentEncoded !== null ? $description : null,
             contentHtml: $contentHtml,
-            publishedAt: DateParser::parse(XmlHelper::childText($entry, 'date', self::DC_NS)),
+            publishedAt: DateParser::parse($dublinCore->text('date')),
             media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
             titleDerived: $entryTitle->derived,
@@ -95,6 +92,13 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
 
     private static function core(\DOMElement $element): CoreElement
     {
-        return new CoreElement($element, self::RSS1_NS);
+        return new CoreElement($element, FeedNamespace::Rss1->value);
+    }
+
+    private static function about(\DOMElement $entry): ?string
+    {
+        $about = trim($entry->getAttributeNS(FeedNamespace::Rdf->value, 'about'));
+
+        return $about === '' ? null : $about;
     }
 }

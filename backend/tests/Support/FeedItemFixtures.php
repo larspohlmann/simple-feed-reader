@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Pass\CoreElement;
-use App\Service\Parser\Support\XmlHelper;
 use PHPUnit\Framework\Assert;
 
 trait FeedItemFixtures
@@ -31,7 +30,7 @@ trait FeedItemFixtures
     private function atomEntry(string $innerXml): CoreElement
     {
         return self::onlyElement(
-            '<feed xmlns="' . Atom10Parser::NAMESPACE . '"' . self::extensionNamespaces() . '><entry>'
+            '<feed xmlns="' . FeedNamespace::Atom10->value . '"' . self::extensionNamespaces() . '><entry>'
             . $innerXml . '</entry></feed>',
             'entry',
         );
@@ -39,8 +38,8 @@ trait FeedItemFixtures
 
     private static function extensionNamespaces(): string
     {
-        return ' xmlns:media="' . XmlHelper::MEDIA_RSS_NAMESPACE . '"'
-            . ' xmlns:itunes="' . XmlHelper::ITUNES_NAMESPACE . '"';
+        return ' xmlns:media="' . FeedNamespace::MediaRss->value . '"'
+            . ' xmlns:itunes="' . FeedNamespace::Itunes->value . '"';
     }
 
     private static function onlyElement(string $xml, string $localName): CoreElement

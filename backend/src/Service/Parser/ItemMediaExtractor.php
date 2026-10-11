@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\CoreElement;
 use App\Service\Parser\Pass\FeedMediaNode;
@@ -21,7 +22,7 @@ final readonly class ItemMediaExtractor
 {
     public function extract(CoreElement $item): ParsedMediaBundleModel
     {
-        $fallbackDuration = self::itunesDuration($item->element);
+        $fallbackDuration = self::itunesDuration($item);
         $media = [];
         $attachments = [];
         foreach ($item->element->childNodes as $child) {
@@ -44,7 +45,7 @@ final readonly class ItemMediaExtractor
         if (!$child instanceof \DOMElement) {
             return null;
         }
-        if (XmlHelper::isElement($child, 'group', XmlHelper::MEDIA_RSS_NAMESPACE)) {
+        if (XmlHelper::isElement($child, 'group', FeedNamespace::MediaRss->value)) {
             return self::fromGroup($child, $fallbackDuration);
         }
 
@@ -148,15 +149,15 @@ final readonly class ItemMediaExtractor
 
     private static function posterIn(\DOMElement $group): ?string
     {
-        $thumbnail = XmlHelper::childElement($group, 'thumbnail', XmlHelper::MEDIA_RSS_NAMESPACE);
+        $thumbnail = CoreElement::extension($group, FeedNamespace::MediaRss)->child('thumbnail');
         $url = $thumbnail === null ? '' : trim($thumbnail->getAttribute('url'));
 
         return $url !== '' ? $url : null;
     }
 
-    private static function itunesDuration(\DOMElement $item): ?int
+    private static function itunesDuration(CoreElement $item): ?int
     {
-        $duration = XmlHelper::childElement($item, 'duration', XmlHelper::ITUNES_NAMESPACE);
+        $duration = $item->in(FeedNamespace::Itunes)->child('duration');
 
         return $duration === null ? null : MediaDuration::seconds($duration->textContent);
     }

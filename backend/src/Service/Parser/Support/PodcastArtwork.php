@@ -6,21 +6,20 @@ namespace App\Service\Parser\Support;
 
 use App\Service\Html\Support\Srcset;
 use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Parser\Model\FeedNamespace;
+use App\Service\Parser\Pass\CoreElement;
 use App\Service\Url\Support\HttpsImageUrl;
 
 final class PodcastArtwork
 {
-    private const string PODCAST_NS = 'https://podcastindex.org/namespace/1.0';
-    private const string GOOGLE_PLAY_NS = 'http://www.google.com/schemas/play-podcasts/1.0';
-
     /** A <podcast:image> may be a canvas video or a banner; only these purposes picture the show or episode. */
     private const array PICTURE_PURPOSES = ['artwork', 'social'];
 
     public static function of(\DOMElement $parent): ?DeclaredImageModel
     {
         return self::podcastNamespaceImage($parent)
-            ?? self::hrefImage($parent, XmlHelper::ITUNES_NAMESPACE)
-            ?? self::hrefImage($parent, self::GOOGLE_PLAY_NS);
+            ?? self::hrefImage($parent, FeedNamespace::Itunes)
+            ?? self::hrefImage($parent, FeedNamespace::GooglePlay);
     }
 
     private static function podcastNamespaceImage(\DOMElement $parent): ?DeclaredImageModel
@@ -31,7 +30,7 @@ final class PodcastArtwork
     private static function podcastImage(\DOMElement $parent): ?DeclaredImageModel
     {
         $candidates = [];
-        foreach (XmlHelper::childElements($parent, 'image', self::PODCAST_NS) as $element) {
+        foreach (CoreElement::extension($parent, FeedNamespace::Podcast)->children('image') as $element) {
             $href = self::usableHref($element);
             if ($href !== null && self::picturesTheShow($element)) {
                 $candidates[] = DeclaredImages::fromElement($element, $href);
@@ -56,7 +55,7 @@ final class PodcastArtwork
 
     private static function podcastImagesSrcset(\DOMElement $parent): ?DeclaredImageModel
     {
-        $srcset = XmlHelper::childElement($parent, 'images', self::PODCAST_NS)?->getAttribute('srcset');
+        $srcset = CoreElement::extension($parent, FeedNamespace::Podcast)->child('images')?->getAttribute('srcset');
         $renditions = DeclaredRenditions::fromSrcset($srcset);
         $widest = Srcset::widest($srcset);
         if ($renditions === [] || $widest === null) {
@@ -66,9 +65,9 @@ final class PodcastArtwork
         return new DeclaredImageModel($widest->url, $widest->width, null, $renditions);
     }
 
-    private static function hrefImage(\DOMElement $parent, string $namespace): ?DeclaredImageModel
+    private static function hrefImage(\DOMElement $parent, FeedNamespace $namespace): ?DeclaredImageModel
     {
-        foreach (XmlHelper::childElements($parent, 'image', $namespace) as $element) {
+        foreach (CoreElement::extension($parent, $namespace)->children('image') as $element) {
             $href = self::usableHref($element);
             if ($href !== null) {
                 return new DeclaredImageModel($href);

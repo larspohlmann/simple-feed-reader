@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Parser\Pass;
 
 use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Model\ParsedAttachmentModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DeclaredImages;
 use App\Service\Parser\Support\FeedMediaClassifier;
 use App\Service\Parser\Support\MediaDuration;
-use App\Service\Parser\Support\XmlHelper;
 
 /**
  * One feed media element — a `<media:content>`, `<media:thumbnail>`, or an
@@ -76,7 +76,7 @@ final readonly class FeedMediaNode
 
     private function title(): ?string
     {
-        $title = XmlHelper::childElement($this->element, 'title', XmlHelper::MEDIA_RSS_NAMESPACE);
+        $title = CoreElement::extension($this->element, FeedNamespace::MediaRss)->child('title');
 
         return $title === null ? null : self::nonEmpty($title->textContent);
     }

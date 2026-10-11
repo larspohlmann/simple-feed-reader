@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Support;
 
+use App\Service\Parser\Model\FeedNamespace;
 use App\Service\Parser\Support\XmlHelper;
 use PHPUnit\Framework\TestCase;
 
@@ -25,7 +26,7 @@ final class XmlHelperTest extends TestCase
         self::assertTrue(XmlHelper::isElement(
             $this->firstChild('<media:title/>'),
             'title',
-            XmlHelper::MEDIA_RSS_NAMESPACE,
+            FeedNamespace::MediaRss->value,
         ));
     }
 
@@ -40,7 +41,7 @@ final class XmlHelperTest extends TestCase
         self::assertFalse(XmlHelper::isElement(
             $this->firstChild('<media:content/>'),
             'title',
-            XmlHelper::MEDIA_RSS_NAMESPACE,
+            FeedNamespace::MediaRss->value,
         ));
     }
 
