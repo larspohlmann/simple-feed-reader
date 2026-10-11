@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Http\SavedSearchPage;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowEnrichment;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
@@ -39,7 +40,9 @@ final class SavedSearchPageTest extends TestCase
 
     public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
     {
-        $row = $this->row(7)->withSavedSearches([['id' => 3, 'slug' => 'climate', 'term' => 'climate']]);
+        $row = $this->row(7)->withEnrichment(
+            new EntryListRowEnrichment(savedSearches: [['id' => 3, 'slug' => 'climate', 'term' => 'climate']]),
+        );
         $result = new SavedSearchEntriesResultModel([$row]);
 
         $page = SavedSearchPage::of($result, 50);
