@@ -506,6 +506,22 @@ describe('EntriesStore', () => {
       });
     });
 
+    it('keeps a completed card when a stale answer still says pending', () => {
+      store.mergeCompleted([entry(2, { linkCards: [card], pending: false })]);
+
+      store.mergeCompleted([entry(2, { pending: true })]);
+
+      expect(store.entries()[1]).toMatchObject({ pending: false, linkCards: [card] });
+    });
+
+    it('lets a listed post the open queued turn pending', () => {
+      store.mergeCompleted([entry(2, { pending: false })]);
+
+      store.mergeCompleted([entry(2, { pending: true })]);
+
+      expect(store.entries()[1].pending).toBe(true);
+    });
+
     it('keeps a state change still on the wire', () => {
       store.setState(2, { isFavorite: true });
       const patch = ctrl.expectOne('https://api.test/api/entries/2/state');

@@ -109,7 +109,7 @@ export class EntryBodyService {
       next: (response) => {
         if (superseded()) return;
         state.set({ status: 'ok', html: response.entry.contentHtml });
-        this.arrivedDetails.next(response.entry);
+        if (this.cache.get(id) === state) this.arrivedDetails.next(response.entry);
       },
       error: () => {
         if (superseded() || state().status === 'ok') return;

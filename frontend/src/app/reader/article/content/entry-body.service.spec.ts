@@ -167,6 +167,20 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
     });
 
+    it('publishes the entry a fetch brings back, but not one for a body forgotten meanwhile', async () => {
+      const published: number[] = [];
+      store.details.subscribe((detail) => published.push(detail.id));
+      store.body(1);
+      store.body(2);
+      await settle();
+
+      store.forget(2);
+      ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { id: 2, contentHtml: '' } });
+      ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { id: 1, contentHtml: '' } });
+
+      expect(published).toEqual([1]);
+    });
+
     it('fetches nothing for a body nobody has loaded', async () => {
       store.refresh(5);
       await settle();
