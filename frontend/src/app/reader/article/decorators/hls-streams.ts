@@ -52,3 +52,11 @@ function destroyDetached(): void {
     instances.delete(video);
   }
 }
+
+export function destroyStreamsIn(host: HTMLElement): void {
+  for (const [video, hls] of instances) {
+    if (!host.contains(video)) continue;
+    hls.destroy();
+    instances.delete(video);
+  }
+}

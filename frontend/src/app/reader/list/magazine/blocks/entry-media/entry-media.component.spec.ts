@@ -6,6 +6,14 @@ import { EntryDto, EntryMediumDto } from '../../../../models';
 import { EntryActionHandler } from '../../../../entry/entry-actions/entry-action-handler';
 import { isHlsManaged } from '../../../../article/decorators/hls-streams';
 
+let pause: jest.SpyInstance;
+
+beforeEach(() => {
+  pause = jest.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+});
+
+afterEach(() => pause.mockRestore());
+
 const entryActions = {
   favorite: jest.fn(),
   keep: jest.fn(),
@@ -64,7 +72,7 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   ...over,
 });
 
-async function mount(testEntry: EntryDto) {
+async function mountFixture(testEntry: EntryDto) {
   TestBed.configureTestingModule({
     imports: [EntryMediaComponent, provideTranslocoTesting()],
     providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
@@ -73,8 +81,18 @@ async function mount(testEntry: EntryDto) {
   fixture.componentRef.setInput('entry', testEntry);
   fixture.detectChanges();
   await fixture.whenStable();
-  return fixture.nativeElement as HTMLElement;
+  return fixture;
 }
+
+async function mount(testEntry: EntryDto) {
+  return (await mountFixture(testEntry)).nativeElement as HTMLElement;
+}
+
+const sighting = (target: Element, isIntersecting: boolean) =>
+  ({ target, isIntersecting }) as unknown as IntersectionObserverEntry;
+
+const press = (target: Element, key: string) =>
+  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
 
 describe('EntryMediaComponent', () => {
   it('shows the post text as a caption above the media', async () => {
@@ -126,5 +144,58 @@ describe('EntryMediaComponent', () => {
 
     element.querySelector<HTMLElement>('img')!.click();
     expect(entryActions.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Enter and Space on the video for its controls, and opens the post from the article', async () => {
+    const element = await mount(entry({ media: [clip] }));
+
+    press(element.querySelector('video')!, 'Enter');
+    press(element.querySelector('video')!, ' ');
+    expect(entryActions.open).not.toHaveBeenCalled();
+
+    press(element.querySelector('article')!, 'Enter');
+    expect(entryActions.open).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the video by its caption, or generically without one', async () => {
+    const captioned = await mount(entry({ media: [clip] }));
+    expect(captioned.querySelector('video')!.getAttribute('aria-label')).toBe(
+      'A sunrise with Nutmeg the donkey',
+    );
+    TestBed.resetTestingModule();
+
+    const bare = await mount(entry({ media: [clip], title: '(untitled)' }));
+    expect(bare.querySelector('video')!.getAttribute('aria-label')).toBe('Video');
+  });
+
+  it('pauses its videos when destroyed', async () => {
+    const fixture = await mountFixture(entry({ media: [clip] }));
+
+    fixture.destroy();
+
+    expect(pause).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses a video that scrolls out of view', async () => {
+    const callbacks: IntersectionObserverCallback[] = [];
+    const real = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = class {
+      constructor(callback: IntersectionObserverCallback) {
+        callbacks.push(callback);
+      }
+      readonly observe = jest.fn();
+      readonly disconnect = jest.fn();
+    } as unknown as typeof IntersectionObserver;
+    try {
+      const element = await mount(entry({ media: [clip] }));
+      const video = element.querySelector('video')!;
+
+      callbacks[0]([sighting(video, true)], {} as IntersectionObserver);
+      expect(pause).not.toHaveBeenCalled();
+      callbacks[0]([sighting(video, false)], {} as IntersectionObserver);
+      expect(pause).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.IntersectionObserver = real;
+    }
   });
 });

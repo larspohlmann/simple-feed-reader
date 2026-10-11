@@ -1038,6 +1038,26 @@ describe('EntryListComponent', () => {
     }
   });
 
+  it('pauses every video in the list when an entry opens', () => {
+    const pause = jest
+      .spyOn(HTMLMediaElement.prototype, 'pause')
+      .mockImplementation(() => undefined);
+    try {
+      const fixture = mount();
+      const element = fixture.nativeElement as HTMLElement;
+      element.querySelector('.rows')!.append(document.createElement('video'));
+      fixture.detectChanges();
+      expect(pause).not.toHaveBeenCalled();
+
+      fixture.componentRef.setInput('openEntryId', 2);
+      fixture.detectChanges();
+
+      expect(pause).toHaveBeenCalledTimes(1);
+    } finally {
+      pause.mockRestore();
+    }
+  });
+
   it('hides mark-all-read when not applicable', () => {
     const element = mount({ canMarkAllRead: false }).nativeElement as HTMLElement;
     expect(element.querySelector('.mark-all')).toBeNull();

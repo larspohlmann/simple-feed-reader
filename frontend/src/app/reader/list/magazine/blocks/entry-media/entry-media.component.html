@@ -20,6 +20,7 @@
           controls
           preload="none"
           playsinline
+          [attr.aria-label]="caption() || ('reader.mediaVideo' | transloco)"
           [src]="medium.url"
           [attr.poster]="medium.previewImageUrl ?? null"
           (click)="$event.stopPropagation()"
