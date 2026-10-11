@@ -7,8 +7,8 @@
 
 - `RedirectFollower` keeps one `follow(string $url, array $options, RedirectBudget $budget)`; `followWithin()` and
   `LandedResponse::$hops` go. Every caller passes a `RedirectBudget` (#1536 builds on this API).
-- `RedirectBudget` keeps `maxRedirects` for the "more than N redirects" message and counts the redirects it has
-  left: `hasRedirectsLeft()` / `spendRedirect()`. The follower spends one per redirect it follows.
+- `RedirectBudget` keeps `maxRedirects` for the "more than N redirects" message and counts the redirects taken:
+  `takeRedirect(): bool` spends one, or answers false when none is left. The follower takes one per redirect.
 - `HtmlPageFetcher::fetch()` holds one budget across redirects and meta refreshes; a meta refresh spends a redirect.
   The "more than 5 redirects" message for the meta-refresh limit stays.
 - `FaviconFetcher` keeps today's bound: 3 redirects, `timeout` and `max_duration` 8 s per request (the budget's
@@ -20,6 +20,9 @@
 - Item 3: `Image/Support/ImageType::declaredOrSniffed()` is the one "declared type, or sniffed when undeclared"
   reading. `ImageDownloader` uses it too, so `/api/image-proxy` serves an `application/octet-stream` image the
   verifier accepts. A declared type is still checked before the body is read.
+- Simplify pass: the "check type unless undeclared, read, sniff, check again" sequence stays in both image
+  downloads (four lines each, differing allow-lists and exceptions); a callback-taking helper would cost more than
+  it saves. Shared image request options and FaviconFetcher not cancelling on a refused status are left as they were.
 - Item 4 (rename `FaviconFetcher`) is out of scope; named in the PR as a follow-up.
 - `/api/entries/{id}/reader` output is unchanged, so `ReaderCacheService` VERSION stays.
 

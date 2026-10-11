@@ -68,10 +68,9 @@ final readonly class HtmlPageFetcher
             }
 
             $landed->response->cancel();
-            if (!$budget->hasRedirectsLeft()) {
+            if (!$budget->takeRedirect()) {
                 throw new PageFetchException(sprintf('%s: more than %d redirects', $url, self::MAX_REDIRECTS));
             }
-            $budget->spendRedirect();
             $target = $next;
         }
     }

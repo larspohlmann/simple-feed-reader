@@ -7,13 +7,12 @@ namespace App\Service\Fetch\Pass;
 /** The redirects one fetch may still follow and the seconds it may still spend, across every hop it takes. */
 final class RedirectBudget
 {
-    private int $redirectsLeft;
+    private int $redirectsTaken = 0;
 
     public function __construct(
         public readonly int $maxRedirects,
         private float $remainingSeconds = \INF,
     ) {
-        $this->redirectsLeft = $maxRedirects;
     }
 
     public function remainingSeconds(): float
@@ -31,18 +30,19 @@ final class RedirectBudget
         $this->remainingSeconds -= $seconds;
     }
 
-    public function hasRedirectsLeft(): bool
+    /** Spends one redirect; false, spending nothing, when none is left. */
+    public function takeRedirect(): bool
     {
-        return $this->redirectsLeft > 0;
-    }
+        if ($this->redirectsTaken >= $this->maxRedirects) {
+            return false;
+        }
+        $this->redirectsTaken++;
 
-    public function spendRedirect(): void
-    {
-        $this->redirectsLeft--;
+        return true;
     }
 
     public function redirectsTaken(): int
     {
-        return $this->maxRedirects - $this->redirectsLeft;
+        return $this->redirectsTaken;
     }
 }

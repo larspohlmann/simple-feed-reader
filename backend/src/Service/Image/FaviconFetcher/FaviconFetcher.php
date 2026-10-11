@@ -93,9 +93,8 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         return [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
-            // Refuse transparent compression so the wire cap below also bounds
-            // the buffered body — a compressed response would otherwise
-            // decompress unbounded before the size check runs.
+            // No transparent compression, so the wire cap also bounds the buffered body: a compressed response
+            // would otherwise decompress unbounded before the size check runs.
             'headers' => ['Accept-Encoding' => 'identity', 'User-Agent' => $this->userAgent],
             'on_progress' => static function (int $downloaded): void {
                 ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Download, $downloaded);

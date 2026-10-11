@@ -68,10 +68,9 @@ final readonly class RedirectFollower
 
     private static function spendRedirect(string $url, RedirectBudget $budget): void
     {
-        if (!$budget->hasRedirectsLeft()) {
+        if (!$budget->takeRedirect()) {
             throw new RedirectChainException(sprintf('%s: more than %d redirects', $url, $budget->maxRedirects));
         }
-        $budget->spendRedirect();
     }
 
     /**
