@@ -17,7 +17,7 @@ interface EmbedProviderInterface
     public function target(string $url): ?EmbedTargetModel;
 
     /**
-     * The player URL families this host's `target()` URLs falls into, each an anchored regex — delimiter-free,
+     * The player URL families this host's `target()` URLs fall into, each an anchored regex — delimiter-free,
      * valid in both PCRE and JavaScript — with what it plays and the box it needs. The patterns are disjoint, and the
      * reader client's allow-list is generated from them, so the two never drift.
      *

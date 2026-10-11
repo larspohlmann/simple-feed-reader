@@ -24,9 +24,11 @@ final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
     {
         $id = $this->videoId($url);
 
-        return $id === null
-            ? null
-            : new EmbedTargetModel('https://www.dailymotion.com/embed/video/' . $id, null, self::LABEL);
+        if ($id === null) {
+            return null;
+        }
+
+        return new EmbedTargetModel('https://www.dailymotion.com/embed/video/' . $id, null, self::LABEL);
     }
 
     public function frames(): array
