@@ -13,13 +13,18 @@ shaped like its siblings. Pure refactor: the namespace-decoy tests from #1484–
   (`$item->in(FeedNamespace::DublinCore)->text('date')`), so an extension read still names its namespace (cc5ef35c0).
   Support code that holds a raw element uses `CoreElement::extension($element, FeedNamespace)`; signatures of
   `MediaDescription`, `PodcastArtwork`, `FeedMediaNode` stay as they are (#1542 owns the media side).
-- `XmlHelper::childText/childElement/childHttpUrl` are deleted; `firstText/firstHttpUrl/firstElement` move into
+- `XmlHelper::childText/childElement/childHttpUrl` and the `*_NAMESPACE` constants are deleted; `firstText/firstHttpUrl/firstElement` move into
   `CoreElement` as private helpers (their only caller). `XmlHelper::childElements/isElement/isRoot` stay.
 - No per-extension helper class for `content:encoded`/`dc:creator`/`dc:date`: after `in()` each read is one expression
   naming namespace and element, and the fallbacks around them differ per dialect.
 - `Rss2Parser`: private `core()`, one `channelOf()` lookup shared by `isEntry()` and `parseFeed()`, and `isEntry()`
   derives the root from `$parent` instead of `$element->ownerDocument`.
 - `Rss1Parser`: the `rdf:about` read becomes one `about()` helper returning `?string`.
+
+- `XmlHelper::isElement/childElements` keep taking `?string` (CoreElement feeds them its own URI); their few direct
+  callers pass `FeedNamespace::X->value`. `AbstractAtomParser::namespaceUri(): string` stays.
+- Pre-existing literal namespace URIs in `FeedImageExtractorTest` and `StreamedFeedDocumentTest` stay: XML fixtures,
+  outside this refactor.
 
 ## Files
 
