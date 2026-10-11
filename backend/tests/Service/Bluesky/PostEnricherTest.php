@@ -11,7 +11,6 @@ use App\Entity\LinkCardContent;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\ShareKind;
-use App\Repository\LinkCardRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriter;
 use App\Service\Bluesky\EntryEmbedWriter\EntryEmbedWriterInterface;
@@ -235,7 +234,7 @@ final class PostEnricherTest extends DbTestCase
 
     public function testAnUnreadableAnswerKeepsItsRowsAndTheNextChunkIsStillAsked(): void
     {
-        $this->appView->answersWithBody('<html>Bad gateway</html>');
+        $this->appView->answersWithBody('<html lang="en">Bad gateway</html>');
         $this->queuePosts(30);
 
         $this->enricher()->enrich($this->feed);
@@ -296,7 +295,7 @@ final class PostEnricherTest extends DbTestCase
 
     public function testAnUnexpectedFailureIsLoggedAndFillsNothing(): void
     {
-        $post = $this->queuedEntry(self::TISCH, '<p>Text.</p>');
+        $this->queuedEntry(self::TISCH, '<p>Text.</p>');
         $this->entityManager->flush();
         $enricher = PostEnrichers::build(
             $this->entityManager,
@@ -561,7 +560,7 @@ final class PostEnricherTest extends DbTestCase
     private function linkCardPass(): ShareLinkCards
     {
         $page = new MockResponse(
-            '<html><head><meta property="og:title" content="The story"></head></html>',
+            '<html lang="en"><head><meta property="og:title" content="The story"></head></html>',
             ['response_headers' => ['content-type' => 'text/html']],
         );
 

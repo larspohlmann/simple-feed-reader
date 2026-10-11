@@ -80,7 +80,7 @@ final class ShareLinkCardsWiring
     public static function titledPages(): MockHttpClient
     {
         return new MockHttpClient(static fn (string $method, string $url): MockResponse => new MockResponse(
-            '<html><head><title>Card for ' . $url . '</title></head></html>',
+            '<html lang="en"><head><title>Card for ' . $url . '</title></head></html>',
             ['response_headers' => ['content-type' => 'text/html']],
         ));
     }
