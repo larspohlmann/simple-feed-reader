@@ -285,6 +285,19 @@ final class Rss1ParserTest extends TestCase
         self::assertSame('<p>Track list :<br>1.Idaishoy</p>', $entry->contentHtml);
     }
 
+    public function testTheLinkWinsOverRdfAboutAsTheUrlAndAboutStandsInWithoutOne(): void
+    {
+        $linked = $this->parseSingleItem(
+            '<item rdf:about="https://e/about"><title>T</title><link>https://e/link</link></item>',
+        );
+        $unlinked = $this->parseSingleItem('<item rdf:about=" https://e/about "><title>T</title></item>');
+        $blankAbout = $this->parseSingleItem('<item rdf:about=" "><title>T</title></item>');
+
+        self::assertSame('https://e/link', $linked->url);
+        self::assertSame('https://e/about', $unlinked->url);
+        self::assertNull($blankAbout->url);
+    }
+
     public function testContentEncodedWinsOverTheDescriptionAsTheBody(): void
     {
         $entry = $this->parseSingleItem(<<<'XML'
