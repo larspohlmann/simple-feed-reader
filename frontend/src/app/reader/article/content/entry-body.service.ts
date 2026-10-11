@@ -1,5 +1,5 @@
 import { Injectable, Signal, WritableSignal, inject, signal } from '@angular/core';
-import { Subject } from 'rxjs';
+import { Subject, Subscription, asapScheduler, finalize, subscribeOn } from 'rxjs';
 import { onIdentityChange } from '../../../core/auth/session-identity';
 import { CompletedEntryDto } from '../../state/completed-entry';
 import { ReaderApi } from '../../reader-api';
@@ -20,22 +20,19 @@ export type EntryBodyState =
 export class EntryBodyService {
   private readonly api = inject(ReaderApi);
   private readonly cache = new Map<number, WritableSignal<EntryBodyState>>();
-  /** Bumped on logout so a response already on the wire for the previous
-   *  account can't write itself into the next one's cache. */
-  private generation = 0;
-  private readonly latestRequest = new WeakMap<WritableSignal<EntryBodyState>, object>();
-  private readonly arrivedDetails = new Subject<CompletedEntryDto>();
+  private readonly inFlight = new Map<WritableSignal<EntryBodyState>, Subscription>();
+  private readonly arrivedCompletions = new Subject<CompletedEntryDto>();
   /** What completing each entry a body fetch brings back has filled in (#1502). */
-  readonly details = this.arrivedDetails.asObservable();
+  readonly completedEntries = this.arrivedCompletions.asObservable();
 
   constructor() {
     onIdentityChange(() => this.clear());
   }
 
   /** The body for `id`, fetching it on first request. Safe to call from a
-   *  `computed()`: the request itself is deferred past the current
-   *  synchronous read, so a mocked observable that emits immediately can
-   *  never write to the signal mid-computation. */
+   *  `computed()`: every fetch subscribes past the current synchronous read,
+   *  so a mocked observable that emits immediately can never write to the
+   *  signal mid-computation. */
   body(id: number): Signal<EntryBodyState> {
     return this.stateFor(id).asReadonly();
   }
@@ -65,7 +62,7 @@ export class EntryBodyService {
   }
 
   /** Refetch a body the server has since changed, keeping a shown one on screen until
-   *  the new one lands, and for good if the refetch fails. A fetch still out is superseded. */
+   *  the new one lands, and for good if the refetch fails. A fetch still out is cancelled. */
   refresh(id: number): void {
     const state = this.cache.get(id);
     if (!state) return;
@@ -74,6 +71,8 @@ export class EntryBodyService {
 
   /** Drop a cached body the server has since changed, so it is fetched afresh when next asked for. */
   forget(id: number): void {
+    const state = this.cache.get(id);
+    if (state) this.cancel(state);
     this.cache.delete(id);
   }
 
@@ -85,13 +84,14 @@ export class EntryBodyService {
     }
     const state = signal<EntryBodyState>({ status: 'loading' });
     this.touch(id, state);
-    queueMicrotask(() => this.fetch(id, state));
+    this.fetch(id, state);
     return state;
   }
 
   /** Records `id => state` as the most recently used, evicting the oldest
    *  entry once the cache grows past its cap. Map insertion order is the LRU
-   *  order: re-setting an existing key moves it to the end. */
+   *  order: re-setting an existing key moves it to the end. Eviction leaves a
+   *  fetch running: a view may still hold the evicted signal. */
   private touch(id: number, state: WritableSignal<EntryBodyState>): void {
     this.cache.delete(id);
     this.cache.set(id, state);
@@ -100,26 +100,31 @@ export class EntryBodyService {
   }
 
   private fetch(id: number, state: WritableSignal<EntryBodyState>): void {
-    const generation = this.generation;
-    const ticket = {};
-    this.latestRequest.set(state, ticket);
-    const superseded = () =>
-      generation !== this.generation || this.latestRequest.get(state) !== ticket;
-    this.api.entry(id).subscribe({
-      next: (response) => {
-        if (superseded()) return;
-        state.set({ status: 'ok', html: response.entry.contentHtml });
-        if (this.cache.get(id) === state) this.arrivedDetails.next(response.completed);
-      },
-      error: () => {
-        if (superseded() || state().status === 'ok') return;
-        state.set({ status: 'error' });
-      },
-    });
+    this.cancel(state);
+    const request = this.api
+      .entry(id)
+      .pipe(
+        subscribeOn(asapScheduler),
+        finalize(() => this.inFlight.delete(state)),
+      )
+      .subscribe({
+        next: (response) => {
+          state.set({ status: 'ok', html: response.entry.contentHtml });
+          this.arrivedCompletions.next(response.completed);
+        },
+        error: () => {
+          if (state().status !== 'ok') state.set({ status: 'error' });
+        },
+      });
+    this.inFlight.set(state, request);
+  }
+
+  private cancel(state: WritableSignal<EntryBodyState>): void {
+    this.inFlight.get(state)?.unsubscribe();
   }
 
   private clear(): void {
-    this.generation++;
+    this.inFlight.forEach((request) => request.unsubscribe());
     this.cache.clear();
   }
 }

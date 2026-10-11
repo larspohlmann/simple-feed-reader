@@ -47,9 +47,9 @@ export class ReaderRouteState {
   readonly openEntryId = computed(() => this.openEntry()?.id ?? null);
 
   constructor() {
-    this.bodyService.details
+    this.bodyService.completedEntries
       .pipe(takeUntilDestroyed())
-      .subscribe((detail) => this.takeCompleted([detail]));
+      .subscribe((completed) => this.takeCompleted([completed]));
     effect(() => {
       const id = this.entryId();
       untracked(() => this.fetchUnlistedEntry(id));

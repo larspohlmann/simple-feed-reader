@@ -121,6 +121,7 @@ describe('EntryBodyService', () => {
       const state = await shown('<p>a</p>');
 
       store.refresh(1);
+      await settle();
       expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
       ctrl
         .expectOne('https://api.test/api/entries/1')
@@ -133,6 +134,7 @@ describe('EntryBodyService', () => {
       const state = await shown('<p>a</p>');
 
       store.refresh(1);
+      await settle();
       ctrl.expectOne('https://api.test/api/entries/1').flush('nope', {
         status: 500,
         statusText: 'Server Error',
@@ -141,15 +143,17 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>a</p>' });
     });
 
-    it('ends on the new body when the first fetch was still on the wire', async () => {
+    it('cancels the fetch still on the wire and ends on the new body', async () => {
       const state = store.body(1);
       await settle();
       const first = ctrl.expectOne('https://api.test/api/entries/1');
 
       store.refresh(1);
-      const second = ctrl.expectOne('https://api.test/api/entries/1');
-      second.flush({ entry: { contentHtml: '<p>new</p>' } });
-      first.flush({ entry: { contentHtml: '<p>old</p>' } });
+      await settle();
+      expect(first.cancelled).toBe(true);
+      ctrl
+        .expectOne('https://api.test/api/entries/1')
+        .flush({ entry: { contentHtml: '<p>new</p>' } });
 
       expect(state()).toEqual({ status: 'ok', html: '<p>new</p>' });
     });
@@ -167,17 +171,15 @@ describe('EntryBodyService', () => {
       expect(state()).toEqual({ status: 'ok', html: '<p>b</p>' });
     });
 
-    it('publishes what completing a fetched entry filled in, but not for a body forgotten meanwhile', async () => {
+    it('publishes what completing a fetched entry filled in, and cancels a body forgotten meanwhile', async () => {
       const published: number[] = [];
-      store.details.subscribe((detail) => published.push(detail.id));
+      store.completedEntries.subscribe((completed) => published.push(completed.id));
       store.body(1);
       store.body(2);
       await settle();
 
       store.forget(2);
-      ctrl
-        .expectOne('https://api.test/api/entries/2')
-        .flush({ entry: { id: 2, contentHtml: '' }, completed: { id: 2 } });
+      expect(ctrl.expectOne('https://api.test/api/entries/2').cancelled).toBe(true);
       ctrl
         .expectOne('https://api.test/api/entries/1')
         .flush({ entry: { id: 1, contentHtml: '' }, completed: { id: 1 } });
@@ -218,18 +220,54 @@ describe('EntryBodyService', () => {
     ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { contentHtml: '<p>2</p>' } });
   });
 
+  it('lets an evicted body still on the wire land in the signal a view holds', async () => {
+    const evicted = store.body(1);
+    for (let id = 2; id <= 51; id++) store.body(id);
+    store.body(1);
+    await settle();
+
+    const [first, again] = ctrl.match('https://api.test/api/entries/1');
+    expect(first.cancelled).toBe(false);
+    first.flush({ entry: { contentHtml: '<p>1</p>' } });
+    again.flush({ entry: { contentHtml: '<p>1</p>' } });
+    ctrl
+      .match((request) => request.url.startsWith('https://api.test/api/entries/'))
+      .forEach((request) => request.flush({ entry: { contentHtml: '' } }));
+
+    expect(evicted()).toEqual({ status: 'ok', html: '<p>1</p>' });
+  });
+
+  it("never shows one entry's body under another, whichever lands first", async () => {
+    const first = store.body(1);
+    const second = store.body(2);
+    await settle();
+
+    ctrl.expectOne('https://api.test/api/entries/2').flush({ entry: { contentHtml: '<p>B</p>' } });
+    ctrl.expectOne('https://api.test/api/entries/1').flush({ entry: { contentHtml: '<p>A</p>' } });
+
+    expect(second()).toEqual({ status: 'ok', html: '<p>B</p>' });
+    expect(first()).toEqual({ status: 'ok', html: '<p>A</p>' });
+  });
+
   describe('when the signed-in identity changes', () => {
-    it('drops a response that was still on the wire before the account changed', async () => {
-      const state = store.body(1);
+    it('cancels a request still on the wire for the previous account', async () => {
+      store.body(1);
       await settle();
       const testRequest = ctrl.expectOne('https://api.test/api/entries/1');
 
       tokens.clear();
       TestBed.tick();
-      testRequest.flush({ entry: { contentHtml: '<p>from the previous account</p>' } });
 
-      // Cleared, and the stale response must not have written back into it.
-      expect(state()).toEqual({ status: 'loading' });
+      expect(testRequest.cancelled).toBe(true);
+    });
+
+    it('never sends a request asked for just before the account changed', async () => {
+      store.body(1);
+      tokens.clear();
+      TestBed.tick();
+      await settle();
+
+      ctrl.expectNone('https://api.test/api/entries/1');
     });
 
     it('refetches for the next signed-in account', async () => {
