@@ -1,6 +1,7 @@
 import { DestroyRef, Injectable, NgZone, computed, effect, inject, untracked } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { onIdentityChange } from '../../core/auth/session-identity';
+import { isTabHidden, onTabVisibilityChange } from '../../core/tab-visibility';
 import { EntryBodyService } from '../article/content/entry-body.service';
 import { EntryDto } from '../models';
 import { ReaderApi } from '../reader-api';
@@ -35,14 +36,6 @@ export class PendingEntriesPoll {
   private rounds = 0;
   private listLoad: string | null = null;
 
-  private readonly onVisibilityChange = (): void => {
-    if (document.visibilityState === 'hidden') {
-      this.cancelTimer();
-      return;
-    }
-    this.schedule();
-  };
-
   constructor() {
     effect(() => {
       const listLoad = this.store.loadedAt();
@@ -50,14 +43,9 @@ export class PendingEntriesPoll {
       this.store.loading();
       untracked(() => this.follow(listLoad));
     });
-    this.zone.runOutsideAngular(() =>
-      document.addEventListener('visibilitychange', this.onVisibilityChange),
-    );
+    onTabVisibilityChange((hidden) => (hidden ? this.cancelTimer() : this.schedule()));
     onIdentityChange(() => this.reset());
-    inject(DestroyRef).onDestroy(() => {
-      this.reset();
-      document.removeEventListener('visibilitychange', this.onVisibilityChange);
-    });
+    inject(DestroyRef).onDestroy(() => this.reset());
   }
 
   private follow(listLoad: string): void {
@@ -85,7 +73,7 @@ export class PendingEntriesPoll {
   private mayPoll(): boolean {
     return (
       this.rounds < PENDING_POLL_MAX_ROUNDS &&
-      document.visibilityState !== 'hidden' &&
+      !isTabHidden() &&
       !this.store.loading() &&
       this.batch().length > 0
     );
