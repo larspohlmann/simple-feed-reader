@@ -66,6 +66,20 @@ final class ShareEnrichmentRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /** @return list<ShareEnrichment> the oldest link-card rows no worker holds, of every feed */
+    public function findClaimableLinkCards(\DateTimeImmutable $now, int $limit): array
+    {
+        /** @var list<ShareEnrichment> $rows */
+        $rows = $this->claimable($now)
+            ->andWhere('pending.kind = :kind')
+            ->setParameter('kind', ShareEnrichmentKind::LinkCards)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
     /**
      * @param list<Entry> $entries
      *
