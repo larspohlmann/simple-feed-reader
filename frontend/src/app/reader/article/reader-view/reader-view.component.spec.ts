@@ -1357,23 +1357,6 @@ describe('ReaderViewComponent', () => {
     expect(hero(fixture)).toBeNull();
   });
 
-  it('hands a failed article-body image to the proxy', async () => {
-    loadMock.mockReturnValue(
-      of<ReaderContent>(
-        okContent({
-          contentHtml: '<p>Lead.</p><img src="https://www.oxmoxhh.de/cover.png" alt="">',
-        }),
-      ),
-    );
-    const fixture = mount(entry());
-    await fixture.whenStable();
-    const img = fixture.nativeElement.querySelector('.content img') as HTMLImageElement;
-
-    img.dispatchEvent(new Event('error'));
-
-    expect(imageProxy.recover).toHaveBeenCalledWith(img);
-  });
-
   it('renders no hero in reader mode when the backend resolved none', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
 

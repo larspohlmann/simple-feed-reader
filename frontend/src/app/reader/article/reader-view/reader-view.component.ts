@@ -1,7 +1,6 @@
 import {
   Component,
   ElementRef,
-  Injector,
   computed,
   effect,
   inject,
@@ -11,13 +10,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
-import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { ProgressRailComponent } from '../../../shared/progress-rail/progress-rail.component';
 import { ScrollProgressDirective } from '../../../shared/progress-rail/scroll-progress.directive';
 import { ScrollProgressRail } from '../../../shared/progress-rail/scroll-progress-rail';
 import { ProxiedImageDirective } from '../../../shared/proxied-image/proxied-image.directive';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { ListActionDirective } from '../../../shared/list-action/list-action.directive';
 import { FlagToggleDirective } from '../../../shared/flag-toggle/flag-toggle.directive';
@@ -46,11 +44,9 @@ import { prefersReducedMotion } from '../reading/reduced-motion';
 import { TocEntry, collectToc } from '../reading/reading-toc';
 import { ReaderTocComponent } from '../reader-toc/reader-toc.component';
 import { LinkCardsComponent } from '../link-cards/link-cards.component';
+import { ArticleBody } from './article-body.service';
 import { ArticleGestures } from './article-gestures.service';
 import { relativeTime } from '../../format';
-import { decorateArticle } from '../decorators/decorate-article';
-import { toggleCinemaByKey } from '../decorators/reader-cinema';
-import { replaceUnplayableVideo } from '../decorators/unplayable-videos';
 import { estimateReadingMinutes } from '../decorators/reading-time';
 import { selectionQueryParams } from '../../query/query';
 import { AudioPlayerService } from '../../audio-player.service';
@@ -59,7 +55,6 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
 
 @Component({
   selector: 'app-reader-view',
-  host: { '(document:keydown)': 'onKeydown($event)' },
   imports: [
     ProgressRailComponent,
     ScrollProgressDirective,
@@ -82,7 +77,7 @@ import { entryDisplayTitle, isPost } from '../../entry/entry-text';
     ReaderTocComponent,
     LinkCardsComponent,
   ],
-  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope],
+  providers: [ArticleScrollRestore, ArticleGestures, ArticleSource, ReadingScope, ArticleBody],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -119,16 +114,15 @@ export class ReaderViewComponent {
   private readonly scrollerRef = viewChild<ElementRef<HTMLElement>>('scroller');
   private readonly scroller = computed(() => this.scrollerRef()?.nativeElement);
   private readonly bar = viewChild<ElementRef<HTMLElement>>('bar');
-  private readonly i18n = inject(TranslocoService);
   protected readonly readerMode = inject(ReaderModeService);
   private readonly language = inject(LanguageService);
   private readonly screen = inject(LayoutService);
-  private readonly injector = inject(Injector);
   private readonly reduceMotion = prefersReducedMotion();
   private readonly restore = inject(ArticleScrollRestore);
   protected readonly gestures = inject(ArticleGestures);
   protected readonly source = inject(ArticleSource);
   protected readonly scope = inject(ReadingScope);
+  private readonly body = inject(ArticleBody);
   protected readonly progressRail = new ScrollProgressRail({
     isWide: this.screen.isWide,
     contentBottom: () => this.scope.contentBottom(),
@@ -215,43 +209,17 @@ export class ReaderViewComponent {
       trailing: this.trailingParts,
     });
 
-    // Body media arrive through [innerHTML], so one capturing listener gives images the proxy
-    // fallback and failed videos a link out (error events do not bubble).
-    effect((onCleanup) => {
-      const content = this.content()?.nativeElement;
-      if (!content) return;
-      const recover = (event: Event) => {
-        if (event.target instanceof HTMLImageElement) {
-          void this.injector.get(ImageProxyService).recover(event.target);
-          return;
-        }
-        replaceUnplayableVideo(event.target, () => ({
-          pageUrl: this.entry()?.url ?? null,
-          title: this.i18n.translate('reader.unplayableVideo.title'),
-          action: this.i18n.translate('reader.unplayableVideo.action'),
-        }));
-      };
-      content.addEventListener('error', recover, true);
-      onCleanup(() => content.removeEventListener('error', recover, true));
-    });
-
-    // Re-decorate external links and re-seat the reading focus whenever the
-    // rendered HTML changes (new article, or Reader/Original toggle).
-    effect(() => {
-      this.source.displayHtml();
-      // Depend on the container too, not just the HTML: when extraction fails,
-      // displayHtml() recomputes to the same string and never notifies, so the
-      // container replacing the placeholder is the only render signal (#101).
-      if (!this.content()) return;
-      queueMicrotask(() => {
-        const host = this.content()?.nativeElement;
-        if (!host) return;
-        decorateArticle(host, this.i18n, this.audio.attachment()?.url ?? null);
+    this.body.connect({
+      content: this.content,
+      html: this.source.displayHtml,
+      pageUrl: () => this.entry()?.url ?? null,
+      enclosureUrl: () => this.audio.attachment()?.url ?? null,
+      decorated: (host) => {
         this.toc.set(collectToc(host));
         this.scope.refresh();
         // Runs on the original render and again when the reader content swaps in.
         this.restore.reseat(() => this.entry()?.id);
-      });
+      },
     });
 
     this.scope.observeResizes();
@@ -271,10 +239,6 @@ export class ReaderViewComponent {
       observer.observe(bar);
       onCleanup(() => observer.disconnect());
     });
-  }
-
-  protected onKeydown(event: KeyboardEvent): void {
-    toggleCinemaByKey(event, this.content()?.nativeElement);
   }
 
   /** The toolbar's back button. Full-screen it plays the same slide-out as a
