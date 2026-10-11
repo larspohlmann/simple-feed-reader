@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
-import { articleHost } from '../../../../testing/article-host-testing';
+import { articleHost, attachedArticleHost } from '../../../../testing/article-host-testing';
+import { fakeHls, firstPlay, resetFakeHls } from '../../../../testing/hls-testing';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { decorateArticle } from './decorate-article';
+
+jest.mock('hls.js', () => jest.requireActual('../../../../testing/hls-testing').fakeHlsModule);
 
 const decorated = (html: string): HTMLElement =>
   articleHost(html, (host) => decorateArticle(host, TestBed.inject(TranslocoService), null));
@@ -10,6 +13,10 @@ const decorated = (html: string): HTMLElement =>
 describe('decorateArticle', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [provideTranslocoTesting()] });
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
   });
 
   it('puts the landscape embed the media step builds from a link inside a cinema box', () => {
@@ -39,5 +46,17 @@ describe('decorateArticle', () => {
     expect(narration.open).toBe(false);
     expect(disclosure.classList.contains('reader-faq')).toBe(true);
     expect(disclosure.open).toBe(true);
+  });
+
+  it('streams a playlist video through hls.js once the cinema box has wrapped it', async () => {
+    resetFakeHls();
+    const host = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
+    decorateArticle(host, TestBed.inject(TranslocoService), null);
+    const video = host.querySelector<HTMLVideoElement>('.reader-cinema video')!;
+
+    await firstPlay(video);
+
+    expect(fakeHls.loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
+    expect(fakeHls.attachMedia).toHaveBeenCalledWith(video);
   });
 });
