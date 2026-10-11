@@ -1,4 +1,3 @@
-/** A detached article body holding `html`, run through `decorate` when a spec names one. */
 export function articleHost(
   html: string,
   decorate: (host: HTMLElement) => void = () => undefined,

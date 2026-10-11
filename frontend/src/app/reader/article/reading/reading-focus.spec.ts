@@ -1,3 +1,4 @@
+import { articleHost } from '../../../../testing/article-host-testing';
 import {
   type FocusCurve,
   LIST_FOCUS_CURVE,
@@ -74,30 +75,26 @@ describe('focusOpacityForSpan', () => {
 });
 
 describe('readingBlocks', () => {
-  function root(html: string): Element {
-    const element = document.createElement('div');
-    element.innerHTML = html;
-    return element;
-  }
-
   it('returns direct children when the content is a flat block list', () => {
-    const blocks = readingBlocks(root('<p>a</p><h2>b</h2><p>c</p>'));
+    const blocks = readingBlocks(articleHost('<p>a</p><h2>b</h2><p>c</p>'));
     expect(blocks.map((block) => block.tagName)).toEqual(['P', 'H2', 'P']);
   });
 
   it('descends through a single wrapper chain to the real block level', () => {
     // Mirrors the extracted-article shape: div > article > p, h2, p …
-    const blocks = readingBlocks(root('<div><article><p>a</p><h2>b</h2><p>c</p></article></div>'));
+    const blocks = readingBlocks(
+      articleHost('<div><article><p>a</p><h2>b</h2><p>c</p></article></div>'),
+    );
     expect(blocks.map((block) => block.tagName)).toEqual(['P', 'H2', 'P']);
   });
 
   it('does not descend into a leaf paragraph that only wraps inline content', () => {
-    const blocks = readingBlocks(root('<p>hello <a href="#">link</a></p>'));
+    const blocks = readingBlocks(articleHost('<p>hello <a href="#">link</a></p>'));
     expect(blocks.map((block) => block.tagName)).toEqual(['P']);
   });
 
   it('stops at the first level holding multiple blocks', () => {
-    const blocks = readingBlocks(root('<div><p>only</p></div>'));
+    const blocks = readingBlocks(articleHost('<div><p>only</p></div>'));
     expect(blocks.map((block) => block.tagName)).toEqual(['P']);
   });
 
@@ -107,7 +104,7 @@ describe('readingBlocks', () => {
   // ever highlighted, then seventeen paragraphs at once.
   it('reaches paragraphs that sit below several branching wrappers', () => {
     const blocks = readingBlocks(
-      root(`<div class="page"><div>
+      articleHost(`<div class="page"><div>
               <div><figure><img></figure><div><p>a</p><p>b</p><h2>c</h2><p>d</p></div></div>
               <div><p>e</p><h2>f</h2><p>g</p></div>
             </div></div>`),
@@ -126,7 +123,7 @@ describe('readingBlocks', () => {
 
   it('keeps a list, a quote and a figure as one block each', () => {
     const blocks = readingBlocks(
-      root(
+      articleHost(
         '<div><ul><li>a</li><li>b</li></ul><blockquote><p>q</p></blockquote>' +
           '<figure><img><figcaption>cap</figcaption></figure></div>',
       ),
@@ -135,14 +132,16 @@ describe('readingBlocks', () => {
   });
 
   it('treats a wrapper holding only inline content as the paragraph itself', () => {
-    const blocks = readingBlocks(root('<div><div>text with <a href="#">a link</a></div></div>'));
+    const blocks = readingBlocks(
+      articleHost('<div><div>text with <a href="#">a link</a></div></div>'),
+    );
     expect(blocks.map((block) => block.tagName)).toEqual(['DIV']);
     expect(blocks[0].textContent).toContain('text with');
   });
 
   it('stops descending at a bounded depth', () => {
     const deep = '<div>'.repeat(40) + '<p>bottom</p>' + '</div>'.repeat(40);
-    const blocks = readingBlocks(root(deep));
+    const blocks = readingBlocks(articleHost(deep));
     expect(blocks.length).toBeGreaterThan(0); // terminates, and returns something to fade
   });
 });
