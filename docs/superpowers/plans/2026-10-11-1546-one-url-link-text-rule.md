@@ -9,7 +9,8 @@ body once for both of its decisions.
 - **One predicate**, `UrlLinkText::readsAsUrl()`: the anchor's trimmed, lower-cased text, a trailing `…` dropped,
   starts with `http://`/`https://`, or is a domain (`www.` optional) that ends there or goes on with `/ : ? #`.
   A bare `example.com` now reads as a URL (it did not for `OwnProse`).
-- **`SharedLinks` keeps its stricter check on top:** a scheme-prefixed text, or the anchor's own host.
+- **`SharedLinks` keeps its stricter check:** a scheme-prefixed text, or the anchor's own host (`www.` optional).
+  Every such text also reads as a URL, so the check stands alone rather than re-running the predicate.
 - **URL-looking text that points elsewhere** (`<a href="https://example.com/a">www.other.org/x</a>`) reads as a
   URL, so it is not own prose, and it is not the anchor's own host, so it is not a shared link either.
 - **Bare URLs count as links for prose:** own prose is read after `SharedLinks` links them, so a bare
@@ -17,8 +18,9 @@ body once for both of its decisions.
 - **`SharedLinks::of()` always parses.** The "no `http` in the body" short-cut went, as own prose needs the
   DOM too; the body still comes back byte for byte when nothing was linked.
 - **The classifier links a post's bare URLs** (moved from `ShareEnrichmentQueue::linkBareUrls`), from the one
-  `SharedLinksModel` it already holds, under the same conditions as before: a title-derived link share, not
-  awaiting an embed, with a body. The queue no longer parses the body.
+  `SharedLinksModel` it already holds: a title-derived share (link or media), not awaiting an embed, with a
+  body. A media post linked nothing before; it can only differ when a bare URL is too long to share. The queue
+  no longer parses the body.
 - `OwnProse` stays a `Support` helper, now over the DOM (a clone of the body), not a regex over HTML.
 
 ## Files
