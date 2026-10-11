@@ -139,7 +139,7 @@ final class GuardedImageDownloaderTest extends TestCase
         $this->downloader($client)->download(self::IMAGE_URL);
     }
 
-    public function testPropagatesTheSsrfGuardAsAnUnavailableIconNotARejectedOne(): void
+    public function testPropagatesTheSsrfGuardAsAnUnavailableImageNotARejectedOne(): void
     {
         $client = new MockHttpClient(new MockResponse('BINARY'));
 
@@ -391,7 +391,7 @@ final class GuardedImageDownloaderTest extends TestCase
         }
     }
 
-    public function testARejectedFetchCarriesNoErrorCode(): void
+    public function testARejectedDownloadCarriesNoErrorCode(): void
     {
         $client = new MockHttpClient(static function (): never {
             throw new TransportException('wrapped', previous: new ResponseTooLargeException('cap tripped'));
@@ -405,7 +405,7 @@ final class GuardedImageDownloaderTest extends TestCase
         }
     }
 
-    public function testAnUnavailableFetchCarriesNoErrorCode(): void
+    public function testAnUnavailableDownloadCarriesNoErrorCode(): void
     {
         $client = new MockHttpClient(static function (): never {
             throw new TransportException('Connection refused');

@@ -19,8 +19,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 /**
- * Downloads one resolved image URL over RedirectFollower's guarded chain, with a timeout, size caps, no compression
- * and an image content-type allow-list.
+ * Downloads one image we store or measure over RedirectFollower's guarded chain, with a timeout, size caps, no
+ * compression and an image content-type allow-list. The proxy downloads through ImageDownloader instead.
  */
 final readonly class GuardedImageDownloader implements GuardedImageDownloaderInterface
 {
@@ -57,7 +57,7 @@ final readonly class GuardedImageDownloader implements GuardedImageDownloaderInt
             $landed = $this->redirects->follow($imageUrl, $this->options(), new RedirectBudget(self::MAX_REDIRECTS));
             [$bytes, $contentType] = $this->readSuccessfulResponse($landed);
         } catch (FetchException | TransportExceptionInterface $exception) {
-            throw $this->asFetchFailure($exception);
+            throw $this->asDownloadFailure($exception);
         }
 
         $this->assertNotEmpty($bytes);
@@ -67,7 +67,7 @@ final readonly class GuardedImageDownloader implements GuardedImageDownloaderInt
     }
 
     /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */
-    private function asFetchFailure(\Throwable $exception): GuardedImageUnavailableException
+    private function asDownloadFailure(\Throwable $exception): GuardedImageUnavailableException
     {
         if ($this->causedByOversizedResponse($exception)) {
             return new GuardedImageRejectedException($exception->getMessage(), 0, $exception);
