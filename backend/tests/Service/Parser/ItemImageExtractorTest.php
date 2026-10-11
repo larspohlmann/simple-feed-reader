@@ -465,30 +465,27 @@ final class ItemImageExtractorTest extends TestCase
         );
     }
 
-    /** @return iterable<string, array{string}> */
+    /** @return iterable<string, array{string, string}> */
     public static function enclosureShapes(): iterable
     {
-        yield 'rss <enclosure>' => ['rss'];
-        yield 'atom <link rel="enclosure">' => ['atom'];
+        $element = '<enclosure url="%2$s" type="%1$s" length="0"/>';
+        $link = '<link rel="enclosure" type="%1$s" href="%2$s"/>';
+        yield 'rss <enclosure>' => ['rssItem', $element];
+        yield 'rss <link rel="enclosure">' => ['rssItem', $link];
+        yield 'atom <link rel="enclosure">' => ['atomEntry', $link];
+        yield 'atom <enclosure>' => ['atomEntry', $element];
     }
 
-    private function itemOf(string $dialect, string $innerXml): CoreElement
+    private function itemWith(string $itemFactory, string $innerXml): CoreElement
     {
-        return $dialect === 'rss' ? $this->rssItem($innerXml) : $this->atomEntry($innerXml);
-    }
-
-    private static function enclosure(string $dialect, string $type, string $url): string
-    {
-        return $dialect === 'rss'
-            ? '<enclosure url="' . $url . '" type="' . $type . '" length="0"/>'
-            : '<link rel="enclosure" type="' . $type . '" href="' . $url . '"/>';
+        return $itemFactory === 'rssItem' ? $this->rssItem($innerXml) : $this->atomEntry($innerXml);
     }
 
     #[DataProvider('enclosureShapes')]
-    public function testAnImageEnclosureYieldsItsImage(string $dialect): void
+    public function testAnImageEnclosureYieldsItsImage(string $itemFactory, string $enclosure): void
     {
         $image = $this->extractor->fromEnclosure(
-            $this->itemOf($dialect, self::enclosure($dialect, 'image/jpeg', 'https://i/e.jpg')),
+            $this->itemWith($itemFactory, sprintf($enclosure, 'image/jpeg', 'https://i/e.jpg')),
         );
 
         self::assertNotNull($image);
@@ -497,50 +494,34 @@ final class ItemImageExtractorTest extends TestCase
     }
 
     #[DataProvider('enclosureShapes')]
-    public function testAnEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(string $dialect): void
-    {
+    public function testAnEnclosureMatchesItsTypeCaseInsensitivelyAndTrimsItsUrl(
+        string $itemFactory,
+        string $enclosure,
+    ): void {
         $image = $this->extractor->fromEnclosure(
-            $this->itemOf($dialect, self::enclosure($dialect, 'IMAGE/JPEG', '  https://i/e.jpg  ')),
+            $this->itemWith($itemFactory, sprintf($enclosure, 'IMAGE/JPEG', '  https://i/e.jpg  ')),
         );
 
         self::assertSame('https://i/e.jpg', $image?->url);
     }
 
     #[DataProvider('enclosureShapes')]
-    public function testANonImageEnclosureYieldsNoImage(string $dialect): void
+    public function testANonImageEnclosureYieldsNoImage(string $itemFactory, string $enclosure): void
     {
         self::assertNull($this->extractor->fromEnclosure(
-            $this->itemOf($dialect, self::enclosure($dialect, 'audio/mpeg', 'https://i/a.mp3')),
+            $this->itemWith($itemFactory, sprintf($enclosure, 'audio/mpeg', 'https://i/a.mp3')),
         ));
     }
 
     #[DataProvider('enclosureShapes')]
-    public function testAnImageEnclosureWithoutAUrlIsSkippedForTheNext(string $dialect): void
+    public function testAnImageEnclosureWithoutAUrlIsSkippedForTheNext(string $itemFactory, string $enclosure): void
     {
-        $image = $this->extractor->fromEnclosure($this->itemOf(
-            $dialect,
-            self::enclosure($dialect, 'image/jpeg', ' ') . self::enclosure($dialect, 'image/png', 'https://i/2.png'),
+        $image = $this->extractor->fromEnclosure($this->itemWith(
+            $itemFactory,
+            sprintf($enclosure, 'image/jpeg', ' ') . sprintf($enclosure, 'image/png', 'https://i/2.png'),
         ));
 
         self::assertSame('https://i/2.png', $image?->url);
-    }
-
-    public function testRss2AcceptsAnEnclosureLink(): void
-    {
-        $image = $this->extractor->fromEnclosure(
-            $this->rssItem('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
-        );
-
-        self::assertSame('https://i/enc.png', $image?->url);
-    }
-
-    public function testAtomAcceptsAnEnclosureElement(): void
-    {
-        $image = $this->extractor->fromEnclosure(
-            $this->atomEntry('<enclosure url="https://i/enc.png" type="image/png"/>'),
-        );
-
-        self::assertSame('https://i/enc.png', $image?->url);
     }
 
     public function testAnUntypedEnclosureIsAnImageByItsExtension(): void

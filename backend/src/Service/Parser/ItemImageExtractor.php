@@ -35,7 +35,6 @@ final readonly class ItemImageExtractor
         return DeclaredImages::widest($candidates)?->joinedWith(...$candidates);
     }
 
-    /** The first image enclosure, in either shape the media path accepts: <enclosure> or <link rel="enclosure">. */
     public function fromEnclosure(CoreElement $item): ?DeclaredImageModel
     {
         foreach ($item->element->childNodes as $child) {
