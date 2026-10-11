@@ -11,11 +11,15 @@ instead of three.
   optional key (only `detail()` adds it).
 - `commonFields()` only existed to hold the shared part; `listRow()` now builds the whole row itself and
   `commonFields()` goes. `detail()` stays `listRow() + contentHtml`.
+- PHPStan merges no intersection of array shapes (`EntryRow&array{contentHtml: …}` loses every other key), and the
+  project carries no phpstan-phpunit to narrow on `assertArrayHasKey`, so the one test reading `contentHtml` reads
+  it as `$json['contentHtml'] ?? null` — a missing key still fails the assertion.
 - Consumers (`EntryPage`, `RecommendationFeedJson`, the two controllers) are untouched.
 
 ## Files
 
 - `backend/src/Http/EntryJson.php`
+- `backend/tests/Http/EntryJsonTest.php`
 
 ## Tasks
 

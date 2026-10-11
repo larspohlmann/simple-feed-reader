@@ -234,7 +234,7 @@ final class EntryJsonTest extends TestCase
 
         $json = EntryJson::detail($row);
 
-        self::assertSame('<p>Full body.</p>', $json['contentHtml']);
+        self::assertSame('<p>Full body.</p>', $json['contentHtml'] ?? null);
         self::assertArrayNotHasKey('contentHtml', $json['duplicates'][0]);
     }
 
