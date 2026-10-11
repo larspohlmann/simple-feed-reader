@@ -254,4 +254,37 @@ describe('EntryMediaComponent', () => {
     expect(element.querySelector('iframe')).toBeNull();
     expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
   });
+
+  it('puts a Short’s player back to its cover when the card scrolls out of view', async () => {
+    const callbacks: IntersectionObserverCallback[] = [];
+    const observed: Element[] = [];
+    const real = globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = class {
+      constructor(callback: IntersectionObserverCallback) {
+        callbacks.push(callback);
+      }
+      readonly observe = (target: Element) => observed.push(target);
+      readonly disconnect = jest.fn();
+    } as unknown as typeof IntersectionObserver;
+    try {
+      const fixture = await mountFixture(short());
+      const element = fixture.nativeElement as HTMLElement;
+      element.querySelector<HTMLButtonElement>('.play')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      const frame = element.querySelector('.short')!;
+      expect(observed).toContain(frame);
+
+      callbacks[0]([sighting(frame, true)], {} as IntersectionObserver);
+      fixture.detectChanges();
+      expect(element.querySelector('iframe')).not.toBeNull();
+
+      callbacks[0]([sighting(frame, false)], {} as IntersectionObserver);
+      fixture.detectChanges();
+      expect(element.querySelector('iframe')).toBeNull();
+      expect(element.querySelector('img')!.getAttribute('src')).toBe(COVER);
+    } finally {
+      globalThis.IntersectionObserver = real;
+    }
+  });
 });
