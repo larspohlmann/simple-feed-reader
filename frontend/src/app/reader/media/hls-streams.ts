@@ -12,51 +12,61 @@ import type Hls from 'hls.js';
  * alone, the `preload="none"` element stays idle and shows only its poster; the
  * playlist src keeps the native play button working, and that first play swaps in
  * the MediaSource and resumes what the swap paused.
- * Runs beside `upgradeMediaEmbeds`; a re-render destroys detached instances first.
+ *
+ * The host that armed a stream owns it: it arms on render and releases on teardown.
  */
 const PLAYLIST = /\.m3u8$/i;
-const instances = new Map<HTMLVideoElement, Hls>();
+const streamsByHost = new WeakMap<HTMLElement, Map<HTMLVideoElement, Hls>>();
 const armed = new WeakSet<HTMLVideoElement>();
 
-export function attachHlsStreams(host: HTMLElement): void {
-  destroyDetached();
+/** Arms the host's playlist videos for their first play, and releases the streams of the videos a re-render removed. */
+export function armHlsStreams(host: HTMLElement): void {
+  releaseWhere(host, (video) => !host.contains(video));
   for (const video of Array.from(host.querySelectorAll('video'))) {
-    const source = video.getAttribute('src') ?? '';
-    if (!PLAYLIST.test(source) || armed.has(video)) continue;
+    if (!isPlaylist(video) || armed.has(video)) continue;
     armed.add(video);
-    video.addEventListener('play', () => void play(video, source).catch(() => undefined), {
+    const source = video.getAttribute('src') ?? '';
+    video.addEventListener('play', () => void play(host, video, source).catch(() => undefined), {
       once: true,
     });
   }
 }
 
-/** hls.js swaps a managed video's source on first play, so the native attempt's error is not a failure. */
-export function isHlsManaged(video: HTMLVideoElement): boolean {
-  return armed.has(video);
+export function releaseHlsStreams(host: HTMLElement): void {
+  releaseWhere(host, () => true);
 }
 
-async function play(video: HTMLVideoElement, source: string): Promise<void> {
+/** hls.js swaps such a video's source on first play, so the native attempt's error is not a failure. */
+export function streamsThroughHls(video: HTMLVideoElement): boolean {
+  return isPlaylist(video) || armed.has(video);
+}
+
+function isPlaylist(video: HTMLVideoElement): boolean {
+  return PLAYLIST.test(video.getAttribute('src') ?? '');
+}
+
+async function play(host: HTMLElement, video: HTMLVideoElement, source: string): Promise<void> {
   const { default: HlsPlayer } = await import('hls.js');
   if (!HlsPlayer.isSupported() || !video.isConnected) return;
   const hls = new HlsPlayer();
-  instances.set(video, hls);
+  streamsOf(host).set(video, hls);
   hls.loadSource(source);
   hls.attachMedia(video);
   void video.play();
 }
 
-function destroyWhere(shouldDestroy: (video: HTMLVideoElement) => boolean): void {
-  for (const [video, hls] of instances) {
-    if (!shouldDestroy(video)) continue;
+function streamsOf(host: HTMLElement): Map<HTMLVideoElement, Hls> {
+  const streams = streamsByHost.get(host) ?? new Map<HTMLVideoElement, Hls>();
+  streamsByHost.set(host, streams);
+  return streams;
+}
+
+function releaseWhere(host: HTMLElement, shouldRelease: (video: HTMLVideoElement) => boolean) {
+  const streams = streamsByHost.get(host);
+  if (!streams) return;
+  for (const [video, hls] of streams) {
+    if (!shouldRelease(video)) continue;
     hls.destroy();
-    instances.delete(video);
+    streams.delete(video);
   }
-}
-
-function destroyDetached(): void {
-  destroyWhere((video) => !video.isConnected);
-}
-
-export function destroyStreamsIn(host: HTMLElement): void {
-  destroyWhere((video) => host.contains(video));
 }

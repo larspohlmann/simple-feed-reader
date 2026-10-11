@@ -1,110 +1,138 @@
-import { attachedArticleHost } from '../../../testing/article-host-testing';
-import { attachHlsStreams } from './hls-streams';
+import { articleHost, attachedArticleHost } from '../../../testing/article-host-testing';
+import { fakeHls, firstPlay, flushHls, resetFakeHls } from '../../../testing/hls-testing';
+import { armHlsStreams, releaseHlsStreams, streamsThroughHls } from './hls-streams';
 
-const loadSource = jest.fn();
-const attachMedia = jest.fn();
-const destroy = jest.fn();
-let supported = true;
+jest.mock('hls.js', () => jest.requireActual('../../../testing/hls-testing').fakeHlsModule);
 
-class FakeHls {
-  static isSupported = (): boolean => supported;
-  loadSource = loadSource;
-  attachMedia = attachMedia;
-  destroy = destroy;
+const PLAYLIST_VIDEO = '<video src="https://x.test/master.m3u8"></video>';
+const videoIn = (host: HTMLElement): HTMLVideoElement => host.querySelector('video')!;
+
+async function playedStream(): Promise<HTMLElement> {
+  const host = attachedArticleHost(PLAYLIST_VIDEO);
+  armHlsStreams(host);
+  await firstPlay(videoIn(host));
+  return host;
 }
 
-jest.mock('hls.js', () => ({
-  __esModule: true,
-  default: FakeHls,
-}));
-
-const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
-
-function firstPlay(element: HTMLElement): Promise<void> {
-  element.querySelector('video')!.dispatchEvent(new Event('play'));
-  return flush();
-}
-
-describe('attachHlsStreams', () => {
+describe('armHlsStreams', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    supported = true;
+    resetFakeHls();
     document.body.innerHTML = '';
-    HTMLMediaElement.prototype.canPlayType = () => '';
-    HTMLMediaElement.prototype.load = () => undefined;
-    HTMLMediaElement.prototype.play = () => Promise.resolve();
   });
 
   it('attaches nothing on render, so the idle poster keeps its playlist src and paints no spinner', async () => {
-    const element = attachedArticleHost(
+    const host = attachedArticleHost(
       '<video src="https://x.test/master.m3u8" poster="p.jpg"></video>',
     );
-    attachHlsStreams(element);
-    await flush();
+    armHlsStreams(host);
+    await flushHls();
 
-    expect(element.querySelector('video')!.getAttribute('src')).toBe('https://x.test/master.m3u8');
-    expect(attachMedia).not.toHaveBeenCalled();
+    expect(videoIn(host).getAttribute('src')).toBe('https://x.test/master.m3u8');
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
   });
 
   it('attaches hls.js only on the first play, so preload="none" keeps its meaning', async () => {
-    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    attachHlsStreams(element);
-    await flush();
-    expect(attachMedia).not.toHaveBeenCalled();
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    await flushHls();
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
 
-    await firstPlay(element);
+    await firstPlay(videoIn(host));
 
-    expect(loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
-    expect(attachMedia).toHaveBeenCalledWith(element.querySelector('video'));
+    expect(fakeHls.loadSource).toHaveBeenCalledWith('https://x.test/master.m3u8');
+    expect(fakeHls.attachMedia).toHaveBeenCalledWith(videoIn(host));
   });
 
   it('takes the stream even when the browser claims native HLS, because Chrome claims and never plays', async () => {
     HTMLMediaElement.prototype.canPlayType = () => 'maybe';
-    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    attachHlsStreams(element);
-    await firstPlay(element);
+    await playedStream();
 
-    expect(attachMedia).toHaveBeenCalledWith(element.querySelector('video'));
+    expect(fakeHls.attachMedia).toHaveBeenCalled();
   });
 
   it('leaves a file video alone', async () => {
-    const element = attachedArticleHost('<video src="https://x.test/a.mp4"></video>');
-    attachHlsStreams(element);
-    await firstPlay(element);
+    const host = attachedArticleHost('<video src="https://x.test/a.mp4"></video>');
+    armHlsStreams(host);
+    await firstPlay(videoIn(host));
 
-    expect(element.querySelector('video')!.getAttribute('src')).toBe('https://x.test/a.mp4');
-    expect(attachMedia).not.toHaveBeenCalled();
+    expect(videoIn(host).getAttribute('src')).toBe('https://x.test/a.mp4');
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
   });
 
   it('leaves the video alone when hls.js reports no support', async () => {
-    supported = false;
-    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    attachHlsStreams(element);
-    await firstPlay(element);
+    fakeHls.supported = false;
+    await playedStream();
 
-    expect(attachMedia).not.toHaveBeenCalled();
+    expect(fakeHls.attachMedia).not.toHaveBeenCalled();
   });
 
-  it('destroys the instance of a played video the re-render removed', async () => {
-    const element = attachedArticleHost('<video src="https://x.test/master.m3u8"></video>');
-    attachHlsStreams(element);
-    await firstPlay(element);
-    element.innerHTML = '<p>re-rendered</p>';
-    attachHlsStreams(element);
-    await flush();
+  it('releases the stream of a played video the re-render removed', async () => {
+    const host = await playedStream();
+    host.innerHTML = '<p>re-rendered</p>';
+    armHlsStreams(host);
 
-    expect(destroy).toHaveBeenCalledTimes(1);
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the streams of another host when re-rendering', async () => {
+    const host = await playedStream();
+    host.remove();
+    armHlsStreams(attachedArticleHost('<p>another surface</p>'));
+
+    expect(fakeHls.destroy).not.toHaveBeenCalled();
   });
 
   it('does not arm the same still-connected video twice', async () => {
-    const element = attachedArticleHost(
-      '<video src="https://x.test/master.m3u8" poster="p.jpg"></video>',
-    );
-    attachHlsStreams(element);
-    await flush();
-    attachHlsStreams(element);
-    await firstPlay(element);
+    const host = attachedArticleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    armHlsStreams(host);
+    await firstPlay(videoIn(host));
 
-    expect(attachMedia).toHaveBeenCalledTimes(1);
+    expect(fakeHls.attachMedia).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('releaseHlsStreams', () => {
+  beforeEach(() => {
+    resetFakeHls();
+    document.body.innerHTML = '';
+  });
+
+  it('destroys the stream its host played, once, though the swap detached its video', async () => {
+    const host = await playedStream();
+    host.innerHTML = '<p>swapped</p>';
+
+    releaseHlsStreams(host);
+    releaseHlsStreams(host);
+
+    expect(fakeHls.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the streams of another host playing', async () => {
+    await playedStream();
+
+    releaseHlsStreams(attachedArticleHost(PLAYLIST_VIDEO));
+
+    expect(fakeHls.destroy).not.toHaveBeenCalled();
+  });
+});
+
+describe('streamsThroughHls', () => {
+  it('claims a playlist video before anything armed it', () => {
+    expect(streamsThroughHls(videoIn(articleHost(PLAYLIST_VIDEO)))).toBe(true);
+  });
+
+  it('keeps claiming an armed video once hls.js swapped its source', () => {
+    const host = articleHost(PLAYLIST_VIDEO);
+    armHlsStreams(host);
+    videoIn(host).src = 'blob:https://reader.test/stream';
+
+    expect(streamsThroughHls(videoIn(host))).toBe(true);
+  });
+
+  it('leaves a file video to the browser', () => {
+    expect(streamsThroughHls(videoIn(articleHost('<video src="https://x.test/a.mp4">')))).toBe(
+      false,
+    );
   });
 });

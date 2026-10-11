@@ -12,7 +12,8 @@ import { TranslocoService } from '@jsverse/transloco';
 import { ImageProxyService } from '../../../shared/proxied-image/image-proxy.service';
 import { decorateArticle } from '../decorators/decorate-article';
 import { toggleCinemaByKey } from '../decorators/reader-cinema';
-import { replaceUnplayableVideo } from '../../media/unplayable-videos';
+import { releaseHlsStreams } from '../../media/hls-streams';
+import { UnplayableVideoService } from '../../media/unplayable-video.service';
 
 export interface ArticleBodyParts {
   readonly content: Signal<ElementRef<HTMLElement> | undefined>;
@@ -29,6 +30,7 @@ export interface ArticleBodyParts {
 export class ArticleBody {
   private readonly i18n = inject(TranslocoService);
   private readonly injector = inject(Injector);
+  private readonly unplayableVideos = inject(UnplayableVideoService);
   private content: Signal<ElementRef<HTMLElement> | undefined> = signal(undefined);
 
   constructor() {
@@ -56,11 +58,7 @@ export class ArticleBody {
             void this.injector.get(ImageProxyService).recover(event.target);
             return;
           }
-          replaceUnplayableVideo(event.target, () => ({
-            pageUrl: parts.pageUrl(),
-            title: this.i18n.translate('reader.unplayableVideo.title'),
-            action: this.i18n.translate('reader.unplayableVideo.action'),
-          }));
+          this.unplayableVideos.replace(event.target, parts.pageUrl());
         };
         content.addEventListener('error', recover, true);
         onCleanup(() => content.removeEventListener('error', recover, true));
@@ -69,15 +67,18 @@ export class ArticleBody {
     );
   }
 
-  /** Re-decorate whenever the rendered HTML changes (new article, or Reader/Original toggle). */
+  /** Re-decorate whenever the rendered HTML changes (new article, or Reader/Original toggle),
+   *  releasing the swapped-out body's streams; the effect never re-runs under a playing video. */
   private decorateEachRender(parts: ArticleBodyParts): void {
     effect(
-      () => {
+      (onCleanup) => {
         parts.html();
         // Depend on the container too, not just the HTML: when extraction fails,
         // the HTML recomputes to the same string and never notifies, so the
         // container replacing the placeholder is the only render signal (#101).
-        if (!parts.content()) return;
+        const content = parts.content()?.nativeElement;
+        if (!content) return;
+        onCleanup(() => releaseHlsStreams(content));
         queueMicrotask(() => {
           const host = parts.content()?.nativeElement;
           if (!host) return;
