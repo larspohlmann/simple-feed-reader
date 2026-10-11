@@ -265,4 +265,15 @@ final class DigestHtmlRendererTest extends TestCase
 
         self::assertStringContainsString("Broken \u{FFFD} title", $html);
     }
+
+    public function testUntitledEntryLinksWithTheFeedName(): void
+    {
+        $cards = [$this->card('', null)];
+        $group = new DigestPageGroupModel('Thailand', 1, $cards, 0, 'https://reader.example/?q=Thailand');
+        $page = new DigestPageModel([$group], 1);
+
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
+
+        self::assertMatchesRegularExpression('/class="card-title"[^>]*>ZDFheute<\/a>/', $html);
+    }
 }

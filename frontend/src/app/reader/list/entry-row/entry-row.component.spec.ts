@@ -119,6 +119,12 @@ describe('EntryRowComponent', () => {
     expect(element.querySelector('.snippet')).toBeNull();
   });
 
+  it('renders no title element for an untitled entry', () => {
+    const element = mount(entry({ title: '', excerpt: '' })).nativeElement as HTMLElement;
+
+    expect(element.querySelector('.title')).toBeNull();
+  });
+
   it('keeps title and snippet for an ordinary entry', () => {
     const element = mount(entry()).nativeElement as HTMLElement;
     expect(element.querySelector('.title')!.classList).not.toContain('post');

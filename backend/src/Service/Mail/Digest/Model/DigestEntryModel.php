@@ -16,4 +16,9 @@ final readonly class DigestEntryModel
         public ?string $faviconUrl,
     ) {
     }
+
+    public function headline(): string
+    {
+        return '' === $this->title ? $this->feedName : $this->title;
+    }
 }

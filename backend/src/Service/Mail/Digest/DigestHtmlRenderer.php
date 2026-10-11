@@ -60,7 +60,7 @@ final readonly class DigestHtmlRenderer
     private function card(DigestEntryModel $card, DigestImageSetModel $images, \IntlDateFormatter $dateFormatter): array
     {
         return [
-            'title' => $card->title,
+            'title' => $card->headline(),
             'feedName' => $card->feedName,
             'shortDescription' => $card->shortDescription,
             'url' => $card->url,

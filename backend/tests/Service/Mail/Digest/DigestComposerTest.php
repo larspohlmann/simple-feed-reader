@@ -92,6 +92,19 @@ final class DigestComposerTest extends DbTestCase
         self::assertStringEndsWith('…', $description);
     }
 
+    public function testUntitledEntryCarriesAnEmptyTitle(): void
+    {
+        $rust = $this->search('rust');
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust]);
+        $this->member($rust, '(untitled)', 'Feed A', new \DateTimeImmutable('2026-08-15T00:00:00Z'));
+        $this->entityManager->flush();
+
+        $model = $this->composer()->compose($this->user, $this->since);
+
+        self::assertNotNull($model);
+        self::assertSame('', $model->groups[0]->entries[0]->title);
+    }
+
     public function testAllSearchesEmptyReturnsNull(): void
     {
         $rust = $this->search('rust');

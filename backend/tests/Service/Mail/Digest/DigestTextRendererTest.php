@@ -73,6 +73,17 @@ final class DigestTextRendererTest extends TestCase
         self::assertStringNotContainsString('\\n', $rendered->body);
     }
 
+    public function testUntitledEntryIsListedByItsFeedName(): void
+    {
+        $entry = new DigestEntryModel('', 'Rust Blog', '', 'https://example.com/1', null, null, null);
+        $group = new DigestGroupModel('rust', 1, [$entry], false, '');
+
+        $rendered = $this->renderer->render(new DigestModel([$group], 1), 'en');
+
+        self::assertStringContainsString("• Rust Blog\n", $rendered->body);
+        self::assertStringNotContainsString('—', $rendered->body);
+    }
+
     private function twoGroupModel(): DigestModel
     {
         $rustEntries = [

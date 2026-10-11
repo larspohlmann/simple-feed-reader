@@ -262,6 +262,25 @@ describe('ReaderViewComponent', () => {
     expect(link.rel).toContain('noopener');
   });
 
+  describe('an untitled entry', () => {
+    const untitled = () => entry({ title: '', source: 'Ars' });
+
+    it('keeps a focusable heading, hidden visually, named after the source', () => {
+      const element = mount(untitled()).nativeElement as HTMLElement;
+      const heading = element.querySelector('h1.title') as HTMLElement;
+
+      expect(heading.classList).toContain('sr-only');
+      expect(heading.getAttribute('tabindex')).toBe('-1');
+      expect(heading.textContent!.trim()).toBe('Ars');
+    });
+
+    it('names the nameplate after the source', () => {
+      const element = mount(untitled()).nativeElement as HTMLElement;
+
+      expect(element.querySelector('.mini-title, .bar-title')!.textContent!.trim()).toBe('Ars');
+    });
+  });
+
   describe('a post (derived title)', () => {
     const post = () =>
       entryWithBody('<p>Just a post</p>', { titleDerived: true, url: 'https://example.test/p/1' });

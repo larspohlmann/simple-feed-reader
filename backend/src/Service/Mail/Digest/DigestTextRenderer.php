@@ -56,7 +56,7 @@ final readonly class DigestTextRenderer
 
     private function entry(DigestEntryModel $entry): string
     {
-        $lines = ["• {$entry->title} — {$entry->feedName}"];
+        $lines = ['' === $entry->title ? "• {$entry->feedName}" : "• {$entry->title} — {$entry->feedName}"];
 
         if ('' !== $entry->shortDescription) {
             $lines[] = "  {$entry->shortDescription}";
