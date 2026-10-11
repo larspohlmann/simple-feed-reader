@@ -6,7 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Catalog\CatalogUrlChecker;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
-use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\PageLanding;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -28,7 +28,7 @@ final class OutboundUserAgentWiringTest extends KernelTestCase
     public static function outboundServices(): iterable
     {
         yield 'feed fetcher' => [ConcurrentFeedFetcher::class, 'userAgent'];
-        yield 'reader page fetcher' => [HtmlPageFetcher::class, 'userAgent'];
+        yield 'reader page landing' => [PageLanding::class, 'userAgent'];
         yield 'catalog rot check' => [CatalogUrlChecker::class, 'userAgent'];
     }
 

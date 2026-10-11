@@ -17,7 +17,7 @@ use App\Service\LinkCard\Model\PageCardModel;
 use App\Service\LinkCard\Support\QuoteLine;
 use App\Service\LinkCard\Support\ShareTargets;
 use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\HtmlPageFetcher;
+use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -157,7 +157,7 @@ final readonly class ShareLinkCards
     ): bool {
         $elapsed = (float) $this->clock->now()->format('U.u') - (float) $claimedAt->format('U.u');
 
-        return $elapsed + \count($uncardedUrls) * HtmlPageFetcher::HEAD_MAX_DURATION_SECONDS <= $budget->seconds();
+        return $elapsed + \count($uncardedUrls) * PageHeadFetcher::MAX_DURATION_SECONDS <= $budget->seconds();
     }
 
     /**

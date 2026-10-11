@@ -7,7 +7,6 @@ namespace App\Tests\Service\Reader\ArticleExtractor;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
-use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
@@ -17,7 +16,6 @@ use App\Service\Reader\ArticlePageReader;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
@@ -108,11 +106,8 @@ final class ArticleExtractorTest extends TestCase
 
         return new ArticleExtractor(
             new HtmlPageFetcher(
-                $redirects,
+                FetchWiring::pageLanding($redirects),
                 new MetaRefreshTarget(),
-                new LandingChallenge(),
-                'TestAgent/1.0',
-                new SymfonyStatusReasonPhrases(),
             ),
             new ArticlePageReader(
                 new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
@@ -516,11 +511,8 @@ final class ArticleExtractorTest extends TestCase
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
             new HtmlPageFetcher(
-                $redirects,
+                FetchWiring::pageLanding($redirects),
                 new MetaRefreshTarget(),
-                new LandingChallenge(),
-                'TestAgent/1.0',
-                new SymfonyStatusReasonPhrases(),
             ),
             new ArticlePageReader(
                 new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),

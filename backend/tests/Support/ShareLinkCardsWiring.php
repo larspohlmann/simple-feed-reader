@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
@@ -13,9 +12,7 @@ use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\UrlGuard;
 use App\Service\LinkCard\PageCardReader;
 use App\Service\LinkCard\ShareLinkCards;
-use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\LandingChallenge;
-use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use Doctrine\ORM\EntityManagerInterface;
@@ -40,7 +37,7 @@ final class ShareLinkCardsWiring
         LoggerInterface $logger = new NullLogger(),
     ): ShareLinkCards {
         return new ShareLinkCards(
-            new PageCardReader(self::pageFetcher($client)),
+            new PageCardReader(self::headFetcher($client)),
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
@@ -59,7 +56,7 @@ final class ShareLinkCardsWiring
         ));
     }
 
-    public static function pageFetcher(HttpClientInterface $client): HtmlPageFetcher
+    public static function headFetcher(HttpClientInterface $client): PageHeadFetcher
     {
         $everyHostIsPublic = new class implements DnsResolverInterface {
             public function resolve(string $hostname): array
@@ -74,16 +71,10 @@ final class ShareLinkCardsWiring
             }
         };
 
-        return new HtmlPageFetcher(
-            FetchWiring::redirectFollower(
-                $client,
-                $noEgressProxy,
-                new UrlGuard($everyHostIsPublic, new IpValidator()),
-            ),
-            new MetaRefreshTarget(),
-            new LandingChallenge(),
-            'TestAgent/1.0',
-            new SymfonyStatusReasonPhrases(),
-        );
+        return new PageHeadFetcher(FetchWiring::pageLanding(FetchWiring::redirectFollower(
+            $client,
+            $noEgressProxy,
+            new UrlGuard($everyHostIsPublic, new IpValidator()),
+        )));
     }
 }
