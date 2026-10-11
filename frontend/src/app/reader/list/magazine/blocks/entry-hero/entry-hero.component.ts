@@ -6,11 +6,13 @@ import { entryImage, widestRenditionWidth } from '../../../preview-image';
 import { EntryBlockBase } from '../../entry-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
 import { FULL_COLUMN_SIZES } from '../../../rendition-sizes';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-hero',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,

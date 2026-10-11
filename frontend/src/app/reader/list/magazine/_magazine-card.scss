@@ -1,10 +1,35 @@
 @use '../../../theme/glass-rim';
+@use '../post-text';
 
 @mixin chrome {
   @include glass-rim.filled(var(--card-bg));
 
   border-width: var(--card-border-width);
   border-radius: var(--card-radius);
+}
+
+// Included in a chrome card's own rule. Hover is pointer-only: a touch tap fires :hover,
+// which must not highlight a card during a drag-scroll (#704).
+@mixin card-states($post-lines: 4) {
+  @media (hover: hover) {
+    &:hover {
+      --rim-base: var(--border-strong);
+    }
+
+    &:hover .title {
+      text-decoration: var(--card-hover-decoration);
+      text-underline-offset: 3px;
+    }
+  }
+
+  &.read .title {
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .title.post {
+    @include post-text.post-text($post-lines);
+  }
 }
 
 @mixin image-rim {

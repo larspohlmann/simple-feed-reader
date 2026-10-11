@@ -8,7 +8,6 @@ import {
   input,
   signal,
 } from '@angular/core';
-import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { FaviconComponent } from '../../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../../shared/marked-text/marked-text.component';
 import { EntryPillsComponent } from '../../entry/entry-pills/entry-pills.component';
@@ -22,6 +21,7 @@ import { relativeTime } from '../../format';
 import { RenditionsDirective } from '../renditions.directive';
 import { ShortBadgeComponent } from '../short-badge/short-badge.component';
 import { COVER_BOX_SIZES } from '../rendition-sizes';
+import { OpensEntryDirective } from '../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-row',
@@ -31,6 +31,7 @@ import { COVER_BOX_SIZES } from '../rendition-sizes';
   // its popover card, so a plain reference here would resolve
   // EntryDuplicatesComponent mid-import-cycle and read as undefined.
   imports: [
+    OpensEntryDirective,
     FaviconComponent,
     MarkedTextComponent,
     EntryPillsComponent,
@@ -55,8 +56,6 @@ export class EntryRowComponent {
    *  `<app-marked-text>` instances per row, so the ordinary list pays nothing
    *  for a feature it never uses. */
   readonly marking = computed(() => this.terms().length > 0);
-
-  protected readonly actions = inject(EntryActionHandler);
 
   readonly imgError = signal(false);
   // The entry's image, from the same shared helper the magazine uses: the

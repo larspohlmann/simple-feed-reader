@@ -43,12 +43,9 @@ function mount(block: MagazineBlock): HTMLElement {
 describe('MagazineBlockComponent', () => {
   afterEach(() => TestBed.resetTestingModule());
 
-  it.each(ENTRY_KINDS.filter((kind) => kind !== 'media'))(
-    'renders the headline of a %s block',
-    (kind) => {
-      expect(mount(blockOf(kind, entry())).querySelector('.title')).not.toBeNull();
-    },
-  );
+  it.each(ENTRY_KINDS)('renders the headline of a %s block', (kind) => {
+    expect(mount(blockOf(kind, entry())).querySelector('.title')).not.toBeNull();
+  });
 
   it.each(ENTRY_KINDS)('renders no empty headline in a %s block', (kind) => {
     expect(mount(blockOf(kind, entry({ title: '' }))).querySelector('.title')).toBeNull();

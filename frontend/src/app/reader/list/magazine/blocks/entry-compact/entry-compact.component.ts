@@ -6,11 +6,13 @@ import { EntryPillsComponent } from '../../../../entry/entry-pills/entry-pills.c
 import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { showsShortPill } from '../../../preview-image';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-compact',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryActionsComponent,

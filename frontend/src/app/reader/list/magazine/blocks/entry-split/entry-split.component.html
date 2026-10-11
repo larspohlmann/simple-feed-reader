@@ -1,13 +1,4 @@
-<article
-  class="split"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  [class.img-left]="imageSide() === 'left'"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="split" [appOpensEntry]="entry()" [class.img-left]="imageSide() === 'left'">
   <div class="top">
     @if (showImage()) {
       <div class="img-frame" [class.portrait]="portraitRatio() !== null">

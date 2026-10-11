@@ -1,4 +1,3 @@
-@use '../../../post-text';
 @use '../../magazine-card';
 
 :host {
@@ -52,8 +51,4 @@
   margin: 0;
   font-size: var(--fs-sm);
   color: var(--text-secondary);
-}
-
-.title.post {
-  @include post-text.post-text;
 }

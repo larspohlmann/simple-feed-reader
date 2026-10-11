@@ -5,11 +5,13 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
 import { SPLIT_SIDE_IMAGE_SIZES } from '../../../rendition-sizes';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-split',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,

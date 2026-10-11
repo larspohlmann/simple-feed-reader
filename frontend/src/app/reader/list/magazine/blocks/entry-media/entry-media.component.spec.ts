@@ -121,20 +121,20 @@ describe('EntryMediaComponent', () => {
       entry({ titleDerived: false, title: 'Chart of the day', excerpt: 'From the report.' }),
     );
 
-    expect(element.querySelector('.caption')!.textContent).toContain('Chart of the day');
+    expect(element.querySelector('.title')!.textContent).toContain('Chart of the day');
     expect(element.querySelector('.dek')!.textContent).toContain('From the report.');
   });
 
   it('shows the post text as a caption above the media', async () => {
     const element = await mount(entry());
 
-    expect(element.querySelector('.caption')!.textContent).toContain('A sunrise with Nutmeg');
+    expect(element.querySelector('.title')!.textContent).toContain('A sunrise with Nutmeg');
   });
 
-  it('shows no caption for a post without text', async () => {
+  it('shows no headline for a post without text', async () => {
     const element = await mount(entry({ title: '', excerpt: '' }));
 
-    expect(element.querySelector('.caption')).toBeNull();
+    expect(element.querySelector('.title')).toBeNull();
   });
 
   it('keeps a single picture at its own aspect ratio', async () => {
@@ -220,7 +220,7 @@ describe('EntryMediaComponent', () => {
   it('captions a Short with its title and frames its cover at the picture’s own shape', async () => {
     const element = await mount(short());
 
-    expect(element.querySelector('.caption')!.textContent).toContain('Should Robert Pattinson');
+    expect(element.querySelector('.title')!.textContent).toContain('Should Robert Pattinson');
     expect(element.querySelector<HTMLElement>('.media')!.style.getPropertyValue('--ratio')).toBe(
       '0.5625',
     );

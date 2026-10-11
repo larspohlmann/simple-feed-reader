@@ -21,6 +21,7 @@ import { ProxiedImageDirective } from '../../../../../shared/proxied-image/proxi
 import { attachHlsStreams, destroyStreamsIn } from '../../../../article/decorators/hls-streams';
 import { pauseMedia } from './pause-media';
 import { autoplayingShortPlayer } from './short-embed';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 const UNKNOWN_RATIO = 16 / 9;
 
@@ -28,6 +29,7 @@ const UNKNOWN_RATIO = 16 / 9;
   selector: 'app-entry-media',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,

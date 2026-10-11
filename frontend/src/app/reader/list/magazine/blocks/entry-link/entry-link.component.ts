@@ -5,11 +5,13 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryBlockBase } from '../../entry-block-base';
 import { LinkCardComponent } from '../../../../link-card/link-card.component';
 import { LinkCardPlaceholderComponent } from '../../../../link-card/link-card-placeholder.component';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-link',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,

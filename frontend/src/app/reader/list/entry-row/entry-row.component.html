@@ -1,13 +1,4 @@
-<article
-  class="row"
-  role="button"
-  tabindex="0"
-  [class.read]="entry().isHidden"
-  [class.img-left]="imageSide() === 'left'"
-  (click)="actions.open(entry())"
-  (keydown.enter)="actions.open(entry())"
-  (keydown.space)="$event.preventDefault(); actions.open(entry())"
->
+<article class="row" [appOpensEntry]="entry()" [class.img-left]="imageSide() === 'left'">
   <div class="body">
     @if (headline()) {
       <h3 class="title" [class.post]="isPost()">

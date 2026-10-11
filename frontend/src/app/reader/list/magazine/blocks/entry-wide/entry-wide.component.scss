@@ -1,4 +1,3 @@
-@use '../../../post-text';
 @use '../../magazine-card';
 
 :host {
@@ -10,19 +9,8 @@
 
   overflow: hidden;
   cursor: pointer;
-}
 
-/* Pointer-only: a touch tap fires :hover, which must not highlight a card
-   during a drag-scroll (#704). */
-@media (hover: hover) {
-  .wide:hover {
-    --rim-base: var(--border-strong);
-  }
-
-  .wide:hover .title {
-    text-decoration: var(--card-hover-decoration);
-    text-underline-offset: 3px;
-  }
+  @include magazine-card.card-states;
 }
 
 .img {
@@ -64,13 +52,4 @@
   font-weight: 500;
   line-height: 1.3;
   color: var(--text-primary);
-}
-
-.wide.read .title {
-  color: var(--text-secondary);
-  font-weight: 400;
-}
-
-.title.post {
-  @include post-text.post-text;
 }

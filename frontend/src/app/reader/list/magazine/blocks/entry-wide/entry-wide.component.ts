@@ -5,11 +5,13 @@ import { EntryDuplicatesComponent } from '../../entry-duplicates.component';
 import { EntryImageBlockBase } from '../../entry-image-block-base';
 import { RenditionsDirective } from '../../../renditions.directive';
 import { FULL_COLUMN_SIZES } from '../../../rendition-sizes';
+import { OpensEntryDirective } from '../../../opens-entry.directive';
 
 @Component({
   selector: 'app-entry-wide',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    OpensEntryDirective,
     EntryKickerLineComponent,
     EntryMetaComponent,
     EntryDuplicatesComponent,
