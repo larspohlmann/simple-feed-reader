@@ -18,6 +18,7 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Share\EntryShareClassifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -67,6 +68,7 @@ final class PostEnrichers
             $entityManager,
             new EntrySanitizer(new TrailingBlankRemover()),
             new NaiveUtcClock($clock),
+            new EntryShareClassifier(),
         );
     }
 
