@@ -33,7 +33,7 @@ final class FeedMediaClassifier
 
         return self::fromMedium($element)
             ?? self::fromType($element)
-            ?? self::fromExtension($element->getAttribute('url'));
+            ?? self::kindOfUrl($element->getAttribute('url'));
     }
 
     private static function fromMedium(\DOMElement $element): ?FeedMediaKind
@@ -62,7 +62,7 @@ final class FeedMediaClassifier
         };
     }
 
-    private static function fromExtension(string $url): FeedMediaKind
+    public static function kindOfUrl(string $url): FeedMediaKind
     {
         $path = strtolower((string) parse_url(trim($url), \PHP_URL_PATH));
         $extension = pathinfo($path, \PATHINFO_EXTENSION);
