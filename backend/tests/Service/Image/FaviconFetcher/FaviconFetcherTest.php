@@ -83,6 +83,21 @@ final class FaviconFetcherTest extends TestCase
         self::assertContains('Accept-Encoding: identity', $headers);
     }
 
+    public function testBoundsEachRequestToEightSeconds(): void
+    {
+        $sent = [];
+        $client = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent) {
+            $sent = $options;
+
+            return new MockResponse('BINARY', ['response_headers' => ['content-type' => ['image/png']]]);
+        });
+
+        $this->fetcher($client)->download(self::ICON_URL);
+
+        self::assertSame(8.0, $sent['timeout'] ?? null);
+        self::assertSame(8.0, $sent['max_duration'] ?? null);
+    }
+
     public function testRejectsANonImageContentType(): void
     {
         $client = new MockHttpClient(new MockResponse('not an image', [
