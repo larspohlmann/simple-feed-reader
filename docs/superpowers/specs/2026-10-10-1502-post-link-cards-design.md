@@ -236,10 +236,12 @@ existing rows as kind `appview`). Its columns:
 - **The refresh** drains only `appview` rows (cheap: one AppView call per 25), as before. It never fetches a page.
 - **`POST /api/entries/complete`** claims the caller's pending rows among the ids:
   1. `appview` rows go first, through one AppView call.
-  2. Then the `link_cards` rows, at most **3** page fetches per call, oldest `queued_at` first.
+  2. Then the `link_cards` rows, oldest `queued_at` first, within **5** page fetches per call. A post starts only
+     if all its links fit the fetches left, except the call's first post, which always runs. A post is never
+     half-carded, and every shared link (up to 5, §2) gets its card.
 - **Card fetches** use their own fetch options through the same guarded chain (`UrlGuard`, `RedirectFollower`): a
   **5 s** timeout, `max_duration` **8 s**, a **512 KB** byte cap, and no meta-refresh chase. One call costs at
-  most 3 × 8 s of worker time.
+  most 5 × 8 s of worker time.
 
 ### Bounds on stored values (final review #1)
 
