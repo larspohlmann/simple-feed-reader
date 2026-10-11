@@ -81,11 +81,13 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
         self::assertStringContainsString('<figure class="post-video"><video', (string) $video->getContentHtml());
         self::assertSame('video', $video->getMedia()[1]->kind ?? null);
         self::assertSame(0, $this->pendingCount());
-        self::assertCount(1, $this->indexWriter->upserts);
-        self::assertCount(2, $this->indexWriter->upserts[0]);
+        self::assertCount(2, $this->indexWriter->upserts);
+        [$created, $filled] = $this->indexWriter->upserts;
+        self::assertCount(2, $created);
+        self::assertCount(2, $filled);
         self::assertContains(self::TISCH_TEXT, array_map(
             static fn (IndexedEntryModel $indexed): ?string => $indexed->summary,
-            $this->indexWriter->upserts[0],
+            $filled,
         ));
     }
 
@@ -160,6 +162,7 @@ final class FeedOutcomePersisterBlueskyTest extends DbTestCase
             $this->clock,
             new AppViewClient($this->appView, $throttle),
             new NullLogger(),
+            $this->indexWriter,
         ));
     }
 

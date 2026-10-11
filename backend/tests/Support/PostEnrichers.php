@@ -19,7 +19,10 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Search\EntryIndexer;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Share\EntryShareClassifier;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -37,6 +40,7 @@ final class PostEnrichers
         ClockInterface $clock,
         AppViewClient $appView,
         LoggerInterface $logger,
+        SearchIndexWriterInterface $indexWriter = new RecordingSearchIndexWriter(),
     ): PostEnricher {
         $naiveUtcClock = new NaiveUtcClock($clock);
 
@@ -50,6 +54,7 @@ final class PostEnrichers
                 new EntryImageWriter(),
                 self::linkCards($entityManager),
             ),
+            new EntryIndexer($indexWriter, new NullLogger()),
             $naiveUtcClock,
             $logger,
         );

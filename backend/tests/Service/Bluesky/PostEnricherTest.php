@@ -28,7 +28,9 @@ use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\Bluesky;
 use App\Tests\Support\FailingEmbedWriter;
 use App\Tests\Support\FakeAppView;
@@ -40,6 +42,7 @@ use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -58,6 +61,7 @@ final class PostEnricherTest extends DbTestCase
     private HostThrottle $throttle;
     private FakeAppView $appView;
     private RecordingLogger $logger;
+    private RecordingSearchIndexWriter $indexWriter;
     private Feed $feed;
 
     protected function setUp(): void
@@ -67,6 +71,7 @@ final class PostEnricherTest extends DbTestCase
         $this->throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
         $this->appView = new FakeAppView();
         $this->logger = new RecordingLogger();
+        $this->indexWriter = new RecordingSearchIndexWriter();
         $this->feed = $this->feed('https://bsky.app/profile/motherjones.com/rss');
     }
 
@@ -74,12 +79,13 @@ final class PostEnricherTest extends DbTestCase
     {
         $this->appView->knowsFixture('external');
         $post = $this->queuedEntry(self::TISCH, '<p>Read this.<br />' . Bluesky::CARD . '</p>');
-        $article = $this->entry($this->feed, 'https://example.com/article', '<p>Article.</p>');
+        $this->entry($this->feed, 'https://example.com/article', '<p>Article.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, [$post, $article]));
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([[self::TISCH]], $this->appView->requests);
+        self::assertSame([$post->requireId()], $this->indexedIds());
         self::assertSame(0, $this->pendingCount());
         $stored = $this->reload($post);
         self::assertSame('<p>Read this.</p>', $stored->getContentHtml());
@@ -87,45 +93,36 @@ final class PostEnricherTest extends DbTestCase
         self::assertSame('Read this.', $stored->getSummary());
     }
 
-    /** @return iterable<string, array{list<string>}> */
-    public static function refreshesWithoutBlueskyPosts(): iterable
+    public function testAFeedWithNothingPendingCostsOneQueryAndNoFlush(): void
     {
-        yield 'a fetched feed with new articles' => [['https://example.com/a', 'https://example.com/b']];
-        yield 'a not-modified feed' => [[]];
-    }
-
-    /** @param list<string> $createdGuids */
-    #[DataProvider('refreshesWithoutBlueskyPosts')]
-    public function testAFeedWithNothingPendingCostsOneQueryAndNoFlush(array $createdGuids): void
-    {
-        $created = array_map(
-            fn (string $guid): Entry => $this->entry($this->feed, $guid, '<p>Text.</p>'),
-            $createdGuids,
-        );
+        $this->entry($this->feed, 'https://example.com/a', '<p>Text.</p>');
         $this->entityManager->flush();
         $this->feed->setTitle('Unflushed title');
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         self::assertInstanceOf(QueryRecorder::class, $recorder);
         $recorder->reset();
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, $created));
+        $this->enricher()->enrich($this->feed);
 
         self::assertCount(1, $recorder->queries());
         self::assertCount(1, $recorder->queriesMatching('from share_enrichment'));
         self::assertSame([], $this->appView->requests);
+        self::assertSame([], $this->indexWriter->upserts);
     }
 
-    public function testReturnsOnlyTheFilledPostsItWasNotHanded(): void
+    public function testIndexesThePostsItFilled(): void
     {
         $this->appView->knowsFixture('external');
         $this->appView->knowsFixture('images');
-        $created = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
-        $queuedEarlier = $this->queuedEntry(self::APPLES, '<p>Apples.</p>');
+        $tisch = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
+        $apples = $this->queuedEntry(self::APPLES, '<p>Apples.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([$queuedEarlier], $this->enricher()->enrich($this->feed, [$created]));
+        $this->enricher()->enrich($this->feed);
 
-        self::assertCount(1, $this->cardsOf($this->reload($created)));
+        self::assertEqualsCanonicalizing([$tisch->requireId(), $apples->requireId()], $this->indexedIds());
+        self::assertSame('Read this.', $this->indexedSummaries()[$tisch->requireId()]);
+        self::assertCount(1, $this->cardsOf($this->reload($tisch)));
         self::assertSame(0, $this->pendingCount());
     }
 
@@ -134,8 +131,9 @@ final class PostEnricherTest extends DbTestCase
         $post = $this->queuedEntry(self::TEST_POST . 'deleted', '<p>Deleted since.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, [$post]));
+        $this->enricher()->enrich($this->feed);
 
+        self::assertSame([], $this->indexWriter->upserts);
         self::assertSame('<p>Deleted since.</p>', $this->reload($post)->getContentHtml());
         self::assertSame(0, $this->pendingCount());
     }
@@ -146,7 +144,7 @@ final class PostEnricherTest extends DbTestCase
         $post->setShareKind(ShareKind::Link);
         $this->entityManager->flush();
 
-        $this->enricher()->enrich($this->feed, [$post]);
+        $this->enricher()->enrich($this->feed);
 
         self::assertNull($this->reload($post)->getShareKind());
     }
@@ -155,7 +153,7 @@ final class PostEnricherTest extends DbTestCase
     {
         $this->queuePosts(30);
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([25, 5], array_map(count(...), $this->appView->requests));
         self::assertSame(0, $this->pendingCount());
@@ -165,7 +163,7 @@ final class PostEnricherTest extends DbTestCase
     {
         $guids = $this->queuePosts(101);
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([25, 25, 25, 25], array_map(count(...), $this->appView->requests));
         self::assertSame($guids[0], $this->appView->requests[0][0]);
@@ -186,8 +184,9 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->failsWith($failure);
         $this->queuePosts(30);
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, []));
+        $this->enricher()->enrich($this->feed);
 
+        self::assertSame([], $this->indexWriter->upserts);
         self::assertCount(1, $this->appView->requests);
         self::assertSame(30, $this->pendingCount());
         self::assertSame(300, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
@@ -199,13 +198,13 @@ final class PostEnricherTest extends DbTestCase
     {
         $this->appView->failsWith(new FeedUnreachableException('connection reset'));
         $this->queuePosts(1);
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
         $this->appView->recovers();
         $otherFeed = $this->feed('https://bsky.app/profile/bsky.app/rss');
         $this->queuedPost($otherFeed, self::TEST_POST . 'other', '-1 minute');
         $this->entityManager->flush();
 
-        $this->enricher()->enrich($otherFeed, []);
+        $this->enricher()->enrich($otherFeed);
 
         self::assertCount(1, $this->appView->requests);
         self::assertSame(2, $this->pendingCount());
@@ -225,8 +224,9 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->failsWith($failure);
         $this->queuePosts(30);
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, []));
+        $this->enricher()->enrich($this->feed);
 
+        self::assertSame([], $this->indexWriter->upserts);
         self::assertCount(2, $this->appView->requests);
         self::assertSame(30, $this->pendingCount());
         self::assertSame(0, $this->throttle->remainingSeconds(Bluesky::GET_POSTS));
@@ -238,7 +238,7 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->answersWithBody('<html>Bad gateway</html>');
         $this->queuePosts(30);
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertCount(2, $this->appView->requests);
         self::assertSame(30, $this->pendingCount());
@@ -253,7 +253,7 @@ final class PostEnricherTest extends DbTestCase
         $this->queuedPost($this->feed('https://bsky.app/profile/bsky.app/rss'), self::TEST_POST . 'other', '-4 days');
         $this->entityManager->flush();
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([[self::TEST_POST . 'young']], $this->appView->requests);
         self::assertSame([self::TEST_POST . 'other'], $this->pendingGuids());
@@ -264,7 +264,7 @@ final class PostEnricherTest extends DbTestCase
         $this->throttle->record(Bluesky::GET_POSTS, 120);
         $this->queuePosts(3);
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([], $this->appView->requests);
         self::assertSame(3, $this->pendingCount());
@@ -275,7 +275,7 @@ final class PostEnricherTest extends DbTestCase
         $this->appView->failsWith(new FeedThrottledException('HTTP 429', 300));
         $this->queuePosts(30);
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertCount(1, $this->appView->requests);
         self::assertSame(30, $this->pendingCount());
@@ -289,7 +289,7 @@ final class PostEnricherTest extends DbTestCase
         $post->getImage()->storePending('https://example.com/own.jpg', 800, 600);
         $this->entityManager->flush();
 
-        $this->enricher()->enrich($this->feed, [$post]);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame('https://example.com/own.jpg', $this->reload($post)->getImageUrl());
     }
@@ -303,9 +303,10 @@ final class PostEnricherTest extends DbTestCase
             $this->clock,
             new AppViewClient(new StubFeedFetcher(), $this->throttle),
             $this->logger,
+            $this->indexWriter,
         );
 
-        self::assertSame([], $enricher->enrich($this->feed, [$post]));
+        $enricher->enrich($this->feed);
 
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky enrichment failed', $this->logger->records[0]['message']);
@@ -322,9 +323,9 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->flush();
         $enricher = $this->enricherWith(new FailingEmbedWriter(self::TISCH, $this->embedWriter()));
 
-        $filled = $enricher->enrich($this->feed, [$broken]);
+        $enricher->enrich($this->feed);
 
-        self::assertSame([$apples], $filled);
+        self::assertSame([$apples->requireId()], $this->indexedIds());
         self::assertSame(0, $this->pendingCount());
         self::assertStringStartsWith(
             '<p>Apples.</p><figure class="post-images">',
@@ -343,7 +344,7 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->persist(new ShareEnrichment($post, ShareEnrichmentKind::AppView, $this->clock->now()));
 
         try {
-            $this->enricher()->enrich($this->feed, [$post]);
+            $this->enricher()->enrich($this->feed);
             self::fail('A failed flush must be rethrown.');
         } catch (UniqueConstraintViolationException) {
         }
@@ -360,7 +361,7 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->persist(new ShareEnrichment($post, ShareEnrichmentKind::AppView, $this->clock->now()));
 
         try {
-            $this->enricher()->enrich($this->feed, [$post]);
+            $this->enricher()->enrich($this->feed);
             self::fail('A failed flush must be rethrown.');
         } catch (UniqueConstraintViolationException) {
         }
@@ -380,7 +381,7 @@ final class PostEnricherTest extends DbTestCase
         $this->storedPost(self::TEST_POST . 'young', new \DateTimeImmutable('2026-10-07 10:00:01', $utc));
         $this->entityManager->flush();
 
-        $this->enricher()->enrich($this->feed, []);
+        $this->enricher()->enrich($this->feed);
 
         self::assertSame([self::TEST_POST . 'young'], $this->pendingGuids());
     }
@@ -395,7 +396,9 @@ final class PostEnricherTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        self::assertSame([$apples], $this->enricher()->enrich($this->feed, []));
+        $this->enricher()->enrich($this->feed);
+
+        self::assertSame([$apples->requireId()], $this->indexedIds());
 
         self::assertSame([[self::APPLES]], $this->appView->requests);
         self::assertSame(['https://mastodon.test/@a/1'], $this->pendingGuids());
@@ -408,8 +411,8 @@ final class PostEnricherTest extends DbTestCase
         $this->entityManager->flush();
         PostEnrichers::enrichments($this->entityManager)->claim($this->rowsOf([$held]), $this->clock->now());
 
-        self::assertSame([], $this->enricher()->enrich($this->feed, []));
-        self::assertSame([], $this->enricher()->complete($this->rowsOf([$held])));
+        $this->enricher()->enrich($this->feed);
+        $this->enricher()->complete($this->rowsOf([$held]));
 
         self::assertSame([], $this->appView->requests);
         self::assertSame(1, $this->pendingCount());
@@ -439,9 +442,9 @@ final class PostEnricherTest extends DbTestCase
         $leftOut = $this->queuedEntry(self::TEST_POST . 'left-out', '<p>Not asked.</p>');
         $this->entityManager->flush();
 
-        $filled = $this->enricher()->complete($this->rowsOf([$tisch, $apples]));
+        $this->enricher()->complete($this->rowsOf([$tisch, $apples]));
 
-        self::assertSame([$tisch, $apples], $filled);
+        self::assertSame([$tisch->requireId(), $apples->requireId()], $this->indexedIds());
         self::assertCount(1, $this->appView->requests);
         self::assertEqualsCanonicalizing([self::TISCH, self::APPLES], $this->appView->requests[0]);
         self::assertSame([$leftOut->getGuid()], $this->pendingGuids());
@@ -456,7 +459,9 @@ final class PostEnricherTest extends DbTestCase
         $second = $this->queuedEntry(self::TEST_POST . 'second', '<p>And this.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([$first, $second], $this->enricher()->complete($this->rowsOf([$first, $second])));
+        $this->enricher()->complete($this->rowsOf([$first, $second]));
+
+        self::assertSame([$first->requireId(), $second->requireId()], $this->indexedIds());
 
         $rows = PostEnrichers::enrichments($this->entityManager)
             ->findClaimableFor([$first, $second], $this->clock->now());
@@ -493,7 +498,7 @@ final class PostEnricherTest extends DbTestCase
 
     public function testCompletingNoRowsAsksNothing(): void
     {
-        self::assertSame([], $this->enricher()->complete([]));
+        $this->enricher()->complete([]);
 
         self::assertSame([], $this->appView->requests);
     }
@@ -504,7 +509,7 @@ final class PostEnricherTest extends DbTestCase
         $queued = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->enricher()->complete($this->rowsOf([$queued])));
+        $this->enricher()->complete($this->rowsOf([$queued]));
 
         self::assertSame([], $this->appView->requests);
         self::assertSame(1, $this->pendingCount());
@@ -520,7 +525,7 @@ final class PostEnricherTest extends DbTestCase
         $queued = $this->queuedEntry(self::TISCH, '<p>Read this.</p>');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->enricher()->complete($this->rowsOf([$queued])));
+        $this->enricher()->complete($this->rowsOf([$queued]));
 
         self::assertSame(1, $this->pendingCount());
         self::assertSame(['warning'], array_column($this->logger->records, 'level'));
@@ -536,13 +541,31 @@ final class PostEnricherTest extends DbTestCase
             $this->clock,
             new AppViewClient(new StubFeedFetcher(), $this->throttle),
             $this->logger,
+            $this->indexWriter,
         );
 
-        self::assertSame([], $enricher->complete($this->rowsOf([$queued])));
+        $enricher->complete($this->rowsOf([$queued]));
 
         self::assertSame(['error'], array_column($this->logger->records, 'level'));
         self::assertSame('Bluesky enrichment failed', $this->logger->records[0]['message']);
         self::assertSame(1, $this->pendingCount());
+    }
+
+    /** @return list<int> */
+    private function indexedIds(): array
+    {
+        return array_keys($this->indexedSummaries());
+    }
+
+    /** @return array<int, ?string> by entry id, in upsert order */
+    private function indexedSummaries(): array
+    {
+        $summaries = [];
+        foreach (array_merge([], ...$this->indexWriter->upserts) as $indexed) {
+            $summaries[$indexed->id] = $indexed->summary;
+        }
+
+        return $summaries;
     }
 
     private function linkCardPass(): ShareLinkCards
@@ -570,6 +593,7 @@ final class PostEnricherTest extends DbTestCase
             $this->clock,
             new AppViewClient($this->appView, $this->throttle),
             $this->logger,
+            $this->indexWriter,
         );
     }
 
@@ -582,6 +606,7 @@ final class PostEnricherTest extends DbTestCase
             PostEnrichers::enrichments($this->entityManager),
             new AppViewClient($this->appView, $this->throttle),
             $embedWriter,
+            new EntryIndexer($this->indexWriter, new NullLogger()),
             $naiveUtcClock,
             $this->logger,
         );

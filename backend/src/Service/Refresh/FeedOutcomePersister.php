@@ -99,7 +99,7 @@ final readonly class FeedOutcomePersister
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordNotModified($feed);
         $this->entityManager->flush();
-        $this->indexer->index($this->postEnricher->enrich($feed, []));
+        $this->postEnricher->enrich($feed);
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);
     }
@@ -120,7 +120,8 @@ final readonly class FeedOutcomePersister
         $this->enrichmentQueue->queue($createdEntries);
         $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it.
-        $this->indexer->index([...$createdEntries, ...$this->postEnricher->enrich($feed, $createdEntries)]);
+        $this->indexer->index($createdEntries);
+        $this->postEnricher->enrich($feed);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));
     }

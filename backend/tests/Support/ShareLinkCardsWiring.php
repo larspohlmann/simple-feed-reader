@@ -17,6 +17,9 @@ use App\Service\LinkCard\ShareLinkCards;
 use App\Service\Reader\PageHeadFetcher;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
+use App\Service\Search\EntryIndexer;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -36,9 +39,14 @@ final class ShareLinkCardsWiring
         EntityManagerInterface $entityManager,
         HttpClientInterface $client,
         ClockInterface $clock,
-        LoggerInterface $logger = new NullLogger(),
+        SearchIndexWriterInterface $indexWriter = new RecordingSearchIndexWriter(),
     ): ShareLinkCards {
-        return self::reading(new PageCardReader(self::headFetcher($client)), $entityManager, $clock, $logger);
+        return self::reading(
+            new PageCardReader(self::headFetcher($client)),
+            $entityManager,
+            $clock,
+            indexWriter: $indexWriter,
+        );
     }
 
     public static function reading(
@@ -46,6 +54,7 @@ final class ShareLinkCardsWiring
         EntityManagerInterface $entityManager,
         ClockInterface $clock,
         LoggerInterface $logger = new NullLogger(),
+        SearchIndexWriterInterface $indexWriter = new RecordingSearchIndexWriter(),
     ): ShareLinkCards {
         return new ShareLinkCards(
             $reader,
@@ -53,6 +62,7 @@ final class ShareLinkCardsWiring
             PostEnrichers::enrichments($entityManager),
             PostEnrichers::linkCards($entityManager),
             $entityManager,
+            new EntryIndexer($indexWriter, new NullLogger()),
             new NaiveUtcClock($clock),
             $logger,
         );
