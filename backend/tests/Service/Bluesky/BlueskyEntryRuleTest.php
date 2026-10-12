@@ -86,6 +86,21 @@ final class BlueskyEntryRuleTest extends TestCase
         self::assertEquals(Headline::derived('Body words.'), $entry->headline);
     }
 
+    public function testASummaryAloneCarryingThePlaceholderIsTitledFromWhatRemains(): void
+    {
+        $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(
+            self::POST,
+            null,
+            Headline::derived('stale'),
+            null,
+            '<p>Summary words.</p><p>' . self::PLACEHOLDER . '</p>',
+            null,
+            null,
+        ));
+
+        self::assertEquals(Headline::derived('Summary words.'), $entry->headline);
+    }
+
     public function testABodyWithoutThePlaceholderKeepsItsTitle(): void
     {
         $entry = (new BlueskyEntryRule())->apply(new ParsedEntryModel(

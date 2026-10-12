@@ -58,6 +58,27 @@ final class BlueskyTimelinePageTest extends TestCase
         self::assertSame('2026-10-12 09:30:00', $entry->publishedAt?->format('Y-m-d H:i:s'));
     }
 
+    /** @param array<string, string> $reposter */
+    #[DataProvider('malformedReposters')]
+    public function testAReposterWithoutANameOrAProfileIsAttributedAsFarAsItCanBe(
+        array $reposter,
+        string $expected,
+    ): void {
+        $item = self::item(['reason' => ['$type' => 'app.bsky.feed.defs#reasonRepost', 'by' => $reposter]]);
+
+        self::assertSame($expected, BlueskyTimelinePage::of([$item], self::ALICE)->parsed->entries[0]->contentHtml);
+    }
+
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function malformedReposters(): iterable
+    {
+        yield 'no name' => [['did' => 'did:plc:carol'], '<p>Hello world. More text</p>'];
+        yield 'a name but no profile' => [
+            ['displayName' => 'Carol <3'],
+            '<p>Hello world. More text</p><p>Reposted by Carol &lt;3</p>',
+        ];
+    }
+
     /** @param array<string, mixed> $parent */
     #[DataProvider('replies')]
     public function testAReplyShowsOnlyWhenItAnswersTheAccountOrSomeoneItFollows(array $parent, int $shown): void

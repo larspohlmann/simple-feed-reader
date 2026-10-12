@@ -18,8 +18,8 @@ use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Text\Support\HtmlAnchor;
 use App\Service\Text\Support\HtmlEscape;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\HttpsImageUrl;
 
 /** A home or list timeline answer as entries; replies are already filtered by the instance. */
@@ -66,7 +66,7 @@ final class MastodonTimelinePage
             contentHtml: self::withBoostAttribution($body, $status),
             publishedAt: DateParser::parse($status->string('created_at')),
             media: self::mediaOf($post->nodes('media_attachments')),
-            authorUrl: $account->string('url'),
+            authorUrl: self::profileOf($account),
         );
     }
 
@@ -92,10 +92,14 @@ final class MastodonTimelinePage
             return $body;
         }
         $booster = $status->node('account');
+        $name = $booster->string('display_name') ?? $booster->string('acct');
 
-        $name = $booster->string('display_name') ?? $booster->string('acct') ?? '';
+        return ($body ?? '') . ShareAttribution::line('Boosted by', $name, self::profileOf($booster));
+    }
 
-        return ($body ?? '') . '<p>Boosted by ' . HtmlAnchor::to($booster->string('url') ?? '', $name) . '</p>';
+    private static function profileOf(JsonNodeModel $account): ?string
+    {
+        return AbsoluteHttpUrl::orNull($account->string('url'));
     }
 
     /** @param list<JsonNodeModel> $attachments */

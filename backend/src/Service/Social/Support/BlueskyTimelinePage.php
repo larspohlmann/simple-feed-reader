@@ -11,7 +11,6 @@ use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\EntryTitle;
 use App\Service\Social\Model\TimelinePageModel;
-use App\Service\Text\Support\HtmlAnchor;
 
 /** A getTimeline / getListFeed / getFeed answer as entries; each post view rides along for its embed. */
 final class BlueskyTimelinePage
@@ -89,15 +88,16 @@ final class BlueskyTimelinePage
             return $html;
         }
         $reposter = $reason->node('by');
+        $name = $reposter->string('displayName') ?? $reposter->string('handle');
 
-        $name = $reposter->string('displayName') ?? $reposter->string('handle') ?? '';
-
-        return ($html ?? '') . '<p>Reposted by ' . HtmlAnchor::to(self::profileOf($reposter), $name) . '</p>';
+        return ($html ?? '') . ShareAttribution::line('Reposted by', $name, self::profileOf($reposter));
     }
 
-    private static function profileOf(JsonNodeModel $actor): string
+    private static function profileOf(JsonNodeModel $actor): ?string
     {
-        return AtPostUri::profileUrl($actor->string('handle') ?? $actor->string('did') ?? '');
+        $handleOrDid = $actor->string('handle') ?? $actor->string('did');
+
+        return null === $handleOrDid ? null : AtPostUri::profileUrl($handleOrDid);
     }
 
     private function __construct()

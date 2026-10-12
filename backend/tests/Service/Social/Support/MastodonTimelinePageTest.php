@@ -153,6 +153,54 @@ final class MastodonTimelinePageTest extends TestCase
         self::assertSame('1000', $page->newestId);
     }
 
+    /** @param list<string> $ids */
+    #[DataProvider('idsOfEqualLength')]
+    public function testIdsOfEqualLengthCompareDigitByDigit(array $ids): void
+    {
+        $page = MastodonTimelinePage::of(array_map(
+            static fn (string $id): JsonNodeModel => self::timelineStatus([
+                'id' => $id,
+                'uri' => 'https://mastodon.example/users/bob/statuses/' . $id,
+            ]),
+            $ids,
+        ));
+
+        self::assertSame('109', $page->newestId);
+    }
+
+    /** @return iterable<string, array{list<string>}> */
+    public static function idsOfEqualLength(): iterable
+    {
+        yield 'newest first' => [['109', '105']];
+        yield 'oldest first' => [['105', '109']];
+    }
+
+    public function testAnAuthorUrlThatIsNoWebPageIsDropped(): void
+    {
+        $status = self::timelineStatus(['account' => ['display_name' => 'Bob', 'url' => 'javascript:alert(1)']]);
+
+        self::assertNull(MastodonTimelinePage::of([$status])->parsed->entries[0]->authorUrl);
+    }
+
+    /** @param array<string, string> $booster */
+    #[DataProvider('malformedBoosters')]
+    public function testABoosterWithoutANameOrAWebPageIsAttributedAsFarAsItCanBe(array $booster, string $expected): void
+    {
+        $boost = self::timelineStatus(['content' => '', 'account' => $booster, 'reblog' => self::statusFields([])]);
+
+        self::assertSame($expected, MastodonTimelinePage::of([$boost])->parsed->entries[0]->contentHtml);
+    }
+
+    /** @return iterable<string, array{array<string, string>, string}> */
+    public static function malformedBoosters(): iterable
+    {
+        yield 'no name' => [['display_name' => ' ', 'url' => 'https://mastodon.example/@carol'], self::CONTENT];
+        yield 'a name but no web page' => [
+            ['display_name' => 'Carol <3', 'url' => 'javascript:alert(1)'],
+            self::CONTENT . '<p>Boosted by Carol &lt;3</p>',
+        ];
+    }
+
     public function testAnEmptyPageNamesNoNewestId(): void
     {
         self::assertNull(MastodonTimelinePage::of([])->newestId);
