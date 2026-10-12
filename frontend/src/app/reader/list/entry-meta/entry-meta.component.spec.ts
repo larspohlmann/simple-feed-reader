@@ -5,7 +5,8 @@ import { EntryMetaComponent } from './entry-meta.component';
 import { EntryDto, SubscriptionTagDto } from '../../models';
 import { EntryActionHandler } from '../../entry/entry-actions/entry-action-handler';
 import { SHORT_PLAYER_URL } from '../../../../testing/short-marking-testing';
-import { FeedNetworks } from '../../state/feed-networks';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
 import { anEntry } from '../../../../testing/entry-testing';
 
 const entryActions = {
@@ -99,7 +100,9 @@ describe('EntryMetaComponent', () => {
       imports: [EntryMetaComponent, provideTranslocoTesting()],
       providers: [{ provide: EntryActionHandler, useValue: entryActions }, provideRouter([])],
     });
-    TestBed.inject(FeedNetworks).replace(new Map([[7, 'mastodon']]));
+    TestBed.inject(SubscriptionRows).all.set([
+      makeSubscription({ id: 7, social: { network: 'mastodon', accountId: 1, kind: 'home' } }),
+    ]);
     const fixture = TestBed.createComponent(EntryMetaComponent);
     fixture.componentRef.setInput('entry', testEntry);
     fixture.detectChanges();

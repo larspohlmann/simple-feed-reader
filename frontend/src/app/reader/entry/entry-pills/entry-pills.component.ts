@@ -6,7 +6,7 @@ import { NetworkLogoComponent } from '../../../shared/network-logo/network-logo.
 import { TagGlyphComponent } from '../../../shared/tag-glyph/tag-glyph.component';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 import { selectionQueryParams } from '../../query/query';
-import { FeedNetworks } from '../../state/feed-networks';
+import { SubscriptionRows } from '../../state/subscription-rows';
 
 /**
  * The network pill of a social feed, the Short pill, tag pills, then saved-search pills, as one wrapping list. Clicks stop
@@ -26,9 +26,9 @@ export class EntryPillsComponent {
   readonly short = input(false);
   readonly subscriptionId = input<number | null>(null);
 
-  private readonly feedNetworks = inject(FeedNetworks);
+  private readonly rows = inject(SubscriptionRows);
   protected readonly network = computed(() => {
     const subscriptionId = this.subscriptionId();
-    return subscriptionId === null ? null : this.feedNetworks.networkOf(subscriptionId);
+    return subscriptionId === null ? null : this.rows.networkOf(subscriptionId);
   });
 }

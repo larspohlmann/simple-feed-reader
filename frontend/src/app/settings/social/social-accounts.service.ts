@@ -3,7 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable, finalize, tap } from 'rxjs';
 import { API_BASE_URL } from '../../core/api';
 import { parseProblem, problemMessage } from '../../core/problem';
-import { SocialNetworkName } from '../../reader/social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 
 export type SocialAccountStatus = 'connected' | 'needs_reconnect';

@@ -7,13 +7,14 @@ import { API_BASE_URL } from '../../core/api';
 import { TokenStore } from '../../core/auth/token.store';
 import { ReaderApi } from '../reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
+import { SubscriptionsStore } from './subscriptions.store';
+import { SubscriptionRows } from './subscription-rows';
 import {
-  SubscriptionsStore,
   buildTagTree,
   sumEntries,
   sumUnread,
   untaggedSubscriptions,
-} from './subscriptions.store';
+} from './subscription-derivations';
 import { SubscriptionDto } from '../models';
 
 const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
@@ -451,6 +452,28 @@ describe('SubscriptionsStore', () => {
         },
         { network: 'mastodon', accounts: [], people: [untaggedProfile] },
       ]);
+    });
+
+    it('marks All items read only in the feeds All items holds, as the backend does', () => {
+      store.zeroUnread('all');
+
+      const unread = (id: number) =>
+        store.subscriptions().find((subscription) => subscription.id === id)?.unreadCount;
+      expect([unread(1), unread(2), unread(5), unread(6), unread(7)]).toEqual([0, 0, 2, 4, 0]);
+    });
+
+    it("reads each feed's network from the loaded list and forgets it on logout", () => {
+      const rows = TestBed.inject(SubscriptionRows);
+      expect([rows.networkOf(6), rows.networkOf(7), rows.networkOf(1)]).toEqual([
+        'bluesky',
+        'mastodon',
+        null,
+      ]);
+
+      tokens.clear();
+      TestBed.tick();
+
+      expect(rows.networkOf(6)).toBeNull();
     });
 
     it("zeroes a tag's private feeds along with the rest when the tag is marked read", () => {

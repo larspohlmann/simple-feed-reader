@@ -1,7 +1,5 @@
 import { SocialNetworkName } from '../core/social-network';
 
-export type { SocialNetworkName };
-
 /** Where a social feed comes from: the network, the connected account a private feed is read through (null for a profile feed), which of its feeds. */
 export interface SocialFeedRefDto {
   network: SocialNetworkName;

@@ -8,7 +8,7 @@ import { RefreshService } from '../../reader/state/refresh.service';
 import { SubscriptionsStore } from '../../reader/state/subscriptions.store';
 import { TagsStore } from '../../reader/state/tags.store';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialNetworkName } from '../../reader/social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 import { SocialImportDialogComponent } from './social-import-dialog.component';
 import { CollectionCandidate, FollowCandidate, ImportCandidates } from './social-import.service';
 

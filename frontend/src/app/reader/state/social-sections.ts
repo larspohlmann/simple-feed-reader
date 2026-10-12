@@ -1,5 +1,6 @@
 import { SubscriptionDto } from '../models';
-import { SocialAccountRefDto, SocialNetworkName } from '../social-feed';
+import { SocialAccountRefDto } from '../social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 
 export interface SocialAccountGroup {
   readonly accountId: number;

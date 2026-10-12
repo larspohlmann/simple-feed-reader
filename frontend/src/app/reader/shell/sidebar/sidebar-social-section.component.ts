@@ -1,7 +1,7 @@
 import { Component, computed, input, linkedSignal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../../shared/icon/icon.component';
-import { SocialNetworkName } from '../../social-feed';
+import { SocialNetworkName } from '../../../core/social-network';
 import { Selection } from '../../query/query';
 import { SocialSection } from '../../state/social-sections';
 import { SidebarFeedRowComponent } from './sidebar-feed-row.component';

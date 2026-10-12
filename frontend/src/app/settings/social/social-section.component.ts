@@ -14,7 +14,7 @@ import { SettingsGroupComponent } from '../../shared/settings/settings-group/set
 import { SettingsRowComponent } from '../../shared/settings/settings-row/settings-row.component';
 import { SettingsStackComponent } from '../../shared/settings/stack/settings-stack.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
-import { SocialNetworkName } from '../../reader/social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 import { SocialAccount, SocialAccountsService } from './social-accounts.service';
 import {
   SocialImportDialogComponent,

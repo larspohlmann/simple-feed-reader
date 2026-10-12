@@ -15,7 +15,7 @@ import { OverlayPanelComponent } from '../../shared/overlay-panel/overlay-panel.
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../../shared/toast/toast.service';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
-import { SocialNetworkName } from '../../reader/social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 import {
   CollectionCandidate,
   CollectionState,

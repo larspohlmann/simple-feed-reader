@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideTranslocoTesting } from '../../../../testing/transloco-testing';
 import { EntryPillsComponent } from './entry-pills.component';
-import { FeedNetworks } from '../../state/feed-networks';
+import { SubscriptionRows } from '../../state/subscription-rows';
+import { makeSubscription } from '../../testing/subscription.factory';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../../models';
 
 const tag = (id: number, name: string): SubscriptionTagDto => ({
@@ -104,7 +105,11 @@ describe('EntryPillsComponent', () => {
         imports: [EntryPillsComponent, provideTranslocoTesting()],
         providers: [provideRouter([{ path: '**', children: [] }])],
       });
-      TestBed.inject(FeedNetworks).replace(new Map(networks));
+      TestBed.inject(SubscriptionRows).all.set(
+        networks.map(([id, network]) =>
+          makeSubscription({ id, social: { network, accountId: 1, kind: 'home' } }),
+        ),
+      );
       const fixture = TestBed.createComponent(EntryPillsComponent);
       fixture.componentRef.setInput('tags', [tag(1, 'Tech')]);
       fixture.componentRef.setInput('subscriptionId', subscriptionId);

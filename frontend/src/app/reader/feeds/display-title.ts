@@ -1,6 +1,6 @@
 import { TranslocoService } from '@jsverse/transloco';
 import { SubscriptionDto } from '../models';
-import { SocialNetworkName } from '../social-feed';
+import { SocialNetworkName } from '../../core/social-network';
 
 export function isUnrenamedHome(subscription: SubscriptionDto): boolean {
   return subscription.social?.kind === 'home' && subscription.customTitle === null;
