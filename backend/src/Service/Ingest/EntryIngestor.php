@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
+use App\Service\Ingest\FeedTitle\FeedTitleInterface;
 use App\Service\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingest\Pass\EntryDeduplicator;
 use App\Service\Ingest\Pass\FeedIngestContext;
@@ -39,6 +40,7 @@ final readonly class EntryIngestor
         private PlatformEntryRules $platformRules,
         private IngestedEntryFactory $entryFactory,
         private EntryImageWriter $imageWriter,
+        private FeedTitleInterface $feedTitle,
     ) {
     }
 
@@ -111,7 +113,8 @@ final readonly class EntryIngestor
     private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
         if ($parsed->title !== null) {
-            $feed->setTitle(mb_substr($parsed->title, 0, self::FEED_TITLE_MAX));
+            $title = $this->feedTitle->of($feed->getUrl(), $parsed->title);
+            $feed->setTitle(mb_substr($title, 0, self::FEED_TITLE_MAX));
         }
         if ($parsed->siteUrl !== null) {
             $feed->setSiteUrl(mb_substr($parsed->siteUrl, 0, self::SITE_URL_MAX));

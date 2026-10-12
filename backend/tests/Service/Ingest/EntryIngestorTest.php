@@ -819,6 +819,22 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('New Title', $feed->getTitle());
     }
 
+    public function testABlueskyProfileFeedStoresOnlyTheDisplayNameAsItsTitle(): void
+    {
+        $feed = new Feed('https://bsky.app/profile/motherjones.com/rss');
+        $feed->setTitle('@motherjones.com - Mother Jones');
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+
+        $this->ingestor->ingest(
+            $feed,
+            new ParsedFeedModel('@motherjones.com - Mother Jones', null, null, null, []),
+            self::context(),
+        );
+
+        self::assertSame('Mother Jones', $feed->getTitle());
+    }
+
     public function testNullMetadataDoesNotWipeExistingFeedFields(): void
     {
         $feed = new Feed('https://example.com/feed');
