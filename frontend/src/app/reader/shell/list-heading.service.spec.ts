@@ -17,7 +17,7 @@ import { ReaderRouteState } from './reader-route-state.service';
 const home = (accountId: number, over: Partial<SubscriptionDto> = {}): SubscriptionDto =>
   makeSubscription({
     id: accountId,
-    title: 'Timeline',
+    title: 'Home',
     social: { network: 'bluesky', accountId, kind: 'home' },
     ...over,
   });

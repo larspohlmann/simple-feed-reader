@@ -8,7 +8,7 @@ import { SavedSearchesStore } from '../state/saved-searches.store';
 import { ReadingLayoutService } from '../reading-layout.service';
 import { Selection, visibleSearchTerm } from '../query/query';
 import { TitleCount } from '../list/list-header/list-header.component';
-import { displayTitle } from '../feeds/display-title';
+import { displayTitle, isUnrenamedHome } from '../feeds/display-title';
 import { SubscriptionDto } from '../models';
 import { ReaderRouteState } from './reader-route-state.service';
 
@@ -104,7 +104,7 @@ export class ListHeading {
   private feedTitle(subscription: SubscriptionDto): string {
     const title = displayTitle(subscription, this.i18n.translate('reader.socialHome'));
     const handle = this.sharedNetworkHandle(subscription);
-    return handle !== null && title !== subscription.title ? `${title} · ${handle}` : title;
+    return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
   }
 
   /** The account's handle when its network has several, so a Home says whose it is. */
