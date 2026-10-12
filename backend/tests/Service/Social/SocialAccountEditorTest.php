@@ -34,10 +34,12 @@ final class SocialAccountEditorTest extends DbTestCase
         $mastodon = $this->stored(SocialNetwork::Mastodon, 'alice@mastodon.example', true);
 
         $this->editor()->makeDefault($second);
+        $this->entityManager->clear();
 
-        self::assertFalse($first->isDefault());
-        self::assertTrue($second->isDefault());
-        self::assertTrue($mastodon->isDefault());
+        self::assertSame(
+            [false, true, true],
+            [$this->storedDefault($first), $this->storedDefault($second), $this->storedDefault($mastodon)],
+        );
     }
 
     public function testDisconnectingTheDefaultPromotesTheOldestRemaining(): void
@@ -46,11 +48,13 @@ final class SocialAccountEditorTest extends DbTestCase
         $second = $this->stored(SocialNetwork::Bluesky, 'did:plc:two', false);
         $third = $this->stored(SocialNetwork::Bluesky, 'did:plc:three', false);
 
-        $this->editor()->disconnect($first);
+        $firstId = $first->requireId();
 
-        self::assertTrue($second->isDefault());
-        self::assertFalse($third->isDefault());
-        self::assertSame(2, $this->repository()->countForUser($this->user));
+        $this->editor()->disconnect($first);
+        $this->entityManager->clear();
+
+        self::assertNull($this->repository()->find($firstId));
+        self::assertSame([true, false], [$this->storedDefault($second), $this->storedDefault($third)]);
     }
 
     public function testDisconnectingANonDefaultLeavesTheDefault(): void
@@ -92,6 +96,11 @@ final class SocialAccountEditorTest extends DbTestCase
         $this->entityManager->flush();
 
         return $account;
+    }
+
+    private function storedDefault(SocialAccount $account): ?bool
+    {
+        return $this->repository()->find($account->requireId())?->isDefault();
     }
 
     private function editor(): SocialAccountEditor

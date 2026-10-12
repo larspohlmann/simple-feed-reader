@@ -136,14 +136,19 @@ final class SocialAccountConnectorTest extends DbTestCase
         $this->entityManager->flush();
         $verified = new VerifiedAccountModel('did:plc:alice', '@alice.renamed.social', 'https://bsky.social');
 
-        $this->reconnect(new StubAccountVerifier($verified), $account);
+        $accountId = $account->requireId();
 
-        self::assertSame(SocialAccountStatus::Connected, $account->getStatus());
-        self::assertSame('9999', $account->getCredentialHint());
-        self::assertSame('@alice.renamed.social', $account->getHandle());
+        $this->reconnect(new StubAccountVerifier($verified), $account);
+        $this->entityManager->clear();
+
+        $reloaded = $this->repository()->find($accountId);
+        self::assertNotNull($reloaded);
+        self::assertSame(SocialAccountStatus::Connected, $reloaded->getStatus());
+        self::assertSame('9999', $reloaded->getCredentialHint());
+        self::assertSame('@alice.renamed.social', $reloaded->getHandle());
         self::assertSame(
             'wxyz-wxyz-wxyz-9999',
-            $this->cipher->open($this->user->requireId(), $account->getSealedCredential()),
+            $this->cipher->open($this->user->requireId(), $reloaded->getSealedCredential()),
         );
     }
 
