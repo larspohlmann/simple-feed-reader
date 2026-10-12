@@ -30,7 +30,7 @@ const ALLOWED = (generatedFrames as EmbedFrame[]).map((frame) => ({
   pattern: new RegExp(frame.pattern),
 }));
 
-/** Every embed frame's security attributes, in the article and in the list alike. */
+/** Every embed frame's security attributes, set by `embedFrame`. */
 export const EMBED_FRAME_ATTRIBUTES = {
   /* `allow-same-origin` beside `allow-scripts` is safe only because every allowed
      URL is cross-origin: the frame gets its own origin and cannot reach the
@@ -49,7 +49,7 @@ export function upgradeMediaEmbeds(host: HTMLElement): void {
     const url = anchor.getAttribute('href') ?? '';
     const frame = ALLOWED.find(({ pattern }) => pattern.test(url));
     if (!frame) continue;
-    anchor.replaceWith(embedFrame(url, frame, anchor.textContent?.trim() || 'Embedded media'));
+    anchor.replaceWith(embedBox(url, frame, anchor.textContent?.trim() || 'Embedded media'));
   }
 }
 
@@ -61,10 +61,16 @@ function boxClasses({ kind, shape }: EmbedPlayer): string[] {
   ];
 }
 
-function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElement {
+function embedBox(url: string, player: EmbedPlayer, title: string): HTMLElement {
   const box = document.createElement('div');
   box.classList.add(...boxClasses(player));
+  box.appendChild(embedFrame(url, title));
 
+  return box;
+}
+
+/** An embed frame, still detached: insert it only once built, since iOS WebKit honours `referrerpolicy` only on a frame whose src precedes insertion (#1594). */
+export function embedFrame(url: string, title: string): HTMLIFrameElement {
   const frame = document.createElement('iframe');
   frame.setAttribute('src', url);
   frame.setAttribute('title', title);
@@ -72,7 +78,6 @@ function embedFrame(url: string, player: EmbedPlayer, title: string): HTMLElemen
   for (const [name, value] of Object.entries(EMBED_FRAME_ATTRIBUTES)) {
     frame.setAttribute(name, value);
   }
-  box.appendChild(frame);
 
-  return box;
+  return frame;
 }
