@@ -10,7 +10,7 @@ use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Social\BlueskyApiClient;
-use App\Service\Social\BlueskySessionOpener;
+use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\CollectedItemsModel;
 use App\Service\Social\Model\FollowedAccountModel;
@@ -29,7 +29,7 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
 
     public function __construct(
         private BlueskyApiClient $bluesky,
-        private BlueskySessionOpener $sessions,
+        private BlueskySessions $sessions,
     ) {
     }
 
@@ -131,11 +131,8 @@ final readonly class BlueskyCandidateSource implements CandidateSourceInterface
     /** @return list<string> */
     private function savedFeedUris(SocialAccount $account): array
     {
-        $session = $this->sessions->openForAccount($account);
-        $preferences = $this->json(ApiRequestModel::get(
-            $account->getServiceUrl() . self::GET_PREFERENCES,
-            ['Authorization' => 'Bearer ' . $session->accessJwt],
-        ))->nodes('preferences');
+        $answer = BlueskyApiClient::accepted($this->sessions->askAs($account, self::GET_PREFERENCES));
+        $preferences = JsonNodeModel::of($answer->json())->nodes('preferences');
 
         $uris = [];
         foreach ($preferences as $preference) {

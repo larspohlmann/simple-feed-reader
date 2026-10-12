@@ -4,28 +4,40 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\CandidateSource;
 
+use App\Entity\SocialAccount;
+use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyApiClient;
+use App\Service\Social\BlueskySessionCache;
 use App\Service\Social\BlueskySessionOpener;
+use App\Service\Social\BlueskySessions;
 use App\Service\Social\CandidateSource\BlueskyCandidateSource;
+use App\Service\Social\Crypto\BlueskySessionCipher;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Model\CollectedItemsModel;
 use App\Service\Social\Model\FollowedAccountModel;
 use App\Service\Social\Model\SocialCollectionModel;
 use App\Service\Social\StoredCredential;
+use App\Tests\Support\AssignsEntityIds;
 use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class BlueskyCandidateSourceTest extends TestCase
 {
+    use AssignsEntityIds;
+
     private const string SESSION = 'POST https://pds.example.test/xrpc/com.atproto.server.createSession';
     private const string PREFERENCES = 'GET https://pds.example.test/xrpc/app.bsky.actor.getPreferences';
     private const string FOLLOWS = 'GET https://public.api.bsky.app/xrpc/app.bsky.graph.getFollows'
@@ -36,18 +48,45 @@ final class BlueskyCandidateSourceTest extends TestCase
     private const string DISCOVER = 'at://did:plc:whats-hot/app.bsky.feed.generator/discover';
     private const string GONE = 'at://did:plc:retired/app.bsky.feed.generator/gone';
 
+    private ArrayAdapter $cache;
+    private SocialAccount $account;
+
+    protected function setUp(): void
+    {
+        $this->cache = new ArrayAdapter();
+        $this->account = SocialAccounts::bluesky();
+        self::assignId($this->account, 3);
+    }
+
     private function source(RoutedHttpClient $http): BlueskyCandidateSource
+    {
+        return $this->sourceOver($http->client());
+    }
+
+    private function sourceOver(HttpClientInterface $http): BlueskyCandidateSource
     {
         $address = ['93.184.216.34'];
         $guard = new UrlGuard(
             new StaticDnsResolver(['public.api.bsky.app' => $address, 'pds.example.test' => $address]),
             new IpValidator(),
         );
-        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http, $guard));
 
         return new BlueskyCandidateSource(
             $api,
-            new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
+            new BlueskySessions(
+                $api,
+                new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
+                $this->sessionCache(),
+            ),
+        );
+    }
+
+    private function sessionCache(): BlueskySessionCache
+    {
+        return new BlueskySessionCache(
+            $this->cache,
+            new BlueskySessionCipher(new InstanceSecretCipher(str_repeat('k', 32))),
         );
     }
 
@@ -117,7 +156,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]),
         ]));
 
-        $candidates = $this->source($http)->candidates(SocialAccounts::bluesky());
+        $candidates = $this->source($http)->candidates($this->account);
 
         self::assertEquals([
             new FollowedAccountModel(
@@ -153,7 +192,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]]),
         ]));
 
-        $lists = $this->source($http)->candidates(SocialAccounts::bluesky())->lists;
+        $lists = $this->source($http)->candidates($this->account)->lists;
 
         self::assertEquals([new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/news', 'News')], $lists);
     }
@@ -170,7 +209,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]]),
         ]));
 
-        $lists = $this->source($http)->candidates(SocialAccounts::bluesky())->lists;
+        $lists = $this->source($http)->candidates($this->account)->lists;
 
         self::assertEquals([
             new SocialCollectionModel('at://did:plc:alice/app.bsky.graph.list/news', 'News'),
@@ -189,7 +228,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]]),
         ]));
 
-        $customFeeds = $this->source($http)->candidates(SocialAccounts::bluesky())->customFeeds;
+        $customFeeds = $this->source($http)->candidates($this->account)->customFeeds;
 
         self::assertEquals([
             new SocialCollectionModel(self::DISCOVER, 'Discover'),
@@ -218,13 +257,47 @@ final class BlueskyCandidateSourceTest extends TestCase
                 => self::json(['feeds' => [['uri' => self::DISCOVER, 'displayName' => 'Discover']]]),
         ]));
 
-        $customFeeds = $this->source($http)->candidates(SocialAccounts::bluesky())->customFeeds;
+        $customFeeds = $this->source($http)->candidates($this->account)->customFeeds;
 
         self::assertEquals([
             new SocialCollectionModel(self::DISCOVER, 'Discover'),
             new SocialCollectionModel(self::GONE, self::GONE),
         ], $customFeeds);
         self::assertContains('Authorization: Bearer jwt-1', $http->requests[1]['headers']);
+    }
+
+    public function testTheCachedSessionReadsThePreferencesWithoutOpeningANewOne(): void
+    {
+        $this->sessionCache()->remember($this->account, new BlueskySessionModel('cached-jwt', 'alice.bsky.social'));
+        $http = new RoutedHttpClient($this->routes());
+
+        $this->source($http)->candidates($this->account);
+
+        self::assertNotContains(
+            'https://pds.example.test/xrpc/com.atproto.server.createSession',
+            $http->requestedUrls(),
+        );
+        self::assertContains('Authorization: Bearer cached-jwt', $http->requests[0]['headers']);
+    }
+
+    public function testAStaleCachedSessionIsReplacedAndThePreferencesAskedAgain(): void
+    {
+        $this->sessionCache()->remember($this->account, new BlueskySessionModel('stale-jwt', 'alice.bsky.social'));
+        $retry = self::json(['preferences' => []]);
+        $http = new MockHttpClient([
+            new MockResponse('{"error":"ExpiredToken"}', ['http_code' => Response::HTTP_BAD_REQUEST]),
+            new MockResponse('{"did":"did:plc:alice","handle":"alice.bsky.social","accessJwt":"jwt-2"}'),
+            $retry,
+            self::json(['follows' => []]),
+            self::json(['lists' => []]),
+        ]);
+
+        $this->sourceOver($http)->candidates($this->account);
+
+        self::assertSame('https://pds.example.test/xrpc/app.bsky.actor.getPreferences', $retry->getRequestUrl());
+        $headers = $retry->getRequestOptions()['headers'] ?? null;
+        self::assertIsArray($headers);
+        self::assertContains('Authorization: Bearer jwt-2', $headers);
     }
 
     public function testGeneratorNamesAreAskedForTwentyFiveFeedsAtATime(): void
@@ -239,7 +312,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             self::GENERATORS . self::feedsQuery(\array_slice($uris, 25)) => self::json(['feeds' => []]),
         ]));
 
-        $customFeeds = $this->source($http)->candidates(SocialAccounts::bluesky())->customFeeds;
+        $customFeeds = $this->source($http)->candidates($this->account)->customFeeds;
 
         self::assertCount(26, $customFeeds);
         $generatorCalls = array_filter(
@@ -258,7 +331,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             ]),
         ]));
 
-        $candidates = $this->source($http)->candidates(SocialAccounts::bluesky());
+        $candidates = $this->source($http)->candidates($this->account);
 
         self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
         self::assertTrue($candidates->truncated);
@@ -278,7 +351,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             self::FOLLOWS . '&cursor=more' => self::json(['follows' => []]),
         ]));
 
-        $candidates = $this->source($http)->candidates(SocialAccounts::bluesky());
+        $candidates = $this->source($http)->candidates($this->account);
 
         self::assertCount(CollectedItemsModel::MAX_ITEMS, $candidates->follows);
         self::assertFalse($candidates->truncated);
@@ -294,7 +367,7 @@ final class BlueskyCandidateSourceTest extends TestCase
             self::FOLLOWS => self::json(['follows' => [], 'cursor' => 'again']),
         ]));
 
-        $this->source($http)->candidates(SocialAccounts::bluesky());
+        $this->source($http)->candidates($this->account);
 
         $followCalls = array_filter(
             $http->requestedUrls(),
@@ -313,7 +386,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         ]));
 
         try {
-            $this->source($http)->candidates(SocialAccounts::bluesky());
+            $this->source($http)->candidates($this->account);
             self::fail('A refused app password must reach the caller.');
         } catch (SocialCredentialsRejectedException) {
             self::assertCount(1, $http->requests);
@@ -329,7 +402,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
         $this->expectExceptionMessage('Bluesky answered 503.');
 
-        $this->source($http)->candidates(SocialAccounts::bluesky());
+        $this->source($http)->candidates($this->account);
     }
 
     /** @return iterable<string, array{array<string, MockResponse>, string}> */
@@ -369,7 +442,7 @@ final class BlueskyCandidateSourceTest extends TestCase
         $this->expectException(SocialNetworkUnreachableException::class);
         $this->expectExceptionMessage($message);
 
-        $this->source($http)->candidates(SocialAccounts::bluesky());
+        $this->source($http)->candidates($this->account);
     }
 
     public function testATransportFailureIsUnreachable(): void
@@ -380,6 +453,6 @@ final class BlueskyCandidateSourceTest extends TestCase
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
-        $this->source($http)->candidates(SocialAccounts::bluesky());
+        $this->source($http)->candidates($this->account);
     }
 }

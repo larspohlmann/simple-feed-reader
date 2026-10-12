@@ -132,11 +132,11 @@ final class BlueskySessionsTest extends TestCase
     {
         $guard = new UrlGuard(new StaticDnsResolver(['pds.example.test' => ['93.184.216.34']]), new IpValidator());
 
+        $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard));
+
         return new BlueskySessions(
-            new BlueskySessionOpener(
-                new BlueskyApiClient(FetchWiring::guardedApiClient($http->client(), $guard)),
-                new StoredCredential(SocialAccounts::cipher()),
-            ),
+            $api,
+            new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
             self::cacheOver($cache),
         );
     }

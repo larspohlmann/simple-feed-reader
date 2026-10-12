@@ -241,8 +241,8 @@ final class BlueskyTimelineSourceTest extends TestCase
         $api = new BlueskyApiClient(FetchWiring::guardedApiClient($http, $guard));
 
         return new BlueskyTimelineSource(
-            $api,
             new BlueskySessions(
+                $api,
                 new BlueskySessionOpener($api, new StoredCredential(SocialAccounts::cipher())),
                 $this->sessionCache(),
             ),

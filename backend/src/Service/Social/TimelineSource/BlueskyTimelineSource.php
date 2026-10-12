@@ -8,14 +8,12 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Service\Bluesky\Model\JsonNodeModel;
-use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\BlueskyApiClient;
 use App\Service\Social\BlueskySessions;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
-use App\Service\Social\Model\BlueskySessionModel;
 use App\Service\Social\Model\TimelinePageModel;
 use App\Service\Social\Support\BlueskyTimelinePage;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,13 +21,8 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class BlueskyTimelineSource implements TimelineSourceInterface
 {
     private const int PAGE_SIZE = 50;
-    private const array STALE_SESSION_ERRORS = ['ExpiredToken', 'InvalidToken'];
-    private const array STALE_SESSION_STATUSES = [Response::HTTP_BAD_REQUEST, Response::HTTP_UNAUTHORIZED];
-
-    public function __construct(
-        private BlueskyApiClient $bluesky,
-        private BlueskySessions $sessions,
-    ) {
+    public function __construct(private BlueskySessions $sessions)
+    {
     }
 
     public static function network(): string
@@ -40,20 +33,9 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
     public function page(SocialFeed $socialFeed): TimelinePageModel
     {
         $account = $socialFeed->getSocialAccount();
-        $answer = $this->ask($socialFeed, $this->sessions->current($account));
-        if (self::isStaleSession($answer)) {
-            $answer = $this->ask($socialFeed, $this->sessions->fresh($account));
-        }
+        $answer = $this->sessions->askAs($account, self::pathOf($socialFeed));
 
         return BlueskyTimelinePage::of(self::itemsOf($answer), $account->getIdentity());
-    }
-
-    private function ask(SocialFeed $socialFeed, BlueskySessionModel $session): ApiResponseModel
-    {
-        return $this->bluesky->answer(ApiRequestModel::get(
-            $socialFeed->getSocialAccount()->getServiceUrl() . self::pathOf($socialFeed),
-            ['Authorization' => 'Bearer ' . $session->accessJwt],
-        ));
     }
 
     private static function pathOf(SocialFeed $socialFeed): string
@@ -67,12 +49,6 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
         } . 'limit=' . self::PAGE_SIZE;
     }
 
-    private static function isStaleSession(ApiResponseModel $answer): bool
-    {
-        return \in_array($answer->status, self::STALE_SESSION_STATUSES, true)
-            && \in_array(JsonNodeModel::of($answer->json())->string('error'), self::STALE_SESSION_ERRORS, true);
-    }
-
     /**
      * @return list<JsonNodeModel>
      *
@@ -82,7 +58,7 @@ final readonly class BlueskyTimelineSource implements TimelineSourceInterface
      */
     private static function itemsOf(ApiResponseModel $answer): array
     {
-        if (Response::HTTP_UNAUTHORIZED === $answer->status || self::isStaleSession($answer)) {
+        if (Response::HTTP_UNAUTHORIZED === $answer->status || BlueskySessions::isStale($answer)) {
             throw new SocialCredentialsRejectedException('Bluesky refused the session of this account.');
         }
 
