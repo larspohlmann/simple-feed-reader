@@ -450,8 +450,17 @@ describe('SubscriptionsStore', () => {
           ],
           people: [],
           unreadCount: 6,
+          entryCount: 0,
+          showsHandles: false,
         },
-        { network: 'mastodon', accounts: [], people: [untaggedProfile], unreadCount: 8 },
+        {
+          network: 'mastodon',
+          accounts: [],
+          people: [untaggedProfile],
+          unreadCount: 8,
+          entryCount: 0,
+          showsHandles: false,
+        },
       ]);
     });
 
