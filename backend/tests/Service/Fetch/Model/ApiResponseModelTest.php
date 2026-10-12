@@ -26,4 +26,16 @@ final class ApiResponseModelTest extends TestCase
     {
         self::assertSame($expected, (new ApiResponseModel($status, ''))->isSuccessful());
     }
+
+    public function testAHeaderReadsItsFirstValueWhateverTheCaseOfItsName(): void
+    {
+        $response = new ApiResponseModel(
+            Response::HTTP_OK,
+            '',
+            ['link' => ['<https://a.example.test/2>; rel="next"', 'second']],
+        );
+
+        self::assertSame('<https://a.example.test/2>; rel="next"', $response->header('Link'));
+        self::assertNull($response->header('X-Absent'));
+    }
 }

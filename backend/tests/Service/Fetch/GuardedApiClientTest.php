@@ -162,4 +162,16 @@ final class GuardedApiClientTest extends TestCase
 
         self::assertSame([], $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'))->json());
     }
+
+    public function testTheAnswerCarriesItsResponseHeaders(): void
+    {
+        $http = new MockHttpClient(new MockResponse('[]', [
+            'http_code' => Response::HTTP_OK,
+            'response_headers' => ['Link' => '<https://api.example.test/x?page=2>; rel="next"'],
+        ]));
+
+        $response = $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertSame('<https://api.example.test/x?page=2>; rel="next"', $response->header('link'));
+    }
 }
