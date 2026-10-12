@@ -149,11 +149,6 @@ final class Feed
         $this->imageCheckedAt = $checkedAt;
     }
 
-    public function markImageCheckedAt(\DateTimeImmutable $checkedAt): void
-    {
-        $this->imageCheckedAt = $checkedAt;
-    }
-
     public function getStatus(): FeedStatus
     {
         return $this->status;

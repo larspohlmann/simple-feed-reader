@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Social\Model\ProfileImageBudgetModel;
@@ -291,7 +292,7 @@ final class ProfileImageSweepTest extends DbTestCase
             $feeds,
             new AppViewClient($this->fetcher, $this->throttle()),
             $this->entityManager,
-            $this->clock,
+            new NaiveUtcClock($this->clock),
             $logger,
         );
 
@@ -336,7 +337,7 @@ final class ProfileImageSweepTest extends DbTestCase
         $feed = new Feed('https://bsky.app/profile/' . $actor . '/rss');
         $feed->setImageUrl($imageUrl);
         if (null !== $checkedAt) {
-            $feed->markImageCheckedAt(new \DateTimeImmutable($checkedAt));
+            $feed->recordImageCheck($feed->getImageUrl(), new \DateTimeImmutable($checkedAt));
         }
         $this->persistSubscribed($feed);
 

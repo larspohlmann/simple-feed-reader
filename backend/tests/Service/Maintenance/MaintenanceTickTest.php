@@ -288,7 +288,7 @@ final class MaintenanceTickTest extends DbTestCase
             $feeds,
             new AppViewClient($fetcher, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
             $this->entityManager,
-            $clock,
+            new NaiveUtcClock($clock),
             new NullLogger(),
         );
     }

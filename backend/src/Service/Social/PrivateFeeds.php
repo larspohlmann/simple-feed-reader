@@ -11,6 +11,7 @@ use App\Enum\SocialNetwork;
 use App\Enum\SourceFormat;
 use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\Model\PrivateFeedModel;
 use App\Service\Social\Model\PrivateFeedOutcome;
 use App\Service\Social\Support\PrivateFeedSite;
@@ -19,7 +20,6 @@ use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 
 final readonly class PrivateFeeds
 {
@@ -29,7 +29,7 @@ final readonly class PrivateFeeds
         private SubscriptionCreator $subscriptionCreator,
         private SubscriptionService $subscriptionService,
         private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -52,7 +52,7 @@ final readonly class PrivateFeeds
     /** Makes the account's private feeds due at once, after a reconnect lifted their pause. The caller flushes. */
     public function resume(SocialAccount $account): void
     {
-        $now = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
+        $now = $this->clock->now();
         foreach ($this->socialFeeds->findAllOf($account) as $socialFeed) {
             $socialFeed->getFeed()->scheduleNextFetchAt($now);
         }

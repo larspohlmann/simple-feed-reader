@@ -10,6 +10,7 @@ use App\Repository\FeedRepository;
 use App\Service\Bluesky\AppViewClient;
 use App\Service\Bluesky\Exception\AppViewAnswerException;
 use App\Service\Bluesky\Model\JsonNodeModel;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Social\Model\ProfileImageBudgetModel;
 use App\Service\Social\Model\ProfileImageSweepReportModel;
@@ -17,7 +18,6 @@ use App\Service\Social\Support\BlueskyActor;
 use App\Service\Social\Support\ProfileFeedUrl;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -32,7 +32,7 @@ final readonly class ProfileImageSweep
         private FeedRepository $feeds,
         private AppViewClient $appView,
         private EntityManagerInterface $entityManager,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
     }
@@ -43,7 +43,7 @@ final readonly class ProfileImageSweep
             return ProfileImageSweepReportModel::none();
         }
 
-        $now = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
+        $now = $this->clock->now();
         $due = $this->feeds->findBlueskyProfileFeedsWithImageDue(
             $now->modify(self::REFRESH_AFTER),
             $budget->calls * AppViewClient::URIS_PER_CALL,
@@ -80,7 +80,7 @@ final readonly class ProfileImageSweep
             'exception' => $refusal,
         ]);
         foreach ($batch as $feed) {
-            $feed->markImageCheckedAt($now);
+            $feed->recordImageCheck($feed->getImageUrl(), $now);
         }
 
         return new ProfileImageSweepReportModel(\count($batch), 0);
@@ -109,7 +109,7 @@ final readonly class ProfileImageSweep
     private function record(Feed $feed, ?JsonNodeModel $profile, \DateTimeImmutable $now): bool
     {
         if (null === $profile) {
-            $feed->markImageCheckedAt($now);
+            $feed->recordImageCheck($feed->getImageUrl(), $now);
 
             return false;
         }

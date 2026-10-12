@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Entity\Subscription;
 use App\Repository\SubscriptionRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Social\PrivateFeeds;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
@@ -30,7 +31,7 @@ final class PrivateFeedsWiring
         /** @var SubscriptionRepository $subscriptions */
         $subscriptions = $entityManager->getRepository(Subscription::class);
 
-        return new PrivateFeeds($socialFeeds, $subscriptions, $creator, $subscriptionService, $entityManager, $clock);
+        return new PrivateFeeds($socialFeeds, $subscriptions, $creator, $subscriptionService, $entityManager, new NaiveUtcClock($clock));
     }
 
     private function __construct()

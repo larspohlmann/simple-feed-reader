@@ -62,7 +62,7 @@ final class FeedRepositoryProfileImageDueTest extends DbTestCase
     {
         $feed = new Feed($url);
         if (null !== $checkedAt) {
-            $feed->markImageCheckedAt(new \DateTimeImmutable($checkedAt));
+            $feed->recordImageCheck($feed->getImageUrl(), new \DateTimeImmutable($checkedAt));
         }
         $this->entityManager->persist($feed);
         if ($subscribed) {
