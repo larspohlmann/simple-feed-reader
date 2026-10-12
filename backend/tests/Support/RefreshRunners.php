@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\Feed;
-use App\Entity\SocialFeed;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Repository\SocialFeedRepository;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
@@ -20,7 +18,6 @@ use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedBodyParser\ScrapedBodyParser;
 use App\Service\Refresh\FeedBodyParser\XmlBodyParser;
-use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Refresh\RefreshPassFetcher;
@@ -172,27 +169,22 @@ final readonly class RefreshRunners
     ): RefreshRunner {
         /** @var FeedRepository $feedRepository */
         $feedRepository = $this->entityManager->getRepository(Feed::class);
-        /** @var SocialFeedRepository $socialFeeds */
-        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
         $indexer = new EntryIndexer($this->indexWriter, new NullLogger());
-        $outcomePersister = new FeedOutcomePersister(
-            $this->flushingEntityManager,
-            $feedRepository,
-            $this->bodyParser,
-            EntryIngestors::build($this->entityManager, $this->clock),
-            FeedSchedulers::build($this->clock),
-            $indexer,
-            PostEnrichers::queue($this->entityManager, $this->clock),
-            PostEnrichers::idle($this->entityManager, $this->clock),
-            new NullLogger(),
-        );
+        $outcomePersister = (new FeedOutcomePersisters($this->entityManager, $this->clock, $this->bodyParser))
+            ->flushingThrough($this->flushingEntityManager)
+            ->indexingInto($this->indexWriter)
+            ->idle();
 
         return new RefreshRunner(
             $feedRepository,
             new RefreshPassFetcher(
                 $feedFetcher,
                 $outcomePersister,
-                new SocialFeedRefresher($socialFeeds, $this->timelines, $outcomePersister),
+                new SocialFeedRefresher(
+                    SocialFeeds::repository($this->entityManager),
+                    $this->timelines,
+                    $outcomePersister,
+                ),
             ),
             new MissingFaviconResolver(
                 new FaviconResolver($homepageFetcher, new NullLogger()),

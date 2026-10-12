@@ -11,7 +11,6 @@ use App\Entity\SocialFeed;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Enum\SourceFormat;
-use App\Repository\SocialFeedRepository;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
@@ -27,6 +26,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubTimelineReader;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
@@ -51,7 +51,7 @@ final class SocialFeedRefresherTest extends DbTestCase
         $this->entityManager->flush();
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
             ->create($this->account, PrivateFeedModel::home());
-        $home = $this->socialFeeds()->findOneFor($this->account, SocialFeedKind::Home, null);
+        $home = SocialFeeds::repository($this->entityManager)->findOneFor($this->account, SocialFeedKind::Home, null);
         self::assertNotNull($home);
         $this->home = $home;
     }
@@ -64,7 +64,8 @@ final class SocialFeedRefresherTest extends DbTestCase
         self::assertSame(1, $result->entriesCreated);
         $feedId = $this->home->getFeed()->requireId();
         $this->entityManager->clear();
-        self::assertSame('109', $this->socialFeeds()->find($this->home->requireId())?->getNewestSeenId());
+        $reloaded = SocialFeeds::repository($this->entityManager)->find($this->home->requireId());
+        self::assertSame('109', $reloaded?->getNewestSeenId());
         self::assertSame(1, $this->entityManager->getRepository(Entry::class)->count(['feed' => $feedId]));
     }
 
@@ -144,7 +145,8 @@ final class SocialFeedRefresherTest extends DbTestCase
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         self::assertSame(1, $this->home->getFeed()->getConsecutiveFailures());
         $this->entityManager->clear();
-        self::assertSame('100', $this->socialFeeds()->find($this->home->requireId())?->getNewestSeenId());
+        $reloaded = SocialFeeds::repository($this->entityManager)->find($this->home->requireId());
+        self::assertSame('100', $reloaded?->getNewestSeenId());
     }
 
     public function testARefusalLeavesTheAccountsOtherFeedsAsTheyWere(): void
@@ -190,7 +192,8 @@ final class SocialFeedRefresherTest extends DbTestCase
     {
         PrivateFeedsWiring::build(self::getContainer(), $this->entityManager, $this->clock)
             ->create($this->account, PrivateFeedModel::userList('42', 'Friends'));
-        $list = $this->socialFeeds()->findOneFor($this->account, SocialFeedKind::UserList, '42')?->getFeed();
+        $list = SocialFeeds::repository($this->entityManager)
+            ->findOneFor($this->account, SocialFeedKind::UserList, '42')?->getFeed();
         self::assertNotNull($list);
 
         return $list;
@@ -204,9 +207,9 @@ final class SocialFeedRefresherTest extends DbTestCase
     private function refresherReading(StubTimelineReader $reader): SocialFeedRefresher
     {
         return new SocialFeedRefresher(
-            $this->socialFeeds(),
+            SocialFeeds::repository($this->entityManager),
             $reader,
-            (new FeedOutcomePersisters(self::getContainer(), $this->entityManager, $this->clock))->idle(),
+            FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)->idle(),
         );
     }
 
@@ -220,13 +223,5 @@ final class SocialFeedRefresherTest extends DbTestCase
             'content' => '<p>Hello</p>',
             'account' => ['acct' => 'bob', 'display_name' => 'Bob', 'url' => 'https://mastodon.example/@bob'],
         ])]);
-    }
-
-    private function socialFeeds(): SocialFeedRepository
-    {
-        /** @var SocialFeedRepository $socialFeeds */
-        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
-
-        return $socialFeeds;
     }
 }

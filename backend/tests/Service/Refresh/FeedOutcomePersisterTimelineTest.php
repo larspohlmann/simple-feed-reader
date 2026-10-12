@@ -112,14 +112,13 @@ final class FeedOutcomePersisterTimelineTest extends DbTestCase
     {
         $throttle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
 
-        return (new FeedOutcomePersisters(self::getContainer(), $this->entityManager, $this->clock))->enrichingWith(
-            PostEnrichers::build(
+        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->enrichingWith(PostEnrichers::build(
                 $this->entityManager,
                 $this->clock,
                 new AppViewClient($this->appView, $throttle),
                 new NullLogger(),
-            ),
-        );
+            ));
     }
 
     private function parsedMotherJones(Feed $rssFeed): ParsedFeedModel

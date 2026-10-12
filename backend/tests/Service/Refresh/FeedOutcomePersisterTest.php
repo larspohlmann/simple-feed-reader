@@ -10,28 +10,21 @@ use App\Entity\LinkCard;
 use App\Entity\ShareEnrichment;
 use App\Enum\ShareEnrichmentKind;
 use App\Enum\FeedStatus;
-use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
-use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
-use App\Tests\Support\EntryIngestors;
-use App\Tests\Support\FeedSchedulers;
+use App\Tests\Support\FeedOutcomePersisters;
 use App\Tests\Support\FlushFailingEntityManager;
-use App\Tests\Support\PostEnrichers;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 final class FeedOutcomePersisterTest extends DbTestCase
@@ -238,22 +231,10 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
     private function persister(EntityManagerInterface $entityManager): FeedOutcomePersister
     {
-        /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->entityManager->getRepository(Feed::class);
-        $bodyParser = self::getContainer()->get(FeedBodyParser::class);
-        self::assertInstanceOf(FeedBodyParser::class, $bodyParser);
-
-        return new FeedOutcomePersister(
-            $entityManager,
-            $feedRepository,
-            $bodyParser,
-            EntryIngestors::build($this->entityManager, $this->clock),
-            FeedSchedulers::build($this->clock),
-            new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
-            PostEnrichers::queue($this->entityManager, $this->clock),
-            PostEnrichers::idle($this->entityManager, $this->clock),
-            $this->logger,
-        );
+        return FeedOutcomePersisters::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->flushingThrough($entityManager)
+            ->loggingTo($this->logger)
+            ->idle();
     }
 
     private function feed(string $url): Feed

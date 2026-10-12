@@ -7,13 +7,11 @@ namespace App\Tests\Service\Social;
 use App\Entity\Feed;
 use App\Entity\SealedSecret;
 use App\Entity\SocialAccount;
-use App\Entity\SocialFeed;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
 use App\Enum\SocialFeedKind;
 use App\Enum\SocialNetwork;
 use App\Repository\SocialAccountRepository;
-use App\Repository\SocialFeedRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Exception\SocialAccountAlreadyConnectedException;
@@ -26,6 +24,7 @@ use App\Service\Social\Model\VerifiedAccountModel;
 use App\Service\Social\SocialAccountConnector;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PrivateFeedsWiring;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StubAccountVerifier;
 use App\Tests\Support\UserFactory;
 use Doctrine\DBAL\Connection;
@@ -239,7 +238,7 @@ final class SocialAccountConnectorTest extends DbTestCase
     {
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
 
-        $home = $this->socialFeeds()->findOneFor($account, SocialFeedKind::Home, null);
+        $home = SocialFeeds::repository($this->entityManager)->findOneFor($account, SocialFeedKind::Home, null);
         self::assertNotNull($home);
         self::assertSame(sprintf('social:bluesky:%d:home', $account->requireId()), $home->getFeed()->getUrl());
     }
@@ -252,13 +251,15 @@ final class SocialAccountConnectorTest extends DbTestCase
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
 
         self::assertSame(SocialAccountStatus::Connected, $account->getStatus());
-        self::assertNull($this->socialFeeds()->findOneFor($account, SocialFeedKind::Home, null));
+        $socialFeeds = SocialFeeds::repository($this->entityManager);
+        self::assertNull($socialFeeds->findOneFor($account, SocialFeedKind::Home, null));
     }
 
     public function testReconnectingMakesTheAccountsPrivateFeedsDueAgain(): void
     {
         $account = $this->connector($this->bluesky('did:plc:alice'))->connect($this->user, $this->blueskyCredentials());
-        $feed = $this->socialFeeds()->findOneFor($account, SocialFeedKind::Home, null)?->getFeed();
+        $socialFeeds = SocialFeeds::repository($this->entityManager);
+        $feed = $socialFeeds->findOneFor($account, SocialFeedKind::Home, null)?->getFeed();
         self::assertNotNull($feed);
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('2026-10-13 10:00:00'));
         $account->markNeedsReconnect();
@@ -284,13 +285,6 @@ final class SocialAccountConnectorTest extends DbTestCase
         );
     }
 
-    private function socialFeeds(): SocialFeedRepository
-    {
-        /** @var SocialFeedRepository $socialFeeds */
-        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
-
-        return $socialFeeds;
-    }
 
     private function bluesky(string $did): StubAccountVerifier
     {

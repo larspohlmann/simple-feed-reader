@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Social;
 
 use App\Entity\SocialAccount;
-use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialAccountStatus;
-use App\Repository\SocialFeedRepository;
 use App\Repository\SubscriptionFeedUrls;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
@@ -32,6 +30,7 @@ use App\Tests\Support\PrivateFeedsWiring;
 use App\Tests\Support\ProfileFeedSubscriptions;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\SocialAccounts;
+use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\StaticDnsResolver;
 use App\Tests\Support\StubSocialCandidates;
 use App\Tests\Support\UserFactory;
@@ -64,18 +63,11 @@ final class ImportCandidatesTest extends DbTestCase
             $network,
             $subscriptionFeedUrls,
             new FollowMatcher($resolver),
-            $this->socialFeeds(),
+            SocialFeeds::repository($this->entityManager),
             $this->entityManager,
         );
     }
 
-    private function socialFeeds(): SocialFeedRepository
-    {
-        /** @var SocialFeedRepository $socialFeeds */
-        $socialFeeds = $this->entityManager->getRepository(SocialFeed::class);
-
-        return $socialFeeds;
-    }
 
     private function account(): SocialAccount
     {
