@@ -11,8 +11,9 @@ import { TitleCount } from '../list/list-header/list-header.component';
 import { isUnrenamedHome } from '../feeds/display-title';
 import { FeedNames } from '../state/feed-names';
 import { SubscriptionDto } from '../models';
+import { SocialNetworkName } from '../../core/social-network';
 import { ReaderRouteState } from './reader-route-state.service';
-import { NetworkCounts, feedAvatarUrl, networkCounts } from '../state/social-sections';
+import { SocialSection, feedAvatarUrl } from '../state/social-sections';
 
 @Injectable()
 export class ListHeading {
@@ -73,11 +74,9 @@ export class ListHeading {
     return subscription === null ? null : this.names.titleOf(subscription);
   });
 
-  private readonly selectedNetworkCounts = computed<NetworkCounts>(() => {
+  private readonly selectedNetworkSection = computed<SocialSection | null>(() => {
     const network = this.routeState.selection().network;
-    return network
-      ? networkCounts(this.subscriptions.subscriptions(), network)
-      : { unreadCount: 0, entryCount: 0 };
+    return network ? this.sectionOf(network) : null;
   });
 
   readonly hasMore = computed(() => this.entries.nextCursor() !== null);
@@ -125,15 +124,17 @@ export class ListHeading {
     return handle !== null && isUnrenamedHome(subscription) ? `${title} · ${handle}` : title;
   }
 
-  /** The account's handle when its network has several, so a Home says whose it is. */
   private sharedNetworkHandle(subscription: SubscriptionDto): string | null {
     const social = subscription.social;
-    if (!social) return null;
-    const section = this.subscriptions
-      .socialSections()
-      .find((candidate) => candidate.network === social.network);
-    if (!section || section.accounts.length < 2) return null;
+    const section = social ? this.sectionOf(social.network) : null;
+    if (!social || !section?.showsHandles) return null;
     return section.accounts.find((group) => group.accountId === social.accountId)?.handle ?? null;
+  }
+
+  private sectionOf(network: SocialNetworkName): SocialSection | null {
+    return (
+      this.subscriptions.socialSections().find((section) => section.network === network) ?? null
+    );
   }
 
   private readonly countByKind: Record<Selection['kind'], (selection: Selection) => TitleCount> = {
@@ -144,8 +145,8 @@ export class ListHeading {
       return bySwitch(selection, node?.unreadCount ?? 0, node?.entryCount ?? 0);
     },
     network: (selection) => {
-      const counts = this.selectedNetworkCounts();
-      return bySwitch(selection, counts.unreadCount, counts.entryCount);
+      const section = this.selectedNetworkSection();
+      return bySwitch(selection, section?.unreadCount ?? 0, section?.entryCount ?? 0);
     },
     subscription: (selection) => {
       const subscription = this.selectedSubscription();

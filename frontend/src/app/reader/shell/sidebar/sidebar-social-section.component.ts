@@ -24,7 +24,6 @@ export class SidebarSocialSectionComponent {
     source: () => this.section().network,
     computation: (network) => localStorage.getItem(collapsedKey(network)) !== 'true',
   });
-  protected readonly showsHandles = computed(() => this.section().accounts.length > 1);
   protected readonly active = computed(() => {
     const selection = this.selection();
     return selection.kind === 'network' && selection.network === this.section().network;

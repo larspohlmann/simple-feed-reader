@@ -27,7 +27,7 @@
 </div>
 @if (expanded()) {
   @for (group of current.accounts; track group.accountId) {
-    @if (showsHandles() && group.handle) {
+    @if (current.showsHandles && group.handle) {
       <p class="account-handle">{{ group.handle }}</p>
     }
     @for (subscription of group.subscriptions; track subscription.id) {

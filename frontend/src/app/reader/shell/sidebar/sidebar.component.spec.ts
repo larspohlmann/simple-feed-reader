@@ -1904,6 +1904,8 @@ describe('organise mode', () => {
       network: 'bluesky',
       people: [],
       unreadCount: 2,
+      entryCount: 0,
+      showsHandles: false,
       accounts: [
         {
           accountId: 3,

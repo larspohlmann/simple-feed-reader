@@ -8,7 +8,7 @@ import { ReadingLayoutService } from '../reading-layout.service';
 import { EntriesStore } from '../state/entries.store';
 import { RecommendationsService } from '../state/recommendations.service';
 import { SavedSearchesStore } from '../state/saved-searches.store';
-import { SocialSection } from '../state/social-sections';
+import { SocialSection, buildSocialSections } from '../state/social-sections';
 import { SubscriptionsStore } from '../state/subscriptions.store';
 import { makeSubscription } from '../testing/subscription.factory';
 import { ListHeading } from './list-heading.service';
@@ -51,6 +51,8 @@ const accountsOf = (...handles: string[]): SocialSection => ({
   network: 'bluesky',
   people: [],
   unreadCount: 0,
+  entryCount: 0,
+  showsHandles: handles.length > 1,
   accounts: handles.map((handle, index) => ({
     accountId: index + 1,
     handle,
@@ -119,7 +121,10 @@ describe("ListHeading for a network's combined view", () => {
         { provide: ReaderRouteState, useValue: { selection: signal(selection) } },
         {
           provide: SubscriptionsStore,
-          useValue: { subscriptions: signal(subscriptions), socialSections: signal([]) },
+          useValue: {
+            subscriptions: signal(subscriptions),
+            socialSections: signal(buildSocialSections(subscriptions, [])),
+          },
         },
         { provide: LanguageService, useValue: { lang: signal('en') } },
         { provide: EntriesStore, useValue: {} },

@@ -1,7 +1,7 @@
 import { SubscriptionDto } from '../models';
 import { SocialFeedRefDto } from '../social-feed';
 import { makeSubscription } from '../testing/subscription.factory';
-import { buildSocialSections, isPrivateFeed, isSocialFeed, networkCounts } from './social-sections';
+import { buildSocialSections, isPrivateFeed, isSocialFeed } from './social-sections';
 
 const ref = (
   network: 'bluesky' | 'mastodon',
@@ -55,6 +55,7 @@ describe('buildSocialSections', () => {
       [3, '@alice.bsky.social', [5, 4, 3, 2]],
       [9, null, [1]],
     ]);
+    expect(sections[0].showsHandles).toBe(true);
   });
 
   it('shows a network that has only profile feeds, with no account group', () => {
@@ -78,6 +79,7 @@ describe('buildSocialSections', () => {
     );
 
     expect(sections[0].accounts.map((group) => group.accountId)).toEqual([3]);
+    expect(sections[0].showsHandles).toBe(false);
     expect(sections[0].people.map((subscription) => subscription.title)).toEqual(['amy', 'Zed']);
   });
 
@@ -94,7 +96,7 @@ describe('buildSocialSections', () => {
     expect(isPrivateFeed(makeSubscription())).toBe(false);
   });
 
-  it("sums a network's unread over its private and profile feeds, excluded ones included", () => {
+  it("sums a network's unread and entries over its private and profile feeds, excluded ones included", () => {
     const subscriptions = [
       {
         ...feed(1, ref('bluesky', 3, 'home')),
@@ -107,7 +109,8 @@ describe('buildSocialSections', () => {
       { ...makeSubscription({ id: 4 }), unreadCount: 11, entryCount: 110 },
     ];
 
-    expect(networkCounts(subscriptions, 'bluesky')).toEqual({ unreadCount: 7, entryCount: 70 });
-    expect(buildSocialSections(subscriptions, [])[0].unreadCount).toBe(7);
+    const [bluesky, mastodon] = buildSocialSections(subscriptions, []);
+    expect([bluesky.unreadCount, bluesky.entryCount]).toEqual([7, 70]);
+    expect([mastodon.unreadCount, mastodon.entryCount]).toEqual([7, 70]);
   });
 });

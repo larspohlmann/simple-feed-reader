@@ -34,6 +34,8 @@ const ONE_ACCOUNT: SocialSection = {
   network: 'bluesky',
   people: [],
   unreadCount: 3,
+  entryCount: 0,
+  showsHandles: false,
   accounts: [
     {
       accountId: 3,
@@ -105,6 +107,8 @@ describe('SidebarSocialSectionComponent', () => {
     const renamed: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: false,
       people: [],
       accounts: [
         {
@@ -124,6 +128,8 @@ describe('SidebarSocialSectionComponent', () => {
     const twoAccounts: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: true,
       people: [],
       accounts: [
         {
@@ -174,6 +180,8 @@ describe('SidebarSocialSectionComponent', () => {
     const unknownHandle: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: true,
       people: [],
       accounts: [
         { accountId: 3, handle: null, subscriptions: [feed(1, 'home')] },
@@ -193,6 +201,8 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: false,
       people: [],
       accounts: [{ accountId: 3, handle: null, subscriptions: [excluded(1)] }],
     };
@@ -204,6 +214,8 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'bluesky',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: false,
       accounts: ONE_ACCOUNT.accounts,
       people: [person(7, 'Amy'), person(8, 'Zed')],
     };
@@ -225,6 +237,8 @@ describe('SidebarSocialSectionComponent', () => {
     const section: SocialSection = {
       network: 'mastodon',
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: false,
       accounts: [],
       people: [person(7, 'Amy')],
     };
@@ -243,6 +257,8 @@ describe('SidebarSocialSectionComponent', () => {
       accounts: [],
       people: [excluded],
       unreadCount: 0,
+      entryCount: 0,
+      showsHandles: false,
     };
 
     expect(element(mount(section)).querySelector('.feed-exclusion-marker')).not.toBeNull();
@@ -294,6 +310,8 @@ describe('SidebarSocialSectionComponent', () => {
         accounts: [],
         people: [subscription],
         unreadCount: 0,
+        entryCount: 0,
+        showsHandles: false,
       };
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
       return row.querySelector('img.avatar')?.getAttribute('src') ?? null;
@@ -328,6 +346,8 @@ describe('SidebarSocialSectionComponent', () => {
         accounts: [],
         people: [amy],
         unreadCount: 0,
+        entryCount: 0,
+        showsHandles: false,
       };
       const row = element(mount(section)).querySelector('app-sidebar-feed-row') as HTMLElement;
 
