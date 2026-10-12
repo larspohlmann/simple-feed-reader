@@ -56,7 +56,9 @@ final class PrivateFeedsTest extends DbTestCase
         self::assertFalse($subscription->isIncludeInAllItems());
         self::assertFalse($subscription->isIncludeInForYou());
         self::assertCount(0, $subscription->getTags());
-        $socialFeed = SocialFeeds::repository($this->entityManager)->findOneByFeed($feed);
+        $socialFeed = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$feed->requireId()])[
+            $feed->requireId()
+        ] ?? null;
         self::assertNotNull($socialFeed);
         self::assertSame(SocialFeedKind::Home, $socialFeed->getKind());
         self::assertSame($account->requireId(), $socialFeed->getSocialAccount()->requireId());

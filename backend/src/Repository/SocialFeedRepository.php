@@ -22,9 +22,30 @@ final class SocialFeedRepository extends ServiceEntityRepository
         parent::__construct($registry, SocialFeed::class);
     }
 
-    public function findOneByFeed(Feed $feed): ?SocialFeed
+    /**
+     * @param list<int> $feedIds
+     *
+     * @return array<int, SocialFeed> by feed id, each with its account loaded
+     */
+    public function findWithAccountByFeedIds(array $feedIds): array
     {
-        return $this->findOneBy(['feed' => $feed]);
+        if ([] === $feedIds) {
+            return [];
+        }
+        /** @var list<SocialFeed> $socialFeeds */
+        $socialFeeds = $this->createQueryBuilder('sf')
+            ->addSelect('sa')
+            ->join('sf.socialAccount', 'sa')
+            ->andWhere('sf.feed IN (:feedIds)')
+            ->setParameter('feedIds', $feedIds)
+            ->getQuery()
+            ->getResult();
+        $byFeedId = [];
+        foreach ($socialFeeds as $socialFeed) {
+            $byFeedId[$socialFeed->getFeed()->requireId()] = $socialFeed;
+        }
+
+        return $byFeedId;
     }
 
     public function findOneFor(SocialAccount $account, SocialFeedKind $kind, string $remoteId): ?SocialFeed

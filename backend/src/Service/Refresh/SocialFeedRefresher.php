@@ -12,7 +12,7 @@ use App\Service\Refresh\Exception\PrivateFeedOrphanedException;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\Model\IncomingFeedModel;
-use App\Service\Refresh\Pass\ThrottledSocialAccounts;
+use App\Service\Refresh\Pass\SocialRefreshPass;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
@@ -28,13 +28,16 @@ final readonly class SocialFeedRefresher
     ) {
     }
 
+    /** @param list<int> $feedIds */
+    public function passOver(array $feedIds): SocialRefreshPass
+    {
+        return new SocialRefreshPass($this->socialFeeds->findWithAccountByFeedIds($feedIds));
+    }
+
     /** @throws \DateMalformedStringException */
-    public function refresh(
-        Feed $feed,
-        \DateTimeImmutable $now,
-        ThrottledSocialAccounts $throttledAccounts,
-    ): FeedRefreshResultModel {
-        $socialFeed = $this->socialFeeds->findOneByFeed($feed);
+    public function refresh(Feed $feed, \DateTimeImmutable $now, SocialRefreshPass $pass): FeedRefreshResultModel
+    {
+        $socialFeed = $pass->socialFeedOf($feed);
         if (null === $socialFeed) {
             return $this->outcomePersister->storeFailure($feed, new PrivateFeedOrphanedException());
         }
@@ -43,14 +46,14 @@ final readonly class SocialFeedRefresher
         if (SocialAccountStatus::NeedsReconnect === $account->getStatus()) {
             return FeedRefreshResultModel::of(FeedOutcome::Failed);
         }
-        if ($throttledAccounts->contains($account)) {
+        if ($pass->isThrottled($account)) {
             return FeedRefreshResultModel::of(FeedOutcome::Throttled);
         }
 
         try {
             $page = $this->pageOf($socialFeed);
         } catch (SocialNetworkThrottledException $exception) {
-            $throttledAccounts->add($account);
+            $pass->throttle($account);
 
             return $this->outcomePersister->storeThrottled($feed, $exception->retryAfterSeconds);
         } catch (SocialCredentialsRejectedException | SocialNetworkUnreachableException $exception) {

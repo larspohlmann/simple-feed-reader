@@ -10,8 +10,10 @@ use App\Entity\SocialFeed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\SocialFeedKind;
+use App\Enum\SocialNetwork;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProfileFeedSubscriptions;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SocialAccounts;
 use App\Tests\Support\SocialFeeds;
 use App\Tests\Support\UserFactory;
@@ -68,7 +70,7 @@ final class SocialFeedRepositoryTest extends DbTestCase
         $this->socialFeed($this->account, SocialFeedKind::Home, '');
     }
 
-    public function testAListIsFoundByItsRemoteIdAndByItsFeed(): void
+    public function testAListIsFoundByItsRemoteId(): void
     {
         $list = $this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS);
 
@@ -76,8 +78,42 @@ final class SocialFeedRepositoryTest extends DbTestCase
             ->findOneFor($this->account, SocialFeedKind::UserList, self::WRITERS);
 
         self::assertSame($list, $found);
-        self::assertSame($list, SocialFeeds::repository($this->entityManager)->findOneByFeed($list->getFeed()));
         self::assertSame(self::WRITERS, $list->getRemoteId());
+    }
+
+    public function testPrivateFeedsAreLoadedByTheirFeedIdsWithTheirAccountsInOneQuery(): void
+    {
+        $home = $this->socialFeed($this->account, SocialFeedKind::Home, '');
+        $list = $this->socialFeed($this->account, SocialFeedKind::UserList, self::WRITERS);
+        $homeFeedId = $home->getFeed()->requireId();
+        $listFeedId = $list->getFeed()->requireId();
+        $this->entityManager->clear();
+        $recorder = $this->recorder();
+
+        $found = SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([$listFeedId, $homeFeedId]);
+        ksort($found);
+
+        self::assertSame([$homeFeedId, $listFeedId], array_keys($found));
+        self::assertSame(self::WRITERS, $found[$listFeedId]->getRemoteId());
+        self::assertSame(SocialNetwork::Bluesky, $found[$homeFeedId]->getSocialAccount()->getNetwork());
+        self::assertCount(1, $recorder->queries());
+    }
+
+    public function testNoFeedIdsAskNothing(): void
+    {
+        $recorder = $this->recorder();
+
+        self::assertSame([], SocialFeeds::repository($this->entityManager)->findWithAccountByFeedIds([]));
+        self::assertSame([], $recorder->queries());
+    }
+
+    private function recorder(): QueryRecorder
+    {
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        return $recorder;
     }
 
     public function testAnAccountsFeedsAndSubscriptionsAreItsOwnOnly(): void

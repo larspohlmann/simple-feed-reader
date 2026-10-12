@@ -27,8 +27,9 @@ final readonly class RefreshPassFetcher
             }
         }
 
+        $socialPass = $this->socialRefresher->passOver($pass->socialFeedIds());
         foreach ($pass->socialFeeds() as $feed) {
-            $pass->tally->record($this->socialRefresher->refresh($feed, $now, $pass->throttledSocialAccounts), $feed);
+            $pass->tally->record($this->socialRefresher->refresh($feed, $now, $socialPass), $feed);
             if ($pass->tally->isAborted()) {
                 return;
             }

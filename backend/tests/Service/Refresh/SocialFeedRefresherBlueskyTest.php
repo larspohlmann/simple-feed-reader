@@ -15,7 +15,7 @@ use App\Enum\SocialNetwork;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Fetch\DnsResolver\NativeDnsResolver;
 use App\Service\Refresh\Model\FeedOutcome;
-use App\Service\Refresh\Pass\ThrottledSocialAccounts;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Social\Crypto\SocialCredentialCipher;
 use App\Service\Social\Model\PrivateFeedModel;
@@ -60,11 +60,7 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
     {
         $home = $this->blueskyHome();
 
-        $result = $this->refresher()->refresh(
-            $home->getFeed(),
-            new \DateTimeImmutable('2026-10-12 12:00:00'),
-            new ThrottledSocialAccounts(),
-        );
+        $result = $this->refreshed($home);
 
         self::assertSame(FeedOutcome::Fetched, $result->outcome);
         self::assertSame(3, $result->entriesCreated);
@@ -84,11 +80,7 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
     {
         $home = $this->blueskyHome();
 
-        $this->refresher()->refresh(
-            $home->getFeed(),
-            new \DateTimeImmutable('2026-10-12 12:00:00'),
-            new ThrottledSocialAccounts(),
-        );
+        $this->refreshed($home);
 
         $post = $this->entry(self::FACET_POST);
         self::assertSame(ShareKind::Link, $post->getShareKind());
@@ -140,6 +132,18 @@ final class SocialFeedRefresherBlueskyTest extends DbTestCase
         self::assertNotNull($home);
 
         return $home;
+    }
+
+    private function refreshed(SocialFeed $socialFeed): FeedRefreshResultModel
+    {
+        $refresher = $this->refresher();
+        $feed = $socialFeed->getFeed();
+
+        return $refresher->refresh(
+            $feed,
+            new \DateTimeImmutable('2026-10-12 12:00:00'),
+            $refresher->passOver([$feed->requireId()]),
+        );
     }
 
     private function refresher(): SocialFeedRefresher

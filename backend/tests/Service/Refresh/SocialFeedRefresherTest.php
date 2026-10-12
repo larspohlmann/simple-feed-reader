@@ -14,7 +14,6 @@ use App\Enum\SourceFormat;
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;
-use App\Service\Refresh\Pass\ThrottledSocialAccounts;
 use App\Service\Refresh\SocialFeedRefresher;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkThrottledException;
@@ -119,10 +118,10 @@ final class SocialFeedRefresherTest extends DbTestCase
             $list->getUrl() => self::page(),
         ]);
         $refresher = $this->refresherReading($reader);
-        $throttledAccounts = new ThrottledSocialAccounts();
-        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $throttledAccounts);
+        $pass = $refresher->passOver([$this->home->getFeed()->requireId(), $list->requireId()]);
+        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $pass);
 
-        $result = $refresher->refresh($list, $this->clock->now(), $throttledAccounts);
+        $result = $refresher->refresh($list, $this->clock->now(), $pass);
 
         self::assertSame(FeedOutcome::Throttled, $result->outcome);
         self::assertSame([$this->home], $reader->asked);
@@ -154,10 +153,10 @@ final class SocialFeedRefresherTest extends DbTestCase
         $list = $this->listFeed();
         $nextFetchAt = $list->getNextFetchAt();
         $refresher = $this->refresher(new SocialCredentialsRejectedException('The Mastodon instance refused it.'));
-        $throttledAccounts = new ThrottledSocialAccounts();
-        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $throttledAccounts);
+        $pass = $refresher->passOver([$this->home->getFeed()->requireId(), $list->requireId()]);
+        $refresher->refresh($this->home->getFeed(), $this->clock->now(), $pass);
 
-        $result = $refresher->refresh($list, $this->clock->now(), $throttledAccounts);
+        $result = $refresher->refresh($list, $this->clock->now(), $pass);
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->entityManager->clear();
@@ -185,7 +184,7 @@ final class SocialFeedRefresherTest extends DbTestCase
 
     private function firstOfPass(SocialFeedRefresher $refresher, Feed $feed): FeedRefreshResultModel
     {
-        return $refresher->refresh($feed, $this->clock->now(), new ThrottledSocialAccounts());
+        return $refresher->refresh($feed, $this->clock->now(), $refresher->passOver([$feed->requireId()]));
     }
 
     private function listFeed(): Feed
