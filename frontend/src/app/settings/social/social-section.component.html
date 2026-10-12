@@ -125,7 +125,11 @@
         [ngTemplateOutletContext]="{ $implicit: mastodonAccounts(), network: 'mastodon' }"
       />
 
-      <app-settings-row [stackable]="true" [title]="'settings.social.instanceUrl' | transloco">
+      <app-settings-row
+        [stackable]="true"
+        [title]="'settings.social.instanceUrl' | transloco"
+        [description]="'settings.social.instanceHint' | transloco"
+      >
         <input
           type="url"
           class="text-field"

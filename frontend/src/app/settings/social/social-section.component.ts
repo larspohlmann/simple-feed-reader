@@ -57,6 +57,12 @@ export class SocialSectionComponent {
     this.reconnectSecrets.update((current) => ({ ...current, [id]: secret }));
   }
 
+  private forgetReconnectSecret(id: number): void {
+    this.reconnectSecrets.update((current) =>
+      Object.fromEntries(Object.entries(current).filter(([key]) => Number(key) !== id)),
+    );
+  }
+
   protected reconnectSecret(id: number): string {
     return this.reconnectSecrets()[id] ?? '';
   }
@@ -105,7 +111,10 @@ export class SocialSectionComponent {
         confirmLabel: this.i18n.translate('settings.social.disconnect'),
         danger: true,
       },
-      () => this.svc.disconnect(account.id),
+      () => {
+        this.svc.disconnect(account.id);
+        this.forgetReconnectSecret(account.id);
+      },
     );
   }
 
@@ -127,8 +136,8 @@ function hostOf(instance: string): string | null {
   const typed = instance.trim();
   if (typed === '') return null;
   try {
-    const { hostname } = new URL(typed.includes('://') ? typed : `https://${typed}`);
-    return hostname.includes('.') ? hostname : null;
+    const { host, hostname } = new URL(typed.includes('://') ? typed : `https://${typed}`);
+    return hostname.includes('.') ? host : null;
   } catch {
     return null;
   }

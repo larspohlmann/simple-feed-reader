@@ -377,7 +377,8 @@
       "disconnectMessage": "The stored credential is deleted. Feeds you imported stay.",
       "empty": "No account connected.",
       "openAppPasswords": "Open app passwords",
-      "openOnInstance": "Open on {{host}}"
+      "openOnInstance": "Open on {{host}}",
+      "instanceHint": "The address of your Mastodon server: the part of your handle after the second @ (for @lars@mastodon.social, mastodon.social). A full https:// address works too."
     },
     "profile": {
       "title": "Profile",

@@ -222,6 +222,41 @@ describe('SocialSectionComponent', () => {
     expect(link?.getAttribute('rel')).toBe('noopener');
   });
 
+  it('says what the Mastodon instance field wants', () => {
+    const fixture = mount([]);
+
+    const row = byTestId(fixture, 'social-mastodon-instance')?.closest('app-settings-row');
+    expect(row?.textContent).toContain('address of your Mastodon server');
+    expect(row?.textContent).toContain('mastodon.social');
+  });
+
+  it('keeps a non-default port in the instance link', () => {
+    const fixture = mount([]);
+
+    type(fixture, 'social-mastodon-instance', 'example.social:8443');
+
+    const link = byTestId<HTMLAnchorElement>(fixture, 'social-mastodon-link');
+    expect(link?.textContent).toContain('Open on example.social:8443');
+    expect(link?.getAttribute('href')).toBe(
+      'https://example.social:8443/settings/applications/new',
+    );
+  });
+
+  it('forgets the typed reconnect secret of a disconnected account', () => {
+    const fixture = mount([account({ status: 'needs_reconnect' })]);
+    type(fixture, 'social-reconnect-secret-1', 'stale-secret');
+
+    press(fixture, 'social-disconnect-1');
+    http.expectOne(`${ENDPOINT}/1`).flush({ accounts: [] });
+    type(fixture, 'social-bluesky-handle', 'alice.bsky.social');
+    type(fixture, 'social-bluesky-password', 'abcd-efgh-ijkl-mnop');
+    press(fixture, 'social-bluesky-connect');
+    http.expectOne(`${ENDPOINT}/bluesky`).flush(account({ status: 'needs_reconnect' }));
+    fixture.detectChanges();
+
+    expect(byTestId<HTMLInputElement>(fixture, 'social-reconnect-secret-1')?.value).toBe('');
+  });
+
   it('shows no instance link for text that is not a host', () => {
     const fixture = mount([]);
 
