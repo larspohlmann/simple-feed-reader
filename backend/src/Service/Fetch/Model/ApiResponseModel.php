@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Model;
 
+use Symfony\Component\HttpFoundation\Response;
+
 final readonly class ApiResponseModel
 {
-    private const int FIRST_SUCCESS = 200;
-    private const int LAST_SUCCESS = 299;
-
     public function __construct(
         public int $status,
         public string $body,
@@ -17,7 +16,7 @@ final readonly class ApiResponseModel
 
     public function isSuccessful(): bool
     {
-        return $this->status >= self::FIRST_SUCCESS && $this->status <= self::LAST_SUCCESS;
+        return $this->status >= Response::HTTP_OK && $this->status < Response::HTTP_MULTIPLE_CHOICES;
     }
 
     /** @return array<mixed> */

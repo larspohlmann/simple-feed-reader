@@ -17,6 +17,7 @@ use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyVerifierTest extends TestCase
 {
@@ -81,7 +82,10 @@ final class BlueskyVerifierTest extends TestCase
     public function testARefusedAppPasswordIsRejected(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('{"error":"AuthenticationRequired"}', ['http_code' => 401]),
+            self::SESSION => new MockResponse(
+                '{"error":"AuthenticationRequired"}',
+                ['http_code' => Response::HTTP_UNAUTHORIZED],
+            ),
         ]);
 
         $this->expectException(SocialCredentialsRejectedException::class);
@@ -108,7 +112,7 @@ final class BlueskyVerifierTest extends TestCase
     public function testAnOutageOnTheSessionCallIsUnreachable(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('', ['http_code' => 503]),
+            self::SESSION => new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
         ]);
 
         $this->expectException(SocialNetworkUnreachableException::class);

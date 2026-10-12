@@ -11,6 +11,7 @@ use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\BlueskyIdentityModel;
+use Symfony\Component\HttpFoundation\Response;
 
 /** Finds the PDS that hosts a Bluesky account, so a self-hosted account signs in where it lives. */
 final readonly class BlueskyIdentityResolver
@@ -19,8 +20,6 @@ final readonly class BlueskyIdentityResolver
     private const string PLC_DIRECTORY = 'https://plc.directory/';
     private const string WEB_DID_PREFIX = 'did:web:';
     private const string PDS_SERVICE_SUFFIX = '#atproto_pds';
-    private const int UNKNOWN_HANDLE_STATUS = 400;
-    private const int MISSING_DOCUMENT_STATUS = 404;
 
     public function __construct(private GuardedApiClient $api)
     {
@@ -41,7 +40,7 @@ final readonly class BlueskyIdentityResolver
     {
         $answer = $this->call(ApiRequestModel::get(self::RESOLVE_HANDLE . '?handle=' . rawurlencode($handle)));
 
-        if (self::UNKNOWN_HANDLE_STATUS === $answer->status) {
+        if (Response::HTTP_BAD_REQUEST === $answer->status) {
             throw new SocialAccountUnresolvableException(sprintf('No Bluesky account has the handle "%s".', $handle));
         }
 
@@ -57,7 +56,7 @@ final readonly class BlueskyIdentityResolver
     {
         $answer = $this->call(ApiRequestModel::get($this->documentUrl($did)));
 
-        if (self::MISSING_DOCUMENT_STATUS === $answer->status) {
+        if (Response::HTTP_NOT_FOUND === $answer->status) {
             throw new SocialAccountUnresolvableException(sprintf('The account %s has no DID document.', $did));
         }
         if (!$answer->isSuccessful()) {

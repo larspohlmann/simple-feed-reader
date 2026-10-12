@@ -14,6 +14,7 @@ use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class BlueskyIdentityResolverTest extends TestCase
 {
@@ -78,7 +79,10 @@ final class BlueskyIdentityResolverTest extends TestCase
     public function testAnUnknownHandleIsUnresolvable(): void
     {
         $http = new RoutedHttpClient([
-            self::RESOLVE_ALICE => new MockResponse('{"error":"InvalidRequest"}', ['http_code' => 400]),
+            self::RESOLVE_ALICE => new MockResponse(
+                '{"error":"InvalidRequest"}',
+                ['http_code' => Response::HTTP_BAD_REQUEST],
+            ),
         ]);
 
         $this->expectException(SocialAccountUnresolvableException::class);
@@ -113,7 +117,10 @@ final class BlueskyIdentityResolverTest extends TestCase
     {
         $http = new RoutedHttpClient([
             self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
-            'GET https://plc.directory/did:plc:alice' => new MockResponse('Not Found', ['http_code' => 404]),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse(
+                'Not Found',
+                ['http_code' => Response::HTTP_NOT_FOUND],
+            ),
         ]);
 
         $this->expectException(SocialAccountUnresolvableException::class);
@@ -123,7 +130,9 @@ final class BlueskyIdentityResolverTest extends TestCase
 
     public function testAnOutageOnTheHandleLookupIsUnreachable(): void
     {
-        $http = new RoutedHttpClient([self::RESOLVE_ALICE => new MockResponse('', ['http_code' => 503])]);
+        $http = new RoutedHttpClient([
+            self::RESOLVE_ALICE => new MockResponse('', ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE]),
+        ]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
 
@@ -134,7 +143,10 @@ final class BlueskyIdentityResolverTest extends TestCase
     {
         $http = new RoutedHttpClient([
             self::RESOLVE_ALICE => new MockResponse('{"did":"did:plc:alice"}'),
-            'GET https://plc.directory/did:plc:alice' => new MockResponse('', ['http_code' => 503]),
+            'GET https://plc.directory/did:plc:alice' => new MockResponse(
+                '',
+                ['http_code' => Response::HTTP_SERVICE_UNAVAILABLE],
+            ),
         ]);
 
         $this->expectException(SocialNetworkUnreachableException::class);

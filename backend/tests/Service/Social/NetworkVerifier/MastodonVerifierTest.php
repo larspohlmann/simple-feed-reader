@@ -15,6 +15,7 @@ use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class MastodonVerifierTest extends TestCase
 {
@@ -57,7 +58,9 @@ final class MastodonVerifierTest extends TestCase
 
     public function testARefusedTokenIsRejected(): void
     {
-        $http = new RoutedHttpClient([self::VERIFY => new MockResponse('{"error":"invalid"}', ['http_code' => 401])]);
+        $http = new RoutedHttpClient([
+            self::VERIFY => new MockResponse('{"error":"invalid"}', ['http_code' => Response::HTTP_UNAUTHORIZED]),
+        ]);
 
         $this->expectException(SocialCredentialsRejectedException::class);
 
@@ -66,7 +69,9 @@ final class MastodonVerifierTest extends TestCase
 
     public function testAForbiddenTokenIsRejected(): void
     {
-        $http = new RoutedHttpClient([self::VERIFY => new MockResponse('{"error":"scope"}', ['http_code' => 403])]);
+        $http = new RoutedHttpClient([
+            self::VERIFY => new MockResponse('{"error":"scope"}', ['http_code' => Response::HTTP_FORBIDDEN]),
+        ]);
 
         $this->expectException(SocialCredentialsRejectedException::class);
 

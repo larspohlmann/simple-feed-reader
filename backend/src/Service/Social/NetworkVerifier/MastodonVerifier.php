@@ -12,11 +12,12 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MastodonVerifier implements NetworkVerifierInterface
 {
     private const string VERIFY_CREDENTIALS = '/api/v1/accounts/verify_credentials';
-    private const array REFUSALS = [401, 403];
+    private const array REFUSALS = [Response::HTTP_UNAUTHORIZED, Response::HTTP_FORBIDDEN];
 
     public function __construct(private GuardedApiClient $api)
     {

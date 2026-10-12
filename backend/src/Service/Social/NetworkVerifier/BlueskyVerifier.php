@@ -13,11 +13,11 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\Model\VerifiedAccountModel;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BlueskyVerifier implements NetworkVerifierInterface
 {
     private const string CREATE_SESSION = '/xrpc/com.atproto.server.createSession';
-    private const int REFUSED_STATUS = 401;
 
     public function __construct(
         private BlueskyIdentityResolver $identities,
@@ -46,7 +46,7 @@ final readonly class BlueskyVerifier implements NetworkVerifierInterface
             );
         }
 
-        if (self::REFUSED_STATUS === $answer->status) {
+        if (Response::HTTP_UNAUTHORIZED === $answer->status) {
             throw new SocialCredentialsRejectedException('Bluesky refused this handle and app password.');
         }
 

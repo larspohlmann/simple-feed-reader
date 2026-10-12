@@ -13,6 +13,7 @@ use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final class GuardedApiClientTest extends TestCase
 {
@@ -37,7 +38,7 @@ final class GuardedApiClientTest extends TestCase
                 $seenUrl = $url;
                 $seenOptions = $options;
 
-                return new MockResponse('{"ok":true}', ['http_code' => 200]);
+                return new MockResponse('{"ok":true}', ['http_code' => Response::HTTP_OK]);
             },
         );
 
@@ -59,11 +60,14 @@ final class GuardedApiClientTest extends TestCase
 
     public function testAnErrorStatusIsReturnedNotThrown(): void
     {
-        $http = new MockHttpClient(new MockResponse('{"error":"AuthenticationRequired"}', ['http_code' => 401]));
+        $http = new MockHttpClient(new MockResponse(
+            '{"error":"AuthenticationRequired"}',
+            ['http_code' => Response::HTTP_UNAUTHORIZED],
+        ));
 
         $response = $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
 
-        self::assertSame(401, $response->status);
+        self::assertSame(Response::HTTP_UNAUTHORIZED, $response->status);
         self::assertFalse($response->isSuccessful());
         self::assertSame(['error' => 'AuthenticationRequired'], $response->json());
     }
@@ -79,7 +83,7 @@ final class GuardedApiClientTest extends TestCase
 
     public function testANonJsonBodyReadsAsEmpty(): void
     {
-        $http = new MockHttpClient(new MockResponse('<html>', ['http_code' => 502]));
+        $http = new MockHttpClient(new MockResponse('<html>', ['http_code' => Response::HTTP_BAD_GATEWAY]));
 
         self::assertSame([], $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'))->json());
     }
