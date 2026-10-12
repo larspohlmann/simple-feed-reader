@@ -11,6 +11,7 @@ enum ResponseSizeLimit: int
     case Feed = 20;
     /** Images and the pages fetched for their cookies. */
     case Download = 5;
+    case Api = 2;
 
     public function bytes(): int
     {

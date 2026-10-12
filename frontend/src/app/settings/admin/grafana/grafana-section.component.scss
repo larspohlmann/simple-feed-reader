@@ -1,4 +1,5 @@
 @use '../../../theme/breakpoints' as bp;
+@use '../../../shared/settings/field-width';
 
 // A bare <input> is ~20 characters wide; real values run longer. Sized in
 // `ch`, matching the admin-settings URL fields.
@@ -7,13 +8,12 @@
 }
 
 .credential-field {
-  width: 24ch;
+  @include field-width.credential-field;
 }
 
 // Narrow viewport: the row stacks, so a field takes the whole line.
 @media (width <= bp.$bp-sm) {
-  .url-field,
-  .credential-field {
+  .url-field {
     width: 100%;
   }
 }

@@ -1,5 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { REQUEST_TOO_LARGE, parseProblem, parseProblemAsync } from './problem';
+import {
+  Problem,
+  REQUEST_TOO_LARGE,
+  parseProblem,
+  parseProblemAsync,
+  problemMessage,
+} from './problem';
 
 describe('parseProblem', () => {
   it('reads a validation_error problem+json body', () => {
@@ -168,5 +174,28 @@ describe('parseProblem', () => {
     const error = new HttpErrorResponse({ status: 0, error: '<html><title>x</title></html>' });
 
     expect(parseProblem(error).title).toBe('Could not reach the server');
+  });
+});
+
+describe('problemMessage', () => {
+  const base: Problem = { type: 'about:blank', title: 'Title', status: 422 };
+
+  it('prefers the first field message', () => {
+    const problem = {
+      ...base,
+      detail: 'Detail',
+      errors: { url: ['Bad url', 'Other'], name: ['x'] },
+    };
+
+    expect(problemMessage(problem)).toBe('Bad url');
+  });
+
+  it('falls back to the detail when no field has a message', () => {
+    expect(problemMessage({ ...base, detail: 'Detail', errors: {} })).toBe('Detail');
+    expect(problemMessage({ ...base, detail: 'Detail', errors: { url: [] } })).toBe('Detail');
+  });
+
+  it('falls back to the title without detail or fields', () => {
+    expect(problemMessage(base)).toBe('Title');
   });
 });

@@ -1,0 +1,16 @@
+@use '../../theme/breakpoints' as bp;
+
+@mixin credential-field {
+  width: 24ch;
+
+  @media (width <= bp.$bp-sm) {
+    width: 100%;
+  }
+}
+
+@mixin credential-field-beside-button {
+  @include credential-field;
+
+  flex: 1 1 auto;
+  min-width: 0;
+}

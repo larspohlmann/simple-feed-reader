@@ -27,6 +27,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
 use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
+use App\Entity\SocialAccount;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -125,6 +126,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array ACCOUNT_SCOPED_WHOLLY_DROPPED = [
         AiProviderSettings::class => 'Model endpoints and API keys. A backup is a file the '
             . 'user handles and mails around; credentials do not belong in one.',
+        SocialAccount::class => 'Connected Bluesky/Mastodon accounts and their sealed credentials. A backup is a file '
+            . 'that leaves the server, and the credential is bound to this instance\'s key; a restore reconnects.',
         UserIdentity::class => 'OAuth identity links — see NEVER_BACKED_UP\'s reasoning.',
         ActionToken::class => 'Short-lived, single-use verification and reset tokens.',
         RecommendationSettings::class => 'The "For you" settings — guidance prompt, learned profile, '
@@ -582,21 +585,22 @@ final class BackupSchemaCoverageTest extends DbTestCase
     /** @return list<string> the keys one kind of line is allowed to carry */
     private function claimedKeysOf(string $kind): array
     {
-        $keys = array_merge(
-            self::EVERY_LINE,
-            self::FILE_SCAFFOLDING[$kind] ?? [],
-            $this->nestedValueObjectKeysOf($kind),
-        );
+        $declaredKeys = [];
         foreach (self::BACKED_UP as $entityClass => $fields) {
             if (self::KIND_OF[$entityClass] !== $kind) {
                 continue;
             }
             foreach ($fields as $declared) {
-                $keys = array_merge($keys, $this->exportedKeysFor($declared));
+                $declaredKeys[] = $this->exportedKeysFor($declared);
             }
         }
 
-        return $keys;
+        return array_merge(
+            self::EVERY_LINE,
+            self::FILE_SCAFFOLDING[$kind] ?? [],
+            $this->nestedValueObjectKeysOf($kind),
+            ...$declaredKeys,
+        );
     }
 
     /** @return list<string> */

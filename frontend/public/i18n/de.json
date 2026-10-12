@@ -356,6 +356,33 @@
         "purged": "Empfehlungen geleert."
       }
     },
+    "social": {
+      "title": "Soziale Medien",
+      "bluesky": "Bluesky",
+      "mastodon": "Mastodon",
+      "handle": "Handle",
+      "appPassword": "App-Passwort",
+      "appPasswordHint": "Lege in Bluesky unter Einstellungen → Datenschutz und Sicherheit → App-Passwörter ein App-Passwort an. Es sieht aus wie xxxx-xxxx-xxxx-xxxx; dein Konto-Passwort wird abgelehnt.",
+      "instanceUrl": "Instanz",
+      "accessToken": "Zugriffstoken",
+      "accessTokenHint": "Lege unter Einstellungen → Entwicklung → Neue Anwendung ein Token mit den Berechtigungen read und write:favourites an und kopiere „Dein Zugriffstoken“.",
+      "connect": "Verbinden",
+      "connected": "Konto verbunden",
+      "default": "Standard",
+      "makeDefault": "Als Standard",
+      "needsReconnect": "Neu verbinden nötig",
+      "reconnect": "Neu verbinden",
+      "disconnect": "Trennen",
+      "disconnectTitle": "{{handle}} trennen?",
+      "disconnectMessage": "Die gespeicherten Zugangsdaten werden gelöscht. Importierte Feeds bleiben.",
+      "empty": "Kein Konto verbunden.",
+      "openAppPasswords": "App-Passwörter öffnen",
+      "openOnInstance": "Auf {{host}} öffnen",
+      "instanceHint": "Die Adresse deines Mastodon-Servers – der Teil deines Handles nach dem zweiten @ (für @lars@mastodon.social also mastodon.social). Eine vollständige https://-Adresse geht auch.",
+      "statusConnected": "Verbunden",
+      "connectedSince": "Verbunden seit {{date}}",
+      "connectAnother": "Weiteres Konto verbinden"
+    },
     "profile": {
       "title": "Profil",
       "caption": "Was das Modell aus deinem Lesen gelernt hat. „Für dich“-Empfehlungen werden daran gemessen.",

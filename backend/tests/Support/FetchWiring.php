@@ -7,6 +7,8 @@ namespace App\Tests\Support;
 use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FailoverRequestSender;
+use App\Service\Fetch\GuardedApiClient;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
@@ -27,6 +29,25 @@ final class FetchWiring
         EgressProxySourceInterface $egressProxy,
     ): FailoverRequestSender {
         return new FailoverRequestSender($client, $egressProxy, new CrossFamilyFailover());
+    }
+
+    public static function guardedApiClient(
+        HttpClientInterface $client,
+        UrlGuard $urlGuard,
+        ?ProxyConfigModel $proxy = null,
+    ): GuardedApiClient {
+        $egressProxy = new class ($proxy) implements EgressProxySourceInterface {
+            public function __construct(private readonly ?ProxyConfigModel $proxy)
+            {
+            }
+
+            public function egressProxy(): ?ProxyConfigModel
+            {
+                return $this->proxy;
+            }
+        };
+
+        return new GuardedApiClient(self::failoverSender($client, $egressProxy), $urlGuard, 'TestAgent/1.0');
     }
 
     public static function retryPolicy(UrlGuard $urlGuard): FetchRetryPolicy

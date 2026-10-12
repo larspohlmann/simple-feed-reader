@@ -356,6 +356,33 @@
         "purged": "Recommendations cleared."
       }
     },
+    "social": {
+      "title": "Social Media",
+      "bluesky": "Bluesky",
+      "mastodon": "Mastodon",
+      "handle": "Handle",
+      "appPassword": "App password",
+      "appPasswordHint": "Create an app password in Bluesky under Settings → Privacy and security → App passwords. It looks like xxxx-xxxx-xxxx-xxxx; your account password is refused.",
+      "instanceUrl": "Instance",
+      "accessToken": "Access token",
+      "accessTokenHint": "Create a token under Preferences → Development → New application with the scopes read and write:favourites, then copy \"Your access token\".",
+      "connect": "Connect",
+      "connected": "Account connected",
+      "default": "Default",
+      "makeDefault": "Make default",
+      "needsReconnect": "Needs reconnecting",
+      "reconnect": "Reconnect",
+      "disconnect": "Disconnect",
+      "disconnectTitle": "Disconnect {{handle}}?",
+      "disconnectMessage": "The stored credential is deleted. Feeds you imported stay.",
+      "empty": "No account connected.",
+      "openAppPasswords": "Open app passwords",
+      "openOnInstance": "Open on {{host}}",
+      "instanceHint": "The address of your Mastodon server: the part of your handle after the second @ (for @lars@mastodon.social, mastodon.social). A full https:// address works too.",
+      "statusConnected": "Connected",
+      "connectedSince": "Connected since {{date}}",
+      "connectAnother": "Connect another account"
+    },
     "profile": {
       "title": "Profile",
       "caption": "What the model has learned from your reading. For You recommendations are scored against it.",

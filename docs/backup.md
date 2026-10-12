@@ -216,6 +216,7 @@ These rows belong to your account. A backup drops each of them completely.
 | Data | Why the file leaves it out |
 |---|---|
 | `AiProviderSettings` | Your AI connections: the endpoint and the API key. A backup is a file you handle, store and send. A key must not travel in such a file. Your AI connections stay in the account, and a restore does not touch them. |
+| `SocialAccount` | Your connected Bluesky and Mastodon accounts and their credentials. A backup is a file that leaves the server, and a credential is bound to this instance's key. A restore does not touch your connected accounts; reconnect them there. |
 | `UserIdentity` | Your links to Google and Apple sign-in. A restore writes what the file says, and the file comes from you. See section 7. |
 | `ActionToken` | Short-lived tokens for address verification and password reset. Each token lives for minutes and works once. |
 | `RecommendationSettings` | Your "For you" settings: the guidance prompt, the learned profile, the caps and limits, and the batch size. They are quick to set again after a restore, and not worth carrying in a file you handle and send. |

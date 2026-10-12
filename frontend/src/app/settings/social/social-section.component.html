@@ -1,0 +1,229 @@
+<ng-template #accountRows let-accounts let-network="network">
+  @for (account of accounts; track account.id) {
+    <app-settings-row
+      [stackable]="true"
+      [title]="account.handle"
+      [description]="account.serviceUrl + ' · ' + describeSince(account)"
+    >
+      <div class="account-actions">
+        @if (account.status === 'connected') {
+          <span class="status-chip connected" [attr.data-testid]="'social-connected-' + account.id">
+            <app-icon name="check_circle" size="text" />
+            {{ 'settings.social.statusConnected' | transloco }}
+          </span>
+        } @else {
+          <span class="status-chip" [attr.data-testid]="'social-needs-reconnect-' + account.id">
+            <app-icon name="warning" size="text" />
+            {{ 'settings.social.needsReconnect' | transloco }}
+          </span>
+        }
+        @if (account.isDefault) {
+          <span class="default-marker" [attr.data-testid]="'social-default-' + account.id">
+            {{ 'settings.social.default' | transloco }}
+          </span>
+        } @else {
+          <app-button
+            size="sm"
+            [attr.data-testid]="'social-make-default-' + account.id"
+            [disabled]="svc.busy()"
+            (click)="makeDefault(account)"
+          >
+            {{ 'settings.social.makeDefault' | transloco }}
+          </app-button>
+        }
+        <app-button
+          size="sm"
+          variant="danger-outline"
+          [attr.data-testid]="'social-disconnect-' + account.id"
+          [disabled]="svc.busy()"
+          (click)="disconnect(account)"
+        >
+          {{ 'settings.social.disconnect' | transloco }}
+        </app-button>
+      </div>
+    </app-settings-row>
+
+    @if (account.status === 'needs_reconnect') {
+      <app-settings-row
+        [stackable]="true"
+        [title]="
+          (network === 'bluesky' ? 'settings.social.appPassword' : 'settings.social.accessToken')
+            | transloco
+        "
+      >
+        <app-password-input class="secret-field">
+          <input
+            type="password"
+            autocomplete="off"
+            [attr.data-testid]="'social-reconnect-secret-' + account.id"
+            [value]="reconnectSecret(account.id)"
+            (input)="setReconnectSecret(account.id, typed($event))"
+          />
+        </app-password-input>
+        <app-button
+          size="sm"
+          variant="primary"
+          [attr.data-testid]="'social-reconnect-' + account.id"
+          [disabled]="svc.busy() || reconnectSecret(account.id) === ''"
+          (click)="reconnect(account)"
+        >
+          {{ 'settings.social.reconnect' | transloco }}
+        </app-button>
+      </app-settings-row>
+    }
+  } @empty {
+    <p class="empty-note" [attr.data-testid]="'social-empty-' + network">
+      {{ 'settings.social.empty' | transloco }}
+    </p>
+  }
+</ng-template>
+
+<app-settings-stack>
+  @if (svc.accounts() !== null) {
+    <app-settings-group icon="cloud" [title]="'settings.social.bluesky' | transloco">
+      <ng-container
+        [ngTemplateOutlet]="accountRows"
+        [ngTemplateOutletContext]="{ $implicit: blueskyAccounts(), network: 'bluesky' }"
+      />
+
+      @if (blueskyAccounts().length === 0 || blueskyFormOpen()) {
+        <app-settings-row [stackable]="true" [title]="'settings.social.handle' | transloco">
+          <input
+            type="text"
+            class="text-field"
+            autocomplete="off"
+            autocapitalize="none"
+            data-testid="social-bluesky-handle"
+            [value]="blueskyHandle()"
+            (input)="blueskyHandle.set(typed($event))"
+          />
+        </app-settings-row>
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.social.appPassword' | transloco"
+          [description]="'settings.social.appPasswordHint' | transloco"
+        >
+          <app-password-input class="secret-field">
+            <input
+              type="password"
+              autocomplete="off"
+              data-testid="social-bluesky-password"
+              [value]="blueskyPassword()"
+              (input)="blueskyPassword.set(typed($event))"
+            />
+          </app-password-input>
+          <app-button
+            variant="primary"
+            data-testid="social-bluesky-connect"
+            [disabled]="svc.busy() || blueskyHandle() === '' || blueskyPassword() === ''"
+            (click)="connectBluesky()"
+          >
+            {{ 'settings.social.connect' | transloco }}
+          </app-button>
+          @if (blueskyAccounts().length > 0) {
+            <app-button data-testid="social-bluesky-cancel" (click)="resetBlueskyForm()">
+              {{ 'common.cancel' | transloco }}
+            </app-button>
+          }
+        </app-settings-row>
+        <p class="hint-link">
+          <a
+            href="https://bsky.app/settings/app-passwords"
+            target="_blank"
+            rel="noopener"
+            data-testid="social-bluesky-link"
+            >{{ 'settings.social.openAppPasswords' | transloco }}</a
+          >
+        </p>
+      } @else {
+        <p class="add-another">
+          <app-button
+            size="sm"
+            data-testid="social-bluesky-add"
+            (click)="blueskyFormOpen.set(true)"
+          >
+            {{ 'settings.social.connectAnother' | transloco }}
+          </app-button>
+        </p>
+      }
+    </app-settings-group>
+
+    <app-settings-group icon="alternate_email" [title]="'settings.social.mastodon' | transloco">
+      <ng-container
+        [ngTemplateOutlet]="accountRows"
+        [ngTemplateOutletContext]="{ $implicit: mastodonAccounts(), network: 'mastodon' }"
+      />
+
+      @if (mastodonAccounts().length === 0 || mastodonFormOpen()) {
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.social.instanceUrl' | transloco"
+          [description]="'settings.social.instanceHint' | transloco"
+        >
+          <input
+            type="url"
+            class="text-field"
+            autocomplete="off"
+            autocapitalize="none"
+            data-testid="social-mastodon-instance"
+            [value]="mastodonInstance()"
+            (input)="mastodonInstance.set(typed($event))"
+          />
+        </app-settings-row>
+        <app-settings-row
+          [stackable]="true"
+          [title]="'settings.social.accessToken' | transloco"
+          [description]="'settings.social.accessTokenHint' | transloco"
+        >
+          <app-password-input class="secret-field">
+            <input
+              type="password"
+              autocomplete="off"
+              data-testid="social-mastodon-token"
+              [value]="mastodonToken()"
+              (input)="mastodonToken.set(typed($event))"
+            />
+          </app-password-input>
+          <app-button
+            variant="primary"
+            data-testid="social-mastodon-connect"
+            [disabled]="svc.busy() || mastodonInstance() === '' || mastodonToken() === ''"
+            (click)="connectMastodon()"
+          >
+            {{ 'settings.social.connect' | transloco }}
+          </app-button>
+          @if (mastodonAccounts().length > 0) {
+            <app-button data-testid="social-mastodon-cancel" (click)="resetMastodonForm()">
+              {{ 'common.cancel' | transloco }}
+            </app-button>
+          }
+        </app-settings-row>
+        @if (mastodonHost(); as host) {
+          <p class="hint-link">
+            <a
+              [href]="'https://' + host + '/settings/applications/new'"
+              target="_blank"
+              rel="noopener"
+              data-testid="social-mastodon-link"
+              >{{ 'settings.social.openOnInstance' | transloco: { host: host } }}</a
+            >
+          </p>
+        }
+      } @else {
+        <p class="add-another">
+          <app-button
+            size="sm"
+            data-testid="social-mastodon-add"
+            (click)="mastodonFormOpen.set(true)"
+          >
+            {{ 'settings.social.connectAnother' | transloco }}
+          </app-button>
+        </p>
+      }
+    </app-settings-group>
+  }
+
+  @if (svc.failure(); as message) {
+    <app-error-banner [message]="message" />
+  }
+</app-settings-stack>

@@ -27,6 +27,7 @@ export const SETTINGS_SECTIONS = [
   { path: 'email', icon: 'mail', labelKey: 'settings.email.title', group: 'general' },
   { path: 'account', icon: 'person', labelKey: 'settings.account.title', group: 'general' },
   { path: 'ai', icon: 'smart_toy', labelKey: 'settings.ai.title', group: 'general' },
+  { path: 'social', icon: 'forum', labelKey: 'settings.social.title', group: 'general' },
   { path: 'about', icon: 'info', labelKey: 'settings.about.title', group: 'general' },
   { path: 'admin/users', icon: 'shield_person', labelKey: 'admin.title', group: 'admin' },
   {

@@ -1,0 +1,67 @@
+@use '../../shared/settings/field-width';
+@use '../../theme/glass-rim';
+
+:host app-button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.text-field,
+.secret-field {
+  @include field-width.credential-field-beside-button;
+}
+
+.status-chip {
+  @include glass-rim.filled(var(--bg-warning), var(--border-warning));
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-0) var(--space-3);
+  border-radius: var(--radius-pill);
+  color: var(--warning);
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+}
+
+.status-chip.connected {
+  @include glass-rim.filled(var(--bg-success), var(--border));
+
+  color: var(--success);
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.add-another {
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+}
+
+.default-marker {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.empty-note {
+  margin: 0;
+  padding: var(--panel-inset-y) var(--panel-inset-x);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.hint-link {
+  margin: 0;
+  padding: var(--space-3) var(--panel-inset-x);
+  font-size: var(--fs-sm);
+}
+
+.hint-link a {
+  color: var(--accent);
+  font-weight: 600;
+}
