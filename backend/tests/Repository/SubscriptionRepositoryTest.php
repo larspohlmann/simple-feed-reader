@@ -59,38 +59,6 @@ final class SubscriptionRepositoryTest extends DbTestCase
         );
     }
 
-    public function testFindFeedUrlsForUserReadsTheOwnersSubscriptionsInCreationOrder(): void
-    {
-        $owner = $this->userFactory()->create('feed-urls-owner@example.com');
-        $titled = $this->subscriptionToFeed($owner, 'https://example.com/titled.xml');
-        $titled->getFeed()->setTitle('Feed title');
-        $titled->setCustomTitle('My title');
-        $plain = $this->subscriptionToFeed($owner, 'https://example.com/plain.xml');
-        $this->subscriptionToFeed(
-            $this->userFactory()->create('feed-urls-other@example.com'),
-            'https://example.com/foreign.xml',
-        );
-        $this->entityManager->flush();
-
-        self::assertSame(
-            [
-                [
-                    'id' => $titled->requireId(),
-                    'customTitle' => 'My title',
-                    'feedUrl' => 'https://example.com/titled.xml',
-                    'feedTitle' => 'Feed title',
-                ],
-                [
-                    'id' => $plain->requireId(),
-                    'customTitle' => null,
-                    'feedUrl' => 'https://example.com/plain.xml',
-                    'feedTitle' => null,
-                ],
-            ],
-            $this->repository()->findFeedUrlsForUser($owner->requireId()),
-        );
-    }
-
     private function repository(): SubscriptionRepository
     {
         $repository = $this->entityManager->getRepository(Subscription::class);

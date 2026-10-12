@@ -160,7 +160,7 @@ final class BlueskyIdentityResolverTest extends TestCase
 
     public function testAMalformedHandleAnswerIsUnreachable(): void
     {
-        $http = new RoutedHttpClient([self::RESOLVE_ALICE => new MockResponse('<html>')]);
+        $http = new RoutedHttpClient([self::RESOLVE_ALICE => new MockResponse('<html lang="en">')]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
 

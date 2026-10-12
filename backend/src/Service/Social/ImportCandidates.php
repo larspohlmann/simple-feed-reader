@@ -6,7 +6,7 @@ namespace App\Service\Social;
 
 use App\Entity\SocialAccount;
 use App\Repository\SubscriptionDisplayTitle;
-use App\Repository\SubscriptionRepository;
+use App\Repository\SubscriptionFeedUrls;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\ImportCandidateModel;
@@ -24,7 +24,7 @@ final readonly class ImportCandidates
 {
     public function __construct(
         private SocialCandidatesInterface $networkCandidates,
-        private SubscriptionRepository $subscriptions,
+        private SubscriptionFeedUrls $subscriptionFeedUrls,
         private FollowMatcher $followMatcher,
         private EntityManagerInterface $entityManager,
     ) {
@@ -83,7 +83,7 @@ final readonly class ImportCandidates
     private function profileFeedsOf(SocialAccount $account): array
     {
         $profileFeeds = [];
-        foreach ($this->subscriptions->findFeedUrlsForUser($account->getUser()->requireId()) as $subscription) {
+        foreach ($this->subscriptionFeedUrls->forUser($account->getUser()->requireId()) as $subscription) {
             $identity = ProfileFeedUrl::identityOf($account->getNetwork(), $subscription['feedUrl']);
             if (null === $identity) {
                 continue;

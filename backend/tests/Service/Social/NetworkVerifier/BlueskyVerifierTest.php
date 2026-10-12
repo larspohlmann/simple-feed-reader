@@ -132,7 +132,7 @@ final class BlueskyVerifierTest extends TestCase
     public function testAMalformedSessionAnswerIsUnreachable(): void
     {
         $http = new RoutedHttpClient($this->identityRoutes() + [
-            self::SESSION => new MockResponse('<html>'),
+            self::SESSION => new MockResponse('<html lang="en">'),
         ]);
 
         $this->expectException(SocialNetworkUnreachableException::class);
