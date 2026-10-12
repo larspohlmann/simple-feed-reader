@@ -289,6 +289,25 @@ describe('planMagazine', () => {
     expect(entryCount(blocks)).toBe(40);
   });
 
+  it('names a group after its feed, not the poster of its first entry', () => {
+    const entries = [
+      ...many(30, (index) => big(index, { subscriptionId: (index % 6) + 2 })),
+      ...many(8, (index) =>
+        big(100 + index, {
+          subscriptionId: 1,
+          subscriptionTitle: 'Home@bsky',
+          source: `Poster ${index}`,
+        }),
+      ),
+      ...many(30, (index) => big(200 + index, { subscriptionId: (index % 6) + 2 })),
+    ];
+    const group = planMagazine({ entries, grouping: true, complete: true }).find(
+      (block) => block.kind === 'group',
+    );
+
+    expect(group!.kind === 'group' && group!.source).toBe('Home@bsky');
+  });
+
   it('collapses a qualifying run into a featured lead plus a tail-owning widget', () => {
     const entries = [
       ...many(30, (index) => big(index, { subscriptionId: (index % 6) + 2 })),

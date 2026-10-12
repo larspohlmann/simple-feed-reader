@@ -10,7 +10,7 @@
         [attr.aria-controls]="displayed()?.id === item.copy.id ? panelId : null"
         (click)="toggle(item.copy, $event)"
       >
-        {{ item.copy.source }} <span class="sep">·</span>
+        {{ item.copy.subscriptionTitle }} <span class="sep">·</span>
         <span class="t">{{ item.when }}</span>
       </button>
     }

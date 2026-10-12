@@ -439,7 +439,7 @@ function digest(tail: EntryDto[]): MagazineBlock {
   return {
     kind: 'group',
     subscriptionId: tail[0].subscriptionId,
-    source: tail[0].source,
+    source: tail[0].subscriptionTitle,
     entries: tail,
     previewCount: Math.min(WIDGET_PREVIEW, tail.length),
   };

@@ -21,6 +21,7 @@ export function anEntry(overrides: Partial<EntryDto> = {}): EntryDto {
     publishedAt: null,
     createdAt: '2026-08-01T12:00:00Z',
     subscriptionId: 1,
+    subscriptionTitle: 'A feed',
     source: 'A feed',
     sourceUrl: null,
     sourceImageUrl: null,

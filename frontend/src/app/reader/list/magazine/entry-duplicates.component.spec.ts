@@ -41,12 +41,20 @@ it('renders nothing without duplicates', () => {
   expect(element.querySelector('.also-foot')).toBeNull();
 });
 
-it('renders one chip per duplicate with its source', () => {
-  const dup = entry({ id: 2, source: 'NDR Schleswig-Holstein' });
+it('renders one chip per duplicate with its feed', () => {
+  const dup = entry({ id: 2, subscriptionTitle: 'NDR Schleswig-Holstein' });
   const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
   const chips = element.querySelectorAll('.also-entry');
   expect(chips.length).toBe(1);
   expect(chips[0].textContent).toContain('NDR Schleswig-Holstein');
+});
+
+it('names a duplicate by its feed, not by the poster', () => {
+  const dup = entry({ id: 2, source: 'Bob', subscriptionTitle: 'Home@bsky' });
+  const element = mount(entry({ duplicates: [dup] })).nativeElement as HTMLElement;
+  const chip = element.querySelector('.also-entry')!;
+  expect(chip.textContent).toContain('Home@bsky');
+  expect(chip.textContent).not.toContain('Bob');
 });
 
 it('opens a popover with the copy card and re-emits open for that copy', () => {

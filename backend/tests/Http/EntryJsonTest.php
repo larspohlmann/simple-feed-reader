@@ -266,7 +266,7 @@ final class EntryJsonTest extends TestCase
                 'id', 'pending', 'summary', 'excerpt', 'imageUrl', 'imageWidth', 'imageHeight',
                 'imageRenditions', 'media', 'linkCards', 'share', 'title', 'url', 'discussionUrl', 'comments',
                 'author', 'imageAspectRatio', 'attachments', 'categories', 'publishedAt', 'createdAt',
-                'subscriptionId', 'source', 'sourceUrl', 'sourceImageUrl',
+                'subscriptionId', 'subscriptionTitle', 'source', 'sourceUrl', 'sourceImageUrl',
                 'faviconUrl', 'isHidden', 'isFavorite', 'isKept', 'isViewed',
                 'shortPlayerUrl', 'titleDerived', 'savedSearches', 'duplicates',
             ],
@@ -424,6 +424,13 @@ final class EntryJsonTest extends TestCase
         $entry = $this->entryOfFeedWithFormat(SourceFormat::MASTODON_API, null);
 
         self::assertSame('Source', EntryJson::listRow($this->row($entry))['source']);
+    }
+
+    public function testAPrivateFeedEntryStillNamesTheSubscriptionTitle(): void
+    {
+        $entry = $this->entryOfFeedWithFormat(SourceFormat::BLUESKY_API, 'POLITICO Europe');
+
+        self::assertSame('Source', EntryJson::listRow($this->row($entry))['subscriptionTitle']);
     }
 
     public function testAnOrdinaryFeedEntryKeepsTheSubscriptionTitleAsTheSource(): void

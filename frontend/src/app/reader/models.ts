@@ -219,6 +219,8 @@ export interface EntryDto {
   publishedAt: string | null;
   createdAt: string;
   subscriptionId: number;
+  /** The feed's own title; `source` names the poster instead for a private feed's post. */
+  subscriptionTitle: string;
   source: string;
   /** The author's profile when `source` names a private feed's poster, else null. */
   sourceUrl: string | null;
