@@ -16,7 +16,7 @@ final class BlueskyRichText
     private const string LINK = 'app.bsky.richtext.facet#link';
     private const string MENTION = 'app.bsky.richtext.facet#mention';
     private const string TAG = 'app.bsky.richtext.facet#tag';
-    private const string HASHTAG = 'https://bsky.app/hashtag/';
+    private const string HASHTAG = BlueskyWeb::URL . '/hashtag/';
 
     /** @param list<JsonNodeModel> $facets */
     public static function asHtml(string $text, array $facets): ?string
@@ -108,7 +108,7 @@ final class BlueskyRichText
 
     private static function profileOf(?string $did): ?string
     {
-        return null === $did ? null : AtPostUri::profileUrl($did);
+        return null === $did ? null : BlueskyWeb::profileUrl($did);
     }
 
     private static function hashtagOf(?string $tag): ?string

@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Service\Social\Support;
 
 use App\Enum\SocialNetwork;
+use App\Service\Bluesky\Support\BlueskyWeb;
 
 final class ProfileFeedUrl
 {
-    public const string BLUESKY_HOST = 'bsky.app';
     private const string BLUESKY_PATH = '#^/profile/([^/]+)/rss/?$#';
     private const string MASTODON_PATH = '#^/@([^/@]+)\.rss$#';
     private const string DID_PREFIX = 'did:';
 
     public static function bluesky(string $did): string
     {
-        return 'https://' . self::BLUESKY_HOST . '/profile/' . $did . '/rss';
+        return BlueskyWeb::profileUrl($did) . '/rss';
     }
 
     public static function mastodon(string $user, string $domain): string
@@ -63,7 +63,7 @@ final class ProfileFeedUrl
 
     private static function blueskyIdentity(string $host, string $path): ?string
     {
-        if (self::BLUESKY_HOST !== $host || 1 !== preg_match(self::BLUESKY_PATH, $path, $match)) {
+        if (BlueskyWeb::HOST !== $host || 1 !== preg_match(self::BLUESKY_PATH, $path, $match)) {
             return null;
         }
         $actor = rawurldecode($match[1]);

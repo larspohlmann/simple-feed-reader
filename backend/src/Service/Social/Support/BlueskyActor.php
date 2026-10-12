@@ -8,7 +8,8 @@ namespace App\Service\Social\Support;
 final class BlueskyActor
 {
     private const string HANDLE = '/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/iD';
-    private const string DID = '/^did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]$/D';
+    public const string DID_SYNTAX = 'did:[a-z]+:[a-zA-Z0-9._:%-]*[a-zA-Z0-9._-]';
+    private const string DID = '/^' . self::DID_SYNTAX . '$/D';
     private const int MAX_LENGTH = 253;
 
     public static function isValid(string $actor): bool

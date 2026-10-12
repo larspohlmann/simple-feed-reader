@@ -6,6 +6,7 @@ namespace App\Service\Social\Support;
 
 use App\Service\Bluesky\Model\JsonNodeModel;
 use App\Service\Bluesky\Support\AtPostUri;
+use App\Service\Bluesky\Support\BlueskyWeb;
 use App\Service\Bluesky\Support\BlueskyRichText;
 use App\Service\Completion\Model\KnownSharesModel;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -100,7 +101,7 @@ final class BlueskyTimelinePage
     {
         $handleOrDid = $actor->string('handle') ?? $actor->string('did');
 
-        return null === $handleOrDid ? null : AtPostUri::profileUrl($handleOrDid);
+        return null === $handleOrDid ? null : BlueskyWeb::profileUrl($handleOrDid);
     }
 
     private function __construct()

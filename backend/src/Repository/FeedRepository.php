@@ -10,7 +10,7 @@ use App\Entity\Subscription;
 use App\Enum\FeedStatus;
 use App\Enum\SocialAccountStatus;
 use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
-use App\Service\Social\Support\ProfileFeedUrl;
+use App\Service\Bluesky\Support\BlueskyWeb;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -183,7 +183,7 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
      */
     public function findBlueskyProfileFeedsWithImageDue(\DateTimeImmutable $checkedBefore, int $limit): array
     {
-        $profilePath = ProfileFeedUrl::BLUESKY_HOST . '/profile/%';
+        $profilePath = BlueskyWeb::HOST . '/profile/%';
         /** @var list<Feed> $feeds */
         $feeds = $this->createQueryBuilder('f')
             ->andWhere('LOWER(f.url) LIKE :httpsProfile OR LOWER(f.url) LIKE :httpProfile')

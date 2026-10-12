@@ -11,21 +11,16 @@ use App\Service\Social\Model\PrivateFeedModel;
 final class PrivateFeedRules
 {
     private const string MASTODON_LIST = '/^\d{1,32}$/D';
-    private const string AT_URI_REPOSITORY = '#^at://did:[a-z0-9]+:[A-Za-z0-9._:%-]+/';
-    private const string RECORD_KEY = '/[A-Za-z0-9._~:-]{1,512}$#D';
-    private const string BLUESKY_LIST = self::AT_URI_REPOSITORY . 'app\.bsky\.graph\.list' . self::RECORD_KEY;
-    private const string BLUESKY_FEED = self::AT_URI_REPOSITORY . 'app\.bsky\.feed\.generator' . self::RECORD_KEY;
 
     public static function allows(SocialNetwork $network, PrivateFeedModel $privateFeed): bool
     {
         return match ($privateFeed->kind) {
             SocialFeedKind::Home => true,
-            SocialFeedKind::UserList => self::matches(
-                SocialNetwork::Bluesky === $network ? self::BLUESKY_LIST : self::MASTODON_LIST,
-                $privateFeed->remoteId,
-            ),
+            SocialFeedKind::UserList => SocialNetwork::Bluesky === $network
+                ? BlueskyRecordUri::isList($privateFeed->remoteId ?? '')
+                : self::matches(self::MASTODON_LIST, $privateFeed->remoteId),
             SocialFeedKind::CustomFeed => SocialNetwork::Bluesky === $network
-                && self::matches(self::BLUESKY_FEED, $privateFeed->remoteId),
+                && BlueskyRecordUri::isFeedGenerator($privateFeed->remoteId ?? ''),
         };
     }
 
