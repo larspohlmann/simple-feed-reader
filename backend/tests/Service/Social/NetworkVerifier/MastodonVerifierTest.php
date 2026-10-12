@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\NetworkVerifier;
 
-use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\NetworkVerifier\MastodonVerifier;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +31,7 @@ final class MastodonVerifierTest extends TestCase
             new IpValidator(),
         );
 
-        return new MastodonVerifier(new GuardedApiClient($http->client(), $guard, 'TestAgent/1.0'));
+        return new MastodonVerifier(FetchWiring::guardedApiClient($http->client(), $guard));
     }
 
     private function credentials(): SocialCredentialsModel

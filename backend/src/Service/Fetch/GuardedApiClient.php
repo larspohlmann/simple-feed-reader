@@ -9,17 +9,15 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\ApiRequestModel;
 use App\Service\Fetch\Model\ApiResponseModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
-use App\Service\Fetch\Support\EgressOptions;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/** One JSON call to a public API, through the same SSRF guard and IP pin as a feed fetch. A redirect is an answer. */
+/** One JSON call to a public API, through the same SSRF guard, egress proxy and IP pin as a feed fetch. A redirect is an answer. */
 final readonly class GuardedApiClient
 {
     private const float TIMEOUT_SECONDS = 10.0;
 
     public function __construct(
-        private HttpClientInterface $httpClient,
+        private FailoverRequestSender $requestSender,
         private UrlGuard $urlGuard,
         private string $userAgent,
     ) {
@@ -31,8 +29,13 @@ final readonly class GuardedApiClient
         $guarded = $this->urlGuard->assertSafe($request->url);
 
         try {
-            $response = $this->httpClient->request($request->method, $request->url, [
-                'headers' => ['Accept' => 'application/json', 'User-Agent' => $this->userAgent, ...$request->headers],
+            $response = $this->requestSender->send($request->method, $request->url, $guarded, [
+                'headers' => [
+                    'Accept' => 'application/json',
+                    'Accept-Encoding' => 'identity',
+                    'User-Agent' => $this->userAgent,
+                    ...$request->headers,
+                ],
                 'max_redirects' => 0,
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS * 2,
@@ -40,7 +43,6 @@ final readonly class GuardedApiClient
                     ResponseTooLargeException::throwIfExceeded(ResponseSizeLimit::Api, $downloaded);
                 },
                 ...(null === $request->json ? [] : ['json' => $request->json]),
-                ...EgressOptions::pinned($guarded, 0),
             ]);
 
             return new ApiResponseModel($response->getStatusCode(), $response->getContent(false));

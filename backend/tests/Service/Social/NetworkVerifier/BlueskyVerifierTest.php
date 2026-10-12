@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social\NetworkVerifier;
 
-use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyIdentityResolver;
@@ -13,6 +12,7 @@ use App\Service\Social\Exception\SocialCredentialsRejectedException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
 use App\Service\Social\Model\SocialCredentialsModel;
 use App\Service\Social\NetworkVerifier\BlueskyVerifier;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +53,7 @@ final class BlueskyVerifierTest extends TestCase
             ]),
             new IpValidator(),
         );
-        $api = new GuardedApiClient($http->client(), $guard, 'TestAgent/1.0');
+        $api = FetchWiring::guardedApiClient($http->client(), $guard);
 
         return new BlueskyVerifier(new BlueskyIdentityResolver($api), $api);
     }

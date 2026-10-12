@@ -7,11 +7,14 @@ namespace App\Tests\Service\Fetch;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Enum\ProxyType;
 use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\ApiRequestModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\Model\ResponseSizeLimit;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -20,14 +23,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class GuardedApiClientTest extends TestCase
 {
-    private function client(MockHttpClient $http): GuardedApiClient
+    private function client(MockHttpClient $http, ?ProxyConfigModel $proxy = null): GuardedApiClient
     {
         $guard = new UrlGuard(
             new StaticDnsResolver(['api.example.test' => ['93.184.216.34'], 'lan.example.test' => ['192.168.1.5']]),
             new IpValidator(),
         );
 
-        return new GuardedApiClient($http, $guard, 'TestAgent/1.0');
+        return FetchWiring::guardedApiClient($http, $guard, $proxy);
     }
 
     public function testAPostSendsJsonPinnedToTheGuardedAddressWithoutFollowingRedirects(): void
@@ -78,6 +81,37 @@ final class GuardedApiClientTest extends TestCase
         self::assertContains('Accept: application/json', $seenOptions['headers']);
         self::assertArrayNotHasKey('extra', $seenOptions);
         self::assertArrayNotHasKey('json', $seenOptions);
+    }
+
+    public function testTheBodyIsRequestedUncompressedSoTheWireLimitBoundsIt(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+
+        $this->client($http)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertIsArray($seenOptions['headers']);
+        self::assertContains('Accept-Encoding: identity', $seenOptions['headers']);
+    }
+
+    public function testAConfiguredEgressProxyCarriesTheCallInsteadOfAnAddressPin(): void
+    {
+        $seenOptions = [];
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$seenOptions) {
+            $seenOptions = $options;
+
+            return new MockResponse('{}');
+        });
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example.test', 1080, null, null, true);
+
+        $this->client($http, $proxy)->send(ApiRequestModel::get('https://api.example.test/x'));
+
+        self::assertSame('socks5://proxy.example.test:1080', $seenOptions['proxy'] ?? null);
+        self::assertArrayNotHasKey('resolve', $seenOptions);
     }
 
     public function testAnAnswerBeyondTheApiSizeLimitIsRefused(): void

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Social;
 
-use App\Service\Fetch\GuardedApiClient;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Social\BlueskyIdentityResolver;
 use App\Service\Social\Exception\SocialAccountUnresolvableException;
 use App\Service\Social\Exception\SocialNetworkUnreachableException;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\RoutedHttpClient;
 use App\Tests\Support\StaticDnsResolver;
 use PHPUnit\Framework\TestCase;
@@ -34,7 +34,7 @@ final class BlueskyIdentityResolverTest extends TestCase
             new IpValidator(),
         );
 
-        return new BlueskyIdentityResolver(new GuardedApiClient($http->client(), $guard, 'TestAgent/1.0'));
+        return new BlueskyIdentityResolver(FetchWiring::guardedApiClient($http->client(), $guard));
     }
 
     public function testAHandleResolvesThroughPlcToItsPds(): void
