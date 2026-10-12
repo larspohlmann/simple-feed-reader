@@ -329,7 +329,8 @@ are left out of backups (docs/backup.md §6.2).
 
 - Every call goes through `UrlGuard` via `GuardedApiClient`: no redirects, the resolved IP pinned.
 - The Bluesky PDS comes from the account's DID document, must be `https`, and is normalised to its origin.
-- The app-password format check refuses a main password, which would grant far more than the app needs.
+- The app-password format check refuses a main password, which would grant far more than the app needs. It runs in
+  the domain model (`SocialCredentialsModel`) on connect and on reconnect, before the rate limit and any network call.
 - The Mastodon token needs only `read` and `write:favourites`.
 
 ## AI provider endpoints
